@@ -793,9 +793,10 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
       )}
 
       <div className="flex-1 overflow-auto custom-scrollbar relative">
-        <table className="w-full text-right text-sm whitespace-nowrap">
-          <thead className="bg-[#1a1a1a] text-gray-400 sticky top-0 z-10 shadow-md">
-            <tr>
+        <table className="w-full text-right whitespace-nowrap">
+          <thead className="sticky top-0 z-20 bg-[#1a1a1a]">
+            <tr className="text-gray-400 text-sm">
+            
               <th className="p-4 font-semibold border-l border-white/5">تاريخ الإنشاء</th>
               <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">تاريخ المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">كود المهمة</th>
@@ -809,7 +810,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               <th className="p-4 font-semibold border-l border-white/5">تاريخ التحرك</th>
               <th className="p-4 font-semibold border-l border-white/5">تاريخ الانتهاء</th>
               <th className="p-4 font-semibold border-l border-white/5">الحالة</th>
-              <th className="p-4 font-semibold sticky left-0 z-20 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">الإجراءات</th>
+              <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">الإجراءات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -829,7 +830,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.departure_date}</td>
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.completion_date}</td>
                 <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
-                <td className="p-4 text-center sticky left-0 bg-[#0c0c0c] z-10">
                   <div className="flex justify-center gap-2">
                     <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
                     {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
