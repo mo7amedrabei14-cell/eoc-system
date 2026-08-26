@@ -41,7 +41,7 @@ export default function Dashboard() {
 
     const fetchData = async () => {
       try {
-        const branchesRes = await fetch('http://127.0.0.1:8000/api/branches/locations', {
+        const branchesRes = await fetch('https://eoc-system.vercel.app/api/branches/locations', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -70,7 +70,7 @@ export default function Dashboard() {
         }
         
         // 💡 سحب إحصائيات الداش بورد
-        const statsRes = await fetch('http://127.0.0.1:8000/api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
+        const statsRes = await fetch('https://eoc-system.vercel.app/api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
         if (statsRes.ok) setDashboardStats(await statsRes.json());
         
       } catch (error) { console.error("فشل في جلب البيانات:", error); }
@@ -152,7 +152,7 @@ function HomeView() {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    fetch('http://127.0.0.1:8000/api/missions', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('https://eoc-system.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => setMissions(data)).catch(() => {});
   }, []);
@@ -392,7 +392,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('https://eoc-system.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
       if (res.ok) setMissionsList(await res.json());
     } catch (error) { console.error("Error:", error); } 
@@ -431,7 +431,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const handleViewMission = async (missionId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system.vercel.app/api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setCurrentMissionData(data);
@@ -470,7 +470,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     if (!missionToDelete) return;
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setMissionToDelete(null); fetchMissions(); } 
     } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
   };
@@ -632,7 +632,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
        const token = localStorage.getItem('access_token');
        
        const isUpdate = currentMissionData !== null;
-       const url = isUpdate ? `http://127.0.0.1:8000/api/missions/${currentMissionData.mission_id}` : 'http://127.0.0.1:8000/api/missions';
+       const url = isUpdate ? `https://eoc-system.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system.vercel.app/api/missions';
        const method = isUpdate ? 'PUT' : 'POST';
 
        const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(missionData) });
@@ -1119,7 +1119,7 @@ function AuditLogsView() {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    fetch('http://127.0.0.1:8000/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('https://eoc-system.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => { setLogs(data); setIsLoading(false); })
       .catch(() => setIsLoading(false));
