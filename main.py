@@ -296,7 +296,6 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     m.responsible_person,
                     (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
                     (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
-                    m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes
                     m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
@@ -336,8 +335,8 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     "mission_type": r[13] or "-", "mission_location": r[14] or "-", "data_source": r[15] or "-",
                     "departure_date": str(r[16]) if r[16] else "-", "completion_date": str(r[17]) if r[17] else "-",
                     "notes": r[18] or "-",
-                    "exit_date": str(r[19]) if r[19] else "-",
-                    "beneficiaries": beneficiaries_dict[m_id],
+                    "exit_date": str(r[19]) if len(r) > 19 and r[19] else "-",
+                    "beneficiaries": beneficiaries_dict.get(m_id, []),
                     "vehicles_info": f"{r[9] or ''} ({r[10] or ''})" if r[9] else "لا توجد سيارات" 
                 })
             return result

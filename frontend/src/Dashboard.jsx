@@ -768,7 +768,14 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex items-center gap-4">
           <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
+          <div className="flex items-center gap-2">
           <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+          {filterDate && (
+            <button onClick={() => setFilterDate('')} className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 px-3 py-2 rounded-xl text-xs font-bold transition-colors">
+              عرض الكل
+            </button>
+          )}
+        </div>
         </div>
         <div className="flex gap-3">
           {/* 👑 المالك فقط هو اللي يقدر ينزل الإكسيل الشامل */}
