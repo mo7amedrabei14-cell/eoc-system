@@ -142,13 +142,26 @@ export default function Dashboard() {
   );
 }
 
+// ==========================================
+// 1. شاشة الداش بورد (موجز العمليات)
+// ==========================================
 function HomeView() {
   const [missions, setMissions] = useState([]);
+  const [activeTab, setActiveTab] = useState('all'); // 💡 حالة التاب النشط
+
   const regionMap = {
     'المركز العام': 'hq', 'الاسماعيلية': 'canal', 'بور سعيد': 'canal', 'السويس': 'canal', 'شمال سيناء': 'canal', 'جنوب سيناء': 'canal', 'الشرقية': 'canal', 'دمياط': 'canal',
     'الاسكندرية': 'delta', 'البحيرة': 'delta', 'الغربية': 'delta', 'كفر الشيخ': 'delta', 'المنوفية': 'delta', 'الدقهلية': 'delta', 'القليوبية': 'delta',
     'الجيزة': 'saeed', 'الفيوم': 'saeed', 'بني سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
   };
+
+  const tabs = [
+    { id: 'all', label: 'الجمهورية (الكل)' },
+    { id: 'hq', label: 'المركز العام' },
+    { id: 'canal', label: 'إقليم القنال' },
+    { id: 'delta', label: 'إقليم الدلتا' },
+    { id: 'saeed', label: 'إقليم الصعيد' }
+  ];
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -157,40 +170,75 @@ function HomeView() {
       .then(data => setMissions(data)).catch(() => {});
   }, []);
 
-  const active = missions.filter(m => m.status === 'Active' || m.status === 'Under Review').length;
-  const review = missions.filter(m => m.status === 'Under Review').length;
-  const approved = missions.filter(m => m.status === 'Approved').length;
-  const completed = missions.filter(m => m.status === 'Completed').length;
-  const drafts = missions.filter(m => m.status === 'Draft' || m.status === 'Returned').length;
+  // 💡 الفلترة السحرية: بنصفي المهام حسب الإقليم المختار
+  const filteredMissions = activeTab === 'all'
+    ? missions
+    : missions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === activeTab);
+
+  // 💡 حساب الأرقام الديناميكية (بتتغير فوراً مع تغيير التاب)
+  const totalMissions = filteredMissions.length;
+  const active = filteredMissions.filter(m => m.status === 'Active' || m.status === 'Under Review').length;
+  const approved = filteredMissions.filter(m => m.status === 'Approved').length;
+  const completed = filteredMissions.filter(m => m.status === 'Completed').length;
+  const drafts = filteredMissions.filter(m => m.status === 'Draft' || m.status === 'Returned').length;
   
+  // حساب الأقاليم الثابتة (بتتعرض بس لو مختارين "الكل")
   const hqCount = missions.filter(m => regionMap[m.branch?.trim()] === 'hq').length;
   const canalCount = missions.filter(m => regionMap[m.branch?.trim()] === 'canal').length;
   const deltaCount = missions.filter(m => regionMap[m.branch?.trim()] === 'delta').length;
   const saeedCount = missions.filter(m => regionMap[m.branch?.trim()] === 'saeed').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-10">
+      
+      {/* 💡 شريط التابات (الأقاليم) */}
+      <div className="flex flex-wrap gap-2 mb-6 bg-[#0c0c0c] p-2 rounded-2xl border border-white/5 w-fit shadow-lg">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
+              activeTab === tab.id
+                ? 'bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.5)] scale-105'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center gap-3 mb-6">
         <div className="w-2 h-8 bg-[#c70000] rounded-full"></div>
-        <h2 className="text-xl font-bold text-gray-200">إحصائيات المهام والأقاليم (تحديث لحظي)</h2>
+        <h2 className="text-xl font-bold text-gray-200">
+          {activeTab === 'all' ? 'مؤشرات وحالات المهام الشاملة' : `مؤشرات ${tabs.find(t=>t.id === activeTab).label}`}
+        </h2>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <StatCard title="إجمالي المهام الميدانية" value={missions.length} color="text-white" borderHighlight />
-        <StatCard title="مهام المركز العام" value={hqCount} color="text-[#c70000]" />
-        <StatCard title="مهام إقليم القنال" value={canalCount} color="text-blue-400" />
-        <StatCard title="مهام إقليم الدلتا" value={deltaCount} color="text-green-400" />
-        <StatCard title="مهام إقليم الصعيد" value={saeedCount} color="text-yellow-400" />
-      </div>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-2 h-8 bg-gray-500 rounded-full"></div>
-        <h2 className="text-xl font-bold text-gray-200">مؤشرات حالات الاستمارات</h2>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+      {/* 💡 كروت الإحصائيات (بتسمع أرقام الإقليم المختار فوراً) */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <StatCard title="إجمالي المهام" value={totalMissions} color="text-white" borderHighlight />
         <StatCard title="قيد التنفيذ والمراجعة" value={active} color="text-blue-400" />
-        <StatCard title="تمت مراجعتها (معتمدة)" value={approved} color="text-teal-400" />
+        <StatCard title="تمت مراجعتها (مستمرة)" value={approved} color="text-teal-400" />
         <StatCard title="مهام مغلقة ومكتملة" value={completed} color="text-gray-400" />
-        <StatCard title="مسودات ومهام معادة" value={drafts} color="text-yellow-400" />
+        <StatCard title="مسودات ومرتجعات" value={drafts} color="text-yellow-400" />
       </div>
+
+      {/* 💡 توزيع الأقاليم بيظهر بس لو إنت مختار "الكل" */}
+      {activeTab === 'all' && (
+        <div className="animate-fade-in-up mt-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-2 h-8 bg-gray-500 rounded-full"></div>
+            <h2 className="text-xl font-bold text-gray-200">التوزيع الجغرافي للمهام</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard title="مهام المركز العام" value={hqCount} color="text-[#c70000]" />
+            <StatCard title="مهام إقليم القنال" value={canalCount} color="text-blue-400" />
+            <StatCard title="مهام إقليم الدلتا" value={deltaCount} color="text-green-400" />
+            <StatCard title="مهام إقليم الصعيد" value={saeedCount} color="text-yellow-400" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
