@@ -1033,7 +1033,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   <button onClick={() => handleSubmit('Draft')} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold">مسودة</button>
                   <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold">إرسال للجوكر</button>
                   <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
-                  <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">تم مراجعةالمهمة</button>
+                  <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">تم مراجعة المهمة</button>
                   <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
                 </>
               ) : (
@@ -1051,7 +1051,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   {currentMissionData?.status === 'Under Review' && !isVolunteer && (
                     <>
                       <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
-                      <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">تم مراجعةالمهمة (مستمرة)</button>
+                      <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">تم مراجعة المهمة (مستمرة)</button>
                       <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
                     </>
                   )}
