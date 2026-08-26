@@ -297,6 +297,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
                     (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
                     m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes
+                    m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
@@ -335,6 +336,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     "mission_type": r[13] or "-", "mission_location": r[14] or "-", "data_source": r[15] or "-",
                     "departure_date": str(r[16]) if r[16] else "-", "completion_date": str(r[17]) if r[17] else "-",
                     "notes": r[18] or "-",
+                    "exit_date": str(r[19]) if r[19] else "-",
                     "beneficiaries": beneficiaries_dict[m_id],
                     "vehicles_info": f"{r[9] or ''} ({r[10] or ''})" if r[9] else "لا توجد سيارات" 
                 })
@@ -579,6 +581,41 @@ def get_audit_logs(skip: int = 0, limit: int = 100, credentials: HTTPAuthorizati
             ]
     except Exception as e:
         print(f"Error fetching audit logs: {e}")
+        return []
+    finally:
+        connection.close()
+
+@app.get("/api/audit-logs/export")
+def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    
+    role = get_user_role(user_id)
+    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
+        raise HTTPException(status_code=403, detail="هذه الصفحة متاحة للمالك فقط")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # سحب كافة السجلات بدون أي LIMIT أو أرشفة سابقة لتكوين أرشيف كامل
+            cursor.execute("""
+                SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at
+                FROM audit_logs l
+                LEFT JOIN users u ON l.user_id = u.user_id
+                ORDER BY l.created_at DESC;
+            """)
+            rows = cursor.fetchall()
+            return [
+                {
+                    "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
+                    "action": r[3], 
+                    "details": r[4].get("action_text", str(r[4])) if isinstance(r[4], dict) else str(r[4] or ""), 
+                    "created_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else ""
+                } for r in rows
+            ]
+    except Exception as e:
+        print(f"Error exporting audit logs: {e}")
         return []
     finally:
         connection.close()
