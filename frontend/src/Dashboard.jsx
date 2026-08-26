@@ -809,7 +809,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               <th className="p-4 font-semibold border-l border-white/5">تاريخ التحرك</th>
               <th className="p-4 font-semibold border-l border-white/5">تاريخ الانتهاء</th>
               <th className="p-4 font-semibold border-l border-white/5">الحالة</th>
-              <th className="p-4 font-semibold text-center sticky left-0 bg-[#1a1a1a] z-20">الإجراءات</th>
+              <th className="p-4 font-semibold sticky left-0 z-20 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">الإجراءات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -828,7 +828,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.data_source}</td>
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.departure_date}</td>
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.completion_date}</td>
-                <td className="p-4 border-l border-white/5"><StatusBadge status={m.status} /></td>
+                <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                 <td className="p-4 text-center sticky left-0 bg-[#0c0c0c] z-10">
                   <div className="flex justify-center gap-2">
                     <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
