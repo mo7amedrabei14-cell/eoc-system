@@ -528,7 +528,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     const missionsSheet = missionsList.map(m => ({
       "كود المهمة": m.mission_code,
       "تصنيف المهمة": m.mission_classification || "عادية",
-      "التاريخ": m.created_at,
+      "تاريخ الإنشاء (السيرفر)": m.created_at,
+      "تاريخ المهمة (الفعلي)": m.exit_date !== '-' && m.exit_date ? m.exit_date : "غير مسجل",
       "اسم المهمة": m.mission_name,
       "عدد المتطوعين": m.vol_count || 0,
       "عدد الغير متطوعين": m.non_vol_count || 0,
@@ -619,6 +620,44 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   const handleSubmit = async (submitStatus) => {
      try {
+       // ==========================================
+       // 🚨 رادار غرفة العمليات: منع تكرار المشاركين
+       // ==========================================
+       const participantTracker = {};
+       let hasDuplicateError = false;
+
+       participants.forEach((_, i) => {
+         const pName = document.getElementById(`p_name_${i}`)?.value;
+         if (!pName) return;
+
+         // بنسحب رقم العضوية والفرع وخط السير اللي المتطوع مربوط بيه
+         const pRole = document.getElementById(`p_role_${i}`)?.value?.trim() || ''; 
+         const pBranch = document.getElementById(`p_branch_${i}`)?.value || '19';
+         const pItin = document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي';
+
+         // بنعمل "بصمة" للمتطوع (رقم العضوية + الفرع).. لو مفيش رقم عضوية بناخد اسمه
+         const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
+
+         if (!participantTracker[uniqueKey]) {
+           participantTracker[uniqueKey] = [];
+         }
+
+         // لو البصمة دي موجودة قبل كده، بنسأله: هل هو في نفس خط السير؟
+         if (participantTracker[uniqueKey].includes(pItin)) {
+           alert(`⚠️ خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر!\n\nتم إدراجه أكثر من مرة في نفس خط السير (${pItin}).\nلا يمكن تكرار الشخص إلا إذا تم توزيعه على خط سير مختلف (بأوقات تحرك وعودة مختلفة).`);
+           hasDuplicateError = true;
+         } else {
+           // لو مش مكرر أو في خط سير مختلف، بنسجله عادي
+           participantTracker[uniqueKey].push(pItin);
+         }
+       });
+
+       // لو الرادار لقى تكرار، بيوقف عملية الحفظ فوراً وميبعتش حاجة للسيرفر
+       if (hasDuplicateError) return;
+
+       // ==========================================
+       // استكمال تجميع البيانات وحفظها
+       // ==========================================
        const allRoutes = [];
        routes.forEach((_, i) => {
            const to = document.getElementById(`r_to_main_${i}`)?.value;
@@ -636,7 +675,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
        let finalNotes = `[حالة الميدان: ${fieldStatus}]\n` + generalNotes;
 
        let sysNotes = document.getElementById('f_internal_notes')?.value || '';
-       // 💡 نظام المسح التلقائي للأوامر الإدارية عند تحرك الاستمارة للأمام
        if (['Under Review', 'Approved', 'Completed'].includes(submitStatus)) {
            sysNotes = '';
        }
@@ -751,7 +789,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         <table className="w-full text-right text-sm whitespace-nowrap">
           <thead className="bg-[#1a1a1a] text-gray-400 sticky top-0 z-10 shadow-md">
             <tr>
-              <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
+              <th className="p-4 font-semibold border-l border-white/5">تاريخ الإنشاء</th>
+              <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">تاريخ المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">كود المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">التمركز (الفرع)</th>
               <th className="p-4 font-semibold border-l border-white/5">اسم المهمة</th>
@@ -771,6 +810,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
             filteredMissions.length > 0 ? filteredMissions.map(m => (
               <tr key={`mission-${m.mission_id}`} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
+                <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
                 <td className="p-4 font-mono text-gray-300 border-l border-white/5">{m.mission_code}</td>
                 <td className="p-4 font-bold text-white border-l border-white/5">{m.branch}</td>
                 <td className="p-4 text-gray-200 font-bold border-l border-white/5">{m.mission_name}</td>
@@ -834,7 +874,16 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                     </StyledSelect>
                   </FormGroup>
                   <FormGroup label="مسؤول المهمة"><StyledInput id="f_responsible_person" defaultValue={currentMissionData?.responsible_person || ''} /></FormGroup>
-                  <FormGroup label="تاريخ الإنشاء"><StyledInput id="f_creation_date" type="date" defaultValue={getCreationDate()} /></FormGroup>
+                  <FormGroup label="تاريخ الإنشاء (يسجل آلياً)">
+  <StyledInput 
+    id="f_creation_date" 
+    type="date" 
+    defaultValue={getCreationDate()} 
+    disabled={!isOwner}
+    className={!isOwner ? 'opacity-50 cursor-not-allowed' : ''}
+    title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''}
+  />
+</FormGroup>
                   <FormGroup label="مصدر البلاغ"><StyledSelect id="f_data_source" defaultValue={currentMissionData?.data_source || 'واتساب'}><option>واتساب</option><option>هاتفياً</option></StyledSelect></FormGroup>
                 </div>
               </SectionCard>
@@ -1180,6 +1229,34 @@ function AuditLogsView() {
   });
 
   const uniqueActions = ['الكل', ...new Set(logs.map(l => l.action))];
+  const handleExportLogs = async () => {
+    const token = localStorage.getItem('access_token');
+    try {
+      // سحب كافة السجلات مباشرة من السيرفر للأرشيف الشامل
+      const res = await fetch('https://eoc-system.vercel.app/api/audit-logs/export', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!res.ok) return alert("فشل في سحب السجل الشامل.");
+      const allLogs = await res.json();
+
+      if (allLogs.length === 0) return alert("لا توجد سجلات لتصديرها.");
+      
+      const excelData = allLogs.map(log => ({
+        "التاريخ والوقت": log.created_at,
+        "اسم المستخدم": log.full_name,
+        "نوع الإجراء": log.action,
+        "تفاصيل العملية": log.details
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      XLSX.utils.book_append_sheet(wb, ws, "الأرشيف الشامل");
+      XLSX.writeFile(wb, `الأرشيف_الأمني_الشامل_للنظام.xlsx`);
+    } catch (err) {
+      alert("حدث خطأ أثناء تحميل الأرشيف.");
+    }
+  };
 
   return (
     <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[calc(100vh-180px)]">
@@ -1189,6 +1266,12 @@ function AuditLogsView() {
           <h3 className="text-xl font-bold text-white tracking-wide">سجل الإجراءات الرقابية <span className="text-xs text-[#c70000] bg-[#c70000]/10 border border-[#c70000]/30 px-2 py-1 rounded ml-2">سري للغاية</span></h3>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
+          {/* زرار التصدير الجديد */}
+          <button onClick={handleExportLogs} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0">
+            <ExcelIcon /> تصدير السجل
+          </button>
+          
+          <input type="text" placeholder="بحث باسم المستخدم أو التفاصيل..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-full md:w-72" />
           <input type="text" placeholder="بحث باسم المستخدم أو التفاصيل..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-full md:w-72" />
           <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none cursor-pointer">
             {uniqueActions.map(action => <option key={action} value={action}>{action}</option>)}
