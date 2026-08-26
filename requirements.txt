@@ -9,3 +9,4 @@ pandas
 openpyxl
 argon2-cffi
 numpy
+pwdlib[argon2]
