@@ -820,7 +820,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {isLoading ? (<tr><td colSpan="13" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
+            {isLoading ? (<tr><td colSpan="14" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
             filteredMissions.length > 0 ? filteredMissions.map(m => (
               <tr key={`mission-${m.mission_id}`} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
@@ -843,7 +843,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   </div>
                 </td>
               </tr>
-            )) : (<tr><td colSpan="13" className="p-8 text-center text-gray-500">لا توجد مهام</td></tr>)}
+            )) : (<tr><td colSpan="14" className="p-8 text-center text-gray-500">لا توجد مهام</td></tr>)}
           </tbody>
         </table>
       </div>
