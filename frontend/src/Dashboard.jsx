@@ -447,6 +447,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   };
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [missionViewType, setMissionViewType] = useState('daily'); // 'daily' or 'open'
+  const [missionClass, setMissionClass] = useState('عادية');
 
   const fetchMissions = async () => {
     setIsLoading(true);
@@ -481,6 +482,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     setCurrentMissionData(null);
     setMissionName('');
     setMainRouteTitle('خط السير الأساسي');
+    setMissionClass('عادية');
     setRoutes([{ id: Date.now() }]);
     setCustomItineraries([]);
     setVehicles([{ id: Date.now() }]);
@@ -497,6 +499,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         const data = await res.json();
         setCurrentMissionData(data);
         setMissionName(data.mission_name || '');
+        setMissionClass(data.mission_classification || 'عادية');
         
         if (data.routes && data.routes.length > 0) {
           const grouped = data.routes.reduce((acc, curr) => {
@@ -605,7 +608,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
       const plate = document.getElementById(`v_plate_${i}`)?.value;
       if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
     });
-    csvContent += "\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,الفريق,كود الفريق,رقم العضوية/الصفة,اليوم/المرحلة,نظام التواجد,الفرع,مجموعة التحرك المتبعة (خط السير)\n";
+    csvContent += "\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,الفريق,كود الفريق,رقم العضوية/الصفة,المرحلة,نظام التواجد,الفرع,مجموعة التحرك المتبعة (خط السير)\n";
     participants.forEach((_, i) => {
       const name = document.getElementById(`p_name_${i}`)?.value;
       if (name) {
@@ -901,7 +904,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               <SectionCard title="البيانات الأساسية للمهمة" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <FormGroup label="تصنيف المهمة">
-                    <StyledSelect id="f_mission_class" defaultValue={currentMissionData?.mission_classification || 'عادية'}>
+                    <StyledSelect id="f_mission_class" value={missionClass} onChange={(e) => setMissionClass(e.target.value)}>
                       <option value="عادية">مهمة عادية</option>
                       <option value="مفتوحة">مهمة مفتوحة</option>
                     </StyledSelect>
@@ -945,7 +948,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              <SectionCard title={<input value={mainRouteTitle} onChange={e => setMainRouteTitle(e.target.value)} placeholder="اسم مسار التحرك (مثال: اليوم الأول)..." className="bg-transparent border-b border-white/10 focus:border-[#c70000] outline-none text-white font-bold w-64 transition-colors" />} icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
+              <SectionCard title={missionClass === 'مفتوحة' ? <input value={mainRouteTitle} onChange={e => setMainRouteTitle(e.target.value)} placeholder="اسم مسار التحرك (مثال: اليوم الأول)..." className="bg-transparent border-b border-white/10 focus:border-[#c70000] outline-none text-white font-bold w-64 transition-colors" /> : "تفاصيل خط السير"} icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
                 <div className="w-full flex flex-col items-center">
                   <div className="mb-4 -mt-2">
                     {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[#111] hover:bg-[#c70000] text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-[#c70000]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[#111] hover:bg-green-600 text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-green-600/30">+ تفعيل خط السير</button>)}
@@ -1000,7 +1003,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               <SectionCard title="القوة البشرية والمشاركين" icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
                 <div className="overflow-x-auto bg-[#111] rounded-xl border border-white/5">
                   <table className="w-full text-right text-sm min-w-[950px]">
-                    <thead className="bg-[#1a1a1a] text-gray-400 border-b border-white/5"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3 text-blue-400 w-32">الفريق / الكود</th><th className="p-3">رقم العضوية / الصفة</th><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th><th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-yellow-500 w-32">الحالة</th><th className="p-3 text-center">حذف</th></tr></thead>
+                    <thead className="bg-[#1a1a1a] text-gray-400 border-b border-white/5"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3 text-blue-400 w-32">الفريق / الكود</th><th className="p-3">رقم العضوية / الصفة</th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-yellow-500 w-32">الحالة</th><th className="p-3 text-center">حذف</th></tr></thead>
                     <tbody className="divide-y divide-white/5">
                       {participants.map((p, index) => (
                         <tr key={p.id} className="hover:bg-white/5">
@@ -1021,11 +1024,22 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                           <td className="p-2">
                             <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : 'الصفة...'} className="bg-transparent outline-none text-white w-full" />
                           </td>
+                          {missionClass === 'مفتوحة' && (
+                            <>
+                              <td className="p-2">
+                                <input id={`p_phase_${index}`} type="text" defaultValue={p.phase_name || 'اليوم الأول'} placeholder="اليوم 1..." className="bg-transparent outline-none text-purple-300 font-bold text-center w-full border-b border-transparent focus:border-purple-500 transition-colors" />
+                              </td>
+                              <td className="p-2">
+                                <select id={`p_stay_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'} className="bg-[#1a1a1a] text-orange-400 border border-white/5 px-1 py-1 outline-none w-full rounded text-xs font-bold">
+                                  <option value="ذهاب وعودة">🔄 عودة</option>
+                                  <option value="مبيت">⛺ مبيت</option>
+                                </select>
+                              </td>
+                            </>
+                          )}
                           <td className="p-2">
-                            <input id={`p_phase_${index}`} type="text" defaultValue={p.phase_name || 'اليوم الأول'} placeholder="اليوم 1..." className="bg-transparent outline-none text-purple-300 font-bold text-center w-full border-b border-transparent focus:border-purple-500 transition-colors" />
-                          </td>
-                          <td className="p-2">
-                            <select id={`p_stay_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'} className="bg-[#1a1a1a] text-orange-400 border border-white/5 px-1 py-1 outline-none w-full rounded text-xs font-bold">
+                            <select 
+                              id={`p_branch_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'} className="bg-[#1a1a1a] text-orange-400 border border-white/5 px-1 py-1 outline-none w-full rounded text-xs font-bold">
                               <option value="ذهاب وعودة">🔄 عودة</option>
                               <option value="مبيت">⛺ مبيت</option>
                             </select>
