@@ -918,7 +918,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
             <div className="flex items-center gap-2">
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors">إلغاء التاريخ</button>}
+              {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-xl text-sm font-bold transition-colors shadow-[0_0_15px_rgba(199,0,0,0.4)]">عرض السجل كامل</button>}
             </div>
           </div>
         </div>
@@ -1414,11 +1414,6 @@ const LogoutIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24
 const InventoryIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>;
 const CheckIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const PendingIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ExcelIcon = () => (<svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="#1e1e1e" /><path d="M14 2V8H20L14 2Z" fill="#33c481" /><path d="M8.5 18L10.5 14L8.5 10H10.5L11.5 12.5L12.5 10H14.5L12.5 14L14.5 18H12.5L11.5 15.5L10.5 18H8.5Z" fill="#33c481" /></svg>);
-
-// ==========================================
-// 5. شاشة سجل النظام (للمالك فقط)
-// ==========================================
 // ==========================================
 // 5. شاشة سجل النظام (للمالك فقط)
 // ==========================================
@@ -1489,7 +1484,7 @@ function AuditLogsView() {
   };
 
   return (
-    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[calc(100vh-180px)]">
+    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[85vh] flex-1">
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[#c70000]/10 rounded-xl flex items-center justify-center border border-[#c70000]/20 text-[#c70000]"><ShieldIcon /></div>
@@ -2342,8 +2337,11 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     const payload = { ...gForm, magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية', month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM', longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null, latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null };
     const token = localStorage.getItem('access_token');
     const url = gForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/global';
-    const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-    if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); }
+    try {
+      const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديلات بنجاح!" : "تم رصد الزلزال بنجاح!"); }
+      else { setCustomAlert("خطأ في السيرفر، تأكد من رفع ملف main.py الجديد."); }
+    } catch(e) { setCustomAlert("خطأ في الاتصال"); }
   };
 
   const handleEgyptSubmit = async () => {
@@ -2352,8 +2350,11 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     const payload = { ...eForm, magnitude: parseFloat(eForm.magnitude), depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null };
     const token = localStorage.getItem('access_token');
     const url = eForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/egypt';
-    const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-    if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); }
+    try {
+      const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديلات بنجاح!" : "تم رصد الزلزال بنجاح!"); }
+      else { setCustomAlert("خطأ في السيرفر، تأكد من رفع ملف main.py الجديد."); }
+    } catch(e) { setCustomAlert("خطأ في الاتصال"); }
   };
 
   const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
@@ -2440,7 +2441,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           <h3 className="text-xl font-bold text-white hidden md:block">سجل بيانات الزلازل</h3>
           
           {/* 💡 حل مشكلة الزراير المقطوعة بـ flex-wrap */}
-          <div className="flex flex-wrap items-center gap-3 justify-end w-full">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
             {activeEqTab === 'global' || activeEqTab === 'all' ? (
               <>
                 {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير العالمي</button>}

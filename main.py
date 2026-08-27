@@ -1186,3 +1186,4 @@ def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorization
     except Exception as e:
         connection.rollback()
         raise HTTPException(500, str(e))
+
