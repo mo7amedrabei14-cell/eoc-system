@@ -177,19 +177,25 @@ export default function Dashboard() {
 // ==========================================
 // 1. شاشة الداش بورد (موجز العمليات التفاعلي)
 // ==========================================
+// ==========================================
+// 1. شاشة الداش بورد (موجز العمليات التفاعلي)
+// ==========================================
 function HomeView({ branches = [] }) {
   const [missions, setMissions] = useState([]);
   const [news, setNews] = useState([]);
+  const [globalDisasters, setGlobalDisasters] = useState([]); // 💡 حالة الكوارث الجديدة
   const [selectedBranchName, setSelectedBranchName] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     Promise.all([
       fetch('https://eoc-system.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
-    ]).then(([missionsData, newsData]) => {
+      fetch('https://eoc-system.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []) // 💡 سحب الكوارث
+    ]).then(([missionsData, newsData, globalData]) => {
       setMissions(missionsData);
       setNews(newsData);
+      setGlobalDisasters(globalData); // 💡 حفظ الكوارث
     });
   }, []);
 
@@ -212,6 +218,7 @@ function HomeView({ branches = [] }) {
   const activeOpen = filteredMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
   const totalNews = filteredNews.length;
   const activeNews = filteredNews.filter(n => n.is_field_response).length;
+  const totalGlobalDisasters = globalDisasters.length; // 💡 إجمالي الكوارث
 
   return (
     <div className="space-y-8 pb-10 animate-fade-in-up">
@@ -228,7 +235,6 @@ function HomeView({ branches = [] }) {
           </div>
         </div>
         
-        {/* زرار إلغاء التحديد اللي طلبته */}
         {selectedBranchName && (
           <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">
             إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -236,35 +242,46 @@ function HomeView({ branches = [] }) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+      {/* 💡 خلينا الشبكة 4 كروت جنب بعض */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#c70000]/10 rounded-full blur-3xl group-hover:bg-[#c70000]/20 transition-all"></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-gray-400 font-bold text-lg">المهام اليومية (نشطة)</h3>
+            <h3 className="text-gray-400 font-bold text-sm">المهام اليومية (نشطة)</h3>
             <div className="p-3 bg-[#c70000]/20 rounded-xl text-[#c70000]"><AlertIcon /></div>
           </div>
-          <p className="text-6xl font-black text-white relative z-10">{activeDaily}</p>
+          <p className="text-4xl font-black text-white relative z-10">{activeDaily}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all"></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-gray-400 font-bold text-lg">المهام المفتوحة (مستمرة)</h3>
+            <h3 className="text-gray-400 font-bold text-sm">المهام المفتوحة</h3>
             <div className="p-3 bg-blue-500/20 rounded-xl text-blue-500"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
           </div>
-          <p className="text-6xl font-black text-white relative z-10">{activeOpen}</p>
+          <p className="text-4xl font-black text-white relative z-10">{activeOpen}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all"></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-gray-400 font-bold text-lg">الأخبار والأحداث المرصودة</h3>
+            <h3 className="text-gray-400 font-bold text-sm">الأخبار المحلية المرصودة</h3>
             <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400"><NewsIcon /></div>
           </div>
           <div className="flex items-end gap-3 relative z-10">
-             <p className="text-6xl font-black text-white">{totalNews}</p>
-             <span className="text-sm font-bold text-purple-400 mb-2">({activeNews} استجابة ميدانية)</span>
+             <p className="text-4xl font-black text-white">{totalNews}</p>
+             <span className="text-xs font-bold text-purple-400 mb-2">({activeNews} استجابة)</span>
           </div>
+        </div>
+
+        {/* 💡 الكارت الجديد للكوارث العالمية */}
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#c70000]/30 p-6 rounded-3xl shadow-[0_0_20px_rgba(199,0,0,0.1)] relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-[#c70000]/10 rounded-full blur-2xl group-hover:bg-[#c70000]/20 transition-all"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <h3 className="text-[#c70000] font-bold text-sm">الكوارث العالمية</h3>
+            <div className="p-3 bg-[#c70000]/20 rounded-xl text-[#c70000]"><GlobalWorldIcon /></div>
+          </div>
+          <p className="text-4xl font-black text-white relative z-10">{totalGlobalDisasters}</p>
         </div>
       </div>
 
@@ -280,7 +297,6 @@ function HomeView({ branches = [] }) {
                   key={`dash-marker-${branch.id}`} 
                   position={[branch.lat, branch.lng]} 
                   icon={branchIcon} 
-                  /* 💡 الذكاء هنا: لو داس على نفس الفرع اللي متحدد، يلغي التحديد. لو فرع جديد، يحدده! */
                   eventHandlers={{ click: () => setSelectedBranchName(prev => prev === branch.name ? null : branch.name) }}
                 >
                   <Popup>
