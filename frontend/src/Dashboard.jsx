@@ -275,36 +275,14 @@ function HomeView({ branches = [] }) {
         </h3>
         <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
-            {/* 💡 النقط بتقرأ الإحداثيات كأرقام مع الفلتر */}
-            {(activeEqTab === 'global' || activeEqTab === 'all') && filteredGlobalEqs.map(eq => {
-              const lat = parseFloat(eq.latitude);
-              const lng = parseFloat(eq.longitude);
-              if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
-              return (
-                <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon}>
-                  <Popup>
-                    <strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong>
-                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
-                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
-                  </Popup>
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
+            {/* 💡 الخريطة الرئيسية للفروع فقط */}
+            {branches.map(branch => branch.lat && branch.lng ? (
+                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => setSelectedBranchName(prev => prev === branch.name ? null : branch.name) }}>
+                  <Popup><strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong><span className="text-xs text-blue-600 block text-center mt-1 font-bold">انقر للفلترة</span></Popup>
                 </Marker>
-              );
-            })}
-            {(activeEqTab === 'egypt' || activeEqTab === 'all') && filteredEgyptEqs.map(eq => {
-              const lat = parseFloat(eq.latitude);
-              const lng = parseFloat(eq.longitude);
-              if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
-              return (
-                <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon}>
-                  <Popup>
-                    <strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong>
-                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
-                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
-                  </Popup>
-                </Marker>
-              );
-            })}
+              ) : null
+            )}
           </MapContainer>
         </div>
       </div>
@@ -916,9 +894,13 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
             <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
 
-            <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-xl text-sm font-bold transition-colors shadow-[0_0_15px_rgba(199,0,0,0.4)]">عرض السجل كامل</button>}
+            <div className="flex items-center gap-3">
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
+              {filterDate && (
+                <button onClick={() => setFilterDate('')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(199,0,0,0.5)] transition-all flex items-center gap-2">
+                  <EyeIcon className="w-5 h-5" /> عرض السجل بالكامل
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -2334,27 +2316,42 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-    const payload = { ...gForm, magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية', month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM', longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null, latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null };
+    
+    // شيلنا الـ eq_id من الـ payload عشان السيرفر يقبله
+    const payload = { 
+      date: gForm.date, time: gForm.time, country: gForm.country, 
+      magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية', 
+      month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM', 
+      region: gForm.region, longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null, 
+      latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null 
+    };
+
     const token = localStorage.getItem('access_token');
     const url = gForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/global';
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديلات بنجاح!" : "تم رصد الزلزال بنجاح!"); }
-      else { setCustomAlert("خطأ في السيرفر، تأكد من رفع ملف main.py الجديد."); }
-    } catch(e) { setCustomAlert("خطأ في الاتصال"); }
+      if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
+      else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
+    } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
   };
 
   const handleEgyptSubmit = async () => {
     if (!eForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!eForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-    const payload = { ...eForm, magnitude: parseFloat(eForm.magnitude), depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null };
+    
+    const payload = { 
+      date: eForm.date, time: eForm.time, magnitude: parseFloat(eForm.magnitude), 
+      depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', region: eForm.region, 
+      longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null 
+    };
+
     const token = localStorage.getItem('access_token');
     const url = eForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/egypt';
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديلات بنجاح!" : "تم رصد الزلزال بنجاح!"); }
-      else { setCustomAlert("خطأ في السيرفر، تأكد من رفع ملف main.py الجديد."); }
-    } catch(e) { setCustomAlert("خطأ في الاتصال"); }
+      if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
+      else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
+    } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
   };
 
   const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
