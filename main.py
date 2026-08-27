@@ -588,7 +588,7 @@ def get_audit_logs(skip: int = 0, limit: int = 100, credentials: HTTPAuthorizati
 def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     user_id = get_current_user_id(token)
-    if not user_id: raise HTTPException(status_code=401)
+    if not user_id: raise HTTPException(status_code=401, detail="غير مصرح")
     
     role = get_user_role(user_id)
     if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
@@ -597,7 +597,6 @@ def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(securi
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            # سحب كافة السجلات بدون أي LIMIT أو أرشفة سابقة لتكوين أرشيف كامل
             cursor.execute("""
                 SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at
                 FROM audit_logs l
@@ -605,16 +604,25 @@ def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(securi
                 ORDER BY l.created_at DESC;
             """)
             rows = cursor.fetchall()
-            return [
-                {
+            
+            result = []
+            for r in rows:
+                # تأمين قراءة التفاصيل
+                details_val = r[4]
+                details_str = details_val.get("action_text", str(details_val)) if isinstance(details_val, dict) else str(details_val or "")
+                    
+                # تأمين قراءة التاريخ
+                created_val = r[5]
+                created_str = created_val.strftime("%Y-%m-%d %H:%M:%S") if hasattr(created_val, 'strftime') else str(created_val) if created_val else "غير مسجل"
+                    
+                result.append({
                     "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
-                    "action": r[3], 
-                    "details": r[4].get("action_text", str(r[4])) if isinstance(r[4], dict) else str(r[4] or ""), 
-                    "created_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else ""
-                } for r in rows
-            ]
+                    "action": r[3], "details": details_str, "created_at": created_str
+                })
+            return result
     except Exception as e:
         print(f"Error exporting audit logs: {e}")
-        return []
+        # هنا بنبعت الإيرور الحقيقي للواجهة عشان نشوفه
+        raise HTTPException(status_code=500, detail=f"خطأ في قاعدة البيانات: {str(e)}")
     finally:
         connection.close()

@@ -1239,14 +1239,17 @@ function AuditLogsView() {
   const handleExportLogs = async () => {
     const token = localStorage.getItem('access_token');
     try {
-      // سحب كافة السجلات مباشرة من السيرفر للأرشيف الشامل
       const res = await fetch('https://eoc-system.vercel.app/api/audit-logs/export', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      if (!res.ok) return alert("فشل في سحب السجل الشامل.");
+      // لو السيرفر ضرب، هنقرأ السبب الحقيقي ونعرضه
+      if (!res.ok) {
+        const errorData = await res.json();
+        return alert(`خطأ من السيرفر: ${errorData.detail || 'غير معروف'}`);
+      }
+      
       const allLogs = await res.json();
-
       if (allLogs.length === 0) return alert("لا توجد سجلات لتصديرها.");
       
       const excelData = allLogs.map(log => ({
@@ -1261,7 +1264,7 @@ function AuditLogsView() {
       XLSX.utils.book_append_sheet(wb, ws, "الأرشيف الشامل");
       XLSX.writeFile(wb, `الأرشيف_الأمني_الشامل_للنظام.xlsx`);
     } catch (err) {
-      alert("حدث خطأ أثناء تحميل الأرشيف.");
+      alert("حدث خطأ في الاتصال بالسيرفر أثناء تحميل الأرشيف.");
     }
   };
 
