@@ -2284,7 +2284,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
   useEffect(() => { fetchEarthquakes(); }, []);
 
-  // 💡 تطبيق الفلتر على المصفوفات
+  // 💡 تطبيق الفلتر على القوائم عشان يسمع في كل حاجة (الخريطة، الإحصائيات، التصدير)
   const filteredGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
   const filteredEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
 
@@ -2389,9 +2389,9 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     fetchEarthquakes();
   };
 
-  // 💡 تصدير الزلازل العالمية
+  // 💡 التصدير الشامل (يتم بناءً على الفلتر)
   const handleExportGlobalEqs = () => {
-    if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير.");
+    if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({
       "التاريخ": eq.date || '',
       "الشهر": eq.month || '',
@@ -2409,9 +2409,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     XLSX.writeFile(wb, filterDate ? `سجل_الزلازل_العالمية_${filterDate}.xlsx` : `سجل_الزلازل_العالمية.xlsx`);
   };
 
-  // 💡 تصدير زلازل مصر
   const handleExportEgyptEqs = () => {
-    if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير.");
+    if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({
       "التاريخ": eq.date || '',
       "وقت الزلزال": eq.time || '',
@@ -2426,12 +2425,22 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     XLSX.writeFile(wb, filterDate ? `سجل_زلازل_مصر_${filterDate}.xlsx` : `سجل_زلازل_مصر.xlsx`);
   };
 
-  // إحصائيات علوية متجاوبة مع الفلتر
+  // إحصائيات علوية تتجاوب مع الفلتر
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
-  const maxMagnitude = Math.max(...filteredGlobalEqs.map(e => e.magnitude), ...filteredEgyptEqs.map(e => e.magnitude), 0);
+  const maxMagnitude = Math.max(...filteredGlobalEqs.map(e => parseFloat(e.magnitude) || 0), ...filteredEgyptEqs.map(e => parseFloat(e.magnitude) || 0), 0);
 
   return (
     <div className="space-y-6 pb-10">
+      
+      {/* 💡 فلتر التاريخ الرئيسي للشاشة */}
+      <div className="flex flex-wrap items-center gap-3 bg-[#0c0c0c] border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in-up">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2 border-l border-white/10 pl-4"><EarthquakeIcon/> رصد الزلازل والهزات</h3>
+        <div className="flex items-center gap-2">
+          <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
+          {filterDate && <button onClick={() => setFilterDate('')} className="text-sm text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-xl transition-colors font-bold border border-red-500/20">إلغاء الفلتر (عرض الكل)</button>}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
         <StatCard title="الزلازل العالمية المرصودة" value={filteredGlobalEqs.length} color="text-red-500" borderHighlight />
         <StatCard title="الدول المرصودة" value={uniqueCountriesCount} color="text-orange-400" />
@@ -2444,6 +2453,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         <div className="h-[350px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
           <MapContainer center={[26.8206, 30.8025]} zoom={3} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
+            
+            {/* 💡 نقط الزلازل المربوطة بالفلتر وبتقرأ الإحداثيات صح 100% */}
             {filteredGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
@@ -2454,11 +2465,12 @@ function EarthquakesView({ isOwner, isSupervisor }) {
                     <strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong>
                     <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
                     <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
-                    <span className="text-[10px] text-blue-600 text-center block font-mono" dir="ltr">{lat.toFixed(2)}, {lng.toFixed(2)}</span>
+                    <span className="text-[10px] text-blue-600 text-center block font-mono mt-1" dir="ltr">{lat.toFixed(4)}, {lng.toFixed(4)}</span>
                   </Popup>
                 </Marker>
               );
             })}
+            
             {filteredEgyptEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
@@ -2469,7 +2481,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
                     <strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong>
                     <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
                     <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
-                    <span className="text-[10px] text-blue-600 text-center block font-mono" dir="ltr">{lat.toFixed(2)}, {lng.toFixed(2)}</span>
+                    <span className="text-[10px] text-blue-600 text-center block font-mono mt-1" dir="ltr">{lat.toFixed(4)}, {lng.toFixed(4)}</span>
                   </Popup>
                 </Marker>
               );
@@ -2480,19 +2492,11 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px]">
         <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
-          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-            <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setActiveEqTab('global')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
-              <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
-            </div>
-
-            {/* 💡 فلتر التاريخ في الهيدر */}
-            <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors">إلغاء التاريخ</button>}
-            </div>
+          <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+            <button onClick={() => setActiveEqTab('global')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
+            <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
           </div>
-
+          
           <div className="flex gap-3 shrink-0">
             {activeEqTab === 'global' ? (
               <>
