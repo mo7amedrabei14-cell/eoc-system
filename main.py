@@ -231,7 +231,7 @@ class ParticipantModel(BaseModel):
     participation_role: str
     branch_id: int
     assigned_itinerary: str
-    return_status: str = "بالمهمة"
+    return_status: str = "مازال بالمهمة"
 
 class BeneficiaryModel(BaseModel):
     category_name: str
@@ -391,14 +391,14 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
             for part in mission.participants:
                 # 1. أوتوميشن الإغلاق
                 if mission.status in ['Completed', 'مكتملة']:
-                    part.return_status = 'عاد للقاعدة'
+                    part.return_status = 'تم النتهاء مهمتة'
                 
                 # 2. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض
-                if part.return_status == 'بالمهمة' and part.participation_role.strip() != '':
+                if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':
                     cursor.execute("""
                         SELECT m.mission_name FROM mission_participants p
                         JOIN missions m ON p.mission_id = m.mission_id
-                        WHERE p.participation_role = %s AND p.return_status = 'بالمهمة' AND m.status NOT IN ('Completed', 'Cancelled', 'Returned')
+                        WHERE p.participation_role = %s AND p.return_status = 'مازال بالمهمة' AND m.status NOT IN ('Completed', 'Cancelled', 'Returned')
                     """, (part.participation_role,))
                     active_in_other = cursor.fetchone()
                     if active_in_other:
@@ -477,13 +477,13 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
 
             for part in mission.participants:
                 if mission.status in ['Completed', 'مكتملة']:
-                    part.return_status = 'عاد للقاعدة'
+                    part.return_status = 'تم انتهاء مهمتة'
                 
-                if part.return_status == 'بالمهمة' and part.participation_role.strip() != '':
+                if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':
                     cursor.execute("""
                         SELECT m.mission_name FROM mission_participants p
                         JOIN missions m ON p.mission_id = m.mission_id
-                        WHERE p.participation_role = %s AND p.return_status = 'بالمهمة' 
+                        WHERE p.participation_role = %s AND p.return_status = 'مازال بالمهمة' 
                         AND m.status NOT IN ('Completed', 'Cancelled', 'Returned') AND m.mission_id != %s
                     """, (part.participation_role, mission_id))
                     active_in_other = cursor.fetchone()
