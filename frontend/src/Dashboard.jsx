@@ -448,6 +448,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [missionViewType, setMissionViewType] = useState('daily'); // 'daily' or 'open'
   const [missionClass, setMissionClass] = useState('عادية');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'completed'
 
   const fetchMissions = async () => {
     setIsLoading(true);
@@ -779,13 +780,27 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   };
 
   let filteredMissions = missionsList;
+  
+  // 1. فلتر نوع المهمة (مفتوحة أو عادية)
   if (missionViewType === 'open') {
-     // المهام المفتوحة النشطة فقط وتظهر دائماً بغض النظر عن التاريخ
-     filteredMissions = filteredMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status));
+     filteredMissions = filteredMissions.filter(m => m.mission_classification === 'مفتوحة');
   } else {
-     // المهام اليومية (حسب تاريخ المهمة أو تاريخ الخروج، لو مش موجود بيجيب تاريخ الإنشاء كبديل احتياطي)
-     filteredMissions = filterDate ? filteredMissions.filter(m => (m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]) === filterDate) : filteredMissions;
+     filteredMissions = filteredMissions.filter(m => m.mission_classification !== 'مفتوحة');
   }
+
+  // 2. فلتر التاريخ (بقى شغال على الاتنين)
+  if (filterDate) {
+     filteredMissions = filteredMissions.filter(m => (m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]) === filterDate);
+  }
+
+  // 3. فلتر حالة المهمة (الكل، نشطة، مكتملة)
+  if (statusFilter === 'active') {
+     filteredMissions = filteredMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
+  } else if (statusFilter === 'completed') {
+     filteredMissions = filteredMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
+  }
+
+  // 4. فلتر الإقليم
   if (activeRegionTab !== 'all') { filteredMissions = filteredMissions.filter(m => (regionMap[m.branch.trim()] || 'hq') === activeRegionTab); }
 
   const getCreationDate = () => {
@@ -812,20 +827,34 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex flex-col gap-3">
           <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
-          <div className="flex items-center gap-2 bg-[#111] p-1 rounded-xl w-fit border border-white/5">
-            <button onClick={() => setMissionViewType('daily')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'daily' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>سجل اليوم</button>
-            <button onClick={() => setMissionViewType('open')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'open' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'text-gray-400 hover:text-white'}`}>المهام المفتوحة (مستمرة)</button>
-          </div>
-          {missionViewType === 'daily' && (
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500">تاريخ المهمة الفعلي:</span>
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 px-3 py-2 rounded-xl text-xs font-bold transition-colors">الكل</button>}
+          
+          <div className="flex flex-wrap items-center gap-3">
+            {/* 1. نوع السجل */}
+            <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+              <button onClick={() => setMissionViewType('daily')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'daily' ? 'bg-[#c70000] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>المهام العادية</button>
+              <button onClick={() => setMissionViewType('open')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'open' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'text-gray-400 hover:text-white'}`}>المهام المفتوحة</button>
             </div>
-          )}
+
+            <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
+
+            {/* 2. حالة المهمة */}
+            <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+              <button onClick={() => setStatusFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'all' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الكل</button>
+              <button onClick={() => setStatusFilter('active')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'active' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>نشطة</button>
+              <button onClick={() => setStatusFilter('completed')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'completed' ? 'bg-teal-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>مكتملة</button>
+            </div>
+
+            <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
+
+            {/* 3. فلتر التاريخ */}
+            <div className="flex items-center gap-2">
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" title="تاريخ المهمة" />
+              {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors">إلغاء التاريخ</button>}
+            </div>
+          </div>
         </div>
-        <div className="flex gap-3">
-          {/* 👑 المالك فقط هو اللي يقدر ينزل الإكسيل الشامل */}
+
+        <div className="flex gap-3 mt-4 md:mt-0">
           {isOwner && <button onClick={handleExportTableExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"><ExcelIcon /> تصدير السجل الشامل</button>}
           <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2">+ إنشاء مهمة</button>
         </div>
@@ -868,7 +897,13 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
                 <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
                 <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
-                <td className="p-4 text-gray-300 border-l border-white/5 font-mono text-xs whitespace-pre-wrap leading-relaxed">{['Completed', 'Cancelled'].includes(m.status) ? `من: ${m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]}\nإلى: ${m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل'}` : `من: ${m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]}\n(حتى الآن...)`}</td>
+                <td className="p-4 text-gray-300 border-l border-white/5 font-mono text-xs whitespace-nowrap text-center">
+                  <div className="flex items-center justify-center gap-2 bg-[#111] px-2 py-1.5 rounded-lg border border-white/5">
+                    <span className="text-green-400">من: {m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]}</span>
+                    <span className="text-gray-600">|</span>
+                    <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-gray-400" : "text-blue-400 animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل') : '(حتى الآن...)'}</span>
+                  </div>
+                </td>
                 <td className="p-4 font-mono text-gray-300 border-l border-white/5">{m.mission_code}</td>
                 <td className="p-4 font-bold text-white border-l border-white/5">{m.branch}</td>
                 <td className="p-4 text-gray-200 font-bold border-l border-white/5">{m.mission_name}</td>
