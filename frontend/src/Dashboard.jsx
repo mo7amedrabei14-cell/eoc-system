@@ -462,7 +462,6 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner }) {
   const [customAlert, setCustomAlert] = useState(null);
-  const [filterDate, setFilterDate] = useState('');
 const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [currentMissionData, setCurrentMissionData] = useState(null);
