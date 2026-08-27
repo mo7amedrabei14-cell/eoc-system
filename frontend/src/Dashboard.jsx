@@ -474,8 +474,9 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
   const [customAlert, setCustomAlert] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
+  const [currentMissionData, setCurrentMissionData] = useState(null);
   
-const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnText, setReturnText] = useState('');
   const [returnError, setReturnError] = useState('');
   const [mainRouteTitle, setMainRouteTitle] = useState('خط السير الأساسي');
@@ -501,9 +502,9 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
   const [filterDate, setFilterDate] = useState(getLocalDate());
-  const [missionViewType, setMissionViewType] = useState('all_types'); // 'daily', 'open', 'all_types'
+  const [missionViewType, setMissionViewType] = useState('all_types');
   const [missionClass, setMissionClass] = useState('عادية');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'completed'
+  const [statusFilter, setStatusFilter] = useState('all'); 
 
   const fetchMissions = async () => {
     setIsLoading(true);
@@ -705,12 +706,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   const handleSubmit = async (submitStatus) => {
      try {
-       // ==========================================
-       // 🚨 رادار غرفة العمليات: منع تكرار المشاركين
-       // ==========================================
-       // ==========================================
-       // 🚨 رادار غرفة العمليات: ذكي (يدعم المهام المفتوحة وتعدد التحركات)
-       // ==========================================
        const activeParticipants = {}; 
        let hasDuplicateError = false;
 
@@ -721,12 +716,9 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
          const pRole = document.getElementById(`p_role_${i}`)?.value?.trim() || ''; 
          const pBranch = document.getElementById(`p_branch_${i}`)?.value || '19';
          const pStatus = document.getElementById(`p_status_${i}`)?.value || 'بالمهمة';
-         const pItin = document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي';
-
+         
          const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
 
-         // الرادار بيتدخل فقط لو المتطوع حالته الحالية "بالمهمة"
-         // مينفعش يكون نفس الشخص "بالمهمة" مرتين في نفس اللحظة!
          if (pStatus === 'بالمهمة') {
            if (activeParticipants[uniqueKey]) {
              setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر ومسجل كـ "بالمهمة" أكثر من مرة!\n\nلا يمكن أن يكون المتطوع متواجد في تحركين نشطين في نفس الوقت.\nيجب تسجيل عودته أولاً من التحرك السابق (عاد للقاعدة) قبل إضافة تحرك جديد له.`);
@@ -738,9 +730,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
        });
        if (hasDuplicateError) return;
 
-       // ==========================================
-       // استكمال تجميع البيانات وحفظها
-       // ==========================================
        const allRoutes = [];
        if (missionClass !== 'مفتوحة') {
            routes.forEach((_, i) => {
@@ -850,7 +839,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
   else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
 
-  // 💡 إحصائيات الأقاليم بتتأثر بالفلاتر (التاريخ، النشط، النوع) عشان تشوف الأرقام الحقيقية!
   const regionStats = {
     total: baseMissions.length,
     hq: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'hq').length,
@@ -866,8 +854,9 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     return filterDate || getLocalDate();
   };
 
+  // 💡 التعديل هنا: خلينا الـ min-h-[85vh] عشان الجدول ياخد الشاشة براحته
   return (
-    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[700px] flex-1">
+    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[85vh] flex-1">
       {missionToDelete && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
           <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
@@ -895,7 +884,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
             <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
 
-            {/* 💡 فلتر الحالة + فلتر الإقليم مع بعض! */}
             <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
               <button onClick={() => setStatusFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'all' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الكل</button>
               <button onClick={() => setStatusFilter('active')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'active' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>نشطة</button>
@@ -918,7 +906,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
             <div className="flex items-center gap-2">
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-xl text-sm font-bold transition-colors shadow-[0_0_15px_rgba(199,0,0,0.4)]">عرض السجل كامل</button>}
+              {/* 💡 التعديل هنا: زرار "عرض السجل كامل" اللي طلبت يكون كبير ومميز */}
+              {filterDate && <button onClick={() => setFilterDate('')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] transition-all">عرض السجل كامل</button>}
             </div>
           </div>
         </div>
@@ -929,7 +918,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         </div>
       </div>
 
-      {/* 💡 داشبورد مصغر للأقاليم في سجل المهام (بيسمع كل الفلاتر) */}
       {!isVolunteer && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[#0a0a0a] border-b border-white/5 shrink-0">
         <StatCard title="إجمالي المهام المفلترة" value={regionStats.total} color="text-white" borderHighlight />
@@ -1320,19 +1308,18 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               )}
             </div>
             
-            {/* 💡 نافذة (Modal) كتابة سبب الإرجاع */}
             {/* 💡 نافذة (Modal) الإرجاع بتصميم احترافي (بدون Alerts متصفح) */}
             {returnModalOpen && (
               <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[120] p-4">
                 <div className="bg-[#0c0c0c] border border-yellow-600/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(202,138,4,0.2)] animate-fade-in-up text-center">
-                  <div className="w-20 h-20 bg-yellow-600/10 rounded-full flex items-center justify-center mb-5 border border-yellow-600/20 text-yellow-500"><svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
+                  <div className="w-20 h-20 bg-yellow-600/10 rounded-full flex items-center justify-center mb-5 border border-yellow-600/20 text-yellow-500"><svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192 3 1.732 3z" /></svg></div>
                   <h3 className="text-xl font-bold text-white mb-2">إرجاع الاستمارة للمتطوع</h3>
                   <p className="text-gray-400 text-sm mb-4 leading-relaxed">برجاء كتابة سبب الإرجاع أو التعديلات المطلوبة بوضوح.</p>
                   
                   {/* 💡 الإشعار الشيك لو داس تأكيد وهو سايب الخانة فاضية */}
                   {returnError && (
                     <div className="w-full bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold p-3 rounded-xl mb-4 flex items-center justify-center gap-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192 3 1.732 3z" /></svg>
                       {returnError}
                     </div>
                   )}
@@ -2274,7 +2261,6 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const filteredGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
   const filteredEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
 
-  // 💡 دوال التعديل (فتح الفورم بالبيانات)
   const handleEditGlobal = (eq) => {
     setGForm({
       eq_id: eq.eq_id, date: eq.date || getLocalDate(), time: eq.time || '', country: eq.country || '',
@@ -2330,7 +2316,6 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     reader.readAsText(file);
   };
 
-  // 💡 التحديث والإضافة
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
@@ -2340,7 +2325,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديلات بنجاح!" : "تم رصد الزلزال بنجاح!"); }
-      else { setCustomAlert("خطأ في السيرفر، تأكد من رفع ملف main.py الجديد."); }
+      else { setCustomAlert("حدث خطأ في السيرفر"); }
     } catch(e) { setCustomAlert("خطأ في الاتصال"); }
   };
 
@@ -2353,7 +2338,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديلات بنجاح!" : "تم رصد الزلزال بنجاح!"); }
-      else { setCustomAlert("خطأ في السيرفر، تأكد من رفع ملف main.py الجديد."); }
+      else { setCustomAlert("حدث خطأ في السيرفر"); }
     } catch(e) { setCustomAlert("خطأ في الاتصال"); }
   };
 
@@ -2377,8 +2362,6 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
   return (
     <div className="space-y-6 pb-10">
-      
-      {/* 💡 الهيدر بدون فلاتر */}
       <div className="bg-[#111] border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in-up">
         <h3 className="text-xl font-bold text-white flex items-center gap-2"><EarthquakeIcon/> مركز رصد الزلازل والهزات الأرضية</h3>
       </div>
@@ -2391,31 +2374,29 @@ function EarthquakesView({ isOwner, isSupervisor }) {
       </div>
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[500px]">
-        {/* 💡 الفلاتر فوق الخريطة */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)</h3>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap"><MapIcon/> خريطة الرصد (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)</h3>
           
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>عالمي</button>
-              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>مصر</button>
-              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكل</button>
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            <div className="flex flex-wrap gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner w-full lg:w-auto">
+              <button onClick={() => setActiveEqTab('global')} className={`flex-1 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>زلازل عالمية</button>
+              <button onClick={() => setActiveEqTab('egypt')} className={`flex-1 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
+              <button onClick={() => setActiveEqTab('all')} className={`flex-1 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>عرض الكل</button>
             </div>
-            <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-3 py-1.5 rounded-lg font-bold">إلغاء</button>}
+            <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner w-full lg:w-auto">
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] w-full" />
+              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg font-bold transition-colors">إلغاء التاريخ</button>}
             </div>
           </div>
         </div>
 
-        {/* 💡 زوم أوت للخريطة */}
         <div className="h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
             {(activeEqTab === 'global' || activeEqTab === 'all') && filteredGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
-              if (isNaN(lat) || isNaN(lng)) return null;
+              if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
               return (
                 <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon}>
                   <Popup><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span></Popup>
@@ -2425,7 +2406,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
             
             {(activeEqTab === 'egypt' || activeEqTab === 'all') && filteredEgyptEqs.map(eq => {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
-              if (isNaN(lat) || isNaN(lng)) return null;
+              if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
               return (
                 <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon}>
                   <Popup><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span></Popup>
@@ -2438,10 +2419,9 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px]">
         <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
-          <h3 className="text-xl font-bold text-white hidden md:block">سجل بيانات الزلازل</h3>
+          <h3 className="text-xl font-bold text-white hidden md:block whitespace-nowrap">سجل بيانات الزلازل</h3>
           
-          {/* 💡 حل مشكلة الزراير المقطوعة بـ flex-wrap */}
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+          <div className="flex flex-wrap items-center gap-3 justify-end w-full">
             {activeEqTab === 'global' || activeEqTab === 'all' ? (
               <>
                 {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير العالمي</button>}
