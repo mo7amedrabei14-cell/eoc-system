@@ -15,6 +15,8 @@ const branchIcon = new L.DivIcon({
   iconAnchor: [8, 8]
 });
 
+const [customAlert, setCustomAlert] = useState(null);
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('missions');
@@ -644,7 +646,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
          // لو البصمة دي موجودة قبل كده، بنسأله: هل هو في نفس خط السير؟
          if (participantTracker[uniqueKey].includes(pItin)) {
-           alert(`⚠️ خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر!\n\nتم إدراجه أكثر من مرة في نفس خط السير (${pItin}).\nلا يمكن تكرار الشخص إلا إذا تم توزيعه على خط سير مختلف (بأوقات تحرك وعودة مختلفة).`);
+           setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر!\n\nتم إدراجه أكثر من مرة في نفس خط السير (${pItin}).\nلا يمكن تكرار الشخص إلا إذا تم توزيعه على خط سير مختلف.`);
            hasDuplicateError = true;
          } else {
            // لو مش مكرر أو في خط سير مختلف، بنسجله عادي
@@ -1312,6 +1314,24 @@ function AuditLogsView() {
           </tbody>
         </table>
       </div>
+      {/* -- تصميم التنبيه الإداري الفخم -- */}
+      {customAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4">
+              <svg className="w-7 h-7 text-[#c70000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <div className="mt-8 flex justify-end">
+              <button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-red-500/50">
+                علم، جاري التعديل
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 }
