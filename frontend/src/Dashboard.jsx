@@ -290,23 +290,31 @@ function HomeView({ branches = [] }) {
               ) : null)}
             
             {/* 💡 الخريطة الرئيسية بتعرض الزلازل كمان */}
-            {globalEqs.map(eq => {
+            {filteredGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
-                <Marker key={`hm-g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon}>
-                  <Popup><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span></Popup>
+                <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon}>
+                  <Popup>
+                    <strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong>
+                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
+                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
+                  </Popup>
                 </Marker>
               );
             })}
-            {egyptEqs.map(eq => {
+            {filteredEgyptEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
-                <Marker key={`hm-e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon}>
-                  <Popup><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span></Popup>
+                <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon}>
+                  <Popup>
+                    <strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong>
+                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
+                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
+                  </Popup>
                 </Marker>
               );
             })}
@@ -480,6 +488,7 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner }) {
   const [customAlert, setCustomAlert] = useState(null);
+  const [filterDate, setFilterDate] = useState('');
 const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [currentMissionData, setCurrentMissionData] = useState(null);
@@ -2495,6 +2504,11 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
             <button onClick={() => setActiveEqTab('global')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
             <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
+            {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors">إلغاء التاريخ</button>}
           </div>
           
           <div className="flex gap-3 shrink-0">
