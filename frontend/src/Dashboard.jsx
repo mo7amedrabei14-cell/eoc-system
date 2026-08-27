@@ -275,23 +275,36 @@ function HomeView({ branches = [] }) {
         </h3>
         <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={6} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
-            {branches.map(branch => branch.lat && branch.lng ? (
-                <Marker 
-                  key={`dash-marker-${branch.id}`} 
-                  position={[branch.lat, branch.lng]} 
-                  icon={branchIcon} 
-                  eventHandlers={{ click: () => setSelectedBranchName(prev => prev === branch.name ? null : branch.name) }}
-                >
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
+            {/* 💡 النقط بتقرأ الإحداثيات كأرقام مع الفلتر */}
+            {filteredGlobalEqs.map(eq => {
+              const lat = parseFloat(eq.latitude);
+              const lng = parseFloat(eq.longitude);
+              if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
+              return (
+                <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon}>
                   <Popup>
-                    <strong className="text-gray-800 font-bold text-sm text-center block mb-1">
-                      {branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}
-                    </strong>
-                    <span className="text-xs text-blue-600 block text-center mt-1 font-bold">انقر للفلترة أو الإلغاء</span>
+                    <strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong>
+                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
+                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
                   </Popup>
                 </Marker>
-              ) : null
-            )}
+              );
+            })}
+            {filteredEgyptEqs.map(eq => {
+              const lat = parseFloat(eq.latitude);
+              const lng = parseFloat(eq.longitude);
+              if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
+              return (
+                <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon}>
+                  <Popup>
+                    <strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong>
+                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
+                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
+                  </Popup>
+                </Marker>
+              );
+            })}
           </MapContainer>
         </div>
       </div>
@@ -2471,9 +2484,17 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px]">
         <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
-          <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-            <button onClick={() => setActiveEqTab('global')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
-            <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+            <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+              <button onClick={() => setActiveEqTab('global')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
+              <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
+            </div>
+            
+            {/* 💡 فلتر التاريخ للزلازل */}
+            <div className="flex items-center gap-2">
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
+              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors font-bold">إلغاء التاريخ</button>}
+            </div>
           </div>
           
           <div className="flex gap-3 shrink-0">
