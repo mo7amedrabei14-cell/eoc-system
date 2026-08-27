@@ -710,7 +710,7 @@ class LocalNewsModel(BaseModel):
     injured_count: int = 0
     deaths_count: int = 0
     news_updates: Optional[str] = None
-    news_link: Optional[str] = None
+    news_link: str
     data_entry_name: Optional[str] = None
     notes: Optional[str] = None
 
@@ -1014,5 +1014,135 @@ def delete_global_disaster(disaster_id: int, credentials: HTTPAuthorizationCrede
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500)
+    finally:
+        connection.close()
+
+# =====================================================================
+# قطاع الزلازل - Earthquakes Module
+# =====================================================================
+class GlobalEqModel(BaseModel):
+    date: str
+    month: Optional[str] = None
+    time: Optional[str] = None
+    country: Optional[str] = None
+    magnitude: float
+    depth_km: Optional[str] = None
+    region: Optional[str] = None
+    status: Optional[str] = None
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+
+class EgyptEqModel(BaseModel):
+    date: str
+    time: Optional[str] = None
+    magnitude: float
+    depth_km: Optional[str] = None
+    region: Optional[str] = None
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+
+@app.get("/api/earthquakes/global")
+def get_global_eqs(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not get_current_user_id(credentials.credentials): raise HTTPException(401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM global_earthquakes ORDER BY date DESC, time DESC;")
+            cols = [desc[0] for desc in cursor.description]
+            return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    finally:
+        connection.close()
+
+@app.post("/api/earthquakes/global/bulk")
+def add_global_eqs_bulk(eqs: List[GlobalEqModel], credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id: raise HTTPException(401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            for eq in eqs:
+                cursor.execute("""
+                    INSERT INTO global_earthquakes (date, month, time, country, magnitude, depth_km, region, status, longitude, latitude)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude))
+            try: create_audit_log(cursor, user_id, "رفع سجل زلازل", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"قام برفع ملف زلازل عالمية يحتوي على {len(eqs)} سجل"})
+            except Exception: pass
+            connection.commit()
+            return {"message": f"تم إضافة {len(eqs)} زلزال بنجاح"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(500, str(e))
+
+@app.post("/api/earthquakes/global")
+def add_global_eq(eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id: raise HTTPException(401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO global_earthquakes (date, month, time, country, magnitude, depth_km, region, status, longitude, latitude)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude))
+            try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})
+            except Exception: pass
+            connection.commit()
+            return {"message": "تم الإضافة"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(500, str(e))
+
+@app.delete("/api/earthquakes/global/{eq_id}")
+def delete_global_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not get_current_user_id(credentials.credentials): raise HTTPException(401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM global_earthquakes WHERE eq_id = %s", (eq_id,))
+            connection.commit()
+            return {"message": "تم الحذف"}
+    finally:
+        connection.close()
+
+@app.get("/api/earthquakes/egypt")
+def get_egypt_eqs(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not get_current_user_id(credentials.credentials): raise HTTPException(401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM egypt_earthquakes ORDER BY date DESC, time DESC;")
+            cols = [desc[0] for desc in cursor.description]
+            return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    finally:
+        connection.close()
+
+@app.post("/api/earthquakes/egypt")
+def add_egypt_eq(eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id: raise HTTPException(401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO egypt_earthquakes (date, time, magnitude, depth_km, region, longitude, latitude)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (eq.date, eq.time, eq.magnitude, eq.depth_km, eq.region, eq.longitude, eq.latitude))
+            try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})
+            except Exception: pass
+            connection.commit()
+            return {"message": "تم الإضافة"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(500, str(e))
+
+@app.delete("/api/earthquakes/egypt/{eq_id}")
+def delete_egypt_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not get_current_user_id(credentials.credentials): raise HTTPException(401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM egypt_earthquakes WHERE eq_id = %s", (eq_id,))
+            connection.commit()
+            return {"message": "تم الحذف"}
     finally:
         connection.close()

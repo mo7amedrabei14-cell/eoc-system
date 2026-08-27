@@ -141,6 +141,7 @@ export default function Dashboard() {
             {/* 🆕 تاب الأخبار المحلية الجديد */}
             <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} />
             <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} />
+            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => setActiveTab('earthquakes')} />
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} />}
             {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام (للمالك فقط)" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} />}
           </nav>
@@ -1484,6 +1485,7 @@ function AuditLogsView() {
       if (entityFilter === 'mission') fileName = 'سجل_لوج_المهام_فقط.xlsx';
       if (entityFilter === 'local_news') fileName = 'سجل_لوج_الأخبار_المحلية.xlsx';
       if (entityFilter === 'global_disaster') fileName = 'سجل_لوج_الكوارث_العالمية.xlsx';
+      if (entityFilter === 'earthquake') fileName = 'سجل_لوج_الزلازل.xlsx';
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
@@ -1510,6 +1512,7 @@ function AuditLogsView() {
             <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>المهام</button>
             <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>الأخبار المحلية</button>
             <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكوارث العالمية</button>
+            <button onClick={() => setEntityFilter('earthquake')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'earthquake' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل</button>
           </div>
 
           <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-full md:w-48" />
@@ -1544,6 +1547,7 @@ function AuditLogsView() {
                   {log.entity_type === 'mission' ? <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/30">المهام</span> : 
                    log.entity_type === 'local_news' ? <span className="bg-[#c70000]/20 text-[#c70000] px-2 py-1 rounded text-xs border border-[#c70000]/30">الأخبار المحلية</span> : 
                    log.entity_type === 'global_disaster' ? <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs border border-orange-500/30">الكوارث العالمية</span> : 
+                   log.entity_type === 'earthquake' ? <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs border border-purple-500/30">الزلازل</span> :
                    <span className="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs border border-gray-500/30">نظام</span>}
                 </td>
                 <td className="p-4 font-bold text-white border-l border-white/5">{log.full_name}</td>
@@ -1561,6 +1565,7 @@ function AuditLogsView() {
 const ShieldIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 const NewsIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>;
 const GlobalWorldIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const EarthquakeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12h4l3-9 5 18 3-9h3" /></svg>;
 // ==========================================
 // 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
 // ==========================================
@@ -1653,6 +1658,8 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   };
 
   const handleSubmit = async () => {
+    // 💡 التحقق الصارم من لينك الخبر المحلي
+    if (!nd.news_link || nd.news_link.trim() === '') return setCustomAlert("عفواً، رابط الخبر (لينك الخبر) إلزامي ولا يمكن تسجيل الخبر بدونه لتأكيد المصداقية!");
     if (!nd.incident_date) return setCustomAlert("عفواً، يجب إدخال تاريخ الحادث.");
     if (!nd.incident_description) return setCustomAlert("عفواً، برجاء إدخال وصف الحادث لتوثيقه.");
     if (!nd.news_type) return setCustomAlert("عفواً، يجب تحديد نوع الخبر من القائمة.");
@@ -1920,7 +1927,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormGroup label="تطورات الخبر"><textarea value={nd.news_updates} onChange={e => setNd({...nd, news_updates: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
                   <FormGroup label="ملاحظات عامة"><textarea value={nd.notes} onChange={e => setNd({...nd, notes: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
-                  <div className="md:col-span-2"><FormGroup label="لينك الخبر (URL)"><StyledInput value={nd.news_link} onChange={e => setNd({...nd, news_link: e.target.value})} placeholder="https://..." dir="ltr" className="text-left" /></FormGroup></div>
+                  <div className="md:col-span-2"><FormGroup label="لينك الخبر (إلزامي)*"><StyledInput value={nd.news_link} onChange={e => setNd({...nd, news_link: e.target.value})} placeholder="https://..." dir="ltr" className="text-left border-blue-500/50 focus:border-blue-500 bg-blue-500/5" required /></FormGroup></div>
                 </div>
               </SectionCard>
 
@@ -2027,27 +2034,51 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
     ? disasters.filter(d => d.incident_date === filterDate) 
     : disasters;
 
+  // 💡 التصدير الشامل للجدول بالترتيب المطلوب
   const handleExportExcel = () => {
     if (filteredDisasters.length === 0) return setCustomAlert("لا توجد كوارث للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredDisasters.map(d => ({
-      "التاريخ": d.incident_date || '', "الشهر": d.incident_month || '', "الخبر": d.news_title || '',
-      "الدولة": d.country || '', "نوع الكارثة": d.disaster_type || '', "المناطق المتأثرة من الكارثة": d.affected_areas || '',
-      "المناطق المتوقعة الخطر": d.at_risk_areas || '', "المصدر": d.source_name || '', "عدد المصابين": d.injured_count || 0,
-      "عدد الوفيات": d.deaths_count || 0, "عدد المفقودين": d.missing_count || 0, "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
-      "لينك الخبر": d.news_link || '', "تطورات الخبر": d.news_updates || '', "اسم مدخل الخبر": d.data_entry_name || '', "ملاحظات": d.notes || ''
+      "التاريخ": d.incident_date || '',
+      "الشهر": d.incident_month || '',
+      "الخبر": d.news_title || '',
+      "الدولة": d.country || '',
+      "نوع الكارثة": d.disaster_type || '',
+      "المناطق المتأثرة من الكارثة": d.affected_areas || '',
+      "المناطق المتوقعة الخطر": d.at_risk_areas || '',
+      "المصدر": d.source_name || '',
+      "عدد المصابين": d.injured_count || 0,
+      "عدد الوفيات": d.deaths_count || 0,
+      "عدد المفقودين": d.missing_count || 0,
+      "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
+      "لينك الخبر": d.news_link || '',
+      "تطورات الخبر": d.news_updates || '',
+      "اسم مدخل الخبر": d.data_entry_name || '',
+      "ملاحظات": d.notes || ''
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "الكوارث العالمية");
     XLSX.writeFile(wb, filterDate ? `سجل_الكوارث_العالمية_${filterDate}.xlsx` : `سجل_الكوارث_العالمية.xlsx`);
   };
 
+  // 💡 تصدير الخبر الفردي بنفس الترتيب
   const handleExportSingleExcel = () => {
     const ws = XLSX.utils.json_to_sheet([{
-      "التاريخ": gd.incident_date || '', "الشهر": gd.incident_month || '', "الخبر": gd.news_title || '',
-      "الدولة": gd.country || '', "نوع الكارثة": gd.disaster_type || '', "المناطق المتأثرة من الكارثة": gd.affected_areas || '',
-      "المناطق المتوقعة الخطر": gd.at_risk_areas || '', "المصدر": gd.source_name || '', "عدد المصابين": gd.injured_count || 0,
-      "عدد الوفيات": gd.deaths_count || 0, "عدد المفقودين": gd.missing_count || 0, "تدخلات الجمعيات الوطنية": gd.national_societies_interventions || '',
-      "لينك الخبر": gd.news_link || '', "تطورات الخبر": gd.news_updates || '', "اسم مدخل الخبر": gd.data_entry_name || '', "ملاحظات": gd.notes || ''
+      "التاريخ": gd.incident_date || '',
+      "الشهر": gd.incident_month || '',
+      "الخبر": gd.news_title || '',
+      "الدولة": gd.country || '',
+      "نوع الكارثة": gd.disaster_type || '',
+      "المناطق المتأثرة من الكارثة": gd.affected_areas || '',
+      "المناطق المتوقعة الخطر": gd.at_risk_areas || '',
+      "المصدر": gd.source_name || '',
+      "عدد المصابين": gd.injured_count || 0,
+      "عدد الوفيات": gd.deaths_count || 0,
+      "عدد المفقودين": gd.missing_count || 0,
+      "تدخلات الجمعيات الوطنية": gd.national_societies_interventions || '',
+      "لينك الخبر": gd.news_link || '',
+      "تطورات الخبر": gd.news_updates || '',
+      "اسم مدخل الخبر": gd.data_entry_name || '',
+      "ملاحظات": gd.notes || ''
     }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الكارثة");
@@ -2207,6 +2238,362 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
             <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4"><AlertIcon /><h3 className="text-xl font-bold text-white">تنبيه النظام</h3></div>
             <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
             <div className="mt-8 flex justify-end"><button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg">علم، جاري التعديل</button></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// 8. شاشة مركز رصد الزلازل (Earthquakes)
+// ==========================================
+const globalEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #ef4444; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px #ef4444;"></div>`, iconSize: [14, 14] });
+const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [16, 16] });
+
+function EarthquakesView({ isOwner, isSupervisor }) {
+  const [activeEqTab, setActiveEqTab] = useState('global'); 
+  const [globalEqs, setGlobalEqs] = useState([]);
+  const [egyptEqs, setEgyptEqs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [customAlert, setCustomAlert] = useState(null);
+
+  const [isGlobalModalOpen, setIsGlobalModalOpen] = useState(false);
+  const [isEgyptModalOpen, setIsEgyptModalOpen] = useState(false);
+
+  const COUNTRIES_LIST = ['أفغانستان','ألبانيا','الجزائر','أندورا','أنغولا','أنتيغوا وبربودا','الأرجنتين','أرمينيا','أستراليا','النمسا','أذربيجان','جزر البهاما','البحرين','بنغلاديش','باربادوس','بيلاروسيا','بلجيكا','بليز','بنين','بوتان','بوليفيا','البوسنة والهرسك','بوتسوانا','البرازيل','بروناي','بلغاريا','بوركينا فاسو','بوروندي','الرأس الأخضر','كمبوديا','الكاميرون','كندا','جمهورية إفريقيا الوسطى','تشاد','تشيلي','الصين','كولومبيا','جزر القمر','جمهورية الكونغو الديمقراطية','كوستاريكا','كرواتيا','كوبا','قبرص','التشيك','الدنمارك','جيبوتي','دومينيكا','جمهورية الدومينيكان','الإكوادور','مصر','السلفادور','غينيا الاستوائية','إريتريا','إستونيا','إسواتيني','إثيوبيا','فيجي','فنلندا','فرنسا','الغابون','غامبيا','جورجيا','ألمانيا','غانا','اليونان','غرينادا','غواتيمالا','غينيا','غينيا بيساو','غيانا','هايتي','هندوراس','المجر','آيسلندا','الهند','إندونيسيا','إيران','العراق','أيرلندا','إسرائيل','إيطاليا','ساحل العاج','جامايكا','اليابان','الأردن','كازاخستان','كينيا','كيريباتي','الكويت','قيرغيزستان','لاوس','لاتفيا','لبنان','ليسوتو','ليبيريا','ليبيا','ليختنشتاين','ليتوانيا','لوكسمبورغ','مدغشقر','ملاوي','ماليزيا','جزر المالديف','مالي','مالطا','جزر مارشال','موريتانيا','موريشيوس','المكسيك','ميكرونيزيا','مولدوفا','موناكو','منغوليا','الجبل الأسود','المغرب','موزمبيق','ميانمار','ناميبيا','ناورو','نيبال','هولندا','نيوزيلندا','نيكاراغوا','النيجر','نيجيريا','كوريا الشمالية','مقدونيا الشمالية','النرويج','عمان','باكستان','بالاو','فلسطين','بنما','بابوا غينيا الجديدة','باراغواي','بيرو','الفلبين','بولندا','البرتغال','قطر','رومانيا','روسيا','رواندا','سانت كيتس ونيفيس','سانت لوسيا','سانت فنسنت وجزر غرينادين','ساموا','سان مارينو','ساو تومي وبرينسيب','السعودية','السنغال','صربيا','سيشيل','سيراليون','سنغافورة','سلوفاكيا','سلوفينيا','جزر سليمان','الصومال','جنوب إفريقيا','كوريا الجنوبية','جنوب السودان','إسبانيا','سريلانكا','السودان','سورينام','السويد','سويسرا','سوريا','طاجيكستان','تنزانيا','تايلاند','تيمور الشرقية','توغو','تونغا','ترينيداد وتوباغو','تونس','تركيا','تركمانستان','توفالو','أوغندا','أوكرانيا','الإمارات العربية المتحدة','المملكة المتحدة البريطانية','الولايات المتحدة الأمريكية','أوروغواي','أوزبكستان','فانواتو','فنزويلا','فيتنام','اليمن','زامبيا','زيمبابوي','تايوان','المحيط الهادي','المحيط الاطلسي','المحيط الهندي','القطب الجنوبي','جزيرة','البحر الكاريبي','البحر الابيض المتوسط','جبال الهند','جزيرة جوام','جزيرة سايمن','مونتيجرو','ولايات مايكرونزيا المتحدة','غرينلاند','جزر كايمان','جبل طارق','بورتوريكو','غوادلوب','جزر المارتينيك','أنغويلا','البحر الاحمر','مضيق بحري','القطب الشمالي','مايوت','شبه جزيرة بوثيا','البحر الأيوني','جزيرة بوفيه','الخليج الفارسي','البحر الأدرياتيكي','بحر الشمال','البحر الميت','خليج البنغال','بحر آرافورا','بحر قزوين','بحر العرب','بحر إيجة','البحر التيراني','جبال البرانس','جزر مارياس','بحر سكوشيا','جبال لومونوسوف','البحر الأسود','المحيط المتجمد الشمالي','بحر سولو','بحر لاكاديفي','ولاية وايومنغ','بحيرة تنجانيقا','مضيق هرمز','أنتاركتيكا','بربادوس','كاليدونيا الجديدة','جزر بيتكيرن','برمودا','هنغاريا','جيرسي','جواتيمالا'];
+  
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
+
+  const [gForm, setGForm] = useState({ date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
+  const [eForm, setEForm] = useState({ date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
+
+  const fetchEarthquakes = async () => {
+    setIsLoading(true);
+    const token = localStorage.getItem('access_token');
+    try {
+      const resG = await fetch('https://eoc-system.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (resG.ok) setGlobalEqs(await resG.json());
+      const resE = await fetch('https://eoc-system.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (resE.ok) setEgyptEqs(await resE.json());
+    } catch (err) {} finally { setIsLoading(false); }
+  };
+
+  useEffect(() => { fetchEarthquakes(); }, []);
+
+  // 💡 رفع شيت EMSC وتحويله أوتوماتيك لزلازل
+  const handleCSVUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target.result;
+      const rows = text.split('\n').filter(r => r.trim() !== '');
+      const parsedData = [];
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].split(';');
+        if (cols.length >= 8) {
+          const mag = parseFloat(cols[7]);
+          if (isNaN(mag)) continue;
+          const status = mag >= 5.1 ? 'زلزال' : 'هزة أرضية';
+          const regionName = cols[4];
+          let countryName = regionName.split(',').pop().trim();
+          
+          parsedData.push({
+            date: cols[0], month: getMonthName(cols[0]), time: cols[1],
+            country: countryName, magnitude: mag, depth_km: cols[5] + ' KM',
+            region: regionName, status: status, longitude: parseFloat(cols[3]), latitude: parseFloat(cols[2])
+          });
+        }
+      }
+      
+      if (parsedData.length > 0) {
+        setIsLoading(true);
+        const token = localStorage.getItem('access_token');
+        const res = await fetch('https://eoc-system.vercel.app/api/earthquakes/global/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(parsedData)
+        });
+        if (res.ok) {
+           setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`);
+           fetchEarthquakes();
+        } else {
+           setCustomAlert("حدث خطأ أثناء رفع الشيت للسيرفر.");
+           setIsLoading(false);
+        }
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  const handleGlobalSubmit = async () => {
+    if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
+    if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
+    
+    const mag = parseFloat(gForm.magnitude);
+    const payload = {
+      ...gForm,
+      magnitude: mag,
+      status: mag >= 5.1 ? 'زلزال' : 'هزة أرضية',
+      month: getMonthName(gForm.date),
+      depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM',
+      longitude: parseFloat(gForm.longitude) || null,
+      latitude: parseFloat(gForm.latitude) || null
+    };
+
+    const token = localStorage.getItem('access_token');
+    const res = await fetch('https://eoc-system.vercel.app/api/earthquakes/global', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload)
+    });
+    if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); }
+  };
+
+  const handleEgyptSubmit = async () => {
+    if (!eForm.date) return setCustomAlert("التاريخ مطلوب");
+    if (!eForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
+    
+    const payload = {
+      ...eForm,
+      magnitude: parseFloat(eForm.magnitude),
+      depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM',
+      longitude: parseFloat(eForm.longitude) || null,
+      latitude: parseFloat(eForm.latitude) || null
+    };
+
+    const token = localStorage.getItem('access_token');
+    const res = await fetch('https://eoc-system.vercel.app/api/earthquakes/egypt', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload)
+    });
+    if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); }
+  };
+
+  const deleteGlobalEq = async (id) => {
+    const token = localStorage.getItem('access_token');
+    await fetch(`https://eoc-system.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    fetchEarthquakes();
+  };
+
+  const deleteEgyptEq = async (id) => {
+    const token = localStorage.getItem('access_token');
+    await fetch(`https://eoc-system.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    fetchEarthquakes();
+  };
+
+  // 💡 تصدير الزلازل العالمية
+  const handleExportGlobalEqs = () => {
+    if (globalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير.");
+    const ws = XLSX.utils.json_to_sheet(globalEqs.map(eq => ({
+      "التاريخ": eq.date || '',
+      "الشهر": eq.month || '',
+      "الدولة": eq.country || '',
+      "القوة بالريختر": eq.magnitude || '',
+      "التوقيت": eq.time || '',
+      "العمق": eq.depth_km || 'KM',
+      "المنطقة": eq.region || '',
+      "الحالة": eq.status || '',
+      "longitude": eq.longitude || '',
+      "Latitude": eq.latitude || ''
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية");
+    XLSX.writeFile(wb, `سجل_الزلازل_العالمية.xlsx`);
+  };
+
+  // 💡 تصدير زلازل مصر
+  const handleExportEgyptEqs = () => {
+    if (egyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير.");
+    const ws = XLSX.utils.json_to_sheet(egyptEqs.map(eq => ({
+      "التاريخ": eq.date || '',
+      "وقت الزلزال": eq.time || '',
+      "العمق": eq.depth_km || 'KM',
+      "القوة بالريختر": eq.magnitude || '',
+      "المنطقة": eq.region || '',
+      "longitude": eq.longitude || '',
+      "Latitude": eq.latitude || ''
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر");
+    XLSX.writeFile(wb, `سجل_زلازل_مصر.xlsx`);
+  };
+
+  // إحصائيات علوية
+  const globalEqsToday = globalEqs.filter(e => e.date === getLocalDate()).length;
+  const uniqueCountriesCount = [...new Set(globalEqs.map(e => e.country))].filter(Boolean).length;
+  const maxMagnitude = Math.max(...globalEqs.map(e => e.magnitude), ...egyptEqs.map(e => e.magnitude), 0);
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
+        <StatCard title="إجمالي الزلازل العالمية (اليوم)" value={globalEqsToday} color="text-red-500" borderHighlight />
+        <StatCard title="الدول المرصودة" value={uniqueCountriesCount} color="text-orange-400" />
+        <StatCard title="إجمالي زلازل مصر" value={egyptEqs.length} color="text-green-500" />
+        <StatCard title="أقوى زلزال مسجل" value={`${maxMagnitude} ريختر`} color="text-yellow-500" />
+      </div>
+
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[450px]">
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><MapIcon/> خريطة الرصد الزلزالي (<span className="text-red-500">عالمي</span> / <span className="text-green-500">مصر</span>)</h3>
+        <div className="h-[350px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
+          <MapContainer center={[26.8206, 30.8025]} zoom={4} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
+            {globalEqs.map(eq => eq.latitude && eq.longitude ? (
+              <Marker key={`g-${eq.eq_id}`} position={[eq.latitude, eq.longitude]} icon={globalEqIcon}>
+                <Popup><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر</strong><span className="text-xs text-gray-800 text-center block">{eq.region}</span></Popup>
+              </Marker>
+            ) : null)}
+            {egyptEqs.map(eq => eq.latitude && eq.longitude ? (
+              <Marker key={`e-${eq.eq_id}`} position={[eq.latitude, eq.longitude]} icon={egyptEqIcon}>
+                <Popup><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر</strong><span className="text-xs text-gray-800 text-center block">{eq.region} (مصر)</span></Popup>
+              </Marker>
+            ) : null)}
+          </MapContainer>
+        </div>
+      </div>
+
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px]">
+        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+          <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+            <button onClick={() => setActiveEqTab('global')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
+            <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
+          </div>
+          <div className="flex gap-3 shrink-0">
+            {activeEqTab === 'global' ? (
+              <>
+                {(isOwner || isSupervisor) && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
+                <label className="bg-[#1a1a1a] text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] cursor-pointer">
+                  <ExcelIcon/> استيراد شيت EMSC
+                  <input type="file" accept=".csv" className="hidden" onChange={handleCSVUpload} />
+                </label>
+                <button onClick={() => { setGForm({ date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsGlobalModalOpen(true); }} className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-bold">+ رصد عالمي</button>
+              </>
+            ) : (
+              <>
+                {(isOwner || isSupervisor) && <button onClick={handleExportEgyptEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
+                <button onClick={() => { setEForm({ date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsEgyptModalOpen(true); }} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-sm font-bold">+ رصد زلزال مصر</button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto custom-scrollbar relative">
+          {activeEqTab === 'global' ? (
+            <table className="w-full text-right whitespace-nowrap text-sm">
+              <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+                <tr>
+                  <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
+                  <th className="p-4 font-semibold border-l border-white/5">الدولة</th>
+                  <th className="p-4 font-semibold border-l border-white/5 text-red-500">القوة (ريختر)</th>
+                  <th className="p-4 font-semibold border-l border-white/5">العمق</th>
+                  <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة</th>
+                  <th className="p-4 font-semibold border-l border-white/5 text-center">الحالة</th>
+                  <th className="p-4 font-semibold border-l border-white/5 text-center">حذف</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+                 globalEqs.map(eq => (
+                  <tr key={eq.eq_id} className="hover:bg-white/5">
+                    <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
+                    <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{eq.country}</td>
+                    <td className="p-4 text-red-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
+                    <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
+                    <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
+                    <td className="p-4 border-l border-white/5 text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{eq.status}</span></td>
+                    <td className="p-4 text-center border-l border-white/5">
+                      {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-right whitespace-nowrap text-sm">
+              <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+                <tr>
+                  <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
+                  <th className="p-4 font-semibold border-l border-white/5 text-green-500">القوة (ريختر)</th>
+                  <th className="p-4 font-semibold border-l border-white/5">العمق</th>
+                  <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة (مصر)</th>
+                  <th className="p-4 font-semibold border-l border-white/5">الإحداثيات</th>
+                  <th className="p-4 font-semibold border-l border-white/5 text-center">حذف</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+                 egyptEqs.map(eq => (
+                  <tr key={eq.eq_id} className="hover:bg-white/5">
+                    <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
+                    <td className="p-4 text-green-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
+                    <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
+                    <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
+                    <td className="p-4 text-gray-500 border-l border-white/5 font-mono text-xs">{eq.latitude}, {eq.longitude}</td>
+                    <td className="p-4 text-center border-l border-white/5">
+                      {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {isGlobalModalOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-[#050505] border border-red-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> رصد زلزال عالمي (يدوي)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <FormGroup label="التاريخ"><StyledInput type="date" value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} /></FormGroup>
+              <FormGroup label="التوقيت"><StyledInput type="time" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
+              <FormGroup label="الدولة">
+                <StyledSelect value={gForm.country} onChange={e => setGForm({...gForm, country: e.target.value})}>
+                  <option value="" disabled>اختر الدولة...</option>
+                  {COUNTRIES_LIST.map(c => <option key={c} value={c}>{c}</option>)}
+                </StyledSelect>
+              </FormGroup>
+              <FormGroup label="المنطقة"><StyledInput value={gForm.region} onChange={e => setGForm({...gForm, region: e.target.value})} /></FormGroup>
+              <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={gForm.magnitude} onChange={e => setGForm({...gForm, magnitude: e.target.value})} className="border-red-500/50" /></FormGroup>
+              <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={gForm.depth_km} onChange={e => setGForm({...gForm, depth_km: e.target.value})} /></FormGroup>
+              <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={gForm.latitude} onChange={e => setGForm({...gForm, latitude: e.target.value})} /></FormGroup>
+              <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={gForm.longitude} onChange={e => setGForm({...gForm, longitude: e.target.value})} /></FormGroup>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setIsGlobalModalOpen(false)} className="px-6 py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
+              <button onClick={handleGlobalSubmit} className="px-6 py-2 rounded-xl text-white bg-red-600 font-bold">حفظ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isEgyptModalOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-[#050505] border border-green-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> رصد زلزال محلي (مصر)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <FormGroup label="التاريخ"><StyledInput type="date" value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} /></FormGroup>
+              <FormGroup label="التوقيت"><StyledInput type="time" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
+              <FormGroup label="المنطقة داخل مصر"><StyledInput value={eForm.region} onChange={e => setEForm({...eForm, region: e.target.value})} /></FormGroup>
+              <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={eForm.magnitude} onChange={e => setEForm({...eForm, magnitude: e.target.value})} className="border-green-500/50" /></FormGroup>
+              <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={eForm.depth_km} onChange={e => setEForm({...eForm, depth_km: e.target.value})} /></FormGroup>
+              <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={eForm.latitude} onChange={e => setEForm({...eForm, latitude: e.target.value})} /></FormGroup>
+              <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={eForm.longitude} onChange={e => setEForm({...eForm, longitude: e.target.value})} /></FormGroup>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setIsEgyptModalOpen(false)} className="px-6 py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
+              <button onClick={handleEgyptSubmit} className="px-6 py-2 rounded-xl text-white bg-green-600 font-bold">حفظ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {customAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] text-center">
+            <h3 className="text-xl font-bold text-white mb-4">تنبيه</h3>
+            <p className="text-gray-300 mb-6">{customAlert}</p>
+            <button onClick={() => setCustomAlert(null)} className="bg-[#c70000] px-6 py-2 rounded-xl text-white font-bold">حسناً</button>
           </div>
         </div>
       )}
