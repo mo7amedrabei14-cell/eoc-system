@@ -551,7 +551,7 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
         connection.close()
 
 @app.get("/api/audit-logs")
-def get_audit_logs(skip: int = 0, limit: int = 100, credentials: HTTPAuthorizationCredentials = Depends(security)):
+def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
