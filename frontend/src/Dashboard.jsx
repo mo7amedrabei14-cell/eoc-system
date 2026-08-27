@@ -122,17 +122,15 @@ export default function Dashboard() {
                 <div className="absolute inset-0 bg-[#c70000] rounded-full blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
                 {/* اللوجو نفسه */}
-                <div className="relative bg-white rounded-full p-2 border-2 border-white/20 shadow-[0_0_25px_rgba(199,0,0,0.4)] flex items-center justify-center transition-transform duration-300 hover:scale-105">
-                  <svg viewBox="0 0 100 100" className="w-14 h-14 drop-shadow-md">
-                    {/* الإطار الدائري الأحمر الخارجي */}
-                    <circle cx="50" cy="50" r="48" fill="none" stroke="#c70000" strokeWidth="4" />
-                    
-                    {/* الهلال الأحمر - كود مثالي لا يختفي أبداً */}
-                    <path d="M 80 20 A 40 40 0 1 0 80 80 A 32 32 0 1 1 80 20 Z" fill="#c70000" />
-                    
-                    {/* النقطة المركزية لغرفة العمليات (مضبوطة داخل تجويف الهلال) */}
-                    <circle cx="58" cy="50" r="5" fill="#111" />
-                    <circle cx="58" cy="50" r="3" fill="#c70000" className="animate-pulse" />
+                <div className="relative group cursor-pointer">
+                {/* تأثير الإضاءة الحمراء خلف اللوجو */}
+                <div className="absolute inset-0 bg-[#c70000] rounded-full blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* الدائرة البيضاء وبداخلها الهلال الصافي */}
+                <div className="relative bg-white rounded-full w-20 h-20 shadow-[0_0_25px_rgba(199,0,0,0.4)] flex items-center justify-center transition-transform duration-300 hover:scale-105 p-3">
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm">
+                    {/* هلال أحمر كلاسيكي صافي */}
+                    <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" />
                   </svg>
                 </div>
               </div>
