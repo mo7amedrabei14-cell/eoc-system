@@ -102,6 +102,7 @@ export default function Dashboard() {
       case 'home': return <HomeView branches={branchesList} />;
       case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
+      case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
       case 'audit': return <AuditLogsView />;
       default: return <HomeView stats={dashboardStats} />;
@@ -139,6 +140,7 @@ export default function Dashboard() {
             <NavItem icon={<AlertIcon />} label="سجل المهام اليومية" isActive={activeTab === 'missions'} onClick={() => setActiveTab('missions')} />
             {/* 🆕 تاب الأخبار المحلية الجديد */}
             <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} />
+            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} />
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} />}
             {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام (للمالك فقط)" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} />}
           </nav>
@@ -1539,6 +1541,7 @@ function AuditLogsView() {
 
 const ShieldIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 const NewsIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>;
+const GlobalWorldIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 // ==========================================
 // 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
 // ==========================================
@@ -1927,6 +1930,242 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
                 علم، جاري التعديل
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// 7. شاشة الكوارث العالمية (Global Disasters)
+// ==========================================
+function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
+  const [disasters, setDisasters] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [disasterToDelete, setDisasterToDelete] = useState(null);
+  const [customAlert, setCustomAlert] = useState(null);
+
+  const COUNTRIES_LIST = ['أفغانستان','ألبانيا','الجزائر','أندورا','أنغولا','أنتيغوا وبربودا','الأرجنتين','أرمينيا','أستراليا','النمسا','أذربيجان','جزر البهاما','البحرين','بنغلاديش','باربادوس','بيلاروسيا','بلجيكا','بليز','بنين','بوتان','بوليفيا','البوسنة والهرسك','بوتسوانا','البرازيل','بروناي','بلغاريا','بوركينا فاسو','بوروندي','الرأس الأخضر','كمبوديا','الكاميرون','كندا','جمهورية إفريقيا الوسطى','تشاد','تشيلي','الصين','كولومبيا','جزر القمر','جمهورية الكونغو الديمقراطية','كوستاريكا','كرواتيا','كوبا','قبرص','التشيك','الدنمارك','جيبوتي','دومينيكا','جمهورية الدومينيكان','الإكوادور','مصر','السلفادور','غينيا الاستوائية','إريتريا','إستونيا','إسواتيني','إثيوبيا','فيجي','فنلندا','فرنسا','الغابون','غامبيا','جورجيا','ألمانيا','غانا','اليونان','غرينادا','غواتيمالا','غينيا','غينيا بيساو','غيانا','هايتي','هندوراس','المجر','آيسلندا','الهند','إندونيسيا','إيران','العراق','أيرلندا','إسرائيل','إيطاليا','ساحل العاج','جامايكا','اليابان','الأردن','كازاخستان','كينيا','كيريباتي','الكويت','قيرغيزستان','لاوس','لاتفيا','لبنان','ليسوتو','ليبيريا','ليبيا','ليختنشتاين','ليتوانيا','لوكسمبورغ','مدغشقر','ملاوي','ماليزيا','جزر المالديف','مالي','مالطا','جزر مارشال','موريتانيا','موريشيوس','المكسيك','ميكرونيزيا','مولدوفا','موناكو','منغوليا','الجبل الأسود','المغرب','موزمبيق','ميانمار','ناميبيا','ناورو','نيبال','هولندا','نيوزيلندا','نيكاراغوا','النيجر','نيجيريا','كوريا الشمالية','مقدونيا الشمالية','النرويج','عمان','باكستان','بالاو','فلسطين','بنما','بابوا غينيا الجديدة','باراغواي','بيرو','الفلبين','بولندا','البرتغال','قطر','رومانيا','روسيا','رواندا','سانت كيتس ونيفيس','سانت لوسيا','سانت فنسنت وجزر غرينادين','ساموا','سان مارينو','ساو تومي وبرينسيب','السعودية','السنغال','صربيا','سيشيل','سيراليون','سنغافورة','سلوفاكيا','سلوفينيا','جزر سليمان','الصومال','جنوب إفريقيا','كوريا الجنوبية','جنوب السودان','إسبانيا','سريلانكا','السودان','سورينام','السويد','سويسرا','سوريا','طاجيكستان','تنزانيا','تايلاند','تيمور الشرقية','توغو','تونغا','ترينيداد وتوباغو','تونس','تركيا','تركمانستان','توفالو','أوغندا','أوكرانيا','الإمارات العربية المتحدة','المملكة المتحدة البريطانية','الولايات المتحدة الأمريكية','أوروغواي','أوزبكستان','فانواتو','فنزويلا','فيتنام','اليمن','زامبيا','زيمبابوي','تايوان','المحيط الهادي','المحيط الاطلسي','المحيط الهندي','القطب الجنوبي','جزيرة','البحر الكاريبي','البحر الابيض المتوسط','جبال الهند','جزيرة جوام','جزيرة سايمن','مونتيجرو','ولايات مايكرونزيا المتحدة','غرينلاند','جزر كايمان','جبل طارق','بورتوريكو','غوادلوب','جزر المارتينيك','أنغويلا','البحر الاحمر','مضيق بحري','القطب الشمالي','مايوت','شبه جزيرة بوثيا','البحر الأيوني','جزيرة بوفيه','الخليج الفارسي','البحر الأدرياتيكي','بحر الشمال','البحر الميت','خليج البنغال','بحر آرافورا','بحر قزوين','بحر العرب','بحر إيجة','البحر التيراني','جبال البرانس','جزر مارياس','بحر سكوشيا','جبال لومونوسوف','البحر الأسود','المحيط المتجمد الشمالي','بحر سولو','بحر لاكاديفي','ولاية وايومنغ','بحيرة تنجانيقا','مضيق هرمز','أنتاركتيكا','بربادوس','كاليدونيا الجديدة','جزر بيتكيرن','برمودا','هنغاريا','جيرسي','جواتيمالا'];
+  const DISASTER_TYPES = ['انفجار','زلزال','هزة أرضية','بركان','اعصار','حرائق غابات','صعق كهربائي','سيول','عاصفة','فيضان','وباء'];
+
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
+
+  const [gd, setGd] = useState({
+    disaster_id: null, incident_date: getLocalDate(), incident_month: '', news_title: '', country: '', disaster_type: '', affected_areas: '', at_risk_areas: '', source_name: '', injured_count: 0, deaths_count: 0, missing_count: 0, national_societies_interventions: '', news_link: '', news_updates: '', data_entry_name: '', notes: ''
+  });
+
+  const fetchDisasters = async () => {
+    setIsLoading(true);
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch('https://eoc-system.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) setDisasters(await res.json());
+    } catch (err) {} finally { setIsLoading(false); }
+  };
+
+  useEffect(() => { fetchDisasters(); }, []);
+
+  const handleCreateNew = () => {
+    setGd({ disaster_id: null, incident_date: getLocalDate(), incident_month: '', news_title: '', country: '', disaster_type: '', affected_areas: '', at_risk_areas: '', source_name: '', injured_count: 0, deaths_count: 0, missing_count: 0, national_societies_interventions: '', news_link: '', news_updates: '', data_entry_name: '', notes: '' });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (d) => { setGd({...d}); setIsModalOpen(true); };
+
+  const confirmDelete = async () => {
+    if (!disasterToDelete) return;
+    const token = localStorage.getItem('access_token');
+    await fetch(`https://eoc-system.vercel.app/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    setDisasterToDelete(null); fetchDisasters();
+  };
+
+  const handleSubmit = async () => {
+    if (!gd.news_link || gd.news_link.trim() === '') return setCustomAlert("عفواً، رابط الخبر (لينك الخبر) إلزامي ولا يمكن تسجيل الكارثة بدونه لتأكيد المصداقية!");
+    if (!gd.incident_date) return setCustomAlert("عفواً، يجب إدخال التاريخ.");
+    if (!gd.country) return setCustomAlert("عفواً، يجب تحديد الدولة/المكان.");
+    if (!gd.disaster_type) return setCustomAlert("عفواً، يجب تحديد نوع الكارثة.");
+
+    const payload = { ...gd, incident_month: getMonthName(gd.incident_date) };
+    const token = localStorage.getItem('access_token');
+    const url = gd.disaster_id ? `https://eoc-system.vercel.app/api/global-disasters/${gd.disaster_id}` : 'https://eoc-system.vercel.app/api/global-disasters';
+    const method = gd.disaster_id ? 'PUT' : 'POST';
+
+    const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+    if (res.ok) { setIsModalOpen(false); fetchDisasters(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
+  };
+
+  const handleExportExcel = () => {
+    if (disasters.length === 0) return setCustomAlert("لا توجد كوارث للتصدير حالياً.");
+    const ws = XLSX.utils.json_to_sheet(disasters.map(d => ({
+      "التاريخ": d.incident_date || '', "الشهر": d.incident_month || '', "الخبر": d.news_title || '',
+      "الدولة": d.country || '', "نوع الكارثة": d.disaster_type || '', "المناطق المتأثرة من الكارثة": d.affected_areas || '',
+      "المناطق المتوقعة الخطر": d.at_risk_areas || '', "المصدر": d.source_name || '', "عدد المصابين": d.injured_count || 0,
+      "عدد الوفيات": d.deaths_count || 0, "عدد المفقودين": d.missing_count || 0, "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
+      "لينك الخبر": d.news_link || '', "تطورات الخبر": d.news_updates || '', "اسم مدخل الخبر": d.data_entry_name || '', "ملاحظات": d.notes || ''
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "الكوارث العالمية");
+    XLSX.writeFile(wb, `سجل_الكوارث_العالمية.xlsx`);
+  };
+
+  const handleExportSingleExcel = () => {
+    const ws = XLSX.utils.json_to_sheet([{
+      "التاريخ": gd.incident_date || '', "الشهر": gd.incident_month || '', "الخبر": gd.news_title || '',
+      "الدولة": gd.country || '', "نوع الكارثة": gd.disaster_type || '', "المناطق المتأثرة من الكارثة": gd.affected_areas || '',
+      "المناطق المتوقعة الخطر": gd.at_risk_areas || '', "المصدر": gd.source_name || '', "عدد المصابين": gd.injured_count || 0,
+      "عدد الوفيات": gd.deaths_count || 0, "عدد المفقودين": gd.missing_count || 0, "تدخلات الجمعيات الوطنية": gd.national_societies_interventions || '',
+      "لينك الخبر": gd.news_link || '', "تطورات الخبر": gd.news_updates || '', "اسم مدخل الخبر": gd.data_entry_name || '', "ملاحظات": gd.notes || ''
+    }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الكارثة");
+    XLSX.writeFile(wb, `كارثة_${gd.country || 'عالمية'}.xlsx`);
+  };
+
+  const uniqueCountries = [...new Set(disasters.map(d => d.country))].filter(Boolean).length;
+  const totalDeaths = disasters.reduce((sum, d) => sum + (parseInt(d.deaths_count) || 0), 0);
+  const totalInjuries = disasters.reduce((sum, d) => sum + (parseInt(d.injured_count) || 0), 0);
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
+        <StatCard title="إجمالي الكوارث المرصودة" value={disasters.length} color="text-white" borderHighlight />
+        <StatCard title="الدول/المناطق المتضررة" value={uniqueCountries} color="text-orange-400" />
+        <StatCard title="إجمالي الوفيات المرصودة" value={totalDeaths.toLocaleString()} color="text-[#c70000]" />
+        <StatCard title="إجمالي المصابين" value={totalInjuries.toLocaleString()} color="text-yellow-500" />
+      </div>
+
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+        <div className="p-6 border-b border-white/5 bg-[#111] flex justify-between items-center gap-4 z-10">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> رصد الكوارث والأزمات العالمية</h3>
+          <div className="flex gap-3">
+            {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon /> تصدير السجل شامل للاونر</button>}
+            <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2">+ رصد كارثة</button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto custom-scrollbar relative">
+          <table className="w-full text-right whitespace-nowrap text-sm">
+            <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+              <tr>
+                <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-orange-400">الدولة / المكان</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">نوع الكارثة</th>
+                <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">الخبر</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-center">الوفيات</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-center">المصابين</th>
+                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5 text-center">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500">جاري تحميل البيانات...</td></tr> : 
+               disasters.length > 0 ? disasters.map(d => (
+                <tr key={d.disaster_id} className="hover:bg-white/5">
+                  <td className="p-4 text-white border-l border-white/5">{d.incident_date}</td>
+                  <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{d.country}</td>
+                  <td className="p-4 text-[#c70000] border-l border-white/5 font-bold bg-[#c70000]/5">{d.disaster_type}</td>
+                  <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{d.news_title}</td>
+                  <td className="p-4 text-gray-300 border-l border-white/5 text-center">{d.deaths_count}</td>
+                  <td className="p-4 text-gray-300 border-l border-white/5 text-center">{d.injured_count}</td>
+                  <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                    <div className="flex justify-center gap-2">
+                      {d.news_link && <a href={d.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
+                      <button onClick={() => handleEdit(d)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
+                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
+                    </div>
+                  </td>
+                </tr>
+              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد كوارث مسجلة حالياً</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-[#050505] border border-[#c70000]/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(199,0,0,0.1)] animate-fade-in-up">
+            <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> {gd.disaster_id ? 'تعديل رصد الكارثة' : 'رصد كارثة عالمية جديدة'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="bg-[#111] text-gray-400 hover:bg-red-600 hover:text-white p-2 rounded-xl"><TrashIcon /></button>
+            </div>
+
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+              <SectionCard title="بيانات الكارثة الأساسية" icon={<AlertIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormGroup label="التاريخ"><StyledInput type="date" value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} /></FormGroup>
+                  <FormGroup label="الدولة (مطلوب)">
+                    <StyledSelect value={gd.country} onChange={e => setGd({...gd, country: e.target.value})} className="border-orange-500/50 text-orange-400 font-bold">
+                      <option value="" disabled className="text-gray-500">اختر المكان...</option>
+                      {COUNTRIES_LIST.map(c => <option key={c} value={c} className="text-white">{c}</option>)}
+                    </StyledSelect>
+                  </FormGroup>
+                  <FormGroup label="نوع الكارثة (مطلوب)">
+                    <StyledSelect value={gd.disaster_type} onChange={e => setGd({...gd, disaster_type: e.target.value})} className="border-[#c70000]/50 text-[#c70000] font-bold">
+                      <option value="" disabled className="text-gray-500">اختر النوع...</option>
+                      {DISASTER_TYPES.map(t => <option key={t} value={t} className="text-white">{t}</option>)}
+                    </StyledSelect>
+                  </FormGroup>
+                  <div className="md:col-span-3"><FormGroup label="الخبر (وصف مختصر)"><StyledInput value={gd.news_title} onChange={e => setGd({...gd, news_title: e.target.value})} /></FormGroup></div>
+                  <FormGroup label="المناطق المتأثرة من الكارثة"><StyledInput value={gd.affected_areas} onChange={e => setGd({...gd, affected_areas: e.target.value})} /></FormGroup>
+                  <FormGroup label="المناطق المتوقعة الخطر"><StyledInput value={gd.at_risk_areas} onChange={e => setGd({...gd, at_risk_areas: e.target.value})} /></FormGroup>
+                  <FormGroup label="المصدر"><StyledInput value={gd.source_name} onChange={e => setGd({...gd, source_name: e.target.value})} /></FormGroup>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="الإصابات والتدخلات" icon={<UsersIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormGroup label="عدد الوفيات"><StyledInput type="number" value={gd.deaths_count} onChange={e => setGd({...gd, deaths_count: parseInt(e.target.value) || 0})} className="bg-[#c70000]/10 text-red-400" /></FormGroup>
+                  <FormGroup label="عدد المصابين"><StyledInput type="number" value={gd.injured_count} onChange={e => setGd({...gd, injured_count: parseInt(e.target.value) || 0})} className="bg-yellow-500/10 text-yellow-400" /></FormGroup>
+                  <FormGroup label="عدد المفقودين"><StyledInput type="number" value={gd.missing_count} onChange={e => setGd({...gd, missing_count: parseInt(e.target.value) || 0})} className="bg-gray-500/10 text-gray-300" /></FormGroup>
+                  <div className="md:col-span-3"><FormGroup label="تدخلات الجمعيات الوطنية"><textarea value={gd.national_societies_interventions} onChange={e => setGd({...gd, national_societies_interventions: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-blue-500" rows="2"></textarea></FormGroup></div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="التوثيق (إلزامي)" icon={<MapIcon />}>
+                <div className="grid grid-cols-1 gap-4">
+                  <FormGroup label="لينك الخبر (إلزامي)*">
+                    <StyledInput value={gd.news_link} onChange={e => setGd({...gd, news_link: e.target.value})} placeholder="https://..." dir="ltr" className="text-left border-blue-500/50 focus:border-blue-500 bg-blue-500/5" required />
+                  </FormGroup>
+                  <FormGroup label="تطورات الخبر"><textarea value={gd.news_updates} onChange={e => setGd({...gd, news_updates: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="2"></textarea></FormGroup>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormGroup label="اسم مدخل الخبر"><StyledInput value={gd.data_entry_name} onChange={e => setGd({...gd, data_entry_name: e.target.value})} /></FormGroup>
+                    <FormGroup label="ملاحظات"><StyledInput value={gd.notes} onChange={e => setGd({...gd, notes: e.target.value})} /></FormGroup>
+                  </div>
+                </div>
+              </SectionCard>
+            </div>
+            
+            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex justify-end gap-3 shrink-0 rounded-b-3xl">
+              <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto"><ExcelIcon /> تحميل خبر للكل</button>
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
+              <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ وتوثيق الكارثة</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {disasterToDelete && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+          <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+            <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
+            <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
+            <p className="text-gray-400 text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذا الرصد نهائياً؟</p>
+            <div className="flex gap-4 w-full">
+              <button onClick={() => setDisasterToDelete(null)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
+              <button onClick={confirmDelete} className="flex-1 bg-[#c70000] hover:bg-[#a50000] text-white px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">نعم، احذف</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {customAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4"><AlertIcon /><h3 className="text-xl font-bold text-white">تنبيه النظام</h3></div>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <div className="mt-8 flex justify-end"><button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg">علم، جاري التعديل</button></div>
           </div>
         </div>
       )}

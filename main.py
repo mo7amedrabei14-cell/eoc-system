@@ -877,3 +877,142 @@ def delete_local_news(news_id: int, credentials: HTTPAuthorizationCredentials = 
         raise HTTPException(status_code=500)
     finally:
         connection.close()
+
+# =====================================================================
+# =====================================================================
+# قطاع رصد الكوارث العالمية - Global Disasters Module
+# =====================================================================
+# =====================================================================
+
+class GlobalDisasterModel(BaseModel):
+    incident_date: Optional[str] = None
+    incident_month: Optional[str] = None
+    news_title: Optional[str] = None
+    country: Optional[str] = None
+    disaster_type: Optional[str] = None
+    affected_areas: Optional[str] = None
+    at_risk_areas: Optional[str] = None
+    source_name: Optional[str] = None
+    injured_count: int = 0
+    deaths_count: int = 0
+    missing_count: int = 0
+    national_societies_interventions: Optional[str] = None
+    news_link: str  # 💡 هذا الحقل إلزامي بناءً على طلبك
+    news_updates: Optional[str] = None
+    data_entry_name: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.get("/api/global-disasters")
+def get_global_disasters(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM global_disasters ORDER BY created_at DESC;")
+            rows = cursor.fetchall()
+            col_names = [desc[0] for desc in cursor.description]
+            result = []
+            for row in rows:
+                data = dict(zip(col_names, row))
+                for k, v in data.items():
+                    if v is not None and not isinstance(v, (str, int, float, bool)): 
+                        data[k] = str(v)
+                result.append(data)
+            return result
+    finally:
+        connection.close()
+
+@app.post("/api/global-disasters")
+def create_global_disaster(disaster: GlobalDisasterModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            def none_if_empty(val): return val if val != "" else None
+            cursor.execute("""
+                INSERT INTO global_disasters (
+                    incident_date, incident_month, news_title, country, disaster_type, affected_areas,
+                    at_risk_areas, source_name, injured_count, deaths_count, missing_count,
+                    national_societies_interventions, news_link, news_updates, data_entry_name, notes
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING disaster_id;
+            """, (
+                none_if_empty(disaster.incident_date), disaster.incident_month, disaster.news_title, disaster.country,
+                disaster.disaster_type, disaster.affected_areas, disaster.at_risk_areas, disaster.source_name,
+                disaster.injured_count, disaster.deaths_count, disaster.missing_count,
+                disaster.national_societies_interventions, disaster.news_link, disaster.news_updates,
+                disaster.data_entry_name, disaster.notes
+            ))
+            disaster_id = cursor.fetchone()[0]
+
+            # تسجيل اللوج الخاص بالكوارث العالمية
+            try:
+                create_audit_log(cursor, user_id, "رصد كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام برصد كارثة جديدة ({disaster.disaster_type}) في: {disaster.country}"})
+            except Exception as e: pass
+
+            connection.commit()
+            return {"message": "تم الحفظ بنجاح", "disaster_id": disaster_id}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/global-disasters/{disaster_id}")
+def update_global_disaster(disaster_id: int, disaster: GlobalDisasterModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            def none_if_empty(val): return val if val != "" else None
+            cursor.execute("""
+                UPDATE global_disasters SET
+                    incident_date=%s, incident_month=%s, news_title=%s, country=%s, disaster_type=%s,
+                    affected_areas=%s, at_risk_areas=%s, source_name=%s, injured_count=%s, deaths_count=%s,
+                    missing_count=%s, national_societies_interventions=%s, news_link=%s, news_updates=%s,
+                    data_entry_name=%s, notes=%s
+                WHERE disaster_id=%s;
+            """, (
+                none_if_empty(disaster.incident_date), disaster.incident_month, disaster.news_title, disaster.country,
+                disaster.disaster_type, disaster.affected_areas, disaster.at_risk_areas, disaster.source_name,
+                disaster.injured_count, disaster.deaths_count, disaster.missing_count,
+                disaster.national_societies_interventions, disaster.news_link, disaster.news_updates,
+                disaster.data_entry_name, disaster.notes, disaster_id
+            ))
+
+            try:
+                create_audit_log(cursor, user_id, "تحديث كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام بتحديث بيانات كارثة ({disaster.disaster_type}) في: {disaster.country}"})
+            except Exception as e: pass
+
+            connection.commit()
+            return {"message": "تم التحديث بنجاح"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/global-disasters/{disaster_id}")
+def delete_global_disaster(disaster_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM global_disasters WHERE disaster_id = %s", (disaster_id,))
+            try:
+                create_audit_log(cursor, user_id, "حذف كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام بحذف رصد الكارثة رقم {disaster_id} نهائياً"})
+            except Exception as e: pass
+            connection.commit()
+            return {"message": "تم الحذف بنجاح"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500)
+    finally:
+        connection.close()
