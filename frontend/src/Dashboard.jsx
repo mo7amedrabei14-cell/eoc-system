@@ -124,14 +124,15 @@ export default function Dashboard() {
                 {/* اللوجو نفسه */}
                 <div className="relative bg-white rounded-full p-2 border-2 border-white/20 shadow-[0_0_25px_rgba(199,0,0,0.4)] flex items-center justify-center transition-transform duration-300 hover:scale-105">
                   <svg viewBox="0 0 100 100" className="w-14 h-14 drop-shadow-md">
-                    {/* الإطار الدائري الأحمر */}
+                    {/* الإطار الدائري الأحمر الخارجي */}
                     <circle cx="50" cy="50" r="48" fill="none" stroke="#c70000" strokeWidth="4" />
                     
-                    {/* الهلال الأحمر المثالي رياضياً (يفتح لليمين ومضبوط تماماً) */}
-                    <path d="M 67.5 15 A 35 35 0 1 0 67.5 85 A 40 40 0 0 1 67.5 15 Z" fill="#c70000" />
+                    {/* الهلال الأحمر - كود مثالي لا يختفي أبداً */}
+                    <path d="M 80 20 A 40 40 0 1 0 80 80 A 32 32 0 1 1 80 20 Z" fill="#c70000" />
                     
-                    {/* نقطة غرفة العمليات (نبض) */}
-                    <circle cx="58" cy="50" r="4" fill="#c70000" className="animate-pulse" />
+                    {/* النقطة المركزية لغرفة العمليات (مضبوطة داخل تجويف الهلال) */}
+                    <circle cx="58" cy="50" r="5" fill="#111" />
+                    <circle cx="58" cy="50" r="3" fill="#c70000" className="animate-pulse" />
                   </svg>
                 </div>
               </div>
