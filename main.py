@@ -1146,3 +1146,43 @@ def delete_egypt_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depe
             return {"message": "تم الحذف"}
     finally:
         connection.close()
+
+@app.put("/api/earthquakes/global/{eq_id}")
+def update_global_eq(eq_id: int, eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id: raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE global_earthquakes 
+                SET date=%s, month=%s, time=%s, country=%s, magnitude=%s, depth_km=%s, region=%s, status=%s, longitude=%s, latitude=%s
+                WHERE eq_id=%s
+            """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude, eq_id))
+            try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})
+            except Exception: pass
+            connection.commit()
+            return {"message": "تم التعديل"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(500, str(e))
+
+@app.put("/api/earthquakes/egypt/{eq_id}")
+def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id: raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE egypt_earthquakes 
+                SET date=%s, time=%s, magnitude=%s, depth_km=%s, region=%s, longitude=%s, latitude=%s
+                WHERE eq_id=%s
+            """, (eq.date, eq.time, eq.magnitude, eq.depth_km, eq.region, eq.longitude, eq.latitude, eq_id))
+            try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"عدّل بيانات زلزال محلي (مصر) بقوة {eq.magnitude}"})
+            except Exception: pass
+            connection.commit()
+            return {"message": "تم التعديل"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(500, str(e))
