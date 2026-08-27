@@ -223,8 +223,6 @@ function HomeView({ branches = [] }) {
   const totalGlobalDisasters = globalDisasters.length;
   const globalEqsToday = globalEqs.filter(e => e.date === getLocalDate()).length;
   const totalEgyptEqs = egyptEqs.length;
-  const filteredGlobalEqs = globalEqs;
-const filteredEgyptEqs = egyptEqs;
 
   return (
     <div className="space-y-8 pb-10 animate-fade-in-up">
@@ -476,9 +474,8 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
   const [customAlert, setCustomAlert] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
-  const [currentMissionData, setCurrentMissionData] = useState(null);
-
-  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  
+const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnText, setReturnText] = useState('');
   const [returnError, setReturnError] = useState('');
   const [mainRouteTitle, setMainRouteTitle] = useState('خط السير الأساسي');
