@@ -15,7 +15,16 @@ const branchIcon = new L.DivIcon({
   iconAnchor: [8, 8]
 });
 
-
+// 💡 دالة تحويل الوقت لـ 12 ساعة (ص/م) في ملفات الإكسيل
+const format12H = (timeStr) => {
+  if (!timeStr) return '';
+  let [h, m] = timeStr.split(':');
+  if (!h || !m) return timeStr;
+  h = parseInt(h, 10);
+  const ampm = h >= 12 ? 'م' : 'ص';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -89,7 +98,7 @@ export default function Dashboard() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <HomeView stats={dashboardStats} />;
+      case 'home': return <HomeView branches={branchesList} />;
       case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
@@ -149,109 +158,119 @@ export default function Dashboard() {
 }
 
 // ==========================================
-// 1. شاشة الداش بورد (موجز العمليات)
+// 1. شاشة الداش بورد (موجز العمليات التفاعلي)
 // ==========================================
-function HomeView() {
+function HomeView({ branches = [] }) {
   const [missions, setMissions] = useState([]);
-  const [activeTab, setActiveTab] = useState('all'); // 💡 حالة التاب النشط
-
-  const regionMap = {
-    'المركز العام': 'hq', 'الاسماعيلية': 'canal', 'بور سعيد': 'canal', 'السويس': 'canal', 'شمال سيناء': 'canal', 'جنوب سيناء': 'canal', 'الشرقية': 'canal', 'دمياط': 'canal',
-    'الاسكندرية': 'delta', 'البحيرة': 'delta', 'الغربية': 'delta', 'كفر الشيخ': 'delta', 'المنوفية': 'delta', 'الدقهلية': 'delta', 'القليوبية': 'delta',
-    'الجيزة': 'saeed', 'الفيوم': 'saeed', 'بني سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
-  };
-
-  const tabs = [
-    { id: 'all', label: 'الجمهورية (الكل)' },
-    { id: 'hq', label: 'المركز العام' },
-    { id: 'canal', label: 'إقليم القنال' },
-    { id: 'delta', label: 'إقليم الدلتا' },
-    { id: 'saeed', label: 'إقليم الصعيد' }
-  ];
+  const [news, setNews] = useState([]);
+  const [selectedBranchName, setSelectedBranchName] = useState(null); // 💡 حالة اختيار الفرع من الخريطة
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    fetch('https://eoc-system.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setMissions(data)).catch(() => {});
+    Promise.all([
+      fetch('https://eoc-system.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
+    ]).then(([missionsData, newsData]) => {
+      setMissions(missionsData);
+      setNews(newsData);
+    });
   }, []);
 
-  // 💡 الفلترة السحرية: بنصفي المهام حسب الإقليم المختار
-  const filteredMissions = activeTab === 'all'
-    ? missions
-    : missions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === activeTab);
+  // 💡 السحر هنا: توحيد (المركز العام) و (القاهرة) بناءً على طلبك
+  const filterMissionBranch = selectedBranchName; 
+  const filterNewsGov = (selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'القاهرة' : selectedBranchName;
 
-  // 💡 حساب الأرقام الديناميكية (بتتغير فوراً مع تغيير التاب)
-  const totalMissions = filteredMissions.length;
-  const active = filteredMissions.filter(m => m.status === 'Active' || m.status === 'Under Review').length;
-  const approved = filteredMissions.filter(m => m.status === 'Approved').length;
-  const completed = filteredMissions.filter(m => m.status === 'Completed').length;
-  const drafts = filteredMissions.filter(m => m.status === 'Draft' || m.status === 'Returned').length;
-  
-  // حساب الأقاليم الثابتة (بتتعرض بس لو مختارين "الكل")
-  const hqCount = missions.filter(m => regionMap[m.branch?.trim()] === 'hq').length;
-  const canalCount = missions.filter(m => regionMap[m.branch?.trim()] === 'canal').length;
-  const deltaCount = missions.filter(m => regionMap[m.branch?.trim()] === 'delta').length;
-  const saeedCount = missions.filter(m => regionMap[m.branch?.trim()] === 'saeed').length;
+  // 1. فلترة المهام (بتسمع المركز العام والقاهرة كحاجة واحدة)
+  const filteredMissions = selectedBranchName
+    ? missions.filter(m => {
+        const mBranch = m.branch?.trim();
+        return mBranch === filterMissionBranch || (filterMissionBranch === 'المركز العام' && mBranch === 'القاهرة') || (filterMissionBranch === 'القاهرة' && mBranch === 'المركز العام');
+      })
+    : missions;
+
+  // 2. فلترة الأخبار (بتاخد القاهرة دايماً لو داس على المركز العام)
+  const filteredNews = selectedBranchName
+    ? news.filter(n => n.governorate === filterNewsGov)
+    : news;
+
+  const activeDaily = filteredMissions.filter(m => m.mission_classification !== 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const activeOpen = filteredMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const totalNews = filteredNews.length;
+  const activeNews = filteredNews.filter(n => n.is_field_response).length;
 
   return (
-    <div className="space-y-8 pb-10">
-      
-      {/* 💡 شريط التابات (الأقاليم) */}
-      {/* 💡 شريط التابات وإحصائيات التصنيف */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-        <div className="flex flex-wrap gap-2 bg-[#0c0c0c] p-2 rounded-2xl border border-white/5 w-fit shadow-lg">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === tab.id ? 'bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.5)] scale-105' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-              {tab.label}
-            </button>
-          ))}
+    <div className="space-y-8 pb-10 animate-fade-in-up">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-10 bg-[#c70000] rounded-full"></div>
+          <div>
+            <h2 className="text-3xl font-black text-white tracking-wide">المركز الرئيسي للعمليات</h2>
+            <p className="text-gray-400 text-sm mt-1">
+               {selectedBranchName
+                 ? `المؤشرات الحية لفرع/محافظة: ${(selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'المركز العام (القاهرة)' : selectedBranchName}`
+                 : 'الرؤية الشاملة للوضع الميداني (على مستوى الجمهورية)'}
+            </p>
+          </div>
         </div>
         
-        {/* عدادات المهام المفتوحة والعادية للفرع المختار */}
-        <div className="flex gap-4 bg-[#111] p-3 rounded-2xl border border-white/5 shadow-lg">
-          <div className="flex flex-col items-center px-6 border-l border-white/10">
-            <span className="text-gray-400 text-xs font-bold mb-1">المهام المفتوحة (نشطة)</span>
-            <span className="text-2xl font-black text-blue-500">{filteredMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length}</span>
+        {/* زرار يظهر لما تدوس على فرع عشان يرجعك للجمهورية كلها */}
+        {selectedBranchName && (
+          <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">
+            عرض الجمهورية بالكامل <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
+        )}
+      </div>
+
+      {/* كروت الإحصائيات الفخمة */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#c70000]/10 rounded-full blur-3xl group-hover:bg-[#c70000]/20 transition-all"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <h3 className="text-gray-400 font-bold text-lg">المهام اليومية (نشطة)</h3>
+            <div className="p-3 bg-[#c70000]/20 rounded-xl text-[#c70000]"><AlertIcon /></div>
           </div>
-          <div className="flex flex-col items-center px-6">
-            <span className="text-gray-400 text-xs font-bold mb-1">المهام العادية (نشطة)</span>
-            <span className="text-2xl font-black text-white">{filteredMissions.filter(m => (m.mission_classification === 'عادية' || !m.mission_classification) && !['Completed', 'Cancelled'].includes(m.status)).length}</span>
+          <p className="text-6xl font-black text-white relative z-10">{activeDaily}</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <h3 className="text-gray-400 font-bold text-lg">المهام المفتوحة (مستمرة)</h3>
+            <div className="p-3 bg-blue-500/20 rounded-xl text-blue-500"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
+          </div>
+          <p className="text-6xl font-black text-white relative z-10">{activeOpen}</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <h3 className="text-gray-400 font-bold text-lg">الأخبار والأحداث المرصودة</h3>
+            <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400"><NewsIcon /></div>
+          </div>
+          <div className="flex items-end gap-3 relative z-10">
+             <p className="text-6xl font-black text-white">{totalNews}</p>
+             <span className="text-sm font-bold text-purple-400 mb-2">({activeNews} استجابة ميدانية)</span>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-2 h-8 bg-[#c70000] rounded-full"></div>
-        <h2 className="text-xl font-bold text-gray-200">
-          {activeTab === 'all' ? 'مؤشرات وحالات المهام الشاملة' : `مؤشرات ${tabs.find(t=>t.id === activeTab).label}`}
-        </h2>
-      </div>
-
-      {/* 💡 كروت الإحصائيات (بتسمع أرقام الإقليم المختار فوراً) */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatCard title="إجمالي المهام" value={totalMissions} color="text-white" borderHighlight />
-        <StatCard title="قيد التنفيذ والمراجعة" value={active} color="text-blue-400" />
-        <StatCard title="تمت مراجعتها (مستمرة)" value={approved} color="text-teal-400" />
-        <StatCard title="مهام مغلقة ومكتملة" value={completed} color="text-gray-400" />
-        <StatCard title="مسودات ومرتجعات" value={drafts} color="text-yellow-400" />
-      </div>
-
-      {/* 💡 توزيع الأقاليم بيظهر بس لو إنت مختار "الكل" */}
-      {activeTab === 'all' && (
-        <div className="animate-fade-in-up mt-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-2 h-8 bg-gray-500 rounded-full"></div>
-            <h2 className="text-xl font-bold text-gray-200">التوزيع الجغرافي للمهام</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard title="مهام المركز العام" value={hqCount} color="text-[#c70000]" />
-            <StatCard title="مهام إقليم القنال" value={canalCount} color="text-blue-400" />
-            <StatCard title="مهام إقليم الدلتا" value={deltaCount} color="text-green-400" />
-            <StatCard title="مهام إقليم الصعيد" value={saeedCount} color="text-yellow-400" />
-          </div>
+      {/* 💡 خريطة التمركزات التفاعلية (الفلتر الميداني) */}
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <MapIcon /> خريطة الانتشار التفاعلية (انقر على الفرع لعرض مؤشراته بالأعلى)
+        </h3>
+        <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
+          <MapContainer center={[26.8206, 30.8025]} zoom={6} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+            {branches.map(branch => branch.lat && branch.lng ? (
+                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => setSelectedBranchName(branch.name) }}>
+                  <Popup><strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong><span className="text-xs text-blue-600 block text-center mt-1 font-bold">انقر لفلترة الداشبورد</span></Popup>
+                </Marker>
+              ) : null
+            )}
+          </MapContainer>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -782,40 +801,32 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     return <span className={`px-2 py-1 rounded text-xs font-bold border ${s.color}`}>{s.text}</span>;
   };
 
-  let filteredMissions = missionsList;
-  
-  // 1. فلتر نوع المهمة (الكل، مفتوحة، عادية)
-  if (missionViewType === 'open') {
-     filteredMissions = filteredMissions.filter(m => m.mission_classification === 'مفتوحة');
-  } else if (missionViewType === 'daily') {
-     filteredMissions = filteredMissions.filter(m => m.mission_classification !== 'مفتوحة');
-  }
+  let baseMissions = missionsList;
+  if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
+  else if (missionViewType === 'daily') baseMissions = baseMissions.filter(m => m.mission_classification !== 'مفتوحة');
 
-  // 2. فلتر التاريخ (تم استثناء المهام المفتوحة النشطة عشان تفضل ظاهرة كل يوم لحد ما تتقفل)
   if (filterDate) {
-     filteredMissions = filteredMissions.filter(m => {
+     baseMissions = baseMissions.filter(m => {
         const missionDate = m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0];
-        
-        // التحقق: هل دي مهمة مفتوحة ولسه شغالة؟
         const isOpenActive = m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status);
-        
-        // لو هي مفتوحة وشغالة، اديها حصانة وخليها تظهر دايماً وتتخطى فلتر التاريخ
         if (isOpenActive) return true;
-        
-        // لو هي عادية، أو مفتوحة (بس اتقفلت)، لازم تاريخها يطابق تاريخ الفلتر عشان تظهر
         return missionDate === filterDate;
      });
   }
 
-  // 3. فلتر حالة المهمة (الكل، نشطة، مكتملة)
-  if (statusFilter === 'active') {
-     filteredMissions = filteredMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
-  } else if (statusFilter === 'completed') {
-     filteredMissions = filteredMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
-  }
+  if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
+  else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
 
-  // 4. فلتر الإقليم
-  if (activeRegionTab !== 'all') { filteredMissions = filteredMissions.filter(m => (regionMap[m.branch.trim()] || 'hq') === activeRegionTab); }
+  // 💡 إحصائيات الأقاليم بتتأثر بالفلاتر (التاريخ، النشط، النوع) عشان تشوف الأرقام الحقيقية!
+  const regionStats = {
+    total: baseMissions.length,
+    hq: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'hq').length,
+    canal: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'canal').length,
+    delta: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'delta').length,
+    saeed: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'saeed').length,
+  };
+
+  const filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === activeRegionTab) : baseMissions;
 
   const getCreationDate = () => {
     if (currentMissionData && currentMissionData.created_at) { return String(currentMissionData.created_at).split(' ')[0]; }
@@ -843,7 +854,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
           <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
           
           <div className="flex flex-wrap items-center gap-3">
-            {/* 1. نوع السجل */}
             <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
               <button onClick={() => setMissionViewType('all_types')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'all_types' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>كل المهام</button>
               <button onClick={() => { setMissionViewType('daily'); setFilterDate(getLocalDate()); }} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'daily' ? 'bg-[#c70000] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>المهام العادية</button>
@@ -852,18 +862,29 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
             <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
 
-            {/* 2. حالة المهمة */}
+            {/* 💡 فلتر الحالة + فلتر الإقليم مع بعض! */}
             <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
               <button onClick={() => setStatusFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'all' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الكل</button>
               <button onClick={() => setStatusFilter('active')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'active' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>نشطة</button>
               <button onClick={() => setStatusFilter('completed')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'completed' ? 'bg-teal-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>مكتملة</button>
+              
+              <div className="w-px h-6 bg-white/10 mx-1"></div>
+              
+              {!isVolunteer && (
+                <select value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer pl-2">
+                  <option value="all" className="bg-[#111]">كل الأقاليم</option>
+                  <option value="hq" className="bg-[#111]">المركز العام</option>
+                  <option value="canal" className="bg-[#111]">إقليم القنال</option>
+                  <option value="delta" className="bg-[#111]">إقليم الدلتا</option>
+                  <option value="saeed" className="bg-[#111]">إقليم الصعيد</option>
+                </select>
+              )}
             </div>
 
             <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
 
-            {/* 3. فلتر التاريخ */}
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" title="تاريخ المهمة" />
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
               {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors">إلغاء التاريخ</button>}
             </div>
           </div>
@@ -875,11 +896,14 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         </div>
       </div>
 
+      {/* 💡 داشبورد مصغر للأقاليم في سجل المهام (بيسمع كل الفلاتر) */}
       {!isVolunteer && (
-      <div className="bg-[#0a0a0a] border-b border-white/5 p-4 flex gap-2 overflow-x-auto custom-scrollbar shrink-0">
-        {Object.entries({ 'all': 'جميع المهام', 'hq': 'المركز العام', 'canal': 'إقليم القنال', 'delta': 'إقليم الدلتا', 'saeed': 'إقليم الصعيد' }).map(([key, label]) => (
-          <button key={key} onClick={() => setActiveRegionTab(key)} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeRegionTab === key ? 'bg-[#c70000] text-white border border-[#c70000]' : 'bg-[#111] text-gray-400 hover:text-white border border-white/5'}`}>{label}</button>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[#0a0a0a] border-b border-white/5 shrink-0">
+        <StatCard title="إجمالي المهام المفلترة" value={regionStats.total} color="text-white" borderHighlight />
+        <StatCard title="المركز العام" value={regionStats.hq} color="text-[#c70000]" />
+        <StatCard title="إقليم القنال" value={regionStats.canal} color="text-blue-400" />
+        <StatCard title="إقليم الدلتا" value={regionStats.delta} color="text-green-400" />
+        <StatCard title="إقليم الصعيد" value={regionStats.saeed} color="text-yellow-400" />
       </div>
       )}
 
@@ -1630,10 +1654,10 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     const ws = XLSX.utils.json_to_sheet(filteredNews.map(n => ({
       "التاريخ": n.incident_date || '', "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
       "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": n.governorate || '',
-      "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": n.report_time || '', "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
-      "توقيت الرد": n.response_time || '', "حالة توقيت الرد": n.response_time_points || 0, "زمن الرد": n.response_duration || '',
-      "الاستجابة": n.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": n.movement_time || '', "المدة بين الابلاغ و التحرك": n.report_to_movement_duration || '',
-      "حالة المدة بين الابلاغ و التحرك": n.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": n.field_arrival_time || '', "حالة الاستجابة": n.field_response_points || 0,
+      "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(n.report_time), "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
+      "توقيت الرد": format12H(n.response_time), "حالة توقيت الرد": n.response_time_points || 0, "زمن الرد": n.response_duration || '',
+      "الاستجابة": n.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": format12H(n.movement_time), "المدة بين الابلاغ و التحرك": n.report_to_movement_duration || '',
+      "حالة المدة بين الابلاغ و التحرك": n.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": format12H(n.field_arrival_time), "حالة الاستجابة": n.field_response_points || 0,
       "الزمن المتخذ لبدء الاستجابة": n.report_to_arrival_duration || '', "نوع الاستجابة": n.intervention_type || '', "الفرع المتدخل": n.intervening_branch || '',
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
@@ -1647,10 +1671,10 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     const ws = XLSX.utils.json_to_sheet([{
       "التاريخ": nd.incident_date || '', "الشهر": nd.incident_month || '', "وصف الحادث": nd.incident_description || '', "نوع الخبر": nd.news_type || '', "ناشر الخبر": nd.news_publisher || '',
       "اسم الشارع": nd.street_name || '', "المنطقة": nd.area_name || '', "المحافظة": nd.governorate || '',
-      "الابلاغ": nd.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": nd.report_time || '', "حالة الرد": nd.is_responded ? 'نعم' : 'لا', "رد الفرع": nd.branch_response_text || '',
-      "توقيت الرد": nd.response_time || '', "حالة توقيت الرد": nd.response_time_points || 0, "زمن الرد": nd.response_duration || '',
-      "الاستجابة": nd.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": nd.movement_time || '', "المدة بين الابلاغ و التحرك": nd.report_to_movement_duration || '',
-      "حالة المدة بين الابلاغ و التحرك": nd.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": nd.field_arrival_time || '', "حالة الاستجابة": nd.field_response_points || 0,
+      "الابلاغ": nd.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(nd.report_time), "حالة الرد": nd.is_responded ? 'نعم' : 'لا', "رد الفرع": nd.branch_response_text || '',
+      "توقيت الرد": format12H(nd.response_time), "حالة توقيت الرد": nd.response_time_points || 0, "زمن الرد": nd.response_duration || '',
+      "الاستجابة": nd.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": format12H(nd.movement_time), "المدة بين الابلاغ و التحرك": nd.report_to_movement_duration || '',
+      "حالة المدة بين الابلاغ و التحرك": nd.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": format12H(nd.field_arrival_time), "حالة الاستجابة": nd.field_response_points || 0,
       "الزمن المتخذ لبدء الاستجابة": nd.report_to_arrival_duration || '', "نوع الاستجابة": nd.intervention_type || '', "الفرع المتدخل": nd.intervening_branch || '',
       "اسم الاستمارة": nd.mission_form_name || '', "عدد المشاركين": nd.participants_count || 0, "اسم المستشفى": nd.hospital_name || '', "عدد المصابين": nd.injured_count || 0, "عدد الوفيات": nd.deaths_count || 0,
       "تطورات الخبر": nd.news_updates || '', "لينك الخبر": nd.news_link || '', "اسم مدخل الخبر": nd.data_entry_name || '', "ملاحظات": nd.notes || '', "طول المسافة بين مكان الحادث و الفرع": nd.distance_km || ''
@@ -1674,8 +1698,9 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   return (
     <div className="space-y-6 pb-10">
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-fade-in-up">
         <StatCard title="إجمالي الحوادث المسجلة" value={filteredNews.length} color="text-white" borderHighlight />
+        <StatCard title="تم الإبلاغ عنها" value={filteredNews.filter(n => n.is_reported).length} color="text-purple-400" />
         <StatCard title="بلاغات تم الرد عليها" value={filteredNews.filter(n => n.is_responded).length} color="text-blue-400" />
         <StatCard title="استجابة ميدانية (تحرك)" value={filteredNews.filter(n => n.is_field_response).length} color="text-green-500" />
         <StatCard title="متوسط نقاط الاستجابة" value={filteredNews.length ? Math.round(filteredNews.reduce((a,b)=>a+b.field_response_points,0)/filteredNews.length) : 0} color="text-yellow-500" />
