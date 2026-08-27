@@ -103,9 +103,10 @@ export default function Dashboard() {
       case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
+      case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
       case 'audit': return <AuditLogsView />;
-      default: return <HomeView stats={dashboardStats} />;
+      default: return <HomeView branches={branchesList} />;
     }
   };
 
@@ -160,6 +161,9 @@ export default function Dashboard() {
             <h1 className="text-2xl font-extrabold tracking-wide">
               {activeTab === 'home' && 'موجز عمليات اليوم'}
               {activeTab === 'missions' && 'إدارة المهام الميدانية'}
+              {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
+              {activeTab === 'global_disasters' && 'رصد الكوارث العالمية'}
+              {activeTab === 'earthquakes' && 'مركز رصد الزلازل'}
               {activeTab === 'branches_inventory' && 'الانتشار الجغرافي والمخزون'}
               {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
             </h1>
