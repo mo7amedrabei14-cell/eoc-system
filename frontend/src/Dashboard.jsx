@@ -10,13 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-// استدعاء مباشر من نفس الفولدر
-import logo1 from './logo1.jpg';
-import logo2 from './logo2.jpg';
 
-// 💡 استدعاء اللوجوهات بشكل مباشر
-import ercLogo from './assets/erc-logo.jpg';
-import eocLogo from './assets/eoc-logo.jpg';
 
 // ==========================================
 // تصميم أيقونة الفرع على الخريطة
@@ -127,15 +121,27 @@ export default function Dashboard() {
           <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-full h-1/2 bg-[#c70000]/10 blur-2xl"></div>
             
-            {/* عرض لوجو الهلال الأحمر وغرفة العمليات */}
-            <div className="flex items-center justify-center gap-4 mb-5 relative z-10">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-[#c70000] rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <img src={logo1} alt="الهلال الأحمر المصري" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
-              </div>
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gray-500 rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <img src={logo2} alt="غرفة العمليات" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
+            {/* تصميم لوجو الهلال الأحمر وغرفة العمليات (SVG فخم ومدمج لا يتعطل أبداً) */}
+            <div className="relative z-10 mb-5 flex justify-center">
+              <div className="relative group cursor-pointer">
+                {/* تأثير الإضاءة الحمراء خلف اللوجو */}
+                <div className="absolute inset-0 bg-[#c70000] rounded-full blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                {/* اللوجو نفسه */}
+                <div className="relative bg-white rounded-full p-2 border-2 border-white/20 shadow-[0_0_25px_rgba(199,0,0,0.4)] flex items-center justify-center transition-transform duration-300 hover:scale-105">
+                  <svg viewBox="0 0 100 100" className="w-16 h-16 drop-shadow-md">
+                    {/* الإطار الدائري الأحمر الخارجي */}
+                    <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#c70000" strokeWidth="4" />
+                    
+                    {/* الهلال الأحمر */}
+                    <path d="M 65 25 A 25 25 0 1 0 65 75 A 20 20 0 1 1 65 25 Z" fill="#c70000" />
+                    
+                    {/* أيقونة مصغرة ترمز لغرفة العمليات (EOC) داخل الهلال */}
+                    <circle cx="55" cy="50" r="7" fill="#111" />
+                    <circle cx="55" cy="50" r="3" fill="#c70000" className="animate-pulse" />
+                    <path d="M 46 50 L 52 50" stroke="#111" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
               </div>
             </div>
 
