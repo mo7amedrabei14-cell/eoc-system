@@ -1362,11 +1362,15 @@ const ExcelIcon = () => (<svg className="w-5 h-5" viewBox="0 0 24 24" fill="curr
 // ==========================================
 // 5. شاشة سجل النظام (للمالك فقط)
 // ==========================================
+// ==========================================
+// 5. شاشة سجل النظام (للمالك فقط)
+// ==========================================
 function AuditLogsView() {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('الكل');
+  const [entityFilter, setEntityFilter] = useState('all'); // الفلتر الجديد (الكل، مهام، أخبار)
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -1379,10 +1383,12 @@ function AuditLogsView() {
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.full_name?.includes(searchTerm) || log.details?.includes(searchTerm);
     const matchesAction = actionFilter === 'الكل' || log.action === actionFilter;
-    return matchesSearch && matchesAction;
+    const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter;
+    return matchesSearch && matchesAction && matchesEntity;
   });
 
   const uniqueActions = ['الكل', ...new Set(logs.map(l => l.action))];
+  
   const handleExportLogs = async () => {
     const token = localStorage.getItem('access_token');
     try {
@@ -1390,26 +1396,34 @@ function AuditLogsView() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      // لو السيرفر ضرب، هنقرأ السبب الحقيقي ونعرضه
       if (!res.ok) {
         const errorData = await res.json();
         return alert(`خطأ من السيرفر: ${errorData.detail || 'غير معروف'}`);
       }
       
       const allLogs = await res.json();
-      if (allLogs.length === 0) return alert("لا توجد سجلات لتصديرها.");
       
-      const excelData = allLogs.map(log => ({
+      // بنفلتر البيانات اللي جاية من السيرفر قبل التصدير بناءً على الفلتر اللي اليوزر مختاره
+      const logsToExport = allLogs.filter(log => entityFilter === 'all' || log.entity_type === entityFilter);
+      if (logsToExport.length === 0) return alert("لا توجد سجلات لهذا القسم لتصديرها.");
+      
+      const excelData = logsToExport.map(log => ({
         "التاريخ والوقت": log.created_at,
+        "القسم": log.entity_type === 'mission' ? 'المهام الميدانية' : log.entity_type === 'local_news' ? 'الأخبار المحلية' : 'نظام داخلي',
         "اسم المستخدم": log.full_name,
         "نوع الإجراء": log.action,
         "تفاصيل العملية": log.details
       }));
 
+      // اسم الملف بيتغير بذكاء حسب الفلتر
+      let fileName = 'الأرشيف_الأمني_الشامل.xlsx';
+      if (entityFilter === 'mission') fileName = 'سجل_لوج_المهام_فقط.xlsx';
+      if (entityFilter === 'local_news') fileName = 'سجل_لوج_الأخبار_فقط.xlsx';
+
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
-      XLSX.utils.book_append_sheet(wb, ws, "الأرشيف الشامل");
-      XLSX.writeFile(wb, `الأرشيف_الأمني_الشامل_للنظام.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "الأرشيف");
+      XLSX.writeFile(wb, fileName);
     } catch (err) {
       alert("حدث خطأ في الاتصال بالسيرفر أثناء تحميل الأرشيف.");
     }
@@ -1422,17 +1436,25 @@ function AuditLogsView() {
           <div className="w-10 h-10 bg-[#c70000]/10 rounded-xl flex items-center justify-center border border-[#c70000]/20 text-[#c70000]"><ShieldIcon /></div>
           <h3 className="text-xl font-bold text-white tracking-wide">سجل الإجراءات الرقابية <span className="text-xs text-[#c70000] bg-[#c70000]/10 border border-[#c70000]/30 px-2 py-1 rounded ml-2">سري للغاية</span></h3>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          {/* زرار التصدير الجديد */}
-          <button onClick={handleExportLogs} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0">
-            <ExcelIcon /> تصدير السجل
-          </button>
+        
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           
-          <input type="text" placeholder="بحث باسم المستخدم أو التفاصيل..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-full md:w-72" />
-          <input type="text" placeholder="بحث باسم المستخدم أو التفاصيل..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-full md:w-72" />
+          {/* فلتر القطاع (مهام / أخبار) */}
+          <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+            <button onClick={() => setEntityFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'all' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكل</button>
+            <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>المهام</button>
+            <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>الأخبار</button>
+          </div>
+
+          <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-full md:w-48" />
+          
           <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none cursor-pointer">
             {uniqueActions.map(action => <option key={action} value={action}>{action}</option>)}
           </select>
+
+          <button onClick={handleExportLogs} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0">
+            <ExcelIcon /> تصدير السجل
+          </button>
         </div>
       </div>
 
@@ -1441,21 +1463,27 @@ function AuditLogsView() {
           <thead className="bg-[#1a1a1a] text-gray-400 sticky top-0 z-10 shadow-md">
             <tr>
               <th className="p-4 font-semibold border-l border-white/5 w-48">التاريخ والوقت</th>
+              <th className="p-4 font-semibold border-l border-white/5 text-purple-400 w-24 text-center">القسم</th>
               <th className="p-4 font-semibold border-l border-white/5 text-[#c70000] w-48">اسم المستخدم</th>
               <th className="p-4 font-semibold border-l border-white/5 text-blue-400 w-40">نوع الإجراء</th>
               <th className="p-4 font-semibold">تفاصيل العملية (ماذا حدث؟)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {isLoading ? (<tr><td colSpan="4" className="p-8 text-center text-gray-500 font-bold animate-pulse">جاري سحب السجلات السرية...</td></tr>) : 
+            {isLoading ? (<tr><td colSpan="5" className="p-8 text-center text-gray-500 font-bold animate-pulse">جاري سحب السجلات السرية...</td></tr>) : 
             filteredLogs.length > 0 ? filteredLogs.map((log, idx) => (
               <tr key={idx} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5" dir="ltr">{log.created_at}</td>
+                <td className="p-4 border-l border-white/5 text-center">
+                  {log.entity_type === 'mission' ? <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/30">المهام</span> : 
+                   log.entity_type === 'local_news' ? <span className="bg-[#c70000]/20 text-[#c70000] px-2 py-1 rounded text-xs border border-[#c70000]/30">الأخبار</span> : 
+                   <span className="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs border border-gray-500/30">نظام</span>}
+                </td>
                 <td className="p-4 font-bold text-white border-l border-white/5">{log.full_name}</td>
                 <td className="p-4 font-bold border-l border-white/5"><span className="bg-[#111] px-3 py-1 rounded-lg border border-white/10 text-xs">{log.action}</span></td>
                 <td className="p-4 text-gray-300 truncate max-w-md whitespace-normal">{log.details}</td>
               </tr>
-            )) : (<tr><td colSpan="4" className="p-8 text-center text-gray-500">لا توجد سجلات مطابقة للبحث</td></tr>)}
+            )) : (<tr><td colSpan="5" className="p-8 text-center text-gray-500">لا توجد سجلات مطابقة للبحث</td></tr>)}
           </tbody>
         </table>
       </div>
@@ -1468,14 +1496,21 @@ const NewsIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" 
 // ==========================================
 // 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
 // ==========================================
+// ==========================================
+// 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
+// ==========================================
 function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [newsList, setNewsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filterDate, setFilterDate] = useState('');
   const [newsToDelete, setNewsToDelete] = useState(null);
+  
+  // 💡 حالات الفلاتر والتنبيهات
+  const [filterDate, setFilterDate] = useState('');
+  const [filterGov, setFilterGov] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [customAlert, setCustomAlert] = useState(null);
 
-  // 💡 الفورم داتا
   const [nd, setNd] = useState({
     news_id: null, incident_date: '', incident_description: '', news_type: '', news_publisher: '', street_name: '', area_name: '', governorate: 'القاهرة',
     is_reported: false, report_time: '',
@@ -1498,15 +1533,12 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     } catch (err) {} finally { setIsLoading(false); }
   };
 
-  // ==========================================
-  // المحرك الرياضي وحسابات الزمن والنقاط
-  // ==========================================
   const getMinutesDiff = (start, end) => {
     if (!start || !end) return null;
     let [sh, sm] = start.split(':').map(Number);
     let [eh, em] = end.split(':').map(Number);
     let diff = (eh * 60 + em) - (sh * 60 + sm);
-    if (diff < 0) diff += 24 * 60; // عبور منتصف الليل
+    if (diff < 0) diff += 24 * 60;
     return diff;
   };
 
@@ -1524,7 +1556,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     return months[new Date(dateStr).getMonth()];
   };
 
-  // الحسابات الحية
   const responseDiff = getMinutesDiff(nd.report_time, nd.response_time);
   const responsePoints = responseDiff !== null ? (responseDiff <= 6 ? 5 : responseDiff <= 11 ? 3 : 1) : 0;
   
@@ -1535,7 +1566,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const expectedTravelMins = nd.distance_km ? (parseFloat(nd.distance_km) * 0.6) : null;
   let fieldPoints = 0;
   if (actualTravelMins !== null && expectedTravelMins !== null) {
-    const timeDiff = actualTravelMins - expectedTravelMins; // بالسالب يعني وصل بدري
+    const timeDiff = actualTravelMins - expectedTravelMins;
     if (timeDiff <= -15) fieldPoints = 7;
     else if (timeDiff <= 0) fieldPoints = 5;
     else if (timeDiff <= 15) fieldPoints = 3;
@@ -1556,10 +1587,31 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     setNewsToDelete(null); fetchNews();
   };
 
+  // 💡 فلاتر الأخطاء الذكية قبل الحفظ
   const handleSubmit = async () => {
+    if (!nd.incident_date) return setCustomAlert("عفواً، يجب إدخال تاريخ الحادث.");
+    if (!nd.incident_description) return setCustomAlert("عفواً، برجاء إدخال وصف الحادث لتوثيقه.");
+    if (!nd.news_type) return setCustomAlert("عفواً، يجب تحديد نوع الخبر من القائمة.");
+    if (!nd.governorate) return setCustomAlert("عفواً، يجب تحديد المحافظة التي وقع بها الحادث.");
+    
+    if (nd.is_reported && !nd.report_time) {
+      return setCustomAlert("لقد أشرت إلى أنه (تم الإبلاغ)!\nبرجاء إدخال توقيت إرسال الخبر لحساب مؤشرات الأداء بشكل صحيح.");
+    }
+    
+    if (nd.is_responded) {
+      if (!nd.response_time) return setCustomAlert("لقد أشرت إلى أنه (تم الرد)!\nبرجاء إدخال توقيت الرد لحساب النقاط.");
+      if (!nd.branch_response_text) return setCustomAlert("لقد أشرت إلى أنه (تم الرد)!\nبرجاء إدخال نص رد الفرع.");
+    }
+    
+    if (nd.is_field_response) {
+      if (!nd.movement_time) return setCustomAlert("عفواً، تم تسجيل (استجابة ميدانية)، يجب إدخال توقيت التحرك.");
+      if (!nd.field_arrival_time) return setCustomAlert("عفواً، يجب إدخال توقيت وصول أول متطوع للميدان لحساب سرعة الاستجابة.");
+      if (!nd.distance_km) return setCustomAlert("عفواً، لحساب نقاط الاستجابة بدقة، يجب إدخال طول المسافة (كم) بين الحادث والفرع.");
+    }
+
     const payload = {
       ...nd,
-      branch_id: 19, // افتراضي
+      branch_id: 19,
       incident_month: getMonthName(nd.incident_date),
       response_time_points: nd.is_reported && nd.is_responded ? responsePoints : 0,
       response_duration: nd.is_reported && nd.is_responded ? formatDuration(responseDiff) : '',
@@ -1574,100 +1626,273 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     const method = nd.news_id ? 'PUT' : 'POST';
 
     const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-    if (res.ok) { setIsModalOpen(false); fetchNews(); } else { alert("خطأ في حفظ الخبر"); }
+    if (res.ok) { setIsModalOpen(false); fetchNews(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
   };
 
   const handleExportExcel = () => {
-    if (newsList.length === 0) return alert("لا توجد أخبار للتصدير.");
-    const ws = XLSX.utils.json_to_sheet(newsList.map(n => ({
-      "التاريخ": n.incident_date, "الشهر": n.incident_month, "وصف الحادث": n.incident_description,
-      "المنطقة": n.area_name, "المحافظة": n.governorate, "الإبلاغ": n.is_reported ? 'نعم' : 'لا',
-      "زمن الرد": n.response_duration, "نقاط الرد": n.response_time_points,
-      "زمن التحرك": n.report_to_movement_duration, "نقاط التحرك": n.movement_points,
-      "مسافة الحادث (كم)": n.distance_km, "نقاط الاستجابة": n.field_response_points,
-      "نوع التدخل": n.intervention_type, "الفرع المتدخل": n.intervening_branch,
-      "المصابين": n.injured_count, "الوفيات": n.deaths_count, "مدخل الخبر": n.data_entry_name
+    if (newsList.length === 0) return setCustomAlert("لا توجد أخبار للتصدير حالياً.");
+    const ws = XLSX.utils.json_to_sheet(filteredNews.map(n => ({
+      "التاريخ": n.incident_date || '', "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
+      "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": n.governorate || '',
+      "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": n.report_time || '', "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
+      "توقيت الرد": n.response_time || '', "حالة توقيت الرد": n.response_time_points || 0, "زمن الرد": n.response_duration || '',
+      "الاستجابة": n.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": n.movement_time || '', "المدة بين الابلاغ و التحرك": n.report_to_movement_duration || '',
+      "حالة المدة بين الابلاغ و التحرك": n.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": n.field_arrival_time || '', "حالة الاستجابة": n.field_response_points || 0,
+      "الزمن المتخذ لبدء الاستجابة": n.report_to_arrival_duration || '', "نوع الاستجابة": n.intervention_type || '', "الفرع المتدخل": n.intervening_branch || '',
+      "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
+      "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "سجل الأخبار");
     XLSX.writeFile(wb, `سجل_الأخبار_المحلية.xlsx`);
   };
 
-  const filteredNews = filterDate ? newsList.filter(n => n.incident_date === filterDate) : newsList;
+  const handleExportSingleNewsExcel = () => {
+    const ws = XLSX.utils.json_to_sheet([{
+      "التاريخ": nd.incident_date || '', "الشهر": nd.incident_month || '', "وصف الحادث": nd.incident_description || '', "نوع الخبر": nd.news_type || '', "ناشر الخبر": nd.news_publisher || '',
+      "اسم الشارع": nd.street_name || '', "المنطقة": nd.area_name || '', "المحافظة": nd.governorate || '',
+      "الابلاغ": nd.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": nd.report_time || '', "حالة الرد": nd.is_responded ? 'نعم' : 'لا', "رد الفرع": nd.branch_response_text || '',
+      "توقيت الرد": nd.response_time || '', "حالة توقيت الرد": nd.response_time_points || 0, "زمن الرد": nd.response_duration || '',
+      "الاستجابة": nd.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": n.movement_time || '', "المدة بين الابلاغ و التحرك": nd.report_to_movement_duration || '',
+      "حالة المدة بين الابلاغ و التحرك": nd.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": nd.field_arrival_time || '', "حالة الاستجابة": nd.field_response_points || 0,
+      "الزمن المتخذ لبدء الاستجابة": nd.report_to_arrival_duration || '', "نوع الاستجابة": nd.intervention_type || '', "الفرع المتدخل": nd.intervening_branch || '',
+      "اسم الاستمارة": nd.mission_form_name || '', "عدد المشاركين": nd.participants_count || 0, "اسم المستشفى": nd.hospital_name || '', "عدد المصابين": nd.injured_count || 0, "عدد الوفيات": nd.deaths_count || 0,
+      "تطورات الخبر": nd.news_updates || '', "لينك الخبر": nd.news_link || '', "اسم مدخل الخبر": nd.data_entry_name || '', "ملاحظات": nd.notes || '', "طول المسافة بين مكان الحادث و الفرع": nd.distance_km || ''
+    }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الخبر");
+    XLSX.writeFile(wb, `خبر_${nd.area_name || 'محلي'}.xlsx`);
+  };
 
-  // 💡 قائمة المحافظات (بتبدل المركز العام بـ القاهرة)
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
   const branchNames = [...new Set(branches.map(b => b.name))];
+  const newsTypes = ['حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'];
+
+  // 💡 تطبيق الفلاتر
+  const filteredNews = newsList.filter(n => {
+    const matchDate = filterDate ? n.incident_date === filterDate : true;
+    const matchGov = filterGov === 'all' ? true : n.governorate === filterGov;
+    const matchType = filterType === 'all' ? true : n.news_type === filterType;
+    return matchDate && matchGov && matchType;
+  });
 
   return (
-    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[calc(100vh-180px)]">
-      {newsToDelete && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
-          <div className="bg-[#0c0c0c] border border-red-600/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center">
-            <TrashIcon className="w-16 h-16 text-red-500 mb-4" />
-            <h3 className="text-xl font-bold text-white mb-6">تأكيد الحذف نهائياً؟</h3>
-            <div className="flex gap-4 w-full">
-              <button onClick={() => setNewsToDelete(null)} className="flex-1 bg-[#111] text-gray-300 py-3 rounded-xl font-bold border border-white/10 hover:bg-white/5">إلغاء</button>
-              <button onClick={confirmDelete} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">حذف</button>
+    <div className="space-y-6 pb-10">
+      
+      {/* 💡 داشبورد مصغر للأخبار */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
+        <StatCard title="إجمالي الحوادث المسجلة" value={filteredNews.length} color="text-white" borderHighlight />
+        <StatCard title="بلاغات تم الرد عليها" value={filteredNews.filter(n => n.is_responded).length} color="text-blue-400" />
+        <StatCard title="استجابة ميدانية (تحرك)" value={filteredNews.filter(n => n.is_field_response).length} color="text-green-500" />
+        <StatCard title="متوسط نقاط الاستجابة" value={filteredNews.length ? Math.round(filteredNews.reduce((a,b)=>a+b.field_response_points,0)/filteredNews.length) : 0} color="text-yellow-500" />
+      </div>
+
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
+            <h3 className="text-xl font-bold text-white whitespace-nowrap">الأخبار المحلية</h3>
+            
+            {/* 💡 شريط الفلاتر الشامل */}
+            <div className="flex flex-wrap items-center gap-2 w-full">
+              <select value={filterGov} onChange={(e) => setFilterGov(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer">
+                <option value="all">كل المحافظات</option>
+                {governorates.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer max-w-[200px] truncate">
+                <option value="all">كل الحوادث</option>
+                {newsTypes.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <div className="flex items-center gap-2">
+                <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+                {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-2 py-2 rounded-lg">الكل</button>}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0"><ExcelIcon /> تصدير السجل</button>}
+            <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0">+ إضافة خبر</button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto custom-scrollbar relative">
+          <table className="w-full text-right whitespace-nowrap text-sm">
+            <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+              <tr>
+                <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
+                <th className="p-4 font-semibold border-l border-white/5">المحافظة</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-blue-400 max-w-[200px]">وصف الحادث</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-yellow-500">نقاط (رد/تحرك/وصول)</th>
+                <th className="p-4 font-semibold border-l border-white/5">المتطوعين</th>
+                <th className="p-4 font-semibold border-l border-white/5">مدخل الخبر</th>
+                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+               filteredNews.length > 0 ? filteredNews.map(n => (
+                <tr key={n.news_id} className="hover:bg-white/5">
+                  <td className="p-4 text-white border-l border-white/5">{n.incident_date}</td>
+                  <td className="p-4 text-gray-300 border-l border-white/5 font-bold">{n.governorate}</td>
+                  <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{n.incident_description}</td>
+                  <td className="p-4 border-l border-white/5">
+                    <div className="flex gap-1">
+                      <span className="bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded text-xs border border-yellow-500/30" title="نقاط الرد">{n.response_time_points}</span>
+                      <span className="bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded text-xs border border-orange-500/30" title="نقاط التحرك">{n.movement_points}</span>
+                      <span className="bg-green-500/20 text-green-500 px-2 py-0.5 rounded text-xs border border-green-500/30" title="نقاط الوصول">{n.field_response_points}</span>
+                    </div>
+                  </td>
+                  <td className="p-4 text-gray-400 border-l border-white/5">{n.participants_count}</td>
+                  <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.data_entry_name}</td>
+                  <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                    <div className="flex justify-center gap-2">
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-blue-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
+                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
+                    </div>
+                  </td>
+                </tr>
+              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد أخبار مطابقة للفلاتر</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-[#050505] border border-white/10 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
+            <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><NewsIcon /> {nd.news_id ? 'تعديل الخبر والمؤشرات' : 'إضافة خبر جديد'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="bg-[#111] text-gray-400 hover:bg-red-600 hover:text-white p-2 rounded-xl"><TrashIcon /></button>
+            </div>
+
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+              
+              <SectionCard title="1. بيانات الخبر الأساسية" icon={<AlertIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormGroup label="التاريخ (مطلوب)"><StyledInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="border-[#c70000]/30" /></FormGroup>
+                  <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(nd.incident_date)} className="bg-[#0a0a0a] text-gray-500" /></FormGroup>
+                  <FormGroup label="نوع الخبر (مطلوب)">
+                    <StyledSelect value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})} className="border-[#c70000]/30">
+                      <option value="" disabled className="bg-[#111] text-gray-500">اختر نوع الحادث...</option>
+                      {newsTypes.map(type => <option key={type} value={type} className="bg-[#111] text-white">{type}</option>)}
+                    </StyledSelect>
+                  </FormGroup>
+                  <div className="md:col-span-3"><FormGroup label="وصف الحادث (مطلوب)"><textarea value={nd.incident_description} onChange={e => setNd({...nd, incident_description: e.target.value})} className="w-full bg-[#111] border border-[#c70000]/30 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="2"></textarea></FormGroup></div>
+                  <FormGroup label="ناشر الخبر"><StyledInput value={nd.news_publisher} onChange={e => setNd({...nd, news_publisher: e.target.value})} /></FormGroup>
+                  <FormGroup label="المحافظة (مطلوب)">
+                    <StyledSelect value={nd.governorate} onChange={e => setNd({...nd, governorate: e.target.value})} className="border-[#c70000]/30">
+                      <option value="" disabled>اختر المحافظة...</option>
+                      {governorates.map(g => <option key={g} value={g}>{g}</option>)}
+                    </StyledSelect>
+                  </FormGroup>
+                  <FormGroup label="المنطقة"><StyledInput value={nd.area_name} onChange={e => setNd({...nd, area_name: e.target.value})} /></FormGroup>
+                  <FormGroup label="الشارع"><StyledInput value={nd.street_name} onChange={e => setNd({...nd, street_name: e.target.value})} /></FormGroup>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="2. الإبلاغ والرد (تقييم السرعة)" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <FormGroup label="تم الإبلاغ؟">
+                    <StyledSelect value={nd.is_reported ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_reported: e.target.value === 'نعم', is_responded: e.target.value === 'لا' ? false : nd.is_responded, is_field_response: e.target.value === 'لا' ? false : nd.is_field_response})}>
+                      <option value="لا">لا</option><option value="نعم">نعم</option>
+                    </StyledSelect>
+                  </FormGroup>
+                  <FormGroup label="توقيت الإرسال"><StyledInput type="time" disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={!nd.is_reported ? 'opacity-50' : 'border-[#c70000]/30'}/></FormGroup>
+                  
+                  <FormGroup label="تم الرد؟">
+                    <StyledSelect disabled={!nd.is_reported} value={nd.is_responded ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_responded: e.target.value === 'نعم'})} className={!nd.is_reported ? 'opacity-50' : ''}>
+                      <option value="لا">لا</option><option value="نعم">نعم</option>
+                    </StyledSelect>
+                  </FormGroup>
+                  <FormGroup label="توقيت الرد"><StyledInput type="time" disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[#c70000]/30'}/></FormGroup>
+                  
+                  <div className="md:col-span-2"><FormGroup label="رد الفرع"><StyledInput disabled={!nd.is_responded} value={nd.branch_response_text} onChange={e => setNd({...nd, branch_response_text: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[#c70000]/30'} /></FormGroup></div>
+                  <FormGroup label="زمن الرد (تلقائي)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-white/5 text-sm">{nd.is_responded ? formatDuration(responseDiff) : '-'}</div></FormGroup>
+                  <FormGroup label="حالة توقيت الرد (نقاط)"><div className="bg-[#0a0a0a] text-yellow-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_responded ? `${responsePoints} نقطة` : '-'}</div></FormGroup>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="3. الاستجابة الميدانية والتحرك" icon={<CarIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <FormGroup label="تمت الاستجابة؟">
+                    <StyledSelect disabled={!nd.is_reported} value={nd.is_field_response ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_field_response: e.target.value === 'نعم'})} className={!nd.is_reported ? 'opacity-50' : ''}>
+                      <option value="لا">لا</option><option value="نعم">نعم</option>
+                    </StyledSelect>
+                  </FormGroup>
+                  <FormGroup label="توقيت التحرك"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[#c70000]/30'} /></FormGroup>
+                  <FormGroup label="المدة (إبلاغ ➔ تحرك)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-white/5 text-sm">{nd.is_field_response ? formatDuration(moveDiff) : '-'}</div></FormGroup>
+                  <FormGroup label="نقاط التحرك"><div className="bg-[#0a0a0a] text-orange-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_field_response ? `${movePoints} نقطة` : '-'}</div></FormGroup>
+
+                  <FormGroup label="طول المسافة (كم)"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.distance_km} onChange={e => setNd({...nd, distance_km: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[#c70000]/30'} placeholder="مثال: 15" /></FormGroup>
+                  <FormGroup label="توقيت الوصول (أول متطوع)"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[#c70000]/30'} /></FormGroup>
+                  <FormGroup label="الزمن المتوقع (تلقائي)"><div className="bg-[#0a0a0a] text-gray-500 p-3 rounded-xl border border-white/5 text-sm">{nd.is_field_response && expectedTravelMins !== null ? `${Math.floor(expectedTravelMins)} دقيقة` : '-'}</div></FormGroup>
+                  <FormGroup label="نقاط الاستجابة للمسافة"><div className="bg-[#0a0a0a] text-green-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_field_response ? `${fieldPoints} نقطة` : '-'}</div></FormGroup>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="4. تفاصيل التدخل الميداني" icon={<UsersIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <FormGroup label="نوع الاستجابة">
+                    <StyledSelect disabled={!nd.is_field_response} value={nd.intervention_type} onChange={e => setNd({...nd, intervention_type: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''}>
+                      {['دعم نفسي', 'طوارئ', 'طوارئ - دعم نفسي', 'طوارئ ( تقييم )', 'مساعدات مالية', 'طوارئ - مساعدات', 'دعم نفسي - مساعدات'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </StyledSelect>
+                  </FormGroup>
+                  <FormGroup label="الفرع المتدخل">
+                    <StyledSelect disabled={!nd.is_field_response} value={nd.intervening_branch} onChange={e => setNd({...nd, intervening_branch: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''}>
+                      {branchNames.map(b => <option key={b} value={b}>{b}</option>)}
+                    </StyledSelect>
+                  </FormGroup>
+                  <FormGroup label="اسم استمارة المهمة"><StyledInput disabled={!nd.is_field_response} value={nd.mission_form_name} onChange={e => setNd({...nd, mission_form_name: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''} /></FormGroup>
+                  <FormGroup label="عدد المشاركين"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.participants_count} onChange={e => setNd({...nd, participants_count: parseInt(e.target.value) || 0})} className={!nd.is_field_response ? 'opacity-50' : ''} /></FormGroup>
+                  
+                  <FormGroup label="اسم المستشفى"><StyledInput value={nd.hospital_name} onChange={e => setNd({...nd, hospital_name: e.target.value})} /></FormGroup>
+                  <FormGroup label="عدد المصابين"><StyledInput type="number" value={nd.injured_count} onChange={e => setNd({...nd, injured_count: parseInt(e.target.value) || 0})} /></FormGroup>
+                  <FormGroup label="عدد الوفيات"><StyledInput type="number" value={nd.deaths_count} onChange={e => setNd({...nd, deaths_count: parseInt(e.target.value) || 0})} /></FormGroup>
+                  <FormGroup label="مدخل الخبر"><StyledInput value={nd.data_entry_name} onChange={e => setNd({...nd, data_entry_name: e.target.value})} placeholder="الاسم..." /></FormGroup>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="5. الملاحظات والمتابعة" icon={<MapIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormGroup label="تطورات الخبر"><textarea value={nd.news_updates} onChange={e => setNd({...nd, news_updates: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
+                  <FormGroup label="ملاحظات عامة"><textarea value={nd.notes} onChange={e => setNd({...nd, notes: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
+                  <div className="md:col-span-2"><FormGroup label="لينك الخبر (URL)"><StyledInput value={nd.news_link} onChange={e => setNd({...nd, news_link: e.target.value})} placeholder="https://..." dir="ltr" className="text-left" /></FormGroup></div>
+                </div>
+              </SectionCard>
+
+            </div>
+            
+            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl">
+              <button onClick={handleExportSingleNewsExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto">
+                <ExcelIcon /> تصدير الخبر الحالي
+              </button>
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
+              <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ الخبر وتقييم الأداء</button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
-        <div className="flex items-center gap-4">
-          <h3 className="text-xl font-bold text-white">الأخبار المحلية <span className="text-[#c70000] text-sm">(تقييم الاستجابة)</span></h3>
-          <div className="flex items-center gap-2">
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
-            {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-2 py-1.5 rounded-lg">الكل</button>}
+      {/* -- تصميم التنبيه الإداري الفخم -- */}
+      {customAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4">
+              <svg className="w-7 h-7 text-[#c70000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <div className="mt-8 flex justify-end">
+              <button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-red-500/50">
+                علم، جاري التعديل
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex gap-3">
-          {(isOwner || isSupervisor || isJoker) && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon /> تصدير السجل</button>}
-          <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2">+ إضافة خبر</button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto custom-scrollbar relative">
-        <table className="w-full text-right whitespace-nowrap text-sm">
-          <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
-            <tr>
-              <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
-              <th className="p-4 font-semibold border-l border-white/5">المحافظة</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-blue-400 max-w-[200px]">وصف الحادث</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-yellow-500">نقاط الاستجابة</th>
-              <th className="p-4 font-semibold border-l border-white/5">المتطوعين</th>
-              <th className="p-4 font-semibold border-l border-white/5">مدخل الخبر</th>
-              <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">إجراءات</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
-             filteredNews.length > 0 ? filteredNews.map(n => (
-              <tr key={n.news_id} className="hover:bg-white/5">
-                <td className="p-4 text-white border-l border-white/5">{n.incident_date}</td>
-                <td className="p-4 text-gray-300 border-l border-white/5 font-bold">{n.governorate}</td>
-                <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{n.incident_description}</td>
-                <td className="p-4 border-l border-white/5">
-                  <div className="flex gap-1">
-                    <span className="bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded text-xs border border-yellow-500/30" title="نقاط الرد">{n.response_time_points}</span>
-                    <span className="bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded text-xs border border-orange-500/30" title="نقاط التحرك">{n.movement_points}</span>
-                    <span className="bg-green-500/20 text-green-500 px-2 py-0.5 rounded text-xs border border-green-500/30" title="نقاط الوصول">{n.field_response_points}</span>
-                  </div>
-                </td>
-                <td className="p-4 text-gray-400 border-l border-white/5">{n.participants_count}</td>
-                <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.data_entry_name}</td>
-                <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
-                  <div className="flex justify-center gap-2">
-                    <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-blue-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                    {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
-                  </div>
-                </td>
-              </tr>
-            )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد أخبار</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      )}
+    </div>
+  );
+}
 
       {/* مودال الفورم العملاقة */}
       {isModalOpen && (
@@ -1785,7 +2010,12 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
 
             </div>
             
-            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex justify-end gap-3 shrink-0 rounded-b-3xl">
+            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl">
+              {/* زرار التصدير الفردي متاح للكل */}
+              <button onClick={handleExportSingleNewsExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto">
+                <ExcelIcon /> تصدير الخبر الحالي
+              </button>
+              
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
               <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ الخبر وتقييم الأداء</button>
             </div>

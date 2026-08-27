@@ -602,8 +602,9 @@ def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizati
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
+            # ضفنا l.entity_type عشان نفلتر بيه
             cursor.execute("""
-                SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at
+                SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
                 ORDER BY l.created_at DESC LIMIT %s OFFSET %s;
@@ -614,7 +615,8 @@ def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizati
                     "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
                     "action": r[3], 
                     "details": r[4].get("action_text", str(r[4])) if isinstance(r[4], dict) else str(r[4] or ""), 
-                    "created_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else ""
+                    "created_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else "",
+                    "entity_type": r[6]
                 } for r in rows
             ]
     except Exception as e:
@@ -637,7 +639,7 @@ def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(securi
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at
+                SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
                 ORDER BY l.created_at DESC;
@@ -646,22 +648,19 @@ def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(securi
             
             result = []
             for r in rows:
-                # تأمين قراءة التفاصيل
                 details_val = r[4]
                 details_str = details_val.get("action_text", str(details_val)) if isinstance(details_val, dict) else str(details_val or "")
-                    
-                # تأمين قراءة التاريخ
                 created_val = r[5]
                 created_str = created_val.strftime("%Y-%m-%d %H:%M:%S") if hasattr(created_val, 'strftime') else str(created_val) if created_val else "غير مسجل"
                     
                 result.append({
                     "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
-                    "action": r[3], "details": details_str, "created_at": created_str
+                    "action": r[3], "details": details_str, "created_at": created_str,
+                    "entity_type": r[6]
                 })
             return result
     except Exception as e:
         print(f"Error exporting audit logs: {e}")
-        # هنا بنبعت الإيرور الحقيقي للواجهة عشان نشوفه
         raise HTTPException(status_code=500, detail=f"خطأ في قاعدة البيانات: {str(e)}")
     finally:
         connection.close()
