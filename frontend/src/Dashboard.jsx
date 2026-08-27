@@ -195,20 +195,27 @@ function HomeView() {
     <div className="space-y-8 pb-10">
       
       {/* 💡 شريط التابات (الأقاليم) */}
-      <div className="flex flex-wrap gap-2 mb-6 bg-[#0c0c0c] p-2 rounded-2xl border border-white/5 w-fit shadow-lg">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-              activeTab === tab.id
-                ? 'bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.5)] scale-105'
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* 💡 شريط التابات وإحصائيات التصنيف */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+        <div className="flex flex-wrap gap-2 bg-[#0c0c0c] p-2 rounded-2xl border border-white/5 w-fit shadow-lg">
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === tab.id ? 'bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.5)] scale-105' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        
+        {/* عدادات المهام المفتوحة والعادية للفرع المختار */}
+        <div className="flex gap-4 bg-[#111] p-3 rounded-2xl border border-white/5 shadow-lg">
+          <div className="flex flex-col items-center px-6 border-l border-white/10">
+            <span className="text-gray-400 text-xs font-bold mb-1">المهام المفتوحة (نشطة)</span>
+            <span className="text-2xl font-black text-blue-500">{filteredMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length}</span>
+          </div>
+          <div className="flex flex-col items-center px-6">
+            <span className="text-gray-400 text-xs font-bold mb-1">المهام العادية (نشطة)</span>
+            <span className="text-2xl font-black text-white">{filteredMissions.filter(m => (m.mission_classification === 'عادية' || !m.mission_classification) && !['Completed', 'Cancelled'].includes(m.status)).length}</span>
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 mb-6">
@@ -439,6 +446,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
   const [filterDate, setFilterDate] = useState(getLocalDate());
+  const [missionViewType, setMissionViewType] = useState('daily'); // 'daily' or 'open'
 
   const fetchMissions = async () => {
     setIsLoading(true);
@@ -747,7 +755,14 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     return <span className={`px-2 py-1 rounded text-xs font-bold border ${s.color}`}>{s.text}</span>;
   };
 
-  let filteredMissions = filterDate ? missionsList.filter(m => m.created_at === filterDate) : missionsList;
+  let filteredMissions = missionsList;
+  if (missionViewType === 'open') {
+     // المهام المفتوحة النشطة فقط وتظهر دائماً بغض النظر عن التاريخ
+     filteredMissions = filteredMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status));
+  } else {
+     // المهام اليومية (حسب تاريخ المهمة أو تاريخ الخروج، لو مش موجود بيجيب تاريخ الإنشاء كبديل احتياطي)
+     filteredMissions = filterDate ? filteredMissions.filter(m => (m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]) === filterDate) : filteredMissions;
+  }
   if (activeRegionTab !== 'all') { filteredMissions = filteredMissions.filter(m => (regionMap[m.branch.trim()] || 'hq') === activeRegionTab); }
 
   const getCreationDate = () => {
@@ -772,16 +787,19 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
       )}
 
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-3">
           <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
-          <div className="flex items-center gap-2">
-          <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
-          {filterDate && (
-            <button onClick={() => setFilterDate('')} className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 px-3 py-2 rounded-xl text-xs font-bold transition-colors">
-              عرض الكل
-            </button>
+          <div className="flex items-center gap-2 bg-[#111] p-1 rounded-xl w-fit border border-white/5">
+            <button onClick={() => setMissionViewType('daily')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'daily' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>سجل اليوم</button>
+            <button onClick={() => setMissionViewType('open')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'open' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'text-gray-400 hover:text-white'}`}>المهام المفتوحة (مستمرة)</button>
+          </div>
+          {missionViewType === 'daily' && (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-gray-500">تاريخ المهمة الفعلي:</span>
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              {filterDate && <button onClick={() => setFilterDate('')} className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 px-3 py-2 rounded-xl text-xs font-bold transition-colors">الكل</button>}
+            </div>
           )}
-        </div>
         </div>
         <div className="flex gap-3">
           {/* 👑 المالك فقط هو اللي يقدر ينزل الإكسيل الشامل */}
@@ -802,15 +820,16 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         <table className="w-full text-right whitespace-nowrap">
           <thead className="sticky top-0 z-20 bg-[#1a1a1a]">
             <tr className="text-gray-400 text-sm">
-            
               <th className="p-4 font-semibold border-l border-white/5">تاريخ الإنشاء</th>
               <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">تاريخ المهمة</th>
+              <th className="p-4 font-semibold border-l border-white/5 text-blue-400">تصنيف المهمة</th>
+              <th className="p-4 font-semibold border-l border-white/5 text-green-400">فترة المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">كود المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">التمركز (الفرع)</th>
               <th className="p-4 font-semibold border-l border-white/5">اسم المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">السيارات والسائقين</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-blue-400">نوع المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-blue-400">مكان المهمة</th>
+              <th className="p-4 font-semibold border-l border-white/5">نوع المهمة</th>
+              <th className="p-4 font-semibold border-l border-white/5">مكان المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">مسؤول المهمة</th>
               <th className="p-4 font-semibold border-l border-white/5">مصدر البلاغ</th>
               <th className="p-4 font-semibold border-l border-white/5">تاريخ التحرك</th>
@@ -820,16 +839,18 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {isLoading ? (<tr><td colSpan="14" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
+            {isLoading ? (<tr><td colSpan="16" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
             filteredMissions.length > 0 ? filteredMissions.map(m => (
               <tr key={`mission-${m.mission_id}`} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
                 <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
+                <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
+                <td className="p-4 text-gray-300 border-l border-white/5 font-mono text-xs whitespace-pre-wrap leading-relaxed">{['Completed', 'Cancelled'].includes(m.status) ? `من: ${m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]}\nإلى: ${m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل'}` : `من: ${m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]}\n(حتى الآن...)`}</td>
                 <td className="p-4 font-mono text-gray-300 border-l border-white/5">{m.mission_code}</td>
                 <td className="p-4 font-bold text-white border-l border-white/5">{m.branch}</td>
                 <td className="p-4 text-gray-200 font-bold border-l border-white/5">{m.mission_name}</td>
                 <td className="p-4 text-green-400 border-l border-white/5">{m.vehicles_info}</td>
-                <td className="p-4 text-blue-300 border-l border-white/5">{m.mission_type}</td>
+                <td className="p-4 text-gray-300 border-l border-white/5">{m.mission_type}</td>
                 <td className="p-4 text-gray-300 border-l border-white/5">{m.mission_location}</td>
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.responsible_person}</td>
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.data_source}</td>
@@ -843,7 +864,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   </div>
                 </td>
               </tr>
-            )) : (<tr><td colSpan="14" className="p-8 text-center text-gray-500">لا توجد مهام</td></tr>)}
+            )) : (<tr><td colSpan="16" className="p-8 text-center text-gray-500">لا توجد مهام مطابقة</td></tr>)}
           </tbody>
         </table>
       </div>
@@ -1104,6 +1125,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
                   <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">تم مراجعة المهمة</button>
                   <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
+                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>}
                 </>
               ) : (
                 /* 👷 باقي الرتب بتمشي على السايكل الصارمة اللي إنت طلبتها */
@@ -1140,7 +1162,10 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
                   {/* 4. مكتملة (مقفولة) - المتطوع ميشوفش حاجة، بس الجوكر والمشرف يقدروا يعدلوا أخطاء ويحفظوها تاني كمكتملة */}
                   {currentMissionData?.status === 'Completed' && !isVolunteer && (
-                    <button onClick={() => handleSubmit('Completed')} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)]">حفظ التعديلات (كمكتملة)</button>
+                    <>
+                      <button onClick={() => handleSubmit('Completed')} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)]">حفظ التعديلات (كمكتملة)</button>
+                      <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>
+                    </>
                   )}
                 </>
               )}
