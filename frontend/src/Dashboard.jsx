@@ -1684,7 +1684,23 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormGroup label="التاريخ"><StyledInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} /></FormGroup>
                   <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(nd.incident_date)} className="bg-[#0a0a0a] text-gray-500" /></FormGroup>
-                  <FormGroup label="نوع الخبر"><StyledInput value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})} placeholder="مثال: حريق، حادث سير..." /></FormGroup>
+                  <FormGroup label="نوع الخبر">
+                    <StyledSelect value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})}>
+                      <option value="" disabled className="bg-[#111] text-gray-500">اختر نوع الحادث...</option>
+                      {[
+                        'حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 
+                        'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 
+                        'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 
+                        'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 
+                        'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 
+                        'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 
+                        'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 
+                        'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'
+                      ].map(type => (
+                        <option key={type} value={type} className="bg-[#111] text-white">{type}</option>
+                      ))}
+                    </StyledSelect>
+                  </FormGroup>
                   <div className="md:col-span-3"><FormGroup label="وصف الحادث"><textarea value={nd.incident_description} onChange={e => setNd({...nd, incident_description: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="2"></textarea></FormGroup></div>
                   <FormGroup label="ناشر الخبر"><StyledInput value={nd.news_publisher} onChange={e => setNd({...nd, news_publisher: e.target.value})} /></FormGroup>
                   <FormGroup label="المحافظة">
