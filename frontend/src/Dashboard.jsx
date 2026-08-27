@@ -627,36 +627,34 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
        // ==========================================
        // 🚨 رادار غرفة العمليات: منع تكرار المشاركين
        // ==========================================
-       const participantTracker = {};
+       // ==========================================
+       // 🚨 رادار غرفة العمليات: ذكي (يدعم المهام المفتوحة وتعدد التحركات)
+       // ==========================================
+       const activeParticipants = {}; 
        let hasDuplicateError = false;
 
        participants.forEach((_, i) => {
          const pName = document.getElementById(`p_name_${i}`)?.value;
          if (!pName) return;
 
-         // بنسحب رقم العضوية والفرع وخط السير اللي المتطوع مربوط بيه
          const pRole = document.getElementById(`p_role_${i}`)?.value?.trim() || ''; 
          const pBranch = document.getElementById(`p_branch_${i}`)?.value || '19';
+         const pStatus = document.getElementById(`p_status_${i}`)?.value || 'بالمهمة';
          const pItin = document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي';
 
-         // بنعمل "بصمة" للمتطوع (رقم العضوية + الفرع).. لو مفيش رقم عضوية بناخد اسمه
          const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
 
-         if (!participantTracker[uniqueKey]) {
-           participantTracker[uniqueKey] = [];
-         }
-
-         // لو البصمة دي موجودة قبل كده، بنسأله: هل هو في نفس خط السير؟
-         if (participantTracker[uniqueKey].includes(pItin)) {
-           setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر!\n\nتم إدراجه أكثر من مرة في نفس خط السير (${pItin}).\nلا يمكن تكرار الشخص إلا إذا تم توزيعه على خط سير مختلف.`);
-           hasDuplicateError = true;
-         } else {
-           // لو مش مكرر أو في خط سير مختلف، بنسجله عادي
-           participantTracker[uniqueKey].push(pItin);
+         // الرادار بيتدخل فقط لو المتطوع حالته الحالية "بالمهمة"
+         // مينفعش يكون نفس الشخص "بالمهمة" مرتين في نفس اللحظة!
+         if (pStatus === 'بالمهمة') {
+           if (activeParticipants[uniqueKey]) {
+             setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر ومسجل كـ "بالمهمة" أكثر من مرة!\n\nلا يمكن أن يكون المتطوع متواجد في تحركين نشطين في نفس الوقت.\nيجب تسجيل عودته أولاً من التحرك السابق (عاد للقاعدة) قبل إضافة تحرك جديد له.`);
+             hasDuplicateError = true;
+           } else {
+             activeParticipants[uniqueKey] = true;
+           }
          }
        });
-
-       // لو الرادار لقى تكرار، بيوقف عملية الحفظ فوراً وميبعتش حاجة للسيرفر
        if (hasDuplicateError) return;
 
        // ==========================================
