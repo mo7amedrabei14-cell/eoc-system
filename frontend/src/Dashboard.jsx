@@ -1473,7 +1473,7 @@ function AuditLogsView() {
       
       const excelData = logsToExport.map(log => ({
         "التاريخ والوقت": log.created_at,
-        "القسم": log.entity_type === 'mission' ? 'المهام الميدانية' : log.entity_type === 'local_news' ? 'الأخبار المحلية' : 'نظام داخلي',
+        "القسم": log.entity_type === 'mission' ? 'المهام الميدانية' : log.entity_type === 'local_news' ? 'الأخبار المحلية' : log.entity_type === 'global_disaster' ? 'الكوارث العالمية' : 'نظام داخلي',
         "اسم المستخدم": log.full_name,
         "نوع الإجراء": log.action,
         "تفاصيل العملية": log.details
@@ -1482,7 +1482,8 @@ function AuditLogsView() {
       // اسم الملف بيتغير بذكاء حسب الفلتر
       let fileName = 'الأرشيف_الأمني_الشامل.xlsx';
       if (entityFilter === 'mission') fileName = 'سجل_لوج_المهام_فقط.xlsx';
-      if (entityFilter === 'local_news') fileName = 'سجل_لوج_الأخبار_فقط.xlsx';
+      if (entityFilter === 'local_news') fileName = 'سجل_لوج_الأخبار_المحلية.xlsx';
+      if (entityFilter === 'global_disaster') fileName = 'سجل_لوج_الكوارث_العالمية.xlsx';
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
@@ -1507,7 +1508,8 @@ function AuditLogsView() {
           <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
             <button onClick={() => setEntityFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'all' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكل</button>
             <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>المهام</button>
-            <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>الأخبار</button>
+            <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>الأخبار المحلية</button>
+            <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكوارث العالمية</button>
           </div>
 
           <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-full md:w-48" />
@@ -1540,7 +1542,8 @@ function AuditLogsView() {
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5" dir="ltr">{log.created_at}</td>
                 <td className="p-4 border-l border-white/5 text-center">
                   {log.entity_type === 'mission' ? <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/30">المهام</span> : 
-                   log.entity_type === 'local_news' ? <span className="bg-[#c70000]/20 text-[#c70000] px-2 py-1 rounded text-xs border border-[#c70000]/30">الأخبار</span> : 
+                   log.entity_type === 'local_news' ? <span className="bg-[#c70000]/20 text-[#c70000] px-2 py-1 rounded text-xs border border-[#c70000]/30">الأخبار المحلية</span> : 
+                   log.entity_type === 'global_disaster' ? <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs border border-orange-500/30">الكوارث العالمية</span> : 
                    <span className="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs border border-gray-500/30">نظام</span>}
                 </td>
                 <td className="p-4 font-bold text-white border-l border-white/5">{log.full_name}</td>
@@ -2057,7 +2060,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
         <div className="p-6 border-b border-white/5 bg-[#111] flex justify-between items-center gap-4 z-10">
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> رصد الكوارث والأزمات العالمية</h3>
           <div className="flex gap-3">
-            {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon /> تصدير السجل شامل للاونر</button>}
+            {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon /> تحميل السجل الشامل للكوارث</button>}
             <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2">+ رصد كارثة</button>
           </div>
         </div>
@@ -2154,7 +2157,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
             </div>
             
             <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex justify-end gap-3 shrink-0 rounded-b-3xl">
-              <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto"><ExcelIcon /> تحميل خبر للكل</button>
+              <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto"><ExcelIcon /> تحميل سجل الكارثة</button>
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
               <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ وتوثيق الكارثة</button>
             </div>
