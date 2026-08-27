@@ -56,8 +56,8 @@ export default function Login() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-black/40"></div>
           <div className="relative z-10">
             <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-8 shadow-2xl transform transition hover:scale-110 hover:rotate-3 duration-500">
-              <svg className="w-10 h-10 text-[#c70000]" viewBox="0 0 100 100" fill="currentColor">
-                <path d="M50 10 A40 40 0 1 0 90 50 A30 30 0 1 1 50 20 Z" />
+              <svg viewBox="0 0 100 100" className="w-10 h-10">
+                <path d="M 50 15 A 35 35 0 1 0 50 85 A 25 25 0 1 1 50 15 Z" fill="#c70000" transform="rotate(-30 50 50)" />
               </svg>
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4 drop-shadow-md">الهلال الأحمر المصري</h2>
