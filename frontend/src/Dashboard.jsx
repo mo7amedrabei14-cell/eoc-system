@@ -123,17 +123,15 @@ export default function Dashboard() {
                 
                 {/* اللوجو نفسه */}
                 <div className="relative bg-white rounded-full p-2 border-2 border-white/20 shadow-[0_0_25px_rgba(199,0,0,0.4)] flex items-center justify-center transition-transform duration-300 hover:scale-105">
-                  <svg viewBox="0 0 100 100" className="w-16 h-16 drop-shadow-md">
-                    {/* الإطار الدائري الأحمر الخارجي */}
-                    <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#c70000" strokeWidth="4" />
+                  <svg viewBox="0 0 100 100" className="w-14 h-14 drop-shadow-md">
+                    {/* الإطار الدائري الأحمر */}
+                    <circle cx="50" cy="50" r="48" fill="none" stroke="#c70000" strokeWidth="4" />
                     
-                    {/* الهلال الأحمر */}
-                    <path d="M 65 25 A 25 25 0 1 0 65 75 A 20 20 0 1 1 65 25 Z" fill="#c70000" />
+                    {/* الهلال الأحمر المثالي رياضياً (يفتح لليمين ومضبوط تماماً) */}
+                    <path d="M 67.5 15 A 35 35 0 1 0 67.5 85 A 40 40 0 0 1 67.5 15 Z" fill="#c70000" />
                     
-                    {/* أيقونة مصغرة ترمز لغرفة العمليات (EOC) داخل الهلال */}
-                    <circle cx="55" cy="50" r="7" fill="#111" />
-                    <circle cx="55" cy="50" r="3" fill="#c70000" className="animate-pulse" />
-                    <path d="M 46 50 L 52 50" stroke="#111" strokeWidth="2" strokeLinecap="round" />
+                    {/* نقطة غرفة العمليات (نبض) */}
+                    <circle cx="58" cy="50" r="4" fill="#c70000" className="animate-pulse" />
                   </svg>
                 </div>
               </div>

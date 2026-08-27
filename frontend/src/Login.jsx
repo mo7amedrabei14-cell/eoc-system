@@ -57,8 +57,8 @@ export default function Login() {
           <div className="relative z-10">
             <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-8 shadow-2xl transform transition hover:scale-110 hover:rotate-3 duration-500">
               <svg viewBox="0 0 100 100" className="w-10 h-10 drop-shadow-sm">
-                {/* الهلال الأحمر المصري الأصلي (بدون دوران) */}
-                <path d="M 50 15 A 35 35 0 1 0 50 85 A 36.4 36.4 0 0 1 50 15 Z" fill="#c70000" />
+                {/* الهلال الأحمر المصري الأصلي */}
+                <path d="M 67.5 15 A 35 35 0 1 0 67.5 85 A 40 40 0 0 1 67.5 15 Z" fill="#c70000" />
               </svg>
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4 drop-shadow-md">الهلال الأحمر المصري</h2>
