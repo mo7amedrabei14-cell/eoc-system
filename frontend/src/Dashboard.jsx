@@ -1496,16 +1496,13 @@ const NewsIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" 
 // ==========================================
 // 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
 // ==========================================
-// ==========================================
-// 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
-// ==========================================
 function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [newsList, setNewsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newsToDelete, setNewsToDelete] = useState(null);
   
-  // 💡 حالات الفلاتر والتنبيهات
+  // حالات الفلاتر والتنبيهات
   const [filterDate, setFilterDate] = useState('');
   const [filterGov, setFilterGov] = useState('all');
   const [filterType, setFilterType] = useState('all');
@@ -1587,7 +1584,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     setNewsToDelete(null); fetchNews();
   };
 
-  // 💡 فلاتر الأخطاء الذكية قبل الحفظ
   const handleSubmit = async () => {
     if (!nd.incident_date) return setCustomAlert("عفواً، يجب إدخال تاريخ الحادث.");
     if (!nd.incident_description) return setCustomAlert("عفواً، برجاء إدخال وصف الحادث لتوثيقه.");
@@ -1653,7 +1649,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
       "اسم الشارع": nd.street_name || '', "المنطقة": nd.area_name || '', "المحافظة": nd.governorate || '',
       "الابلاغ": nd.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": nd.report_time || '', "حالة الرد": nd.is_responded ? 'نعم' : 'لا', "رد الفرع": nd.branch_response_text || '',
       "توقيت الرد": nd.response_time || '', "حالة توقيت الرد": nd.response_time_points || 0, "زمن الرد": nd.response_duration || '',
-      "الاستجابة": nd.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": n.movement_time || '', "المدة بين الابلاغ و التحرك": nd.report_to_movement_duration || '',
+      "الاستجابة": nd.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": nd.movement_time || '', "المدة بين الابلاغ و التحرك": nd.report_to_movement_duration || '',
       "حالة المدة بين الابلاغ و التحرك": nd.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": nd.field_arrival_time || '', "حالة الاستجابة": nd.field_response_points || 0,
       "الزمن المتخذ لبدء الاستجابة": nd.report_to_arrival_duration || '', "نوع الاستجابة": nd.intervention_type || '', "الفرع المتدخل": nd.intervening_branch || '',
       "اسم الاستمارة": nd.mission_form_name || '', "عدد المشاركين": nd.participants_count || 0, "اسم المستشفى": nd.hospital_name || '', "عدد المصابين": nd.injured_count || 0, "عدد الوفيات": nd.deaths_count || 0,
@@ -1668,7 +1664,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const branchNames = [...new Set(branches.map(b => b.name))];
   const newsTypes = ['حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'];
 
-  // 💡 تطبيق الفلاتر
   const filteredNews = newsList.filter(n => {
     const matchDate = filterDate ? n.incident_date === filterDate : true;
     const matchGov = filterGov === 'all' ? true : n.governorate === filterGov;
@@ -1679,7 +1674,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   return (
     <div className="space-y-6 pb-10">
       
-      {/* 💡 داشبورد مصغر للأخبار */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
         <StatCard title="إجمالي الحوادث المسجلة" value={filteredNews.length} color="text-white" borderHighlight />
         <StatCard title="بلاغات تم الرد عليها" value={filteredNews.filter(n => n.is_responded).length} color="text-blue-400" />
@@ -1692,7 +1686,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
           <div className="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
             <h3 className="text-xl font-bold text-white whitespace-nowrap">الأخبار المحلية</h3>
             
-            {/* 💡 شريط الفلاتر الشامل */}
             <div className="flex flex-wrap items-center gap-2 w-full">
               <select value={filterGov} onChange={(e) => setFilterGov(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer">
                 <option value="all">كل المحافظات</option>
@@ -1886,138 +1879,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
               <button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-red-500/50">
                 علم، جاري التعديل
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-      {/* مودال الفورم العملاقة */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#050505] border border-white/10 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
-            <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2"><NewsIcon /> {nd.news_id ? 'تعديل الخبر والمؤشرات' : 'إضافة خبر جديد'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[#111] text-gray-400 hover:bg-red-600 hover:text-white p-2 rounded-xl"><TrashIcon /></button>
-            </div>
-
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              
-              <SectionCard title="1. بيانات الخبر الأساسية" icon={<AlertIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="التاريخ"><StyledInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} /></FormGroup>
-                  <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(nd.incident_date)} className="bg-[#0a0a0a] text-gray-500" /></FormGroup>
-                  <FormGroup label="نوع الخبر">
-                    <StyledSelect value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})}>
-                      <option value="" disabled className="bg-[#111] text-gray-500">اختر نوع الحادث...</option>
-                      {[
-                        'حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 
-                        'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 
-                        'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 
-                        'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 
-                        'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 
-                        'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 
-                        'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 
-                        'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'
-                      ].map(type => (
-                        <option key={type} value={type} className="bg-[#111] text-white">{type}</option>
-                      ))}
-                    </StyledSelect>
-                  </FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="وصف الحادث"><textarea value={nd.incident_description} onChange={e => setNd({...nd, incident_description: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="2"></textarea></FormGroup></div>
-                  <FormGroup label="ناشر الخبر"><StyledInput value={nd.news_publisher} onChange={e => setNd({...nd, news_publisher: e.target.value})} /></FormGroup>
-                  <FormGroup label="المحافظة">
-                    <StyledSelect value={nd.governorate} onChange={e => setNd({...nd, governorate: e.target.value})}>
-                      {governorates.map(g => <option key={g} value={g}>{g}</option>)}
-                    </StyledSelect>
-                  </FormGroup>
-                  <FormGroup label="المنطقة"><StyledInput value={nd.area_name} onChange={e => setNd({...nd, area_name: e.target.value})} /></FormGroup>
-                  <FormGroup label="الشارع"><StyledInput value={nd.street_name} onChange={e => setNd({...nd, street_name: e.target.value})} /></FormGroup>
-                </div>
-              </SectionCard>
-
-              <SectionCard title="2. الإبلاغ والرد (تقييم السرعة)" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormGroup label="تم الإبلاغ؟">
-                    <StyledSelect value={nd.is_reported ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_reported: e.target.value === 'نعم', is_responded: e.target.value === 'لا' ? false : nd.is_responded, is_field_response: e.target.value === 'لا' ? false : nd.is_field_response})}>
-                      <option value="لا">لا</option><option value="نعم">نعم</option>
-                    </StyledSelect>
-                  </FormGroup>
-                  <FormGroup label="توقيت الإرسال"><StyledInput type="time" disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={!nd.is_reported ? 'opacity-50' : ''}/></FormGroup>
-                  
-                  <FormGroup label="تم الرد؟">
-                    <StyledSelect disabled={!nd.is_reported} value={nd.is_responded ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_responded: e.target.value === 'نعم'})} className={!nd.is_reported ? 'opacity-50' : ''}>
-                      <option value="لا">لا</option><option value="نعم">نعم</option>
-                    </StyledSelect>
-                  </FormGroup>
-                  <FormGroup label="توقيت الرد"><StyledInput type="time" disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={!nd.is_responded ? 'opacity-50' : ''}/></FormGroup>
-                  
-                  <div className="md:col-span-2"><FormGroup label="رد الفرع"><StyledInput disabled={!nd.is_responded} value={nd.branch_response_text} onChange={e => setNd({...nd, branch_response_text: e.target.value})} className={!nd.is_responded ? 'opacity-50' : ''} /></FormGroup></div>
-                  <FormGroup label="زمن الرد (تلقائي)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-white/5 text-sm">{nd.is_responded ? formatDuration(responseDiff) : '-'}</div></FormGroup>
-                  <FormGroup label="حالة توقيت الرد (نقاط)"><div className="bg-[#0a0a0a] text-yellow-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_responded ? `${responsePoints} نقطة` : '-'}</div></FormGroup>
-                </div>
-              </SectionCard>
-
-              <SectionCard title="3. الاستجابة الميدانية والتحرك" icon={<CarIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormGroup label="تمت الاستجابة؟">
-                    <StyledSelect disabled={!nd.is_reported} value={nd.is_field_response ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_field_response: e.target.value === 'نعم'})} className={!nd.is_reported ? 'opacity-50' : ''}>
-                      <option value="لا">لا</option><option value="نعم">نعم</option>
-                    </StyledSelect>
-                  </FormGroup>
-                  <FormGroup label="توقيت التحرك"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''} /></FormGroup>
-                  <FormGroup label="المدة (إبلاغ ➔ تحرك)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-white/5 text-sm">{nd.is_field_response ? formatDuration(moveDiff) : '-'}</div></FormGroup>
-                  <FormGroup label="نقاط التحرك"><div className="bg-[#0a0a0a] text-orange-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_field_response ? `${movePoints} نقطة` : '-'}</div></FormGroup>
-
-                  <FormGroup label="طول المسافة (كم)"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.distance_km} onChange={e => setNd({...nd, distance_km: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''} placeholder="مثال: 15" /></FormGroup>
-                  <FormGroup label="توقيت الوصول (أول متطوع)"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''} /></FormGroup>
-                  <FormGroup label="الزمن المتوقع (تلقائي)"><div className="bg-[#0a0a0a] text-gray-500 p-3 rounded-xl border border-white/5 text-sm">{nd.is_field_response && expectedTravelMins !== null ? `${Math.floor(expectedTravelMins)} دقيقة` : '-'}</div></FormGroup>
-                  <FormGroup label="نقاط الاستجابة للمسافة"><div className="bg-[#0a0a0a] text-green-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_field_response ? `${fieldPoints} نقطة` : '-'}</div></FormGroup>
-                </div>
-              </SectionCard>
-
-              <SectionCard title="4. تفاصيل التدخل الميداني" icon={<UsersIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormGroup label="نوع الاستجابة">
-                    <StyledSelect disabled={!nd.is_field_response} value={nd.intervention_type} onChange={e => setNd({...nd, intervention_type: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''}>
-                      {['دعم نفسي', 'طوارئ', 'طوارئ - دعم نفسي', 'طوارئ ( تقييم )', 'مساعدات مالية', 'طوارئ - مساعدات', 'دعم نفسي - مساعدات'].map(t => <option key={t} value={t}>{t}</option>)}
-                    </StyledSelect>
-                  </FormGroup>
-                  <FormGroup label="الفرع المتدخل">
-                    <StyledSelect disabled={!nd.is_field_response} value={nd.intervening_branch} onChange={e => setNd({...nd, intervening_branch: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''}>
-                      {branchNames.map(b => <option key={b} value={b}>{b}</option>)}
-                    </StyledSelect>
-                  </FormGroup>
-                  <FormGroup label="اسم استمارة المهمة"><StyledInput disabled={!nd.is_field_response} value={nd.mission_form_name} onChange={e => setNd({...nd, mission_form_name: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : ''} /></FormGroup>
-                  <FormGroup label="عدد المشاركين"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.participants_count} onChange={e => setNd({...nd, participants_count: parseInt(e.target.value) || 0})} className={!nd.is_field_response ? 'opacity-50' : ''} /></FormGroup>
-                  
-                  <FormGroup label="اسم المستشفى"><StyledInput value={nd.hospital_name} onChange={e => setNd({...nd, hospital_name: e.target.value})} /></FormGroup>
-                  <FormGroup label="عدد المصابين"><StyledInput type="number" value={nd.injured_count} onChange={e => setNd({...nd, injured_count: parseInt(e.target.value) || 0})} /></FormGroup>
-                  <FormGroup label="عدد الوفيات"><StyledInput type="number" value={nd.deaths_count} onChange={e => setNd({...nd, deaths_count: parseInt(e.target.value) || 0})} /></FormGroup>
-                  <FormGroup label="مدخل الخبر"><StyledInput value={nd.data_entry_name} onChange={e => setNd({...nd, data_entry_name: e.target.value})} placeholder="الاسم..." /></FormGroup>
-                </div>
-              </SectionCard>
-
-              <SectionCard title="5. الملاحظات والمتابعة" icon={<MapIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormGroup label="تطورات الخبر"><textarea value={nd.news_updates} onChange={e => setNd({...nd, news_updates: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
-                  <FormGroup label="ملاحظات عامة"><textarea value={nd.notes} onChange={e => setNd({...nd, notes: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
-                  <div className="md:col-span-2"><FormGroup label="لينك الخبر (URL)"><StyledInput value={nd.news_link} onChange={e => setNd({...nd, news_link: e.target.value})} placeholder="https://..." dir="ltr" className="text-left" /></FormGroup></div>
-                </div>
-              </SectionCard>
-
-            </div>
-            
-            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl">
-              {/* زرار التصدير الفردي متاح للكل */}
-              <button onClick={handleExportSingleNewsExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto">
-                <ExcelIcon /> تصدير الخبر الحالي
-              </button>
-              
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
-              <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ الخبر وتقييم الأداء</button>
             </div>
           </div>
         </div>
