@@ -10,6 +10,9 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+// استدعاء مباشر من نفس الفولدر
+import logo1 from './logo1.jpg';
+import logo2 from './logo2.jpg';
 
 // 💡 استدعاء اللوجوهات بشكل مباشر
 import ercLogo from './assets/erc-logo.jpg';
@@ -128,11 +131,11 @@ export default function Dashboard() {
             <div className="flex items-center justify-center gap-4 mb-5 relative z-10">
               <div className="relative group">
                 <div className="absolute inset-0 bg-[#c70000] rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <img src={ercLogo} alt="الهلال الأحمر المصري" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
+                <img src={logo1} alt="الهلال الأحمر المصري" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
               </div>
               <div className="relative group">
                 <div className="absolute inset-0 bg-gray-500 rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <img src={eocLogo} alt="غرفة العمليات" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
+                <img src={logo2} alt="غرفة العمليات" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
               </div>
             </div>
 
