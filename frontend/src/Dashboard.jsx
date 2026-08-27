@@ -4,6 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import * as XLSX from 'xlsx';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// 💡 استدعاء اللوجوهات بشكل مباشر
+import ercLogo from './assets/erc-logo.jpg';
+import eocLogo from './assets/eoc-logo.jpg';
 
 // ==========================================
 // تصميم أيقونة الفرع على الخريطة
@@ -118,11 +128,11 @@ export default function Dashboard() {
             <div className="flex items-center justify-center gap-4 mb-5 relative z-10">
               <div className="relative group">
                 <div className="absolute inset-0 bg-[#c70000] rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <img src="/erc-logo.jpg" alt="الهلال الأحمر المصري" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white" />
+                <img src={ercLogo} alt="الهلال الأحمر المصري" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
               </div>
               <div className="relative group">
                 <div className="absolute inset-0 bg-gray-500 rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <img src="/eoc-logo.jpg" alt="غرفة العمليات" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white" />
+                <img src={eocLogo} alt="غرفة العمليات" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white p-1" />
               </div>
             </div>
 
