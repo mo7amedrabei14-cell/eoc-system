@@ -446,7 +446,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
   const [filterDate, setFilterDate] = useState(getLocalDate());
-  const [missionViewType, setMissionViewType] = useState('daily'); // 'daily' or 'open'
+  const [missionViewType, setMissionViewType] = useState('all_types'); // 'daily', 'open', 'all_types'
   const [missionClass, setMissionClass] = useState('عادية');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'completed'
 
@@ -781,16 +781,27 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   let filteredMissions = missionsList;
   
-  // 1. فلتر نوع المهمة (مفتوحة أو عادية)
+  // 1. فلتر نوع المهمة (الكل، مفتوحة، عادية)
   if (missionViewType === 'open') {
      filteredMissions = filteredMissions.filter(m => m.mission_classification === 'مفتوحة');
-  } else {
+  } else if (missionViewType === 'daily') {
      filteredMissions = filteredMissions.filter(m => m.mission_classification !== 'مفتوحة');
   }
 
-  // 2. فلتر التاريخ (بقى شغال على الاتنين)
+  // 2. فلتر التاريخ (تم استثناء المهام المفتوحة النشطة عشان تفضل ظاهرة كل يوم لحد ما تتقفل)
   if (filterDate) {
-     filteredMissions = filteredMissions.filter(m => (m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]) === filterDate);
+     filteredMissions = filteredMissions.filter(m => {
+        const missionDate = m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0];
+        
+        // التحقق: هل دي مهمة مفتوحة ولسه شغالة؟
+        const isOpenActive = m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status);
+        
+        // لو هي مفتوحة وشغالة، اديها حصانة وخليها تظهر دايماً وتتخطى فلتر التاريخ
+        if (isOpenActive) return true;
+        
+        // لو هي عادية، أو مفتوحة (بس اتقفلت)، لازم تاريخها يطابق تاريخ الفلتر عشان تظهر
+        return missionDate === filterDate;
+     });
   }
 
   // 3. فلتر حالة المهمة (الكل، نشطة، مكتملة)
@@ -831,8 +842,9 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
           <div className="flex flex-wrap items-center gap-3">
             {/* 1. نوع السجل */}
             <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setMissionViewType('daily')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'daily' ? 'bg-[#c70000] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>المهام العادية</button>
-              <button onClick={() => setMissionViewType('open')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'open' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'text-gray-400 hover:text-white'}`}>المهام المفتوحة</button>
+              <button onClick={() => setMissionViewType('all_types')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'all_types' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>كل المهام</button>
+              <button onClick={() => { setMissionViewType('daily'); setFilterDate(getLocalDate()); }} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'daily' ? 'bg-[#c70000] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>المهام العادية</button>
+              <button onClick={() => { setMissionViewType('open'); setFilterDate(''); }} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'open' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'text-gray-400 hover:text-white'}`}>المهام المفتوحة</button>
             </div>
 
             <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
