@@ -113,9 +113,19 @@ export default function Dashboard() {
         <div>
           <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-full h-1/2 bg-[#c70000]/10 blur-2xl"></div>
-            <div className="w-16 h-16 bg-[#111] rounded-2xl flex items-center justify-center mb-4 border border-white/10 shadow-[0_0_20px_rgba(199,0,0,0.15)] relative z-10">
-              <svg className="w-10 h-10 text-[#c70000]" viewBox="0 0 100 100" fill="currentColor"><path d="M50 10 A40 40 0 1 0 90 50 A30 30 0 1 1 50 20 Z" /></svg>
+            
+            {/* عرض لوجو الهلال الأحمر وغرفة العمليات */}
+            <div className="flex items-center justify-center gap-4 mb-5 relative z-10">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-[#c70000] rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <img src="/erc-logo.jpg" alt="الهلال الأحمر المصري" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white" />
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gray-500 rounded-full blur-md opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <img src="/eoc-logo.jpg" alt="غرفة العمليات" className="relative w-16 h-16 rounded-full object-cover border-2 border-white/20 shadow-lg bg-white" />
+              </div>
             </div>
+
             <h2 className="text-lg font-bold text-white tracking-wide relative z-10">{userData?.full_name || 'المالك'}</h2>
             <p className="text-xs text-[#c70000] font-semibold mt-2 bg-[#c70000]/10 border border-[#c70000]/20 px-3 py-1 rounded-full uppercase tracking-widest relative z-10">{userData?.role || 'OWNER'}</p>
           </div>
@@ -163,7 +173,7 @@ export default function Dashboard() {
 function HomeView({ branches = [] }) {
   const [missions, setMissions] = useState([]);
   const [news, setNews] = useState([]);
-  const [selectedBranchName, setSelectedBranchName] = useState(null); // 💡 حالة اختيار الفرع من الخريطة
+  const [selectedBranchName, setSelectedBranchName] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -176,11 +186,10 @@ function HomeView({ branches = [] }) {
     });
   }, []);
 
-  // 💡 السحر هنا: توحيد (المركز العام) و (القاهرة) بناءً على طلبك
+  // توحيد المركز العام والقاهرة
   const filterMissionBranch = selectedBranchName; 
   const filterNewsGov = (selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'القاهرة' : selectedBranchName;
 
-  // 1. فلترة المهام (بتسمع المركز العام والقاهرة كحاجة واحدة)
   const filteredMissions = selectedBranchName
     ? missions.filter(m => {
         const mBranch = m.branch?.trim();
@@ -188,7 +197,6 @@ function HomeView({ branches = [] }) {
       })
     : missions;
 
-  // 2. فلترة الأخبار (بتاخد القاهرة دايماً لو داس على المركز العام)
   const filteredNews = selectedBranchName
     ? news.filter(n => n.governorate === filterNewsGov)
     : news;
@@ -213,15 +221,14 @@ function HomeView({ branches = [] }) {
           </div>
         </div>
         
-        {/* زرار يظهر لما تدوس على فرع عشان يرجعك للجمهورية كلها */}
+        {/* زرار إلغاء التحديد اللي طلبته */}
         {selectedBranchName && (
           <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">
-            عرض الجمهورية بالكامل <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </button>
         )}
       </div>
 
-      {/* كروت الإحصائيات الفخمة */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-8 rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#c70000]/10 rounded-full blur-3xl group-hover:bg-[#c70000]/20 transition-all"></div>
@@ -254,17 +261,27 @@ function HomeView({ branches = [] }) {
         </div>
       </div>
 
-      {/* 💡 خريطة التمركزات التفاعلية (الفلتر الميداني) */}
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
         <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <MapIcon /> خريطة الانتشار التفاعلية (انقر على الفرع لعرض مؤشراته بالأعلى)
+          <MapIcon /> خريطة الانتشار التفاعلية (انقر على الفرع للفلترة أو إلغاء التحديد)
         </h3>
         <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={6} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {branches.map(branch => branch.lat && branch.lng ? (
-                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => setSelectedBranchName(branch.name) }}>
-                  <Popup><strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong><span className="text-xs text-blue-600 block text-center mt-1 font-bold">انقر لفلترة الداشبورد</span></Popup>
+                <Marker 
+                  key={`dash-marker-${branch.id}`} 
+                  position={[branch.lat, branch.lng]} 
+                  icon={branchIcon} 
+                  /* 💡 الذكاء هنا: لو داس على نفس الفرع اللي متحدد، يلغي التحديد. لو فرع جديد، يحدده! */
+                  eventHandlers={{ click: () => setSelectedBranchName(prev => prev === branch.name ? null : branch.name) }}
+                >
+                  <Popup>
+                    <strong className="text-gray-800 font-bold text-sm text-center block mb-1">
+                      {branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}
+                    </strong>
+                    <span className="text-xs text-blue-600 block text-center mt-1 font-bold">انقر للفلترة أو الإلغاء</span>
+                  </Popup>
                 </Marker>
               ) : null
             )}
@@ -314,7 +331,7 @@ function BranchesAndInventoryView({ branches }) {
         </div>
         <div className="w-full lg:w-3/4 bg-[#0c0c0c] border border-white/5 rounded-3xl relative overflow-hidden shadow-lg z-0">
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+              <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
                   <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => handleSelectBranch(branch.id) }}>
                     <Popup><strong className="text-gray-800">{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</strong></Popup>
