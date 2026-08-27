@@ -274,10 +274,10 @@ function HomeView({ branches = [] }) {
           <MapIcon /> خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)
         </h3>
         <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
-          <MapContainer center={[26.8206, 30.8025]} zoom={6} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             {/* 💡 النقط بتقرأ الإحداثيات كأرقام مع الفلتر */}
-            {filteredGlobalEqs.map(eq => {
+            {(activeEqTab === 'global' || activeEqTab === 'all') && filteredGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
@@ -291,7 +291,7 @@ function HomeView({ branches = [] }) {
                 </Marker>
               );
             })}
-            {filteredEgyptEqs.map(eq => {
+            {(activeEqTab === 'egypt' || activeEqTab === 'all') && filteredEgyptEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return null;
@@ -470,14 +470,10 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
-// ==========================================
-// 3. شاشة سجل المهام واستمارة التسجيل
-// ==========================================
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner }) {
   const [customAlert, setCustomAlert] = useState(null);
-const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
-  const [currentMissionData, setCurrentMissionData] = useState(null);
   
 const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnText, setReturnText] = useState('');
@@ -2426,13 +2422,9 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   return (
     <div className="space-y-6 pb-10">
       
-      {/* 💡 فلتر التاريخ لتاب الزلازل هنا */}
+      {/* 💡 هيدر الصفحة الأساسي بدون فلاتر */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#111] border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in-up">
         <h3 className="text-xl font-bold text-white flex items-center gap-2"><EarthquakeIcon/> رصد الزلازل والهزات الأرضية</h3>
-        <div className="flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-white/10 shadow-inner">
-          <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
-          {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg transition-colors font-bold border border-red-500/20">إلغاء الفلتر (عرض الكل)</button>}
-        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
@@ -2442,14 +2434,30 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         <StatCard title="أقوى هزة / زلزال" value={maxMagnitude > 0 ? `${maxMagnitude} ريختر` : '-'} color="text-yellow-500" />
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[450px]">
-        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><MapIcon/> خريطة الرصد الزلزالي المباشر (<span className="text-red-500">عالمي</span> / <span className="text-green-500">مصر</span>)</h3>
-        <div className="h-[350px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
-          <MapContainer center={[26.8206, 30.8025]} zoom={3} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+      {/* 💡 الخريطة بالفلاتر الجديدة فوقها والزوم أوت */}
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[500px]">
+        <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <MapIcon/> خريطة الرصد الزلزالي (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)
+          </h3>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
+              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
+              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الكل</button>
+            </div>
+            <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors font-bold">إلغاء التاريخ</button>}
+            </div>
+          </div>
+        </div>
+        <div className="h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
+          <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
-            {/* 💡 رسم النقط بدقة على الخريطة ومربوطة بالفلتر */}
-            {filteredGlobalEqs.map(eq => {
+            {/* 💡 رسم النقط يتأثر بتاب (عالمي / مصر / الكل) وفلتر التاريخ */}
+            {(activeEqTab === 'global' || activeEqTab === 'all') && filteredGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
@@ -2464,7 +2472,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               );
             })}
             
-            {filteredEgyptEqs.map(eq => {
+            {(activeEqTab === 'egypt' || activeEqTab === 'all') && filteredEgyptEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
@@ -2484,20 +2492,9 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px]">
         <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
-          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-            <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setActiveEqTab('global')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
-              <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
-            </div>
-            
-            {/* 💡 فلتر التاريخ للزلازل */}
-            <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors font-bold">إلغاء التاريخ</button>}
-            </div>
-          </div>
+          <h3 className="text-xl font-bold text-white hidden md:block">سجل بيانات الزلازل</h3>
           
-          <div className="flex gap-3 shrink-0">
+          <div className="flex gap-3 shrink-0 w-full justify-end">
             {activeEqTab === 'global' ? (
               <>
                 {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
