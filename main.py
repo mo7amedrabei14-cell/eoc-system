@@ -665,3 +665,216 @@ def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(securi
         raise HTTPException(status_code=500, detail=f"خطأ في قاعدة البيانات: {str(e)}")
     finally:
         connection.close()
+
+# =====================================================================
+# =====================================================================
+# قطاع الأخبار المحلية (مفصول تماماً عن المهام) - Local News Module
+# =====================================================================
+# =====================================================================
+
+class LocalNewsModel(BaseModel):
+    branch_id: Optional[int] = None
+    incident_date: Optional[str] = None
+    incident_month: Optional[str] = None
+    incident_description: Optional[str] = None
+    news_type: Optional[str] = None
+    news_publisher: Optional[str] = None
+    street_name: Optional[str] = None
+    area_name: Optional[str] = None
+    governorate: Optional[str] = None
+    
+    is_reported: bool = False
+    report_time: Optional[str] = None
+    
+    is_responded: bool = False
+    branch_response_text: Optional[str] = None
+    response_time: Optional[str] = None
+    response_time_points: int = 0
+    response_duration: Optional[str] = None
+    
+    is_field_response: bool = False
+    movement_time: Optional[str] = None
+    report_to_movement_duration: Optional[str] = None
+    movement_points: int = 0
+    
+    field_arrival_time: Optional[str] = None
+    distance_km: Optional[float] = None
+    field_response_points: int = 0
+    report_to_arrival_duration: Optional[str] = None
+    
+    intervention_type: Optional[str] = None
+    intervening_branch: Optional[str] = None
+    mission_form_name: Optional[str] = None
+    participants_count: int = 0
+    
+    hospital_name: Optional[str] = None
+    injured_count: int = 0
+    deaths_count: int = 0
+    news_updates: Optional[str] = None
+    news_link: Optional[str] = None
+    data_entry_name: Optional[str] = None
+    notes: Optional[str] = None
+
+@app.get("/api/local-news")
+def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    
+    role = get_user_role(user_id)
+    if not role: raise HTTPException(status_code=403)
+
+    role_name = role["role_name"]
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # الصلاحيات: المالك والجوكر والمشرف بيشوفوا كله، الفرع بيشوف أخباره بس
+            base_query = """
+                SELECT n.*, b.branch_name 
+                FROM local_news n 
+                LEFT JOIN branches b ON n.branch_id = b.branch_id
+            """
+            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "مشرف", "جوكر", "المالك"]:
+                query = base_query + " ORDER BY n.created_at DESC;"
+                cursor.execute(query)
+            else:
+                user_branches = get_user_branches(user_id)
+                branch_ids = [b["branch_id"] for b in user_branches]
+                if not branch_ids: return []
+                query = base_query + " WHERE n.branch_id = ANY(%s) ORDER BY n.created_at DESC;"
+                cursor.execute(query, (branch_ids,))
+                
+            rows = cursor.fetchall()
+            col_names = [desc[0] for desc in cursor.description]
+            
+            result = []
+            for row in rows:
+                news_data = dict(zip(col_names, row))
+                # تظبيط التواريخ عشان الـ JSON
+                for k, v in news_data.items():
+                    if v is not None and not isinstance(v, (str, int, float, bool)): 
+                        news_data[k] = str(v)
+                result.append(news_data)
+                
+            return result
+    except Exception as e:
+        print(f"Error fetching news: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء جلب الأخبار")
+    finally:
+        connection.close()
+
+
+@app.post("/api/local-news")
+def create_local_news(news: LocalNewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            def none_if_empty(val): return val if val != "" else None
+
+            cursor.execute("""
+                INSERT INTO local_news (
+                    branch_id, incident_date, incident_month, incident_description, news_type, news_publisher,
+                    street_name, area_name, governorate, is_reported, report_time, is_responded, branch_response_text,
+                    response_time, response_time_points, response_duration, is_field_response, movement_time,
+                    report_to_movement_duration, movement_points, field_arrival_time, distance_km, field_response_points,
+                    report_to_arrival_duration, intervention_type, intervening_branch, mission_form_name, participants_count,
+                    hospital_name, injured_count, deaths_count, news_updates, news_link, data_entry_name, notes
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                ) RETURNING news_id;
+            """, (
+                news.branch_id, none_if_empty(news.incident_date), news.incident_month, news.incident_description, news.news_type, news.news_publisher,
+                news.street_name, news.area_name, news.governorate, news.is_reported, none_if_empty(news.report_time), news.is_responded, news.branch_response_text,
+                none_if_empty(news.response_time), news.response_time_points, news.response_duration, news.is_field_response, none_if_empty(news.movement_time),
+                news.report_to_movement_duration, news.movement_points, none_if_empty(news.field_arrival_time), news.distance_km, news.field_response_points,
+                news.report_to_arrival_duration, news.intervention_type, news.intervening_branch, news.mission_form_name, news.participants_count,
+                news.hospital_name, news.injured_count, news.deaths_count, news.news_updates, news.news_link, news.data_entry_name, news.notes
+            ))
+            news_id = cursor.fetchone()[0]
+
+            # 💡 تسجيل اللوج الخاص بالأخبار فقط (مفصول عن المهام)
+            try:
+                create_audit_log(cursor, user_id, "إنشاء خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم حفظ الخبر بنجاح", "news_id": news_id}
+            
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/local-news/{news_id}")
+def update_local_news(news_id: int, news: LocalNewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            def none_if_empty(val): return val if val != "" else None
+
+            cursor.execute("""
+                UPDATE local_news SET
+                    branch_id=%s, incident_date=%s, incident_month=%s, incident_description=%s, news_type=%s, news_publisher=%s,
+                    street_name=%s, area_name=%s, governorate=%s, is_reported=%s, report_time=%s, is_responded=%s, branch_response_text=%s,
+                    response_time=%s, response_time_points=%s, response_duration=%s, is_field_response=%s, movement_time=%s,
+                    report_to_movement_duration=%s, movement_points=%s, field_arrival_time=%s, distance_km=%s, field_response_points=%s,
+                    report_to_arrival_duration=%s, intervention_type=%s, intervening_branch=%s, mission_form_name=%s, participants_count=%s,
+                    hospital_name=%s, injured_count=%s, deaths_count=%s, news_updates=%s, news_link=%s, data_entry_name=%s, notes=%s
+                WHERE news_id=%s;
+            """, (
+                news.branch_id, none_if_empty(news.incident_date), news.incident_month, news.incident_description, news.news_type, news.news_publisher,
+                news.street_name, news.area_name, news.governorate, news.is_reported, none_if_empty(news.report_time), news.is_responded, news.branch_response_text,
+                none_if_empty(news.response_time), news.response_time_points, news.response_duration, news.is_field_response, none_if_empty(news.movement_time),
+                news.report_to_movement_duration, news.movement_points, none_if_empty(news.field_arrival_time), news.distance_km, news.field_response_points,
+                news.report_to_arrival_duration, news.intervention_type, news.intervening_branch, news.mission_form_name, news.participants_count,
+                news.hospital_name, news.injured_count, news.deaths_count, news.news_updates, news.news_link, news.data_entry_name, news.notes,
+                news_id
+            ))
+
+            # 💡 تسجيل اللوج الخاص بالأخبار
+            try:
+                create_audit_log(cursor, user_id, "تحديث خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بتحديث بيانات الخبر في منطقة: {news.area_name or 'غير محدد'}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم تحديث الخبر بنجاح"}
+            
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/local-news/{news_id}")
+def delete_local_news(news_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM local_news WHERE news_id = %s", (news_id,))
+            
+            try:
+                create_audit_log(cursor, user_id, "حذف خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بحذف الخبر رقم {news_id} نهائياً"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم حذف الخبر بنجاح"}
+            
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500)
+    finally:
+        connection.close()
