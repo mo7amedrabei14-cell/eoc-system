@@ -690,6 +690,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
        }
 
        const missionData = {
+         mission_code: document.getElementById('f_mission_code')?.value || null,
+         created_at: document.getElementById('f_creation_date')?.value || null,
          mission_name: document.getElementById('f_mission_name')?.value || 'مهمة بدون اسم',
          mission_classification: document.getElementById('f_mission_class')?.value || 'عادية', 
          branch_id: parseInt(document.getElementById('f_branch_id')?.value || 19),
@@ -888,7 +890,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   <label className="block text-[#c70000] text-sm font-bold mb-2">اسم الاستمارة (عنوان رئيسي)</label>
                   <input id="f_mission_name" type="text" defaultValue={missionName} onChange={(e) => setMissionName(e.target.value)} placeholder="مثال: تأمين مول..." className="w-full bg-transparent border-b-2 border-white/10 focus:border-[#c70000] text-white text-2xl font-bold pb-2 outline-none" />
                 </div>
-                <div className="w-full md:w-48"><FormGroup label="كود الاستمارة"><StyledInput disabled defaultValue={currentMissionData?.mission_code || ''} placeholder="#MSN-AUTO" className="text-center font-mono text-gray-500 bg-[#0a0a0a]" /></FormGroup></div>
+                <div className="w-full md:w-48"><FormGroup label="كود الاستمارة"><StyledInput id="f_mission_code" disabled={!isOwner} defaultValue={currentMissionData?.mission_code || ''} placeholder="#MSN-AUTO" className={`text-center font-mono ${!isOwner ? 'text-gray-500 bg-[#0a0a0a] opacity-50 cursor-not-allowed' : 'text-white bg-[#111] border border-white/10'}`} title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''} /></FormGroup></div>
               </div>
 
               <SectionCard title="البيانات الأساسية للمهمة" icon={<AlertIcon />}>
@@ -910,15 +912,16 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   </FormGroup>
                   <FormGroup label="مسؤول المهمة"><StyledInput id="f_responsible_person" defaultValue={currentMissionData?.responsible_person || ''} /></FormGroup>
                   <FormGroup label="تاريخ الإنشاء (يسجل آلياً)">
-  <StyledInput 
-    id="f_creation_date" 
-    type="date" 
-    defaultValue={getCreationDate()} 
-    disabled={!isOwner}
-    className={!isOwner ? 'opacity-50 cursor-not-allowed' : ''}
-    title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''}
-  />
-</FormGroup>
+                    <StyledInput 
+                      id="f_creation_date" 
+                      type="date" 
+                      max="2030-12-31"
+                      defaultValue={getCreationDate()} 
+                      disabled={!isOwner}
+                      className={!isOwner ? 'opacity-50 cursor-not-allowed text-gray-500 bg-[#0a0a0a]' : 'text-white border border-white/10'}
+                      title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''}
+                    />
+                  </FormGroup>
                   <FormGroup label="مصدر البلاغ"><StyledSelect id="f_data_source" defaultValue={currentMissionData?.data_source || 'واتساب'}><option>واتساب</option><option>هاتفياً</option></StyledSelect></FormGroup>
                 </div>
               </SectionCard>

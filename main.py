@@ -268,6 +268,9 @@ class MissionCreate(BaseModel):
     notes: Optional[str] = None
     internal_notes: Optional[str] = None
     
+    mission_code: Optional[str] = None
+    created_at: Optional[str] = None
+    
     routes: List[RouteModel] = []
     vehicles: List[VehicleModel] = []
     participants: List[ParticipantModel] = []
@@ -442,13 +445,16 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
             def none_if_empty(val): return val if val != "" else None
 
             # 1. تحديث البيانات الأساسية (بدون تغيير كود المهمة)
+            # 1. تحديث البيانات الأساسية
             cursor.execute("""
                 UPDATE missions SET
                     mission_name=%s, mission_classification=%s, branch_id=%s, mission_type=%s, mission_location=%s,
                     responsible_person=%s, data_source=%s, status=%s, exit_date=%s, departure_date=%s,
                     arrival_date=%s, return_date=%s, completion_date=%s, start_time=%s, departure_time=%s,
                     arrival_time=%s, completion_time=%s, injured_count=%s, indirect_beneficiaries_total=%s,
-                    notes=%s, internal_notes=%s
+                    notes=%s, internal_notes=%s,
+                    mission_code = COALESCE(%s, mission_code),
+                    created_at = COALESCE(%s::timestamp, created_at)
                 WHERE mission_id=%s;
             """, (
                 mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
@@ -458,6 +464,7 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                 none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
                 none_if_empty(mission.completion_time),
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
+                none_if_empty(mission.mission_code), none_if_empty(mission.created_at),
                 mission_id
             ))
 
