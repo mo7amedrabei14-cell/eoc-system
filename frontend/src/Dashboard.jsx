@@ -2284,7 +2284,10 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
   useEffect(() => { fetchEarthquakes(); }, []);
 
-  // 💡 رفع شيت EMSC
+  // 💡 تطبيق الفلتر على المصفوفات
+  const filteredGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
+  const filteredEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
+
   const handleCSVUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -2305,7 +2308,9 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           parsedData.push({
             date: cols[0], month: getMonthName(cols[0]), time: cols[1],
             country: countryName, magnitude: mag, depth_km: cols[5] + ' KM',
-            region: regionName, status: status, longitude: parseFloat(cols[3]) || null, latitude: parseFloat(cols[2]) || null
+            region: regionName, status: status, 
+            longitude: cols[3] ? parseFloat(cols[3]) : null, 
+            latitude: cols[2] ? parseFloat(cols[2]) : null
           });
         }
       }
@@ -2384,11 +2389,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     fetchEarthquakes();
   };
 
-  // 💡 تطبيق فلتر التاريخ
-  const filteredGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
-  const filteredEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
-
-  // 💡 تصدير الزلازل العالمية بالترتيب المحدد
+  // 💡 تصدير الزلازل العالمية
   const handleExportGlobalEqs = () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير.");
     const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({
@@ -2408,7 +2409,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     XLSX.writeFile(wb, filterDate ? `سجل_الزلازل_العالمية_${filterDate}.xlsx` : `سجل_الزلازل_العالمية.xlsx`);
   };
 
-  // 💡 تصدير زلازل مصر بالترتيب المحدد
+  // 💡 تصدير زلازل مصر
   const handleExportEgyptEqs = () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير.");
     const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({
@@ -2438,11 +2439,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         <StatCard title="أقوى هزة / زلزال" value={maxMagnitude > 0 ? `${maxMagnitude} ريختر` : '-'} color="text-yellow-500" />
       </div>
 
-      {/* 💡 خريطة الرصد الزلزالي الشاملة مع قراءة الإحداثيات بدقة */}
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[450px]">
-        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <MapIcon/> خريطة الرصد الزلزالي المباشر (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)
-        </h3>
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><MapIcon/> خريطة الرصد الزلزالي المباشر (<span className="text-red-500">عالمي</span> / <span className="text-green-500">مصر</span>)</h3>
         <div className="h-[350px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
           <MapContainer center={[26.8206, 30.8025]} zoom={3} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
@@ -2488,7 +2486,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               <button onClick={() => setActiveEqTab('egypt')} className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
             </div>
 
-            {/* 💡 فلتر التاريخ في الهيدر فوق */}
+            {/* 💡 فلتر التاريخ في الهيدر */}
             <div className="flex items-center gap-2">
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors">إلغاء التاريخ</button>}
@@ -2498,7 +2496,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           <div className="flex gap-3 shrink-0">
             {activeEqTab === 'global' ? (
               <>
-                {(isOwner || isSupervisor) && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
+                {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
                 <label className="bg-[#1a1a1a] text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] cursor-pointer">
                   <ExcelIcon/> استيراد شيت EMSC
                   <input type="file" accept=".csv" className="hidden" onChange={handleCSVUpload} />
@@ -2507,7 +2505,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               </>
             ) : (
               <>
-                {(isOwner || isSupervisor) && <button onClick={handleExportEgyptEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
+                {isOwner && <button onClick={handleExportEgyptEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
                 <button onClick={() => { setEForm({ date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsEgyptModalOpen(true); }} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">+ رصد زلزال مصر</button>
               </>
             )}
