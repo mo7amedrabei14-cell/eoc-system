@@ -186,9 +186,11 @@ function HomeView({ branches = [] }) {
   const [missions, setMissions] = useState([]);
   const [news, setNews] = useState([]);
   const [globalDisasters, setGlobalDisasters] = useState([]);
-  const [globalEqs, setGlobalEqs] = useState([]); // 💡 حالة الزلازل العالمية
-  const [egyptEqs, setEgyptEqs] = useState([]); // 💡 حالة زلازل مصر
+  const [globalEqs, setGlobalEqs] = useState([]); 
+  const [egyptEqs, setEgyptEqs] = useState([]); 
   const [selectedBranchName, setSelectedBranchName] = useState(null);
+
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -219,6 +221,8 @@ function HomeView({ branches = [] }) {
   const activeNews = filteredNews.filter(n => n.is_field_response).length;
   
   const totalGlobalDisasters = globalDisasters.length;
+  const globalEqsToday = globalEqs.filter(e => e.date === getLocalDate()).length;
+  const totalEgyptEqs = egyptEqs.length;
 
   return (
     <div className="space-y-8 pb-10 animate-fade-in-up">
@@ -227,59 +231,42 @@ function HomeView({ branches = [] }) {
           <div className="w-2 h-10 bg-[#c70000] rounded-full"></div>
           <div>
             <h2 className="text-3xl font-black text-white tracking-wide">المركز الرئيسي للعمليات</h2>
-            <p className="text-gray-400 text-sm mt-1">{selectedBranchName ? `المؤشرات الحية لفرع/محافظة: ${(selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'المركز العام (القاهرة)' : selectedBranchName}` : 'الرؤية الشاملة للوضع الميداني (على مستوى الجمهورية)'}</p>
+            <p className="text-gray-400 text-sm mt-1">{selectedBranchName ? `المؤشرات الحية لفرع/محافظة: ${(selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'المركز العام (القاهرة)' : selectedBranchName}` : 'الرؤية الشاملة للوضع الميداني والزلزالي (على مستوى الجمهورية)'}</p>
           </div>
         </div>
-        
         {selectedBranchName && (
-          <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">
-            إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          </button>
+          <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-lg relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-gray-400 font-bold text-sm">المهام اليومية (نشطة)</h3>
-            <div className="p-2 bg-[#c70000]/20 rounded-xl text-[#c70000]"><AlertIcon /></div>
-          </div>
+          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">المهام اليومية (نشطة)</h3><div className="p-2 bg-[#c70000]/20 rounded-xl text-[#c70000]"><AlertIcon/></div></div>
           <p className="text-4xl font-black text-white relative z-10">{activeDaily}</p>
         </div>
-
         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-lg relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-gray-400 font-bold text-sm">المهام المفتوحة</h3>
-            <div className="p-2 bg-blue-500/20 rounded-xl text-blue-500"><svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
-          </div>
+          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">المهام المفتوحة</h3><div className="p-2 bg-blue-500/20 rounded-xl text-blue-500"><AlertIcon/></div></div>
           <p className="text-4xl font-black text-white relative z-10">{activeOpen}</p>
         </div>
-
         <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-lg relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-gray-400 font-bold text-sm">الأخبار المحلية المرصودة</h3>
-            <div className="p-2 bg-purple-500/20 rounded-xl text-purple-400"><NewsIcon /></div>
-          </div>
-          <div className="flex items-end gap-2 relative z-10">
-             <p className="text-4xl font-black text-white">{totalNews}</p>
-             <span className="text-xs font-bold text-purple-400 mb-1">({activeNews} استجابة)</span>
-          </div>
+          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 bg-purple-500/20 rounded-xl text-purple-400"><NewsIcon/></div></div>
+          <div className="flex items-end gap-2 relative z-10"><p className="text-4xl font-black text-white">{totalNews}</p><span className="text-xs font-bold text-purple-400 mb-1">({activeNews} استجابة)</span></div>
         </div>
-
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#c70000]/30 p-6 rounded-3xl shadow-lg relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <h3 className="text-[#c70000] font-bold text-sm">الكوارث العالمية</h3>
-            <div className="p-2 bg-[#c70000]/20 rounded-xl text-[#c70000]"><GlobalWorldIcon /></div>
-          </div>
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#c70000]/30 p-6 rounded-3xl shadow-[0_0_20px_rgba(199,0,0,0.1)] relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-[#c70000]/10 rounded-full blur-2xl group-hover:bg-[#c70000]/20 transition-all"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-[#c70000] font-bold text-sm">الكوارث العالمية</h3><div className="p-2 bg-[#c70000]/20 rounded-xl text-[#c70000]"><GlobalWorldIcon/></div></div>
           <p className="text-4xl font-black text-white relative z-10">{totalGlobalDisasters}</p>
         </div>
-      </div>
-
-      {/* 💡 كروت الزلازل في الداشبورد الرئيسية */}
-      <h3 className="text-xl font-bold text-white mt-8 mb-4 border-b border-white/10 pb-2 flex items-center gap-2"><EarthquakeIcon/> نشاط الزلازل والهزات الأرضية</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <StatCard color="text-red-500" title="الزلازل العالمية المرصودة (إجمالي)" value={globalEqs.length} borderHighlight />
-        <StatCard color="text-green-500" title="زلازل مصر المرصودة (إجمالي)" value={egyptEqs.length} borderHighlight />
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-red-500/30 p-6 rounded-3xl shadow-[0_0_20px_rgba(239,68,68,0.1)] relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-all"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-red-500 font-bold text-sm">الزلازل العالمية (اليوم)</h3><div className="p-2 bg-red-500/20 rounded-xl text-red-500"><EarthquakeIcon/></div></div>
+          <p className="text-4xl font-black text-white relative z-10">{globalEqsToday}</p>
+        </div>
+        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-green-500/30 p-6 rounded-3xl shadow-[0_0_20px_rgba(34,197,94,0.1)] relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-green-500 font-bold text-sm">زلازل مصر المرصودة</h3><div className="p-2 bg-green-500/20 rounded-xl text-green-500"><EarthquakeIcon/></div></div>
+          <p className="text-4xl font-black text-white relative z-10">{totalEgyptEqs}</p>
+        </div>
       </div>
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
@@ -289,7 +276,6 @@ function HomeView({ branches = [] }) {
         <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={6} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
-            {/* 💡 خريطة الرئيسية تعرض الفروع فقط بدون أي زلازل */}
             {branches.map(branch => branch.lat && branch.lng ? (
                 <Marker 
                   key={`dash-marker-${branch.id}`} 
@@ -2255,16 +2241,17 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const [egyptEqs, setEgyptEqs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
-  const [filterDate, setFilterDate] = useState(''); // 💡 فلتر التاريخ أهو موجود هنا
+  
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
+
+  const [filterDate, setFilterDate] = useState(getLocalDate()); // 💡 خليت الفلتر الديفولت يجيب زلازل النهاردة عشان الشاشة متكونش زحمة
 
   const [isGlobalModalOpen, setIsGlobalModalOpen] = useState(false);
   const [isEgyptModalOpen, setIsEgyptModalOpen] = useState(false);
 
   const COUNTRIES_LIST = ['أفغانستان','ألبانيا','الجزائر','أندورا','أنغولا','أنتيغوا وبربودا','الأرجنتين','أرمينيا','أستراليا','النمسا','أذربيجان','جزر البهاما','البحرين','بنغلاديش','باربادوس','بيلاروسيا','بلجيكا','بليز','بنين','بوتان','بوليفيا','البوسنة والهرسك','بوتسوانا','البرازيل','بروناي','بلغاريا','بوركينا فاسو','بوروندي','الرأس الأخضر','كمبوديا','الكاميرون','كندا','جمهورية إفريقيا الوسطى','تشاد','تشيلي','الصين','كولومبيا','جزر القمر','جمهورية الكونغو الديمقراطية','كوستاريكا','كرواتيا','كوبا','قبرص','التشيك','الدنمارك','جيبوتي','دومينيكا','جمهورية الدومينيكان','الإكوادور','مصر','السلفادور','غينيا الاستوائية','إريتريا','إستونيا','إسواتيني','إثيوبيا','فيجي','فنلندا','فرنسا','الغابون','غامبيا','جورجيا','ألمانيا','غانا','اليونان','غرينادا','غواتيمالا','غينيا','غينيا بيساو','غيانا','هايتي','هندوراس','المجر','آيسلندا','الهند','إندونيسيا','إيران','العراق','أيرلندا','إسرائيل','إيطاليا','ساحل العاج','جامايكا','اليابان','الأردن','كازاخستان','كينيا','كيريباتي','الكويت','قيرغيزستان','لاوس','لاتفيا','لبنان','ليسوتو','ليبيريا','ليبيا','ليختنشتاين','ليتوانيا','لوكسمبورغ','مدغشقر','ملاوي','ماليزيا','جزر المالديف','مالي','مالطا','جزر مارشال','موريتانيا','موريشيوس','المكسيك','ميكرونيزيا','مولدوفا','موناكو','منغوليا','الجبل الأسود','المغرب','موزمبيق','ميانمار','ناميبيا','ناورو','نيبال','هولندا','نيوزيلندا','نيكاراغوا','النيجر','نيجيريا','كوريا الشمالية','مقدونيا الشمالية','النرويج','عمان','باكستان','بالاو','فلسطين','بنما','بابوا غينيا الجديدة','باراغواي','بيرو','الفلبين','بولندا','البرتغال','قطر','رومانيا','روسيا','رواندا','سانت كيتس ونيفيس','سانت لوسيا','سانت فنسنت وجزر غرينادين','ساموا','سان مارينو','ساو تومي وبرينسيب','السعودية','السنغال','صربيا','سيشيل','سيراليون','سنغافورة','سلوفاكيا','سلوفينيا','جزر سليمان','الصومال','جنوب إفريقيا','كوريا الجنوبية','جنوب السودان','إسبانيا','سريلانكا','السودان','سورينام','السويد','سويسرا','سوريا','طاجيكستان','تنزانيا','تايلاند','تيمور الشرقية','توغو','تونغا','ترينيداد وتوباغو','تونس','تركيا','تركمانستان','توفالو','أوغندا','أوكرانيا','الإمارات العربية المتحدة','المملكة المتحدة البريطانية','الولايات المتحدة الأمريكية','أوروغواي','أوزبكستان','فانواتو','فنزويلا','فيتنام','اليمن','زامبيا','زيمبابوي','تايوان','المحيط الهادي','المحيط الاطلسي','المحيط الهندي','القطب الجنوبي','جزيرة','البحر الكاريبي','البحر الابيض المتوسط','جبال الهند','جزيرة جوام','جزيرة سايمن','مونتيجرو','ولايات مايكرونزيا المتحدة','غرينلاند','جزر كايمان','جبل طارق','بورتوريكو','غوادلوب','جزر المارتينيك','أنغويلا','البحر الاحمر','مضيق بحري','القطب الشمالي','مايوت','شبه جزيرة بوثيا','البحر الأيوني','جزيرة بوفيه','الخليج الفارسي','البحر الأدرياتيكي','بحر الشمال','البحر الميت','خليج البنغال','بحر آرافورا','بحر قزوين','بحر العرب','بحر إيجة','البحر التيراني','جبال البرانس','جزر مارياس','بحر سكوشيا','جبال لومونوسوف','البحر الأسود','المحيط المتجمد الشمالي','بحر سولو','بحر لاكاديفي','ولاية وايومنغ','بحيرة تنجانيقا','مضيق هرمز','أنتاركتيكا','بربادوس','كاليدونيا الجديدة','جزر بيتكيرن','برمودا','هنغاريا','جيرسي','جواتيمالا'];
   
-  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
-
   const [gForm, setGForm] = useState({ date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
   const [eForm, setEForm] = useState({ date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
 
@@ -2432,7 +2419,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         <h3 className="text-xl font-bold text-white flex items-center gap-2"><EarthquakeIcon/> رصد الزلازل والهزات الأرضية</h3>
         <div className="flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-white/10 shadow-inner">
           <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
-          {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg transition-colors font-bold border border-red-500/20">إلغاء الفلتر</button>}
+          {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg transition-colors font-bold border border-red-500/20">إلغاء الفلتر (عرض الكل)</button>}
         </div>
       </div>
 
@@ -2449,7 +2436,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           <MapContainer center={[26.8206, 30.8025]} zoom={3} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
-            {/* 💡 رسم النقط بدقة على الخريطة */}
+            {/* 💡 رسم النقط بدقة على الخريطة ومربوطة بالفلتر */}
             {filteredGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude);
               const lng = parseFloat(eq.longitude);
