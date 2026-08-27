@@ -1808,7 +1808,9 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
                   <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.data_entry_name}</td>
                   <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-blue-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
+                      {/* 💡 زرار فتح الرابط الجديد (بيظهر بس لو فيه لينك متسجل) */}
+                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
                       {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
                     </div>
                   </td>
@@ -1959,12 +1961,16 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
 // ==========================================
 // 7. شاشة الكوارث العالمية (Global Disasters)
 // ==========================================
+// ==========================================
+// 7. شاشة الكوارث العالمية (Global Disasters)
+// ==========================================
 function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [disasters, setDisasters] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [disasterToDelete, setDisasterToDelete] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
+  const [filterDate, setFilterDate] = useState(''); // 💡 حالة فلتر التاريخ
 
   const COUNTRIES_LIST = ['أفغانستان','ألبانيا','الجزائر','أندورا','أنغولا','أنتيغوا وبربودا','الأرجنتين','أرمينيا','أستراليا','النمسا','أذربيجان','جزر البهاما','البحرين','بنغلاديش','باربادوس','بيلاروسيا','بلجيكا','بليز','بنين','بوتان','بوليفيا','البوسنة والهرسك','بوتسوانا','البرازيل','بروناي','بلغاريا','بوركينا فاسو','بوروندي','الرأس الأخضر','كمبوديا','الكاميرون','كندا','جمهورية إفريقيا الوسطى','تشاد','تشيلي','الصين','كولومبيا','جزر القمر','جمهورية الكونغو الديمقراطية','كوستاريكا','كرواتيا','كوبا','قبرص','التشيك','الدنمارك','جيبوتي','دومينيكا','جمهورية الدومينيكان','الإكوادور','مصر','السلفادور','غينيا الاستوائية','إريتريا','إستونيا','إسواتيني','إثيوبيا','فيجي','فنلندا','فرنسا','الغابون','غامبيا','جورجيا','ألمانيا','غانا','اليونان','غرينادا','غواتيمالا','غينيا','غينيا بيساو','غيانا','هايتي','هندوراس','المجر','آيسلندا','الهند','إندونيسيا','إيران','العراق','أيرلندا','إسرائيل','إيطاليا','ساحل العاج','جامايكا','اليابان','الأردن','كازاخستان','كينيا','كيريباتي','الكويت','قيرغيزستان','لاوس','لاتفيا','لبنان','ليسوتو','ليبيريا','ليبيا','ليختنشتاين','ليتوانيا','لوكسمبورغ','مدغشقر','ملاوي','ماليزيا','جزر المالديف','مالي','مالطا','جزر مارشال','موريتانيا','موريشيوس','المكسيك','ميكرونيزيا','مولدوفا','موناكو','منغوليا','الجبل الأسود','المغرب','موزمبيق','ميانمار','ناميبيا','ناورو','نيبال','هولندا','نيوزيلندا','نيكاراغوا','النيجر','نيجيريا','كوريا الشمالية','مقدونيا الشمالية','النرويج','عمان','باكستان','بالاو','فلسطين','بنما','بابوا غينيا الجديدة','باراغواي','بيرو','الفلبين','بولندا','البرتغال','قطر','رومانيا','روسيا','رواندا','سانت كيتس ونيفيس','سانت لوسيا','سانت فنسنت وجزر غرينادين','ساموا','سان مارينو','ساو تومي وبرينسيب','السعودية','السنغال','صربيا','سيشيل','سيراليون','سنغافورة','سلوفاكيا','سلوفينيا','جزر سليمان','الصومال','جنوب إفريقيا','كوريا الجنوبية','جنوب السودان','إسبانيا','سريلانكا','السودان','سورينام','السويد','سويسرا','سوريا','طاجيكستان','تنزانيا','تايلاند','تيمور الشرقية','توغو','تونغا','ترينيداد وتوباغو','تونس','تركيا','تركمانستان','توفالو','أوغندا','أوكرانيا','الإمارات العربية المتحدة','المملكة المتحدة البريطانية','الولايات المتحدة الأمريكية','أوروغواي','أوزبكستان','فانواتو','فنزويلا','فيتنام','اليمن','زامبيا','زيمبابوي','تايوان','المحيط الهادي','المحيط الاطلسي','المحيط الهندي','القطب الجنوبي','جزيرة','البحر الكاريبي','البحر الابيض المتوسط','جبال الهند','جزيرة جوام','جزيرة سايمن','مونتيجرو','ولايات مايكرونزيا المتحدة','غرينلاند','جزر كايمان','جبل طارق','بورتوريكو','غوادلوب','جزر المارتينيك','أنغويلا','البحر الاحمر','مضيق بحري','القطب الشمالي','مايوت','شبه جزيرة بوثيا','البحر الأيوني','جزيرة بوفيه','الخليج الفارسي','البحر الأدرياتيكي','بحر الشمال','البحر الميت','خليج البنغال','بحر آرافورا','بحر قزوين','بحر العرب','بحر إيجة','البحر التيراني','جبال البرانس','جزر مارياس','بحر سكوشيا','جبال لومونوسوف','البحر الأسود','المحيط المتجمد الشمالي','بحر سولو','بحر لاكاديفي','ولاية وايومنغ','بحيرة تنجانيقا','مضيق هرمز','أنتاركتيكا','بربادوس','كاليدونيا الجديدة','جزر بيتكيرن','برمودا','هنغاريا','جيرسي','جواتيمالا'];
   const DISASTER_TYPES = ['انفجار','زلزال','هزة أرضية','بركان','اعصار','حرائق غابات','صعق كهربائي','سيول','عاصفة','فيضان','وباء'];
@@ -2016,9 +2022,14 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
     if (res.ok) { setIsModalOpen(false); fetchDisasters(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
   };
 
+  // 💡 تطبيق الفلتر على الجدول والإحصائيات وتصدير الإكسيل
+  const filteredDisasters = filterDate 
+    ? disasters.filter(d => d.incident_date === filterDate) 
+    : disasters;
+
   const handleExportExcel = () => {
-    if (disasters.length === 0) return setCustomAlert("لا توجد كوارث للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(disasters.map(d => ({
+    if (filteredDisasters.length === 0) return setCustomAlert("لا توجد كوارث للتصدير حالياً.");
+    const ws = XLSX.utils.json_to_sheet(filteredDisasters.map(d => ({
       "التاريخ": d.incident_date || '', "الشهر": d.incident_month || '', "الخبر": d.news_title || '',
       "الدولة": d.country || '', "نوع الكارثة": d.disaster_type || '', "المناطق المتأثرة من الكارثة": d.affected_areas || '',
       "المناطق المتوقعة الخطر": d.at_risk_areas || '', "المصدر": d.source_name || '', "عدد المصابين": d.injured_count || 0,
@@ -2027,7 +2038,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "الكوارث العالمية");
-    XLSX.writeFile(wb, `سجل_الكوارث_العالمية.xlsx`);
+    XLSX.writeFile(wb, filterDate ? `سجل_الكوارث_العالمية_${filterDate}.xlsx` : `سجل_الكوارث_العالمية.xlsx`);
   };
 
   const handleExportSingleExcel = () => {
@@ -2043,23 +2054,34 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
     XLSX.writeFile(wb, `كارثة_${gd.country || 'عالمية'}.xlsx`);
   };
 
-  const uniqueCountries = [...new Set(disasters.map(d => d.country))].filter(Boolean).length;
-  const totalDeaths = disasters.reduce((sum, d) => sum + (parseInt(d.deaths_count) || 0), 0);
-  const totalInjuries = disasters.reduce((sum, d) => sum + (parseInt(d.injured_count) || 0), 0);
+  // 💡 الإحصائيات تتحدث مع الفلتر
+  const uniqueCountries = [...new Set(filteredDisasters.map(d => d.country))].filter(Boolean).length;
+  const totalDeaths = filteredDisasters.reduce((sum, d) => sum + (parseInt(d.deaths_count) || 0), 0);
+  const totalInjuries = filteredDisasters.reduce((sum, d) => sum + (parseInt(d.injured_count) || 0), 0);
 
   return (
     <div className="space-y-6 pb-10">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
-        <StatCard title="إجمالي الكوارث المرصودة" value={disasters.length} color="text-white" borderHighlight />
+        <StatCard title="إجمالي الكوارث المرصودة" value={filteredDisasters.length} color="text-white" borderHighlight />
         <StatCard title="الدول/المناطق المتضررة" value={uniqueCountries} color="text-orange-400" />
         <StatCard title="إجمالي الوفيات المرصودة" value={totalDeaths.toLocaleString()} color="text-[#c70000]" />
         <StatCard title="إجمالي المصابين" value={totalInjuries.toLocaleString()} color="text-yellow-500" />
       </div>
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
-        <div className="p-6 border-b border-white/5 bg-[#111] flex justify-between items-center gap-4 z-10">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> رصد الكوارث والأزمات العالمية</h3>
-          <div className="flex gap-3">
+        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+          
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap"><GlobalWorldIcon /> رصد الكوارث العالمية</h3>
+            
+            {/* 💡 فلتر التاريخ الجديد في الهيدر */}
+            <div className="flex items-center gap-2">
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">إلغاء التاريخ</button>}
+            </div>
+          </div>
+
+          <div className="flex gap-3 shrink-0">
             {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon /> تحميل السجل الشامل للكوارث</button>}
             <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2">+ رصد كارثة</button>
           </div>
@@ -2080,7 +2102,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
             </thead>
             <tbody className="divide-y divide-white/5">
               {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500">جاري تحميل البيانات...</td></tr> : 
-               disasters.length > 0 ? disasters.map(d => (
+               filteredDisasters.length > 0 ? filteredDisasters.map(d => (
                 <tr key={d.disaster_id} className="hover:bg-white/5">
                   <td className="p-4 text-white border-l border-white/5">{d.incident_date}</td>
                   <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{d.country}</td>
@@ -2096,7 +2118,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
                     </div>
                   </td>
                 </tr>
-              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد كوارث مسجلة حالياً</td></tr>}
+              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد كوارث مسجلة حالياً بهذا التاريخ</td></tr>}
             </tbody>
           </table>
         </div>
