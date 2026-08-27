@@ -391,7 +391,7 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
             for part in mission.participants:
                 # 1. أوتوميشن الإغلاق
                 if mission.status in ['Completed', 'مكتملة']:
-                    part.return_status = 'تم النتهاء مهمتة'
+                    part.return_status = 'تم انتهاء مهمتة'
                 
                 # 2. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض
                 if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':

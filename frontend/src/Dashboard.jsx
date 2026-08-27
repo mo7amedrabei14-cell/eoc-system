@@ -712,7 +712,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
            branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
            assigned_itinerary: document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي',
-           return_status: document.getElementById(`p_status_${i}`)?.value || 'مازال بالمهمة'
+           return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : (document.getElementById(`p_status_${i}`)?.value || 'مازال بالمهمة')
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
          eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== '')
@@ -1011,7 +1011,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                             </select>
                           </td>
                           <td className="p-2">
-                            <select id={`p_status_${index}`} defaultValue={p.return_status || 'مازال بالمهمة'} disabled={currentMissionData?.status === 'Completed'} className={`bg-[#1a1a1a] border border-white/5 px-2 py-1 outline-none w-full rounded font-bold ${p.return_status === 'تم انتهاء مهمتة' || currentMissionData?.status === 'Completed' ? 'text-gray-500' : 'text-yellow-500'} ${(currentMissionData?.status === 'Completed') ? 'opacity-50 cursor-not-allowed' : ''}`} onChange={(e) => { e.target.classList.remove('text-yellow-500', 'text-gray-500'); e.target.classList.add(e.target.value === 'تم انتهاء مهمتة' ? 'text-gray-500' : 'text-yellow-500'); }}>
+                            <select id={`p_status_${index}`} defaultValue={p.return_status || 'مازال بالمهمة'} disabled={currentMissionData?.status === 'Completed' && isVolunteer} className={`bg-[#1a1a1a] border border-white/5 px-2 py-1 outline-none w-full rounded font-bold ${p.return_status === 'تم انتهاء مهمتة' ? 'text-gray-500' : 'text-yellow-500'} ${(currentMissionData?.status === 'Completed' && isVolunteer) ? 'opacity-50 cursor-not-allowed' : ''}`} onChange={(e) => { e.target.classList.remove('text-yellow-500', 'text-gray-500'); e.target.classList.add(e.target.value === 'تم انتهاء مهمتة' ? 'text-gray-500' : 'text-yellow-500'); }}>
                               <option value="مازال بالمهمة">📍 مازال بالمهمة</option>
                               <option value="تم انتهاء مهمتة">🏠 تم انتهاء مهمتة</option>
                             </select>
