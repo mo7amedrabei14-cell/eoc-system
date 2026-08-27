@@ -502,19 +502,30 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         setMissionClass(data.mission_classification || 'عادية');
         
         if (data.routes && data.routes.length > 0) {
-          const grouped = data.routes.reduce((acc, curr) => {
-            if (!acc[curr.group_title]) acc[curr.group_title] = [];
-            acc[curr.group_title].push({ id: Date.now() + Math.random(), ...curr });
-            return acc;
-          }, {});
-          const titles = Object.keys(grouped);
-          setMainRouteTitle(titles[0]);
-          setRoutes(grouped[titles[0]].map((r, i) => ({ id: i, ...r })));
-          
-          if (titles.length > 1) {
-            setCustomItineraries(titles.slice(1).map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
-          } else { setCustomItineraries([]); }
-        } else { setMainRouteTitle('خط السير الأساسي'); setRoutes([{ id: Date.now() }]); setCustomItineraries([]); }
+          if (data.mission_classification === 'مفتوحة') {
+             const grouped = data.routes.reduce((acc, curr) => {
+               if (!acc[curr.group_title]) acc[curr.group_title] = [];
+               acc[curr.group_title].push({ id: Date.now() + Math.random(), ...curr });
+               return acc;
+             }, {});
+             const titles = Object.keys(grouped);
+             setCustomItineraries(titles.map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
+             setRoutes([]); 
+          } else {
+             const mainR = data.routes.filter(r => r.group_title === 'خط السير الأساسي');
+             const customR = data.routes.filter(r => r.group_title !== 'خط السير الأساسي');
+             setRoutes(mainR.length ? mainR.map((r, i) => ({ id: i, ...r })) : []);
+             
+             if (customR.length > 0) {
+               const grouped = customR.reduce((acc, curr) => {
+                 if (!acc[curr.group_title]) acc[curr.group_title] = [];
+                 acc[curr.group_title].push({ id: Date.now() + Math.random(), ...curr });
+                 return acc;
+               }, {});
+               setCustomItineraries(Object.keys(grouped).map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
+             } else { setCustomItineraries([]); }
+          }
+        } else { setRoutes([{ id: Date.now() }]); setCustomItineraries([]); }
 
         setVehicles((data.vehicles && data.vehicles.length > 0) ? data.vehicles.map((v, i) => ({ id: i, ...v })) : [{ id: Date.now() }]);
         setParticipants((data.participants && data.participants.length > 0) ? data.participants.map((p, i) => ({ id: i, ...p })) : [{ id: Date.now() }]);
@@ -675,10 +686,12 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
        // استكمال تجميع البيانات وحفظها
        // ==========================================
        const allRoutes = [];
-       routes.forEach((_, i) => {
-           const to = document.getElementById(`r_to_main_${i}`)?.value;
-           if (to) allRoutes.push({ group_title: mainRouteTitle || 'خط السير الأساسي', route_to: to, departure_time: document.getElementById(`r_dep_main_${i}`)?.value || null, arrival_time: document.getElementById(`r_arr_main_${i}`)?.value || null });
-       });
+       if (missionClass !== 'مفتوحة') {
+           routes.forEach((_, i) => {
+               const to = document.getElementById(`r_to_main_${i}`)?.value;
+               if (to) allRoutes.push({ group_title: 'خط السير الأساسي', route_to: to, departure_time: document.getElementById(`r_dep_main_${i}`)?.value || null, arrival_time: document.getElementById(`r_arr_main_${i}`)?.value || null });
+           });
+       }
        customItineraries.forEach((ci, ciIndex) => {
          ci.routes.forEach((_, rIndex) => {
            const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
@@ -948,30 +961,32 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              <SectionCard title={missionClass === 'مفتوحة' ? <input value={mainRouteTitle} onChange={e => setMainRouteTitle(e.target.value)} placeholder="اسم مسار التحرك (مثال: اليوم الأول)..." className="bg-transparent border-b border-white/10 focus:border-[#c70000] outline-none text-white font-bold w-64 transition-colors" /> : "تفاصيل خط السير"} icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
-                <div className="w-full flex flex-col items-center">
-                  <div className="mb-4 -mt-2">
-                    {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[#111] hover:bg-[#c70000] text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-[#c70000]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[#111] hover:bg-green-600 text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-green-600/30">+ تفعيل خط السير</button>)}
+              {missionClass !== 'مفتوحة' && (
+                <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
+                  <div className="w-full flex flex-col items-center">
+                    <div className="mb-4 -mt-2">
+                      {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[#111] hover:bg-[#c70000] text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-[#c70000]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[#111] hover:bg-green-600 text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-green-600/30">+ تفعيل خط السير</button>)}
+                    </div>
+                    <div className="w-full">
+                      {routes.map((route, index) => (
+                        <div key={route.id} className="flex flex-col md:flex-row w-full border border-white/10 rounded-lg overflow-hidden mb-2 bg-[#1a1a1a]">
+                          <div className="flex-1 flex border-l border-white/10"><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
+                          <div className="w-full md:w-auto flex border-l border-white/10"><div className="bg-[#111] text-gray-400 text-xs px-3 flex items-center justify-center border-l border-white/10">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
+                          <div className="w-full md:w-auto flex"><div className="bg-[#111] text-gray-400 text-xs px-3 flex items-center justify-center border-l border-white/10">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-gray-500 hover:text-red-500 bg-[#111] border-r border-white/5"><TrashIcon /></button>)}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="w-full">
-                    {routes.map((route, index) => (
-                      <div key={route.id} className="flex flex-col md:flex-row w-full border border-white/10 rounded-lg overflow-hidden mb-2 bg-[#1a1a1a]">
-                        <div className="flex-1 flex border-l border-white/10"><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
-                        <div className="w-full md:w-auto flex border-l border-white/10"><div className="bg-[#111] text-gray-400 text-xs px-3 flex items-center justify-center border-l border-white/10">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
-                        <div className="w-full md:w-auto flex"><div className="bg-[#111] text-gray-400 text-xs px-3 flex items-center justify-center border-l border-white/10">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-gray-500 hover:text-red-500 bg-[#111] border-r border-white/5"><TrashIcon /></button>)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              )}
 
-              <SectionCard title="خطوط سير مخصصة (لفرق أو أفراد محددين)" icon={<MapIcon />} actionBtn={<button onClick={addCustomItinerary} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة خط سير مخصص</button>}>
+              <SectionCard title={missionClass === 'مفتوحة' ? "أيام المهمة / مسارات التحرك" : "خطوط سير مخصصة (لفرق أو أفراد محددين)"} icon={<MapIcon />} actionBtn={<button onClick={addCustomItinerary} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">{missionClass === 'مفتوحة' ? "+ إضافة يوم / مسار جديد" : "+ إضافة خط سير مخصص"}</button>}>
                 <div className="space-y-4">
-                  {customItineraries.length === 0 && <p className="text-center text-gray-600 text-sm">لا يوجد خطوط سير مخصصة.</p>}
+                  {customItineraries.length === 0 && <p className="text-center text-gray-600 text-sm">{missionClass === 'مفتوحة' ? "يرجى إضافة أيام المهمة أو المسارات..." : "لا يوجد خطوط سير مخصصة."}</p>}
                   {customItineraries.map((ci, ciIndex) => (
                     <div key={ci.id} className="bg-[#111] border border-white/5 p-4 rounded-xl">
                       <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
-                        <input type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder="اكتب اسم خط السير المخصص هنا..." className="bg-transparent text-[#c70000] font-bold outline-none w-1/2" />
+                        <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder={missionClass === 'مفتوحة' ? "اكتب اسم اليوم (مثال: تحركات اليوم الأول)..." : "اكتب اسم خط السير المخصص هنا..."} className="bg-transparent text-[#c70000] font-bold outline-none w-full md:w-1/2" />
                         <div className="flex gap-2">
                           <button onClick={() => addRouteToCustom(ci.id)} className="text-xs text-green-500 hover:bg-white/5 px-2 py-1 rounded">+ مسار</button>
                           <button onClick={() => removeCustomItinerary(ci.id)} className="text-xs text-red-500 hover:bg-white/5 px-2 py-1 rounded">حذف المخصص</button>
@@ -1039,13 +1054,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                           )}
                           <td className="p-2">
                             <select 
-                              id={`p_branch_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'} className="bg-[#1a1a1a] text-orange-400 border border-white/5 px-1 py-1 outline-none w-full rounded text-xs font-bold">
-                              <option value="ذهاب وعودة">🔄 عودة</option>
-                              <option value="مبيت">⛺ مبيت</option>
-                            </select>
-                          </td>
-                          <td className="p-2">
-                            <select 
                               id={`p_branch_${index}`} 
                               defaultValue={p.branch_id || '19'} 
                               disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}
@@ -1056,9 +1064,12 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                             </select>
                           </td>
                           <td className="p-2">
-                            <select id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'} className="bg-[#1a1a1a] text-green-400 border border-white/5 px-2 py-1 outline-none w-full rounded">
-                              {routes.length > 0 && <option value="خط السير الأساسي">خط السير الأساسي</option>}
-                              {customItineraries.map(ci => (<option key={ci.id} value={document.getElementById(`r_title_${customItineraries.indexOf(ci)}`)?.value || ci.title || 'مخصص'}>{document.getElementById(`r_title_${customItineraries.indexOf(ci)}`)?.value || ci.title || 'مخصص'}</option>))}
+                            <select id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'} className="bg-[#1a1a1a] text-green-400 border border-white/5 px-2 py-1 outline-none w-full rounded max-w-[120px] truncate">
+                              {routes.length > 0 && missionClass !== 'مفتوحة' && <option value="خط السير الأساسي">خط السير الأساسي</option>}
+                              {customItineraries.map((ci) => {
+                                const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || 'مخصص';
+                                return <option key={ci.id} value={ciTitle}>{ciTitle}</option>;
+                              })}
                               {routes.length === 0 && customItineraries.length === 0 && <option value="بدون خط سير">بدون خط سير</option>}
                             </select>
                           </td>
