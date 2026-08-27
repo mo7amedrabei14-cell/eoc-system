@@ -713,7 +713,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
            team_code: document.getElementById(`p_tcode_${i}`)?.value || '', 
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
            branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
-           assigned_itinerary: document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي'
+           assigned_itinerary: document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي',
+           return_status: document.getElementById(`p_status_${i}`)?.value || 'بالمهمة'
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
          eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== '')
@@ -727,8 +728,11 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
        const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(missionData) });
        if (res.ok) { setIsModalOpen(false); fetchMissions(); } 
-       else { const errorData = await res.json(); alert(`حدث خطأ أثناء الحفظ: ${errorData.detail}`); }
-     } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
+       else { 
+           const errorData = await res.json(); 
+           setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errorData.detail}`); 
+       }
+     } catch (error) { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
   };
 
   const StatusBadge = ({ status }) => {
@@ -968,7 +972,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               <SectionCard title="القوة البشرية والمشاركين" icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
                 <div className="overflow-x-auto bg-[#111] rounded-xl border border-white/5">
                   <table className="w-full text-right text-sm min-w-[950px]">
-                    <thead className="bg-[#1a1a1a] text-gray-400 border-b border-white/5"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3 text-blue-400 w-40">الفريق / الكود</th><th className="p-3">رقم العضوية / الصفة</th><th className="p-3">الفرع</th><th className="p-3 text-green-400">خط السير المتبع</th><th className="p-3 text-center">حذف</th></tr></thead>
+                    <thead className="bg-[#1a1a1a] text-gray-400 border-b border-white/5"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3 text-blue-400 w-40">الفريق / الكود</th><th className="p-3">رقم العضوية / الصفة</th><th className="p-3">الفرع</th><th className="p-3 text-green-400">خط السير المتبع</th><th className="p-3 text-yellow-500 w-36">حالة التتبع</th><th className="p-3 text-center">حذف</th></tr></thead>
                     <tbody className="divide-y divide-white/5">
                       {participants.map((p, index) => (
                         <tr key={p.id} className="hover:bg-white/5">
@@ -1005,6 +1009,12 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                               {routes.length > 0 && <option value="خط السير الأساسي">خط السير الأساسي</option>}
                               {customItineraries.map(ci => (<option key={ci.id} value={document.getElementById(`r_title_${customItineraries.indexOf(ci)}`)?.value || ci.title || 'مخصص'}>{document.getElementById(`r_title_${customItineraries.indexOf(ci)}`)?.value || ci.title || 'مخصص'}</option>))}
                               {routes.length === 0 && customItineraries.length === 0 && <option value="بدون خط سير">بدون خط سير</option>}
+                            </select>
+                          </td>
+                          <td className="p-2">
+                            <select id={`p_status_${index}`} defaultValue={p.return_status || 'بالمهمة'} disabled={currentMissionData?.status === 'Completed'} className={`bg-[#1a1a1a] border border-white/5 px-2 py-1 outline-none w-full rounded font-bold ${p.return_status === 'عاد للقاعدة' || currentMissionData?.status === 'Completed' ? 'text-gray-500' : 'text-yellow-500'} ${(currentMissionData?.status === 'Completed') ? 'opacity-50 cursor-not-allowed' : ''}`} onChange={(e) => { e.target.classList.remove('text-yellow-500', 'text-gray-500'); e.target.classList.add(e.target.value === 'عاد للقاعدة' ? 'text-gray-500' : 'text-yellow-500'); }}>
+                              <option value="بالمهمة">📍 بالمهمة</option>
+                              <option value="عاد للقاعدة">🏠 عاد للقاعدة</option>
                             </select>
                           </td>
                           <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-gray-500 hover:text-red-500"><TrashIcon /></button></td>

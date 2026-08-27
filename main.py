@@ -231,6 +231,7 @@ class ParticipantModel(BaseModel):
     participation_role: str
     branch_id: int
     assigned_itinerary: str
+    return_status: str = "بالمهمة"
 
 class BeneficiaryModel(BaseModel):
     category_name: str
@@ -388,10 +389,25 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
 
             for part in mission.participants:
+                # 1. أوتوميشن الإغلاق
+                if mission.status in ['Completed', 'مكتملة']:
+                    part.return_status = 'عاد للقاعدة'
+                
+                # 2. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض
+                if part.return_status == 'بالمهمة' and part.participation_role.strip() != '':
+                    cursor.execute("""
+                        SELECT m.mission_name FROM mission_participants p
+                        JOIN missions m ON p.mission_id = m.mission_id
+                        WHERE p.participation_role = %s AND p.return_status = 'بالمهمة' AND m.status NOT IN ('Completed', 'Cancelled', 'Returned')
+                    """, (part.participation_role,))
+                    active_in_other = cursor.fetchone()
+                    if active_in_other:
+                        raise Exception(f"المشارك '{part.full_name}' (رقم {part.participation_role}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other[0]}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً.")
+
                 cursor.execute("""
-                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary))
+                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -410,9 +426,9 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
             
     except Exception as e:
         connection.rollback()
+        if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
+            raise HTTPException(status_code=400, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        connection.close()
 
 @app.put("/api/missions/{mission_id}")
 def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -460,7 +476,21 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
 
             for part in mission.participants:
-                cursor.execute("INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary))
+                if mission.status in ['Completed', 'مكتملة']:
+                    part.return_status = 'عاد للقاعدة'
+                
+                if part.return_status == 'بالمهمة' and part.participation_role.strip() != '':
+                    cursor.execute("""
+                        SELECT m.mission_name FROM mission_participants p
+                        JOIN missions m ON p.mission_id = m.mission_id
+                        WHERE p.participation_role = %s AND p.return_status = 'بالمهمة' 
+                        AND m.status NOT IN ('Completed', 'Cancelled', 'Returned') AND m.mission_id != %s
+                    """, (part.participation_role, mission_id))
+                    active_in_other = cursor.fetchone()
+                    if active_in_other:
+                        raise Exception(f"المشارك '{part.full_name}' (رقم {part.participation_role}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other[0]}).\n\nلا يمكن إضافته أو تحديث بياناته حتى يتم تسجيل عودته أولاً.")
+
+                cursor.execute("INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -479,9 +509,9 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
             
     except Exception as e:
         connection.rollback()
+        if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
+            raise HTTPException(status_code=400, detail=str(e))
         raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء التحديث: {str(e)}")
-    finally:
-        connection.close()
 
 @app.get("/api/missions/{mission_id}")
 def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -506,8 +536,8 @@ def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentia
             cursor.execute("SELECT driver_name, vehicle_number FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             mission_data["vehicles"] = [{"driver_name": r[0], "vehicle_number": r[1]} for r in cursor.fetchall()]
             
-            cursor.execute("SELECT participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary FROM mission_participants WHERE mission_id = %s", (mission_id,))
-            mission_data["participants"] = [{"participant_type": r[0], "full_name": r[1], "team_name": r[2], "team_code": r[3], "participation_role": r[4], "branch_id": r[5], "assigned_itinerary": r[6]} for r in cursor.fetchall()]
+            cursor.execute("SELECT participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status FROM mission_participants WHERE mission_id = %s", (mission_id,))
+            mission_data["participants"] = [{"participant_type": r[0], "full_name": r[1], "team_name": r[2], "team_code": r[3], "participation_role": r[4], "branch_id": r[5], "assigned_itinerary": r[6], "return_status": r[7]} for r in cursor.fetchall()]
             
             cursor.execute("SELECT category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             mission_data["beneficiaries"] = [{"category_name": r[0], "direct_count": r[1], "indirect_count": r[2]} for r in cursor.fetchall()]
