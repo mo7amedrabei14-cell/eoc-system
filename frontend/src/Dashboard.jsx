@@ -115,19 +115,14 @@ export default function Dashboard() {
           <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-full h-1/2 bg-[#c70000]/10 blur-2xl"></div>
             
-            {/* تصميم لوجو الهلال الأحمر وغرفة العمليات (SVG فخم ومدمج لا يتعطل أبداً) */}
+            {/* تصميم اللوجو (نسخة طبق الأصل من شاشة الدخول بالمللي) */}
             <div className="relative z-10 mb-5 flex justify-center">
               <div className="relative group cursor-pointer">
-                {/* تأثير الإضاءة الحمراء خلف اللوجو */}
-                <div className="absolute inset-0 bg-[#c70000] rounded-full blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
+                {/* تأثير الإضاءة خلف المربع */}
+                <div className="absolute inset-0 bg-[#c70000] rounded-2xl blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
-                {/* اللوجو نفسه */}
-                <div className="relative group cursor-pointer">
-                {/* تأثير الإضاءة الحمراء خلف اللوجو */}
-                <div className="absolute inset-0 bg-[#c70000] rounded-full blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                {/* الدائرة البيضاء وبداخلها الهلال الصافي */}
-                <div className="relative bg-white rounded-full w-20 h-20 shadow-[0_0_25px_rgba(199,0,0,0.4)] flex items-center justify-center transition-transform duration-300 hover:scale-105 p-3">
+                {/* المربع الأبيض والهلال الصافي */}
+                <div className="relative w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(199,0,0,0.4)] transition-transform duration-300 hover:scale-105 p-2">
                   <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm">
                     {/* هلال أحمر كلاسيكي صافي */}
                     <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" />
