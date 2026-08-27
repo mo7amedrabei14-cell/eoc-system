@@ -867,7 +867,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   };
 
   return (
-    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[calc(100vh-180px)]">
+    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[700px] flex-1">
       {missionToDelete && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
           <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
@@ -2253,45 +2253,15 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
 
-  const [filterDate, setFilterDate] = useState(getLocalDate()); // 💡 خليت الفلتر الديفولت يجيب زلازل النهاردة عشان الشاشة متكونش زحمة
+  const [filterDate, setFilterDate] = useState(getLocalDate()); 
 
   const [isGlobalModalOpen, setIsGlobalModalOpen] = useState(false);
   const [isEgyptModalOpen, setIsEgyptModalOpen] = useState(false);
 
-  // 💡 دوال التعديل: بتاخد بيانات الزلزال وتحطها في الفورم وتفتح الشاشة
-  const handleEditGlobal = (eq) => {
-    setGForm({
-      eq_id: eq.eq_id,
-      date: eq.date || getLocalDate(),
-      time: eq.time || '',
-      country: eq.country || '',
-      magnitude: eq.magnitude || '',
-      depth_km: eq.depth_km ? eq.depth_km.replace(' KM', '') : '',
-      region: eq.region || '',
-      longitude: eq.longitude || '',
-      latitude: eq.latitude || ''
-    });
-    setIsGlobalModalOpen(true);
-  };
-
-  const handleEditEgypt = (eq) => {
-    setEForm({
-      eq_id: eq.eq_id,
-      date: eq.date || getLocalDate(),
-      time: eq.time || '',
-      magnitude: eq.magnitude || '',
-      depth_km: eq.depth_km ? eq.depth_km.replace(' KM', '') : '',
-      region: eq.region || '',
-      longitude: eq.longitude || '',
-      latitude: eq.latitude || ''
-    });
-    setIsEgyptModalOpen(true);
-  };
-
   const COUNTRIES_LIST = ['أفغانستان','ألبانيا','الجزائر','أندورا','أنغولا','أنتيغوا وبربودا','الأرجنتين','أرمينيا','أستراليا','النمسا','أذربيجان','جزر البهاما','البحرين','بنغلاديش','باربادوس','بيلاروسيا','بلجيكا','بليز','بنين','بوتان','بوليفيا','البوسنة والهرسك','بوتسوانا','البرازيل','بروناي','بلغاريا','بوركينا فاسو','بوروندي','الرأس الأخضر','كمبوديا','الكاميرون','كندا','جمهورية إفريقيا الوسطى','تشاد','تشيلي','الصين','كولومبيا','جزر القمر','جمهورية الكونغو الديمقراطية','كوستاريكا','كرواتيا','كوبا','قبرص','التشيك','الدنمارك','جيبوتي','دومينيكا','جمهورية الدومينيكان','الإكوادور','مصر','السلفادور','غينيا الاستوائية','إريتريا','إستونيا','إسواتيني','إثيوبيا','فيجي','فنلندا','فرنسا','الغابون','غامبيا','جورجيا','ألمانيا','غانا','اليونان','غرينادا','غواتيمالا','غينيا','غينيا بيساو','غيانا','هايتي','هندوراس','المجر','آيسلندا','الهند','إندونيسيا','إيران','العراق','أيرلندا','إسرائيل','إيطاليا','ساحل العاج','جامايكا','اليابان','الأردن','كازاخستان','كينيا','كيريباتي','الكويت','قيرغيزستان','لاوس','لاتفيا','لبنان','ليسوتو','ليبيريا','ليبيا','ليختنشتاين','ليتوانيا','لوكسمبورغ','مدغشقر','ملاوي','ماليزيا','جزر المالديف','مالي','مالطا','جزر مارشال','موريتانيا','موريشيوس','المكسيك','ميكرونيزيا','مولدوفا','موناكو','منغوليا','الجبل الأسود','المغرب','موزمبيق','ميانمار','ناميبيا','ناورو','نيبال','هولندا','نيوزيلندا','نيكاراغوا','النيجر','نيجيريا','كوريا الشمالية','مقدونيا الشمالية','النرويج','عمان','باكستان','بالاو','فلسطين','بنما','بابوا غينيا الجديدة','باراغواي','بيرو','الفلبين','بولندا','البرتغال','قطر','رومانيا','روسيا','رواندا','سانت كيتس ونيفيس','سانت لوسيا','سانت فنسنت وجزر غرينادين','ساموا','سان مارينو','ساو تومي وبرينسيب','السعودية','السنغال','صربيا','سيشيل','سيراليون','سنغافورة','سلوفاكيا','سلوفينيا','جزر سليمان','الصومال','جنوب إفريقيا','كوريا الجنوبية','جنوب السودان','إسبانيا','سريلانكا','السودان','سورينام','السويد','سويسرا','سوريا','طاجيكستان','تنزانيا','تايلاند','تيمور الشرقية','توغو','تونغا','ترينيداد وتوباغو','تونس','تركيا','تركمانستان','توفالو','أوغندا','أوكرانيا','الإمارات العربية المتحدة','المملكة المتحدة البريطانية','الولايات المتحدة الأمريكية','أوروغواي','أوزبكستان','فانواتو','فنزويلا','فيتنام','اليمن','زامبيا','زيمبابوي','تايوان','المحيط الهادي','المحيط الاطلسي','المحيط الهندي','القطب الجنوبي','جزيرة','البحر الكاريبي','البحر الابيض المتوسط','جبال الهند','جزيرة جوام','جزيرة سايمن','مونتيجرو','ولايات مايكرونزيا المتحدة','غرينلاند','جزر كايمان','جبل طارق','بورتوريكو','غوادلوب','جزر المارتينيك','أنغويلا','البحر الاحمر','مضيق بحري','القطب الشمالي','مايوت','شبه جزيرة بوثيا','البحر الأيوني','جزيرة بوفيه','الخليج الفارسي','البحر الأدرياتيكي','بحر الشمال','البحر الميت','خليج البنغال','بحر آرافورا','بحر قزوين','بحر العرب','بحر إيجة','البحر التيراني','جبال البرانس','جزر مارياس','بحر سكوشيا','جبال لومونوسوف','البحر الأسود','المحيط المتجمد الشمالي','بحر سولو','بحر لاكاديفي','ولاية وايومنغ','بحيرة تنجانيقا','مضيق هرمز','أنتاركتيكا','بربادوس','كاليدونيا الجديدة','جزر بيتكيرن','برمودا','هنغاريا','جيرسي','جواتيمالا'];
   
-  const [gForm, setGForm] = useState({ date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
-  const [eForm, setEForm] = useState({ date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
+  const [gForm, setGForm] = useState({ eq_id: null, date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
+  const [eForm, setEForm] = useState({ eq_id: null, date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
 
   const fetchEarthquakes = async () => {
     setIsLoading(true);
@@ -2306,9 +2276,27 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
   useEffect(() => { fetchEarthquakes(); }, []);
 
-  // 💡 تطبيق الفلتر على الداتا عشان الخريطة والجدول يتأثروا
   const filteredGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
   const filteredEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
+
+  // 💡 دوال التعديل (فتح الفورم بالبيانات)
+  const handleEditGlobal = (eq) => {
+    setGForm({
+      eq_id: eq.eq_id, date: eq.date || getLocalDate(), time: eq.time || '', country: eq.country || '',
+      magnitude: eq.magnitude || '', depth_km: eq.depth_km ? eq.depth_km.replace(' KM', '') : '',
+      region: eq.region || '', longitude: eq.longitude || '', latitude: eq.latitude || ''
+    });
+    setIsGlobalModalOpen(true);
+  };
+
+  const handleEditEgypt = (eq) => {
+    setEForm({
+      eq_id: eq.eq_id, date: eq.date || getLocalDate(), time: eq.time || '', magnitude: eq.magnitude || '',
+      depth_km: eq.depth_km ? eq.depth_km.replace(' KM', '') : '', region: eq.region || '',
+      longitude: eq.longitude || '', latitude: eq.latitude || ''
+    });
+    setIsEgyptModalOpen(true);
+  };
 
   const handleCSVUpload = (e) => {
     const file = e.target.files[0];
@@ -2326,128 +2314,61 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           const status = mag >= 5.1 ? 'زلزال' : 'هزة أرضية';
           const regionName = cols[4];
           let countryName = regionName.split(',').pop().trim();
-          
           parsedData.push({
-            date: cols[0], month: getMonthName(cols[0]), time: cols[1],
-            country: countryName, magnitude: mag, depth_km: cols[5] + ' KM',
-            region: regionName, status: status, 
-            longitude: cols[3] ? parseFloat(cols[3]) : null, 
-            latitude: cols[2] ? parseFloat(cols[2]) : null
+            date: cols[0], month: getMonthName(cols[0]), time: cols[1], country: countryName, magnitude: mag, 
+            depth_km: cols[5] + ' KM', region: regionName, status: status, 
+            longitude: cols[3] ? parseFloat(cols[3]) : null, latitude: cols[2] ? parseFloat(cols[2]) : null
           });
         }
       }
-      
       if (parsedData.length > 0) {
         setIsLoading(true);
         const token = localStorage.getItem('access_token');
         const res = await fetch('https://eoc-system.vercel.app/api/earthquakes/global/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify(parsedData)
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
         });
-        if (res.ok) {
-           setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`);
-           fetchEarthquakes();
-        } else {
-           setCustomAlert("حدث خطأ أثناء رفع الشيت للسيرفر.");
-           setIsLoading(false);
-        }
+        if (res.ok) { setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); } 
+        else { setCustomAlert("حدث خطأ أثناء رفع الشيت للسيرفر."); setIsLoading(false); }
       }
       e.target.value = '';
     };
     reader.readAsText(file);
   };
 
+  // 💡 التحديث والإضافة
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-    
-    const mag = parseFloat(gForm.magnitude);
-    const payload = {
-      ...gForm,
-      magnitude: mag,
-      status: mag >= 5.1 ? 'زلزال' : 'هزة أرضية',
-      month: getMonthName(gForm.date),
-      depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM',
-      longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null,
-      latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null
-    };
-
+    const payload = { ...gForm, magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية', month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM', longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null, latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null };
     const token = localStorage.getItem('access_token');
-    // 💡 التعديل هنا: بيشوف لو في eq_id يبعت PUT (تعديل)، ولو مفيش يبعت POST (جديد)
     const url = gForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/global';
-    const method = gForm.eq_id ? 'PUT' : 'POST';
-
-    const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+    const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
     if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); }
   };
 
   const handleEgyptSubmit = async () => {
     if (!eForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!eForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-    
-    const payload = {
-      ...eForm,
-      magnitude: parseFloat(eForm.magnitude),
-      depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM',
-      longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null,
-      latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null
-    };
-
+    const payload = { ...eForm, magnitude: parseFloat(eForm.magnitude), depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null };
     const token = localStorage.getItem('access_token');
-    // 💡 التعديل هنا: نفس الفكرة عشان زلازل مصر
     const url = eForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/egypt';
-    const method = eForm.eq_id ? 'PUT' : 'POST';
-
-    const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+    const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
     if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); }
   };
 
-  const deleteGlobalEq = async (id) => {
-    const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    fetchEarthquakes();
-  };
-
-  const deleteEgyptEq = async (id) => {
-    const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    fetchEarthquakes();
-  };
+  const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
+  const deleteEgyptEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
 
   const handleExportGlobalEqs = () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({
-      "التاريخ": eq.date || '',
-      "الشهر": eq.month || '',
-      "الدولة": eq.country || '',
-      "القوة بالريختر": eq.magnitude || '',
-      "التوقيت": eq.time || '',
-      "العمق": eq.depth_km || 'KM',
-      "المنطقة": eq.region || '',
-      "الحالة": eq.status || '',
-      "longitude": eq.longitude || '',
-      "Latitude": eq.latitude || ''
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية");
-    XLSX.writeFile(wb, filterDate ? `سجل_الزلازل_العالمية_${filterDate}.xlsx` : `سجل_الزلازل_العالمية.xlsx`);
+    const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({ "التاريخ": eq.date || '', "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": eq.time || '', "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية"); XLSX.writeFile(wb, filterDate ? `سجل_الزلازل_العالمية_${filterDate}.xlsx` : `سجل_الزلازل_العالمية.xlsx`);
   };
 
   const handleExportEgyptEqs = () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({
-      "التاريخ": eq.date || '',
-      "وقت الزلزال": eq.time || '',
-      "العمق": eq.depth_km || 'KM',
-      "القوة بالريختر": eq.magnitude || '',
-      "المنطقة": eq.region || '',
-      "longitude": eq.longitude || '',
-      "Latitude": eq.latitude || ''
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر");
-    XLSX.writeFile(wb, filterDate ? `سجل_زلازل_مصر_${filterDate}.xlsx` : `سجل_زلازل_مصر.xlsx`);
+    const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({ "التاريخ": eq.date || '', "وقت الزلزال": eq.time || '', "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر"); XLSX.writeFile(wb, filterDate ? `سجل_زلازل_مصر_${filterDate}.xlsx` : `سجل_زلازل_مصر.xlsx`);
   };
 
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
@@ -2456,9 +2377,9 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   return (
     <div className="space-y-6 pb-10">
       
-      {/* 💡 هيدر الصفحة الأساسي بدون فلاتر */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#111] border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in-up">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2"><EarthquakeIcon/> رصد الزلازل والهزات الأرضية</h3>
+      {/* 💡 الهيدر بدون فلاتر */}
+      <div className="bg-[#111] border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in-up">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2"><EarthquakeIcon/> مركز رصد الزلازل والهزات الأرضية</h3>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
@@ -2468,55 +2389,45 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         <StatCard title="أقوى هزة / زلزال" value={maxMagnitude > 0 ? `${maxMagnitude} ريختر` : '-'} color="text-yellow-500" />
       </div>
 
-      {/* 💡 الخريطة بالفلاتر الجديدة فوقها والزوم أوت */}
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[500px]">
+        {/* 💡 الفلاتر فوق الخريطة */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <MapIcon/> خريطة الرصد الزلزالي (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)
-          </h3>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)</h3>
+          
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الزلازل العالمية</button>
-              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>زلازل مصر</button>
-              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الكل</button>
+              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>عالمي</button>
+              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>مصر</button>
+              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكل</button>
             </div>
             <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors font-bold">إلغاء التاريخ</button>}
+              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-3 py-1.5 rounded-lg font-bold">إلغاء</button>}
             </div>
           </div>
         </div>
+
+        {/* 💡 زوم أوت للخريطة */}
         <div className="h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
-            {/* 💡 رسم النقط يتأثر بتاب (عالمي / مصر / الكل) وفلتر التاريخ */}
             {(activeEqTab === 'global' || activeEqTab === 'all') && filteredGlobalEqs.map(eq => {
-              const lat = parseFloat(eq.latitude);
-              const lng = parseFloat(eq.longitude);
+              const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon}>
-                  <Popup>
-                    <strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong>
-                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
-                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
-                  </Popup>
+                  <Popup><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span></Popup>
                 </Marker>
               );
             })}
             
             {(activeEqTab === 'egypt' || activeEqTab === 'all') && filteredEgyptEqs.map(eq => {
-              const lat = parseFloat(eq.latitude);
-              const lng = parseFloat(eq.longitude);
+              const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon}>
-                  <Popup>
-                    <strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong>
-                    <span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span>
-                    <span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span>
-                  </Popup>
+                  <Popup><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span></Popup>
                 </Marker>
               );
             })}
@@ -2525,105 +2436,114 @@ function EarthquakesView({ isOwner, isSupervisor }) {
       </div>
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px]">
-        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
           <h3 className="text-xl font-bold text-white hidden md:block">سجل بيانات الزلازل</h3>
           
-          <div className="flex gap-3 shrink-0 w-full justify-end">
-            {activeEqTab === 'global' ? (
+          {/* 💡 حل مشكلة الزراير المقطوعة بـ flex-wrap */}
+          <div className="flex flex-wrap items-center gap-3 justify-end w-full">
+            {activeEqTab === 'global' || activeEqTab === 'all' ? (
               <>
-                {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
+                {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير العالمي</button>}
                 <label className="bg-[#1a1a1a] text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] cursor-pointer">
                   <ExcelIcon/> استيراد شيت EMSC
                   <input type="file" accept=".csv" className="hidden" onChange={handleCSVUpload} />
                 </label>
-                <button onClick={() => { setGForm({ date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsGlobalModalOpen(true); }} className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.3)]">+ رصد عالمي</button>
+                <button onClick={() => { setGForm({ eq_id: null, date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsGlobalModalOpen(true); }} className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.3)]">+ رصد عالمي</button>
               </>
-            ) : (
+            ) : null}
+            
+            {activeEqTab === 'egypt' || activeEqTab === 'all' ? (
               <>
-                {isOwner && <button onClick={handleExportEgyptEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير السجل</button>}
-                <button onClick={() => { setEForm({ date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsEgyptModalOpen(true); }} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">+ رصد زلزال مصر</button>
+                {isOwner && <button onClick={handleExportEgyptEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير مصر</button>}
+                <button onClick={() => { setEForm({ eq_id: null, date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsEgyptModalOpen(true); }} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">+ رصد زلزال مصر</button>
               </>
-            )}
+            ) : null}
           </div>
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          {activeEqTab === 'global' ? (
-            <table className="w-full text-right whitespace-nowrap text-sm">
-              <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
-                <tr>
-                  <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
-                  <th className="p-4 font-semibold border-l border-white/5">الدولة</th>
-                  <th className="p-4 font-semibold border-l border-white/5 text-red-500">القوة (ريختر)</th>
-                  <th className="p-4 font-semibold border-l border-white/5">العمق</th>
-                  <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة</th>
-                  <th className="p-4 font-semibold border-l border-white/5">الإحداثيات</th>
-                  <th className="p-4 font-semibold border-l border-white/5 text-center">الحالة</th>
-                  <th className="p-4 font-semibold border-l border-white/5 text-center">حذف</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {isLoading ? <tr><td colSpan="8" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
-                 filteredGlobalEqs.length > 0 ? filteredGlobalEqs.map(eq => (
-                  <tr key={eq.eq_id} className="hover:bg-white/5">
-                    <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
-                    <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{eq.country}</td>
-                    <td className="p-4 text-red-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
-                    <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5 font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
-                    <td className="p-4 border-l border-white/5 text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{eq.status}</span></td>
-                    <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
-                      <div className="flex justify-center gap-2">
-                        {/* 💡 زرار التعديل الجديد */}
-                        <button onClick={() => handleEditGlobal(eq)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                        {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
-                      </div>
-                    </td>
+          {(activeEqTab === 'global' || activeEqTab === 'all') ? (
+            <div className="mb-8">
+              {activeEqTab === 'all' && <h4 className="p-4 text-red-500 font-bold bg-[#111]">الزلازل العالمية</h4>}
+              <table className="w-full text-right whitespace-nowrap text-sm">
+                <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+                  <tr>
+                    <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
+                    <th className="p-4 font-semibold border-l border-white/5">الدولة</th>
+                    <th className="p-4 font-semibold border-l border-white/5 text-red-500">القوة (ريختر)</th>
+                    <th className="p-4 font-semibold border-l border-white/5">العمق</th>
+                    <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة</th>
+                    <th className="p-4 font-semibold border-l border-white/5">الإحداثيات</th>
+                    <th className="p-4 font-semibold border-l border-white/5 text-center">الحالة</th>
+                    <th className="p-4 font-semibold border-l border-white/5 text-center">إجراءات</th>
                   </tr>
-                )) : <tr><td colSpan="8" className="p-8 text-center text-gray-500">لا توجد زلازل عالمية مسجلة بهذا التاريخ</td></tr>}
-              </tbody>
-            </table>
-          ) : (
-            <table className="w-full text-right whitespace-nowrap text-sm">
-              <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
-                <tr>
-                  <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
-                  <th className="p-4 font-semibold border-l border-white/5 text-green-500">القوة (ريختر)</th>
-                  <th className="p-4 font-semibold border-l border-white/5">العمق</th>
-                  <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة (مصر)</th>
-                  <th className="p-4 font-semibold border-l border-white/5">الإحداثيات</th>
-                  <th className="p-4 font-semibold border-l border-white/5 text-center">حذف</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
-                 filteredEgyptEqs.length > 0 ? filteredEgyptEqs.map(eq => (
-                  <tr key={eq.eq_id} className="hover:bg-white/5">
-                    <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
-                    <td className="p-4 text-green-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
-                    <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5 font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
-                    <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
-                      <div className="flex justify-center gap-2">
-                        {/* 💡 زرار التعديل الجديد */}
-                        <button onClick={() => handleEditEgypt(eq)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                        {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
-                      </div>
-                    </td>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {isLoading ? <tr><td colSpan="8" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+                   filteredGlobalEqs.length > 0 ? filteredGlobalEqs.map(eq => (
+                    <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-white/5">
+                      <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
+                      <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{eq.country}</td>
+                      <td className="p-4 text-red-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
+                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
+                      <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
+                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
+                      <td className="p-4 border-l border-white/5 text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{eq.status}</span></td>
+                      <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleEditGlobal(eq)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
+                          {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
+                        </div>
+                      </td>
+                    </tr>
+                  )) : <tr><td colSpan="8" className="p-8 text-center text-gray-500">لا توجد زلازل عالمية</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {(activeEqTab === 'egypt' || activeEqTab === 'all') ? (
+            <div>
+              {activeEqTab === 'all' && <h4 className="p-4 text-green-500 font-bold bg-[#111]">زلازل مصر</h4>}
+              <table className="w-full text-right whitespace-nowrap text-sm">
+                <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+                  <tr>
+                    <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
+                    <th className="p-4 font-semibold border-l border-white/5 text-green-500">القوة (ريختر)</th>
+                    <th className="p-4 font-semibold border-l border-white/5">العمق</th>
+                    <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة (مصر)</th>
+                    <th className="p-4 font-semibold border-l border-white/5">الإحداثيات</th>
+                    <th className="p-4 font-semibold border-l border-white/5 text-center">إجراءات</th>
                   </tr>
-                )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500">لا توجد زلازل مسجلة لمصر بهذا التاريخ</td></tr>}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+                   filteredEgyptEqs.length > 0 ? filteredEgyptEqs.map(eq => (
+                    <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-white/5">
+                      <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
+                      <td className="p-4 text-green-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
+                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
+                      <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
+                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
+                      <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleEditEgypt(eq)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
+                          {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
+                        </div>
+                      </td>
+                    </tr>
+                  )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500">لا توجد زلازل مسجلة لمصر</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
       </div>
 
       {isGlobalModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-red-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> رصد زلزال عالمي (يدوي)</h2>
+            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <FormGroup label="التاريخ"><StyledInput type="date" value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} /></FormGroup>
               <FormGroup label="التوقيت"><StyledInput type="time" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
@@ -2650,7 +2570,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
       {isEgyptModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-green-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> رصد زلزال محلي (مصر)</h2>
+            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <FormGroup label="التاريخ"><StyledInput type="date" value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} /></FormGroup>
               <FormGroup label="التوقيت"><StyledInput type="time" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
