@@ -30,6 +30,7 @@ const format12H = (timeStr) => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('missions');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userData, setUserData] = useState(null);
   const [branchesList, setBranchesList] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({ active_missions: '-', ready_teams: '-', emergency_level: '-', under_review: '-', approved: '-', completed: '-', drafts: '-' });
@@ -119,59 +120,53 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden" dir="rtl">
-      <aside className="w-72 bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between hidden md:flex sticky top-0 h-screen z-50">
-        <div>
-          <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-full h-1/2 bg-[#c70000]/10 blur-2xl"></div>
-            
-            {/* تصميم اللوجو (نسخة طبق الأصل من شاشة الدخول بالمللي) */}
-            <div className="relative z-10 mb-5 flex justify-center">
-              <div className="relative group cursor-pointer">
-                {/* تأثير الإضاءة خلف المربع */}
-                <div className="absolute inset-0 bg-[#c70000] rounded-2xl blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                {/* المربع الأبيض والهلال الصافي */}
-                <div className="relative w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(199,0,0,0.4)] transition-transform duration-300 hover:scale-105 p-2">
-                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm">
-                    {/* هلال أحمر كلاسيكي صافي */}
-                    <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" />
-                  </svg>
+      <aside className={`${isSidebarOpen ? 'w-72' : 'w-20'} bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between hidden md:flex sticky top-0 h-screen z-50 transition-all duration-300`}>
+        <div className="overflow-y-auto custom-scrollbar flex-1">
+          {isSidebarOpen ? (
+            <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300">
+              <div className="absolute top-0 right-0 w-full h-1/2 bg-[#c70000]/10 blur-2xl"></div>
+              <div className="relative z-10 mb-5 flex justify-center">
+                <div className="relative w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(199,0,0,0.4)] p-2">
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" /></svg>
                 </div>
               </div>
+              <h2 className="text-lg font-bold text-white tracking-wide relative z-10">{userData?.full_name || 'المالك'}</h2>
+              <p className="text-xs text-[#c70000] font-semibold mt-2 bg-[#c70000]/10 border border-[#c70000]/20 px-3 py-1 rounded-full uppercase tracking-widest relative z-10">{userData?.role || 'OWNER'}</p>
             </div>
+          ) : (
+            <div className="p-4 border-b border-white/5 flex justify-center transition-all duration-300">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(199,0,0,0.4)] p-1.5" title={userData?.full_name}>
+                <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" /></svg>
+              </div>
+            </div>
+          )}
 
-            <h2 className="text-lg font-bold text-white tracking-wide relative z-10">{userData?.full_name || 'المالك'}</h2>
-            <p className="text-xs text-[#c70000] font-semibold mt-2 bg-[#c70000]/10 border border-[#c70000]/20 px-3 py-1 rounded-full uppercase tracking-widest relative z-10">{userData?.role || 'OWNER'}</p>
-          </div>
-          <nav className="p-4 space-y-2 mt-4">
-            {/* الداشبورد الرئيسية: للجوكر، المشرف، والمالك فقط */}
-            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة (الداشبورد)" isActive={activeTab === 'home'} onClick={() => setActiveTab('home')} />}
-
-            {/* الـ 4 شاشات المتاحة للجميع (بما فيهم المتطوع) */}
-            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => setActiveTab('missions')} />
-            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} />
-            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} />
-            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => setActiveTab('earthquakes')} />
-
-            {/* الفروع والمخزون: للمشرف والمالك فقط */}
-            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} />}
-
-            {/* سجل النظام: للمالك فقط */}
-            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام (للمالك فقط)" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} />}
+          <nav className="p-4 space-y-2 mt-2">
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => setActiveTab('home')} isOpen={isSidebarOpen} />}
+            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => setActiveTab('missions')} isOpen={isSidebarOpen} />
+            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} isOpen={isSidebarOpen} />
+            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} isOpen={isSidebarOpen} />
+            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => setActiveTab('earthquakes')} isOpen={isSidebarOpen} />
+            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} isOpen={isSidebarOpen} />}
+            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} isOpen={isSidebarOpen} />}
           </nav>
         </div>
         <div className="p-4 border-t border-white/5">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 p-4 rounded-xl transition-all duration-300 group">
+          <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`w-full flex items-center p-4 rounded-xl transition-all duration-300 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 ${isSidebarOpen ? 'gap-3' : 'justify-center mx-auto'}`}>
             <LogoutIcon />
-            <span className="font-semibold tracking-wide">إنهاء الجلسة الآمنة</span>
+            {isSidebarOpen && <span className="font-semibold tracking-wide truncate">إنهاء الجلسة الآمنة</span>}
           </button>
         </div>
       </aside>
 
       <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)]">
-        <header className="px-10 py-6 border-b border-white/5 flex justify-between items-center bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-40">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-wide">
+        <header className="px-10 py-6 border-b border-white/5 flex items-center gap-5 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-40">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-white bg-[#111] p-2.5 rounded-xl border border-white/10 hidden md:block transition-all hover:bg-white/5">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+          </button>
+          <div className="flex-1 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-wide">
               {activeTab === 'home' && 'موجز عمليات اليوم'}
               {activeTab === 'missions' && 'إدارة المهام الميدانية'}
               {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
@@ -181,6 +176,7 @@ export default function Dashboard() {
               {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
             </h1>
             <p className="text-sm text-gray-500 mt-1">غرفة العمليات المركزية (EOC)</p>
+            </div>
           </div>
         </header>
         <div className="p-10">
@@ -515,9 +511,10 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
   const [filterDate, setFilterDate] = useState(getLocalDate());
-  const [missionViewType, setMissionViewType] = useState('all_types'); // 'daily', 'open', 'all_types'
+  const [missionViewType, setMissionViewType] = useState('all_types'); 
   const [missionClass, setMissionClass] = useState('عادية');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'completed'
+  const [statusFilter, setStatusFilter] = useState('all'); 
+  const [searchTerm, setSearchTerm] = useState(''); // 💡 السيرش
 
   const fetchMissions = async () => {
     setIsLoading(true);
@@ -873,7 +870,17 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     saeed: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'saeed').length,
   };
 
-  const filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === activeRegionTab) : baseMissions;
+  let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === activeRegionTab) : baseMissions;
+
+  if (searchTerm.trim() !== '') {
+    const term = searchTerm.toLowerCase();
+    filteredMissions = filteredMissions.filter(m => 
+      (m.mission_name && m.mission_name.toLowerCase().includes(term)) ||
+      (m.mission_location && m.mission_location.toLowerCase().includes(term)) ||
+      (m.mission_code && m.mission_code.toLowerCase().includes(term)) ||
+      (m.mission_type && m.mission_type.toLowerCase().includes(term))
+    );
+  }
 
   const getCreationDate = () => {
     if (currentMissionData && currentMissionData.created_at) { return String(currentMissionData.created_at).split(' ')[0]; }
@@ -944,6 +951,19 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
           {isOwner && <button onClick={handleExportTableExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"><ExcelIcon /> تصدير</button>}
           <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(199,0,0,0.3)] whitespace-nowrap">+ إنشاء مهمة</button>
         </div>
+      </div>
+
+      {/* 💡 السيرش بار الجديد */}
+      <div className="mt-4 bg-[#111] border border-white/10 rounded-2xl p-2 flex items-center gap-3 w-full shadow-inner focus-within:border-[#c70000]/50 transition-colors">
+        <svg className="w-5 h-5 text-gray-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input 
+          type="text" 
+          placeholder="بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="bg-transparent text-white text-sm w-full outline-none font-bold"
+        />
+        {searchTerm && <button onClick={() => setSearchTerm('')} className="bg-red-500/10 text-red-500 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-500/20">مسح</button>}
       </div>
 
       {/* 💡 داشبورد مصغر للأقاليم في سجل المهام (بيسمع كل الفلاتر) */}
@@ -1433,7 +1453,14 @@ const VehicleRow = ({ index, onRemove, data }) => (
   </div>
 );
 
-function NavItem({ icon, label, isActive, onClick }) { return ( <button onClick={onClick} className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-300 ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-gray-400 hover:bg-[#111] hover:text-white'}`}> {icon} <span className="font-bold text-sm tracking-wide">{label}</span> </button> ); }
+function NavItem({ icon, label, isActive, onClick, isOpen = true }) { return ( <button onClick={onClick} title={!isOpen ? label : ''} className={`flex items-center p-4 rounded-xl transition-all duration-300 ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-gray-400 hover:bg-[#111] hover:text-white'} ${isOpen ? 'w-full gap-4' : 'w-14 justify-center mx-auto'}`}> <div className="shrink-0">{icon}</div> {isOpen && <span className="font-bold text-sm tracking-wide truncate">{label}</span>} </button> ); } { 
+  return ( 
+    <button onClick={onClick} title={!isOpen ? label : ''} className={`flex items-center p-4 rounded-xl transition-all duration-300 ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-gray-400 hover:bg-[#111] hover:text-white'} ${isOpen ? 'w-full gap-4' : 'w-14 justify-center mx-auto'}`}> 
+      <div className="shrink-0">{icon}</div> 
+      {isOpen && <span className="font-bold text-sm tracking-wide truncate">{label}</span>} 
+    </button> 
+  ); 
+}
 function InventoryCard({ title, value, unit, color }) { return ( <div className="bg-[#0c0c0c] border border-white/5 p-5 rounded-2xl"><p className="text-gray-400 text-xs font-bold mb-1">{title}</p><p className={`text-3xl font-black ${color}`}>{value}</p><p className="text-[10px] text-gray-500 mt-1">{unit}</p></div> ); }
 function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`bg-[#0c0c0c] border ${borderHighlight ? 'border-[#c70000]/50' : 'border-white/5'} p-5 rounded-3xl relative h-32`}>{icon && icon}<p className="text-gray-400 text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`text-3xl font-black ${color} relative z-10`}>{value}</p></div> ); }
 
@@ -2651,3 +2678,6 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     </div>
   );
 }
+
+const SidebarToggleIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>;
+const SearchIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
