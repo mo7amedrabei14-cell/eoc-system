@@ -229,14 +229,14 @@ function HomeView({ branches = [] }) {
   const filteredMissions = selectedBranchName ? missions.filter(m => { const mBranch = m.branch?.trim(); return mBranch === filterMissionBranch || (filterMissionBranch === 'المركز العام' && mBranch === 'القاهرة') || (filterMissionBranch === 'القاهرة' && mBranch === 'المركز العام'); }) : missions;
   const filteredNews = selectedBranchName ? news.filter(n => n.governorate === filterNewsGov) : news;
 
-  const dailyMissions = filteredMissions.filter(m => {
+  const dailyMissions = filterDate ? filteredMissions.filter(m => {
     const mDate = m.exit_date && m.exit_date !== '-' ? m.exit_date : (m.created_at ? m.created_at.split(' ')[0] : '');
     return mDate === filterDate;
-  });
-  const dailyNews = filteredNews.filter(n => n.incident_date === filterDate);
-  const dailyDisasters = globalDisasters.filter(d => d.incident_date === filterDate);
-  const dailyGlobalEqs = globalEqs.filter(e => e.date === filterDate);
-  const dailyEgyptEqs = egyptEqs.filter(e => e.date === filterDate);
+  }) : filteredMissions;
+  const dailyNews = filterDate ? filteredNews.filter(n => n.incident_date === filterDate) : filteredNews;
+  const dailyDisasters = filterDate ? globalDisasters.filter(d => d.incident_date === filterDate) : globalDisasters;
+  const dailyGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
+  const dailyEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
 
   const activeDaily = dailyMissions.filter(m => m.mission_classification !== 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
   const activeOpen = dailyMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
@@ -261,6 +261,11 @@ function HomeView({ branches = [] }) {
           <div className="flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-white/10 shadow-inner">
             <span className="text-gray-400 text-xs font-bold pl-2">إحصائيات يوم:</span>
             <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] px-2" />
+            {filterDate && (
+              <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1 rounded-lg font-bold transition-colors">
+                عرض الكل
+              </button>
+            )}
           </div>
           {selectedBranchName && (
             <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
