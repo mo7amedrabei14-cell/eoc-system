@@ -244,7 +244,7 @@ function HomeView({ branches = [] }) {
   const totalEgyptEqs = dailyEgyptEqs.length;
 
   return (
-    <div className="space-y-8 pb-10 animate-fade-in-up">
+    <div id="home-view-top" className="space-y-8 pb-10 animate-fade-in-up scroll-mt-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div className="flex items-center gap-3">
           <div className="w-2 h-10 bg-[#c70000] rounded-full"></div>
@@ -308,7 +308,7 @@ function HomeView({ branches = [] }) {
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
-                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { setSelectedBranchName(prev => prev === branch.name ? null : branch.name); window.scrollTo({ top: 0, behavior: 'smooth' }); } }}>
+                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { setSelectedBranchName(prev => prev === branch.name ? null : branch.name); document.getElementById('home-view-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
                   <Tooltip direction="top">
                     <strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong>
                     <span className="text-[10px] text-blue-600 block text-center font-bold">{selectedBranchName === branch.name ? 'مفعل (انقر للإلغاء)' : 'انقر للفلترة'}</span>
