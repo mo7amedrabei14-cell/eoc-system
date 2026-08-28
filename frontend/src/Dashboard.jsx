@@ -308,7 +308,7 @@ function HomeView({ branches = [] }) {
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
-                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => setSelectedBranchName(prev => prev === branch.name ? null : branch.name) }}>
+                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { setSelectedBranchName(prev => prev === branch.name ? null : branch.name); window.scrollTo({ top: 0, behavior: 'smooth' }); } }}>
                   <Popup autoPan={false} closeButton={false}>
                     <strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong>
                     <span className="text-[10px] text-blue-600 block text-center font-bold">{selectedBranchName === branch.name ? 'مفعل (انقر للإلغاء)' : 'انقر للفلترة'}</span>
@@ -364,7 +364,7 @@ function BranchesAndInventoryView({ branches }) {
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
-                  <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => handleSelectBranch(branch.id) }}>
+                  <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { handleSelectBranch(branch.id); document.getElementById('inventory-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
                     <Popup autoPan={false} closeButton={false}>
                       <strong className="text-gray-800">{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</strong>
                     </Popup>
@@ -375,7 +375,7 @@ function BranchesAndInventoryView({ branches }) {
         </div>
       </div>
 
-      <div className="space-y-4 mt-4">
+      <div id="inventory-table-section" className="space-y-4 mt-4 scroll-mt-6">
         <h3 className="text-lg font-bold text-white border-b border-white/5 pb-2">الأرصدة اللوجستية والفنية</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InventoryCard title="إجمالي شنط الإسعاف" value={totalFirstAid.toLocaleString()} unit="شنطة مجهزة" color="text-red-500" />
@@ -2504,7 +2504,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
-                <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id) }}>
+                <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); document.getElementById('earthquakes-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
                   <Popup autoPan={false} closeButton={false}><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Popup>
                 </Marker>
               );
@@ -2514,7 +2514,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
-                <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id) }}>
+                <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); document.getElementById('earthquakes-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
                   <Popup autoPan={false} closeButton={false}><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Popup>
                 </Marker>
               );
@@ -2523,7 +2523,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         </div>
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px]">
+      <div id="earthquakes-table-section" className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
         <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
           <h3 className="text-xl font-bold text-white hidden md:block">سجل بيانات الزلازل</h3>
           
