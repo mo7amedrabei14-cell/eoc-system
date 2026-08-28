@@ -308,8 +308,15 @@ function HomeView({ branches = [] }) {
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
-                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => setSelectedBranchName(prev => prev === branch.name ? null : branch.name) }}>
-                  <Popup><strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong><span className="text-xs text-blue-600 block text-center mt-1 font-bold">انقر للفلترة</span></Popup>
+                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon}>
+                  <Popup>
+                    <div className="flex flex-col items-center gap-2 p-1 w-full" dir="rtl">
+                      <strong className="text-gray-800 font-bold text-sm text-center block w-full">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong>
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedBranchName(branch.name.trim()); }} className="bg-[#c70000] text-white px-3 py-1.5 rounded-lg text-xs font-bold w-full hover:bg-red-700 transition-colors cursor-pointer border-none outline-none">
+                        فلترة هذا التمركز
+                      </button>
+                    </div>
+                  </Popup>
                 </Marker>
               ) : null
             )}
@@ -361,8 +368,15 @@ function BranchesAndInventoryView({ branches }) {
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
-                  <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => handleSelectBranch(branch.id) }}>
-                    <Popup><strong className="text-gray-800">{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</strong></Popup>
+                  <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon}>
+                    <Popup>
+                      <div className="flex flex-col items-center gap-2 p-1 w-full" dir="rtl">
+                        <strong className="text-gray-800 font-bold text-sm text-center block w-full">{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</strong>
+                        <button onClick={(e) => { e.stopPropagation(); handleSelectBranch(branch.id); }} className="bg-[#c70000] text-white px-3 py-1.5 rounded-lg text-xs font-bold w-full hover:bg-red-700 transition-colors cursor-pointer border-none outline-none">
+                          عرض جرد التمركز
+                        </button>
+                      </div>
+                    </Popup>
                   </Marker>
                 ) : null
               )}
