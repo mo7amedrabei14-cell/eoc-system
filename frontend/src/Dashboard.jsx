@@ -932,25 +932,12 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
           </div>
         </div>
 
-        {/* 💡 أزرار الإجراءات (منسقة ومقسمة) */}
-        <div className="flex flex-row flex-wrap items-center justify-end gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsTableExpanded(true)} className="bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shrink-0">
-              <EyeIcon className="w-5 h-5" /> عرض السجل
-            </button>
-            {isOwner && (
-              <button onClick={handleExportTableExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0">
-                <ExcelIcon /> تصدير
-              </button>
-            )}
-          </div>
-          
-          {/* خط فاصل شيك بيختفي في الموبايل */}
-          <div className="hidden sm:block w-px h-8 bg-white/10 mx-1"></div>
-          
-          <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shrink-0 shadow-[0_0_15px_rgba(199,0,0,0.3)] w-full sm:w-auto">
-            + إنشاء مهمة
+        <div className="flex items-center gap-3 mt-4 md:mt-0 shrink-0">
+          <button onClick={() => setIsTableExpanded(true)} className="bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap">
+            <EyeIcon className="w-5 h-5" /> عرض السجل
           </button>
+          {isOwner && <button onClick={handleExportTableExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"><ExcelIcon /> تصدير</button>}
+          <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(199,0,0,0.3)] whitespace-nowrap">+ إنشاء مهمة</button>
         </div>
       </div>
 
