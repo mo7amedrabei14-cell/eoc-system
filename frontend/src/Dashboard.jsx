@@ -308,14 +308,10 @@ function HomeView({ branches = [] }) {
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
-                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon}>
-                  <Popup>
-                    <div className="flex flex-col items-center gap-2 p-1 w-full" dir="rtl">
-                      <strong className="text-gray-800 font-bold text-sm text-center block w-full">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong>
-                      <button onClick={(e) => { e.stopPropagation(); setSelectedBranchName(branch.name.trim()); }} className="bg-[#c70000] text-white px-3 py-1.5 rounded-lg text-xs font-bold w-full hover:bg-red-700 transition-colors cursor-pointer border-none outline-none">
-                        فلترة هذا التمركز
-                      </button>
-                    </div>
+                <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => setSelectedBranchName(prev => prev === branch.name ? null : branch.name) }}>
+                  <Popup autoPan={false} closeButton={false}>
+                    <strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong>
+                    <span className="text-[10px] text-blue-600 block text-center font-bold">{selectedBranchName === branch.name ? 'مفعل (انقر للإلغاء)' : 'انقر للفلترة'}</span>
                   </Popup>
                 </Marker>
               ) : null
@@ -368,14 +364,9 @@ function BranchesAndInventoryView({ branches }) {
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
-                  <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon}>
-                    <Popup>
-                      <div className="flex flex-col items-center gap-2 p-1 w-full" dir="rtl">
-                        <strong className="text-gray-800 font-bold text-sm text-center block w-full">{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</strong>
-                        <button onClick={(e) => { e.stopPropagation(); handleSelectBranch(branch.id); }} className="bg-[#c70000] text-white px-3 py-1.5 rounded-lg text-xs font-bold w-full hover:bg-red-700 transition-colors cursor-pointer border-none outline-none">
-                          عرض جرد التمركز
-                        </button>
-                      </div>
+                  <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => handleSelectBranch(branch.id) }}>
+                    <Popup autoPan={false} closeButton={false}>
+                      <strong className="text-gray-800">{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</strong>
                     </Popup>
                   </Marker>
                 ) : null
@@ -2318,6 +2309,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
 
   const [filterDate, setFilterDate] = useState(getLocalDate()); 
+  const [selectedEqId, setSelectedEqId] = useState(null); // 💡 فلتر الخريطة الجديد
 
   const [isGlobalModalOpen, setIsGlobalModalOpen] = useState(false);
   const [isEgyptModalOpen, setIsEgyptModalOpen] = useState(false);
@@ -2342,6 +2334,10 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
   const filteredGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
   const filteredEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
+
+  // 💡 تطبيق فلتر الخريطة على الجداول بس (عشان النقط متختفيش من الخريطة)
+  const tableGlobalEqs = selectedEqId ? filteredGlobalEqs.filter(e => e.eq_id === selectedEqId) : filteredGlobalEqs;
+  const tableEgyptEqs = selectedEqId ? filteredEgyptEqs.filter(e => e.eq_id === selectedEqId) : filteredEgyptEqs;
 
   // 💡 دوال التعديل (فتح الفورم بالبيانات)
   const handleEditGlobal = (eq) => {
@@ -2477,7 +2473,14 @@ function EarthquakesView({ isOwner, isSupervisor }) {
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[500px]">
         {/* 💡 الفلاتر فوق الخريطة */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)</h3>
+            {selectedEqId && (
+              <button onClick={() => setSelectedEqId(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-[0_0_10px_rgba(199,0,0,0.3)]">
+                إلغاء الفلترة
+              </button>
+            )}
+          </div>
           
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
@@ -2501,8 +2504,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
-                <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon}>
-                  <Popup><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span></Popup>
+                <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id) }}>
+                  <Popup autoPan={false} closeButton={false}><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Popup>
                 </Marker>
               );
             })}
@@ -2511,8 +2514,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
-                <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon}>
-                  <Popup><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span></Popup>
+                <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id) }}>
+                  <Popup autoPan={false} closeButton={false}><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Popup>
                 </Marker>
               );
             })}
@@ -2565,7 +2568,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? <tr><td colSpan="8" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
-                   filteredGlobalEqs.length > 0 ? filteredGlobalEqs.map(eq => (
+                   tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
                     <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-white/5">
                       <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
                       <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{eq.country}</td>
@@ -2603,7 +2606,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
-                   filteredEgyptEqs.length > 0 ? filteredEgyptEqs.map(eq => (
+                   tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
                     <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-white/5">
                       <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
                       <td className="p-4 text-green-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
