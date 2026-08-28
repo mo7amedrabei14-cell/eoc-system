@@ -523,10 +523,23 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
 
   const regionMap = {
-    'المركز العام': 'hq', 'الاسماعيلية': 'canal', 'بور سعيد': 'canal', 'السويس': 'canal', 'شمال سيناء': 'canal', 'جنوب سيناء': 'canal', 'الشرقية': 'canal', 'دمياط': 'canal',
-    'الاسكندرية': 'delta', 'البحيرة': 'delta', 'الغربية': 'delta', 'كفر الشيخ': 'delta', 'المنوفية': 'delta', 'الدقهلية': 'delta', 'القليوبية': 'delta',
-    'الجيزة': 'saeed', 'الفيوم': 'saeed', 'بني سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
+    // 💡 المركز العام وملحقاته (تم ضم الجيزة، القليوبية، البحيرة، الإسكندرية، مطروح)
+    'المركز العام': 'hq', 'القاهرة': 'hq', 'الجيزة': 'hq', 'القليوبية': 'hq', 'البحيرة': 'hq', 'الاسكندرية': 'hq', 'مطروح': 'hq',
+    
+    // 💡 إقليم القنال
+    'الاسماعيلية': 'canal', 'بور سعيد': 'canal', 'السويس': 'canal', 'شمال سيناء': 'canal', 'جنوب سيناء': 'canal', 'الشرقية': 'canal',
+    
+    // 💡 إقليم الدلتا (5 محافظات فقط)
+    'الغربية': 'delta', 'الدقهلية': 'delta', 'كفر الشيخ': 'delta', 'المنوفية': 'delta', 'دمياط': 'delta',
+    
+    // 💡 إقليم الصعيد
+    'الفيوم': 'saeed', 'بني سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
   };
+
+  // 💡 استخراج إقليم المستخدم الحالي لعزله (للمتطوعين فقط)
+  const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+  const userBranchName = branches.find(b => b.id === currentUserData?.branch_id)?.name || 'المركز العام';
+  const userRegion = regionMap[userBranchName.trim()] || 'hq';
 
   const getLocalDate = () => {
     const d = new Date();
@@ -868,6 +881,12 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   };
 
   let baseMissions = missionsList;
+
+  // 🚨 حائط الصد: المتطوع (الأوبريشن) فقط هو اللي مقفول عليه إقليمه.. باقي الرتب تشوف كل حاجة!
+  if (isVolunteer) {
+    baseMissions = baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === userRegion);
+  }
+
   if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
   else if (missionViewType === 'daily') baseMissions = baseMissions.filter(m => m.mission_classification !== 'مفتوحة');
 
@@ -949,7 +968,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               {!isVolunteer && (
                 <select value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer pl-2">
                   <option value="all" className="bg-[#111]">كل الأقاليم</option>
-                  <option value="hq" className="bg-[#111]">المركز العام</option>
+                  <option value="hq" className="bg-[#111]">المركز العام (وملحقاته)</option>
                   <option value="canal" className="bg-[#111]">إقليم القنال</option>
                   <option value="delta" className="bg-[#111]">إقليم الدلتا</option>
                   <option value="saeed" className="bg-[#111]">إقليم الصعيد</option>
@@ -1105,7 +1124,19 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                       <option value="مفتوحة">مهمة مفتوحة</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="التمركز / الفرع"><StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || '19'}><option value="19">المركز العام</option>{branches.map(b => b.name !== 'القاهرة' && b.name !== 'المركز العام' && <option key={b.id} value={b.id}>{b.name}</option>)}</StyledSelect></FormGroup>
+                  <FormGroup label="التمركز / الفرع">
+                    <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || currentUserData?.branch_id || '19'}>
+                      {!isVolunteer && <option value="19">المركز العام</option>}
+                      {branches.map(b => {
+                        const isBranchInMyRegion = (regionMap[b.name.trim()] || 'hq') === userRegion;
+                        // لو مش متطوع هيشوف كل الفروع، لو متطوع هيشوف إقليمه بس
+                        if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
+                          return <option key={b.id} value={b.id}>{b.name}</option>;
+                        }
+                        return null;
+                      })}
+                    </StyledSelect>
+                  </FormGroup>
                   <FormGroup label="نوع المهمة"><StyledInput id="f_mission_type" defaultValue={currentMissionData?.mission_type || ''} /></FormGroup>
                   <FormGroup label="مكان المهمة"><StyledInput id="f_mission_location" defaultValue={currentMissionData?.mission_location || ''} /></FormGroup>
                   <FormGroup label="حالة العملية الميدانية">
@@ -1238,12 +1269,18 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                           <td className="p-2">
                             <select 
                               id={`p_branch_${index}`} 
-                              defaultValue={p.branch_id || '19'} 
+                              defaultValue={p.branch_id || currentUserData?.branch_id || '19'} 
                               disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}
                               className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-gray-600 cursor-not-allowed' : 'text-white'}`}
                             >
-                              <option value="19" className="bg-[#111]">المركز العام</option>
-                              {branches.map(b => b.name !== 'القاهرة' && b.name !== 'المركز العام' && <option key={b.id} value={b.id} className="bg-[#111]">{b.name}</option>)}
+                              {!isVolunteer && <option value="19" className="bg-[#111]">المركز العام</option>}
+                              {branches.map(b => {
+                                const isBranchInMyRegion = (regionMap[b.name.trim()] || 'hq') === userRegion;
+                                if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
+                                  return <option key={b.id} value={b.id} className="bg-[#111]">{b.name}</option>;
+                                }
+                                return null;
+                              })}
                             </select>
                           </td>
                           <td className="p-2">
