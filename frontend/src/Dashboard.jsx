@@ -164,7 +164,7 @@ export default function Dashboard() {
             <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} isOpen={isSidebarOpen} />
             <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} isOpen={isSidebarOpen} />
             <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => setActiveTab('earthquakes')} isOpen={isSidebarOpen} />
-            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} isOpen={isSidebarOpen} />}
+            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label=" الاستراتيجيالفروع والمخزون" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} isOpen={isSidebarOpen} />}
             {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} isOpen={isSidebarOpen} />}
           </nav>
         </div>
@@ -321,7 +321,7 @@ function HomeView({ branches = [] }) {
           <MapIcon /> خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)
         </h3>
         <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
-          <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
@@ -378,7 +378,7 @@ function BranchesAndInventoryView({ branches }) {
           </div>
         </div>
         <div className="w-full lg:w-3/4 bg-[#0c0c0c] border border-white/5 rounded-3xl relative overflow-hidden shadow-lg z-0">
-           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
                   <Marker keyboard={false} key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { handleSelectBranch(branch.id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('inventory-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
@@ -2514,7 +2514,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
         {/* 💡 زوم أوت للخريطة */}
         <div className="h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
-          <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
             {(activeEqTab === 'global' || activeEqTab === 'all') && tableGlobalEqs.map(eq => {
