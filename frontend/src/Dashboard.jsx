@@ -164,7 +164,7 @@ export default function Dashboard() {
             <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} isOpen={isSidebarOpen} />
             <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} isOpen={isSidebarOpen} />
             <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => setActiveTab('earthquakes')} isOpen={isSidebarOpen} />
-            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label=" الاستراتيجيالفروع والمخزون" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} isOpen={isSidebarOpen} />}
+            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} isOpen={isSidebarOpen} />}
             {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} isOpen={isSidebarOpen} />}
           </nav>
         </div>
