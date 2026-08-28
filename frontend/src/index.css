@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+/* ========================================== */
+/* تصميم شريط التمرير (Scrollbar) للسيستم كله */
+/* ========================================== */
+
+/* عرض وارتفاع الشريط */
+::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* خلفية الشريط (اللون الغامق اللي بيمشي مع خلفية الموقع) */
+::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #050505; 
+  border-radius: 8px;
+}
+
+/* الجزء اللي بتسحبه بالماوس (رمادي رايق وواضح جداً) */
+::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563; 
+  border-radius: 8px;
+  /* التريكة دي بتعمل حواف سودة صغيرة بتدي شكل شيك كأن الشريط طاير */
+  border: 2px solid #050505; 
+}
+
+/* لما تقف عليه بالماوس ينور شوية ويبقى أوضح */
+::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; 
+}
+
+/* الزاوية التقاطع لو في شريط بالطول والعرض مع بعض */
+::-webkit-scrollbar-corner,
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: #050505; 
+}
