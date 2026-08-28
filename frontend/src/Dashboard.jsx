@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -309,10 +309,10 @@ function HomeView({ branches = [] }) {
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
                 <Marker key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { setSelectedBranchName(prev => prev === branch.name ? null : branch.name); window.scrollTo({ top: 0, behavior: 'smooth' }); } }}>
-                  <Popup autoPan={false} closeButton={false}>
+                  <Tooltip direction="top">
                     <strong className="text-gray-800 font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong>
                     <span className="text-[10px] text-blue-600 block text-center font-bold">{selectedBranchName === branch.name ? 'مفعل (انقر للإلغاء)' : 'انقر للفلترة'}</span>
-                  </Popup>
+                  </Tooltip>
                 </Marker>
               ) : null
             )}
@@ -365,9 +365,9 @@ function BranchesAndInventoryView({ branches }) {
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
                   <Marker key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { handleSelectBranch(branch.id); document.getElementById('inventory-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
-                    <Popup autoPan={false} closeButton={false}>
+                    <Tooltip direction="top">
                       <strong className="text-gray-800">{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</strong>
-                    </Popup>
+                    </Tooltip>
                   </Marker>
                 ) : null
               )}
@@ -2500,22 +2500,22 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
-            {(activeEqTab === 'global' || activeEqTab === 'all') && filteredGlobalEqs.map(eq => {
+            {(activeEqTab === 'global' || activeEqTab === 'all') && tableGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); document.getElementById('earthquakes-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
-                  <Popup autoPan={false} closeButton={false}><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Popup>
+                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
             
-            {(activeEqTab === 'egypt' || activeEqTab === 'all') && filteredEgyptEqs.map(eq => {
+            {(activeEqTab === 'egypt' || activeEqTab === 'all') && tableEgyptEqs.map(eq => {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); document.getElementById('earthquakes-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }}>
-                  <Popup autoPan={false} closeButton={false}><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Popup>
+                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
