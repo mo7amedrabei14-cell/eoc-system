@@ -198,6 +198,7 @@ function HomeView({ branches = [] }) {
   const [selectedBranchName, setSelectedBranchName] = useState(null);
 
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const [filterDate, setFilterDate] = useState(getLocalDate());
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -222,14 +223,23 @@ function HomeView({ branches = [] }) {
   const filteredMissions = selectedBranchName ? missions.filter(m => { const mBranch = m.branch?.trim(); return mBranch === filterMissionBranch || (filterMissionBranch === 'المركز العام' && mBranch === 'القاهرة') || (filterMissionBranch === 'القاهرة' && mBranch === 'المركز العام'); }) : missions;
   const filteredNews = selectedBranchName ? news.filter(n => n.governorate === filterNewsGov) : news;
 
-  const activeDaily = filteredMissions.filter(m => m.mission_classification !== 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
-  const activeOpen = filteredMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
-  const totalNews = filteredNews.length;
-  const activeNews = filteredNews.filter(n => n.is_field_response).length;
+  const dailyMissions = filteredMissions.filter(m => {
+    const mDate = m.exit_date && m.exit_date !== '-' ? m.exit_date : (m.created_at ? m.created_at.split(' ')[0] : '');
+    return mDate === filterDate;
+  });
+  const dailyNews = filteredNews.filter(n => n.incident_date === filterDate);
+  const dailyDisasters = globalDisasters.filter(d => d.incident_date === filterDate);
+  const dailyGlobalEqs = globalEqs.filter(e => e.date === filterDate);
+  const dailyEgyptEqs = egyptEqs.filter(e => e.date === filterDate);
+
+  const activeDaily = dailyMissions.filter(m => m.mission_classification !== 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const activeOpen = dailyMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const totalNews = dailyNews.length;
+  const activeNews = dailyNews.filter(n => n.is_field_response).length;
   
-  const totalGlobalDisasters = globalDisasters.length;
-  const globalEqsToday = globalEqs.filter(e => e.date === getLocalDate()).length;
-  const totalEgyptEqs = egyptEqs.length;
+  const totalGlobalDisasters = dailyDisasters.length;
+  const globalEqsToday = dailyGlobalEqs.length;
+  const totalEgyptEqs = dailyEgyptEqs.length;
 
   return (
     <div className="space-y-8 pb-10 animate-fade-in-up">
@@ -241,9 +251,15 @@ function HomeView({ branches = [] }) {
             <p className="text-gray-400 text-sm mt-1">{selectedBranchName ? `المؤشرات الحية لفرع/محافظة: ${(selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'المركز العام (القاهرة)' : selectedBranchName}` : 'الرؤية الشاملة للوضع الميداني والزلزالي (على مستوى الجمهورية)'}</p>
           </div>
         </div>
-        {selectedBranchName && (
-          <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-white/10 shadow-inner">
+            <span className="text-gray-400 text-xs font-bold pl-2">إحصائيات يوم:</span>
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] px-2" />
+          </div>
+          {selectedBranchName && (
+            <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -281,7 +297,7 @@ function HomeView({ branches = [] }) {
           <MapIcon /> خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)
         </h3>
         <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
-          <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
