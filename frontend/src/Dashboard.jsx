@@ -1547,11 +1547,11 @@ function AuditLogsView() {
   return (
     <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[85vh] flex-1">
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="w-10 h-10 shrink-0 bg-[#c70000]/10 rounded-xl flex items-center justify-center border border-[#c70000]/20 text-[#c70000]"><ShieldIcon /></div>
-          <div className="flex flex-col">
-            <h3 className="text-xl font-bold text-white tracking-wide">سجل الإجراءات الرقابية</h3>
-            <span className="text-[10px] font-bold text-[#c70000] bg-[#c70000]/10 border border-[#c70000]/30 px-2 py-0.5 rounded mt-1 w-fit">سري للغاية</span>
+          <div className="flex flex-col items-start">
+            <h3 className="text-xl font-bold text-white tracking-wide whitespace-nowrap">سجل الإجراءات الرقابية</h3>
+            <span className="text-[10px] font-bold text-[#c70000] bg-[#c70000]/10 border border-[#c70000]/30 px-2 py-0.5 rounded mt-1">سري للغاية</span>
           </div>
         </div>
         
