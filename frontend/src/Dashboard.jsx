@@ -870,7 +870,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   };
 
   return (
-    <div className={isTableExpanded ? "fixed inset-4 z-[999] bg-[#0c0c0c] border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] animate-fade-in-up" : "bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[700px] flex-1"}>
+    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[700px] flex-1">
       {missionToDelete && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
           <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
@@ -927,16 +927,10 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         </div>
 
         <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-          {/* 💡 زرار التكبير والتصغير الجديد */}
-          <button onClick={() => setIsTableExpanded(!isTableExpanded)} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all">
-            {isTableExpanded ? (
-              <><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> تصغير السجل</>
-            ) : (
-              <><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg> تكبير السجل بالكامل</>
-            )}
+          <button onClick={() => setIsTableExpanded(true)} className="bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+            <EyeIcon className="w-5 h-5" /> عرض السجل بالكامل
           </button>
-          
-          {isOwner && <button onClick={handleExportTableExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"><ExcelIcon /> تصدير</button>}
+          {isOwner && <button onClick={handleExportTableExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"><ExcelIcon /> تصدير السجل</button>}
           <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2">+ إنشاء مهمة</button>
         </div>
       </div>
@@ -952,8 +946,24 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
       </div>
       )}
 
-      <div className="flex-1 overflow-auto custom-scrollbar relative">
-        <table className="w-full text-right whitespace-nowrap">
+      {/* خلفية سوداء شفافة تظهر ورا الجدول لما يكبر */}
+      {isTableExpanded && <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
+      
+      {/* حاوية الجدول */}
+      <div className={isTableExpanded ? "fixed inset-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" : "flex-1 flex flex-col overflow-hidden relative"}>
+        
+        {/* هيدر الجدول (يظهر فقط عند التكبير ويحتوي على زر الـ X) */}
+        {isTableExpanded && (
+          <div className="p-4 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2"><EyeIcon className="w-5 h-5" /> سجل متابعة المهام الميدانية الشامل</h2>
+            <button onClick={() => setIsTableExpanded(false)} className="bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white p-2 rounded-xl transition-colors shadow-sm">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        )}
+        
+        <div className="flex-1 overflow-auto custom-scrollbar relative">
+          <table className="w-full text-right whitespace-nowrap">
           <thead className="sticky top-0 z-20 bg-[#1a1a1a]">
             <tr className="text-gray-400 text-sm">
               <th className="p-4 font-semibold border-l border-white/5">تاريخ الإنشاء</th>
@@ -1009,6 +1019,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
             )) : (<tr><td colSpan="16" className="p-8 text-center text-gray-500">لا توجد مهام مطابقة</td></tr>)}
           </tbody>
         </table>
+        </div>
       </div>
 
       {isModalOpen && (
