@@ -144,13 +144,19 @@ export default function Dashboard() {
             <p className="text-xs text-[#c70000] font-semibold mt-2 bg-[#c70000]/10 border border-[#c70000]/20 px-3 py-1 rounded-full uppercase tracking-widest relative z-10">{userData?.role || 'OWNER'}</p>
           </div>
           <nav className="p-4 space-y-2 mt-4">
-            {!isVolunteer && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة (الداشبورد)" isActive={activeTab === 'home'} onClick={() => setActiveTab('home')} />}
-            <NavItem icon={<AlertIcon />} label="سجل المهام اليومية" isActive={activeTab === 'missions'} onClick={() => setActiveTab('missions')} />
-            {/* 🆕 تاب الأخبار المحلية الجديد */}
+            {/* الداشبورد الرئيسية: للجوكر، المشرف، والمالك فقط */}
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة (الداشبورد)" isActive={activeTab === 'home'} onClick={() => setActiveTab('home')} />}
+
+            {/* الـ 4 شاشات المتاحة للجميع (بما فيهم المتطوع) */}
+            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => setActiveTab('missions')} />
             <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} />
             <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} />
             <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => setActiveTab('earthquakes')} />
+
+            {/* الفروع والمخزون: للمشرف والمالك فقط */}
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} />}
+
+            {/* سجل النظام: للمالك فقط */}
             {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام (للمالك فقط)" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} />}
           </nav>
         </div>
@@ -2263,7 +2269,7 @@ const globalEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<d
 const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [16, 16] });
 
 function EarthquakesView({ isOwner, isSupervisor }) {
-  const [activeEqTab, setActiveEqTab] = useState('global'); 
+  const [activeEqTab, setActiveEqTab] = useState('all'); 
   const [globalEqs, setGlobalEqs] = useState([]);
   const [egyptEqs, setEgyptEqs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
