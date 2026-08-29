@@ -2432,9 +2432,19 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
                   <td className="p-4 text-gray-300 border-l border-white/5 text-center">{d.injured_count}</td>
                   <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                     <div className="flex justify-center gap-2">
-                      {d.news_link && <a href={d.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
-                      <button onClick={() => handleEdit(d)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
+                      {d.news_link && (
+                        <a href={d.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                          <GlobalWorldIcon />
+                        </a>
+                      )}
+                      <button onClick={() => handleEdit(d)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="تعديل">
+                        <EyeIcon />
+                      </button>
+                      {(isOwner || isSupervisor || isJoker) && (
+                        <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف">
+                          <TrashIcon />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -3142,18 +3152,16 @@ function AINewsMonitorView({ branches, isOwner }) {
                   <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.news_publisher}</td>
                   <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                     <div className="flex justify-center gap-2">
-                      {/* 💡 زرار فتح اللينك الخارجي */}
                       {n.news_link && (
-                        <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-purple-600 text-purple-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                        <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-purple-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="عرض تفاصيل الرصد">
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="عرض وتعديل الخبر">
                         <EyeIcon />
                       </button>
-                      {/* 💡 زرار المسح يظهر للمالك والمشرف */}
-                      {(isOwner || isSupervisor) && (
-                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف السجل نهائياً">
+                      {(isOwner || isSupervisor || isJoker) && (
+                        <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف الخبر">
                           <TrashIcon />
                         </button>
                       )}
