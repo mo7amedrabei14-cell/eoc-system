@@ -380,8 +380,11 @@ function BranchesAndInventoryView({ branches }) {
         )}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 h-[400px]">
-        <div className="w-full lg:w-1/4 bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden flex flex-col shadow-lg">
+      {/* 💡 التعديل هنا: الارتفاع هيبقى تلقائي (auto) في الموبايل عشان الخريطة واللستة ياخدوا راحتهم، و 400 في الديسكتوب */}
+      <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[400px]">
+        
+        {/* 💡 اللستة هتاخد 250 بيكسل في الموبايل وتقدر تعملها سكرول */}
+        <div className="w-full lg:w-1/4 bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden flex flex-col shadow-lg h-[250px] lg:h-auto">
           <div className="p-4 border-b border-white/5 bg-[#111]"><h3 className="text-md font-bold text-center">قائمة التمركزات</h3></div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <table className="w-full text-right text-sm">
@@ -395,7 +398,9 @@ function BranchesAndInventoryView({ branches }) {
             </table>
           </div>
         </div>
-        <div className="w-full lg:w-3/4 bg-[#0c0c0c] border border-white/5 rounded-3xl relative overflow-hidden shadow-lg z-0">
+        
+        {/* 💡 الخريطة هتاخد 350 بيكسل في الموبايل */}
+        <div className="w-full lg:w-3/4 bg-[#0c0c0c] border border-white/5 rounded-3xl relative overflow-hidden shadow-lg z-0 h-[350px] lg:h-auto">
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
@@ -1021,12 +1026,13 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mt-4 md:mt-0 shrink-0">
-          <button onClick={() => setIsTableExpanded(true)} className="bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap">
-            <EyeIcon className="w-5 h-5" /> عرض السجل
+        {/* 💡 التعديل هنا: الزراير في الموبايل هتتوزع وتاخد عرض مناسب عشان متتزنقش */}
+        <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-4 md:mt-0 shrink-0 w-full md:w-auto">
+          <button onClick={() => setIsTableExpanded(true)} className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap">
+            <EyeIcon className="w-5 h-5" /> السجل
           </button>
-          {isOwner && <button onClick={handleExportTableExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"><ExcelIcon /> تصدير</button>}
-          <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(199,0,0,0.3)] whitespace-nowrap">+ إنشاء مهمة</button>
+          {isOwner && <button onClick={handleExportTableExcel} className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"><ExcelIcon /> تصدير</button>}
+          <button onClick={handleCreateNew} className="w-full md:w-auto justify-center bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(199,0,0,0.3)] whitespace-nowrap">+ إنشاء مهمة</button>
         </div>
       </div>
 
@@ -1399,9 +1405,10 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
 
             </div>
             
-            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl">
-              {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"><ExcelIcon /> تصدير الاستمارة</button>}
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
+            {/* 💡 أضفنا كلاسات بتخلي الزراير فوق بعض في الموبايل وبعرض الشاشة بالكامل لسهولة اللمس */}
+            <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير الاستمارة</button>}
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
               
               {isOwner ? (
                 <>
@@ -2049,8 +2056,8 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
 
             </div>
             
-            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl">
-              <button onClick={handleExportSingleNewsExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto">
+            <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              <button onClick={handleExportSingleNewsExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto">
                 <ExcelIcon /> تصدير الخبر الحالي
               </button>
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
@@ -2325,10 +2332,10 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
               </SectionCard>
             </div>
             
-            <div className="p-5 border-t border-white/10 bg-[#0a0a0a] flex justify-end gap-3 shrink-0 rounded-b-3xl">
-              <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 mr-auto"><ExcelIcon /> تحميل سجل الكارثة</button>
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
-              <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ وتوثيق الكارثة</button>
+            <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تحميل سجل الكارثة</button>
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
+              <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ وتوثيق الكارثة</button>
             </div>
           </div>
         </div>
@@ -2534,7 +2541,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         <StatCard title="أقوى هزة / زلزال" value={maxMagnitude > 0 ? `${maxMagnitude} ريختر` : '-'} color="text-yellow-500" />
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg relative z-0 h-[500px]">
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-4 md:p-6 shadow-lg relative z-0 h-auto md:h-[500px]">
         {/* 💡 الفلاتر فوق الخريطة */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
           <div className="flex items-center gap-3">
@@ -2560,7 +2567,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         </div>
 
         {/* 💡 زوم أوت للخريطة */}
-        <div className="h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
+        <div className="h-[300px] md:h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative mt-4 md:mt-0">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
@@ -2711,8 +2718,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={gForm.latitude} onChange={e => setGForm({...gForm, latitude: e.target.value})} /></FormGroup>
               <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={gForm.longitude} onChange={e => setGForm({...gForm, longitude: e.target.value})} /></FormGroup>
             </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setIsGlobalModalOpen(false)} className="px-6 py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
+            <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto">
+              <button onClick={() => setIsGlobalModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
               <button onClick={handleGlobalSubmit} className="px-6 py-2 rounded-xl text-white bg-red-600 font-bold">حفظ</button>
             </div>
           </div>
@@ -2732,8 +2739,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
               <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={eForm.latitude} onChange={e => setEForm({...eForm, latitude: e.target.value})} /></FormGroup>
               <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={eForm.longitude} onChange={e => setEForm({...eForm, longitude: e.target.value})} /></FormGroup>
             </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setIsEgyptModalOpen(false)} className="px-6 py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
+            <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto">
+              <button onClick={() => setIsEgyptModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
               <button onClick={handleEgyptSubmit} className="px-6 py-2 rounded-xl text-white bg-green-600 font-bold">حفظ</button>
             </div>
           </div>
