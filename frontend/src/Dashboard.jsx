@@ -529,20 +529,21 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     'الفيوم': 'saeed', 'بنى سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
   };
 
-  // 💡 استخراج بيانات اليوزر بالمللي من الـ ID (الحل الجذري المنيع)
-  // 💡 استخراج إقليم اليوزر فوراً من بيانات الجلسة (عشان نقضي على كسر الثانية بتاع التحميل)
-  // 💡 كود الطوارئ الذكي: هنقفلها بالاسم بدل الداتابيز عشان نخلص من وجع الدماغ ده!
+  // 💡 كود الطوارئ الذكي السليم (لحل مشكلة الشاشة البيضاء)
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
   const userFullName = (currentUserData?.full_name || '').toLowerCase();
   
+  // 🚨 تعريف المتغيرات بره عشان ميعملش خطأ (ReferenceError) ويضرب شاشة بيضا
+  const userBranchId = currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19;
+  const userBranchName = currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام';
+  
   let userRegion = 'hq'; // الافتراضي
   
-  // 🚨 إجبار السيستم على الإقليم من اسم الحساب مباشرة (عشان نتجاهل أي كاش أو غلطة في الداتابيز)
+  // 🚨 إجبار السيستم على الإقليم من اسم الحساب مباشرة
   if (userFullName.includes('delta')) userRegion = 'delta';
   else if (userFullName.includes('canal')) userRegion = 'canal';
   else if (userFullName.includes('upper') || userFullName.includes('saeed')) userRegion = 'saeed';
   else {
-    const userBranchName = currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام';
     userRegion = regionMap[userBranchName.trim()] || 'hq';
   }
 
