@@ -137,7 +137,14 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden" dir="rtl">
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-20'} bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between hidden md:flex sticky top-0 h-screen z-50 transition-all duration-300`}>
+      
+      {/* 💡 خلفية ضبابية تظهر في الموبايل فقط لما القائمة تكون مفتوحة */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
+
+      {/* 💡 تعديل الكلاسات عشان القائمة تطلع من الجنب في الموبايل (fixed) وتفضل عادية في الديسكتوب (sticky) */}
+      <aside className={`${isSidebarOpen ? 'translate-x-0 w-64 md:w-72' : 'translate-x-full w-64 md:translate-x-0 md:w-20'} bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 right-0 h-screen z-[70] transition-transform duration-300`}>
         <div className="overflow-y-auto custom-scrollbar flex-1">
           {isSidebarOpen ? (
             <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300">
@@ -176,14 +183,17 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)]">
-        <header className="px-10 py-6 border-b border-white/5 flex items-center gap-5 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-40">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-white bg-[#111] p-2.5 rounded-xl border border-white/10 hidden md:block transition-all hover:bg-white/5">
+      <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative z-0">
+        {/* 💡 صغرنا الـ Padding للموبايل */}
+        <header className="px-4 md:px-10 py-4 md:py-6 border-b border-white/5 flex items-center gap-3 md:gap-5 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-40">
+          {/* 💡 شيلنا (hidden md:block) عشان الزرار يظهر دايماً */}
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-white bg-[#111] p-2 md:p-2.5 rounded-xl border border-white/10 block transition-all hover:bg-white/5">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
           </button>
           <div className="flex-1 flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-extrabold tracking-wide">
+              {/* 💡 صغرنا الخط في الموبايل */}
+              <h1 className="text-xl md:text-2xl font-extrabold tracking-wide">
               {activeTab === 'home' && 'موجز عمليات اليوم'}
               {activeTab === 'missions' && 'إدارة المهام الميدانية'}
               {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
@@ -316,11 +326,13 @@ function HomeView({ branches = [] }) {
         </div>
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 shadow-lg animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+      {/* 💡 صغرنا المسافات الداخلية في الموبايل */}
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-4 md:p-6 shadow-lg animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <h3 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
           <MapIcon /> خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)
         </h3>
-        <div className="h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
+        {/* 💡 الارتفاع بقى 300 في الموبايل و 450 في الديسكتوب */}
+        <div className="h-[300px] md:h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
