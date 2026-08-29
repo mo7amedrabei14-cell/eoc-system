@@ -2929,6 +2929,41 @@ function AINewsMonitorView({ branches, isOwner }) {
   });
 
   const AI_NEWS_TYPES = ['حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'];
+
+  // 💡 حالة وقت آخر فحص
+  const [lastRunTime, setLastRunTime] = useState('جاري التحقق...');
+
+  // 💡 دالة سحب آخر توقيت اشتغل فيه الروبوت من جيت هاب (تتحدث كل دقيقة)
+  useEffect(() => {
+    const fetchLastRun = async () => {
+      try {
+        const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/runs?per_page=1');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.workflow_runs && data.workflow_runs.length > 0) {
+            const lastRun = data.workflow_runs[0];
+            const dateObj = new Date(lastRun.updated_at);
+            const now = new Date();
+            const isToday = dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth();
+            const formattedTime = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            const dayStr = isToday ? 'اليوم' : dateObj.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
+            
+            setLastRunTime(`${dayStr}، الساعة ${formattedTime}`);
+          } else {
+            setLastRunTime('لا توجد بيانات');
+          }
+        } else {
+          setLastRunTime('غير متاح');
+        }
+      } catch (e) {
+        setLastRunTime('غير متاح');
+      }
+    };
+    
+    fetchLastRun();
+    const interval = setInterval(fetchLastRun, 60000); // تحدث نفسها كل دقيقة
+    return () => clearInterval(interval);
+  }, []);
   
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
 
@@ -3022,23 +3057,29 @@ function AINewsMonitorView({ branches, isOwner }) {
   return (
     <div className="space-y-6 pb-10">
       
-      {/* 💡 لوحة مراقبة البوت */}
+      {/* 💡 لوحة مراقبة البوت بالتوقيت الحي */}
       <div className="bg-[#111] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> مركز رصد الذكاء الاصطناعي (AI Scanner)</h3>
           <p className="text-gray-400 text-sm mt-2">يتم هنا عرض الأخبار والحوادث التي يقوم الروبوت الآلي بسحبها من المواقع الإخبارية.</p>
         </div>
         
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-            </span>
-            <span className="text-xs font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
+          <div className="flex flex-col gap-1 w-full md:w-auto">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+              <span className="text-xs font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 border-t border-white/5 pt-1">
+              <svg className="w-3 h-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span className="text-[10px] text-gray-400 font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
+            </div>
           </div>
-          <div className="w-px h-6 bg-white/10"></div>
-          <img src="https://github.com/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/badge.svg" alt="AI Status Badge" className="h-5" />
+          <div className="hidden md:block w-px h-8 bg-white/10"></div>
+          <img src="https://github.com/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/badge.svg" alt="AI Status Badge" className="h-5 mr-auto md:mr-0" />
         </div>
       </div>
 
