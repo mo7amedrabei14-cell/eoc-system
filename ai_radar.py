@@ -16,20 +16,42 @@ SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news"
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 KEYWORDS = [
+    # 🚨 كوارث وحوادث كبرى
     'حريق', 'حرائق', 'انهيار', 'سقوط مبنى', 'تصادم', 'انقلاب', 'غرق', 'تسرب غاز', 
-    'تسرب كيميائي', 'تسمم', 'انفجار', 'سيول', 'فيضانات', 'زلزال', 'هزة أرضية', 
-    'مصرع', 'وفاة', 'إصابة', 'تفحم', 'اشتعال', 'دهس', 'اختناق', 'عاجل', 
-    'طوارئ', 'إنقاذ', 'إسعاف', 'كارثة', 'تدافع', 'خروج قطار'
+    'تسرب كيميائي', 'انفجار', 'تدافع', 'خروج قطار', 'اصطدام', 'حوادث طرق',
+    
+    # 🌩️ كوارث طبيعية وبيئية
+    'سيول', 'فيضانات', 'زلزال', 'هزة أرضية', 'عاصفة ترابية', 'عاصفة رملية',
+    'طقس سيء', 'انهيار صخري', 'هبوط أرضي', 'أمطار رعدية', 'رياح عاتية',
+    
+    # 🏥 طوارئ طبية وإصابات
+    'مصرع', 'وفاة', 'إصابة', 'إصابات بالغة', 'حالات حرجة', 'تفحم', 'اشتعال', 
+    'دهس', 'اختناق', 'تسمم غذائي', 'نزيف', 'ضحايا', 'مفقودين',
+    
+    # 🛠️ أزمات بنية تحتية ومرافق
+    'انهيار كوبري', 'قطع طريق', 'توقف حركة الملاحة', 'تعطل حركة المرور', 
+    'انقطاع تيار', 'انفجار ماسورة', 'تسرب بترولي',
+    
+    # ⛑️ عمليات الإغاثة والاستجابة (عشان لو في أزمة محتاجة تدخل)
+    'عاجل', 'طوارئ', 'إنقاذ', 'إسعاف', 'كارثة', 'استغاثة', 'إخلاء', 
+    'تدخل سريع', 'فرق إغاثة', 'مخيم إيواء', 'فجوة إغاثية', 'قوافل طبية', 
+    'إمدادات طارئة', 'مناورات طوارئ', 'استجابة عاجلة'
 ]
 
 RSS_FEEDS = {
-    "اليوم السابع": "https://www.youm7.com/rss/SectionRss?SectionID=203",
-    "المصري اليوم": "https://www.almasryalyoum.com/rss/section/13",
-    "صدى البلد": "https://www.elbalad.news/rss/3",
-    "مصراوي": "https://www.masrawy.com/CrossDomain/News/RSS",
-    "الشروق": "https://www.shorouknews.com/rss/accidents.xml",
-    "بوابة الأهرام": "https://gate.ahram.org.eg/Rss/50/LatestNews.aspx",
-    "الوطن": "https://www.elwatannews.com/home/rss"
+    "اليوم السابع (حوادث)": "https://www.youm7.com/rss/SectionRss?SectionID=203",
+    "المصري اليوم (حوادث)": "https://www.almasryalyoum.com/rss/section/13",
+    "صدى البلد (حوادث)": "https://www.elbalad.news/rss/3",
+    "مصراوي (حوادث)": "https://www.masrawy.com/CrossDomain/News/RSS",
+    "الشروق (حوادث)": "https://www.shorouknews.com/rss/accidents.xml",
+    "بوابة الأهرام (حوادث)": "https://gate.ahram.org.eg/Rss/50/LatestNews.aspx",
+    "الوطن (حوادث)": "https://www.elwatannews.com/home/rss",
+    # 🌐 المصادر الجديدة:
+    "فيتو (حوادث)": "https://www.vetogate.com/rss/2",
+    "الدستور (حوادث)": "https://www.dostor.org/rss/section/5",
+    "البوابة نيوز (حوادث)": "https://www.albawabhnews.com/rss/97",
+    "الأسبوع (حوادث)": "https://www.elaosboa.com/rss/accidents/",
+    "سكاي نيوز (مصر)": "https://www.skynewsarabia.com/rss/مصر"
 }
 
 # ==========================================

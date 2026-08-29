@@ -2,7 +2,7 @@ name: AI Radar Scanner 🤖
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # التشغيل كل 15 دقيقة
+    - cron: '*/10 * * * *' # التشغيل كل 10 دقائق
   workflow_dispatch: # زرار للتشغيل اليدوي لو حبيت
 
 jobs:
