@@ -3,28 +3,24 @@ import requests
 import time
 import schedule
 import json
-import google.generativeai as genai
+from google import genai # 💡 التحديث الجديد لمكتبة جوجل
 from datetime import datetime
 
 # ==========================================
 # 1. إعدادات النظام والربط (Configurations)
 # ==========================================
-# 🚨 حط مفتاح الـ API بتاع Gemini هنا
-GEMINI_API_KEY = "حط_مفتاح_جيميني_هنا" 
-
-# رابط السيرفر بتاعك اللي هيستقبل الداتا
+GEMINI_API_KEY = "." 
 SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news" 
+SYSTEM_TOKEN = "." 
 
-# 🚨 حط التوكن بتاع حسابك الإداري عشان السيرفر يقبل الأخبار
-SYSTEM_TOKEN = "التوكن_بتاع_حسابك_الاداري_هنا" 
-
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 💡 تهيئة العميل بالطريقة الجديدة لجوجل
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ==========================================
 # 2. الكلمات المفتاحية الشاملة (الرادار)
 # ==========================================
 KEYWORDS = [
+    'الشرطة', 'مصر', 'النيابة', # 💡 كلمات للاختبار (امسحها بعد ما تتأكد إنه شغال)
     'حريق', 'حرائق', 'انهيار', 'سقوط مبنى', 'تصادم', 'انقلاب', 'غرق', 'تسرب غاز', 
     'تسرب كيميائي', 'تسمم', 'انفجار', 'سيول', 'فيضانات', 'زلزال', 'هزة أرضية', 
     'مصرع', 'وفاة', 'إصابة', 'تفحم', 'اشتعال', 'دهس', 'اختناق', 'عاجل', 
@@ -44,7 +40,6 @@ RSS_FEEDS = {
     "الوطن (حوادث)": "https://www.elwatannews.com/home/rss"
 }
 
-# ذاكرة عشان الروبوت ميبعتش نفس الخبر مرتين للغرفة
 processed_news_links = set()
 
 # ==========================================
@@ -68,8 +63,11 @@ def analyze_news_with_ai(news_text):
     تأكد أن المخرجات هي Valid JSON format فقط.
     """
     try:
-        response = model.generate_content(prompt)
-        # تنظيف الرد لضمان أنه JSON سليم
+        # 💡 التحديث الجديد لطريقة نداء الذكاء الاصطناعي
+        response = client.models.generate_content(
+            model='gemini-3.6-flash',
+            contents=prompt,
+        )
         clean_json = response.text.replace('```json', '').replace('```', '').strip()
         return json.loads(clean_json)
     except Exception as e:
@@ -85,11 +83,9 @@ def run_ai_scanner():
     for publisher, url in RSS_FEEDS.items():
         try:
             feed = feedparser.parse(url)
-            # هنبص على أحدث 5 أخبار نزلت في كل موقع
             for entry in feed.entries[:5]:
                 news_link = entry.link
                 
-                # لو الخبر في الذاكرة، نتجاوزه
                 if news_link in processed_news_links:
                     continue
                 
@@ -97,11 +93,9 @@ def run_ai_scanner():
                 news_summary = entry.get('summary', '')
                 full_text = f"{news_title} - {news_summary}"
                 
-                # الفلترة المبدئية: هل الخبر يحتوي على كلمة من الرادار؟
                 if any(keyword in full_text for keyword in KEYWORDS):
                     print(f"⚠️ تم التقاط حادث محتمل من ({publisher}): {news_title}")
                     
-                    # إرسال للـ AI لتحليل التفاصيل
                     ai_data = analyze_news_with_ai(full_text)
                     
                     if ai_data:
@@ -121,7 +115,6 @@ def run_ai_scanner():
                             "data_entry_name": "AI Robot"
                         }
                         
-                        # إرسال البيانات لقاعدة بيانات الغرفة المركزية
                         headers = {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
                         api_res = requests.post(SYSTEM_API_URL, json=payload, headers=headers)
                         
@@ -130,8 +123,10 @@ def run_ai_scanner():
                         else:
                             print(f"❌ فشل الإرسال للسيستم: {api_res.text}")
                     
-                    # حفظ اللينك في الذاكرة عشان ميتكررش
                     processed_news_links.add(news_link)
+                    
+                # 💡 فرملة 4 ثواني بين كل خبر والتاني عشان جوجل متعملناش حظر مؤقت
+                time.sleep(4)
                     
         except Exception as e:
             print(f"❌ خطأ أثناء مسح {publisher}: {e}")
@@ -139,11 +134,10 @@ def run_ai_scanner():
 # ==========================================
 # 6. التشغيل المستمر (الجدولة)
 # ==========================================
-# هيعمل مسح لكل المواقع كل 10 دقايق
 schedule.every(10).minutes.do(run_ai_scanner)
 
 print("🚀 محرك الذكاء الاصطناعي (AI Radar) يعمل الآن... سيقوم بالمسح كل 10 دقائق.")
-run_ai_scanner() # تشغيل أول مرة فوراً
+run_ai_scanner()
 
 while True:
     schedule.run_pending()

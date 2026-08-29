@@ -88,9 +88,11 @@ export default function Dashboard() {
               lastSeenSignature = newActions[0].created_at + newActions[0].full_name + newActions[0].action;
 
               newActions.reverse().forEach(action => {
-                if (action.full_name !== userData?.full_name) {
+                const isAiLog = action.entity_type === 'ai_news' || action.full_name === 'AI Robot';
+                
+                // 💡 التعديل: إظهار الإشعار لو كان من الروبوت (حتى لو هو بيستخدم التوكن بتاعك)
+                if (action.full_name !== userData?.full_name || isAiLog) {
                   const toastId = Date.now() + Math.random(); 
-                  const isAiLog = action.entity_type === 'ai_news' || action.full_name === 'AI Robot';
 
                   // إضافة الإشعار للطابور (بيقعد 10 ثواني)
                   setToasts(prev => [...prev, { id: toastId, user: action.full_name, action: action.action, details: action.details, isAi: isAiLog }]);
@@ -2953,6 +2955,31 @@ function AINewsMonitorView({ branches, isOwner }) {
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "سجل الرصد الآلي"); XLSX.writeFile(wb, `سجل_الذكاء_الاصطناعي.xlsx`);
   };
 
+  // 💡 التعديل: تفعيل دالة الحفظ للمالك فقط وربطها بالباك إند
+  const handleSubmit = async () => {
+    if (!isOwner) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      const url = `https://eoc-system.vercel.app/api/ai-news/${form.id}`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(form)
+      });
+      if (res.ok) {
+        setIsModalOpen(false);
+        setCustomAlert("تم حفظ التعديلات بنجاح!");
+        // تحديث الداتا بعد الحفظ مباشرة
+        const resRefresh = await fetch('https://eoc-system.vercel.app/api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (resRefresh.ok) setAiNewsList(await resRefresh.json());
+      } else {
+        setCustomAlert("حدث خطأ أثناء الحفظ في السيرفر.");
+      }
+    } catch(err) {
+      setCustomAlert("فشل الاتصال بالسيرفر.");
+    }
+  };
+
   const filteredNews = filterDate ? aiNewsList.filter(n => n.incident_date === filterDate) : aiNewsList;
 
   return (
@@ -3060,7 +3087,8 @@ function AINewsMonitorView({ branches, isOwner }) {
             <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
               <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-purple-400 border border-purple-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير هذا السجل</button>
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
-              <button onClick={() => setCustomAlert("جاري حفظ التعديل.. بانتظار ربط الواجهة الخلفية (Backend) لمحرك الـ AI")} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(168,85,247,0.3)]">حفظ بيانات الرصد</button>
+              {/* 💡 التعديل: إخفاء زرار الحفظ تماماً عن أي حد مش (المالك) وربطه بدالة الحفظ الحقيقية */}
+              {isOwner && <button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(168,85,247,0.3)]">حفظ التعديلات</button>}
             </div>
           </div>
         </div>
@@ -3080,4 +3108,4 @@ function AINewsMonitorView({ branches, isOwner }) {
 }
 
 // 💡 أيقونة الروبوت للذكاء الاصطناعي (AI)
-const AIIcon = (props) => <svg {...props} className={props.className || "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h.01M15 9h.01" /></svg>;
+const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5 h-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h.01M15 9h.01" /></svg>;
