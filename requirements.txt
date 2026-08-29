@@ -10,3 +10,9 @@ openpyxl
 argon2-cffi
 numpy
 pwdlib[argon2]
+feedparser
+requests
+schedule
+google-genai
+flask
+gunicorn

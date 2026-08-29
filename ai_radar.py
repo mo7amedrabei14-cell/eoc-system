@@ -3,105 +3,102 @@ import requests
 import time
 import schedule
 import json
-from google import genai # 💡 التحديث الجديد لمكتبة جوجل
+import threading
+import os
+from flask import Flask
+from google import genai
 from datetime import datetime
 
 # ==========================================
-# 1. إعدادات النظام والربط (Configurations)
+# 1. إعدادات النظام والمفاتيح السريّة (من السيرفر)
 # ==========================================
-GEMINI_API_KEY = "." 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
+SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN") 
 SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news" 
-SYSTEM_TOKEN = "." 
 
-# 💡 تهيئة العميل بالطريقة الجديدة لجوجل
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 # ==========================================
-# 2. الكلمات المفتاحية الشاملة (الرادار)
+# 2. إعداد سيرفر الويب الوهمي (عشان السيرفر السحابي ميفصلوش)
+# ==========================================
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "🤖 AI Radar is running 24/7 in the background!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# ==========================================
+# 3. الكلمات المفتاحية والمصادر
 # ==========================================
 KEYWORDS = [
-    'الشرطة', 'مصر', 'النيابة', # 💡 كلمات للاختبار (امسحها بعد ما تتأكد إنه شغال)
     'حريق', 'حرائق', 'انهيار', 'سقوط مبنى', 'تصادم', 'انقلاب', 'غرق', 'تسرب غاز', 
     'تسرب كيميائي', 'تسمم', 'انفجار', 'سيول', 'فيضانات', 'زلزال', 'هزة أرضية', 
     'مصرع', 'وفاة', 'إصابة', 'تفحم', 'اشتعال', 'دهس', 'اختناق', 'عاجل', 
     'طوارئ', 'إنقاذ', 'إسعاف', 'كارثة', 'تدافع', 'خروج قطار'
 ]
 
-# ==========================================
-# 3. شبكة المصادر الإخبارية (RSS Feeds)
-# ==========================================
 RSS_FEEDS = {
-    "اليوم السابع (حوادث)": "https://www.youm7.com/rss/SectionRss?SectionID=203",
-    "المصري اليوم (حوادث)": "https://www.almasryalyoum.com/rss/section/13",
-    "صدى البلد (حوادث)": "https://www.elbalad.news/rss/3",
-    "مصراوي (حوادث)": "https://www.masrawy.com/CrossDomain/News/RSS",
-    "الشروق (حوادث)": "https://www.shorouknews.com/rss/accidents.xml",
-    "بوابة الأهرام (حوادث)": "https://gate.ahram.org.eg/Rss/50/LatestNews.aspx",
-    "الوطن (حوادث)": "https://www.elwatannews.com/home/rss"
+    "اليوم السابع": "https://www.youm7.com/rss/SectionRss?SectionID=203",
+    "المصري اليوم": "https://www.almasryalyoum.com/rss/section/13",
+    "صدى البلد": "https://www.elbalad.news/rss/3",
+    "مصراوي": "https://www.masrawy.com/CrossDomain/News/RSS",
+    "الشروق": "https://www.shorouknews.com/rss/accidents.xml",
+    "بوابة الأهرام": "https://gate.ahram.org.eg/Rss/50/LatestNews.aspx",
+    "الوطن": "https://www.elwatannews.com/home/rss"
 }
 
 processed_news_links = set()
 
 # ==========================================
-# 4. عقل الذكاء الاصطناعي (تحليل الخبر)
+# 4. محرك البحث والذكاء الاصطناعي
 # ==========================================
 def analyze_news_with_ai(news_text):
     prompt = f"""
-    أنت مساعد ذكي لغرفة عمليات طوارئ (EOC) في مصر. قم بقراءة هذا الخبر واستخراج البيانات التالية في صيغة JSON فقط وبدون أي نصوص إضافية:
+    أنت مساعد لغرفة عمليات EOC. استخرج البيانات التالية في صيغة JSON فقط:
     الخبر: "{news_text}"
 
-    المفاتيح المطلوبة في الـ JSON:
-    - "incident_description": ملخص للحادث في جملة واحدة.
-    - "news_type": اختر تصنيفاً واحداً فقط يطابق الخبر من هذه القائمة (حادث تصادم سيارات, حادث غرق سفينة, حادث تصادم قطارات, حادث انقلاب قطار, حادث انقلاب سيارة, حادث فقدان أشخاص في البحر, حادث تصادم سفن, انهيار مبنى تجاري, حريق مبنى سكني, حريق مبنى تجاري, حريق مبنى صناعي, حادث انفجار, انهيار مبنى صناعي, انهيار ارضي, حريق منطقة زراعية, حادث تسرب مواد كيميائية أو غازات سامة, سيول, فيضانات, امطار غزيرة, زلزال, انهيار مبنى سكني, حادث دهس اشخاص, حريق مبنى طبي, انهيار مبنى طبي, حريق مخزن, حريق مزرعة, حريق سيارة, حريق مبنى ديني, حريق مبنى تعليمي, حادث تدافع, حريق مبنى رياضي, حريق قطار, حادث تصادم سيارة بقطار, حادث تسمم, حريق مبنى حكومي, انهيار مبنى حكومي, انهيار مبنى ديني). إذا لم تجد تطابقاً دقيقاً، اختر أقرب وصف منطقي.
-    - "governorate": اسم المحافظة المصرية التي وقع بها الحادث (يجب أن يكون اسم المحافظة فقط مثل: القاهرة, الإسكندرية, الدقهلية). إذا لم تذكر، اكتب "غير محدد".
-    - "area_name": اسم المنطقة أو المركز (مثل: شبرا، مدينة نصر، طلخا). إذا لم يذكر اكتب "".
-    - "street_name": اسم الشارع أو الطريق (مثل: الدائري، الزراعي). إذا لم يذكر اكتب "".
-    - "hospital_name": اسم المستشفى التي تم نقل المصابين/الجثامين إليها. إذا لم يذكر اكتب "".
-    - "injured_count": عدد المصابين (رقم فقط). إذا لم يذكر اكتب "0".
-    - "deaths_count": عدد الوفيات (رقم فقط). إذا لم يذكر اكتب "0".
-
-    تأكد أن المخرجات هي Valid JSON format فقط.
+    - "incident_description": ملخص للحادث.
+    - "news_type": تصنيف الحادث.
+    - "governorate": اسم المحافظة (مثال: القاهرة).
+    - "area_name": اسم المنطقة.
+    - "street_name": اسم الشارع.
+    - "hospital_name": اسم المستشفى.
+    - "injured_count": المصابين (رقم).
+    - "deaths_count": الوفيات (رقم).
     """
     try:
-        # 💡 التحديث الجديد لطريقة نداء الذكاء الاصطناعي
-        response = client.models.generate_content(
-            model='gemini-3.6-flash',
-            contents=prompt,
-        )
+        response = client.models.generate_content(model='gemini-3.6-flash', contents=prompt)
         clean_json = response.text.replace('```json', '').replace('```', '').strip()
         return json.loads(clean_json)
     except Exception as e:
-        print(f"❌ خطأ في معالجة الذكاء الاصطناعي: {e}")
+        print(f"❌ خطأ AI: {e}")
         return None
 
-# ==========================================
-# 5. محرك البحث والإرسال للسيستم
-# ==========================================
 def run_ai_scanner():
-    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 بدء جولة مسح جديدة عبر المواقع الإخبارية...")
-    
+    if not GEMINI_API_KEY or not SYSTEM_TOKEN:
+        print("⚠️ المفاتيح السرية غير موجودة! الرجاء إضافتها في إعدادات السيرفر.")
+        return
+
+    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 بدء المسح...")
     for publisher, url in RSS_FEEDS.items():
         try:
             feed = feedparser.parse(url)
             for entry in feed.entries[:5]:
                 news_link = entry.link
+                if news_link in processed_news_links: continue
                 
-                if news_link in processed_news_links:
-                    continue
-                
-                news_title = entry.title
-                news_summary = entry.get('summary', '')
-                full_text = f"{news_title} - {news_summary}"
-                
-                if any(keyword in full_text for keyword in KEYWORDS):
-                    print(f"⚠️ تم التقاط حادث محتمل من ({publisher}): {news_title}")
-                    
+                full_text = f"{entry.title} - {entry.get('summary', '')}"
+                if any(k in full_text for k in KEYWORDS):
+                    print(f"⚠️ حادث محتمل: {entry.title}")
                     ai_data = analyze_news_with_ai(full_text)
-                    
                     if ai_data:
                         payload = {
                             "incident_date": datetime.now().strftime("%Y-%m-%d"),
-                            "incident_description": ai_data.get("incident_description", news_title),
+                            "incident_description": ai_data.get("incident_description", entry.title),
                             "news_type": ai_data.get("news_type", "غير محدد"),
                             "news_publisher": publisher,
                             "street_name": ai_data.get("street_name", ""),
@@ -110,35 +107,28 @@ def run_ai_scanner():
                             "hospital_name": ai_data.get("hospital_name", ""),
                             "injured_count": str(ai_data.get("injured_count", "0")),
                             "deaths_count": str(ai_data.get("deaths_count", "0")),
-                            "news_updates": "تم الرصد والتحليل آلياً بواسطة محرك الذكاء الاصطناعي (AI Scanner).",
+                            "news_updates": "تم الرصد آلياً بواسطة AI Scanner.",
                             "news_link": news_link,
                             "data_entry_name": "AI Robot"
                         }
-                        
                         headers = {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
-                        api_res = requests.post(SYSTEM_API_URL, json=payload, headers=headers)
-                        
-                        if api_res.status_code in [200, 201]:
-                            print(f"✅ تم الإرسال للغرفة المركزية بنجاح! ({ai_data.get('governorate')})")
-                        else:
-                            print(f"❌ فشل الإرسال للسيستم: {api_res.text}")
+                        res = requests.post(SYSTEM_API_URL, json=payload, headers=headers)
+                        if res.status_code in [200, 201]: print("✅ تم الإرسال بنجاح!")
                     
                     processed_news_links.add(news_link)
-                    
-                # 💡 فرملة 4 ثواني بين كل خبر والتاني عشان جوجل متعملناش حظر مؤقت
-                time.sleep(4)
-                    
+                time.sleep(4) # فرملة لمنع الحظر من جوجل
         except Exception as e:
-            print(f"❌ خطأ أثناء مسح {publisher}: {e}")
+            print(f"❌ خطأ مسح {publisher}")
 
-# ==========================================
-# 6. التشغيل المستمر (الجدولة)
-# ==========================================
-schedule.every(10).minutes.do(run_ai_scanner)
+def start_background_tasks():
+    schedule.every(10).minutes.do(run_ai_scanner)
+    run_ai_scanner()
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
-print("🚀 محرك الذكاء الاصطناعي (AI Radar) يعمل الآن... سيقوم بالمسح كل 10 دقائق.")
-run_ai_scanner()
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+if __name__ == '__main__':
+    # تشغيل الروبوت في الخلفية (Thread)
+    threading.Thread(target=start_background_tasks, daemon=True).start()
+    # تشغيل سيرفر الويب في الواجهة عشان Render يقبله
+    run_flask()

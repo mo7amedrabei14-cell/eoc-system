@@ -1694,7 +1694,8 @@ function AuditLogsView() {
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.full_name?.includes(searchTerm) || log.details?.includes(searchTerm);
     const matchesAction = actionFilter === 'الكل' || log.action === actionFilter;
-    const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter;
+    // 💡 التعديل هنا: لو اختار "system" يجيب أي حاجة ملهاش قسم (يعني تسجيل دخول، باسورد، إلخ)
+    const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter || (entityFilter === 'system' && !['mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news'].includes(log.entity_type));
     return matchesSearch && matchesAction && matchesEntity;
   });
 
@@ -1762,6 +1763,8 @@ function AuditLogsView() {
             <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>الأخبار المحلية</button>
             <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكوارث العالمية</button>
             <button onClick={() => setEntityFilter('earthquake')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'earthquake' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل</button>
+            {/* 💡 الزرار الجديد لفلترة النظام */}
+            <button onClick={() => setEntityFilter('system')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'system' ? 'bg-gray-500 text-white' : 'text-gray-400 hover:text-white'}`}>النظام</button>
           </div>
 
           <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-48 shrink-0" />
