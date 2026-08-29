@@ -94,8 +94,14 @@ export default function Dashboard() {
                 if (action.full_name !== userData?.full_name || isAiLog) {
                   const toastId = Date.now() + Math.random(); 
 
-                  // إضافة الإشعار للطابور (بيقعد 10 ثواني)
-                  setToasts(prev => [...prev, { id: toastId, user: action.full_name, action: action.action, details: action.details, isAi: isAiLog }]);
+                  // إضافة الإشعار للطابور (محمي ضد الانهيار لو الداتا عبارة عن Object)
+                  setToasts(prev => [...prev, { 
+                    id: toastId, 
+                    user: String(action.full_name || 'نظام'), 
+                    action: String(action.action || 'تحديث'), 
+                    details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''), 
+                    isAi: isAiLog 
+                  }]);
                   setTimeout(() => {
                     setToasts(prev => prev.filter(t => t.id !== toastId)); 
                   }, 10000);
@@ -151,7 +157,7 @@ export default function Dashboard() {
         if (branchesRes.ok) {
           const branchesData = await branchesRes.json();
           const uniqueData = branchesData.filter((branch, index, self) =>
-            index === self.findIndex((t) => t.name.trim() === branch.name.trim())
+            index === self.findIndex((t) => (t.name || '').trim() === (branch.name || '').trim())
           );
 
           const normalizedBranches = uniqueData.map(b => ({
@@ -355,7 +361,7 @@ function HomeView({ branches = [] }) {
   const filteredNews = selectedBranchName ? news.filter(n => n.governorate === filterNewsGov) : news;
 
   const dailyMissions = filterDate ? filteredMissions.filter(m => {
-    const mDate = m.exit_date && m.exit_date !== '-' ? m.exit_date : (m.created_at ? m.created_at.split(' ')[0] : '');
+    const mDate = m.exit_date && m.exit_date !== '-' ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : '');
     return mDate === filterDate;
   }) : filteredMissions;
   const dailyNews = filterDate ? filteredNews.filter(n => n.incident_date === filterDate) : filteredNews;
@@ -1024,7 +1030,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
 
   if (filterDate) {
      baseMissions = baseMissions.filter(m => {
-        const missionDate = m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0];
+        const missionDate = m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : '');
         const isOpenActive = m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status);
         if (isOpenActive) return true;
         return missionDate === filterDate;
@@ -1196,7 +1202,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
                 <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
                 <td className="p-4 text-gray-300 border-l border-white/5 font-mono text-xs whitespace-nowrap text-center">
                   <div className="flex items-center justify-center gap-2 bg-[#111] px-2 py-1.5 rounded-lg border border-white/5">
-                    <span className="text-green-400">من: {m.exit_date !== '-' && m.exit_date ? m.exit_date : m.created_at.split(' ')[0]}</span>
+                    <span className="text-green-400">من: {m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : 'غير مسجل')}</span>
                     <span className="text-gray-600">|</span>
                     <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-gray-400" : "text-blue-400 animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
@@ -2940,9 +2946,6 @@ const SidebarToggleIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24" fil
 const globalEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #ef4444; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px #ef4444;"></div>`, iconSize: [14, 14] });
 const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [16, 16] });
 
-// ==========================================
-// 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor)
-// ==========================================
 // ==========================================
 // 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor)
 // ==========================================
