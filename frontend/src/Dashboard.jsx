@@ -522,24 +522,32 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
 
-  const regionMap = {
-    // 💡 المركز العام وملحقاته (تم ضم الجيزة، القليوبية، البحيرة، الإسكندرية، مطروح)
-    'المركز العام': 'hq', 'القاهرة': 'hq', 'الجيزة': 'hq', 'القليوبية': 'hq', 'البحيرة': 'hq', 'الاسكندرية': 'hq', 'مطروح': 'hq',
-    
-    // 💡 إقليم القنال
-    'الاسماعيلية': 'canal', 'بور سعيد': 'canal', 'السويس': 'canal', 'شمال سيناء': 'canal', 'جنوب سيناء': 'canal', 'الشرقية': 'canal',
-    
-    // 💡 إقليم الدلتا (5 محافظات فقط)
-    'الغربية': 'delta', 'الدقهلية': 'delta', 'كفر الشيخ': 'delta', 'المنوفية': 'delta', 'دمياط': 'delta',
-    
-    // 💡 إقليم الصعيد
-    'الفيوم': 'saeed', 'بني سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
+  // 💡 دالة سحرية لتوحيد الحروف وتجاهل المسافات والهمزات (عشان بورسعيد وبور سعيد ميعملوش مشكلة)
+  const normalizeName = (name) => {
+    if (!name) return '';
+    return name.replace(/[أإآا]/g, 'ا')
+               .replace(/[يى]/g, 'ي')
+               .replace(/ة/g, 'ه')
+               .replace(/\s+/g, '')
+               .trim();
   };
 
-  // 💡 استخراج إقليم المستخدم الحالي لعزله (للمتطوعين فقط)
+  const regionMap = {
+    // 💡 المركز العام وملحقاته (بعد ضم الجيزة، القليوبية، البحيرة، الإسكندرية، مطروح)
+    'المركزالعام': 'hq', 'القاهره': 'hq', 'الجيزه': 'hq', 'القليوبيه': 'hq', 'البحيره': 'hq', 'الاسكندريه': 'hq', 'مرسيمطروح': 'hq', 'مطروح': 'hq',
+    // 💡 إقليم القنال
+    'الاسماعيليه': 'canal', 'بورسعيد': 'canal', 'السويس': 'canal', 'شمالسيناء': 'canal', 'جنوبسيناء': 'canal', 'الشرقيه': 'canal',
+    // 💡 إقليم الدلتا (5 محافظات فقط)
+    'الغربيه': 'delta', 'الدقهليه': 'delta', 'كفرالشيخ': 'delta', 'المنوفيه': 'delta', 'دمياط': 'delta',
+    // 💡 إقليم الصعيد
+    'الفيوم': 'saeed', 'بنيسويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الواديالجديد': 'saeed', 'البحرالاحمر': 'saeed'
+  };
+
+  // 💡 استخراج إقليم المستخدم بأمان تام للعزل
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-  const userBranchName = branches.find(b => b.id === currentUserData?.branch_id)?.name || 'المركز العام';
-  const userRegion = regionMap[userBranchName.trim()] || 'hq';
+  const branchObj = branches.find(b => String(b.id) === String(currentUserData?.branch_id) || b.name === currentUserData?.branch);
+  const userBranchName = branchObj?.name || currentUserData?.branch || 'المركزالعام';
+  const userRegion = regionMap[normalizeName(userBranchName)] || 'unknown';
 
   const getLocalDate = () => {
     const d = new Date();
@@ -884,7 +892,10 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   // 🚨 حائط الصد: المتطوع (الأوبريشن) فقط هو اللي مقفول عليه إقليمه.. باقي الرتب تشوف كل حاجة!
   if (isVolunteer) {
-    baseMissions = baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === userRegion);
+    baseMissions = baseMissions.filter(m => {
+      const missionRegion = regionMap[normalizeName(m.branch)] || 'unknown';
+      return missionRegion === userRegion && userRegion !== 'unknown';
+    });
   }
 
   if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
@@ -903,15 +914,16 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
 
   // 💡 إحصائيات الأقاليم بتتأثر بالفلاتر (التاريخ، النشط، النوع) عشان تشوف الأرقام الحقيقية!
+  // 💡 إحصائيات الأقاليم بتتأثر بالفلاتر (التاريخ، النشط، النوع) عشان تشوف الأرقام الحقيقية!
   const regionStats = {
     total: baseMissions.length,
-    hq: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'hq').length,
-    canal: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'canal').length,
-    delta: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'delta').length,
-    saeed: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'saeed').length,
+    hq: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'unknown') === 'hq').length,
+    canal: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'unknown') === 'canal').length,
+    delta: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'unknown') === 'delta').length,
+    saeed: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'unknown') === 'saeed').length,
   };
 
-  let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === activeRegionTab) : baseMissions;
+  let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'unknown') === activeRegionTab) : baseMissions;
 
   if (searchTerm.trim() !== '') {
     const term = searchTerm.toLowerCase();
@@ -1128,8 +1140,9 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                     <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || currentUserData?.branch_id || '19'}>
                       {!isVolunteer && <option value="19">المركز العام</option>}
                       {branches.map(b => {
-                        const isBranchInMyRegion = (regionMap[b.name.trim()] || 'hq') === userRegion;
-                        // لو مش متطوع هيشوف كل الفروع، لو متطوع هيشوف إقليمه بس
+                        const branchRegion = regionMap[normalizeName(b.name)] || 'unknown';
+                        const isBranchInMyRegion = branchRegion === userRegion && userRegion !== 'unknown';
+                        // المديرين بيشوفوا الكل.. المتطوع بيشوف إقليمه بس
                         if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                           return <option key={b.id} value={b.id}>{b.name}</option>;
                         }
@@ -1275,7 +1288,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                             >
                               {!isVolunteer && <option value="19" className="bg-[#111]">المركز العام</option>}
                               {branches.map(b => {
-                                const isBranchInMyRegion = (regionMap[b.name.trim()] || 'hq') === userRegion;
+                                const branchRegion = regionMap[normalizeName(b.name)] || 'unknown';
+                                const isBranchInMyRegion = branchRegion === userRegion && userRegion !== 'unknown';
                                 if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                                   return <option key={b.id} value={b.id} className="bg-[#111]">{b.name}</option>;
                                 }
