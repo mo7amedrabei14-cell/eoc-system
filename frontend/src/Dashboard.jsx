@@ -523,20 +523,19 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
 
   const regionMap = {
-    // 💡 المركز العام وملحقاته (الأسماء من الداتابيز بالمللي)
     'المركز العام': 'hq', 'القاهرة': 'hq', 'الجيزة': 'hq', 'القليوبية': 'hq', 'الاسكندرية': 'hq', 'البحيرة': 'hq', 'مرسي مطروح': 'hq',
-    // 💡 إقليم القنال
     'الاسماعيلية': 'canal', 'بورسعيد': 'canal', 'السويس': 'canal', 'شمال سيناء': 'canal', 'جنوب سيناء': 'canal', 'الشرقية': 'canal',
-    // 💡 إقليم الدلتا (5 محافظات فقط)
     'الغربية': 'delta', 'الدقهلية': 'delta', 'كفر الشيخ': 'delta', 'المنوفية': 'delta', 'دمياط': 'delta',
-    // 💡 إقليم الصعيد
     'الفيوم': 'saeed', 'بنى سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
   };
 
-  // 💡 استخراج إقليم المستخدم بأمان للعزل
+  // 💡 استخراج بيانات اليوزر بالمللي من الـ ID (الحل الجذري المنيع)
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-  const userBranchName = currentUserData?.branches?.[0]?.branch_name || 'المركز العام';
-  const userBranchId = currentUserData?.branches?.[0]?.branch_id || 19;
+  const userBranchId = currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19;
+  
+  // بندور على اسم الفرع جوه الداتابيز الحية بدل الكاش الناقص بتاع المتصفح
+  const myBranchObj = branches.find(b => b.id === userBranchId);
+  const userBranchName = myBranchObj ? myBranchObj.name : 'المركز العام';
   const userRegion = regionMap[userBranchName.trim()] || 'hq';
 
   const getLocalDate = () => {
