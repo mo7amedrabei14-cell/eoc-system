@@ -537,15 +537,21 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   };
 
   // 3. استخراج بيانات اليوزر وتحديد الإقليم بالاسم (كود الطوارئ لضمان العزل)
+  // 💡 استخراج بيانات اليوزر
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-  const userFullName = (currentUserData?.full_name || '').toLowerCase();
+  
+  // 🚨 الحل هنا: هندور في الـ username (operation.delta) مش الـ full_name عشان الداتابيز
+  const username = (currentUserData?.username || '').toLowerCase();
+  
   const userBranchId = currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19;
   const userBranchName = currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام';
   
-  let userRegion = 'hq';
-  if (userFullName.includes('delta')) userRegion = 'delta';
-  else if (userFullName.includes('canal')) userRegion = 'canal';
-  else if (userFullName.includes('upper') || userFullName.includes('saeed')) userRegion = 'saeed';
+  let userRegion = 'hq'; // الافتراضي
+  
+  // 🚨 إجبار السيستم على الإقليم من اسم المستخدم (username)
+  if (username.includes('delta')) userRegion = 'delta';
+  else if (username.includes('canal')) userRegion = 'canal';
+  else if (username.includes('upper') || username.includes('saeed')) userRegion = 'saeed';
   else {
     userRegion = regionMap[normalizeName(userBranchName)] || 'hq';
   }
@@ -2083,9 +2089,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   );
 }
 
-// ==========================================
-// 7. شاشة الكوارث العالمية (Global Disasters)
-// ==========================================
 // ==========================================
 // 7. شاشة الكوارث العالمية (Global Disasters)
 // ==========================================
