@@ -48,21 +48,22 @@ export default function Dashboard() {
   const [dashboardStats, setDashboardStats] = useState({ active_missions: '-', ready_teams: '-', emergency_level: '-', under_review: '-', approved: '-', completed: '-', drafts: '-' });
 
   // 💡 1. حالات نظام الإشعارات والرادار (الجديدة)
-  const [toast, setToast] = useState(null);
+  // 💡 1. حالات نظام الإشعارات والرادار (تدعم طابور الإشعارات المتعددة)
+  const [toasts, setToasts] = useState([]);
   const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false });
 
-  // 💡 تعريف الصلاحيات (فصل ربيع كمالك بصلاحيات مطلقة)
   const userRole = userData?.role?.toUpperCase() || 'VOLUNTEER';
   const isOwner = userData?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
   const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
   const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
   const isVolunteer = !isOwner && !isSupervisor && !isJoker;
 
-  // 💡 2. رادار الغرفة المركزية (يسحب التحديثات بصمت كل 15 ثانية)
+  // 💡 2. رادار الغرفة المركزية المتطور (يدعم الحركات المتزامنة)
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token || !userData) return;
-    let lastLogId = null;
+
+    let lastSeenSignature = null; // توقيع عشان نميز آخر حاجة سحبناها
 
     const checkLiveUpdates = async () => {
       try {
@@ -70,32 +71,55 @@ export default function Dashboard() {
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
-            const latestAction = data[0];
-            const currentLogId = latestAction.created_at + latestAction.full_name; // توقيع فريد للحركة
             
-            // لو في حركة جديدة متسجلتش قبل كده
-            if (lastLogId !== null && lastLogId !== currentLogId) {
-               // 🚨 نستبعد حركات اليوزر نفسه عشان ميزعجوش، نبلغه بحركات الباقيين بس!
-               if (latestAction.full_name !== userData?.full_name) {
-                 setToast({ user: latestAction.full_name, action: latestAction.action, details: latestAction.details });
-                 setTimeout(() => setToast(null), 5000); // إخفاء الشريط بعد 5 ثواني
-                 
-                 // تنوير النقطة الحمراء حسب قسم الحركة
-                 if (latestAction.entity_type === 'mission') setNewUpdates(prev => ({...prev, missions: true}));
-                 if (latestAction.entity_type === 'local_news') setNewUpdates(prev => ({...prev, local_news: true}));
-                 if (latestAction.entity_type === 'global_disaster') setNewUpdates(prev => ({...prev, global_disasters: true}));
-                 if (latestAction.entity_type === 'earthquake') setNewUpdates(prev => ({...prev, earthquakes: true}));
-                 setNewUpdates(prev => ({...prev, audit: true}));
-               }
+            // أول مرة يفتح السيستم، نحدد النقطة اللي هنبدأ منها عشان منجبش القديم كله
+            if (lastSeenSignature === null) {
+              lastSeenSignature = data[0].created_at + data[0].full_name + data[0].action;
+              return;
             }
-            lastLogId = currentLogId; // تحديث الذاكرة
+
+            // تجميع كل الحركات الجديدة اللي حصلت من وقت آخر سحبة
+            const newActions = [];
+            for (const log of data) {
+              const currentSig = log.created_at + log.full_name + log.action;
+              if (currentSig === lastSeenSignature) break; // وصلنا للحاجات القديمة، نوقف سحب
+              newActions.push(log);
+            }
+
+            if (newActions.length > 0) {
+              // نحدث التوقيع لآخر حركة جديدة خالص
+              lastSeenSignature = newActions[0].created_at + newActions[0].full_name + newActions[0].action;
+
+              // نقلب المصفوفة عشان القديم يظهر الأول والجديد فوقه
+              newActions.reverse().forEach(action => {
+                if (action.full_name !== userData?.full_name) {
+                  const toastId = Date.now() + Math.random(); // رقم تعريفي لكل إشعار عشان نمسحه لوحده
+
+                  // 1. إضافة الإشعار للطابور (بيقعد 10 ثواني)
+                  setToasts(prev => [...prev, { id: toastId, user: action.full_name, action: action.action, details: action.details }]);
+                  setTimeout(() => {
+                    setToasts(prev => prev.filter(t => t.id !== toastId)); // يتمسح بعد 10 ثواني بالظبط
+                  }, 10000);
+
+                  // 2. تنوير النقطة الحمراء
+                  setNewUpdates(prev => ({
+                    ...prev,
+                    missions: prev.missions || action.entity_type === 'mission',
+                    local_news: prev.local_news || action.entity_type === 'local_news',
+                    global_disasters: prev.global_disasters || action.entity_type === 'global_disaster',
+                    earthquakes: prev.earthquakes || action.entity_type === 'earthquake',
+                    audit: true
+                  }));
+                }
+              });
+            }
           }
         }
       } catch (e) {}
     };
 
-    checkLiveUpdates(); // تشغيل فوري أول مرة
-    const interval = setInterval(checkLiveUpdates, 15000); // تكرار كل 15 ثانية
+    checkLiveUpdates();
+    const interval = setInterval(checkLiveUpdates, 15000); // يفحص كل 15 ثانية
     return () => clearInterval(interval);
   }, [userData]);
 
@@ -191,18 +215,31 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden" dir="rtl">
       
-      {/* 💡 4. شريط الإشعارات الديناميكي (بينزل من فوق ويختفي بشياكة) */}
-      <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[9999] transition-all duration-500 transform ${toast ? 'translate-y-0 opacity-100' : '-translate-y-24 opacity-0 pointer-events-none'} w-[90%] md:w-auto min-w-[300px] max-w-md`}>
-        <div className="bg-[#111] border border-[#c70000]/50 rounded-2xl p-4 shadow-[0_10px_40px_rgba(199,0,0,0.4)] flex items-center gap-4 relative overflow-hidden">
-          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#c70000] animate-pulse"></div>
-          <div className="w-10 h-10 bg-[#c70000]/20 rounded-full flex items-center justify-center border border-[#c70000]/30 shrink-0 text-[#c70000]">
-            <AlertIcon className="w-5 h-5 animate-bounce" />
+      {/* 💡 4. طابور الإشعارات الديناميكي (يعرض الحركات المتعددة بتفاصيلها) */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[90%] md:w-auto min-w-[320px] max-w-lg pointer-events-none">
+        {toasts.map(toastItem => (
+          <div key={toastItem.id} className="bg-[#111] border border-[#c70000]/50 rounded-2xl p-4 shadow-[0_10px_40px_rgba(199,0,0,0.4)] flex items-start gap-4 relative overflow-hidden animate-fade-in-up pointer-events-auto">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#c70000] animate-pulse"></div>
+            <div className="w-10 h-10 mt-1 bg-[#c70000]/20 rounded-full flex items-center justify-center border border-[#c70000]/30 shrink-0 text-[#c70000]">
+              <AlertIcon className="w-5 h-5 animate-bounce" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-white font-bold text-sm flex justify-between items-center">
+                <span>تحديث بواسطة: <span className="text-[#c70000] ml-1">{toastItem.user}</span></span>
+                {/* 💡 زرار إغلاق يدوي لو حبيت تمسحه قبل الـ 10 ثواني */}
+                <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="text-gray-500 hover:text-white transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </h4>
+              <p className="text-blue-400 text-xs mt-2 font-bold bg-[#1a1a1a] p-2 rounded-lg border border-white/5 inline-block">
+                إجراء: {toastItem.action}
+              </p>
+              <p className="text-gray-300 text-xs mt-2 leading-relaxed">
+                {toastItem.details}
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h4 className="text-white font-bold text-sm">تحديث ميداني جديد</h4>
-            <p className="text-gray-400 text-xs mt-1 leading-relaxed"><strong className="text-[#c70000]">{toast?.user}</strong> قام بـ: {toast?.action}</p>
-          </div>
-        </div>
+        ))}
       </div>
 
       {isSidebarOpen && (
