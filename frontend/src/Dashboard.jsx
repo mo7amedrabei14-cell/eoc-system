@@ -533,8 +533,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
   const userBranchId = currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19;
   
-  // بندور على اسم الفرع جوه الداتابيز الحية بدل الكاش الناقص بتاع المتصفح
-  const myBranchObj = branches.find(b => b.id === userBranchId);
+  // 💡 بندور على اسم الفرع في الداتابيز الحية مع توحيد نوع البيانات (String) عشان ميضربش
+  const myBranchObj = branches.find(b => String(b.id) === String(userBranchId));
   const userBranchName = myBranchObj ? myBranchObj.name : 'المركز العام';
   const userRegion = regionMap[userBranchName.trim()] || 'hq';
 
