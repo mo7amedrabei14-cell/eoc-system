@@ -2969,8 +2969,8 @@ function AINewsMonitorView({ branches, isOwner }) {
             {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-purple-400 hover:text-white bg-purple-500/10 px-2 py-2 rounded-lg">الكل</button>}
           </div>
           <div className="flex flex-wrap gap-3">
+            {/* 💡 زرار الإضافة اليدوية اتشال عشان نحافظ على سلامة داتا الـ AI */}
             {isOwner && <button onClick={handleExportAllExcel} className="bg-[#1a1a1a] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 w-full md:w-auto justify-center"><ExcelIcon /> تصدير السجل الشامل</button>}
-            <button onClick={handleCreateNew} className="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 w-full md:w-auto justify-center">+ رصد يدوي للمحرك</button>
           </div>
         </div>
 
@@ -2994,8 +2994,18 @@ function AINewsMonitorView({ branches, isOwner }) {
                   <td className="p-4 text-gray-300 border-l border-white/5">{n.governorate}</td>
                   <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{n.incident_description}</td>
                   <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.news_publisher}</td>
-                  <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5 text-center">
-                    <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-purple-600 text-gray-400 hover:text-white rounded-lg transition-colors"><EyeIcon /></button>
+                  <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                    <div className="flex justify-center gap-2">
+                      {/* 💡 زرار فتح اللينك الخارجي */}
+                      {n.news_link && (
+                        <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-purple-600 text-purple-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                          <GlobalWorldIcon />
+                        </a>
+                      )}
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-purple-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="عرض تفاصيل الرصد">
+                        <EyeIcon />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">لا توجد أخبار مسحوبة من الروبوت حالياً... (في انتظار ربط الباك إند)</td></tr>}

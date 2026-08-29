@@ -1187,3 +1187,139 @@ def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorization
         connection.rollback()
         raise HTTPException(500, str(e))
 
+# =====================================================================
+# قطاع رصد الذكاء الاصطناعي - AI News Module
+# =====================================================================
+
+class AINewsModel(BaseModel):
+    incident_date: Optional[str] = None
+    incident_month: Optional[str] = None
+    incident_description: Optional[str] = None
+    news_type: Optional[str] = None
+    news_publisher: Optional[str] = None
+    street_name: Optional[str] = None
+    area_name: Optional[str] = None
+    governorate: Optional[str] = None
+    hospital_name: Optional[str] = None
+    injured_count: Optional[str] = "0"
+    deaths_count: Optional[str] = "0"
+    news_updates: Optional[str] = None
+    news_link: str
+    data_entry_name: Optional[str] = "AI Robot"
+
+@app.get("/api/ai-news")
+def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM ai_news ORDER BY created_at DESC;")
+            rows = cursor.fetchall()
+            col_names = [desc[0] for desc in cursor.description]
+            result = []
+            for row in rows:
+                data = dict(zip(col_names, row))
+                for k, v in data.items():
+                    if v is not None and not isinstance(v, (str, int, float, bool)): 
+                        data[k] = str(v)
+                result.append(data)
+            return result
+    finally:
+        connection.close()
+
+@app.post("/api/ai-news")
+def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            def none_if_empty(val): return val if val != "" else None
+            
+            cursor.execute("""
+                INSERT INTO ai_news (
+                    incident_date, incident_month, incident_description, news_type, news_publisher,
+                    street_name, area_name, governorate, hospital_name, injured_count, deaths_count,
+                    news_updates, news_link, data_entry_name
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
+            """, (
+                none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
+                news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
+                news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
+                news.news_link, news.data_entry_name
+            ))
+            new_id = cursor.fetchone()[0]
+
+            # تسجيل في اللوج عشان الرادار ينور باللون البنفسجي
+            try:
+                create_audit_log(cursor, user_id, "رصد خبر آلي", mission_id=None, entity_type="ai_news", entity_id=new_id, details={"action_text": f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"})
+            except Exception as e: pass
+
+            connection.commit()
+            return {"message": "تم الحفظ بنجاح", "id": new_id}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
+
+@app.put("/api/ai-news/{news_id}")
+def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            def none_if_empty(val): return val if val != "" else None
+            cursor.execute("""
+                UPDATE ai_news SET
+                    incident_date=%s, incident_month=%s, incident_description=%s, news_type=%s, news_publisher=%s,
+                    street_name=%s, area_name=%s, governorate=%s, hospital_name=%s, injured_count=%s, deaths_count=%s,
+                    news_updates=%s, news_link=%s, data_entry_name=%s
+                WHERE id=%s;
+            """, (
+                none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
+                news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
+                news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
+                news.news_link, news.data_entry_name, news_id
+            ))
+
+            try:
+                create_audit_log(cursor, user_id, "تحديث خبر آلي", mission_id=None, entity_type="ai_news", entity_id=news_id, details={"action_text": f"تم تحديث بيانات رصد الذكاء الاصطناعي للخبر رقم {news_id}"})
+            except Exception as e: pass
+
+            connection.commit()
+            return {"message": "تم التحديث بنجاح"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
+
+@app.delete("/api/ai-news/{news_id}")
+def delete_ai_news(news_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM ai_news WHERE id = %s", (news_id,))
+            try:
+                create_audit_log(cursor, user_id, "حذف خبر آلي", mission_id=None, entity_type="ai_news", entity_id=news_id, details={"action_text": f"تم حذف الرصد الآلي رقم {news_id}"})
+            except Exception as e: pass
+            connection.commit()
+            return {"message": "تم الحذف بنجاح"}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500)
+    finally:
+        connection.close()
