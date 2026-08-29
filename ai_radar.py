@@ -1,16 +1,13 @@
 import feedparser
 import requests
-import time
-import schedule
 import json
-import threading
 import os
-from flask import Flask
+import time
 from google import genai
 from datetime import datetime
 
 # ==========================================
-# 1. إعدادات النظام والمفاتيح السريّة (من السيرفر)
+# 1. إعدادات النظام (بتتسحب من خزنة GitHub السرية)
 # ==========================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN") 
@@ -18,22 +15,6 @@ SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news"
 
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-# ==========================================
-# 2. إعداد سيرفر الويب الوهمي (عشان السيرفر السحابي ميفصلوش)
-# ==========================================
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "🤖 AI Radar is running 24/7 in the background!"
-
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-# ==========================================
-# 3. الكلمات المفتاحية والمصادر
-# ==========================================
 KEYWORDS = [
     'حريق', 'حرائق', 'انهيار', 'سقوط مبنى', 'تصادم', 'انقلاب', 'غرق', 'تسرب غاز', 
     'تسرب كيميائي', 'تسمم', 'انفجار', 'سيول', 'فيضانات', 'زلزال', 'هزة أرضية', 
@@ -51,10 +32,24 @@ RSS_FEEDS = {
     "الوطن": "https://www.elwatannews.com/home/rss"
 }
 
+# ==========================================
+# 2. تحميل الذاكرة من السيستم لمنع التكرار
+# ==========================================
 processed_news_links = set()
+try:
+    if SYSTEM_TOKEN:
+        headers = {"Authorization": f"Bearer {SYSTEM_TOKEN}"}
+        res = requests.get(SYSTEM_API_URL, headers=headers)
+        if res.ok:
+            for news in res.json():
+                if news.get("news_link"):
+                    processed_news_links.add(news.get("news_link"))
+        print(f"📦 تم تحميل {len(processed_news_links)} رابط سابق من الداتا بيز لعدم التكرار.")
+except Exception as e:
+    print(f"⚠️ فشل جلب الأخبار السابقة: {e}")
 
 # ==========================================
-# 4. محرك البحث والذكاء الاصطناعي
+# 3. التحليل بالذكاء الاصطناعي
 # ==========================================
 def analyze_news_with_ai(news_text):
     prompt = f"""
@@ -78,9 +73,12 @@ def analyze_news_with_ai(news_text):
         print(f"❌ خطأ AI: {e}")
         return None
 
+# ==========================================
+# 4. محرك المسح والإرسال
+# ==========================================
 def run_ai_scanner():
     if not GEMINI_API_KEY or not SYSTEM_TOKEN:
-        print("⚠️ المفاتيح السرية غير موجودة! الرجاء إضافتها في إعدادات السيرفر.")
+        print("⚠️ المفاتيح السرية مفقودة!")
         return
 
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 بدء المسح...")
@@ -116,19 +114,10 @@ def run_ai_scanner():
                         if res.status_code in [200, 201]: print("✅ تم الإرسال بنجاح!")
                     
                     processed_news_links.add(news_link)
-                time.sleep(4) # فرملة لمنع الحظر من جوجل
+                time.sleep(4) 
         except Exception as e:
             print(f"❌ خطأ مسح {publisher}")
-
-def start_background_tasks():
-    schedule.every(10).minutes.do(run_ai_scanner)
-    run_ai_scanner()
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    print("✅ انتهت دورة المسح بنجاح.")
 
 if __name__ == '__main__':
-    # تشغيل الروبوت في الخلفية (Thread)
-    threading.Thread(target=start_background_tasks, daemon=True).start()
-    # تشغيل سيرفر الويب في الواجهة عشان Render يقبله
-    run_flask()
+    run_ai_scanner()

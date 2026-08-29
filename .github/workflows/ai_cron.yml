@@ -1,0 +1,29 @@
+name: AI Radar Scanner 🤖
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # التشغيل كل 15 دقيقة
+  workflow_dispatch: # زرار للتشغيل اليدوي
+
+jobs:
+  scan-news:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: تحميل ملفات المشروع
+        uses: actions/checkout@v3
+
+      - name: تجهيز بيئة البايثون
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: تسطيب المكتبات المطلوبة
+        run: |
+          pip install feedparser requests google-genai
+
+      - name: تشغيل محرك الذكاء الاصطناعي
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
+        run: python ai_radar.py
