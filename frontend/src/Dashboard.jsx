@@ -522,29 +522,32 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
 
-  const regionMap = {
-    'المركز العام': 'hq', 'القاهرة': 'hq', 'الجيزة': 'hq', 'القليوبية': 'hq', 'الاسكندرية': 'hq', 'البحيرة': 'hq', 'مرسي مطروح': 'hq',
-    'الاسماعيلية': 'canal', 'بورسعيد': 'canal', 'السويس': 'canal', 'شمال سيناء': 'canal', 'جنوب سيناء': 'canal', 'الشرقية': 'canal',
-    'الغربية': 'delta', 'الدقهلية': 'delta', 'كفر الشيخ': 'delta', 'المنوفية': 'delta', 'دمياط': 'delta',
-    'الفيوم': 'saeed', 'بنى سويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الوادي الجديد': 'saeed', 'البحر الاحمر': 'saeed'
+  // 1. الدالة السحرية لتوحيد الأسماء (عشان ميعملش شاشة بيضا تحت)
+  const normalizeName = (name) => {
+    if (!name) return '';
+    return name.replace(/[أإآا]/g, 'ا').replace(/[يى]/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, '').trim();
   };
 
-  // 💡 كود الطوارئ الذكي السليم (لحل مشكلة الشاشة البيضاء)
+  // 2. خريطة الأقاليم بالأسماء الموحدة (عشان تتطابق 100% مع الدالة بدون مسافات)
+  const regionMap = {
+    'المركزالعام': 'hq', 'القاهره': 'hq', 'الجيزه': 'hq', 'القليوبيه': 'hq', 'البحيره': 'hq', 'الاسكندريه': 'hq', 'مرسيمطروح': 'hq', 'مطروح': 'hq',
+    'الاسماعيليه': 'canal', 'بورسعيد': 'canal', 'السويس': 'canal', 'شمالسيناء': 'canal', 'جنوبسيناء': 'canal', 'الشرقيه': 'canal',
+    'الغربيه': 'delta', 'الدقهليه': 'delta', 'كفرالشيخ': 'delta', 'المنوفيه': 'delta', 'دمياط': 'delta',
+    'الفيوم': 'saeed', 'بنيسويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الواديالجديد': 'saeed', 'البحرالاحمر': 'saeed'
+  };
+
+  // 3. استخراج بيانات اليوزر وتحديد الإقليم بالاسم (كود الطوارئ لضمان العزل)
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
   const userFullName = (currentUserData?.full_name || '').toLowerCase();
-  
-  // 🚨 تعريف المتغيرات بره عشان ميعملش خطأ (ReferenceError) ويضرب شاشة بيضا
   const userBranchId = currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19;
   const userBranchName = currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام';
   
-  let userRegion = 'hq'; // الافتراضي
-  
-  // 🚨 إجبار السيستم على الإقليم من اسم الحساب مباشرة
+  let userRegion = 'hq';
   if (userFullName.includes('delta')) userRegion = 'delta';
   else if (userFullName.includes('canal')) userRegion = 'canal';
   else if (userFullName.includes('upper') || userFullName.includes('saeed')) userRegion = 'saeed';
   else {
-    userRegion = regionMap[userBranchName.trim()] || 'hq';
+    userRegion = regionMap[normalizeName(userBranchName)] || 'hq';
   }
 
   const getLocalDate = () => {
@@ -1135,10 +1138,10 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                     </StyledSelect>
                   </FormGroup>
                   <FormGroup label="التمركز / الفرع">
-                    <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || ''}>
+                    <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || userBranchId}>
                       {!isVolunteer && <option value="19">المركز العام</option>}
                       {branches.map(b => {
-                        const isBranchInMyRegion = (regionMap[b.name.trim()] || 'hq') === userRegion;
+                        const isBranchInMyRegion = (regionMap[normalizeName(b.name)] || 'hq') === userRegion;
                         if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                           return <option key={b.id} value={b.id}>{b.name}</option>;
                         }
@@ -1278,13 +1281,13 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                           <td className="p-2">
                             <select 
                               id={`p_branch_${index}`} 
-                              defaultValue={p.branch_id || ''} 
+                              defaultValue={p.branch_id || userBranchId} 
                               disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}
                               className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-gray-600 cursor-not-allowed' : 'text-white'}`}
                             >
                               {!isVolunteer && <option value="19" className="bg-[#111]">المركز العام</option>}
                               {branches.map(b => {
-                                const isBranchInMyRegion = (regionMap[b.name.trim()] || 'hq') === userRegion;
+                                const isBranchInMyRegion = (regionMap[normalizeName(b.name)] || 'hq') === userRegion;
                                 if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                                   return <option key={b.id} value={b.id} className="bg-[#111]">{b.name}</option>;
                                 }
