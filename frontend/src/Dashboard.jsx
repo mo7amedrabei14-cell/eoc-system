@@ -888,6 +888,12 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
        });
 
        const fieldStatus = document.getElementById('f_mission_field_status')?.value || 'نشطة الآن';
+       
+       // 🚨 التعديل الأول: منع إنهاء المهمة لو الحالة الميدانية لم تنتهي
+       if (submitStatus === 'Completed' && fieldStatus !== 'مكتملة') {
+         return setCustomAlert("عفواً! لا يمكن إنهاء وإغلاق المهمة إلا بعد تغيير 'حالة العملية الميدانية' في الاستمارة إلى (مكتملة).");
+       }
+
        let generalNotes = document.getElementById('f_notes')?.value || '';
        let finalNotes = `[حالة الميدان: ${fieldStatus}]\n` + generalNotes;
 
@@ -1469,45 +1475,58 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
               {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير الاستمارة</button>}
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
               
+              {/* 👑 المالك (God Mode) */}
               {isOwner ? (
                 <>
-                  <button onClick={() => handleSubmit('Draft')} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold">مسودة</button>
-                  <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold">إرسال للجوكر</button>
-                  <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
-                  <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">تم مراجعة المهمة</button>
-                  <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
-                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>}
+                  <button onClick={() => handleSubmit('Draft')} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">مسودة</button>
+                  <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرسال للجوكر</button>
+                  <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
+                  <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">تم مراجعة المهمة (مستمرة)</button>
+                  <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
+                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>}
                 </>
               ) : (
+                /* 👷 باقي الرتب */
                 <>
+                  {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة */}
                   {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
                     <>
-                      <button onClick={() => handleSubmit('Draft')} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold">حفظ كمسودة</button>
-                      <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">إرسال إلى الجوكر</button>
+                      <button onClick={() => handleSubmit('Draft')} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">حفظ كمسودة</button>
+                      <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرسال إلى الجوكر</button>
                     </>
                   )}
+                  
+                  {/* 2. الإداري (الجوكر والمشرف) لو الاستمارة قيد المراجعة */}
                   {currentMissionData?.status === 'Under Review' && !isVolunteer && (
                     <>
-                      <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
-                      <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">تم مراجعة المهمة (مستمرة)</button>
-                      <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
+                      <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
+                      <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">تم مراجعة المهمة (مستمرة)</button>
+                      <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
                     </>
                   )}
+                  
+                  {/* 3. لو الاستمارة معتمدة وشغالة */}
                   {currentMissionData?.status === 'Approved' && (
                     <>
-                      {isVolunteer && <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">إرسال التحديثات للجوكر</button>}
+                      {/* المتطوع يشوف زرار إرسال التحديثات فقط */}
+                      {isVolunteer && <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرسال التحديثات للجوكر</button>}
+                      
+                      {/* الإداري (الجوكر وفوق) يقدر يرجعها، يخليها مستمرة، أو يقفلها */}
                       {!isVolunteer && (
                         <>
-                          <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
-                          <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
+                          <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
+                          <button onClick={() => handleSubmit('Approved')} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">تم مراجعة المهمة (مستمرة)</button>
+                          <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
                         </>
                       )}
                     </>
                   )}
+                  
+                  {/* 4. لو الاستمارة مكتملة (مغلقة) */}
                   {currentMissionData?.status === 'Completed' && !isVolunteer && (
                     <>
-                      <button onClick={() => handleSubmit('Completed')} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)]">حفظ التعديلات (كمكتملة)</button>
-                      <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>
+                      <button onClick={() => handleSubmit('Completed')} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)]">حفظ التعديلات (وهي مقفولة)</button>
+                      <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>
                     </>
                   )}
                 </>
