@@ -47,12 +47,57 @@ export default function Dashboard() {
   const [branchesList, setBranchesList] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({ active_missions: '-', ready_teams: '-', emergency_level: '-', under_review: '-', approved: '-', completed: '-', drafts: '-' });
 
-// 💡 تعريف الصلاحيات (فصل ربيع كمالك بصلاحيات مطلقة)
+  // 💡 1. حالات نظام الإشعارات والرادار (الجديدة)
+  const [toast, setToast] = useState(null);
+  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false });
+
+  // 💡 تعريف الصلاحيات (فصل ربيع كمالك بصلاحيات مطلقة)
   const userRole = userData?.role?.toUpperCase() || 'VOLUNTEER';
   const isOwner = userData?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
   const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
   const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
   const isVolunteer = !isOwner && !isSupervisor && !isJoker;
+
+  // 💡 2. رادار الغرفة المركزية (يسحب التحديثات بصمت كل 15 ثانية)
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token || !userData) return;
+    let lastLogId = null;
+
+    const checkLiveUpdates = async () => {
+      try {
+        const res = await fetch('https://eoc-system.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            const latestAction = data[0];
+            const currentLogId = latestAction.created_at + latestAction.full_name; // توقيع فريد للحركة
+            
+            // لو في حركة جديدة متسجلتش قبل كده
+            if (lastLogId !== null && lastLogId !== currentLogId) {
+               // 🚨 نستبعد حركات اليوزر نفسه عشان ميزعجوش، نبلغه بحركات الباقيين بس!
+               if (latestAction.full_name !== userData?.full_name) {
+                 setToast({ user: latestAction.full_name, action: latestAction.action, details: latestAction.details });
+                 setTimeout(() => setToast(null), 5000); // إخفاء الشريط بعد 5 ثواني
+                 
+                 // تنوير النقطة الحمراء حسب قسم الحركة
+                 if (latestAction.entity_type === 'mission') setNewUpdates(prev => ({...prev, missions: true}));
+                 if (latestAction.entity_type === 'local_news') setNewUpdates(prev => ({...prev, local_news: true}));
+                 if (latestAction.entity_type === 'global_disaster') setNewUpdates(prev => ({...prev, global_disasters: true}));
+                 if (latestAction.entity_type === 'earthquake') setNewUpdates(prev => ({...prev, earthquakes: true}));
+                 setNewUpdates(prev => ({...prev, audit: true}));
+               }
+            }
+            lastLogId = currentLogId; // تحديث الذاكرة
+          }
+        }
+      } catch (e) {}
+    };
+
+    checkLiveUpdates(); // تشغيل فوري أول مرة
+    const interval = setInterval(checkLiveUpdates, 15000); // تكرار كل 15 ثانية
+    return () => clearInterval(interval);
+  }, [userData]);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -115,9 +160,10 @@ export default function Dashboard() {
   useEffect(() => {
     document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
-  // 💡 دالة الانتقال الذكية: بتغير الصفحة وتقفل القائمة في الموبايل بس (لما يكون عرض الشاشة أقل من 768 بيكسل)
+  // 💡 3. دالة الانتقال الذكية (بتفتح الصفحة، تقفل الموبايل، وتمسح الإشعار)
   const handleNavigation = (tabName) => {
     setActiveTab(tabName);
+    setNewUpdates(prev => ({ ...prev, [tabName]: false })); // إخفاء النقطة الحمراء بعد قراءة التحديث
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
@@ -145,12 +191,24 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden" dir="rtl">
       
-      {/* 💡 1. خلفية ضبابية تظهر في الموبايل فقط لما القائمة تكون مفتوحة (وتقفلها لما تدوس عليها) */}
+      {/* 💡 4. شريط الإشعارات الديناميكي (بينزل من فوق ويختفي بشياكة) */}
+      <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[9999] transition-all duration-500 transform ${toast ? 'translate-y-0 opacity-100' : '-translate-y-24 opacity-0 pointer-events-none'} w-[90%] md:w-auto min-w-[300px] max-w-md`}>
+        <div className="bg-[#111] border border-[#c70000]/50 rounded-2xl p-4 shadow-[0_10px_40px_rgba(199,0,0,0.4)] flex items-center gap-4 relative overflow-hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#c70000] animate-pulse"></div>
+          <div className="w-10 h-10 bg-[#c70000]/20 rounded-full flex items-center justify-center border border-[#c70000]/30 shrink-0 text-[#c70000]">
+            <AlertIcon className="w-5 h-5 animate-bounce" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-white font-bold text-sm">تحديث ميداني جديد</h4>
+            <p className="text-gray-400 text-xs mt-1 leading-relaxed"><strong className="text-[#c70000]">{toast?.user}</strong> قام بـ: {toast?.action}</p>
+          </div>
+        </div>
+      </div>
+
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
       )}
 
-      {/* 💡 2. السايد بار المنيع: تم استخدام (right) بدل (translate) لتجنب أي تعارض مع الـ RTL واختفاء القائمة */}
       <aside className={`bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 h-screen z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
         <div className="overflow-y-auto custom-scrollbar flex-1">
           {isSidebarOpen ? (
@@ -174,12 +232,13 @@ export default function Dashboard() {
 
           <nav className="p-4 space-y-2 mt-2">
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
-            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} />
-            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => handleNavigation('local_news')} isOpen={isSidebarOpen} />
-            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => handleNavigation('global_disasters')} isOpen={isSidebarOpen} />
-            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} />
+            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
+            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => handleNavigation('local_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.local_news} />
+            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => handleNavigation('global_disasters')} isOpen={isSidebarOpen} hasUpdate={newUpdates.global_disasters} />
+            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} hasUpdate={newUpdates.earthquakes} />
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => handleNavigation('branches_inventory')} isOpen={isSidebarOpen} />}
-            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} />}
+            {/* 💡 هنا القوس اللي كان ناقص وتم إضافته */}
+            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
         <div className="p-4 border-t border-white/5">
@@ -1529,11 +1588,18 @@ const VehicleRow = ({ index, onRemove, data }) => (
   </div>
 );
 
-function NavItem({ icon, label, isActive, onClick, isOpen = true }) { 
+// 💡 دالة زراير القائمة (مزودة بدعم النقطة الحمراء للإشعارات)
+function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = false }) { 
   return ( 
-    <button onClick={onClick} title={!isOpen ? label : ''} className={`flex items-center p-4 rounded-xl transition-all duration-300 ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-gray-400 hover:bg-[#111] hover:text-white'} ${isOpen ? 'w-full gap-4' : 'w-14 justify-center mx-auto'}`}> 
-      <div className="shrink-0">{icon}</div> 
-      {isOpen && <span className="font-bold text-sm tracking-wide truncate">{label}</span>} 
+    <button onClick={onClick} title={!isOpen ? label : ''} className={`relative flex items-center p-4 rounded-xl transition-all duration-300 ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-gray-400 hover:bg-[#111] hover:text-white'} ${isOpen ? 'w-full gap-4' : 'w-14 justify-center mx-auto'}`}> 
+      <div className="shrink-0 relative">
+        {icon}
+        {/* 💡 نقطة التنبيه والأيقونة مقفولة */}
+        {!isOpen && hasUpdate && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border border-[#0c0c0c] shadow-[0_0_5px_rgba(239,68,68,0.8)]"></span>}
+      </div> 
+      {isOpen && <span className="font-bold text-sm tracking-wide truncate flex-1 text-right">{label}</span>} 
+      {/* 💡 نقطة التنبيه والقائمة مفتوحة */}
+      {isOpen && hasUpdate && <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] shrink-0"></span>}
     </button> 
   ); 
 }
