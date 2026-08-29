@@ -507,7 +507,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
   const [currentMissionData, setCurrentMissionData] = useState(null);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
   
-const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnText, setReturnText] = useState('');
   const [returnError, setReturnError] = useState('');
   const [mainRouteTitle, setMainRouteTitle] = useState('خط السير الأساسي');
@@ -522,13 +522,13 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
 
-  // 1. الدالة السحرية لتوحيد الأسماء (عشان ميعملش شاشة بيضا تحت)
+  // 1. الدالة السحرية بأمان تام (لمنع أي شاشة بيضاء)
   const normalizeName = (name) => {
     if (!name) return '';
-    return name.replace(/[أإآا]/g, 'ا').replace(/[يى]/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, '').trim();
+    return String(name).replace(/[أإآا]/g, 'ا').replace(/[يى]/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, '').trim();
   };
 
-  // 2. خريطة الأقاليم بالأسماء الموحدة (عشان تتطابق 100% مع الدالة بدون مسافات)
+  // 2. خريطة الأقاليم بناءً على الأسماء الموحدة
   const regionMap = {
     'المركزالعام': 'hq', 'القاهره': 'hq', 'الجيزه': 'hq', 'القليوبيه': 'hq', 'البحيره': 'hq', 'الاسكندريه': 'hq', 'مرسيمطروح': 'hq', 'مطروح': 'hq',
     'الاسماعيليه': 'canal', 'بورسعيد': 'canal', 'السويس': 'canal', 'شمالسيناء': 'canal', 'جنوبسيناء': 'canal', 'الشرقيه': 'canal',
@@ -536,25 +536,27 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
     'الفيوم': 'saeed', 'بنيسويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الواديالجديد': 'saeed', 'البحرالاحمر': 'saeed'
   };
 
-  // 3. استخراج بيانات اليوزر وتحديد الإقليم بالاسم (كود الطوارئ لضمان العزل)
-  // 💡 استخراج بيانات اليوزر
+  // 3. خريطة الأقاليم بناءً على أرقام الفروع (مستحيل تغلط لو الأسماء اتغيرت)
+  const branchIdToRegion = {
+    19: 'hq', 13: 'hq', 20: 'hq', 8: 'hq', 12: 'hq', 32: 'hq', 
+    9: 'canal', 25: 'canal', 15: 'canal', 29: 'canal', 26: 'canal', 16: 'canal',
+    17: 'delta', 14: 'delta', 31: 'delta', 21: 'delta', 27: 'delta',
+    18: 'saeed', 24: 'saeed', 22: 'saeed', 7: 'saeed', 28: 'saeed', 30: 'saeed', 10: 'saeed', 6: 'saeed', 23: 'saeed', 11: 'saeed'
+  };
+
+  // 4. استخراج بيانات اليوزر وتحديد إقليمه (تأمين ثلاثي الأبعاد ضد أخطاء الكاش)
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-  
-  // 🚨 الحل هنا: هندور في الـ username (operation.delta) مش الـ full_name عشان الداتابيز
-  const username = (currentUserData?.username || '').toLowerCase();
-  
-  const userBranchId = currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19;
-  const userBranchName = currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام';
+  const username = String(currentUserData?.username || '').toLowerCase();
+  const userBranchId = Number(currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19);
+  const userBranchName = String(currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام');
   
   let userRegion = 'hq'; // الافتراضي
   
-  // 🚨 إجبار السيستم على الإقليم من اسم المستخدم (username)
   if (username.includes('delta')) userRegion = 'delta';
   else if (username.includes('canal')) userRegion = 'canal';
   else if (username.includes('upper') || username.includes('saeed')) userRegion = 'saeed';
-  else {
-    userRegion = regionMap[normalizeName(userBranchName)] || 'hq';
-  }
+  else if (branchIdToRegion[userBranchId]) userRegion = branchIdToRegion[userBranchId];
+  else userRegion = regionMap[normalizeName(userBranchName)] || 'hq';
 
   const getLocalDate = () => {
     const d = new Date();
@@ -564,7 +566,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [missionViewType, setMissionViewType] = useState('all_types'); 
   const [missionClass, setMissionClass] = useState('عادية');
   const [statusFilter, setStatusFilter] = useState('all'); 
-  const [searchTerm, setSearchTerm] = useState(''); // 💡 السيرش
+  const [searchTerm, setSearchTerm] = useState(''); 
 
   const fetchMissions = async () => {
     setIsLoading(true);
@@ -581,13 +583,11 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
   const removeRoute = (id) => setRoutes(routes.filter(r => r.id !== id));
-
   const addCustomItinerary = () => setCustomItineraries([...customItineraries, { id: Date.now(), title: '', routes: [{ id: Date.now() }] }]);
   const removeCustomItinerary = (id) => setCustomItineraries(customItineraries.filter(c => c.id !== id));
   const addRouteToCustom = (customId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: [...c.routes, { id: Date.now() }] } : c));
   const removeRouteFromCustom = (customId, routeId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: c.routes.filter(r => r.id !== routeId) } : c));
   const updateCustomTitle = (customId, newTitle) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, title: newTitle } : c));
-
   const addVehicle = () => setVehicles([...vehicles, { id: Date.now() }]);
   const addParticipant = () => setParticipants([...participants, { id: Date.now() }]);
   const addBeneficiary = () => setBeneficiaries([...beneficiaries, { id: Date.now() }]);
@@ -766,12 +766,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   const handleSubmit = async (submitStatus) => {
      try {
-       // ==========================================
-       // 🚨 رادار غرفة العمليات: منع تكرار المشاركين
-       // ==========================================
-       // ==========================================
-       // 🚨 رادار غرفة العمليات: ذكي (يدعم المهام المفتوحة وتعدد التحركات)
-       // ==========================================
        const activeParticipants = {}; 
        let hasDuplicateError = false;
 
@@ -786,8 +780,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
          const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
 
-         // الرادار بيتدخل فقط لو المتطوع حالته الحالية "بالمهمة"
-         // مينفعش يكون نفس الشخص "بالمهمة" مرتين في نفس اللحظة!
          if (pStatus === 'بالمهمة') {
            if (activeParticipants[uniqueKey]) {
              setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر ومسجل كـ "بالمهمة" أكثر من مرة!\n\nلا يمكن أن يكون المتطوع متواجد في تحركين نشطين في نفس الوقت.\nيجب تسجيل عودته أولاً من التحرك السابق (عاد للقاعدة) قبل إضافة تحرك جديد له.`);
@@ -799,9 +791,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
        });
        if (hasDuplicateError) return;
 
-       // ==========================================
-       // استكمال تجميع البيانات وحفظها
-       // ==========================================
        const allRoutes = [];
        if (missionClass !== 'مفتوحة') {
            routes.forEach((_, i) => {
@@ -897,9 +886,12 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   let baseMissions = missionsList;
 
-  // 🚨 حائط الصد: المتطوع (الأوبريشن) فقط مقفول عليه إقليمه.. باقي الرتب تشوف كل حاجة!
+  // 🚨 حائط الصد: المتطوع مقفول عليه إقليمه فقط
   if (isVolunteer) {
-    baseMissions = baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === userRegion);
+    baseMissions = baseMissions.filter(m => {
+      const missionRegion = regionMap[normalizeName(m.branch)] || 'hq';
+      return missionRegion === userRegion;
+    });
   }
 
   if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
@@ -917,17 +909,16 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
   else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
 
-  // 💡 إحصائيات الأقاليم بتتأثر بالفلاتر (التاريخ، النشط، النوع) عشان تشوف الأرقام الحقيقية!
-  // 💡 إحصائيات الأقاليم بتتأثر بالفلاتر (التاريخ، النشط، النوع) عشان تشوف الأرقام الحقيقية!
+  // 💡 إحصائيات الأقاليم
   const regionStats = {
     total: baseMissions.length,
-    hq: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'hq').length,
-    canal: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'canal').length,
-    delta: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'delta').length,
-    saeed: baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === 'saeed').length,
+    hq: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'hq').length,
+    canal: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'canal').length,
+    delta: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'delta').length,
+    saeed: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'saeed').length,
   };
 
-  let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[m.branch?.trim()] || 'hq') === activeRegionTab) : baseMissions;
+  let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === activeRegionTab) : baseMissions;
 
   if (searchTerm.trim() !== '') {
     const term = searchTerm.toLowerCase();
@@ -962,9 +953,18 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex flex-col gap-3">
+          
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
-            {isVolunteer && <span className="bg-[#c70000]/20 text-[#c70000] px-3 py-1 rounded-lg text-xs font-bold border border-[#c70000]/30 font-mono">الفرع: {userBranchName} | الإقليم: {userRegion}</span>}
+            {isVolunteer ? (
+              <span className="bg-[#c70000]/20 text-[#c70000] px-3 py-1 rounded-lg text-xs font-bold border border-[#c70000]/30 font-mono">
+                حساب أوبريشن | الإقليم المعزول: {userRegion === 'delta' ? 'الدلتا' : userRegion === 'canal' ? 'القنال' : userRegion === 'saeed' ? 'الصعيد' : 'المركز العام'}
+              </span>
+            ) : (
+              <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold border border-blue-500/30 font-mono">
+                حساب إداري | الصلاحية: كل الأقاليم
+              </span>
+            )}
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
@@ -976,7 +976,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
             <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
 
-            {/* 💡 فلتر الحالة + فلتر الإقليم مع بعض! */}
             <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
               <button onClick={() => setStatusFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'all' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الكل</button>
               <button onClick={() => setStatusFilter('active')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'active' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>نشطة</button>
@@ -1013,20 +1012,12 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
         </div>
       </div>
 
-      {/* 💡 السيرش بار الجديد */}
       <div className="mt-4 bg-[#111] border border-white/10 rounded-2xl p-2 flex items-center gap-3 w-full shadow-inner focus-within:border-[#c70000]/50 transition-colors">
         <svg className="w-5 h-5 text-gray-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-        <input 
-          type="text" 
-          placeholder="بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="bg-transparent text-white text-sm w-full outline-none font-bold"
-        />
+        <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-white text-sm w-full outline-none font-bold" />
         {searchTerm && <button onClick={() => setSearchTerm('')} className="bg-red-500/10 text-red-500 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-500/20">مسح</button>}
       </div>
 
-      {/* 💡 داشبورد مصغر للأقاليم في سجل المهام (بيسمع كل الفلاتر) */}
       {!isVolunteer && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[#0a0a0a] border-b border-white/5 shrink-0">
         <StatCard title="إجمالي المهام المفلترة" value={regionStats.total} color="text-white" borderHighlight />
@@ -1037,19 +1028,14 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
       </div>
       )}
 
-      {/* خلفية سوداء شفافة تظهر ورا الجدول لما يكبر */}
       {isTableExpanded && <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
       
-      {/* حاوية الجدول */}
       <div className={isTableExpanded ? "fixed inset-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" : "flex-1 flex flex-col overflow-hidden relative"}>
         
-        {/* هيدر الجدول (يظهر فقط عند التكبير ويحتوي على زر الـ X) */}
         {isTableExpanded && (
           <div className="p-4 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0">
             <h2 className="text-lg font-bold text-white flex items-center gap-2"><EyeIcon className="w-5 h-5" /> سجل متابعة المهام الميدانية الشامل</h2>
-            <button onClick={() => setIsTableExpanded(false)} className="bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white p-2 rounded-xl transition-colors shadow-sm">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+            <button onClick={() => setIsTableExpanded(false)} className="bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white p-2 rounded-xl transition-colors shadow-sm"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
           </div>
         )}
         
@@ -1147,7 +1133,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                     <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || userBranchId}>
                       {!isVolunteer && <option value="19">المركز العام</option>}
                       {branches.map(b => {
-                        const isBranchInMyRegion = (regionMap[normalizeName(b.name)] || 'hq') === userRegion;
+                        const branchRegion = branchIdToRegion[b.id] || regionMap[normalizeName(b.name)] || 'hq';
+                        const isBranchInMyRegion = branchRegion === userRegion;
                         if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                           return <option key={b.id} value={b.id}>{b.name}</option>;
                         }
@@ -1293,7 +1280,8 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                             >
                               {!isVolunteer && <option value="19" className="bg-[#111]">المركز العام</option>}
                               {branches.map(b => {
-                                const isBranchInMyRegion = (regionMap[normalizeName(b.name)] || 'hq') === userRegion;
+                                const branchRegion = branchIdToRegion[b.id] || regionMap[normalizeName(b.name)] || 'hq';
+                                const isBranchInMyRegion = branchRegion === userRegion;
                                 if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                                   return <option key={b.id} value={b.id} className="bg-[#111]">{b.name}</option>;
                                 }
@@ -1397,7 +1385,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2"><ExcelIcon /> تصدير الاستمارة</button>}
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
               
-              {/* 👑 المالك (God Mode): كل الزراير متاحة ومفتوحة دايماً */}
               {isOwner ? (
                 <>
                   <button onClick={() => handleSubmit('Draft')} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold">مسودة</button>
@@ -1408,17 +1395,13 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>}
                 </>
               ) : (
-                /* 👷 باقي الرتب بتمشي على السايكل الصارمة اللي إنت طلبتها */
                 <>
-                  {/* 1. استمارة جديدة / مسودة / معادة */}
                   {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
                     <>
                       <button onClick={() => handleSubmit('Draft')} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold">حفظ كمسودة</button>
                       <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">إرسال إلى الجوكر</button>
                     </>
                   )}
-
-                  {/* 2. قيد المراجعة (زرار الإنهاء يظهر للجوكر هنا لو المتطوع كان باعتها كإنهاء) */}
                   {currentMissionData?.status === 'Under Review' && !isVolunteer && (
                     <>
                       <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
@@ -1426,8 +1409,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                       <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
                     </>
                   )}
-
-                  {/* 3. معتمدة (شغالة) - المتطوع آخره يبعت التحديثات للجوكر */}
                   {currentMissionData?.status === 'Approved' && (
                     <>
                       {isVolunteer && <button onClick={() => handleSubmit('Under Review')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold">إرسال التحديثات للجوكر</button>}
@@ -1439,8 +1420,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                       )}
                     </>
                   )}
-
-                  {/* 4. مكتملة (مقفولة) - المتطوع ميشوفش حاجة، بس الجوكر والمشرف يقدروا يعدلوا أخطاء ويحفظوها تاني كمكتملة */}
                   {currentMissionData?.status === 'Completed' && !isVolunteer && (
                     <>
                       <button onClick={() => handleSubmit('Completed')} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)]">حفظ التعديلات (كمكتملة)</button>
@@ -1451,8 +1430,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
               )}
             </div>
             
-            {/* 💡 نافذة (Modal) كتابة سبب الإرجاع */}
-            {/* 💡 نافذة (Modal) الإرجاع بتصميم احترافي (بدون Alerts متصفح) */}
             {returnModalOpen && (
               <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[120] p-4">
                 <div className="bg-[#0c0c0c] border border-yellow-600/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(202,138,4,0.2)] animate-fade-in-up text-center">
@@ -1460,7 +1437,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                   <h3 className="text-xl font-bold text-white mb-2">إرجاع الاستمارة للمتطوع</h3>
                   <p className="text-gray-400 text-sm mb-4 leading-relaxed">برجاء كتابة سبب الإرجاع أو التعديلات المطلوبة بوضوح.</p>
                   
-                  {/* 💡 الإشعار الشيك لو داس تأكيد وهو سايب الخانة فاضية */}
                   {returnError && (
                     <div className="w-full bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold p-3 rounded-xl mb-4 flex items-center justify-center gap-2">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -1486,7 +1462,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                         setReturnError('');
                         handleSubmit('Returned');
                       } else { 
-                        // 💡 هنا بنغير قيمة الإشعار بدل الـ Alert المستفز
                         setReturnError('برجاء كتابة سبب الإرجاع بوضوح لتوجيه المتطوع!'); 
                       }
                     }} className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(202,138,4,0.3)] transition-all">تأكيد الإرجاع</button>
@@ -1497,7 +1472,6 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
             </div>
         </div>
       )}
-      {/* -- تصميم التنبيه الإداري الفخم -- */}
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
