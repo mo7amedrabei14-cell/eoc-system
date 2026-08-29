@@ -115,6 +115,13 @@ export default function Dashboard() {
   useEffect(() => {
     document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
+  // 💡 دالة الانتقال الذكية: بتغير الصفحة وتقفل القائمة في الموبايل بس (لما يكون عرض الشاشة أقل من 768 بيكسل)
+  const handleNavigation = (tabName) => {
+    setActiveTab(tabName);
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -166,14 +173,13 @@ export default function Dashboard() {
           )}
 
           <nav className="p-4 space-y-2 mt-2">
-            {/* 💡 3. القايمة بتقفل أوتوماتيك في الموبايل لما تختار منها شاشة */}
-            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => { setActiveTab('home'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />}
-            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => { setActiveTab('missions'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
-            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => { setActiveTab('local_news'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
-            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => { setActiveTab('global_disasters'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
-            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => { setActiveTab('earthquakes'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
-            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => { setActiveTab('branches_inventory'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />}
-            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => { setActiveTab('audit'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />}
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
+            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} />
+            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => handleNavigation('local_news')} isOpen={isSidebarOpen} />
+            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => handleNavigation('global_disasters')} isOpen={isSidebarOpen} />
+            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} />
+            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => handleNavigation('branches_inventory')} isOpen={isSidebarOpen} />}
+            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} />}
           </nav>
         </div>
         <div className="p-4 border-t border-white/5">
