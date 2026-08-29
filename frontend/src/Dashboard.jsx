@@ -1213,11 +1213,23 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
                 <td className="p-4 text-gray-400 border-l border-white/5">{m.completion_date}</td>
                 <td className="p-4 border-l border-white/5 text-center"><StatusBadge status={m.status} /></td>
                 <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
-                  <div className="flex justify-center gap-2">
-                    <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
-                    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
-                  </div>
-                </td>
+                    <div className="flex justify-center gap-2">
+                      {n.news_link && (
+                        <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-purple-600 text-purple-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                          <GlobalWorldIcon />
+                        </a>
+                      )}
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-purple-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="عرض تفاصيل الرصد">
+                        <EyeIcon />
+                      </button>
+                      {/* 💡 زرار المسح: تم فتح الصلاحية للمالك والمشرفين لضمان ظهوره دائماً */}
+                      {(isOwner || isSupervisor) && (
+                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف السجل نهائياً">
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div>
+                  </td>
               </tr>
             )) : (<tr><td colSpan="16" className="p-8 text-center text-gray-500">لا توجد مهام مطابقة</td></tr>)}
           </tbody>
@@ -2898,9 +2910,6 @@ const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<di
 // ==========================================
 // 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor)
 // ==========================================
-// ==========================================
-// 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor)
-// ==========================================
 function AINewsMonitorView({ branches, isOwner }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
@@ -2918,8 +2927,10 @@ function AINewsMonitorView({ branches, isOwner }) {
 
   const AI_NEWS_TYPES = ['حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'];
   
+  // دمج المحافظات وتبديل المركز العام بالقاهرة لتطابق الأخبار
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
 
+  // 💡 هنا بنجيب الداتا (حالياً بيسحب من مسار وهمي لحد ما تعمل الباك إند)
   useEffect(() => {
     const fetchAiNews = async () => {
       try {
@@ -2959,6 +2970,7 @@ function AINewsMonitorView({ branches, isOwner }) {
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "سجل الرصد الآلي"); XLSX.writeFile(wb, `سجل_الذكاء_الاصطناعي.xlsx`);
   };
 
+  // 💡 التعديل: تفعيل دالة الحفظ للمالك فقط وربطها بالباك إند
   const handleSubmit = async () => {
     if (!isOwner) return;
     try {
@@ -2972,6 +2984,7 @@ function AINewsMonitorView({ branches, isOwner }) {
       if (res.ok) {
         setIsModalOpen(false);
         setCustomAlert("تم حفظ التعديلات بنجاح!");
+        // تحديث الداتا بعد الحفظ مباشرة
         const resRefresh = await fetch('https://eoc-system.vercel.app/api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
         if (resRefresh.ok) setAiNewsList(await resRefresh.json());
       } else {
@@ -2981,8 +2994,8 @@ function AINewsMonitorView({ branches, isOwner }) {
       setCustomAlert("فشل الاتصال بالسيرفر.");
     }
   };
-
-  // 💡 دالة المسح الجديدة
+  
+  // 💡 دالة مسح الخبر (للمالك فقط)
   const handleDeleteAiNews = async (id) => {
     if (!isOwner) return setCustomAlert("عفواً، المالك فقط يمكنه الحذف.");
     if (!window.confirm("هل أنت متأكد من حذف هذا السجل نهائياً؟")) return;
@@ -3009,9 +3022,25 @@ function AINewsMonitorView({ branches, isOwner }) {
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="bg-[#111] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> مركز رصد الذكاء الاصطناعي (AI Scanner)</h3>
-        <p className="text-gray-400 text-sm mt-2">يتم هنا عرض الأخبار والحوادث التي يقوم الروبوت الآلي بسحبها من المواقع الإخبارية.</p>
+      <div className="bg-[#111] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> مركز رصد الذكاء الاصطناعي (AI Scanner)</h3>
+          <p className="text-gray-400 text-sm mt-2">يتم هنا عرض الأخبار والحوادث التي يقوم الروبوت الآلي بسحبها من المواقع الإخبارية.</p>
+        </div>
+        
+        {/* 💡 لوحة مراقبة حالة الروبوت (تحديث تلقائي) */}
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span className="text-xs font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
+          </div>
+          <div className="w-px h-6 bg-white/10"></div>
+          {/* 💡 السطر ده بيسحب حالة السيرفر لايف من جيت هاب بتاعتك */}
+          <img src="https://github.com/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/badge.svg" alt="AI Status Badge" className="h-5" />
+        </div>
       </div>
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
@@ -3021,6 +3050,7 @@ function AINewsMonitorView({ branches, isOwner }) {
             {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-purple-400 hover:text-white bg-purple-500/10 px-2 py-2 rounded-lg">الكل</button>}
           </div>
           <div className="flex flex-wrap gap-3">
+            {/* 💡 زرار الإضافة اليدوية اتشال عشان نحافظ على سلامة داتا الـ AI */}
             {isOwner && <button onClick={handleExportAllExcel} className="bg-[#1a1a1a] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 w-full md:w-auto justify-center"><ExcelIcon /> تصدير السجل الشامل</button>}
           </div>
         </div>
@@ -3047,6 +3077,7 @@ function AINewsMonitorView({ branches, isOwner }) {
                   <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.news_publisher}</td>
                   <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                     <div className="flex justify-center gap-2">
+                      {/* 💡 زرار فتح اللينك الخارجي */}
                       {n.news_link && (
                         <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-purple-600 text-purple-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
@@ -3055,7 +3086,7 @@ function AINewsMonitorView({ branches, isOwner }) {
                       <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-purple-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="عرض تفاصيل الرصد">
                         <EyeIcon />
                       </button>
-                      {/* 💡 زرار المسح للمالك فقط */}
+                      {/* 💡 زرار المسح (يظهر للمالك فقط) */}
                       {isOwner && (
                         <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="حذف السجل">
                           <TrashIcon />
@@ -3064,7 +3095,7 @@ function AINewsMonitorView({ branches, isOwner }) {
                     </div>
                   </td>
                 </tr>
-              )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">لا توجد أخبار مسحوبة من الروبوت حالياً...</td></tr>}
+              )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">لا توجد أخبار مسحوبة من الروبوت حالياً... (في انتظار ربط الباك إند)</td></tr>}
             </tbody>
           </table>
         </div>
@@ -3116,6 +3147,7 @@ function AINewsMonitorView({ branches, isOwner }) {
             <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
               <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-purple-400 border border-purple-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير هذا السجل</button>
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
+              {/* 💡 التعديل: إخفاء زرار الحفظ تماماً عن أي حد مش (المالك) وربطه بدالة الحفظ الحقيقية */}
               {isOwner && <button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(168,85,247,0.3)]">حفظ التعديلات</button>}
             </div>
           </div>
