@@ -4,7 +4,7 @@ import json
 import os
 import time
 from google import genai
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ==========================================
 # 1. إعدادات النظام (بتتسحب من خزنة GitHub السرية)
@@ -104,12 +104,29 @@ def run_ai_scanner():
         return
 
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 بدء المسح...")
+    
+    # حساب توقيت اللحظة دي عشان نفلتر بيه الأخبار القديمة
+    now_utc = datetime.utcnow()
+
     for publisher, url in RSS_FEEDS.items():
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:5]:
+            # هنمسك كل الأخبار، بس هنفلتر بالوقت (أحدث ساعة بس)
+            for entry in feed.entries:
+                
+                # 💡 1. فلتر الزمن: لو الخبر عدى عليه أكتر من 60 دقيقة (ساعة)، ارميه في الزبالة وكمل
+                try:
+                    if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                        pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                        if now_utc - pub_date > timedelta(hours=1):
+                            continue # تخطي الخبر القديم
+                except Exception:
+                    pass # لو الموقع مش حاطط توقيت للخبر، هنكمل عادي عشان السيستم ميوقعش
+                
+                # 💡 2. فلتر التكرار (من الداتا بيز)
                 news_link = entry.link
-                if news_link in processed_news_links: continue
+                if news_link in processed_news_links: 
+                    continue
                 
                 full_text = f"{entry.title} - {entry.get('summary', '')}"
                 if any(k in full_text for k in KEYWORDS):
@@ -135,8 +152,9 @@ def run_ai_scanner():
                         res = requests.post(SYSTEM_API_URL, json=payload, headers=headers)
                         if res.status_code in [200, 201]: print("✅ تم الإرسال بنجاح!")
                     
+                    # بنسجل اللينك في الذاكرة فوراً عشان لو البوت لسه بيلف ميجيبهوش تاني
                     processed_news_links.add(news_link)
-                time.sleep(4) 
+            time.sleep(4) 
         except Exception as e:
             print(f"❌ خطأ مسح {publisher}")
     print("✅ انتهت دورة المسح بنجاح.")
