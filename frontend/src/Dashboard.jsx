@@ -530,13 +530,21 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
   };
 
   // 💡 استخراج بيانات اليوزر بالمللي من الـ ID (الحل الجذري المنيع)
+  // 💡 استخراج إقليم اليوزر فوراً من بيانات الجلسة (عشان نقضي على كسر الثانية بتاع التحميل)
+  // 💡 كود الطوارئ الذكي: هنقفلها بالاسم بدل الداتابيز عشان نخلص من وجع الدماغ ده!
   const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
-  const userBranchId = currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19;
+  const userFullName = (currentUserData?.full_name || '').toLowerCase();
   
-  // 💡 بندور على اسم الفرع في الداتابيز الحية مع توحيد نوع البيانات (String) عشان ميضربش
-  const myBranchObj = branches.find(b => String(b.id) === String(userBranchId));
-  const userBranchName = myBranchObj ? myBranchObj.name : 'المركز العام';
-  const userRegion = regionMap[userBranchName.trim()] || 'hq';
+  let userRegion = 'hq'; // الافتراضي
+  
+  // 🚨 إجبار السيستم على الإقليم من اسم الحساب مباشرة (عشان نتجاهل أي كاش أو غلطة في الداتابيز)
+  if (userFullName.includes('delta')) userRegion = 'delta';
+  else if (userFullName.includes('canal')) userRegion = 'canal';
+  else if (userFullName.includes('upper') || userFullName.includes('saeed')) userRegion = 'saeed';
+  else {
+    const userBranchName = currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام';
+    userRegion = regionMap[userBranchName.trim()] || 'hq';
+  }
 
   const getLocalDate = () => {
     const d = new Date();
@@ -944,7 +952,10 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
 
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex flex-col gap-3">
-          <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
+            {isVolunteer && <span className="bg-[#c70000]/20 text-[#c70000] px-3 py-1 rounded-lg text-xs font-bold border border-[#c70000]/30 font-mono">الفرع: {userBranchName} | الإقليم: {userRegion}</span>}
+          </div>
           
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
@@ -1123,7 +1134,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                     </StyledSelect>
                   </FormGroup>
                   <FormGroup label="التمركز / الفرع">
-                    <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || userBranchId}>
+                    <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || ''}>
                       {!isVolunteer && <option value="19">المركز العام</option>}
                       {branches.map(b => {
                         const isBranchInMyRegion = (regionMap[b.name.trim()] || 'hq') === userRegion;
@@ -1266,7 +1277,7 @@ const [returnModalOpen, setReturnModalOpen] = useState(false);
                           <td className="p-2">
                             <select 
                               id={`p_branch_${index}`} 
-                              defaultValue={p.branch_id || userBranchId} 
+                              defaultValue={p.branch_id || ''} 
                               disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}
                               className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-gray-600 cursor-not-allowed' : 'text-white'}`}
                             >
