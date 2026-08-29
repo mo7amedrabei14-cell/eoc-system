@@ -1996,6 +1996,42 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   };
 
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
+
+// 💡 حالة وقت آخر فحص
+const [lastRunTime, setLastRunTime] = useState('جاري التحقق...');
+
+useEffect(() => {
+  const fetchLastRun = async () => {
+    try {
+      const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/runs?per_page=1');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.workflow_runs && data.workflow_runs.length > 0) {
+          const lastRun = data.workflow_runs[0];
+          const dateObj = new Date(lastRun.updated_at);
+          const now = new Date();
+          const isToday = dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth();
+          const formattedTime = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+          const dayStr = isToday ? 'اليوم' : dateObj.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
+          
+          setLastRunTime(`${dayStr}، الساعة ${formattedTime}`);
+        } else {
+          setLastRunTime('لا توجد بيانات');
+        }
+      } else {
+        setLastRunTime('غير متاح');
+      }
+    } catch (e) {
+      setLastRunTime('غير متاح');
+    }
+  };
+  
+  fetchLastRun();
+  const interval = setInterval(fetchLastRun, 60000);
+  return () => clearInterval(interval);
+}, []);
+
+
   const branchNames = [...new Set(branches.map(b => b.name))];
   const newsTypes = ['حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'];
 
@@ -2075,10 +2111,8 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
                   <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.data_entry_name}</td>
                   <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                     <div className="flex justify-center gap-2">
-                      {/* 💡 زرار فتح الرابط الجديد (بيظهر بس لو فيه لينك متسجل) */}
-                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
+                      <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
+                      {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
@@ -2403,9 +2437,8 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
                   <td className="p-4 text-gray-300 border-l border-white/5 text-center">{d.injured_count}</td>
                   <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                     <div className="flex justify-center gap-2">
-                      {d.news_link && <a href={d.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
-                      <button onClick={() => handleEdit(d)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
+                      <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
+                      {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
@@ -2787,8 +2820,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
                       <td className="p-4 border-l border-white/5 text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{eq.status}</span></td>
                       <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => handleEditGlobal(eq)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
+                          <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
+                          {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
                         </div>
                       </td>
                     </tr>
