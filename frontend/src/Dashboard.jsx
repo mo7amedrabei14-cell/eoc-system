@@ -958,7 +958,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
             <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
             {isVolunteer ? (
               <span className="bg-[#c70000]/20 text-[#c70000] px-3 py-1 rounded-lg text-xs font-bold border border-[#c70000]/30 font-mono">
-                حساب أوبريشن | الإقليم المعزول: {userRegion === 'delta' ? 'الدلتا' : userRegion === 'canal' ? 'القنال' : userRegion === 'saeed' ? 'الصعيد' : 'المركز العام'}
+                سيتم عرض مهام {userRegion === 'delta' ? 'إقليم الدلتا' : userRegion === 'canal' ? 'إقليم القنال' : userRegion === 'saeed' ? 'إقليم الصعيد' : 'المركز العام'} فقط
               </span>
             ) : (
               <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold border border-blue-500/30 font-mono">
@@ -1131,10 +1131,10 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
                   </FormGroup>
                   <FormGroup label="التمركز / الفرع">
                     <StyledSelect id="f_branch_id" defaultValue={currentMissionData?.branch_id || userBranchId}>
-                      {!isVolunteer && <option value="19">المركز العام</option>}
+                      {/* 💡 التعديل هنا: المركز العام يظهر للمديرين، ولأي متطوع تبع إقليم المركز العام (hq) */}
+                      {(!isVolunteer || userRegion === 'hq') && <option value="19">المركز العام</option>}
                       {branches.map(b => {
-                        const branchRegion = branchIdToRegion[b.id] || regionMap[normalizeName(b.name)] || 'hq';
-                        const isBranchInMyRegion = branchRegion === userRegion;
+                        const isBranchInMyRegion = (regionMap[normalizeName(b.name)] || 'hq') === userRegion;
                         if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                           return <option key={b.id} value={b.id}>{b.name}</option>;
                         }
@@ -1278,10 +1278,10 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
                               disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}
                               className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-gray-600 cursor-not-allowed' : 'text-white'}`}
                             >
-                              {!isVolunteer && <option value="19" className="bg-[#111]">المركز العام</option>}
+                              {/* 💡 نفس التعديل هنا لجدول المشاركين */}
+                              {(!isVolunteer || userRegion === 'hq') && <option value="19" className="bg-[#111]">المركز العام</option>}
                               {branches.map(b => {
-                                const branchRegion = branchIdToRegion[b.id] || regionMap[normalizeName(b.name)] || 'hq';
-                                const isBranchInMyRegion = branchRegion === userRegion;
+                                const isBranchInMyRegion = (regionMap[normalizeName(b.name)] || 'hq') === userRegion;
                                 if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
                                   return <option key={b.id} value={b.id} className="bg-[#111]">{b.name}</option>;
                                 }
