@@ -138,13 +138,13 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden" dir="rtl">
       
-      {/* 💡 خلفية ضبابية تظهر في الموبايل فقط لما القائمة تكون مفتوحة */}
+      {/* 💡 1. خلفية ضبابية تظهر في الموبايل فقط لما القائمة تكون مفتوحة (وتقفلها لما تدوس عليها) */}
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
       )}
 
-      {/* 💡 تعديل الكلاسات عشان القائمة تطلع من الجنب في الموبايل (fixed) وتفضل عادية في الديسكتوب (sticky) */}
-      <aside className={`${isSidebarOpen ? 'translate-x-0 w-64 md:w-72' : 'translate-x-full w-64 md:translate-x-0 md:w-20'} bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 right-0 h-screen z-[70] transition-transform duration-300`}>
+      {/* 💡 2. السايد بار المنيع: تم استخدام (right) بدل (translate) لتجنب أي تعارض مع الـ RTL واختفاء القائمة */}
+      <aside className={`bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 h-screen z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
         <div className="overflow-y-auto custom-scrollbar flex-1">
           {isSidebarOpen ? (
             <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300">
@@ -166,13 +166,14 @@ export default function Dashboard() {
           )}
 
           <nav className="p-4 space-y-2 mt-2">
-            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => setActiveTab('home')} isOpen={isSidebarOpen} />}
-            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => setActiveTab('missions')} isOpen={isSidebarOpen} />
-            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => setActiveTab('local_news')} isOpen={isSidebarOpen} />
-            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => setActiveTab('global_disasters')} isOpen={isSidebarOpen} />
-            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => setActiveTab('earthquakes')} isOpen={isSidebarOpen} />
-            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => setActiveTab('branches_inventory')} isOpen={isSidebarOpen} />}
-            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => setActiveTab('audit')} isOpen={isSidebarOpen} />}
+            {/* 💡 3. القايمة بتقفل أوتوماتيك في الموبايل لما تختار منها شاشة */}
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => { setActiveTab('home'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />}
+            <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => { setActiveTab('missions'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
+            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => { setActiveTab('local_news'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
+            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => { setActiveTab('global_disasters'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
+            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => { setActiveTab('earthquakes'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />
+            {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => { setActiveTab('branches_inventory'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />}
+            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => { setActiveTab('audit'); window.innerWidth < 768 && setIsSidebarOpen(false); }} isOpen={isSidebarOpen} />}
           </nav>
         </div>
         <div className="p-4 border-t border-white/5">
@@ -184,15 +185,12 @@ export default function Dashboard() {
       </aside>
 
       <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative z-0">
-        {/* 💡 صغرنا الـ Padding للموبايل */}
         <header className="px-4 md:px-10 py-4 md:py-6 border-b border-white/5 flex items-center gap-3 md:gap-5 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-40">
-          {/* 💡 شيلنا (hidden md:block) عشان الزرار يظهر دايماً */}
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-white bg-[#111] p-2 md:p-2.5 rounded-xl border border-white/10 block transition-all hover:bg-white/5">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
           </button>
           <div className="flex-1 flex justify-between items-center">
             <div>
-              {/* 💡 صغرنا الخط في الموبايل */}
               <h1 className="text-xl md:text-2xl font-extrabold tracking-wide">
               {activeTab === 'home' && 'موجز عمليات اليوم'}
               {activeTab === 'missions' && 'إدارة المهام الميدانية'}
@@ -206,7 +204,9 @@ export default function Dashboard() {
             </div>
           </div>
         </header>
-        <div className="p-10">
+        
+        {/* 💡 4. مسافات الشاشة صغرت للموبايل عشان تدي براح للعرض */}
+        <div className="p-4 md:p-10">
           {renderContent()}
         </div>
       </main>
