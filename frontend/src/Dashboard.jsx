@@ -2982,6 +2982,29 @@ function AINewsMonitorView({ branches, isOwner }) {
       setCustomAlert("فشل الاتصال بالسيرفر.");
     }
   };
+  
+  // 💡 دالة مسح الخبر (للمالك فقط)
+  const handleDeleteAiNews = async (id) => {
+    if (!isOwner) return setCustomAlert("عفواً، المالك فقط يمكنه الحذف.");
+    if (!window.confirm("هل أنت متأكد من حذف هذا السجل نهائياً؟")) return;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`https://eoc-system.vercel.app/api/ai-news/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        setCustomAlert("تم الحذف بنجاح!");
+        setAiNewsList(prev => prev.filter(item => item.id !== id));
+      } else {
+        setCustomAlert("حدث خطأ أثناء الحذف من السيرفر.");
+      }
+    } catch (err) {
+      setCustomAlert("فشل الاتصال بالسيرفر.");
+    }
+  };
 
   const filteredNews = filterDate ? aiNewsList.filter(n => n.incident_date === filterDate) : aiNewsList;
 
@@ -3035,6 +3058,12 @@ function AINewsMonitorView({ branches, isOwner }) {
                       <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-purple-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="عرض تفاصيل الرصد">
                         <EyeIcon />
                       </button>
+                      {/* 💡 زرار المسح (يظهر للمالك فقط) */}
+                      {isOwner && (
+                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="حذف السجل">
+                          <TrashIcon />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
