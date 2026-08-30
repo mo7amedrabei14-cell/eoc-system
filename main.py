@@ -1326,16 +1326,16 @@ def delete_ai_news(news_id: int, credentials: HTTPAuthorizationCredentials = Dep
 
 import os
 import requests
-from fastapi import APIRouter, Depends, HTTPException, status
-
-# ... (باقي كود السيرفر بتاعك اللي موجود أصلاً) ...
 
 @app.post("/api/trigger-ai-radar")
-async def trigger_ai_radar(current_user: dict = Depends(security)):
-    # 1. حماية أمنية: المالك فقط هو اللي يقدر يشغل الرادار
-    role = current_user.get("role", "").upper()
-    is_admin = current_user.get("is_global_admin") or role in ["OWNER", "المالك"]
-    if not is_admin:
+def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    # 1. التحقق من المستخدم باستخدام الدوال المعتمدة في ملفك
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401, detail="غير مصرح")
+    
+    role = get_user_role(user_id)
+    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
         raise HTTPException(status_code=403, detail="عفواً، المالك فقط يمكنه إطلاق الرادار.")
 
     # 2. سحب المفتاح السري من خزنة Vercel في الخفاء
@@ -1355,7 +1355,7 @@ async def trigger_ai_radar(current_user: dict = Depends(security)):
     try:
         response = requests.post(url, headers=headers, json=data)
         if response.status_code in [200, 204]:
-            return {"message": "تم إطلاق الرادار بنجاح"}
+            return {"message": "تم إطلاق الرادار بنجاح! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة."}
         else:
             raise HTTPException(status_code=response.status_code, detail="فشل إرسال الأمر لـ GitHub.")
     except Exception as e:
