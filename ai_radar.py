@@ -123,7 +123,7 @@ def analyze_news_with_ai(news_text, title, retries=3):
     """
     for attempt in range(retries):
         try:
-            response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
+            response = client.models.generate_content(model='gemini-pro', contents=prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
             return json.loads(clean_json)
         except Exception as e:
