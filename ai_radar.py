@@ -124,7 +124,7 @@ def analyze_news_with_ai(news_text, title, retries=3):
     """
     for attempt in range(retries):
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-pro')
             response = model.generate_content(prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
             return json.loads(clean_json)
