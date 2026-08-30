@@ -1212,10 +1212,9 @@ def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     import os
     
-    # 💡 التعديل السحري: استثناء الروبوت لو معاه الباسورد
-    system_token = os.environ.get("SYSTEM_TOKEN")
-    if system_token and token == system_token:
-        pass # الباب مفتوح للروبوت
+    system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    if system_token and token.strip() == system_token:
+        pass
     else:
         user_id = get_current_user_id(token)
         if not user_id: raise HTTPException(status_code=401)
@@ -1242,10 +1241,9 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
     token = credentials.credentials
     import os
     
-    # 💡 التعديل السحري: إعطاء الروبوت هوية مؤقتة للتسجيل
-    system_token = os.environ.get("SYSTEM_TOKEN")
-    if system_token and token == system_token:
-        user_id = 1 # نعتبره المالك عشان يسجل في اللوج بدون مشاكل
+    system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    if system_token and token.strip() == system_token:
+        user_id = 1
     else:
         user_id = get_current_user_id(token)
         if not user_id: raise HTTPException(status_code=401)
