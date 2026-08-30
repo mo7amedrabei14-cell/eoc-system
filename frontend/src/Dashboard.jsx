@@ -67,7 +67,7 @@ export default function Dashboard() {
 
     const checkLiveUpdates = async () => {
       try {
-        const res = await fetch('https://eoc-system.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
@@ -148,7 +148,7 @@ export default function Dashboard() {
 
     const fetchData = async () => {
       try {
-        const branchesRes = await fetch('https://eoc-system.vercel.app/api/branches/locations', {
+        const branchesRes = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/branches/locations', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -177,7 +177,7 @@ export default function Dashboard() {
         }
         
         // 💡 سحب إحصائيات الداش بورد
-        const statsRes = await fetch('https://eoc-system.vercel.app/api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
+        const statsRes = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
         if (statsRes.ok) setDashboardStats(await statsRes.json());
         
       } catch (error) { console.error("فشل في جلب البيانات:", error); }
@@ -340,11 +340,11 @@ function HomeView({ branches = [] }) {
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     Promise.all([
-      fetch('https://eoc-system.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
+      fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
     ]).then(([missionsData, newsData, globalData, gEqs, eEqs]) => {
       setMissions(missionsData);
       setNews(newsData);
@@ -697,7 +697,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
       if (res.ok) setMissionsList(await res.json());
     } catch (error) { console.error("Error:", error); } 
@@ -736,7 +736,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
   const handleViewMission = async (missionId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`https://eoc-system.vercel.app/api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setCurrentMissionData(data);
@@ -787,7 +787,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
     if (!missionToDelete) return;
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`https://eoc-system.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setMissionToDelete(null); fetchMissions(); } 
     } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
   };
@@ -989,7 +989,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
        const token = localStorage.getItem('access_token');
        
        const isUpdate = currentMissionData !== null;
-       const url = isUpdate ? `https://eoc-system.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system.vercel.app/api/missions';
+       const url = isUpdate ? `https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/missions/${currentMissionData.mission_id}` : 'https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/missions';
        const method = isUpdate ? 'PUT' : 'POST';
 
        const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(missionData) });
@@ -1691,7 +1691,7 @@ function AuditLogsView() {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    fetch('https://eoc-system.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => { setLogs(data); setIsLoading(false); })
       .catch(() => setIsLoading(false));
@@ -1710,7 +1710,7 @@ function AuditLogsView() {
   const handleExportLogs = async () => {
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system.vercel.app/api/audit-logs/export', {
+      const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/audit-logs/export', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -1852,7 +1852,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/local-news', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setNewsList(await res.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -1907,7 +1907,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const confirmDelete = async () => {
     if (!newsToDelete) return;
     const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system.vercel.app/api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    await fetch(`https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     setNewsToDelete(null); fetchNews();
   };
 
@@ -1947,7 +1947,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     };
 
     const token = localStorage.getItem('access_token');
-    const url = nd.news_id ? `https://eoc-system.vercel.app/api/local-news/${nd.news_id}` : 'https://eoc-system.vercel.app/api/local-news';
+    const url = nd.news_id ? `https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/local-news/${nd.news_id}` : 'https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/local-news';
     const method = nd.news_id ? 'PUT' : 'POST';
 
     const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
@@ -2282,7 +2282,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setDisasters(await res.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -2299,7 +2299,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const confirmDelete = async () => {
     if (!disasterToDelete) return;
     const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system.vercel.app/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    await fetch(`https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     setDisasterToDelete(null); fetchDisasters();
   };
 
@@ -2311,7 +2311,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
 
     const payload = { ...gd, incident_month: getMonthName(gd.incident_date) };
     const token = localStorage.getItem('access_token');
-    const url = gd.disaster_id ? `https://eoc-system.vercel.app/api/global-disasters/${gd.disaster_id}` : 'https://eoc-system.vercel.app/api/global-disasters';
+    const url = gd.disaster_id ? `https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/global-disasters/${gd.disaster_id}` : 'https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/global-disasters';
     const method = gd.disaster_id ? 'PUT' : 'POST';
 
     const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
@@ -2570,9 +2570,9 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const resG = await fetch('https://eoc-system.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } });
+      const resG = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } });
       if (resG.ok) setGlobalEqs(await resG.json());
-      const resE = await fetch('https://eoc-system.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } });
+      const resE = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } });
       if (resE.ok) setEgyptEqs(await resE.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -2631,7 +2631,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
       if (parsedData.length > 0) {
         setIsLoading(true);
         const token = localStorage.getItem('access_token');
-        const res = await fetch('https://eoc-system.vercel.app/api/earthquakes/global/bulk', {
+        const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/global/bulk', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
         });
         if (res.ok) { setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); } 
@@ -2657,7 +2657,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     };
 
     const token = localStorage.getItem('access_token');
-    const url = gForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/global';
+    const url = gForm.eq_id ? `https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/global';
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
@@ -2676,7 +2676,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     };
 
     const token = localStorage.getItem('access_token');
-    const url = eForm.eq_id ? `https://eoc-system.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system.vercel.app/api/earthquakes/egypt';
+    const url = eForm.eq_id ? `https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/egypt';
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
@@ -2684,8 +2684,8 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
   };
 
-  const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
-  const deleteEgyptEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
+  const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
+  const deleteEgyptEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
 
   const handleExportGlobalEqs = () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
@@ -3006,7 +3006,7 @@ function AINewsMonitorView({ branches, isOwner }) {
     const fetchAiNews = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await fetch('https://eoc-system.vercel.app/api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) setAiNewsList(await res.json());
       } catch (err) {}
     };
@@ -3036,7 +3036,7 @@ function AINewsMonitorView({ branches, isOwner }) {
     if (!window.confirm("هل أنت متأكد من حذف هذا السجل نهائياً؟")) return;
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`https://eoc-system.vercel.app/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setCustomAlert("تم الحذف بنجاح!"); setAiNewsList(prev => prev.filter(item => item.id !== id)); } 
     } catch (err) { setCustomAlert("فشل الاتصال بالسيرفر."); }
   };
@@ -3048,7 +3048,7 @@ function AINewsMonitorView({ branches, isOwner }) {
     setIsScanning(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('https://eoc-system.vercel.app/api/trigger-ai-radar', {
+      const res = await fetch('https://eoc-system-o8eqxjs7q-eoc5.vercel.app//api/trigger-ai-radar', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
