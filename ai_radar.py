@@ -35,9 +35,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
 ]
 
-# ==========================================
-# 2. شبكة الرصد الأخطبوطية الشاملة
-# ==========================================
 search_query = 'حريق OR حادث OR عاجل OR مصرع OR انفجار OR انهيار'
 encoded_query = urllib.parse.quote(f"{search_query} when:1h")
 GOOGLE_NEWS_EGYPT = f"https://news.google.com/rss/search?q={encoded_query}&hl=ar&gl=EG&ceid=EG:ar"
@@ -45,26 +42,7 @@ GOOGLE_NEWS_EGYPT = f"https://news.google.com/rss/search?q={encoded_query}&hl=ar
 RSS_FEEDS = {
     "رادار جوجل اللحظي": GOOGLE_NEWS_EGYPT, 
     "صدى البلد (عاجل)": "https://www.elbalad.news/rss/1",
-    "صدى البلد (حوادث)": "https://www.elbalad.news/rss/3",
-    "اليوم السابع (عاجل)": "https://www.youm7.com/rss/SectionRss?SectionID=65",
-    "اليوم السابع (حوادث)": "https://www.youm7.com/rss/SectionRss?SectionID=203",
-    "المصري اليوم (عاجل)": "https://www.almasryalyoum.com/rss/section/1",
-    "المصري اليوم (حوادث)": "https://www.almasryalyoum.com/rss/section/13",
-    "الشروق (عاجل)": "https://www.shorouknews.com/rss/urgent.xml",
-    "الشروق (حوادث)": "https://www.shorouknews.com/rss/accidents.xml",
-    "فيتو (عاجل)": "https://www.vetogate.com/rss/1",
-    "فيتو (حوادث)": "https://www.vetogate.com/rss/2",
-    "الدستور (عاجل)": "https://www.dostor.org/rss/section/1",
-    "الدستور (حوادث)": "https://www.dostor.org/rss/section/5",
-    "البوابة نيوز": "https://www.albawabhnews.com/rss/97",
-    "الأسبوع (عاجل)": "https://www.elaosboa.com/rss/1/",
-    "الأسبوع (حوادث)": "https://www.elaosboa.com/rss/accidents/",
-    "القاهرة 24 (الرئيسية)": "https://www.cairo24.com/rss",
-    "الوطن (الرئيسية)": "https://www.elwatannews.com/home/rss",
-    "مصراوي (الرئيسية)": "https://www.masrawy.com/CrossDomain/News/RSS",
-    "سكاي نيوز (مصر)": "https://www.skynewsarabia.com/rss/مصر",
-    "روسيا اليوم (مصر)": "https://arabic.rt.com/rss/egypt/",
-    "العربية (مصر)": "https://www.alarabiya.net/egypt.rss"
+    "صدى البلد (حوادث)": "https://www.elbalad.news/rss/3"
 }
 
 processed_news_links = set()
@@ -79,28 +57,19 @@ try:
 except Exception as e:
     pass
 
-# ==========================================
-# 4. دالة الغوص العميق (سحب النص + الصور)
-# ==========================================
 def scrape_full_article(url):
     try:
         headers = {'User-Agent': random.choice(USER_AGENTS)}
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
-        
         og_image = soup.find('meta', property='og:image')
         image_url = og_image['content'] if og_image else "لا توجد صورة"
-
         paragraphs = soup.find_all('p')
         article_text = " ".join([p.get_text() for p in paragraphs])
-        
         return article_text[:3500] if len(article_text) > 3500 else article_text, image_url
     except Exception as e:
         return "", "لا توجد صورة"
 
-# ==========================================
-# 5. محرك الذكاء الاصطناعي (العقل المدبر التكتيكي)
-# ==========================================
 def analyze_news_with_ai(news_text, title, retries=3):
     prompt = f"""
     أنت خبير أمني ومدير استراتيجيات في غرفة عمليات طوارئ (EOC) متقدمة.
@@ -124,7 +93,7 @@ def analyze_news_with_ai(news_text, title, retries=3):
     """
     for attempt in range(retries):
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-pro')
             response = model.generate_content(prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
             return json.loads(clean_json)
@@ -133,28 +102,22 @@ def analyze_news_with_ai(news_text, title, retries=3):
             time.sleep(2)
     return None
 
-# ==========================================
-# 6. وحدة المسح الفردية
-# ==========================================
 def scan_single_source(publisher, url, now_utc):
     try:
         headers = {'User-Agent': random.choice(USER_AGENTS)}
         resp = requests.get(url, headers=headers, timeout=10)
         feed = feedparser.parse(resp.content)
         
-        # 💡 تم التعديل هنا لـ 15 خبر فقط لضمان سرعة الروبوت وعدم استهلاك الباقة
-        for entry in feed.entries[:15]: 
+        for entry in feed.entries[:10]: 
             try:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
                     if now_utc - pub_date > timedelta(hours=2):
                         continue 
-            except Exception:
-                pass 
+            except Exception: pass 
             
             news_link = entry.link
-            if news_link in processed_news_links: 
-                continue
+            if news_link in processed_news_links: continue
             
             if any(k in entry.title for k in KEYWORDS):
                 print(f"🚨 [{publisher}] تم رصد الهدف: {entry.title}")
@@ -167,18 +130,7 @@ def scan_single_source(publisher, url, now_utc):
                 if not ai_data:
                     print(f"🔄 جاري إرسال الخبر ({entry.title}) بدون تحليل ذكاء اصطناعي للضرورة.")
                     ai_data = {
-                        "incident_description": entry.title,
-                        "news_type": "غير مصنف (فشل التحليل)",
-                        "governorate": "القاهرة",
-                        "area_name": "",
-                        "street_name": "",
-                        "hospital_name": "",
-                        "injured_count": "0",
-                        "deaths_count": "0",
-                        "severity_score": "?",
-                        "latitude": "30.0444",
-                        "longitude": "31.2357",
-                        "tactical_recommendations": "تعذر التحليل بواسطة الذكاء الاصطناعي. يرجى المراجعة اليدوية للخبر المرفق."
+                        "incident_description": entry.title, "news_type": "غير مصنف (فشل التحليل)", "governorate": "القاهرة", "area_name": "", "street_name": "", "hospital_name": "", "injured_count": "0", "deaths_count": "0", "severity_score": "?", "latitude": "30.0444", "longitude": "31.2357", "tactical_recommendations": "تعذر التحليل بواسطة الذكاء الاصطناعي."
                     }
 
                 severity = ai_data.get("severity_score", "?")
@@ -186,12 +138,7 @@ def scan_single_source(publisher, url, now_utc):
                 lat = ai_data.get("latitude", "غير متوفر")
                 lng = ai_data.get("longitude", "غير متوفر")
                 
-                tactical_report = (
-                    f"🔥 [مستوى الخطورة]: {severity}/10\n"
-                    f"📍 [إحداثيات الموقع]: {lat}, {lng}\n"
-                    f"💡 [توصيات تكتيكية للغرفة]: {tactical}\n"
-                    f"📸 [صورة الحادثة]: {image_url}"
-                )
+                tactical_report = (f"🔥 [مستوى الخطورة]: {severity}/10\n📍 [إحداثيات الموقع]: {lat}, {lng}\n💡 [توصيات تكتيكية للغرفة]: {tactical}\n📸 [صورة الحادثة]: {image_url}")
 
                 payload = {
                     "incident_date": datetime.now().strftime("%Y-%m-%d"),
@@ -212,31 +159,20 @@ def scan_single_source(publisher, url, now_utc):
                 headers_api = {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
                 res = requests.post(SYSTEM_API_URL, json=payload, headers=headers_api)
                 
-                if res.status_code in [200, 201]: 
-                    print(f"✅ تم إرسال التقرير لغرفة العمليات بنجاح!")
-                else:
-                    print(f"⚠️ خطأ في الإرسال: {res.text}")
+                if res.status_code in [200, 201]: print(f"✅ تم إرسال التقرير لغرفة العمليات بنجاح!")
+                else: print(f"⚠️ خطأ في الإرسال: {res.text}")
                 
                 processed_news_links.add(news_link)
     except Exception as e:
         pass
 
-# ==========================================
-# 7. المحرك الرئيسي (Multi-threading القاتل)
-# ==========================================
 def run_ai_scanner():
-    if not GEMINI_API_KEY or not SYSTEM_TOKEN:
-        print("⚠️ المفاتيح مفقودة!")
-        return
-
+    if not GEMINI_API_KEY or not SYSTEM_TOKEN: return
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT God-Mode)...")
     now_utc = datetime.utcnow()
-
     with concurrent.futures.ThreadPoolExecutor(max_workers=30) as executor:
         futures = [executor.submit(scan_single_source, pub, url, now_utc) for pub, url in RSS_FEEDS.items()]
         concurrent.futures.wait(futures)
-
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء من المسح الميداني بنجاح.")
 
 if __name__ == '__main__':
     run_ai_scanner()
