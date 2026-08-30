@@ -7,7 +7,7 @@ import urllib.parse
 import concurrent.futures
 import random
 from bs4 import BeautifulSoup
-from google import genai
+import google.generativeai as genai
 from datetime import datetime, timedelta
 
 # ==========================================
@@ -17,7 +17,8 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN") 
 SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news" 
 
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 KEYWORDS = [
     'تصادم', 'انقلاب', 'خروج قطار', 'اصطدام', 'حوادث طرق', 'ميكروباص', 'سيارة نقل', 
@@ -123,7 +124,8 @@ def analyze_news_with_ai(news_text, title, retries=3):
     """
     for attempt in range(retries):
         try:
-            response = client.models.generate_content(model='gemini-pro', contents=prompt)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
             return json.loads(clean_json)
         except Exception as e:

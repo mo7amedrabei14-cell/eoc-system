@@ -1210,8 +1210,15 @@ class AINewsModel(BaseModel):
 @app.get("/api/ai-news")
 def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id: raise HTTPException(status_code=401)
+    import os
+    
+    # 💡 التعديل السحري: استثناء الروبوت لو معاه الباسورد
+    system_token = os.environ.get("SYSTEM_TOKEN")
+    if system_token and token == system_token:
+        pass # الباب مفتوح للروبوت
+    else:
+        user_id = get_current_user_id(token)
+        if not user_id: raise HTTPException(status_code=401)
     
     connection = get_connection()
     try:
@@ -1233,8 +1240,15 @@ def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
 @app.post("/api/ai-news")
 def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id: raise HTTPException(status_code=401)
+    import os
+    
+    # 💡 التعديل السحري: إعطاء الروبوت هوية مؤقتة للتسجيل
+    system_token = os.environ.get("SYSTEM_TOKEN")
+    if system_token and token == system_token:
+        user_id = 1 # نعتبره المالك عشان يسجل في اللوج بدون مشاكل
+    else:
+        user_id = get_current_user_id(token)
+        if not user_id: raise HTTPException(status_code=401)
     
     connection = get_connection()
     try:
@@ -1255,7 +1269,6 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
             ))
             new_id = cursor.fetchone()[0]
 
-            # تسجيل في اللوج عشان الرادار ينور باللون البنفسجي
             try:
                 create_audit_log(cursor, user_id, "رصد خبر آلي", mission_id=None, entity_type="ai_news", entity_id=new_id, details={"action_text": f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"})
             except Exception as e: pass
