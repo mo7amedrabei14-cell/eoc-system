@@ -3001,6 +3001,7 @@ function AINewsMonitorView({ branches, isOwner }) {
     return () => clearInterval(interval);
   }, []);
   
+  // 💡 تجربة المستخدم الحية (Live UX): تحديث الأخبار والخريطة تلقائياً في الخلفية
   useEffect(() => {
     const fetchAiNews = async () => {
       try {
@@ -3009,7 +3010,13 @@ function AINewsMonitorView({ branches, isOwner }) {
         if (res.ok) setAiNewsList(await res.json());
       } catch (err) {}
     };
+    
+    // 1. جلب البيانات فوراً أول ما الشاشة تفتح
     fetchAiNews();
+    
+    // 2. المحرك الحي: فحص صامت كل 15 ثانية لجلب أي كوارث جديدة رصدها الروبوت
+    const interval = setInterval(fetchAiNews, 15000); 
+    return () => clearInterval(interval);
   }, []);
 
   const handleEdit = (n) => { setForm({...n}); setIsModalOpen(true); };
@@ -3041,7 +3048,6 @@ function AINewsMonitorView({ branches, isOwner }) {
     setIsScanning(true);
     try {
       const token = localStorage.getItem('access_token');
-      // الداشبورد دلوقتي بتكلم السيرفر بتاعك إنت، والسيرفر هو اللي بيكلم جيت هاب في السر
       const res = await fetch('https://eoc-system.vercel.app/api/trigger-ai-radar', {
         method: 'POST',
         headers: { 
@@ -3098,8 +3104,8 @@ function AINewsMonitorView({ branches, isOwner }) {
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> استخبارات الذكاء الاصطناعي (OSINT God-Mode)</h3>
           <p className="text-gray-400 text-sm mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
         </div>
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap">
-          <div className="flex flex-col gap-1">
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
+          <div className="flex flex-col gap-1 w-full md:w-auto">
             <div className="flex items-center gap-2">
               <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
               <span className="text-xs font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
@@ -3109,6 +3115,9 @@ function AINewsMonitorView({ branches, isOwner }) {
               <span className="text-[10px] text-gray-400 font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
             </div>
           </div>
+          {/* 👇 الخط اللي بيفصل والبادج بتاع جيت هاب رجعوا هنا 👇 */}
+          <div className="hidden md:block w-px h-8 bg-white/10"></div>
+          <img src="https://github.com/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/badge.svg" alt="AI Status Badge" className="h-5 mr-auto md:mr-0" />
         </div>
       </div>
 
@@ -3267,5 +3276,5 @@ function AINewsMonitorView({ branches, isOwner }) {
   );
 }
 
-// 💡 أيقونات (للتأكيد إن مفيش حاجة ناقصة)
+// 💡 أيقونات
 const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5 h-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h.01M15 9h.01" /></svg>;
