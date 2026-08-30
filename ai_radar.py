@@ -87,7 +87,6 @@ def scrape_full_article(url):
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # 💡 التطور الأول: اصطياد الصورة المرفقة بالخبر
         og_image = soup.find('meta', property='og:image')
         image_url = og_image['content'] if og_image else "لا توجد صورة"
 
@@ -120,16 +119,14 @@ def analyze_news_with_ai(news_text, title, retries=3):
     - "severity_score": تقييم الخطورة من 1 إلى 10 (رقم فقط).
     - "latitude": استنتج خط العرض الجغرافي التقريبي لمكان الحادث في مصر (مثال: 30.0444).
     - "longitude": استنتج خط الطول الجغرافي التقريبي لمكان الحادث في مصر (مثال: 31.2357).
-    - "tactical_recommendations": اكتب 3 توصيات ميدانية سريعة لغرفة العمليات لكيفية الاستجابة لهذا الحدث (مثل تجهيز سيارات إسعاف إضافية، إخلاء مباني مجاورة، تجهيز خيم إيواء).
+    - "tactical_recommendations": اكتب 3 توصيات ميدانية سريعة لغرفة العمليات لكيفية الاستجابة لهذا الحدث.
     """
     for attempt in range(retries):
         try:
-            # تم تعديل اسم الموديل للإصدار الصحيح
             response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
             return json.loads(clean_json)
         except Exception as e:
-            # 💡 التعديل هنا: طباعة سبب الفشل
             print(f"⚠️ فشل الذكاء الاصطناعي في تحليل ({title}) [المحاولة {attempt+1}]: {str(e)}")
             time.sleep(2)
     return None
@@ -143,7 +140,8 @@ def scan_single_source(publisher, url, now_utc):
         resp = requests.get(url, headers=headers, timeout=10)
         feed = feedparser.parse(resp.content)
         
-        for entry in feed.entries[:50]: 
+        # 💡 تم التعديل هنا لـ 15 خبر فقط لضمان سرعة الروبوت وعدم استهلاك الباقة
+        for entry in feed.entries[:15]: 
             try:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
@@ -164,7 +162,6 @@ def scan_single_source(publisher, url, now_utc):
 
                 ai_data = analyze_news_with_ai(combined_text, entry.title)
                 
-                # 💡 خطة الإنقاذ: لو الذكاء الاصطناعي فشل، مش هنرمي الخبر!
                 if not ai_data:
                     print(f"🔄 جاري إرسال الخبر ({entry.title}) بدون تحليل ذكاء اصطناعي للضرورة.")
                     ai_data = {
