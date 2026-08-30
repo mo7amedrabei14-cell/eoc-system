@@ -2,7 +2,7 @@ name: AI Radar Scanner 🤖
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # التشغيل كل 10 دقائق
+    - cron: '0 */2 * * *' # التشغيل كل ساعتين
   workflow_dispatch: # زرار للتشغيل اليدوي لو حبيت
 
 jobs:
@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: تحميل ملفات المشروع
-        uses: actions/checkout@v4 # 💡 تم التحديث للإصدار الرابع
+        uses: actions/checkout@v4
 
       - name: تجهيز بيئة البايثون
-        uses: actions/setup-python@v5 # 💡 تم التحديث للإصدار الخامس
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
