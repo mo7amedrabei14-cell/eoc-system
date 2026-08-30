@@ -2947,7 +2947,17 @@ const globalEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<d
 const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [16, 16] });
 
 // ==========================================
-// 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor)
+// 💡 أيقونة الرادار الخاصة بالذكاء الاصطناعي على الخريطة
+// ==========================================
+const aiIncidentIcon = new L.DivIcon({
+  className: 'custom-leaflet-icon',
+  html: `<div style="background-color: #a855f7; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 20px #a855f7; animation: pulse 2s infinite;"></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8]
+});
+
+// ==========================================
+// 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor - God Mode)
 // ==========================================
 function AINewsMonitorView({ branches, isOwner }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -2957,9 +2967,8 @@ function AINewsMonitorView({ branches, isOwner }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [customAlert, setCustomAlert] = useState(null);
-  
-  // 💡 حالة التحميل للزرار الجديد
   const [isScanning, setIsScanning] = useState(false);
+  const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
 
   const [form, setForm] = useState({
     id: null, incident_date: getLocalDate(), incident_description: '', news_type: '', news_publisher: '',
@@ -2967,9 +2976,6 @@ function AINewsMonitorView({ branches, isOwner }) {
     deaths_count: '', news_updates: '', news_link: ''
   });
 
-  const AI_NEWS_TYPES = ['حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'];
-
-  // 💡 حالة وقت آخر فحص
   const [lastRunTime, setLastRunTime] = useState('جاري التحقق...');
 
   useEffect(() => {
@@ -2985,26 +2991,16 @@ function AINewsMonitorView({ branches, isOwner }) {
             const isToday = dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth();
             const formattedTime = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
             const dayStr = isToday ? 'اليوم' : dateObj.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
-            
             setLastRunTime(`${dayStr}، الساعة ${formattedTime}`);
-          } else {
-            setLastRunTime('لا توجد بيانات');
-          }
-        } else {
-          setLastRunTime('غير متاح');
-        }
-      } catch (e) {
-        setLastRunTime('غير متاح');
-      }
+          } else { setLastRunTime('لا توجد بيانات'); }
+        } else { setLastRunTime('غير متاح'); }
+      } catch (e) { setLastRunTime('غير متاح'); }
     };
-    
     fetchLastRun();
-    const interval = setInterval(fetchLastRun, 60000); // تحدث نفسها كل دقيقة
+    const interval = setInterval(fetchLastRun, 60000); 
     return () => clearInterval(interval);
   }, []);
   
-  const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
-
   useEffect(() => {
     const fetchAiNews = async () => {
       try {
@@ -3016,131 +3012,96 @@ function AINewsMonitorView({ branches, isOwner }) {
     fetchAiNews();
   }, []);
 
-  const handleCreateNew = () => {
-    setForm({ id: null, incident_date: getLocalDate(), incident_description: '', news_type: '', news_publisher: '', street_name: '', area_name: '', governorate: 'القاهرة', hospital_name: '', injured_count: '', deaths_count: '', news_updates: '', news_link: '' });
-    setIsModalOpen(true);
-  };
-
   const handleEdit = (n) => { setForm({...n}); setIsModalOpen(true); };
-
-  const handleExportSingleExcel = () => {
-    const ws = XLSX.utils.json_to_sheet([{
-      "التاريخ": form.incident_date || '', "الشهر": getMonthName(form.incident_date) || '', "وصف الحادث": form.incident_description || '', "نوع الخبر": form.news_type || '', "ناشر الخبر": form.news_publisher || '',
-      "اسم الشارع": form.street_name || '', "المنطقة": form.area_name || '', "المحافظة": form.governorate || '',
-      "اسم المستشفى": form.hospital_name || '', "عدد المصابين": form.injured_count || 0, "عدد الوفيات": form.deaths_count || 0,
-      "تطورات الخبر": form.news_updates || '', "لينك الخبر": form.news_link || ''
-    }]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الرصد"); XLSX.writeFile(wb, `رصد_آلي_${form.area_name || 'جديد'}.xlsx`);
-  };
 
   const handleExportAllExcel = () => {
     if (aiNewsList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
     const ws = XLSX.utils.json_to_sheet(aiNewsList.map(n => ({
       "التاريخ": n.incident_date || '', "الشهر": getMonthName(n.incident_date) || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
-      "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": form.governorate || '',
-      "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
-      "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || ''
+      "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
+      "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "سجل الرصد الآلي"); XLSX.writeFile(wb, `سجل_الذكاء_الاصطناعي.xlsx`);
-  };
-
-  const handleSubmit = async () => {
-    if (!isOwner) return;
-    try {
-      const token = localStorage.getItem('access_token');
-      const url = `https://eoc-system.vercel.app/api/ai-news/${form.id}`;
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(form)
-      });
-      if (res.ok) {
-        setIsModalOpen(false);
-        setCustomAlert("تم حفظ التعديلات بنجاح!");
-        const resRefresh = await fetch('https://eoc-system.vercel.app/api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (resRefresh.ok) setAiNewsList(await resRefresh.json());
-      } else {
-        setCustomAlert("حدث خطأ أثناء الحفظ في السيرفر.");
-      }
-    } catch(err) {
-      setCustomAlert("فشل الاتصال بالسيرفر.");
-    }
   };
 
   const handleDeleteAiNews = async (id) => {
     if (!isOwner) return setCustomAlert("عفواً، المالك فقط يمكنه الحذف.");
     if (!window.confirm("هل أنت متأكد من حذف هذا السجل نهائياً؟")) return;
-
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`https://eoc-system.vercel.app/api/ai-news/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`https://eoc-system.vercel.app/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) { setCustomAlert("تم الحذف بنجاح!"); setAiNewsList(prev => prev.filter(item => item.id !== id)); } 
+    } catch (err) { setCustomAlert("فشل الاتصال بالسيرفر."); }
+  };
+
+  // 💡 الدالة السحرية للتشغيل اليدوي (تم تأمينها عبر السيرفر)
+  const handleManualScanTrigger = async () => {
+    if (!isOwner) return setCustomAlert("المالك فقط يمكنه إعطاء أمر التشغيل.");
+    
+    setIsScanning(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      // الداشبورد دلوقتي بتكلم السيرفر بتاعك إنت، والسيرفر هو اللي بيكلم جيت هاب في السر
+      const res = await fetch('https://eoc-system.vercel.app/api/trigger-ai-radar', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        }
       });
 
       if (res.ok) {
-        setCustomAlert("تم الحذف بنجاح!");
-        setAiNewsList(prev => prev.filter(item => item.id !== id));
+        setCustomAlert("تم إطلاق وحش الرصد (God Mode)! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة.");
       } else {
-        setCustomAlert("حدث خطأ أثناء الحذف من السيرفر.");
+        const errorData = await res.json();
+        setCustomAlert(`تنبيه: ${errorData.detail || 'فشل إرسال الأمر للسيرفر.'}`);
       }
-    } catch (err) {
-      setCustomAlert("فشل الاتصال بالسيرفر.");
-    }
-  };
-
-  // 💡 الدالة السحرية للتشغيل اليدوي (زرار الطوارئ)
-  const handleManualScanTrigger = async () => {
-    if (!isOwner) return setCustomAlert("المالك فقط يمكنه إعطاء أمر تشغيل الرادار اليدوي.");
-    
-    // 🚨 حط المفتاح بتاعك هنا بين علامتين التنصيص
-    const GITHUB_PAT = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxx"; 
-
-    if (GITHUB_PAT === "ghp_xxxxxxxxxxxxxxxxxxxxxxxxx" || !GITHUB_PAT) {
-      return setCustomAlert("عفواً، يرجى وضع مفتاح GitHub (Token) في الكود لتفعيل هذه الميزة.");
-    }
-
-    setIsScanning(true);
-    try {
-      const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/dispatches', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'Authorization': `Bearer ${GITHUB_PAT}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ref: 'main' })
-      });
-
-      if (res.ok || res.status === 204) {
-        setCustomAlert("تم إرسال أمر التشغيل للرادار بنجاح! 🚀\nالروبوت يقوم بمسح المواقع الآن، يرجى الانتظار لمدة دقيقة تقريباً ومراقبة الإشعارات.");
-      } else {
-        setCustomAlert("حدث خطأ أثناء إرسال الأمر للسيرفر. تأكد من صلاحيات مفتاح GitHub.");
-      }
-    } catch (error) {
-      setCustomAlert("فشل الاتصال بسيرفرات التشغيل الآلي.");
+    } catch (error) { 
+      setCustomAlert("فشل الاتصال بالسيرفر المركزي."); 
     }
     setIsScanning(false);
   };
 
+  // 💡 فلترة الداتا
   const filteredNews = filterDate ? aiNewsList.filter(n => n.incident_date === filterDate) : aiNewsList;
+  const tableNews = selectedAiNewsId ? filteredNews.filter(n => n.id === selectedAiNewsId) : filteredNews;
+
+  // 💡 الدالة العبقرية لاستخراج الإحداثيات والصورة من نص التقرير
+  const extractAiData = (updatesText) => {
+    if (!updatesText) return null;
+    let lat = null, lng = null, img = null, severity = null;
+    
+    // استخراج الإحداثيات
+    const coordsMatch = updatesText.match(/📍 \[إحداثيات الموقع\]:\s*([\d.-]+)[,\s]+([\d.-]+)/);
+    if (coordsMatch && coordsMatch.length === 3) {
+      lat = parseFloat(coordsMatch[1]);
+      lng = parseFloat(coordsMatch[2]);
+    }
+    // استخراج الصورة
+    const imgMatch = updatesText.match(/📸 \[صورة الحادثة\]:\s*(https?:\/\/[^\s]+)/);
+    if (imgMatch && imgMatch[1]) img = imgMatch[1];
+    
+    // استخراج الخطورة
+    const severityMatch = updatesText.match(/🔥 \[مستوى الخطورة\]:\s*([\d]+)\/10/);
+    if (severityMatch && severityMatch[1]) severity = severityMatch[1];
+
+    if (lat && lng && !isNaN(lat) && !isNaN(lng)) return { lat, lng, img, severity };
+    return null;
+  };
 
   return (
     <div className="space-y-6 pb-10">
       
+      {/* الهيدر ومؤشرات العمل */}
       <div className="bg-[#111] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> مركز رصد الذكاء الاصطناعي (AI Scanner)</h3>
-          <p className="text-gray-400 text-sm mt-2">يتم هنا عرض الأخبار والحوادث التي يقوم الروبوت الآلي بسحبها من المواقع الإخبارية.</p>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> استخبارات الذكاء الاصطناعي (OSINT God-Mode)</h3>
+          <p className="text-gray-400 text-sm mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
         </div>
-        
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
-          <div className="flex flex-col gap-1 w-full md:w-auto">
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
+              <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
               <span className="text-xs font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
             </div>
             <div className="flex items-center gap-1.5 mt-1 border-t border-white/5 pt-1">
@@ -3148,12 +3109,46 @@ function AINewsMonitorView({ branches, isOwner }) {
               <span className="text-[10px] text-gray-400 font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
             </div>
           </div>
-          <div className="hidden md:block w-px h-8 bg-white/10"></div>
-          <img src="https://github.com/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/badge.svg" alt="AI Status Badge" className="h-5 mr-auto md:mr-0" />
         </div>
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+      {/* 💡 خريطة الرصد التكتيكية للذكاء الاصطناعي */}
+      <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-4 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-0 h-auto md:h-[450px] animate-fade-in-up">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد اللحظي للذكاء الاصطناعي</h3>
+          {selectedAiNewsId && (
+            <button onClick={() => setSelectedAiNewsId(null)} className="bg-[#111] hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-all">
+              إلغاء الفلترة (عرض كل الأخبار)
+            </button>
+          )}
+        </div>
+        <div className="h-[300px] md:h-[350px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
+          <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
+            
+            {filteredNews.map(news => {
+              const aiData = extractAiData(news.news_updates);
+              if (!aiData) return null; // لو مفيش إحداثيات، مش هيترسم
+
+              return (
+                <Marker keyboard={false} key={`ai-map-${news.id}`} position={[aiData.lat, aiData.lng]} icon={aiIncidentIcon} eventHandlers={{ click: () => { setSelectedAiNewsId(prev => prev === news.id ? null : news.id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('ai-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
+                  <Tooltip direction="top">
+                    <div className="text-center w-48">
+                      {aiData.severity && <strong className="text-red-600 block mb-1">🔥 خطورة: {aiData.severity}/10</strong>}
+                      <strong className="text-purple-700 block mb-1">{news.news_type}</strong>
+                      <span className="text-xs text-gray-800 font-bold line-clamp-2">{news.incident_description}</span>
+                      {aiData.img && aiData.img !== 'لا توجد صورة' && <img src={aiData.img} alt="حادث" className="w-full h-20 object-cover mt-2 rounded border border-gray-300" />}
+                      <span className="text-[10px] text-blue-600 block mt-2 font-bold">انقر لفلترة الجدول</span>
+                    </div>
+                  </Tooltip>
+                </Marker>
+              );
+            })}
+          </MapContainer>
+        </div>
+      </div>
+
+      <div id="ai-table-section" className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
         <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           <div className="flex items-center gap-2">
             <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
@@ -3162,18 +3157,9 @@ function AINewsMonitorView({ branches, isOwner }) {
           <div className="flex flex-wrap gap-3">
             {isOwner && (
               <>
-                <button onClick={handleExportAllExcel} className="bg-[#1a1a1a] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 w-full md:w-auto justify-center"><ExcelIcon /> تصدير السجل الشامل</button>
-                {/* 💡 زرار الرصد اليدوي العبقري */}
-                <button 
-                  onClick={handleManualScanTrigger} 
-                  disabled={isScanning}
-                  className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 w-full md:w-auto justify-center transition-all ${isScanning ? 'bg-purple-600/50 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'}`}
-                >
-                  {isScanning ? (
-                    <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري إرسال الأمر...</>
-                  ) : (
-                    <><AIIcon className="w-4 h-4"/> تشغيل الرادار الآن</>
-                  )}
+                <button onClick={handleExportAllExcel} className="bg-[#1a1a1a] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 justify-center"><ExcelIcon /> تصدير السجل</button>
+                <button onClick={handleManualScanTrigger} disabled={isScanning} className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 justify-center transition-all ${isScanning ? 'bg-purple-600/50 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'}`}>
+                  {isScanning ? <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري المسح...</> : <><AIIcon className="w-4 h-4"/> إطلاق الرادار</>}
                 </button>
               </>
             )}
@@ -3193,10 +3179,15 @@ function AINewsMonitorView({ branches, isOwner }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredNews.length > 0 ? filteredNews.map(n => (
+              {tableNews.length > 0 ? tableNews.map(n => {
+                 const aiData = extractAiData(n.news_updates);
+                 return (
                 <tr key={n.id} className="hover:bg-white/5">
                   <td className="p-4 text-white border-l border-white/5 font-mono">{n.incident_date}</td>
-                  <td className="p-4 text-purple-400 border-l border-white/5 font-bold">{n.news_type}</td>
+                  <td className="p-4 text-purple-400 border-l border-white/5 font-bold">
+                    {n.news_type}
+                    {aiData && aiData.severity && <span className="block mt-1 bg-red-500/20 text-red-500 px-2 py-0.5 rounded text-[10px] w-max">خطورة: {aiData.severity}/10</span>}
+                  </td>
                   <td className="p-4 text-gray-300 border-l border-white/5">{n.governorate}</td>
                   <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{n.incident_description}</td>
                   <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.news_publisher}</td>
@@ -3207,81 +3198,68 @@ function AINewsMonitorView({ branches, isOwner }) {
                           <GlobalWorldIcon />
                         </a>
                       )}
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="عرض وتعديل الخبر">
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="قراءة التقرير الاستخباراتي">
                         <EyeIcon />
                       </button>
-                      {(isOwner || isSupervisor || isJoker) && (
-                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف الخبر">
+                      {isOwner && (
+                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف السجل">
                           <TrashIcon />
                         </button>
                       )}
                     </div>
                   </td>
                 </tr>
-              )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">لا توجد أخبار مسحوبة من الروبوت حالياً...</td></tr>}
+              )
+              }) : <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">لا توجد أخبار مطابقة...</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* مودال قراءة التقرير والتعديل */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-purple-500/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-fade-in-up">
             <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500"/> استمارة الرصد الآلي (AI)</h2>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500"/> التقرير الاستخباراتي (OSINT)</h2>
               <button onClick={() => setIsModalOpen(false)} className="bg-[#111] text-gray-400 hover:text-red-500 p-2 rounded-xl"><TrashIcon /></button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              <SectionCard title="تفاصيل الخبر المسحوب" icon={<NewsIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="التاريخ"><StyledInput type="date" value={form.incident_date} onChange={e => setForm({...form, incident_date: e.target.value})} className="border-purple-500/30 focus:border-purple-500" /></FormGroup>
-                  <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(form.incident_date)} className="bg-[#0a0a0a] text-gray-500" /></FormGroup>
-                  <FormGroup label="نوع الخبر">
-                    <StyledSelect value={form.news_type} onChange={e => setForm({...form, news_type: e.target.value})} className="border-purple-500/30 focus:border-purple-500">
-                      <option value="" disabled className="text-gray-500">تصنيف الذكاء الاصطناعي...</option>
-                      {AI_NEWS_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </StyledSelect>
-                  </FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="وصف الحادث (الملخص)"><textarea value={form.incident_description} onChange={e => setForm({...form, incident_description: e.target.value})} className="w-full bg-[#111] border border-purple-500/30 rounded-xl p-3 text-sm outline-none text-white focus:border-purple-500" rows="3"></textarea></FormGroup></div>
-                  <FormGroup label="ناشر الخبر (الموقع/المجلة)"><StyledInput value={form.news_publisher} onChange={e => setForm({...form, news_publisher: e.target.value})} className="focus:border-purple-500" /></FormGroup>
-                  <FormGroup label="المحافظة (الفرع)">
-                    <StyledSelect value={form.governorate} onChange={e => setForm({...form, governorate: e.target.value})} className="focus:border-purple-500">
-                      <option value="" disabled>تم الرصد في...</option>
-                      {governorates.map(g => <option key={g} value={g}>{g}</option>)}
-                    </StyledSelect>
-                  </FormGroup>
-                  <FormGroup label="المنطقة"><StyledInput value={form.area_name} onChange={e => setForm({...form, area_name: e.target.value})} className="focus:border-purple-500" /></FormGroup>
-                  <FormGroup label="الشارع"><StyledInput value={form.street_name} onChange={e => setForm({...form, street_name: e.target.value})} className="focus:border-purple-500" /></FormGroup>
+              
+              {/* عرض التقرير التكتيكي والصورة فوق */}
+              <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-purple-500/50 p-6 rounded-2xl shadow-[0_0_20px_rgba(168,85,247,0.1)] flex flex-col md:flex-row gap-6">
+                <div className="flex-1 space-y-4">
+                   <h3 className="text-purple-400 font-bold flex items-center gap-2 border-b border-white/10 pb-2"><ShieldIcon/> التقرير الاستراتيجي الميداني</h3>
+                   <div className="text-gray-300 text-sm leading-loose whitespace-pre-wrap font-mono">
+                     {form.news_updates || 'لا يوجد تقرير متاح لهذا الحدث.'}
+                   </div>
                 </div>
-              </SectionCard>
+                {/* استخراج الصورة لعرضها */}
+                {extractAiData(form.news_updates)?.img && extractAiData(form.news_updates)?.img !== 'لا توجد صورة' && (
+                  <div className="w-full md:w-1/3 shrink-0">
+                    <img src={extractAiData(form.news_updates).img} alt="صورة الحدث" className="w-full h-auto rounded-xl border border-white/10 object-cover shadow-lg" />
+                  </div>
+                )}
+              </div>
 
-              <SectionCard title="الإحصائيات والتطورات الميدانية" icon={<AlertIcon />}>
+              <SectionCard title="تفاصيل الرصد" icon={<NewsIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="اسم المستشفى"><StyledInput value={form.hospital_name} onChange={e => setForm({...form, hospital_name: e.target.value})} className="focus:border-purple-500" /></FormGroup>
-                  <FormGroup label="عدد المصابين"><StyledInput type="text" value={form.injured_count} onChange={e => setForm({...form, injured_count: e.target.value})} className="focus:border-purple-500" /></FormGroup>
-                  <FormGroup label="عدد الوفيات"><StyledInput type="text" value={form.deaths_count} onChange={e => setForm({...form, deaths_count: e.target.value})} className="focus:border-purple-500" /></FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="تطورات الخبر"><textarea value={form.news_updates} onChange={e => setForm({...form, news_updates: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-purple-500" rows="3"></textarea></FormGroup></div>
-                  <div className="md:col-span-3"><FormGroup label="لينك الخبر الأصلي"><StyledInput value={form.news_link} onChange={e => setForm({...form, news_link: e.target.value})} dir="ltr" className="text-left border-blue-500/50 text-blue-400 bg-blue-500/5 focus:border-blue-500" /></FormGroup></div>
+                  <FormGroup label="نوع الخبر"><StyledInput disabled value={form.news_type} className="text-purple-400 font-bold" /></FormGroup>
+                  <FormGroup label="المحافظة (الفرع)"><StyledInput disabled value={form.governorate} /></FormGroup>
+                  <FormGroup label="ناشر الخبر"><StyledInput disabled value={form.news_publisher} /></FormGroup>
+                  <div className="md:col-span-3"><FormGroup label="وصف الحادث (الملخص)"><textarea readOnly value={form.incident_description} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-gray-300" rows="2"></textarea></FormGroup></div>
+                  <FormGroup label="اسم المستشفى"><StyledInput readOnly value={form.hospital_name} /></FormGroup>
+                  <FormGroup label="عدد المصابين"><StyledInput readOnly value={form.injured_count} className="text-yellow-500 font-bold" /></FormGroup>
+                  <FormGroup label="عدد الوفيات"><StyledInput readOnly value={form.deaths_count} className="text-red-500 font-bold" /></FormGroup>
+                  <div className="md:col-span-3"><FormGroup label="لينك الخبر الأصلي"><a href={form.news_link} target="_blank" rel="noreferrer" className="block w-full bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-sm text-blue-400 hover:text-blue-300 truncate" dir="ltr">{form.news_link}</a></FormGroup></div>
                 </div>
               </SectionCard>
             </div>
             
             <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-purple-400 border border-purple-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير هذا السجل</button>
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
-              {isOwner && <button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(168,85,247,0.3)]">حفظ التعديلات</button>}
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق التقرير</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(168,85,247,0.3)] text-center animate-fade-in-up">
-            <h3 className="text-xl font-bold text-white mb-4">رسالة النظام</h3>
-            <p className="text-gray-300 mb-6 whitespace-pre-wrap">{customAlert}</p>
-            <button onClick={() => setCustomAlert(null)} className="bg-purple-600 px-6 py-2.5 rounded-xl text-white font-bold w-full">علم</button>
           </div>
         </div>
       )}

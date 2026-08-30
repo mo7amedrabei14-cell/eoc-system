@@ -19,7 +19,6 @@ SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news"
 
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-# 💡 شبكة اصطياد الحوادث الشاملة
 KEYWORDS = [
     'تصادم', 'انقلاب', 'خروج قطار', 'اصطدام', 'حوادث طرق', 'ميكروباص', 'سيارة نقل', 
     'مقطورة', 'حادث مروع', 'دهس', 'حريق', 'حرائق', 'اشتعال', 'نيران', 'تفحم', 
@@ -29,7 +28,6 @@ KEYWORDS = [
     'طوارئ', 'إنقاذ', 'إسعاف', 'كارثة', 'حماية مدنية', 'كردون أمني', 'السيطرة على'
 ]
 
-# قائمة تنكر البوت (Stealth Mode)
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Safari/605.1.15",
@@ -37,68 +35,37 @@ USER_AGENTS = [
 ]
 
 # ==========================================
-# 2. بناء رادار السوشيال ميديا والأخبار السريع (محدث وشامل)
+# 2. شبكة الرصد الأخطبوطية الشاملة
 # ==========================================
 search_query = 'حريق OR حادث OR عاجل OR مصرع OR انفجار OR انهيار'
 encoded_query = urllib.parse.quote(f"{search_query} when:1h")
 GOOGLE_NEWS_EGYPT = f"https://news.google.com/rss/search?q={encoded_query}&hl=ar&gl=EG&ceid=EG:ar"
 
-# 💡 شبكة الرصد الأخطبوطية (كل الأقسام والمواقع)
 RSS_FEEDS = {
-    # 🔴 جوجل نيوز
     "رادار جوجل اللحظي": GOOGLE_NEWS_EGYPT, 
-    
-    # 🔴 صدى البلد (الموقع اللي فاتنا)
-    "صدى البلد (عاجل/رئيسية)": "https://www.elbalad.news/rss/1",
+    "صدى البلد (عاجل)": "https://www.elbalad.news/rss/1",
     "صدى البلد (حوادث)": "https://www.elbalad.news/rss/3",
-    "صدى البلد (محافظات)": "https://www.elbalad.news/rss/4",
-
-    # 🔴 اليوم السابع
     "اليوم السابع (عاجل)": "https://www.youm7.com/rss/SectionRss?SectionID=65",
     "اليوم السابع (حوادث)": "https://www.youm7.com/rss/SectionRss?SectionID=203",
-    "اليوم السابع (محافظات)": "https://www.youm7.com/rss/SectionRss?SectionID=319",
-
-    # 🔴 المصري اليوم
     "المصري اليوم (عاجل)": "https://www.almasryalyoum.com/rss/section/1",
     "المصري اليوم (حوادث)": "https://www.almasryalyoum.com/rss/section/13",
-    "المصري اليوم (محافظات)": "https://www.almasryalyoum.com/rss/section/53",
-
-    # 🔴 الشروق
     "الشروق (عاجل)": "https://www.shorouknews.com/rss/urgent.xml",
     "الشروق (حوادث)": "https://www.shorouknews.com/rss/accidents.xml",
-    "الشروق (محافظات)": "https://www.shorouknews.com/rss/governorates.xml",
-
-    # 🔴 فيتو
     "فيتو (عاجل)": "https://www.vetogate.com/rss/1",
     "فيتو (حوادث)": "https://www.vetogate.com/rss/2",
-    "فيتو (محافظات)": "https://www.vetogate.com/rss/3",
-
-    # 🔴 الدستور
     "الدستور (عاجل)": "https://www.dostor.org/rss/section/1",
     "الدستور (حوادث)": "https://www.dostor.org/rss/section/5",
-
-    # 🔴 البوابة نيوز
-    "البوابة نيوز (عاجل)": "https://www.albawabhnews.com/rss/1",
-    "البوابة نيوز (حوادث)": "https://www.albawabhnews.com/rss/97",
-
-    # 🔴 الأسبوع
+    "البوابة نيوز": "https://www.albawabhnews.com/rss/97",
     "الأسبوع (عاجل)": "https://www.elaosboa.com/rss/1/",
     "الأسبوع (حوادث)": "https://www.elaosboa.com/rss/accidents/",
-
-    # 🔴 مواقع بتغذية شاملة
     "القاهرة 24 (الرئيسية)": "https://www.cairo24.com/rss",
     "الوطن (الرئيسية)": "https://www.elwatannews.com/home/rss",
     "مصراوي (الرئيسية)": "https://www.masrawy.com/CrossDomain/News/RSS",
-
-    # 🔴 الوكالات الدولية بمصر
     "سكاي نيوز (مصر)": "https://www.skynewsarabia.com/rss/مصر",
     "روسيا اليوم (مصر)": "https://arabic.rt.com/rss/egypt/",
     "العربية (مصر)": "https://www.alarabiya.net/egypt.rss"
 }
 
-# ==========================================
-# 3. الذاكرة المانعة للتكرار
-# ==========================================
 processed_news_links = set()
 try:
     if SYSTEM_TOKEN:
@@ -109,10 +76,10 @@ try:
                 if news.get("news_link"):
                     processed_news_links.add(news.get("news_link"))
 except Exception as e:
-    print(f"⚠️ فشل جلب الأخبار السابقة: {e}")
+    pass
 
 # ==========================================
-# 4. دالة الغوص العميق (قراءة المقال بالكامل)
+# 4. دالة الغوص العميق (سحب النص + الصور)
 # ==========================================
 def scrape_full_article(url):
     try:
@@ -120,31 +87,40 @@ def scrape_full_article(url):
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
         
+        # 💡 التطور الأول: اصطياد الصورة المرفقة بالخبر
+        og_image = soup.find('meta', property='og:image')
+        image_url = og_image['content'] if og_image else "لا توجد صورة"
+
         paragraphs = soup.find_all('p')
         article_text = " ".join([p.get_text() for p in paragraphs])
         
-        return article_text[:3500] if len(article_text) > 3500 else article_text
+        return article_text[:3500] if len(article_text) > 3500 else article_text, image_url
     except Exception as e:
-        return ""
+        return "", "لا توجد صورة"
 
 # ==========================================
-# 5. محرك الذكاء الاصطناعي (تحليل احترافي)
+# 5. محرك الذكاء الاصطناعي (العقل المدبر التكتيكي)
 # ==========================================
 def analyze_news_with_ai(news_text, title, retries=3):
     prompt = f"""
-    أنت خبير أمني في غرفة عمليات EOC. اقرأ هذا النص الكامل للخبر، واستخرج البيانات في صيغة JSON فقط:
+    أنت خبير أمني ومدير استراتيجيات في غرفة عمليات طوارئ (EOC) متقدمة.
+    قم بتحليل هذا الحدث بدقة شديدة:
     العنوان: "{title}"
-    التفاصيل الكاملة: "{news_text}"
+    التفاصيل: "{news_text}"
 
-    - "incident_description": ملخص دقيق للحادث يبرز حجم الخسائر إن وجدت.
-    - "news_type": تصنيف الحادث. (إذا كان غريباً اكتب "أخرى / غير مصنف").
-    - "governorate": اسم المحافظة (استنتجها أو اكتب "غير محدد").
-    - "area_name": اسم المنطقة.
-    - "street_name": اسم الشارع.
-    - "hospital_name": المستشفى الذي تم نقل الضحايا إليه (إن وجد).
-    - "injured_count": المصابين (اكتب الرقم فقط، أو 0).
-    - "deaths_count": الوفيات (اكتب الرقم فقط، أو 0).
-    - "severity_score": رقم من 1 إلى 10 يمثل حجم الأزمة وتأثيرها.
+    استخرج البيانات التالية في صيغة JSON فقط وبدون أي نصوص إضافية:
+    - "incident_description": ملخص تكتيكي للحادث يبرز حجم الخسائر والتهديدات المحتملة.
+    - "news_type": تصنيف الحادث الدقيق.
+    - "governorate": المحافظة.
+    - "area_name": المنطقة.
+    - "street_name": الشارع.
+    - "hospital_name": المستشفى.
+    - "injured_count": المصابين (رقم فقط).
+    - "deaths_count": الوفيات (رقم فقط).
+    - "severity_score": تقييم الخطورة من 1 إلى 10 (رقم فقط).
+    - "latitude": استنتج خط العرض الجغرافي التقريبي لمكان الحادث في مصر (مثال: 30.0444).
+    - "longitude": استنتج خط الطول الجغرافي التقريبي لمكان الحادث في مصر (مثال: 31.2357).
+    - "tactical_recommendations": اكتب 3 توصيات ميدانية سريعة لغرفة العمليات لكيفية الاستجابة لهذا الحدث (مثل تجهيز سيارات إسعاف إضافية، إخلاء مباني مجاورة، تجهيز خيم إيواء).
     """
     for attempt in range(retries):
         try:
@@ -156,7 +132,7 @@ def analyze_news_with_ai(news_text, title, retries=3):
     return None
 
 # ==========================================
-# 6. وحدة المسح الفردية (تعمل بالتوازي)
+# 6. وحدة المسح الفردية
 # ==========================================
 def scan_single_source(publisher, url, now_utc):
     try:
@@ -165,7 +141,6 @@ def scan_single_source(publisher, url, now_utc):
         feed = feedparser.parse(resp.content)
         
         for entry in feed.entries[:50]: 
-            
             try:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
@@ -179,23 +154,29 @@ def scan_single_source(publisher, url, now_utc):
                 continue
             
             if any(k in entry.title for k in KEYWORDS):
-                print(f"🚨 [{publisher}] تم اصطياد حادث، جاري الغوص لجمع التفاصيل: {entry.title}")
+                print(f"🚨 [{publisher}] تم رصد الهدف: {entry.title}")
                 
-                full_article_text = scrape_full_article(news_link)
+                full_article_text, image_url = scrape_full_article(news_link)
                 combined_text = full_article_text if len(full_article_text) > 50 else entry.get('summary', '')
 
                 ai_data = analyze_news_with_ai(combined_text, entry.title)
                 
                 if not ai_data:
-                    ai_data = {
-                        "incident_description": entry.title,
-                        "news_type": "أخرى / غير مصنف",
-                        "governorate": "تحليل يدوي مطلوب",
-                        "injured_count": "0", "deaths_count": "0", "severity_score": "غير محدد"
-                    }
+                    continue
 
+                # 💡 التطور الأعظم: دمج التقرير الاستخباراتي في تحديثات الخبر
                 severity = ai_data.get("severity_score", "?")
-                updates_msg = f"🔥 [مستوى الخطورة: {severity}/10] - تم قراءة المقال بالكامل بواسطة EOC AI Radar."
+                tactical = ai_data.get("tactical_recommendations", "لا توجد توصيات واضحة.")
+                lat = ai_data.get("latitude", "غير متوفر")
+                lng = ai_data.get("longitude", "غير متوفر")
+                
+                # تنسيق تقرير الغرفة اللي هيظهرلك على الداشبورد
+                tactical_report = (
+                    f"🔥 [مستوى الخطورة]: {severity}/10\n"
+                    f"📍 [إحداثيات الموقع]: {lat}, {lng}\n"
+                    f"💡 [توصيات تكتيكية للغرفة]: {tactical}\n"
+                    f"📸 [صورة الحادثة]: {image_url}"
+                )
 
                 payload = {
                     "incident_date": datetime.now().strftime("%Y-%m-%d"),
@@ -208,37 +189,37 @@ def scan_single_source(publisher, url, now_utc):
                     "hospital_name": ai_data.get("hospital_name", ""),
                     "injured_count": str(ai_data.get("injured_count", "0")),
                     "deaths_count": str(ai_data.get("deaths_count", "0")),
-                    "news_updates": updates_msg,
+                    "news_updates": tactical_report, # التقرير الاستخباراتي اترمي هنا
                     "news_link": news_link,
-                    "data_entry_name": "AI Robot (Deep Scan)"
+                    "data_entry_name": "OSINT God-Mode AI"
                 }
                 
                 headers_api = {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
                 res = requests.post(SYSTEM_API_URL, json=payload, headers=headers_api)
                 if res.status_code in [200, 201]: 
-                    print(f"✅ تم رفع الخبر بنجاح شامل التفاصيل من {publisher}!")
+                    print(f"✅ تم إرسال التقرير التكتيكي لغرفة العمليات بنجاح!")
                 
                 processed_news_links.add(news_link)
     except Exception as e:
-        print(f"❌ خطأ في مسح {publisher}: {e}")
+        pass
 
 # ==========================================
-# 7. المحرك الرئيسي (Multi-threading مع 25 مسار)
+# 7. المحرك الرئيسي (Multi-threading القاتل)
 # ==========================================
 def run_ai_scanner():
     if not GEMINI_API_KEY or not SYSTEM_TOKEN:
-        print("⚠️ المفاتيح السرية مفقودة!")
+        print("⚠️ المفاتيح مفقودة!")
         return
 
-    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 بدء المسح المتوازي الشامل (Deep Scan Mode)...")
+    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT God-Mode)...")
     now_utc = datetime.utcnow()
 
-    # 💡 تم زيادة قوة المعالجة لـ 25 مسار متوازي لاصطياد كل المواقع في ثانية واحدة
-    with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
+    # 30 مسار متوازي عشان يقرأ كل المواقع وكل الأقسام في نفس اللحظة
+    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as executor:
         futures = [executor.submit(scan_single_source, pub, url, now_utc) for pub, url in RSS_FEEDS.items()]
         concurrent.futures.wait(futures)
 
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ انتهت دورة المسح الشاملة بنجاح.")
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء من المسح الميداني بنجاح.")
 
 if __name__ == '__main__':
     run_ai_scanner()

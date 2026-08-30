@@ -1323,3 +1323,40 @@ def delete_ai_news(news_id: int, credentials: HTTPAuthorizationCredentials = Dep
         raise HTTPException(status_code=500)
     finally:
         connection.close()
+
+import os
+import requests
+from fastapi import APIRouter, Depends, HTTPException, status
+
+# ... (باقي كود السيرفر بتاعك اللي موجود أصلاً) ...
+
+@app.post("/api/trigger-ai-radar")
+async def trigger_ai_radar(current_user: dict = Depends(security)):
+    # 1. حماية أمنية: المالك فقط هو اللي يقدر يشغل الرادار
+    role = current_user.get("role", "").upper()
+    is_admin = current_user.get("is_global_admin") or role in ["OWNER", "المالك"]
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="عفواً، المالك فقط يمكنه إطلاق الرادار.")
+
+    # 2. سحب المفتاح السري من خزنة Vercel في الخفاء
+    github_pat = os.environ.get("GITHUB_PAT")
+    if not github_pat:
+        raise HTTPException(status_code=500, detail="المفتاح السري غير متوفر في السيرفر.")
+
+    # 3. إرسال أمر التشغيل لجيت هاب
+    url = "https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/dispatches"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": f"Bearer {github_pat}",
+        "Content-Type": "application/json"
+    }
+    data = {"ref": "main"}
+
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code in [200, 204]:
+            return {"message": "تم إطلاق الرادار بنجاح"}
+        else:
+            raise HTTPException(status_code=response.status_code, detail="فشل إرسال الأمر لـ GitHub.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="فشل الاتصال الداخلي.")
