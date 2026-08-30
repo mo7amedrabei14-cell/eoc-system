@@ -34,6 +34,9 @@ USER_AGENTS = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
 ]
 
+# ==========================================
+# 2. شبكة الرصد الأخطبوطية الشاملة
+# ==========================================
 search_query = 'حريق OR حادث OR عاجل OR مصرع OR انفجار OR انهيار'
 encoded_query = urllib.parse.quote(f"{search_query} when:1h")
 GOOGLE_NEWS_EGYPT = f"https://news.google.com/rss/search?q={encoded_query}&hl=ar&gl=EG&ceid=EG:ar"
@@ -75,19 +78,29 @@ try:
 except Exception as e:
     pass
 
+# ==========================================
+# 4. دالة الغوص العميق (سحب النص + الصور)
+# ==========================================
 def scrape_full_article(url):
     try:
         headers = {'User-Agent': random.choice(USER_AGENTS)}
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # 💡 التطور الأول: اصطياد الصورة المرفقة بالخبر
         og_image = soup.find('meta', property='og:image')
         image_url = og_image['content'] if og_image else "لا توجد صورة"
+
         paragraphs = soup.find_all('p')
         article_text = " ".join([p.get_text() for p in paragraphs])
+        
         return article_text[:3500] if len(article_text) > 3500 else article_text, image_url
-    except Exception:
+    except Exception as e:
         return "", "لا توجد صورة"
 
+# ==========================================
+# 5. محرك الذكاء الاصطناعي (العقل المدبر التكتيكي)
+# ==========================================
 def analyze_news_with_ai(news_text, title, retries=3):
     prompt = f"""
     أنت خبير أمني ومدير استراتيجيات في غرفة عمليات طوارئ (EOC) متقدمة.
@@ -107,26 +120,30 @@ def analyze_news_with_ai(news_text, title, retries=3):
     - "severity_score": تقييم الخطورة من 1 إلى 10 (رقم فقط).
     - "latitude": استنتج خط العرض الجغرافي التقريبي لمكان الحادث في مصر (مثال: 30.0444).
     - "longitude": استنتج خط الطول الجغرافي التقريبي لمكان الحادث في مصر (مثال: 31.2357).
-    - "tactical_recommendations": اكتب 3 توصيات ميدانية سريعة لغرفة العمليات.
+    - "tactical_recommendations": اكتب 3 توصيات ميدانية سريعة لغرفة العمليات لكيفية الاستجابة لهذا الحدث (مثل تجهيز سيارات إسعاف إضافية، إخلاء مباني مجاورة، تجهيز خيم إيواء).
     """
     for attempt in range(retries):
         try:
+            # تم تعديل اسم الموديل للإصدار الصحيح
             response = client.models.generate_content(model='gemini-1.5-flash', contents=prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
             return json.loads(clean_json)
         except Exception as e:
-            # 💡 التعديل هنا: طباعة الخطأ عشان نعرف المشكلة منين
+            # 💡 التعديل هنا: طباعة سبب الفشل
             print(f"⚠️ فشل الذكاء الاصطناعي في تحليل ({title}) [المحاولة {attempt+1}]: {str(e)}")
             time.sleep(2)
     return None
 
+# ==========================================
+# 6. وحدة المسح الفردية
+# ==========================================
 def scan_single_source(publisher, url, now_utc):
     try:
         headers = {'User-Agent': random.choice(USER_AGENTS)}
         resp = requests.get(url, headers=headers, timeout=10)
         feed = feedparser.parse(resp.content)
         
-        for entry in feed.entries[:30]: 
+        for entry in feed.entries[:50]: 
             try:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
@@ -147,25 +164,28 @@ def scan_single_source(publisher, url, now_utc):
 
                 ai_data = analyze_news_with_ai(combined_text, entry.title)
                 
-                # 💡 التعديل القاتل: لو الذكاء الاصطناعي فشل، ابعت الخبر بردو للداشبورد!
+                # 💡 خطة الإنقاذ: لو الذكاء الاصطناعي فشل، مش هنرمي الخبر!
                 if not ai_data:
                     print(f"🔄 جاري إرسال الخبر ({entry.title}) بدون تحليل ذكاء اصطناعي للضرورة.")
                     ai_data = {
                         "incident_description": entry.title,
                         "news_type": "غير مصنف (فشل التحليل)",
                         "governorate": "القاهرة",
-                        "severity_score": "?",
-                        "tactical_recommendations": "لم يتمكن الذكاء الاصطناعي من تحليل التفاصيل.",
+                        "area_name": "",
+                        "street_name": "",
+                        "hospital_name": "",
                         "injured_count": "0",
                         "deaths_count": "0",
+                        "severity_score": "?",
                         "latitude": "30.0444",
-                        "longitude": "31.2357"
+                        "longitude": "31.2357",
+                        "tactical_recommendations": "تعذر التحليل بواسطة الذكاء الاصطناعي. يرجى المراجعة اليدوية للخبر المرفق."
                     }
 
                 severity = ai_data.get("severity_score", "?")
                 tactical = ai_data.get("tactical_recommendations", "لا توجد توصيات واضحة.")
-                lat = ai_data.get("latitude", "30.0444")
-                lng = ai_data.get("longitude", "31.2357")
+                lat = ai_data.get("latitude", "غير متوفر")
+                lng = ai_data.get("longitude", "غير متوفر")
                 
                 tactical_report = (
                     f"🔥 [مستوى الخطورة]: {severity}/10\n"
@@ -196,15 +216,18 @@ def scan_single_source(publisher, url, now_utc):
                 if res.status_code in [200, 201]: 
                     print(f"✅ تم إرسال التقرير لغرفة العمليات بنجاح!")
                 else:
-                    print(f"⚠️ خطأ في الإرسال للداشبورد: {res.text}")
+                    print(f"⚠️ خطأ في الإرسال: {res.text}")
                 
                 processed_news_links.add(news_link)
     except Exception as e:
         pass
 
+# ==========================================
+# 7. المحرك الرئيسي (Multi-threading القاتل)
+# ==========================================
 def run_ai_scanner():
     if not GEMINI_API_KEY or not SYSTEM_TOKEN:
-        print("⚠️ المفاتيح مفقودة! تأكد من إعداد GEMINI_API_KEY و SYSTEM_TOKEN")
+        print("⚠️ المفاتيح مفقودة!")
         return
 
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT God-Mode)...")
