@@ -20,7 +20,7 @@ jobs:
 
       - name: تسطيب المكتبات المطلوبة
         run: |
-          pip install feedparser requests google-genai beautifulsoup4
+          pip install feedparser requests google-generativeai beautifulsoup4
 
       - name: تشغيل محرك الذكاء الاصطناعي
         env:
