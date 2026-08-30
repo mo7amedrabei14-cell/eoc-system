@@ -16,3 +16,4 @@ schedule
 google-genai
 flask
 gunicorn
+beautifulsoup4
