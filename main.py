@@ -1361,4 +1361,4 @@ def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(securit
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"فشل الاتصال الداخلي: {str(e)}")
 
-# Force Vercel to load GitHub PAT
+# Fix Vercel Environment Variables Conflict
