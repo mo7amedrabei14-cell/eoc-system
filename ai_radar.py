@@ -15,7 +15,8 @@ from datetime import datetime, timedelta
 # ==========================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN") 
-SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news" 
+# 💡 تم إصلاح اللينك للمشروع الجديد مع مسار الـ API
+SYSTEM_API_URL = "https://eoc-system-o8eqxjs7q-eoc5.vercel.app/api/ai-news" 
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -124,6 +125,7 @@ def analyze_news_with_ai(news_text, title, retries=3):
     """
     for attempt in range(retries):
         try:
+            # 💡 تم وضع الموديل السليم هنا
             model = genai.GenerativeModel('gemini-pro')
             response = model.generate_content(prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
@@ -142,7 +144,7 @@ def scan_single_source(publisher, url, now_utc):
         resp = requests.get(url, headers=headers, timeout=10)
         feed = feedparser.parse(resp.content)
         
-        # 💡 تم التعديل هنا لـ 15 خبر فقط لضمان سرعة الروبوت وعدم استهلاك الباقة
+        # 💡 مسح 15 خبر من كل مصدر
         for entry in feed.entries[:15]: 
             try:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
