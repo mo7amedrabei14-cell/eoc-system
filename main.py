@@ -1329,7 +1329,6 @@ import requests
 
 @app.post("/api/trigger-ai-radar")
 def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # 1. التحقق من المستخدم باستخدام الدوال المعتمدة في ملفك
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401, detail="غير مصرح")
@@ -1338,10 +1337,15 @@ def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(securit
     if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
         raise HTTPException(status_code=403, detail="عفواً، المالك فقط يمكنه إطلاق الرادار.")
 
-    # 2. سحب المفتاح السري من خزنة Vercel في الخفاء
+    # 🔍 كود التشخيص الدقيق لمعرفة العطل فين بالظبط
     github_pat = os.environ.get("GITHUB_PAT")
-    if not github_pat:
-        raise HTTPException(status_code=500, detail="المفتاح السري غير متوفر في السيرفر.")
+    
+    if github_pat is None:
+        raise HTTPException(status_code=500, detail="الخطأ من Vercel: المفتاح غير موجود نهائياً (None).")
+    if github_pat.strip() == "":
+        raise HTTPException(status_code=500, detail="الخطأ من الأكواد: المفتاح موجود ولكنه فارغ! هناك ملف .env مرفوع على جيت هاب يقوم بمسحه.")
+    if not github_pat.startswith("ghp_"):
+        raise HTTPException(status_code=500, detail=f"الخطأ في النسخ: المفتاح مكتوب بشكل خاطئ، يبدأ بـ: {github_pat[:4]}")
 
     # 3. إرسال أمر التشغيل لجيت هاب
     url = "https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/dispatches"
@@ -1357,8 +1361,8 @@ def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(securit
         if response.status_code in [200, 204]:
             return {"message": "تم إطلاق الرادار بنجاح! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة."}
         else:
-            raise HTTPException(status_code=response.status_code, detail="فشل إرسال الأمر لـ GitHub.")
+            raise HTTPException(status_code=response.status_code, detail=f"فشل جيت هاب: {response.text}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail="فشل الاتصال الداخلي.")
+        raise HTTPException(status_code=500, detail=f"فشل الاتصال الداخلي: {str(e)}")
 
 # Force Vercel to load GitHub PAT
