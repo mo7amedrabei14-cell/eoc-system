@@ -1337,21 +1337,17 @@ def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(securit
     if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
         raise HTTPException(status_code=403, detail="عفواً، المالك فقط يمكنه إطلاق الرادار.")
 
-    # 🔍 كود التشخيص الدقيق لمعرفة العطل فين بالظبط
-    github_pat = os.environ.get("GITHUB_PAT")
+    # 💡 تم تغيير الاسم لتجنب حظر Vercel لأي متغير يبدأ بـ GITHUB
+    radar_key = os.environ.get("RADAR_SECRET_KEY")
     
-    if github_pat is None:
-        raise HTTPException(status_code=500, detail="الخطأ من Vercel: المفتاح غير موجود نهائياً (None).")
-    if github_pat.strip() == "":
-        raise HTTPException(status_code=500, detail="الخطأ من الأكواد: المفتاح موجود ولكنه فارغ! هناك ملف .env مرفوع على جيت هاب يقوم بمسحه.")
-    if not github_pat.startswith("ghp_"):
-        raise HTTPException(status_code=500, detail=f"الخطأ في النسخ: المفتاح مكتوب بشكل خاطئ، يبدأ بـ: {github_pat[:4]}")
+    if not radar_key:
+        raise HTTPException(status_code=500, detail="الخطأ: مفتاح RADAR_SECRET_KEY غير موجود في إعدادات Vercel.")
 
-    # 3. إرسال أمر التشغيل لجيت هاب
+    # إرسال أمر التشغيل لجيت هاب
     url = "https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/dispatches"
     headers = {
         "Accept": "application/vnd.github.v3+json",
-        "Authorization": f"Bearer {github_pat}",
+        "Authorization": f"Bearer {radar_key}",
         "Content-Type": "application/json"
     }
     data = {"ref": "main"}
@@ -1359,7 +1355,7 @@ def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(securit
     try:
         response = requests.post(url, headers=headers, json=data)
         if response.status_code in [200, 204]:
-            return {"message": "تم إطلاق الرادار بنجاح! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة."}
+            return {"message": "تم إطلاق وحش الرصد بنجاح! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة."}
         else:
             raise HTTPException(status_code=response.status_code, detail=f"فشل جيت هاب: {response.text}")
     except Exception as e:
