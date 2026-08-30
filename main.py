@@ -1211,10 +1211,10 @@ class AINewsModel(BaseModel):
 def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     import os
-    
     system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    
     if system_token and token.strip() == system_token:
-        pass
+        pass # الباب مفتوح للروبوت
     else:
         user_id = get_current_user_id(token)
         if not user_id: raise HTTPException(status_code=401)
@@ -1240,8 +1240,8 @@ def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
 def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     import os
-    
     system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    
     if system_token and token.strip() == system_token:
         user_id = 1
     else:
@@ -1252,7 +1252,6 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
     try:
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
-            
             cursor.execute("""
                 INSERT INTO ai_news (
                     incident_date, incident_month, incident_description, news_type, news_publisher,
@@ -1278,7 +1277,7 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         connection.close()
-
+        
 @app.put("/api/ai-news/{news_id}")
 def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
