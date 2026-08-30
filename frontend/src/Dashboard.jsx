@@ -3272,6 +3272,25 @@ function AINewsMonitorView({ branches, isOwner }) {
           </div>
         </div>
       )}
+
+      {/* 👇 شاشة التنبيهات عشان الزرار يرد عليك 👇 */}
+      {customAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1a1a1a] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(168,85,247,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4">
+              <AIIcon className="w-7 h-7 text-purple-500" />
+              <h3 className="text-xl font-bold text-white">رسالة النظام</h3>
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <div className="mt-8 flex justify-end">
+              <button onClick={() => setCustomAlert(null)} className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] w-full">
+                علم
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 👆 نهاية شاشة التنبيهات 👆 */}
     </div>
   );
 }
