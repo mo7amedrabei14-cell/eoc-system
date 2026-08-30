@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN") 
 # 💡 تم إصلاح اللينك للمشروع الجديد مع مسار الـ API
-SYSTEM_API_URL = "https://eoc-system-o8eqxjs7q-eoc5.vercel.app/api/ai-news" 
+SYSTEM_API_URL = "'https://eoc-system.vercel.app/api/ai-news" 
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
