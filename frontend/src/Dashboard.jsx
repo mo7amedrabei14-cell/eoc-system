@@ -2957,6 +2957,9 @@ function AINewsMonitorView({ branches, isOwner }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [customAlert, setCustomAlert] = useState(null);
+  
+  // 💡 حالة التحميل للزرار الجديد
+  const [isScanning, setIsScanning] = useState(false);
 
   const [form, setForm] = useState({
     id: null, incident_date: getLocalDate(), incident_description: '', news_type: '', news_publisher: '',
@@ -2969,7 +2972,6 @@ function AINewsMonitorView({ branches, isOwner }) {
   // 💡 حالة وقت آخر فحص
   const [lastRunTime, setLastRunTime] = useState('جاري التحقق...');
 
-  // 💡 دالة سحب آخر توقيت اشتغل فيه الروبوت من جيت هاب (تتحدث كل دقيقة)
   useEffect(() => {
     const fetchLastRun = async () => {
       try {
@@ -3065,7 +3067,6 @@ function AINewsMonitorView({ branches, isOwner }) {
     }
   };
 
-  // 💡 دالة المسح الجديدة
   const handleDeleteAiNews = async (id) => {
     if (!isOwner) return setCustomAlert("عفواً، المالك فقط يمكنه الحذف.");
     if (!window.confirm("هل أنت متأكد من حذف هذا السجل نهائياً؟")) return;
@@ -3088,12 +3089,45 @@ function AINewsMonitorView({ branches, isOwner }) {
     }
   };
 
+  // 💡 الدالة السحرية للتشغيل اليدوي (زرار الطوارئ)
+  const handleManualScanTrigger = async () => {
+    if (!isOwner) return setCustomAlert("المالك فقط يمكنه إعطاء أمر تشغيل الرادار اليدوي.");
+    
+    // 🚨 حط المفتاح بتاعك هنا بين علامتين التنصيص
+    const GITHUB_PAT = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxx"; 
+
+    if (GITHUB_PAT === "ghp_xxxxxxxxxxxxxxxxxxxxxxxxx" || !GITHUB_PAT) {
+      return setCustomAlert("عفواً، يرجى وضع مفتاح GitHub (Token) في الكود لتفعيل هذه الميزة.");
+    }
+
+    setIsScanning(true);
+    try {
+      const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/dispatches', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'Authorization': `Bearer ${GITHUB_PAT}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ref: 'main' })
+      });
+
+      if (res.ok || res.status === 204) {
+        setCustomAlert("تم إرسال أمر التشغيل للرادار بنجاح! 🚀\nالروبوت يقوم بمسح المواقع الآن، يرجى الانتظار لمدة دقيقة تقريباً ومراقبة الإشعارات.");
+      } else {
+        setCustomAlert("حدث خطأ أثناء إرسال الأمر للسيرفر. تأكد من صلاحيات مفتاح GitHub.");
+      }
+    } catch (error) {
+      setCustomAlert("فشل الاتصال بسيرفرات التشغيل الآلي.");
+    }
+    setIsScanning(false);
+  };
+
   const filteredNews = filterDate ? aiNewsList.filter(n => n.incident_date === filterDate) : aiNewsList;
 
   return (
     <div className="space-y-6 pb-10">
       
-      {/* 💡 لوحة مراقبة البوت بالتوقيت الحي */}
       <div className="bg-[#111] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> مركز رصد الذكاء الاصطناعي (AI Scanner)</h3>
@@ -3126,7 +3160,23 @@ function AINewsMonitorView({ branches, isOwner }) {
             {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-purple-400 hover:text-white bg-purple-500/10 px-2 py-2 rounded-lg">الكل</button>}
           </div>
           <div className="flex flex-wrap gap-3">
-            {isOwner && <button onClick={handleExportAllExcel} className="bg-[#1a1a1a] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 w-full md:w-auto justify-center"><ExcelIcon /> تصدير السجل الشامل</button>}
+            {isOwner && (
+              <>
+                <button onClick={handleExportAllExcel} className="bg-[#1a1a1a] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 w-full md:w-auto justify-center"><ExcelIcon /> تصدير السجل الشامل</button>
+                {/* 💡 زرار الرصد اليدوي العبقري */}
+                <button 
+                  onClick={handleManualScanTrigger} 
+                  disabled={isScanning}
+                  className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 w-full md:w-auto justify-center transition-all ${isScanning ? 'bg-purple-600/50 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'}`}
+                >
+                  {isScanning ? (
+                    <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري إرسال الأمر...</>
+                  ) : (
+                    <><AIIcon className="w-4 h-4"/> تشغيل الرادار الآن</>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -3161,7 +3211,7 @@ function AINewsMonitorView({ branches, isOwner }) {
                         <EyeIcon />
                       </button>
                       {(isOwner || isSupervisor || isJoker) && (
-                        <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف الخبر">
+                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف الخبر">
                           <TrashIcon />
                         </button>
                       )}
@@ -3230,7 +3280,7 @@ function AINewsMonitorView({ branches, isOwner }) {
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#1a1a1a] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(168,85,247,0.3)] text-center animate-fade-in-up">
             <h3 className="text-xl font-bold text-white mb-4">رسالة النظام</h3>
-            <p className="text-gray-300 mb-6">{customAlert}</p>
+            <p className="text-gray-300 mb-6 whitespace-pre-wrap">{customAlert}</p>
             <button onClick={() => setCustomAlert(null)} className="bg-purple-600 px-6 py-2.5 rounded-xl text-white font-bold w-full">علم</button>
           </div>
         </div>
@@ -3239,5 +3289,5 @@ function AINewsMonitorView({ branches, isOwner }) {
   );
 }
 
-// 💡 أيقونات
+// 💡 أيقونات (للتأكيد إن مفيش حاجة ناقصة)
 const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5 h-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h.01M15 9h.01" /></svg>;

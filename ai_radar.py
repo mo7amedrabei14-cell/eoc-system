@@ -19,14 +19,14 @@ SYSTEM_API_URL = "https://eoc-system.vercel.app/api/ai-news"
 
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-# شبكة اصطياد الحوادث الشاملة
+# 💡 شبكة اصطياد الحوادث الشاملة
 KEYWORDS = [
     'تصادم', 'انقلاب', 'خروج قطار', 'اصطدام', 'حوادث طرق', 'ميكروباص', 'سيارة نقل', 
     'مقطورة', 'حادث مروع', 'دهس', 'حريق', 'حرائق', 'اشتعال', 'نيران', 'تفحم', 
     'ماس كهربائي', 'انفجار', 'تسرب غاز', 'تسرب كيميائي', 'انهيار', 'سقوط مبنى', 
     'تصدع', 'ميل عقار', 'هبوط أرضي', 'سيول', 'فيضانات', 'زلزال', 'هزة أرضية', 
     'مصرع', 'وفاة', 'إصابة', 'حالات حرجة', 'اختناق', 'تسمم', 'انتشال', 'جثة', 
-    'طوارئ', 'إنقاذ', 'إسعاف', 'كارثة', 'حماية مدنية', 'كردون أمني'
+    'طوارئ', 'إنقاذ', 'إسعاف', 'كارثة', 'حماية مدنية', 'كردون أمني', 'السيطرة على'
 ]
 
 # قائمة تنكر البوت (Stealth Mode)
@@ -37,27 +37,63 @@ USER_AGENTS = [
 ]
 
 # ==========================================
-# 2. بناء رادار السوشيال ميديا والأخبار السريع
+# 2. بناء رادار السوشيال ميديا والأخبار السريع (محدث وشامل)
 # ==========================================
 search_query = 'حريق OR حادث OR عاجل OR مصرع OR انفجار OR انهيار'
 encoded_query = urllib.parse.quote(f"{search_query} when:1h")
 GOOGLE_NEWS_EGYPT = f"https://news.google.com/rss/search?q={encoded_query}&hl=ar&gl=EG&ceid=EG:ar"
 
+# 💡 شبكة الرصد الأخطبوطية (كل الأقسام والمواقع)
 RSS_FEEDS = {
-    "رادار جوجل اللحظي (تريندات)": GOOGLE_NEWS_EGYPT, 
-    "اليوم السابع": "https://www.youm7.com/rss/SectionRss?SectionID=203",
-    "المصري اليوم": "https://www.almasryalyoum.com/rss/section/13",
-    "صدى البلد": "https://www.elbalad.news/rss/3",
-    "مصراوي": "https://www.masrawy.com/CrossDomain/News/RSS",
-    "الشروق": "https://www.shorouknews.com/rss/accidents.xml",
-    "بوابة الأهرام": "https://gate.ahram.org.eg/Rss/50/LatestNews.aspx",
-    "الوطن": "https://www.elwatannews.com/home/rss",
-    "فيتو": "https://www.vetogate.com/rss/2",
-    "الدستور": "https://www.dostor.org/rss/section/5",
-    "البوابة نيوز": "https://www.albawabhnews.com/rss/97",
-    "الأسبوع": "https://www.elaosboa.com/rss/accidents/",
-    "سكاي نيوز": "https://www.skynewsarabia.com/rss/مصر",
-    "القاهرة 24": "https://www.cairo24.com/rss"
+    # 🔴 جوجل نيوز
+    "رادار جوجل اللحظي": GOOGLE_NEWS_EGYPT, 
+    
+    # 🔴 صدى البلد (الموقع اللي فاتنا)
+    "صدى البلد (عاجل/رئيسية)": "https://www.elbalad.news/rss/1",
+    "صدى البلد (حوادث)": "https://www.elbalad.news/rss/3",
+    "صدى البلد (محافظات)": "https://www.elbalad.news/rss/4",
+
+    # 🔴 اليوم السابع
+    "اليوم السابع (عاجل)": "https://www.youm7.com/rss/SectionRss?SectionID=65",
+    "اليوم السابع (حوادث)": "https://www.youm7.com/rss/SectionRss?SectionID=203",
+    "اليوم السابع (محافظات)": "https://www.youm7.com/rss/SectionRss?SectionID=319",
+
+    # 🔴 المصري اليوم
+    "المصري اليوم (عاجل)": "https://www.almasryalyoum.com/rss/section/1",
+    "المصري اليوم (حوادث)": "https://www.almasryalyoum.com/rss/section/13",
+    "المصري اليوم (محافظات)": "https://www.almasryalyoum.com/rss/section/53",
+
+    # 🔴 الشروق
+    "الشروق (عاجل)": "https://www.shorouknews.com/rss/urgent.xml",
+    "الشروق (حوادث)": "https://www.shorouknews.com/rss/accidents.xml",
+    "الشروق (محافظات)": "https://www.shorouknews.com/rss/governorates.xml",
+
+    # 🔴 فيتو
+    "فيتو (عاجل)": "https://www.vetogate.com/rss/1",
+    "فيتو (حوادث)": "https://www.vetogate.com/rss/2",
+    "فيتو (محافظات)": "https://www.vetogate.com/rss/3",
+
+    # 🔴 الدستور
+    "الدستور (عاجل)": "https://www.dostor.org/rss/section/1",
+    "الدستور (حوادث)": "https://www.dostor.org/rss/section/5",
+
+    # 🔴 البوابة نيوز
+    "البوابة نيوز (عاجل)": "https://www.albawabhnews.com/rss/1",
+    "البوابة نيوز (حوادث)": "https://www.albawabhnews.com/rss/97",
+
+    # 🔴 الأسبوع
+    "الأسبوع (عاجل)": "https://www.elaosboa.com/rss/1/",
+    "الأسبوع (حوادث)": "https://www.elaosboa.com/rss/accidents/",
+
+    # 🔴 مواقع بتغذية شاملة
+    "القاهرة 24 (الرئيسية)": "https://www.cairo24.com/rss",
+    "الوطن (الرئيسية)": "https://www.elwatannews.com/home/rss",
+    "مصراوي (الرئيسية)": "https://www.masrawy.com/CrossDomain/News/RSS",
+
+    # 🔴 الوكالات الدولية بمصر
+    "سكاي نيوز (مصر)": "https://www.skynewsarabia.com/rss/مصر",
+    "روسيا اليوم (مصر)": "https://arabic.rt.com/rss/egypt/",
+    "العربية (مصر)": "https://www.alarabiya.net/egypt.rss"
 }
 
 # ==========================================
@@ -84,11 +120,9 @@ def scrape_full_article(url):
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # استخراج النص من كل البراجرافات في الصفحة
         paragraphs = soup.find_all('p')
         article_text = " ".join([p.get_text() for p in paragraphs])
         
-        # لو المقال طويل جداً بناخد أهم 3500 حرف عشان سرعة الذكاء الاصطناعي
         return article_text[:3500] if len(article_text) > 3500 else article_text
     except Exception as e:
         return ""
@@ -127,7 +161,6 @@ def analyze_news_with_ai(news_text, title, retries=3):
 def scan_single_source(publisher, url, now_utc):
     try:
         headers = {'User-Agent': random.choice(USER_AGENTS)}
-        # استخدام requests مع feedparser لتفادي الحظر
         resp = requests.get(url, headers=headers, timeout=10)
         feed = feedparser.parse(resp.content)
         
@@ -145,11 +178,9 @@ def scan_single_source(publisher, url, now_utc):
             if news_link in processed_news_links: 
                 continue
             
-            # التأكد المبدئي من العنوان عشان منسحبش مقالات ملهاش لازمة
             if any(k in entry.title for k in KEYWORDS):
                 print(f"🚨 [{publisher}] تم اصطياد حادث، جاري الغوص لجمع التفاصيل: {entry.title}")
                 
-                # 💡 الغوص العميق لجلب التفاصيل من داخل الصفحة
                 full_article_text = scrape_full_article(news_link)
                 combined_text = full_article_text if len(full_article_text) > 50 else entry.get('summary', '')
 
@@ -163,7 +194,6 @@ def scan_single_source(publisher, url, now_utc):
                         "injured_count": "0", "deaths_count": "0", "severity_score": "غير محدد"
                     }
 
-                # إضافة مؤشر الخطورة لتحديثات الخبر
                 severity = ai_data.get("severity_score", "?")
                 updates_msg = f"🔥 [مستوى الخطورة: {severity}/10] - تم قراءة المقال بالكامل بواسطة EOC AI Radar."
 
@@ -186,14 +216,14 @@ def scan_single_source(publisher, url, now_utc):
                 headers_api = {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
                 res = requests.post(SYSTEM_API_URL, json=payload, headers=headers_api)
                 if res.status_code in [200, 201]: 
-                    print(f"✅ تم رفع الخبر بنجاح شامل التفاصيل!")
+                    print(f"✅ تم رفع الخبر بنجاح شامل التفاصيل من {publisher}!")
                 
                 processed_news_links.add(news_link)
     except Exception as e:
-        print(f"❌ خطأ في مسح {publisher}")
+        print(f"❌ خطأ في مسح {publisher}: {e}")
 
 # ==========================================
-# 7. المحرك الرئيسي (Multi-threading)
+# 7. المحرك الرئيسي (Multi-threading مع 25 مسار)
 # ==========================================
 def run_ai_scanner():
     if not GEMINI_API_KEY or not SYSTEM_TOKEN:
@@ -203,8 +233,8 @@ def run_ai_scanner():
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 بدء المسح المتوازي الشامل (Deep Scan Mode)...")
     now_utc = datetime.utcnow()
 
-    # تشغيل كل المواقع في نفس اللحظة (10 مسارات متوازية)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    # 💡 تم زيادة قوة المعالجة لـ 25 مسار متوازي لاصطياد كل المواقع في ثانية واحدة
+    with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
         futures = [executor.submit(scan_single_source, pub, url, now_utc) for pub, url in RSS_FEEDS.items()]
         concurrent.futures.wait(futures)
 
