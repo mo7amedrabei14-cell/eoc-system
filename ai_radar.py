@@ -123,16 +123,28 @@ def analyze_news_with_ai(news_text, title, retries=3):
     - "longitude": استنتج خط الطول الجغرافي التقريبي لمكان الحادث في مصر (مثال: 31.2357).
     - "tactical_recommendations": اكتب 3 توصيات ميدانية سريعة لغرفة العمليات لكيفية الاستجابة لهذا الحدث.
     """
+    
+    fallback_models = [
+        'gemini-1.5-flash', 
+        'gemini-1.5-flash-latest', 
+        'gemini-1.5-pro', 
+        'gemini-pro',
+        'models/gemini-pro'
+    ]
+
     for attempt in range(retries):
-        try:
-            # 💡 تم وضع الموديل السليم هنا
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            clean_json = response.text.replace('```json', '').replace('```', '').strip()
-            return json.loads(clean_json)
-        except Exception as e:
-            print(f"⚠️ فشل الذكاء الاصطناعي في تحليل ({title}) [المحاولة {attempt+1}]: {str(e)}")
-            time.sleep(2)
+        for model_name in fallback_models:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                clean_json = response.text.replace('```json', '').replace('```', '').strip()
+                return json.loads(clean_json)
+            except Exception as e:
+                continue 
+        
+        print(f"⚠️ كل الموديلات فشلت في المحاولة {attempt+1} للخبر: {title}")
+        time.sleep(2) 
+        
     return None
 
 # ==========================================
