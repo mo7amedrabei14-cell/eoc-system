@@ -9,8 +9,11 @@ import random
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ==========================================
 # 1. إعدادات النظام والمفاتيح
