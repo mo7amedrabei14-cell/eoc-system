@@ -3344,7 +3344,8 @@ function HumanResourcesView({ branches }) {
       "رقم العضوية / الصفة": p.membership_number,
       "الفرع التابع له": p.branch_name === 'القاهرة' ? 'المركز العام' : p.branch_name,
       "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
-      "إجمالي المهام الميدانية": p.missions_count
+      "إجمالي المهام الميدانية": p.missions_count,
+      "إجمالي الساعات (ساعة)": p.total_hours
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "القوة البشرية");
@@ -3357,7 +3358,7 @@ function HumanResourcesView({ branches }) {
     <div className="space-y-6 pb-10 animate-fade-in-up">
       <div className="bg-[#111] border border-[#c70000]/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(199,0,0,0.1)]">
         <h3 className="text-xl font-bold text-white flex items-center gap-2"><UsersIcon className="text-[#c70000]"/> سجل القوة البشرية الفعالة (إدارة المتطوعين)</h3>
-        <p className="text-gray-400 text-sm mt-2">يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته.</p>
+        <p className="text-gray-400 text-sm mt-2">يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته وساعاته الفعلية.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -3398,11 +3399,12 @@ function HumanResourcesView({ branches }) {
                 <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">رقم العضوية / الصفة</th>
                 <th className="p-4 font-semibold border-l border-white/5">الفرع التابع له</th>
                 <th className="p-4 font-semibold border-l border-white/5 text-center">النوع</th>
-                <th className="p-4 font-semibold text-center text-green-500">عدد المهام الميدانية</th>
+                <th className="p-4 font-semibold text-center text-green-500 border-l border-white/5">عدد المهام</th>
+                <th className="p-4 font-semibold text-center text-orange-400">إجمالي الساعات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> : 
+              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> : 
                filteredHR.length > 0 ? filteredHR.map((person, idx) => (
                 <tr key={idx} className="hover:bg-white/5 transition-colors">
                   <td className="p-4 text-gray-500 font-bold border-l border-white/5 text-center">{idx + 1}</td>
@@ -3414,13 +3416,18 @@ function HumanResourcesView({ branches }) {
                       {person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}
                     </span>
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-4 border-l border-white/5 text-center">
                     <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.missions_count >= 5 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-[#111] text-gray-300 border border-white/10'}`}>
-                      {person.missions_count} مهام
+                      {person.missions_count} مهمة
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.total_hours > 0 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-[#111] text-gray-500 border border-white/10'}`}>
+                      {person.total_hours} ساعة
                     </span>
                   </td>
                 </tr>
-              )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
+              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
             </tbody>
           </table>
         </div>
