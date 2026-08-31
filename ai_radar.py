@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN") 
 # 💡 تم إصلاح اللينك للمشروع الجديد مع مسار الـ API
-SYSTEM_API_URL = "'https://eoc-system-b12f.vercel.app/api/ai-news" 
+SYSTEM_API_URL = "https://eoc-system-b12f.vercel.app/api/ai-news" 
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -126,7 +126,7 @@ def analyze_news_with_ai(news_text, title, retries=3):
     for attempt in range(retries):
         try:
             # 💡 تم وضع الموديل السليم هنا
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             response = model.generate_content(prompt)
             clean_json = response.text.replace('```json', '').replace('```', '').strip()
             return json.loads(clean_json)
