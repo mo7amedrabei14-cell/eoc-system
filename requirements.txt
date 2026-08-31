@@ -17,3 +17,4 @@ google-genai
 flask
 gunicorn
 beautifulsoup4
+python-dotenv
