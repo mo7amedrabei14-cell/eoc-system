@@ -140,6 +140,7 @@ def analyze_news_with_ai(news_text, title, retries=3):
                 clean_json = response.text.replace('```json', '').replace('```', '').strip()
                 return json.loads(clean_json)
             except Exception as e:
+                print(f"⚠️ تفاصيل الخطأ مع موديل {model_name}: {e}")
                 continue 
         
         print(f"⚠️ كل الموديلات فشلت في المحاولة {attempt+1} للخبر: {title}")
