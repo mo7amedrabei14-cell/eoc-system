@@ -9,6 +9,8 @@ import random
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+load_dotenv()
 
 # ==========================================
 # 1. إعدادات النظام والمفاتيح
@@ -124,28 +126,33 @@ def analyze_news_with_ai(news_text, title, retries=3):
     - "tactical_recommendations": اكتب 3 توصيات ميدانية سريعة لغرفة العمليات لكيفية الاستجابة لهذا الحدث.
     """
     
-    fallback_models = [
-        'gemini-1.5-flash', 
-        'gemini-1.5-flash-latest', 
-        'gemini-1.5-pro', 
-        'gemini-pro',
-        'models/gemini-pro'
-    ]
+    # هنستخدم أحدث وأسرع موديل ظهر عندك في القائمة ونكلم جوجل دايركت
+    model_name = "gemini-3.5-flash" 
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+    
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.2}
+    }
 
     for attempt in range(retries):
-        for model_name in fallback_models:
-            try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt)
-                clean_json = response.text.replace('```json', '').replace('```', '').strip()
+        try:
+            # الاتصال المباشر الصاروخي
+            response = requests.post(url, headers=headers, json=payload, timeout=20)
+            
+            if response.status_code == 200:
+                data = response.json()
+                ai_text = data['candidates'][0]['content']['parts'][0]['text']
+                clean_json = ai_text.replace('```json', '').replace('```', '').strip()
                 return json.loads(clean_json)
-            except Exception as e:
-                print(f"⚠️ تفاصيل الخطأ مع موديل {model_name}: {e}")
-                continue 
-        
-        print(f"⚠️ كل الموديلات فشلت في المحاولة {attempt+1} للخبر: {title}")
-        time.sleep(2) 
-        
+            else:
+                print(f"⚠️ خطأ من جوجل في المحاولة {attempt+1}: {response.text}")
+                time.sleep(2)
+        except Exception as e:
+            print(f"⚠️ فشل تحليل الذكاء الاصطناعي في المحاولة {attempt+1}: {e}")
+            time.sleep(2)
+            
     return None
 
 # ==========================================
