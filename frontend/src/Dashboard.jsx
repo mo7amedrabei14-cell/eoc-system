@@ -215,6 +215,7 @@ export default function Dashboard() {
       case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
       case 'audit': return <AuditLogsView />;
+      case 'human_resources': return <HumanResourcesView branches={branchesList} />;
       default: return <HomeView branches={branchesList} />;
     }
   };
@@ -282,6 +283,7 @@ export default function Dashboard() {
             <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} hasUpdate={newUpdates.earthquakes} />
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => handleNavigation('branches_inventory')} isOpen={isSidebarOpen} />}
             {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
+            {isOwner && <NavItem icon={<UsersIcon />} label="القوة البشرية" isActive={activeTab === 'human_resources'} onClick={() => handleNavigation('human_resources')} isOpen={isSidebarOpen} />}
           </nav>
         </div>
         <div className="p-4 border-t border-white/5">
@@ -3297,3 +3299,130 @@ function AINewsMonitorView({ branches, isOwner }) {
 
 // 💡 أيقونات
 const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5 h-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h.01M15 9h.01" /></svg>;
+
+// ==========================================
+// 9. شاشة القوة البشرية (للمالك فقط - تجميع من المهام بدون تكرار)
+// ==========================================
+function HumanResourcesView({ branches }) {
+  const [hrList, setHrList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filterBranch, setFilterBranch] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchHR = async () => {
+      const token = localStorage.getItem('access_token');
+      try {
+        const res = await fetch('https://eoc-system-b12f.vercel.app/api/human-resources', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          setHrList(await res.json());
+        }
+      } catch (err) {
+        console.error("Failed to fetch HR");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchHR();
+  }, []);
+
+  const filteredHR = hrList.filter(p => {
+    const matchBranch = filterBranch === 'all' ? true : p.branch_name === filterBranch;
+    const matchType = filterType === 'all' ? true : p.participant_type === filterType;
+    const matchSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || p.membership_number.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchBranch && matchType && matchSearch;
+  });
+
+  const handleExportExcel = () => {
+    if (filteredHR.length === 0) return alert("لا توجد بيانات لتصديرها.");
+    const ws = XLSX.utils.json_to_sheet(filteredHR.map((p, i) => ({
+      "م": i + 1,
+      "الاسم الرباعي": p.full_name,
+      "رقم العضوية / الصفة": p.membership_number,
+      "الفرع التابع له": p.branch_name === 'القاهرة' ? 'المركز العام' : p.branch_name,
+      "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
+      "إجمالي المهام الميدانية": p.missions_count
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "القوة البشرية");
+    XLSX.writeFile(wb, `سجل_القوة_البشرية.xlsx`);
+  };
+
+  const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
+
+  return (
+    <div className="space-y-6 pb-10 animate-fade-in-up">
+      <div className="bg-[#111] border border-[#c70000]/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(199,0,0,0.1)]">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2"><UsersIcon className="text-[#c70000]"/> سجل القوة البشرية الفعالة (إدارة المتطوعين)</h3>
+        <p className="text-gray-400 text-sm mt-2">يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته.</p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard title="إجمالي القوة (بدون تكرار)" value={filteredHR.length} color="text-white" borderHighlight />
+        <StatCard title="إجمالي المتطوعين الفعليين" value={filteredHR.filter(p => p.participant_type === 'volunteer').length} color="text-blue-400" />
+        <StatCard title="مشاركين خارجيين (غير متطوع)" value={filteredHR.filter(p => p.participant_type === 'non_volunteer').length} color="text-yellow-500" />
+        <StatCard title="متطوعين شاركوا +5 مهام" value={filteredHR.filter(p => p.missions_count >= 5).length} color="text-green-500" />
+      </div>
+
+      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+          
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            <input type="text" placeholder="بحث بالاسم أو الكود..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#c70000]/50 w-full md:w-auto" />
+            
+            <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
+              <option value="all">كل الفروع والتمركزات</option>
+              <option value="المركز العام">المركز العام</option>
+              {branchNames.filter(n => n !== 'القاهرة').map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
+              <option value="all">الكل (متطوع وغير متطوع)</option>
+              <option value="volunteer">متطوعين فقط</option>
+              <option value="non_volunteer">غير متطوعين</option>
+            </select>
+          </div>
+
+          <button onClick={handleExportExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors w-full md:w-auto justify-center"><ExcelIcon /> تصدير سجل القوة البشرية</button>
+        </div>
+
+        <div className="flex-1 overflow-auto custom-scrollbar relative">
+          <table className="w-full text-right whitespace-nowrap text-sm">
+            <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+              <tr>
+                <th className="p-4 font-semibold border-l border-white/5 w-16 text-center">م</th>
+                <th className="p-4 font-semibold border-l border-white/5">الاسم</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">رقم العضوية / الصفة</th>
+                <th className="p-4 font-semibold border-l border-white/5">الفرع التابع له</th>
+                <th className="p-4 font-semibold border-l border-white/5 text-center">النوع</th>
+                <th className="p-4 font-semibold text-center text-green-500">عدد المهام الميدانية</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> : 
+               filteredHR.length > 0 ? filteredHR.map((person, idx) => (
+                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                  <td className="p-4 text-gray-500 font-bold border-l border-white/5 text-center">{idx + 1}</td>
+                  <td className="p-4 text-white font-bold border-l border-white/5">{person.full_name}</td>
+                  <td className="p-4 text-[#c70000] font-mono font-bold border-l border-white/5">{person.membership_number}</td>
+                  <td className="p-4 text-gray-300 border-l border-white/5">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
+                  <td className="p-4 border-l border-white/5 text-center">
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${person.participant_type === 'volunteer' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-gray-600/20 text-gray-400 border border-gray-600/30'}`}>
+                      {person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.missions_count >= 5 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-[#111] text-gray-300 border border-white/10'}`}>
+                      {person.missions_count} مهام
+                    </span>
+                  </td>
+                </tr>
+              )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict YO8hfYidDN6zpJBjszthKxKQwgP4Osf6oRJdqfIODxCQNcme5xgngtOGpq30faB
+\restrict YQHZOx72tDeF9xahUlFa1bP4vgakWrBd2DGqy6pU3irELFQbNX0yhTq9Zd1jkh5
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
 
--- Started on 2026-08-26 07:29:08
+-- Started on 2026-08-31 16:01:49
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,7 +22,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 262 (class 1255 OID 16445)
+-- TOC entry 272 (class 1255 OID 16445)
 -- Name: generate_mission_code(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -44,7 +44,7 @@ $$;
 ALTER FUNCTION public.generate_mission_code() OWNER TO postgres;
 
 --
--- TOC entry 265 (class 1255 OID 16716)
+-- TOC entry 275 (class 1255 OID 16716)
 -- Name: prevent_duplicate_daily_volunteer(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -87,7 +87,7 @@ $$;
 ALTER FUNCTION public.prevent_duplicate_daily_volunteer() OWNER TO postgres;
 
 --
--- TOC entry 264 (class 1255 OID 16709)
+-- TOC entry 274 (class 1255 OID 16709)
 -- Name: validate_mission_open_status(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -128,7 +128,7 @@ $$;
 ALTER FUNCTION public.validate_mission_open_status() OWNER TO postgres;
 
 --
--- TOC entry 263 (class 1255 OID 16707)
+-- TOC entry 273 (class 1255 OID 16707)
 -- Name: validate_mission_participant(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -186,6 +186,58 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- TOC entry 271 (class 1259 OID 17193)
+-- Name: ai_news; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ai_news (
+    id integer NOT NULL,
+    incident_date date,
+    incident_month character varying(50),
+    incident_description text,
+    news_type character varying(255),
+    news_publisher character varying(255),
+    street_name character varying(255),
+    area_name character varying(255),
+    governorate character varying(255),
+    hospital_name character varying(255),
+    injured_count character varying(50),
+    deaths_count character varying(50),
+    news_updates text,
+    news_link text,
+    data_entry_name character varying(255),
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.ai_news OWNER TO postgres;
+
+--
+-- TOC entry 270 (class 1259 OID 17192)
+-- Name: ai_news_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.ai_news_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.ai_news_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5406 (class 0 OID 0)
+-- Dependencies: 270
+-- Name: ai_news_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.ai_news_id_seq OWNED BY public.ai_news.id;
+
+
+--
 -- TOC entry 246 (class 1259 OID 16736)
 -- Name: audit_logs; Type: TABLE; Schema: public; Owner: postgres
 --
@@ -220,7 +272,7 @@ CREATE SEQUENCE public.audit_logs_audit_id_seq
 ALTER SEQUENCE public.audit_logs_audit_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5335 (class 0 OID 0)
+-- TOC entry 5407 (class 0 OID 0)
 -- Dependencies: 245
 -- Name: audit_logs_audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -343,6 +395,153 @@ ALTER TABLE public.branches ALTER COLUMN branch_id ADD GENERATED ALWAYS AS IDENT
 
 
 --
+-- TOC entry 269 (class 1259 OID 17182)
+-- Name: egypt_earthquakes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.egypt_earthquakes (
+    eq_id integer NOT NULL,
+    date character varying(50) NOT NULL,
+    "time" character varying(50),
+    magnitude double precision NOT NULL,
+    depth_km character varying(50),
+    region character varying(255),
+    longitude double precision,
+    latitude double precision,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.egypt_earthquakes OWNER TO postgres;
+
+--
+-- TOC entry 268 (class 1259 OID 17181)
+-- Name: egypt_earthquakes_eq_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.egypt_earthquakes_eq_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.egypt_earthquakes_eq_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5408 (class 0 OID 0)
+-- Dependencies: 268
+-- Name: egypt_earthquakes_eq_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.egypt_earthquakes_eq_id_seq OWNED BY public.egypt_earthquakes.eq_id;
+
+
+--
+-- TOC entry 265 (class 1259 OID 17153)
+-- Name: global_disasters; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.global_disasters (
+    disaster_id integer NOT NULL,
+    incident_date date NOT NULL,
+    incident_month character varying(50),
+    news_title text,
+    country character varying(100),
+    disaster_type character varying(100),
+    affected_areas text,
+    at_risk_areas text,
+    source_name character varying(255),
+    injured_count integer DEFAULT 0,
+    deaths_count integer DEFAULT 0,
+    missing_count integer DEFAULT 0,
+    national_societies_interventions text,
+    news_link text NOT NULL,
+    news_updates text,
+    data_entry_name character varying(150),
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.global_disasters OWNER TO postgres;
+
+--
+-- TOC entry 264 (class 1259 OID 17152)
+-- Name: global_disasters_disaster_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.global_disasters_disaster_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.global_disasters_disaster_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5409 (class 0 OID 0)
+-- Dependencies: 264
+-- Name: global_disasters_disaster_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.global_disasters_disaster_id_seq OWNED BY public.global_disasters.disaster_id;
+
+
+--
+-- TOC entry 267 (class 1259 OID 17169)
+-- Name: global_earthquakes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.global_earthquakes (
+    eq_id integer NOT NULL,
+    date character varying(50) NOT NULL,
+    month character varying(50),
+    "time" character varying(50),
+    country character varying(150),
+    magnitude double precision NOT NULL,
+    depth_km character varying(50),
+    region character varying(255),
+    status character varying(50),
+    longitude double precision,
+    latitude double precision,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.global_earthquakes OWNER TO postgres;
+
+--
+-- TOC entry 266 (class 1259 OID 17168)
+-- Name: global_earthquakes_eq_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.global_earthquakes_eq_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.global_earthquakes_eq_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5410 (class 0 OID 0)
+-- Dependencies: 266
+-- Name: global_earthquakes_eq_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.global_earthquakes_eq_id_seq OWNED BY public.global_earthquakes.eq_id;
+
+
+--
 -- TOC entry 238 (class 1259 OID 16609)
 -- Name: governorates; Type: TABLE; Schema: public; Owner: postgres
 --
@@ -370,6 +569,79 @@ ALTER TABLE public.governorates ALTER COLUMN governorate_id ADD GENERATED ALWAYS
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- TOC entry 263 (class 1259 OID 17128)
+-- Name: local_news; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.local_news (
+    news_id integer NOT NULL,
+    branch_id integer,
+    incident_date date,
+    incident_month character varying(50),
+    incident_description text,
+    news_type character varying(255),
+    news_publisher character varying(255),
+    street_name character varying(255),
+    area_name character varying(255),
+    governorate character varying(255),
+    is_reported boolean DEFAULT false,
+    report_time time without time zone,
+    is_responded boolean DEFAULT false,
+    branch_response_text text,
+    response_time time without time zone,
+    response_time_points integer DEFAULT 0,
+    response_duration character varying(100),
+    is_field_response boolean DEFAULT false,
+    movement_time time without time zone,
+    report_to_movement_duration character varying(100),
+    movement_points integer DEFAULT 0,
+    field_arrival_time time without time zone,
+    distance_km numeric,
+    field_response_points integer DEFAULT 0,
+    report_to_arrival_duration character varying(100),
+    intervention_type character varying(255),
+    intervening_branch character varying(255),
+    mission_form_name character varying(255),
+    participants_count integer DEFAULT 0,
+    hospital_name character varying(255),
+    injured_count integer DEFAULT 0,
+    deaths_count integer DEFAULT 0,
+    news_updates text,
+    news_link text,
+    data_entry_name character varying(255),
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.local_news OWNER TO postgres;
+
+--
+-- TOC entry 262 (class 1259 OID 17127)
+-- Name: local_news_news_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.local_news_news_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.local_news_news_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5411 (class 0 OID 0)
+-- Dependencies: 262
+-- Name: local_news_news_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.local_news_news_id_seq OWNED BY public.local_news.news_id;
 
 
 --
@@ -405,7 +677,7 @@ CREATE SEQUENCE public.mission_beneficiaries_beneficiary_id_seq
 ALTER SEQUENCE public.mission_beneficiaries_beneficiary_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5336 (class 0 OID 0)
+-- TOC entry 5412 (class 0 OID 0)
 -- Dependencies: 258
 -- Name: mission_beneficiaries_beneficiary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -445,7 +717,7 @@ CREATE SEQUENCE public.mission_eoc_staff_staff_id_seq
 ALTER SEQUENCE public.mission_eoc_staff_staff_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5337 (class 0 OID 0)
+-- TOC entry 5413 (class 0 OID 0)
 -- Dependencies: 260
 -- Name: mission_eoc_staff_staff_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -487,7 +759,7 @@ CREATE SEQUENCE public.mission_itineraries_itinerary_id_seq
 ALTER SEQUENCE public.mission_itineraries_itinerary_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5338 (class 0 OID 0)
+-- TOC entry 5414 (class 0 OID 0)
 -- Dependencies: 252
 -- Name: mission_itineraries_itinerary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -578,7 +850,10 @@ CREATE TABLE public.mission_participants (
     branch_id integer,
     assigned_itinerary character varying(150) DEFAULT 'خط السير الأساسي'::character varying,
     team_name character varying(100) DEFAULT ''::character varying,
-    team_code character varying(50) DEFAULT ''::character varying
+    team_code character varying(50) DEFAULT ''::character varying,
+    return_status character varying(50) DEFAULT 'مازال بالمهمة'::character varying,
+    phase_name character varying(100) DEFAULT 'اليوم الأول'::character varying,
+    stay_type character varying(50) DEFAULT 'ذهاب وعودة'::character varying
 );
 
 
@@ -601,7 +876,7 @@ CREATE SEQUENCE public.mission_participants_participant_id_seq
 ALTER SEQUENCE public.mission_participants_participant_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5339 (class 0 OID 0)
+-- TOC entry 5415 (class 0 OID 0)
 -- Dependencies: 256
 -- Name: mission_participants_participant_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -677,7 +952,7 @@ CREATE SEQUENCE public.mission_vehicles_vehicle_id_seq
 ALTER SEQUENCE public.mission_vehicles_vehicle_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5340 (class 0 OID 0)
+-- TOC entry 5416 (class 0 OID 0)
 -- Dependencies: 254
 -- Name: mission_vehicles_vehicle_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -737,7 +1012,7 @@ CREATE SEQUENCE public.missions_mission_id_seq
 ALTER SEQUENCE public.missions_mission_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5341 (class 0 OID 0)
+-- TOC entry 5417 (class 0 OID 0)
 -- Dependencies: 250
 -- Name: missions_mission_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -996,7 +1271,15 @@ ALTER TABLE public.volunteers ALTER COLUMN volunteer_id ADD GENERATED ALWAYS AS 
 
 
 --
--- TOC entry 4983 (class 2604 OID 16739)
+-- TOC entry 5089 (class 2604 OID 17196)
+-- Name: ai_news id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ai_news ALTER COLUMN id SET DEFAULT nextval('public.ai_news_id_seq'::regclass);
+
+
+--
+-- TOC entry 5008 (class 2604 OID 16739)
 -- Name: audit_logs audit_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1004,7 +1287,39 @@ ALTER TABLE ONLY public.audit_logs ALTER COLUMN audit_id SET DEFAULT nextval('pu
 
 
 --
--- TOC entry 5037 (class 2604 OID 17091)
+-- TOC entry 5087 (class 2604 OID 17185)
+-- Name: egypt_earthquakes eq_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.egypt_earthquakes ALTER COLUMN eq_id SET DEFAULT nextval('public.egypt_earthquakes_eq_id_seq'::regclass);
+
+
+--
+-- TOC entry 5080 (class 2604 OID 17156)
+-- Name: global_disasters disaster_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.global_disasters ALTER COLUMN disaster_id SET DEFAULT nextval('public.global_disasters_disaster_id_seq'::regclass);
+
+
+--
+-- TOC entry 5085 (class 2604 OID 17172)
+-- Name: global_earthquakes eq_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.global_earthquakes ALTER COLUMN eq_id SET DEFAULT nextval('public.global_earthquakes_eq_id_seq'::regclass);
+
+
+--
+-- TOC entry 5069 (class 2604 OID 17131)
+-- Name: local_news news_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.local_news ALTER COLUMN news_id SET DEFAULT nextval('public.local_news_news_id_seq'::regclass);
+
+
+--
+-- TOC entry 5065 (class 2604 OID 17091)
 -- Name: mission_beneficiaries beneficiary_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1012,7 +1327,7 @@ ALTER TABLE ONLY public.mission_beneficiaries ALTER COLUMN beneficiary_id SET DE
 
 
 --
--- TOC entry 5040 (class 2604 OID 17106)
+-- TOC entry 5068 (class 2604 OID 17106)
 -- Name: mission_eoc_staff staff_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1020,7 +1335,7 @@ ALTER TABLE ONLY public.mission_eoc_staff ALTER COLUMN staff_id SET DEFAULT next
 
 
 --
--- TOC entry 5030 (class 2604 OID 17047)
+-- TOC entry 5055 (class 2604 OID 17047)
 -- Name: mission_itineraries itinerary_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1028,7 +1343,7 @@ ALTER TABLE ONLY public.mission_itineraries ALTER COLUMN itinerary_id SET DEFAUL
 
 
 --
--- TOC entry 5033 (class 2604 OID 17073)
+-- TOC entry 5058 (class 2604 OID 17073)
 -- Name: mission_participants participant_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1036,7 +1351,7 @@ ALTER TABLE ONLY public.mission_participants ALTER COLUMN participant_id SET DEF
 
 
 --
--- TOC entry 5032 (class 2604 OID 17060)
+-- TOC entry 5057 (class 2604 OID 17060)
 -- Name: mission_vehicles vehicle_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1044,7 +1359,7 @@ ALTER TABLE ONLY public.mission_vehicles ALTER COLUMN vehicle_id SET DEFAULT nex
 
 
 --
--- TOC entry 5024 (class 2604 OID 17024)
+-- TOC entry 5049 (class 2604 OID 17024)
 -- Name: missions mission_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1052,7 +1367,17 @@ ALTER TABLE ONLY public.missions ALTER COLUMN mission_id SET DEFAULT nextval('pu
 
 
 --
--- TOC entry 5314 (class 0 OID 16736)
+-- TOC entry 5400 (class 0 OID 17193)
+-- Dependencies: 271
+-- Data for Name: ai_news; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.ai_news (id, incident_date, incident_month, incident_description, news_type, news_publisher, street_name, area_name, governorate, hospital_name, injured_count, deaths_count, news_updates, news_link, data_entry_name, created_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 5375 (class 0 OID 16736)
 -- Dependencies: 246
 -- Data for Name: audit_logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1064,7 +1389,7 @@ COPY public.audit_logs (audit_id, user_id, action, entity_type, entity_id, detai
 
 
 --
--- TOC entry 5308 (class 0 OID 16623)
+-- TOC entry 5369 (class 0 OID 16623)
 -- Dependencies: 240
 -- Data for Name: branch_governorates; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1074,7 +1399,7 @@ COPY public.branch_governorates (branch_governorate_id, branch_id, governorate_i
 
 
 --
--- TOC entry 5317 (class 0 OID 16958)
+-- TOC entry 5378 (class 0 OID 16958)
 -- Dependencies: 249
 -- Data for Name: branch_inventory; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1110,7 +1435,7 @@ COPY public.branch_inventory (branch_id, cars, tents, mattresses, fire_extinguis
 
 
 --
--- TOC entry 5290 (class 0 OID 16402)
+-- TOC entry 5351 (class 0 OID 16402)
 -- Dependencies: 222
 -- Data for Name: branches; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1147,7 +1472,37 @@ COPY public.branches (branch_id, branch_name, is_active, created_at, has_geograp
 
 
 --
--- TOC entry 5306 (class 0 OID 16609)
+-- TOC entry 5398 (class 0 OID 17182)
+-- Dependencies: 269
+-- Data for Name: egypt_earthquakes; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.egypt_earthquakes (eq_id, date, "time", magnitude, depth_km, region, longitude, latitude, created_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 5394 (class 0 OID 17153)
+-- Dependencies: 265
+-- Data for Name: global_disasters; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.global_disasters (disaster_id, incident_date, incident_month, news_title, country, disaster_type, affected_areas, at_risk_areas, source_name, injured_count, deaths_count, missing_count, national_societies_interventions, news_link, news_updates, data_entry_name, notes, created_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 5396 (class 0 OID 17169)
+-- Dependencies: 267
+-- Data for Name: global_earthquakes; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.global_earthquakes (eq_id, date, month, "time", country, magnitude, depth_km, region, status, longitude, latitude, created_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 5367 (class 0 OID 16609)
 -- Dependencies: 238
 -- Data for Name: governorates; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1184,7 +1539,17 @@ COPY public.governorates (governorate_id, governorate_name, is_active, created_a
 
 
 --
--- TOC entry 5327 (class 0 OID 17088)
+-- TOC entry 5392 (class 0 OID 17128)
+-- Dependencies: 263
+-- Data for Name: local_news; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.local_news (news_id, branch_id, incident_date, incident_month, incident_description, news_type, news_publisher, street_name, area_name, governorate, is_reported, report_time, is_responded, branch_response_text, response_time, response_time_points, response_duration, is_field_response, movement_time, report_to_movement_duration, movement_points, field_arrival_time, distance_km, field_response_points, report_to_arrival_duration, intervention_type, intervening_branch, mission_form_name, participants_count, hospital_name, injured_count, deaths_count, news_updates, news_link, data_entry_name, notes, created_at) FROM stdin;
+\.
+
+
+--
+-- TOC entry 5388 (class 0 OID 17088)
 -- Dependencies: 259
 -- Data for Name: mission_beneficiaries; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1199,7 +1564,7 @@ COPY public.mission_beneficiaries (beneficiary_id, mission_id, category_name, di
 
 
 --
--- TOC entry 5329 (class 0 OID 17103)
+-- TOC entry 5390 (class 0 OID 17103)
 -- Dependencies: 261
 -- Data for Name: mission_eoc_staff; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1216,7 +1581,7 @@ COPY public.mission_eoc_staff (staff_id, mission_id, role_name, staff_name) FROM
 
 
 --
--- TOC entry 5321 (class 0 OID 17044)
+-- TOC entry 5382 (class 0 OID 17044)
 -- Dependencies: 253
 -- Data for Name: mission_itineraries; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1230,7 +1595,7 @@ COPY public.mission_itineraries (itinerary_id, mission_id, route_to, departure_t
 
 
 --
--- TOC entry 5316 (class 0 OID 16809)
+-- TOC entry 5377 (class 0 OID 16809)
 -- Dependencies: 248
 -- Data for Name: mission_logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1240,7 +1605,7 @@ COPY public.mission_logs (log_id, mission_id, branch_id, communication_method, l
 
 
 --
--- TOC entry 5294 (class 0 OID 16490)
+-- TOC entry 5355 (class 0 OID 16490)
 -- Dependencies: 226
 -- Data for Name: mission_participant_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1250,18 +1615,18 @@ COPY public.mission_participant_sessions (session_id, participant_id, session_da
 
 
 --
--- TOC entry 5325 (class 0 OID 17070)
+-- TOC entry 5386 (class 0 OID 17070)
 -- Dependencies: 257
 -- Data for Name: mission_participants; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.mission_participants (participant_id, mission_id, participant_type, full_name, participation_role, branch_id, assigned_itinerary, team_name, team_code) FROM stdin;
-12	11	volunteer	عصماء محمد	12	19	خط السير الأساسي	تنمية الموارد	123
+COPY public.mission_participants (participant_id, mission_id, participant_type, full_name, participation_role, branch_id, assigned_itinerary, team_name, team_code, return_status, phase_name, stay_type) FROM stdin;
+12	11	volunteer	عصماء محمد	12	19	خط السير الأساسي	تنمية الموارد	123	مازال بالمهمة	اليوم الأول	ذهاب وعودة
 \.
 
 
 --
--- TOC entry 5312 (class 0 OID 16679)
+-- TOC entry 5373 (class 0 OID 16679)
 -- Dependencies: 244
 -- Data for Name: mission_status_history; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1271,7 +1636,7 @@ COPY public.mission_status_history (history_id, mission_id, previous_status, new
 
 
 --
--- TOC entry 5323 (class 0 OID 17057)
+-- TOC entry 5384 (class 0 OID 17057)
 -- Dependencies: 255
 -- Data for Name: mission_vehicles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1283,7 +1648,7 @@ COPY public.mission_vehicles (vehicle_id, mission_id, driver_name, vehicle_numbe
 
 
 --
--- TOC entry 5319 (class 0 OID 17021)
+-- TOC entry 5380 (class 0 OID 17021)
 -- Dependencies: 251
 -- Data for Name: missions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1296,7 +1661,7 @@ COPY public.missions (mission_id, mission_code, mission_name, branch_id, mission
 
 
 --
--- TOC entry 5300 (class 0 OID 16548)
+-- TOC entry 5361 (class 0 OID 16548)
 -- Dependencies: 232
 -- Data for Name: permissions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1330,7 +1695,7 @@ COPY public.permissions (permission_id, permission_code, description, created_at
 
 
 --
--- TOC entry 5304 (class 0 OID 16585)
+-- TOC entry 5365 (class 0 OID 16585)
 -- Dependencies: 236
 -- Data for Name: role_inheritance; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1344,7 +1709,7 @@ COPY public.role_inheritance (role_inheritance_id, parent_role_id, child_role_id
 
 
 --
--- TOC entry 5302 (class 0 OID 16562)
+-- TOC entry 5363 (class 0 OID 16562)
 -- Dependencies: 234
 -- Data for Name: role_permissions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1399,7 +1764,7 @@ COPY public.role_permissions (role_permission_id, role_id, permission_id, create
 
 
 --
--- TOC entry 5296 (class 0 OID 16511)
+-- TOC entry 5357 (class 0 OID 16511)
 -- Dependencies: 228
 -- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1414,24 +1779,24 @@ COPY public.roles (role_id, role_name, description, created_at) FROM stdin;
 
 
 --
--- TOC entry 5310 (class 0 OID 16647)
+-- TOC entry 5371 (class 0 OID 16647)
 -- Dependencies: 242
 -- Data for Name: user_branches; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.user_branches (user_branch_id, user_id, branch_id, created_at) FROM stdin;
-17	10	19	2026-08-25 03:40:39.495431
 18	15	19	2026-08-25 03:40:39.495431
-19	12	19	2026-08-25 03:40:39.495431
 20	14	19	2026-08-25 03:40:39.495431
 21	3	19	2026-08-25 03:40:39.495431
 22	13	19	2026-08-25 03:40:39.495431
-23	11	19	2026-08-25 03:40:39.495431
+19	12	17	2026-08-25 03:40:39.495431
+23	11	9	2026-08-25 03:40:39.495431
+17	10	7	2026-08-25 03:40:39.495431
 \.
 
 
 --
--- TOC entry 5298 (class 0 OID 16525)
+-- TOC entry 5359 (class 0 OID 16525)
 -- Dependencies: 230
 -- Data for Name: user_roles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1449,7 +1814,7 @@ COPY public.user_roles (user_role_id, user_id, role_id, created_at) FROM stdin;
 
 
 --
--- TOC entry 5288 (class 0 OID 16386)
+-- TOC entry 5349 (class 0 OID 16386)
 -- Dependencies: 220
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1467,7 +1832,7 @@ COPY public.users (user_id, full_name, username, role, is_active, created_at, pa
 
 
 --
--- TOC entry 5292 (class 0 OID 16448)
+-- TOC entry 5353 (class 0 OID 16448)
 -- Dependencies: 224
 -- Data for Name: volunteers; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -1477,7 +1842,16 @@ COPY public.volunteers (volunteer_id, full_name, phone, branch_id, is_active, cr
 
 
 --
--- TOC entry 5342 (class 0 OID 0)
+-- TOC entry 5418 (class 0 OID 0)
+-- Dependencies: 270
+-- Name: ai_news_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.ai_news_id_seq', 1, false);
+
+
+--
+-- TOC entry 5419 (class 0 OID 0)
 -- Dependencies: 245
 -- Name: audit_logs_audit_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1486,7 +1860,7 @@ SELECT pg_catalog.setval('public.audit_logs_audit_id_seq', 2, true);
 
 
 --
--- TOC entry 5343 (class 0 OID 0)
+-- TOC entry 5420 (class 0 OID 0)
 -- Dependencies: 239
 -- Name: branch_governorates_branch_governorate_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1495,7 +1869,7 @@ SELECT pg_catalog.setval('public.branch_governorates_branch_governorate_id_seq',
 
 
 --
--- TOC entry 5344 (class 0 OID 0)
+-- TOC entry 5421 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: branches_branch_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1504,7 +1878,34 @@ SELECT pg_catalog.setval('public.branches_branch_id_seq', 32, true);
 
 
 --
--- TOC entry 5345 (class 0 OID 0)
+-- TOC entry 5422 (class 0 OID 0)
+-- Dependencies: 268
+-- Name: egypt_earthquakes_eq_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.egypt_earthquakes_eq_id_seq', 1, false);
+
+
+--
+-- TOC entry 5423 (class 0 OID 0)
+-- Dependencies: 264
+-- Name: global_disasters_disaster_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.global_disasters_disaster_id_seq', 1, false);
+
+
+--
+-- TOC entry 5424 (class 0 OID 0)
+-- Dependencies: 266
+-- Name: global_earthquakes_eq_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.global_earthquakes_eq_id_seq', 1, false);
+
+
+--
+-- TOC entry 5425 (class 0 OID 0)
 -- Dependencies: 237
 -- Name: governorates_governorate_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1513,7 +1914,16 @@ SELECT pg_catalog.setval('public.governorates_governorate_id_seq', 27, true);
 
 
 --
--- TOC entry 5346 (class 0 OID 0)
+-- TOC entry 5426 (class 0 OID 0)
+-- Dependencies: 262
+-- Name: local_news_news_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.local_news_news_id_seq', 1, false);
+
+
+--
+-- TOC entry 5427 (class 0 OID 0)
 -- Dependencies: 258
 -- Name: mission_beneficiaries_beneficiary_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1522,7 +1932,7 @@ SELECT pg_catalog.setval('public.mission_beneficiaries_beneficiary_id_seq', 35, 
 
 
 --
--- TOC entry 5347 (class 0 OID 0)
+-- TOC entry 5428 (class 0 OID 0)
 -- Dependencies: 260
 -- Name: mission_eoc_staff_staff_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1531,7 +1941,7 @@ SELECT pg_catalog.setval('public.mission_eoc_staff_staff_id_seq', 70, true);
 
 
 --
--- TOC entry 5348 (class 0 OID 0)
+-- TOC entry 5429 (class 0 OID 0)
 -- Dependencies: 252
 -- Name: mission_itineraries_itinerary_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1540,7 +1950,7 @@ SELECT pg_catalog.setval('public.mission_itineraries_itinerary_id_seq', 39, true
 
 
 --
--- TOC entry 5349 (class 0 OID 0)
+-- TOC entry 5430 (class 0 OID 0)
 -- Dependencies: 247
 -- Name: mission_logs_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1549,7 +1959,7 @@ SELECT pg_catalog.setval('public.mission_logs_log_id_seq', 1, false);
 
 
 --
--- TOC entry 5350 (class 0 OID 0)
+-- TOC entry 5431 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: mission_participant_sessions_session_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1558,7 +1968,7 @@ SELECT pg_catalog.setval('public.mission_participant_sessions_session_id_seq', 1
 
 
 --
--- TOC entry 5351 (class 0 OID 0)
+-- TOC entry 5432 (class 0 OID 0)
 -- Dependencies: 256
 -- Name: mission_participants_participant_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1567,7 +1977,7 @@ SELECT pg_catalog.setval('public.mission_participants_participant_id_seq', 12, t
 
 
 --
--- TOC entry 5352 (class 0 OID 0)
+-- TOC entry 5433 (class 0 OID 0)
 -- Dependencies: 243
 -- Name: mission_status_history_history_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1576,7 +1986,7 @@ SELECT pg_catalog.setval('public.mission_status_history_history_id_seq', 1, fals
 
 
 --
--- TOC entry 5353 (class 0 OID 0)
+-- TOC entry 5434 (class 0 OID 0)
 -- Dependencies: 254
 -- Name: mission_vehicles_vehicle_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1585,7 +1995,7 @@ SELECT pg_catalog.setval('public.mission_vehicles_vehicle_id_seq', 17, true);
 
 
 --
--- TOC entry 5354 (class 0 OID 0)
+-- TOC entry 5435 (class 0 OID 0)
 -- Dependencies: 250
 -- Name: missions_mission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1594,7 +2004,7 @@ SELECT pg_catalog.setval('public.missions_mission_id_seq', 11, true);
 
 
 --
--- TOC entry 5355 (class 0 OID 0)
+-- TOC entry 5436 (class 0 OID 0)
 -- Dependencies: 231
 -- Name: permissions_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1603,7 +2013,7 @@ SELECT pg_catalog.setval('public.permissions_permission_id_seq', 25, true);
 
 
 --
--- TOC entry 5356 (class 0 OID 0)
+-- TOC entry 5437 (class 0 OID 0)
 -- Dependencies: 235
 -- Name: role_inheritance_role_inheritance_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1612,7 +2022,7 @@ SELECT pg_catalog.setval('public.role_inheritance_role_inheritance_id_seq', 4, t
 
 
 --
--- TOC entry 5357 (class 0 OID 0)
+-- TOC entry 5438 (class 0 OID 0)
 -- Dependencies: 233
 -- Name: role_permissions_role_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1621,7 +2031,7 @@ SELECT pg_catalog.setval('public.role_permissions_role_permission_id_seq', 50, t
 
 
 --
--- TOC entry 5358 (class 0 OID 0)
+-- TOC entry 5439 (class 0 OID 0)
 -- Dependencies: 227
 -- Name: roles_role_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1630,7 +2040,7 @@ SELECT pg_catalog.setval('public.roles_role_id_seq', 5, true);
 
 
 --
--- TOC entry 5359 (class 0 OID 0)
+-- TOC entry 5440 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: user_branches_user_branch_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1639,7 +2049,7 @@ SELECT pg_catalog.setval('public.user_branches_user_branch_id_seq', 23, true);
 
 
 --
--- TOC entry 5360 (class 0 OID 0)
+-- TOC entry 5441 (class 0 OID 0)
 -- Dependencies: 229
 -- Name: user_roles_user_role_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1648,7 +2058,7 @@ SELECT pg_catalog.setval('public.user_roles_user_role_id_seq', 12, true);
 
 
 --
--- TOC entry 5361 (class 0 OID 0)
+-- TOC entry 5442 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1657,7 +2067,7 @@ SELECT pg_catalog.setval('public.users_user_id_seq', 15, true);
 
 
 --
--- TOC entry 5362 (class 0 OID 0)
+-- TOC entry 5443 (class 0 OID 0)
 -- Dependencies: 223
 -- Name: volunteers_volunteer_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -1666,7 +2076,16 @@ SELECT pg_catalog.setval('public.volunteers_volunteer_id_seq', 1, false);
 
 
 --
--- TOC entry 5098 (class 2606 OID 16747)
+-- TOC entry 5176 (class 2606 OID 17202)
+-- Name: ai_news ai_news_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ai_news
+    ADD CONSTRAINT ai_news_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 5148 (class 2606 OID 16747)
 -- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1675,7 +2094,7 @@ ALTER TABLE ONLY public.audit_logs
 
 
 --
--- TOC entry 5087 (class 2606 OID 16634)
+-- TOC entry 5137 (class 2606 OID 16634)
 -- Name: branch_governorates branch_governorates_branch_id_governorate_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1684,7 +2103,7 @@ ALTER TABLE ONLY public.branch_governorates
 
 
 --
--- TOC entry 5089 (class 2606 OID 16632)
+-- TOC entry 5139 (class 2606 OID 16632)
 -- Name: branch_governorates branch_governorates_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1693,7 +2112,7 @@ ALTER TABLE ONLY public.branch_governorates
 
 
 --
--- TOC entry 5102 (class 2606 OID 17001)
+-- TOC entry 5152 (class 2606 OID 17001)
 -- Name: branch_inventory branch_inventory_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1702,7 +2121,7 @@ ALTER TABLE ONLY public.branch_inventory
 
 
 --
--- TOC entry 5050 (class 2606 OID 16414)
+-- TOC entry 5100 (class 2606 OID 16414)
 -- Name: branches branches_branch_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1711,7 +2130,7 @@ ALTER TABLE ONLY public.branches
 
 
 --
--- TOC entry 5052 (class 2606 OID 16412)
+-- TOC entry 5102 (class 2606 OID 16412)
 -- Name: branches branches_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1720,7 +2139,34 @@ ALTER TABLE ONLY public.branches
 
 
 --
--- TOC entry 5083 (class 2606 OID 16621)
+-- TOC entry 5174 (class 2606 OID 17191)
+-- Name: egypt_earthquakes egypt_earthquakes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.egypt_earthquakes
+    ADD CONSTRAINT egypt_earthquakes_pkey PRIMARY KEY (eq_id);
+
+
+--
+-- TOC entry 5170 (class 2606 OID 17167)
+-- Name: global_disasters global_disasters_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.global_disasters
+    ADD CONSTRAINT global_disasters_pkey PRIMARY KEY (disaster_id);
+
+
+--
+-- TOC entry 5172 (class 2606 OID 17180)
+-- Name: global_earthquakes global_earthquakes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.global_earthquakes
+    ADD CONSTRAINT global_earthquakes_pkey PRIMARY KEY (eq_id);
+
+
+--
+-- TOC entry 5133 (class 2606 OID 16621)
 -- Name: governorates governorates_governorate_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1729,7 +2175,7 @@ ALTER TABLE ONLY public.governorates
 
 
 --
--- TOC entry 5085 (class 2606 OID 16619)
+-- TOC entry 5135 (class 2606 OID 16619)
 -- Name: governorates governorates_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1738,7 +2184,16 @@ ALTER TABLE ONLY public.governorates
 
 
 --
--- TOC entry 5114 (class 2606 OID 17096)
+-- TOC entry 5168 (class 2606 OID 17146)
+-- Name: local_news local_news_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.local_news
+    ADD CONSTRAINT local_news_pkey PRIMARY KEY (news_id);
+
+
+--
+-- TOC entry 5164 (class 2606 OID 17096)
 -- Name: mission_beneficiaries mission_beneficiaries_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1747,7 +2202,7 @@ ALTER TABLE ONLY public.mission_beneficiaries
 
 
 --
--- TOC entry 5116 (class 2606 OID 17109)
+-- TOC entry 5166 (class 2606 OID 17109)
 -- Name: mission_eoc_staff mission_eoc_staff_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1756,7 +2211,7 @@ ALTER TABLE ONLY public.mission_eoc_staff
 
 
 --
--- TOC entry 5108 (class 2606 OID 17050)
+-- TOC entry 5158 (class 2606 OID 17050)
 -- Name: mission_itineraries mission_itineraries_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1765,7 +2220,7 @@ ALTER TABLE ONLY public.mission_itineraries
 
 
 --
--- TOC entry 5100 (class 2606 OID 16821)
+-- TOC entry 5150 (class 2606 OID 16821)
 -- Name: mission_logs mission_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1774,7 +2229,7 @@ ALTER TABLE ONLY public.mission_logs
 
 
 --
--- TOC entry 5059 (class 2606 OID 16503)
+-- TOC entry 5109 (class 2606 OID 16503)
 -- Name: mission_participant_sessions mission_participant_sessions_participant_id_session_date_ch_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1783,7 +2238,7 @@ ALTER TABLE ONLY public.mission_participant_sessions
 
 
 --
--- TOC entry 5061 (class 2606 OID 16501)
+-- TOC entry 5111 (class 2606 OID 16501)
 -- Name: mission_participant_sessions mission_participant_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1792,7 +2247,7 @@ ALTER TABLE ONLY public.mission_participant_sessions
 
 
 --
--- TOC entry 5112 (class 2606 OID 17076)
+-- TOC entry 5162 (class 2606 OID 17076)
 -- Name: mission_participants mission_participants_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1801,7 +2256,7 @@ ALTER TABLE ONLY public.mission_participants
 
 
 --
--- TOC entry 5096 (class 2606 OID 16695)
+-- TOC entry 5146 (class 2606 OID 16695)
 -- Name: mission_status_history mission_status_history_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1810,7 +2265,7 @@ ALTER TABLE ONLY public.mission_status_history
 
 
 --
--- TOC entry 5110 (class 2606 OID 17063)
+-- TOC entry 5160 (class 2606 OID 17063)
 -- Name: mission_vehicles mission_vehicles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1819,7 +2274,7 @@ ALTER TABLE ONLY public.mission_vehicles
 
 
 --
--- TOC entry 5104 (class 2606 OID 17037)
+-- TOC entry 5154 (class 2606 OID 17037)
 -- Name: missions missions_mission_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1828,7 +2283,7 @@ ALTER TABLE ONLY public.missions
 
 
 --
--- TOC entry 5106 (class 2606 OID 17035)
+-- TOC entry 5156 (class 2606 OID 17035)
 -- Name: missions missions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1837,7 +2292,7 @@ ALTER TABLE ONLY public.missions
 
 
 --
--- TOC entry 5071 (class 2606 OID 16560)
+-- TOC entry 5121 (class 2606 OID 16560)
 -- Name: permissions permissions_permission_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1846,7 +2301,7 @@ ALTER TABLE ONLY public.permissions
 
 
 --
--- TOC entry 5073 (class 2606 OID 16558)
+-- TOC entry 5123 (class 2606 OID 16558)
 -- Name: permissions permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1855,7 +2310,7 @@ ALTER TABLE ONLY public.permissions
 
 
 --
--- TOC entry 5079 (class 2606 OID 16597)
+-- TOC entry 5129 (class 2606 OID 16597)
 -- Name: role_inheritance role_inheritance_parent_role_id_child_role_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1864,7 +2319,7 @@ ALTER TABLE ONLY public.role_inheritance
 
 
 --
--- TOC entry 5081 (class 2606 OID 16595)
+-- TOC entry 5131 (class 2606 OID 16595)
 -- Name: role_inheritance role_inheritance_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1873,7 +2328,7 @@ ALTER TABLE ONLY public.role_inheritance
 
 
 --
--- TOC entry 5075 (class 2606 OID 16571)
+-- TOC entry 5125 (class 2606 OID 16571)
 -- Name: role_permissions role_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1882,7 +2337,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 5077 (class 2606 OID 16573)
+-- TOC entry 5127 (class 2606 OID 16573)
 -- Name: role_permissions role_permissions_role_id_permission_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1891,7 +2346,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 5063 (class 2606 OID 16521)
+-- TOC entry 5113 (class 2606 OID 16521)
 -- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1900,7 +2355,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 5065 (class 2606 OID 16523)
+-- TOC entry 5115 (class 2606 OID 16523)
 -- Name: roles roles_role_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1909,7 +2364,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 5091 (class 2606 OID 16656)
+-- TOC entry 5141 (class 2606 OID 16656)
 -- Name: user_branches user_branches_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1918,7 +2373,7 @@ ALTER TABLE ONLY public.user_branches
 
 
 --
--- TOC entry 5093 (class 2606 OID 16658)
+-- TOC entry 5143 (class 2606 OID 16658)
 -- Name: user_branches user_branches_user_id_branch_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1927,7 +2382,7 @@ ALTER TABLE ONLY public.user_branches
 
 
 --
--- TOC entry 5067 (class 2606 OID 16534)
+-- TOC entry 5117 (class 2606 OID 16534)
 -- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1936,7 +2391,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 5069 (class 2606 OID 16536)
+-- TOC entry 5119 (class 2606 OID 16536)
 -- Name: user_roles user_roles_user_id_role_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1945,7 +2400,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 5046 (class 2606 OID 16398)
+-- TOC entry 5096 (class 2606 OID 16398)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1954,7 +2409,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 5048 (class 2606 OID 16400)
+-- TOC entry 5098 (class 2606 OID 16400)
 -- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1963,7 +2418,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 5055 (class 2606 OID 16715)
+-- TOC entry 5105 (class 2606 OID 16715)
 -- Name: volunteers volunteers_membership_number_branch_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1972,7 +2427,7 @@ ALTER TABLE ONLY public.volunteers
 
 
 --
--- TOC entry 5057 (class 2606 OID 16458)
+-- TOC entry 5107 (class 2606 OID 16458)
 -- Name: volunteers volunteers_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1981,7 +2436,7 @@ ALTER TABLE ONLY public.volunteers
 
 
 --
--- TOC entry 5094 (class 1259 OID 16706)
+-- TOC entry 5144 (class 1259 OID 16706)
 -- Name: mission_status_history_mission_id_index; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1989,7 +2444,7 @@ CREATE INDEX mission_status_history_mission_id_index ON public.mission_status_hi
 
 
 --
--- TOC entry 5053 (class 1259 OID 16761)
+-- TOC entry 5103 (class 1259 OID 16761)
 -- Name: volunteers_auto_status_index; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1997,7 +2452,7 @@ CREATE INDEX volunteers_auto_status_index ON public.volunteers USING btree (stat
 
 
 --
--- TOC entry 5129 (class 2606 OID 16748)
+-- TOC entry 5189 (class 2606 OID 16748)
 -- Name: audit_logs audit_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2006,7 +2461,7 @@ ALTER TABLE ONLY public.audit_logs
 
 
 --
--- TOC entry 5124 (class 2606 OID 16635)
+-- TOC entry 5184 (class 2606 OID 16635)
 -- Name: branch_governorates branch_governorates_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2015,7 +2470,7 @@ ALTER TABLE ONLY public.branch_governorates
 
 
 --
--- TOC entry 5125 (class 2606 OID 16640)
+-- TOC entry 5185 (class 2606 OID 16640)
 -- Name: branch_governorates branch_governorates_governorate_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2024,7 +2479,7 @@ ALTER TABLE ONLY public.branch_governorates
 
 
 --
--- TOC entry 5132 (class 2606 OID 17002)
+-- TOC entry 5192 (class 2606 OID 17002)
 -- Name: branch_inventory branch_inventory_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2033,7 +2488,16 @@ ALTER TABLE ONLY public.branch_inventory
 
 
 --
--- TOC entry 5138 (class 2606 OID 17097)
+-- TOC entry 5200 (class 2606 OID 17147)
+-- Name: local_news local_news_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.local_news
+    ADD CONSTRAINT local_news_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id);
+
+
+--
+-- TOC entry 5198 (class 2606 OID 17097)
 -- Name: mission_beneficiaries mission_beneficiaries_mission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2042,7 +2506,7 @@ ALTER TABLE ONLY public.mission_beneficiaries
 
 
 --
--- TOC entry 5139 (class 2606 OID 17110)
+-- TOC entry 5199 (class 2606 OID 17110)
 -- Name: mission_eoc_staff mission_eoc_staff_mission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2051,7 +2515,7 @@ ALTER TABLE ONLY public.mission_eoc_staff
 
 
 --
--- TOC entry 5134 (class 2606 OID 17051)
+-- TOC entry 5194 (class 2606 OID 17051)
 -- Name: mission_itineraries mission_itineraries_mission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2060,7 +2524,7 @@ ALTER TABLE ONLY public.mission_itineraries
 
 
 --
--- TOC entry 5130 (class 2606 OID 16827)
+-- TOC entry 5190 (class 2606 OID 16827)
 -- Name: mission_logs mission_logs_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2069,7 +2533,7 @@ ALTER TABLE ONLY public.mission_logs
 
 
 --
--- TOC entry 5131 (class 2606 OID 16832)
+-- TOC entry 5191 (class 2606 OID 16832)
 -- Name: mission_logs mission_logs_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2078,7 +2542,7 @@ ALTER TABLE ONLY public.mission_logs
 
 
 --
--- TOC entry 5136 (class 2606 OID 17082)
+-- TOC entry 5196 (class 2606 OID 17082)
 -- Name: mission_participants mission_participants_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2087,7 +2551,7 @@ ALTER TABLE ONLY public.mission_participants
 
 
 --
--- TOC entry 5137 (class 2606 OID 17077)
+-- TOC entry 5197 (class 2606 OID 17077)
 -- Name: mission_participants mission_participants_mission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2096,7 +2560,7 @@ ALTER TABLE ONLY public.mission_participants
 
 
 --
--- TOC entry 5128 (class 2606 OID 16701)
+-- TOC entry 5188 (class 2606 OID 16701)
 -- Name: mission_status_history mission_status_history_action_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2105,7 +2569,7 @@ ALTER TABLE ONLY public.mission_status_history
 
 
 --
--- TOC entry 5135 (class 2606 OID 17064)
+-- TOC entry 5195 (class 2606 OID 17064)
 -- Name: mission_vehicles mission_vehicles_mission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2114,7 +2578,7 @@ ALTER TABLE ONLY public.mission_vehicles
 
 
 --
--- TOC entry 5133 (class 2606 OID 17038)
+-- TOC entry 5193 (class 2606 OID 17038)
 -- Name: missions missions_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2123,7 +2587,7 @@ ALTER TABLE ONLY public.missions
 
 
 --
--- TOC entry 5122 (class 2606 OID 16603)
+-- TOC entry 5182 (class 2606 OID 16603)
 -- Name: role_inheritance role_inheritance_child_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2132,7 +2596,7 @@ ALTER TABLE ONLY public.role_inheritance
 
 
 --
--- TOC entry 5123 (class 2606 OID 16598)
+-- TOC entry 5183 (class 2606 OID 16598)
 -- Name: role_inheritance role_inheritance_parent_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2141,7 +2605,7 @@ ALTER TABLE ONLY public.role_inheritance
 
 
 --
--- TOC entry 5120 (class 2606 OID 16579)
+-- TOC entry 5180 (class 2606 OID 16579)
 -- Name: role_permissions role_permissions_permission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2150,7 +2614,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 5121 (class 2606 OID 16574)
+-- TOC entry 5181 (class 2606 OID 16574)
 -- Name: role_permissions role_permissions_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2159,7 +2623,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 5126 (class 2606 OID 16664)
+-- TOC entry 5186 (class 2606 OID 16664)
 -- Name: user_branches user_branches_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2168,7 +2632,7 @@ ALTER TABLE ONLY public.user_branches
 
 
 --
--- TOC entry 5127 (class 2606 OID 16659)
+-- TOC entry 5187 (class 2606 OID 16659)
 -- Name: user_branches user_branches_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2177,7 +2641,7 @@ ALTER TABLE ONLY public.user_branches
 
 
 --
--- TOC entry 5118 (class 2606 OID 16542)
+-- TOC entry 5178 (class 2606 OID 16542)
 -- Name: user_roles user_roles_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2186,7 +2650,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 5119 (class 2606 OID 16537)
+-- TOC entry 5179 (class 2606 OID 16537)
 -- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2195,7 +2659,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 5117 (class 2606 OID 16459)
+-- TOC entry 5177 (class 2606 OID 16459)
 -- Name: volunteers volunteers_branch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2203,11 +2667,11 @@ ALTER TABLE ONLY public.volunteers
     ADD CONSTRAINT volunteers_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id);
 
 
--- Completed on 2026-08-26 07:29:08
+-- Completed on 2026-08-31 16:01:50
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict YO8hfYidDN6zpJBjszthKxKQwgP4Osf6oRJdqfIODxCQNcme5xgngtOGpq30faB
+\unrestrict YQHZOx72tDeF9xahUlFa1bP4vgakWrBd2DGqy6pU3irELFQbNX0yhTq9Zd1jkh5
 

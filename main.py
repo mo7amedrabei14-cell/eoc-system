@@ -1372,3 +1372,75 @@ def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=500, detail=f"فشل الاتصال الداخلي: {str(e)}")
 
 # Fix Vercel Environment Variables Conflict
+
+# =====================================================================
+# قطاع القوة البشرية - Human Resources
+# =====================================================================
+@app.get("/api/human-resources")
+def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    
+    role = get_user_role(user_id)
+    # الحماية المطلقة: لا يفتح إلا للمالك
+    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
+        raise HTTPException(status_code=403, detail="عفواً، هذه الصفحة متاحة للمالك فقط")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # دالة DISTINCT ON لمنع التكرار بناءً على (الفرع + رقم العضوية)
+            cursor.execute("""
+                SELECT DISTINCT ON (
+                    p.branch_id, 
+                    CASE 
+                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
+                        ELSE TRIM(p.participation_role) 
+                    END
+                )
+                    p.full_name,
+                    COALESCE(NULLIF(TRIM(p.participation_role), ''), 'بدون رقم/صفة') AS membership_number,
+                    p.participant_type,
+                    b.branch_name,
+                    p.branch_id,
+                    (
+                        SELECT COUNT(DISTINCT m.mission_id)
+                        FROM mission_participants mp
+                        JOIN missions m ON mp.mission_id = m.mission_id
+                        WHERE mp.branch_id = p.branch_id
+                        AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
+                        AND (
+                            (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
+                            OR 
+                            ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
+                        )
+                    ) as missions_count
+                FROM mission_participants p
+                LEFT JOIN branches b ON p.branch_id = b.branch_id
+                WHERE p.full_name IS NOT NULL AND TRIM(p.full_name) != ''
+                ORDER BY 
+                    p.branch_id, 
+                    CASE 
+                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
+                        ELSE TRIM(p.participation_role) 
+                    END, 
+                    p.participant_id DESC;
+            """)
+            rows = cursor.fetchall()
+            result = []
+            for row in rows:
+                result.append({
+                    "full_name": row[0],
+                    "membership_number": row[1],
+                    "participant_type": row[2],
+                    "branch_name": row[3] or "غير محدد",
+                    "branch_id": row[4],
+                    "missions_count": row[5]
+                })
+            return result
+    except Exception as e:
+        print(f"Error fetching HR: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء جلب بيانات القوة البشرية")
+    finally:
+        connection.close()
