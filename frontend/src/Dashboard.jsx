@@ -3289,7 +3289,6 @@ const totalAiCountries = new Set(
               <tr>
                 <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
                 <th className="p-4 font-semibold border-l border-white/5 text-purple-400">نوع الخبر</th>
-                <th className="p-4 font-semibold border-l border-white/5">المحافظة</th>
                 <th className="p-4 font-semibold border-l border-white/5 max-w-[250px]">وصف الحادث</th>
                 <th className="p-4 font-semibold border-l border-white/5">الناشر</th>
                 <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5 text-center">إجراءات</th>
