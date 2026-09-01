@@ -193,14 +193,14 @@ useEffect(() => {
             ></div>
 
             <div
-              className={`absolute inset-0 grid grid-cols-[1fr_auto_1fr] items-center ${theme === 'light' ? 'text-gray-500' : 'text-white/50'} text-sm font-semibold tracking-wide select-none pointer-events-none`}
+              className={`absolute inset-0 flex items-center justify-center ${theme === 'light' ? 'text-gray-500' : 'text-white/50'} text-sm font-semibold tracking-wide select-none pointer-events-none`}
               style={{ opacity: 1 - dragProgress }}
             >
-              <span className="col-start-2 whitespace-nowrap text-center">
+              <span className="whitespace-nowrap text-center">
   {language === 'ar' ? 'اسحب لليمين للوصول الآمن' : 'Swipe right for secure access'}
 </span>
 
-              <span className="col-start-1 row-start-1 flex justify-self-end">
+              <span className="hidden">
                 <span className="animate-pulse" style={{ animationDelay: '0s' }}>›</span>
                 <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>›</span>
                 <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>›</span>
@@ -217,7 +217,7 @@ useEffect(() => {
                 transform: `translateX(${dragX}px)`,
                 transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)',
               }}
-              className={`absolute top-1 left-1 rounded-full bg-[#c70000] shadow-[0_0_20px_rgba(199,0,0,0.6)] flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${
+              className={`absolute top-1/2 left-1 -translate-y-1/2 rounded-full bg-[#c70000] shadow-[0_0_20px_rgba(199,0,0,0.6)] flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${
                 isUnlocking ? 'scale-110' : ''
               }`}
             >
