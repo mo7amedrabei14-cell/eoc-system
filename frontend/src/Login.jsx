@@ -129,7 +129,7 @@ useEffect(() => {
         type="button"
         onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
         title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-        className="fixed top-5 left-5 z-[100] px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm font-bold backdrop-blur-md shadow-lg transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] hover:scale-105"
+        className={`fixed top-5 left-5 z-[100] px-4 py-2 rounded-xl border text-sm font-bold backdrop-blur-md shadow-lg transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] hover:text-white hover:scale-105 ${theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-white/10 border-white/20 text-white'}`}
       >
         {language === 'ar' ? 'EN' : 'عربي'}
       </button>
@@ -167,7 +167,7 @@ useEffect(() => {
           <div className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] bg-[#c70000]/10 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }}></div>
           <div className="absolute -bottom-[20%] -left-[10%] w-[50vw] h-[50vw] bg-[#c70000]/5 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }}></div>
 
-          <div className={`relative z-10 flex flex-col items-center px-8 py-10 ${theme === 'light' ? 'bg-white/95 border border-slate-200 rounded-[2rem] shadow-[0_18px_55px_rgba(15,23,42,0.16)]' : ''}`}>
+          <div className="relative z-10 flex flex-col items-center px-8 py-10">
           <div className="relative z-10 mb-10">
             <div className="absolute inset-0 -m-4 rounded-full bg-[#c70000]/30 blur-2xl animate-pulse" style={{ animationDuration: '3s' }}></div>
             <svg viewBox="0 0 100 100" className="relative w-28 h-28 md:w-32 md:h-32 drop-shadow-[0_0_30px_rgba(199,0,0,0.55)]">
@@ -188,19 +188,19 @@ useEffect(() => {
             className={`relative z-10 w-[300px] md:w-[340px] h-16 rounded-full backdrop-blur-md overflow-hidden ${theme === 'light' ? 'bg-black/5 border border-black/10' : 'bg-white/5 border border-white/10'}`}
           >
             <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#c70000]/10 to-[#c70000]/50"
-              style={{ width: `${dragX + HANDLE_SIZE / 2}px`, transition: isDragging ? 'none' : 'width 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
+              className="pointer-events-none absolute top-1 bottom-0 left-1 rounded-full bg-gradient-to-r from-[#c70000]/10 to-[#c70000]/50"
+              style={{ width: `${dragX}px`, transition: isDragging ? 'none' : 'width 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
             ></div>
 
             <div
-              className={`absolute inset-0 flex items-center justify-center gap-1.5 ${theme === 'light' ? 'text-gray-500' : 'text-white/50'} text-sm font-semibold tracking-wide select-none pointer-events-none`}
+              className={`absolute inset-0 grid grid-cols-[1fr_auto_1fr] items-center ${theme === 'light' ? 'text-gray-500' : 'text-white/50'} text-sm font-semibold tracking-wide select-none pointer-events-none`}
               style={{ opacity: 1 - dragProgress }}
             >
-              <span>
+              <span className="col-start-2 whitespace-nowrap text-center">
   {language === 'ar' ? 'اسحب لليمين للوصول الآمن' : 'Swipe right for secure access'}
 </span>
 
-              <span className="flex">
+              <span className="col-start-1 row-start-1 flex justify-self-end">
                 <span className="animate-pulse" style={{ animationDelay: '0s' }}>›</span>
                 <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>›</span>
                 <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>›</span>
