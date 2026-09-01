@@ -2079,7 +2079,7 @@ useEffect(() => {
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full min-w-[1400px] text-right whitespace-nowrap text-sm">
+          <table className="w-full text-right whitespace-nowrap text-sm">
             <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
               <tr>
                 <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
@@ -3146,6 +3146,90 @@ const totalAiCountries = new Set(
         </div>
       </div>
 
+            {/* إحصائيات الرصد */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+
+        {/* عدد الأخبار */}
+        <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-gray-400 text-sm font-bold">
+                إجمالي الأخبار المرصودة
+              </p>
+
+              <p className="text-4xl font-black text-white mt-2">
+                {filteredNews.length.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-purple-500/10 text-purple-400 p-3 rounded-xl">
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12m2-8h2v8a2 2 0 01-2 2h-2M7 8h6M7 12h6M7 16h4"
+                />
+              </svg>
+            </div>
+
+          </div>
+        </div>
+
+
+        {/* عدد الدول */}
+        <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-gray-400 text-sm font-bold">
+                الدول المرصودة
+              </p>
+
+              <p className="text-4xl font-black text-white mt-2">
+                {new Set(
+                  filteredNews
+                    .map(n => n.governorate)
+                    .filter(Boolean)
+                ).size.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-purple-500/10 text-purple-400 p-3 rounded-xl">
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  strokeWidth={1.8}
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeWidth={1.8}
+                  d="M3 12h18M12 3c2.2 2.5 3.4 5.5 3.4 9s-1.2 6.5-3.4 9c-2.2-2.5-3.4-5.5-3.4-9S9.8 5.5 12 3z"
+                />
+              </svg>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+
+      {/* 💡 خريطة الرصد التكتيكية للذكاء الاصطناعي */}
+
       <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-4 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-0 h-auto md:h-[450px] animate-fade-in-up">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد اللحظي للذكاء الاصطناعي</h3>
@@ -3200,7 +3284,7 @@ const totalAiCountries = new Set(
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full min-w-[1400px] text-right whitespace-nowrap text-sm">
+          <table className="w-full text-right whitespace-nowrap text-sm">
             <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400 border-b border-purple-500/30">
               <tr>
                 <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
@@ -3223,7 +3307,7 @@ const totalAiCountries = new Set(
                   </td>
                   <td className="p-4 text-gray-300 border-l border-white/5">{n.governorate}</td>
                   <td className="p-4 text-gray-400 border-l border-white/5 w-[500px] min-w-[500px] whitespace-normal leading-7">
-                    {n.incident_description || 'لا يوجد وصف'}
+                      {n.incident_description || 'لا يوجد وصف'}
                   </td>
                   <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.news_publisher}</td>
                   <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
