@@ -160,7 +160,7 @@ useEffect(() => {
       {showGate && (
 
         <div
-          className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#050505] transition-all duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+          className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${theme === 'light' ? 'bg-[#f4f6f8]' : 'bg-[#050505]'} transition-all duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
             isUnlocking ? 'opacity-0 scale-110 blur-md pointer-events-none' : 'opacity-100 scale-100'
           }`}
         >
@@ -174,17 +174,17 @@ useEffect(() => {
             </svg>
           </div>
 
-          <h2 className="relative z-10 text-white text-xl md:text-2xl font-bold mb-1 tracking-wide">
+          <h2 className={`relative z-10 ${theme === 'light' ? 'text-[#17202a]' : 'text-white'} text-xl md:text-2xl font-bold mb-1 tracking-wide`}>
   {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
 </h2>
-<p className="relative z-10 text-white/40 text-sm mb-14">
+<p className={`relative z-10 ${theme === 'light' ? 'text-gray-500' : 'text-white/40'} text-sm mb-14`}>
   {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Emergency Operations Center'}
 </p>
 
 
           <div
             ref={trackRef}
-            className="relative z-10 w-[300px] md:w-[340px] h-16 rounded-full bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden"
+            className={`relative z-10 w-[300px] md:w-[340px] h-16 rounded-full backdrop-blur-md overflow-hidden ${theme === 'light' ? 'bg-black/5 border border-black/10' : 'bg-white/5 border border-white/10'}`}
           >
             <div
               className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#c70000]/10 to-[#c70000]/50"
@@ -192,7 +192,7 @@ useEffect(() => {
             ></div>
 
             <div
-              className="absolute inset-0 flex items-center justify-center gap-1.5 text-white/50 text-sm font-semibold tracking-wide select-none pointer-events-none"
+              className={`absolute inset-0 flex items-center justify-center gap-1.5 ${theme === 'light' ? 'text-gray-500' : 'text-white/50'} text-sm font-semibold tracking-wide select-none pointer-events-none`}
               style={{ opacity: 1 - dragProgress }}
             >
               <span>

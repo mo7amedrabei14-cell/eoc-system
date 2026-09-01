@@ -455,10 +455,176 @@ const ENGLISH_UI = {
   'أسوان': 'Aswan',
   'الوادي الجديد': 'New Valley',
   'البحر الأحمر': 'Red Sea',
+  'مسح': 'Clear',
+  'سجل متابعة المهام الميدانية الشامل': 'Comprehensive field mission tracking register',
+  'تاريخ الإنشاء': 'Creation date',
+  'فترة المهمة': 'Mission period',
+  'كود المهمة': 'Mission code',
+  'التمركز (الفرع)': 'Deployment (branch)',
+  'اسم المهمة': 'Mission name',
+  'السيارات والسائقين': 'Vehicles and drivers',
+  'تاريخ التحرك': 'Movement date',
+  'الإجراءات': 'Actions',
+  'جاري السحب...': 'Loading...',
+  'لا توجد مهام مطابقة': 'No matching missions',
+  '🔄 عودة': '🔄 Return',
+  '⛺ مبيت': '⛺ Overnight stay',
+  'بدون خط سير': 'No itinerary',
+  '📍 مازال بالمهمة': '📍 Still on mission',
+  '🏠 تم انتهاء مهمتة': '🏠 Mission completed',
+  '+ إضافة تصنيف': '+ Add category',
+  'تصدير الاستمارة': 'Export form',
+  'إرسال للجوكر': 'Send to Joker',
+  'تم مراجعة المهمة (مستمرة)': 'Mission reviewed (in progress)',
+  'إنهاء وإغلاق المهمة': 'Complete and close mission',
+  'إلغاء الإغلاق (إعادة فتح)': 'Cancel closure (reopen)',
+  'إرسال إلى الجوكر': 'Send to Joker',
+  'إرجاع للتعديل': 'Return for editing',
+  'إرسال التحديثات للجوكر': 'Send updates to Joker',
+  'حفظ التعديلات (وهي مقفولة)': 'Save edits (while locked)',
+  'إرجاع الاستمارة للمتطوع': 'Return form to volunteer',
+  'برجاء كتابة سبب الإرجاع أو التعديلات المطلوبة بوضوح.': 'Please clearly state the reason for return or the requested changes.',
+  'تأكيد الإرجاع': 'Confirm return',
+  'تنبيه النظام': 'System alert',
+  'علم، جاري التعديل': 'Got it, editing now',
+  'اسم السائق:': 'Driver name:',
+  'رقم السيارة:': 'Vehicle number:',
+  'سجل الإجراءات الرقابية': 'Oversight action log',
+  'سري للغاية': 'Top secret',
+  'النظام': 'System',
+  'التاريخ والوقت': 'Date and time',
+  'القسم': 'Section',
+  'اسم المستخدم': 'User name',
+  'تصدير الخبر الحالي': 'Export current report',
+  'حفظ الخبر وتقييم الأداء': 'Save report and evaluate performance',
+  'تحميل السجل الشامل للكوارث': 'Download comprehensive disaster register',
+  '+ رصد كارثة': '+ Log disaster',
+  'الدولة / المكان': 'Country / location',
+  'نوع الكارثة': 'Disaster type',
+  'الخبر': 'Report',
+  'الوفيات': 'Fatalities',
+  'المصابين': 'Injured',
+  'جاري تحميل البيانات...': 'Loading data...',
+  'لا توجد كوارث مسجلة حالياً بهذا التاريخ': 'No disasters are recorded for this date',
+  'اختر المكان...': 'Select location...',
+  'اختر النوع...': 'Select type...',
+  'تحميل سجل الكارثة': 'Download disaster register',
+  'حفظ وتوثيق الكارثة': 'Save and document disaster',
+  'هل أنت متأكد من حذف هذا الرصد نهائياً؟': 'Are you sure you want to permanently delete this record?',
+  'خريطة الرصد (': 'Monitoring map (',
+  'عالمي 🔴': 'Global 🔴',
+  'مصر 🟢': 'Egypt 🟢',
+  'إلغاء الفلترة': 'Clear filter',
+  'عالمي': 'Global',
+  'مصر': 'Egypt',
+  'انقر لفلترة السجل': 'Click to filter the register',
+  'سجل بيانات الزلازل': 'Earthquake data register',
+  'تصدير العالمي': 'Export global',
+  'استيراد شيت EMSC': 'Import EMSC sheet',
+  '+ رصد عالمي': '+ Log global earthquake',
+  'تصدير مصر': 'Export Egypt',
+  '+ رصد زلزال مصر': '+ Log Egypt earthquake',
+  'التاريخ / الوقت': 'Date / time',
+  'الإحداثيات': 'Coordinates',
+  'لا توجد زلازل عالمية': 'No global earthquakes',
+  'المنطقة (مصر)': 'Area (Egypt)',
+  'لا توجد زلازل مسجلة لمصر': 'No earthquakes recorded for Egypt',
+  'اختر الدولة...': 'Select country...',
+  'إجمالي المهام المفلترة': 'Total filtered missions',
+  'الكود': 'Code',
+  'اليوم 1...': 'Day 1...',
+  'إحصائيات المستفيدين': 'Beneficiary statistics',
+  'تصنيف المستفيدين': 'Beneficiary category',
+  'مثال: أطفال، مصابين...': 'Example: children, injured...',
+  'مستفيدين (مباشر)': 'Direct beneficiaries',
+  'مستفيدين (غير مباشر)': 'Indirect beneficiaries',
+  'فريق إدارة الغرفة (الهيكل الإداري)': 'Operations room team (administrative structure)',
+  'مسؤول المتابعة (قائد العملية)': 'Follow-up lead (operation commander)',
+  'الاسم ورقم الهاتف...': 'Name and phone number...',
+  'الجوكر': 'Joker',
+  'الحالة والملاحظات العامة': 'Status and general notes',
+  'موقف الاستمارة إدارياً وميدانياً (مغلق)': 'Administrative and field form status (locked)',
+  'أسباب الإرجاع والتعديلات (مغلق)': 'Reasons for return and edits (locked)',
+  'لا توجد ملاحظات إرجاع حالياً... (تُحذف تلقائياً عند الاعتماد أو الإغلاق)': 'No return notes currently... (automatically cleared upon approval or closure)',
+  'الملاحظات والتحديثات (متاحة للجميع)': 'Notes and updates (available to everyone)',
+  'اكتب هنا أي ملاحظات إضافية، تحديثات ميدانية متاحة للغرفة...': 'Enter any additional notes or field updates available to the room...',
+  'مثال: يرجى استكمال بيانات السيارات...': 'Example: please complete the vehicle data...',
+  'بحث باسم المستخدم...': 'Search by user name...',
+  'حالة توقيت الرد (نقاط)': 'Response-time status (points)',
+  '3. الاستجابة الميدانية والتحرك': '3. Field response and movement',
+  'تمت الاستجابة؟': 'Response completed?',
+  'المدة (إبلاغ ➔ تحرك)': 'Duration (report ➔ movement)',
+  'طول المسافة (كم)': 'Distance (km)',
+  'مثال: 15': 'Example: 15',
+  'توقيت الوصول (أول متطوع)': 'Arrival time (first volunteer)',
+  'الزمن المتوقع (تلقائي)': 'Expected time (automatic)',
+  'نقاط الاستجابة للمسافة': 'Distance response points',
+  '4. تفاصيل التدخل الميداني': '4. Field intervention details',
+  'نوع الاستجابة': 'Response type',
+  'اسم استمارة المهمة': 'Mission form name',
+  '5. الملاحظات والمتابعة': '5. Notes and follow-up',
+  'ملاحظات عامة': 'General notes',
+  'لينك الخبر (إلزامي)*': 'News link (required)*',
+  'إجمالي الكوارث المرصودة': 'Total monitored disasters',
+  'الدول/المناطق المتضررة': 'Affected countries/areas',
+  'إجمالي الوفيات المرصودة': 'Total monitored fatalities',
+  'إجمالي المصابين': 'Total injured',
+  'تعديل': 'Edit',
+  'بيانات الكارثة الأساسية': 'Basic disaster information',
+  'الدولة (مطلوب)': 'Country (required)',
+  'نوع الكارثة (مطلوب)': 'Disaster type (required)',
+  'الخبر (وصف مختصر)': 'Report (brief description)',
+  'المناطق المتأثرة من الكارثة': 'Areas affected by disaster',
+  'المناطق المتوقعة الخطر': 'Areas at risk',
+  'الإصابات والتدخلات': 'Injuries and interventions',
+  'عدد المفقودين': 'Missing count',
+  'تدخلات الجمعيات الوطنية': 'National Society interventions',
+  'التوثيق (إلزامي)': 'Documentation (required)',
+  'الزلازل العالمية المرصودة': 'Monitored global earthquakes',
+  'أقوى هزة / زلزال': 'Strongest tremor / earthquake',
+  'Latitude (دوائر العرض)': 'Latitude',
+  'Longitude (خطوط الطول)': 'Longitude',
+  'الولايات المتحدة الأمريكية': 'United States',
+  'المملكة المتحدة البريطانية': 'United Kingdom',
+  'جمهورية الكونغو الديمقراطية': 'Democratic Republic of the Congo',
+  'الكونغو': 'Republic of the Congo',
+  'البوسنة والهرسك': 'Bosnia and Herzegovina',
+  'جزر البهاما': 'Bahamas',
+  'جمهورية إفريقيا الوسطى': 'Central African Republic',
+  'جمهورية الدومينيكان': 'Dominican Republic',
+  'غينيا الاستوائية': 'Equatorial Guinea',
+  'كوريا الشمالية': 'North Korea',
+  'سانت كيتس ونيفيس': 'Saint Kitts and Nevis',
+  'سانت لوسيا': 'Saint Lucia',
+  'سانت فنسنت وجزر غرينادين': 'Saint Vincent and the Grenadines',
+  'بابوا غينيا الجديدة': 'Papua New Guinea',
+  'ترينيداد وتوباغو': 'Trinidad and Tobago',
+  'الإمارات العربية المتحدة': 'United Arab Emirates',
+  'المحيط الهادي': 'Pacific Ocean',
+  'المحيط الاطلسي': 'Atlantic Ocean',
+  'المحيط الهندي': 'Indian Ocean',
+  'القطب الجنوبي': 'Antarctica',
+  'القطب الشمالي': 'Arctic',
+  'البحر الكاريبي': 'Caribbean Sea',
+  'البحر الابيض المتوسط': 'Mediterranean Sea',
+  'البحر الاحمر': 'Red Sea',
+  'البحر الأسود': 'Black Sea',
+  'البحر الميت': 'Dead Sea',
+  'الخليج الفارسي': 'Persian Gulf',
+  'بحر الشمال': 'North Sea',
+  'بحر العرب': 'Arabian Sea',
+  'بحر إيجة': 'Aegean Sea',
+  'بحر قزوين': 'Caspian Sea',
+  'بحر البلطيق': 'Baltic Sea',
+  'جبال الهند': 'Himalayas',
+  'أنتاركتيكا': 'Antarctica',
+  'جزيرة': 'Island',
 };
 
 const translatedTextCache = new WeakMap();
 const translatedAttributeCache = new WeakMap();
+const ISO_REGION_CODES = 'AF,AL,DZ,AD,AO,AG,AR,AM,AU,AT,AZ,BS,BH,BD,BB,BY,BE,BZ,BJ,BT,BO,BA,BW,BR,BN,BG,BF,BI,CV,KH,CM,CA,CF,TD,CL,CN,CO,KM,CD,CG,CR,HR,CU,CY,CZ,DK,DJ,DM,DO,EC,EG,SV,GQ,ER,EE,SZ,ET,FJ,FI,FR,GA,GM,GE,DE,GH,GR,GD,GT,GN,GW,GY,HT,HN,HU,IS,IN,ID,IR,IQ,IE,IL,IT,CI,JM,JP,JO,KZ,KE,KI,KW,KG,LA,LV,LB,LS,LR,LY,LI,LT,LU,MG,MW,MY,MV,ML,MT,MH,MR,MU,MX,FM,MD,MC,MN,ME,MA,MZ,MM,NA,NR,NP,NL,NZ,NI,NE,NG,KP,MK,NO,OM,PK,PW,PA,PG,PY,PE,PH,PL,PT,QA,RO,RU,RW,KN,LC,VC,WS,SM,ST,SA,SN,RS,SC,SL,SG,SK,SI,SB,SO,ZA,KR,SS,ES,LK,SD,SR,SE,CH,SY,TJ,TZ,TH,TL,TG,TO,TT,TN,TR,TM,TV,UG,UA,AE,GB,US,UY,UZ,VU,VE,VN,YE,ZM,ZW,TW,GL,GU,AI,KY,GI,PR,GP,MQ,NC,PN,BM,JE,IM,BL,MF'.split(',');
+const englishRegionNameCache = new Map();
 const ENGLISH_UI_PREFIXES = [
   ['المؤشرات الحية لفرع/محافظة:', 'Live indicators for branch/governorate:'],
   ['بيانات تمركز:', 'Deployment data:'],
@@ -466,7 +632,51 @@ const ENGLISH_UI_PREFIXES = [
   ['إجراء:', 'Action:'],
   ['آخر فحص:', 'Last scan:'],
   ['🔥 خطورة:', '🔥 Severity:'],
+  ['سيتم عرض مهام', 'Showing missions for'],
 ];
+
+function getEnglishRegionName(value) {
+  if (englishRegionNameCache.has(value)) return englishRegionNameCache.get(value);
+
+  try {
+    const arabicNames = new Intl.DisplayNames(['ar'], { type: 'region' });
+    const englishNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    const matchingCode = ISO_REGION_CODES.find((code) => arabicNames.of(code) === value);
+    const translatedName = matchingCode ? englishNames.of(matchingCode) : null;
+    englishRegionNameCache.set(value, translatedName);
+    return translatedName;
+  } catch {
+    englishRegionNameCache.set(value, null);
+    return null;
+  }
+}
+
+function translateGeneratedUiText(value) {
+  let translated = value;
+
+  translated = translated
+    .replace(/(\d+)\s*يوم/g, '$1 day')
+    .replace(/(\d+)\s*ساعة/g, '$1 hour')
+    .replace(/(\d+)\s*دقيقة/g, '$1 minute')
+    .replace(/(\d+)\s*نقطة/g, '$1 point')
+    .replace(/^من:/, 'From:')
+    .replace(/^إلى:/, 'To:')
+    .replace(/\(حتى الآن\.\.\.\)/g, '(to date...)')
+    .replace(/^اليوم، الساعة\s*/, 'Today at ')
+    .replace(/(\d{1,2}:\d{2})\s*ص$/u, '$1 AM')
+    .replace(/(\d{1,2}:\d{2})\s*م$/u, '$1 PM');
+
+  if (/^\d{1,2}\s/.test(translated) && translated.includes('، الساعة')) {
+    Object.entries({
+      'يناير': 'January', 'فبراير': 'February', 'مارس': 'March', 'أبريل': 'April',
+      'مايو': 'May', 'يونيو': 'June', 'يوليو': 'July', 'أغسطس': 'August',
+      'سبتمبر': 'September', 'أكتوبر': 'October', 'نوفمبر': 'November', 'ديسمبر': 'December',
+    }).forEach(([arabic, english]) => { translated = translated.replace(arabic, english); });
+    translated = translated.replace('، الساعة ', ' at ');
+  }
+
+  return translated;
+}
 
 function getEnglishUiText(value) {
   if (typeof value !== 'string') return value;
@@ -476,11 +686,17 @@ function getEnglishUiText(value) {
   const directTranslation = ENGLISH_UI[key];
   if (directTranslation) return `${leadingWhitespace}${directTranslation}${trailingWhitespace}`;
 
+  const regionTranslation = getEnglishRegionName(key);
+  if (regionTranslation) return `${leadingWhitespace}${regionTranslation}${trailingWhitespace}`;
+
   const prefixTranslation = ENGLISH_UI_PREFIXES.find(([arabicPrefix]) => key.startsWith(arabicPrefix));
   if (prefixTranslation) {
     const [arabicPrefix, englishPrefix] = prefixTranslation;
     return `${leadingWhitespace}${englishPrefix}${key.slice(arabicPrefix.length)}${trailingWhitespace}`;
   }
+
+  const generatedTranslation = translateGeneratedUiText(key);
+  if (generatedTranslation !== key) return `${leadingWhitespace}${generatedTranslation}${trailingWhitespace}`;
 
   return value;
 }
