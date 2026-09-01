@@ -12,29 +12,40 @@ export default function Login() {
 const [dragProgress, setDragProgress] = useState(0);
 const [isDragging, setIsDragging] = useState(false);
 const [dragStartX, setDragStartX] = useState(0);
-  
+
+
   // دي الأداة اللي هتنقلنا للصفحة التانية
   const navigate = useNavigate();
 
   useEffect(() => { setIsMounted(true); }, []);
 
   const handleDragStart = (e) => {
+  if (isLoginRevealed) return;
+
   setDragStartX(e.clientX);
   setIsDragging(true);
-  e.currentTarget.setPointerCapture(e.pointerId);
+
+  if (e.currentTarget.setPointerCapture) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
 };
 
 const handleDragMove = (e) => {
   if (!isDragging || isLoginRevealed) return;
 
-  const distance = Math.abs(e.clientX - dragStartX);
-  const progress = Math.min(distance / 180, 1);
+  const distance = Math.max(0, e.clientX - dragStartX);
+  const progress = Math.min(distance / 300, 1);
 
   setDragProgress(progress);
 
-  if (progress >= 0.9) {
-    setIsLoginRevealed(true);
-    setIsDragging(false);
+  if (progress >= 0.92) {
+    setDragProgress(1);
+
+    setTimeout(() => {
+      setIsLoginRevealed(true);
+      setIsDragging(false);
+      setDragProgress(0);
+    }, 280);
   }
 };
 
@@ -73,171 +84,226 @@ const handleDragEnd = () => {
   };
 
   return (
-    <>
+
+
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir="rtl">
+
       {!isLoginRevealed && (
   <div
-    className="fixed inset-0 z-[9999] bg-[#030303] flex items-center justify-center overflow-hidden"
+    className="fixed inset-0 z-[9999] overflow-hidden"
     style={{
+      background:
+        'radial-gradient(circle at 25% 50%, rgba(90,0,0,0.18), transparent 38%), #030303',
       touchAction: 'none',
       userSelect: 'none'
     }}
     onPointerMove={handleDragMove}
     onPointerUp={handleDragEnd}
     onPointerCancel={handleDragEnd}
+    onPointerLeave={handleDragEnd}
   >
 
-    {/* إضاءة خلفية */}
+    {/* الإضاءة الخلفية */}
     <div
       className="absolute pointer-events-none"
       style={{
-        width: '420px',
-        height: '420px',
+        left: '10%',
+        top: '50%',
+        width: '520px',
+        height: '520px',
+        transform: 'translate(-50%, -50%)',
         borderRadius: '50%',
         background:
-          'radial-gradient(circle, rgba(199,0,0,0.18) 0%, rgba(120,0,0,0.08) 35%, transparent 70%)',
-        filter: 'blur(20px)',
-        opacity: 0.9
+          'radial-gradient(circle, rgba(199,0,0,0.16) 0%, rgba(199,0,0,0.06) 35%, transparent 70%)',
+        filter: 'blur(30px)'
+      }}
+    />
+
+    {/* حلقات حول الهلال */}
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: '25%',
+        top: '50%',
+        width: '430px',
+        height: '430px',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '50%',
+        border: '1px solid rgba(199,0,0,0.10)',
+        boxShadow:
+          '0 0 80px rgba(199,0,0,0.08)'
+      }}
+    />
+
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: '25%',
+        top: '50%',
+        width: '330px',
+        height: '330px',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '50%',
+        border: '1px solid rgba(199,0,0,0.13)'
+      }}
+    />
+
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: '25%',
+        top: '50%',
+        width: '250px',
+        height: '250px',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: '50%',
+        border: '1px solid rgba(199,0,0,0.16)'
       }}
     />
 
     {/* الهلال */}
     <div
-      className="relative z-10 flex flex-col items-center"
+      className="absolute"
       onPointerDown={handleDragStart}
       style={{
-        transform: `translateX(${dragProgress * 260}px)`,
-        transition: isDragging
-          ? 'none'
-          : 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
-        cursor: isDragging ? 'grabbing' : 'grab'
+        left: `calc(25% + ${dragProgress * 300}px)`,
+        top: '50%',
+        width: '170px',
+        height: '170px',
+        transform: 'translate(-50%, -50%)',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        willChange: 'left, transform'
       }}
     >
 
-      {/* هالة الهلال */}
+      {/* Glow */}
       <div
-        className="absolute pointer-events-none"
+        className="absolute inset-[-35px] rounded-full pointer-events-none"
         style={{
-          width: '180px',
-          height: '180px',
-          borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 35%, transparent 70%)',
-          filter: 'blur(18px)',
-          transform: `scale(${1 + dragProgress * 0.35})`,
-          transition: isDragging ? 'none' : 'transform 0.4s ease'
+            'radial-gradient(circle, rgba(220,0,0,0.32) 0%, rgba(220,0,0,0.12) 35%, transparent 70%)',
+          filter: 'blur(16px)',
+          transform: `scale(${1 + dragProgress * 0.3})`
         }}
       />
 
-      {/* الهلال */}
+      {/* جسم الهلال */}
       <div
+        className="absolute inset-0 rounded-full"
         style={{
-          fontSize: '110px',
-          lineHeight: 1,
-          color: '#ffffff',
-          textShadow: `
-            0 0 10px rgba(255,255,255,0.8),
-            0 0 25px rgba(255,255,255,0.45),
-            0 0 55px rgba(255,255,255,0.2)
-          `,
-          transform: `scale(${1 + dragProgress * 0.12})`,
-          transition: isDragging
-            ? 'none'
-            : 'transform 0.4s ease'
+          background:
+            'linear-gradient(145deg, #ff2525 0%, #d40000 45%, #a90000 100%)',
+          boxShadow: `
+            0 0 12px rgba(255,0,0,0.85),
+            0 0 30px rgba(220,0,0,0.55),
+            0 0 70px rgba(180,0,0,0.30)
+          `
         }}
-      >
-        ☾
-      </div>
+      />
 
-      {/* خط السحب */}
+      {/* القطع الأسود لعمل شكل الهلال */}
       <div
-        className="mt-10 relative"
+        className="absolute rounded-full"
         style={{
-          width: '260px',
-          height: '3px',
-          background: 'rgba(255,255,255,0.08)',
-          borderRadius: '999px',
-          boxShadow: '0 0 12px rgba(255,255,255,0.04)'
+          width: '145px',
+          height: '145px',
+          top: '-18px',
+          right: '-8px',
+          background: '#030303'
         }}
-      >
+      />
 
-        {/* المسار المضيء */}
-        <div
-          className="absolute left-0 top-0 h-full rounded-full"
-          style={{
-            width: `${dragProgress * 100}%`,
-            background:
-              'linear-gradient(90deg, rgba(199,0,0,0.2), #c70000)',
-            boxShadow:
-              '0 0 12px rgba(199,0,0,0.65)',
-            transition: isDragging ? 'none' : 'width 0.4s ease'
-          }}
-        />
-
-        {/* نقطة السحب */}
-        <div
-          className="absolute top-1/2"
-          style={{
-            left: `${dragProgress * 100}%`,
-            width: '18px',
-            height: '18px',
-            borderRadius: '50%',
-            background: '#ffffff',
-            boxShadow: `
-              0 0 8px rgba(255,255,255,0.9),
-              0 0 20px rgba(255,255,255,0.45)
-            `,
-            transform: 'translate(-50%, -50%)',
-            transition: isDragging ? 'none' : 'left 0.4s ease'
-          }}
-        />
-
-      </div>
-
-      {/* النص */}
+      {/* حافة مضيئة للهلال */}
       <div
-        className="mt-7 text-center"
+        className="absolute inset-[-2px] rounded-full pointer-events-none"
         style={{
-          opacity: Math.max(0.35, 1 - dragProgress * 0.5),
-          transition: 'opacity 0.3s ease'
+          border: '1px solid rgba(255,80,80,0.75)',
+          clipPath: 'inset(0 45% 0 0)',
+          filter: 'blur(0.5px)'
         }}
-      >
-        <div className="text-white text-sm font-medium">
-          اسحب الهلال لفتح النظام
-        </div>
-
-        <div className="mt-2 text-white/30 text-[11px]">
-          اسحب إلى اليمين للوصول الآمن
-        </div>
-      </div>
+      />
 
     </div>
 
-    {/* حواف الشاشة */}
+    {/* Slider */}
+    <div
+      className="absolute"
+      style={{
+        left: '8%',
+        right: '8%',
+        bottom: '18%',
+        height: '4px',
+        background: 'rgba(255,255,255,0.08)',
+        borderRadius: '999px'
+      }}
+    >
+
+      {/* الخط المضيء */}
+      <div
+        className="absolute left-0 top-0 h-full rounded-full"
+        style={{
+          width: `${dragProgress * 100}%`,
+          background:
+            'linear-gradient(90deg, rgba(180,0,0,0.3), #e00000)',
+          boxShadow:
+            '0 0 14px rgba(220,0,0,0.7)'
+        }}
+      />
+
+      {/* نقطة السحب */}
+      <div
+        className="absolute top-1/2"
+        style={{
+          left: `${dragProgress * 100}%`,
+          width: '20px',
+          height: '20px',
+          borderRadius: '50%',
+          background: '#fff',
+          transform: 'translate(-50%, -50%)',
+          boxShadow: `
+            0 0 8px rgba(255,255,255,0.95),
+            0 0 20px rgba(255,0,0,0.8)
+          `
+        }}
+      />
+
+    </div>
+
+    {/* النص */}
+    <div
+      className="absolute left-0 right-0 text-center"
+      style={{
+        bottom: '10%',
+        opacity: Math.max(0.3, 1 - dragProgress * 0.7)
+      }}
+    >
+      <div className="text-white text-lg font-medium">
+        اسحب الهلال لفتح النظام
+      </div>
+
+      <div className="mt-2 text-white/35 text-xs">
+        اسحب إلى اليمين للوصول الآمن
+      </div>
+    </div>
+
+    {/* Vignette */}
     <div
       className="absolute inset-0 pointer-events-none"
       style={{
         boxShadow:
-          'inset 0 0 120px rgba(0,0,0,0.9)'
+          'inset 0 0 180px rgba(0,0,0,0.95)'
       }}
     />
 
   </div>
 )}
-
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir="rtl">
       
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] bg-[#c70000]/10 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }}></div>
         <div className="absolute -bottom-[20%] -left-[10%] w-[50vw] h-[50vw] bg-[#c70000]/5 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }}></div>
       </div>
 
-      <div
-  className={`relative z-10 w-full max-w-5xl bg-[#0c0c0c]/80 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden transition-all duration-1000 ease-out transform ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
-  style={{
-    opacity: isLoginRevealed ? 1 : dragProgress,
-    pointerEvents: isLoginRevealed ? 'auto' : 'none'
-  }}
->
+      <div className={`relative z-10 w-full max-w-5xl bg-[#0c0c0c]/80 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden transition-all duration-1000 ease-out transform ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
         
         <div className="md:w-5/12 bg-[#c70000] p-10 md:p-14 flex flex-col justify-between relative overflow-hidden shadow-[inset_-20px_0_40px_rgba(0,0,0,0.2)]">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,white_1px,transparent_1.5px)] bg-[length:24px_24px]"></div>
@@ -302,6 +368,5 @@ const handleDragEnd = () => {
         </div>
       </div>
     </div>
-    </>
   );
 }
