@@ -185,7 +185,7 @@ useEffect(() => {
 
           <div
             ref={trackRef}
-            className={`relative z-10 w-[300px] md:w-[340px] h-16 rounded-full backdrop-blur-md overflow-hidden ${theme === 'light' ? 'bg-black/5 border border-black/10' : 'bg-white/5 border border-white/10'}`}
+            className={`relative z-10 w-[calc(100vw-4rem)] max-w-[300px] self-center md:w-[340px] md:max-w-none h-16 rounded-full backdrop-blur-md overflow-hidden ${theme === 'light' ? 'bg-black/5 border border-black/10' : 'bg-white/5 border border-white/10'}`}
           >
             <div
               className="pointer-events-none absolute top-1 bottom-0 left-1 rounded-full bg-gradient-to-r from-[#c70000]/10 to-[#c70000]/50"
