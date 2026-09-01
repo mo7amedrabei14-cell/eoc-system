@@ -167,6 +167,7 @@ useEffect(() => {
           <div className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] bg-[#c70000]/10 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }}></div>
           <div className="absolute -bottom-[20%] -left-[10%] w-[50vw] h-[50vw] bg-[#c70000]/5 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }}></div>
 
+          <div className={`relative z-10 flex flex-col items-center px-8 py-10 ${theme === 'light' ? 'bg-white/95 border border-slate-200 rounded-[2rem] shadow-[0_18px_55px_rgba(15,23,42,0.16)]' : ''}`}>
           <div className="relative z-10 mb-10">
             <div className="absolute inset-0 -m-4 rounded-full bg-[#c70000]/30 blur-2xl animate-pulse" style={{ animationDuration: '3s' }}></div>
             <svg viewBox="0 0 100 100" className="relative w-28 h-28 md:w-32 md:h-32 drop-shadow-[0_0_30px_rgba(199,0,0,0.55)]">
@@ -174,10 +175,10 @@ useEffect(() => {
             </svg>
           </div>
 
-          <h2 className={`relative z-10 ${theme === 'light' ? 'text-[#17202a]' : 'text-white'} text-xl md:text-2xl font-bold mb-1 tracking-wide`}>
+          <h2 className={`relative z-10 ${theme === 'light' ? 'text-slate-800' : 'text-white'} text-xl md:text-2xl font-bold mb-1 tracking-wide`}>
   {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
 </h2>
-<p className={`relative z-10 ${theme === 'light' ? 'text-gray-500' : 'text-white/40'} text-sm mb-14`}>
+<p className={`relative z-10 ${theme === 'light' ? 'text-slate-500' : 'text-white/40'} text-sm mb-14`}>
   {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Emergency Operations Center'}
 </p>
 
@@ -224,6 +225,7 @@ useEffect(() => {
                 <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="white" />
               </svg>
             </div>
+          </div>
           </div>
         </div>
       )}
