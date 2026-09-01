@@ -85,10 +85,18 @@ useEffect(() => {
         localStorage.setItem('user', JSON.stringify(data.user)); // 👈 السطر ده ضفناه عشان نحفظ بياناتك
         navigate('/dashboard');
       } else {
-        setErrorMsg('بيانات الدخول غير صحيحة');
+        setErrorMsg(
+  language === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid login credentials'
+);
+
       }
     } catch (err) {
-      setErrorMsg('تعذر الاتصال بالخادم المركزي');
+      setErrorMsg(
+  language === 'ar'
+    ? 'تعذر الاتصال بالخادم المركزي'
+    : 'Unable to connect to the central server'
+);
+
     } finally {
       setIsLoading(false);
     }
@@ -124,8 +132,13 @@ useEffect(() => {
             </svg>
           </div>
 
-          <h2 className="relative z-10 text-white text-xl md:text-2xl font-bold mb-1 tracking-wide">الهلال الأحمر المصري</h2>
-          <p className="relative z-10 text-white/40 text-sm mb-14">مركز عمليات الطوارئ</p>
+          <h2 className="relative z-10 text-white text-xl md:text-2xl font-bold mb-1 tracking-wide">
+  {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
+</h2>
+<p className="relative z-10 text-white/40 text-sm mb-14">
+  {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Emergency Operations Center'}
+</p>
+
 
           <div
             ref={trackRef}
@@ -140,7 +153,10 @@ useEffect(() => {
               className="absolute inset-0 flex items-center justify-center gap-1.5 text-white/50 text-sm font-semibold tracking-wide select-none pointer-events-none"
               style={{ opacity: 1 - dragProgress }}
             >
-              <span>اسحب لليمين للوصول الآمن</span>
+              <span>
+  {language === 'ar' ? 'اسحب لليمين للوصول الآمن' : 'Swipe right for secure access'}
+</span>
+
               <span className="flex">
                 <span className="animate-pulse" style={{ animationDelay: '0s' }}>›</span>
                 <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>›</span>
@@ -187,21 +203,38 @@ useEffect(() => {
                 <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" />
               </svg>
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4 drop-shadow-md">الهلال الأحمر المصري</h2>
-            <p className="text-white/80 text-lg font-medium leading-relaxed">نظام إدارة مركز عمليات الطوارئ (EOC) للاستجابة السريعة وإدارة الأزمات.</p>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4 drop-shadow-md">
+  {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
+</h2>
+<p className="text-white/80 text-lg font-medium leading-relaxed">
+  {language === 'ar'
+    ? 'نظام إدارة مركز عمليات الطوارئ (EOC) للاستجابة السريعة وإدارة الأزمات.'
+    : 'Emergency Operations Center (EOC) management system for rapid response and crisis management.'}
+</p>
+
           </div>
           <div className="relative z-10 mt-12 md:mt-0 flex items-center justify-between">
             <div className="flex items-center gap-3 bg-black/20 px-4 py-2 rounded-full border border-white/10 backdrop-blur-sm">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_#4ade80]"></div>
-              <span className="text-white/90 text-sm font-semibold tracking-wider">النظام مشفر ومتصل</span>
+              <span className="text-white/90 text-sm font-semibold tracking-wider">
+  {language === 'ar' ? 'النظام مشفر ومتصل' : 'System encrypted and connected'}
+</span>
+
             </div>
           </div>
         </div>
 
         <div className="md:w-7/12 p-10 md:p-16 flex flex-col justify-center bg-gradient-to-br from-[#111] to-[#0a0a0a]">
           <div className="mb-10">
-            <h3 className="text-2xl font-bold text-white mb-2">بوابة الوصول الآمن</h3>
-            <p className="text-gray-400 text-sm">الرجاء إدخال بيانات الاعتماد الموثقة للمتابعة.</p>
+            <h3 className="text-2xl font-bold text-white mb-2">
+  {language === 'ar' ? 'بوابة الوصول الآمن' : 'Secure Access Portal'}
+</h3>
+<p className="text-gray-400 text-sm">
+  {language === 'ar'
+    ? 'الرجاء إدخال بيانات الاعتماد الموثقة للمتابعة.'
+    : 'Please enter your verified credentials to continue.'}
+</p>
+
           </div>
           {errorMsg && (
             <div className="mb-6 p-4 rounded-xl border border-[#c70000]/30 bg-[#c70000]/10 text-[#ff4d4d] text-sm animate-pulse flex items-center gap-2">
@@ -211,14 +244,19 @@ useEffect(() => {
           )}
           <form onSubmit={handleLogin} className="space-y-6" autoComplete="off">
             <div className="space-y-2 group">
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-focus-within:text-[#c70000] transition-colors">الرقم التعريفي / المستخدم</label>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-focus-within:text-[#c70000] transition-colors">
+  {language === 'ar' ? 'الرقم التعريفي / المستخدم' : 'ID / Username'}
+</label>
+
               <div className="relative">
-                <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#c70000] focus:ring-1 focus:ring-[#c70000] transition-all duration-300" placeholder="أدخل البيانات هنا" autoComplete="new-password" />
+                <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#c70000] focus:ring-1 focus:ring-[#c70000] transition-all duration-300" placeholder={language === 'ar' ? 'أدخل البيانات هنا' : 'Enter your credentials here'} autoComplete="new-password" />
               </div>
             </div>
             <div className="space-y-2 group">
               <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-focus-within:text-[#c70000] transition-colors">رمز المرور السري</label>
+                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider group-focus-within:text-[#c70000] transition-colors">
+  {language === 'ar' ? 'رمز المرور السري' : 'Secret Password'}
+</label>
               </div>
               <div className="relative">
                 <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-4 pl-12 text-white placeholder-gray-600 focus:outline-none focus:border-[#c70000] focus:ring-1 focus:ring-[#c70000] transition-all duration-300 tracking-widest font-mono" placeholder="••••••••" autoComplete="new-password" />
@@ -233,7 +271,10 @@ useEffect(() => {
             </div>
             <button type="submit" disabled={isLoading} className="w-full mt-6 relative overflow-hidden group bg-[#c70000] hover:bg-[#a50000] text-white font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(199,0,0,0.2)] hover:shadow-[0_0_35px_rgba(199,0,0,0.5)] transition-all duration-300 disabled:opacity-50 flex justify-center items-center gap-2 transform hover:-translate-y-1">
               <span className="relative flex items-center gap-2">
-                {isLoading ? 'جاري التحقق...' : 'تأكيد الدخول'}
+                {isLoading
+  ? (language === 'ar' ? 'جاري التحقق...' : 'Verifying...')
+  : (language === 'ar' ? 'تأكيد الدخول' : 'Sign In')}
+
               </span>
             </button>
           </form>
