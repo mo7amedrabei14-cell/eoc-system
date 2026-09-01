@@ -194,15 +194,15 @@ def scan_single_source(publisher, url, now_utc):
                     ai_data = {
                         "incident_description": entry.title,
                         "news_type": "غير مصنف (فشل التحليل)",
-                        "governorate": "القاهرة",
+                        "governorate": "-",
                         "area_name": "",
                         "street_name": "",
                         "hospital_name": "",
                         "injured_count": "0",
                         "deaths_count": "0",
                         "severity_score": "?",
-                        "latitude": "30.0444",
-                        "longitude": "31.2357",
+                        "latitude": "غير متوفر",
+                        "longitude": "غير متوفر",
                         "tactical_recommendations": "تعذر التحليل بواسطة الذكاء الاصطناعي. يرجى المراجعة اليدوية للخبر المرفق."
                     }
 
@@ -225,7 +225,7 @@ def scan_single_source(publisher, url, now_utc):
                     "news_publisher": publisher,
                     "street_name": ai_data.get("street_name", ""),
                     "area_name": ai_data.get("area_name", ""),
-                    "governorate": ai_data.get("governorate", "القاهرة"),
+                    "governorate": ai_data.get("governorate", "-"),
                     "hospital_name": ai_data.get("hospital_name", ""),
                     "injured_count": str(ai_data.get("injured_count", "0")),
                     "deaths_count": str(ai_data.get("deaths_count", "0")),
