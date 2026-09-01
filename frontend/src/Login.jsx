@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
@@ -7,7 +7,16 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isMounted, setIsMounted] = useState(false); 
+const [isMounted, setIsMounted] = useState(false);
+
+const [language, setLanguage] = useState(() => {
+  return localStorage.getItem('dashboard-language') || 'ar';
+});
+
+useEffect(() => {
+  localStorage.setItem('dashboard-language', language);
+}, [language]);
+
 
   // --- بوابة السحب للدخول (Slide to Unlock) ---
   const [showGate, setShowGate] = useState(true);
@@ -87,9 +96,19 @@ export default function Login() {
 
   return (
     // نفس التصميم اللي اتفقنا عليه بالظبط
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir="rtl">
+        <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+
+      <button
+        type="button"
+        onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+        title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+        className="fixed top-5 left-5 z-[100] px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm font-bold backdrop-blur-md shadow-lg transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] hover:scale-105"
+      >
+        {language === 'ar' ? 'EN' : 'عربي'}
+      </button>
 
       {showGate && (
+
         <div
           className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#050505] transition-all duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
             isUnlocking ? 'opacity-0 scale-110 blur-md pointer-events-none' : 'opacity-100 scale-100'
