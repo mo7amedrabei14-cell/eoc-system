@@ -2079,7 +2079,7 @@ useEffect(() => {
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap text-sm">
+          <table className="w-full min-w-[1400px] text-right whitespace-nowrap text-sm">
             <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
               <tr>
                 <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
