@@ -62,7 +62,7 @@ export default function Login() {
               </svg>
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4 drop-shadow-md">الهلال الأحمر المصري</h2>
-            <p className="text-white/80 text-lg font-medium leading-relaxed">نظام إدارة غرفة العمليات المركزية (EOC) للاستجابة السريعة وإدارة الأزمات.</p>
+            <p className="text-white/80 text-lg font-medium leading-relaxed">نظام إدارة مركز عمليات الطوارئ (EOC) للاستجابة السريعة وإدارة الأزمات.</p>
           </div>
           <div className="relative z-10 mt-12 md:mt-0 flex items-center justify-between">
             <div className="flex items-center gap-3 bg-black/20 px-4 py-2 rounded-full border border-white/10 backdrop-blur-sm">
