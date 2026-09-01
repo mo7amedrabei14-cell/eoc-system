@@ -2079,7 +2079,7 @@ useEffect(() => {
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap text-sm">
+          <table className="w-full min-w-[1400px] text-right whitespace-nowrap text-sm">
             <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
               <tr>
                 <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
@@ -2097,7 +2097,9 @@ useEffect(() => {
                 <tr key={n.news_id} className="hover:bg-white/5">
                   <td className="p-4 text-white border-l border-white/5">{n.incident_date}</td>
                   <td className="p-4 text-gray-300 border-l border-white/5 font-bold">{n.governorate}</td>
-                  <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{n.incident_description}</td>
+                  <td className="p-4 text-gray-400 border-l border-white/5 w-[500px] min-w-[500px] whitespace-normal leading-7">
+                    {n.incident_description || 'لا يوجد وصف'}
+                 </td>
                   <td className="p-4 border-l border-white/5">
                     <div className="flex gap-1">
                       <span className="bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded text-xs border border-yellow-500/30" title="نقاط الرد">{n.response_time_points}</span>
