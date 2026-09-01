@@ -44,6 +44,15 @@ export default function Dashboard() {
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+const [theme, setTheme] = useState(() => {
+  return localStorage.getItem('dashboard-theme') || 'dark';
+});
+
+useEffect(() => {
+  localStorage.setItem('dashboard-theme', theme);
+}, [theme]);
+
   const [branchesList, setBranchesList] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({ active_missions: '-', ready_teams: '-', emergency_level: '-', under_review: '-', approved: '-', completed: '-', drafts: '-' });
 
@@ -221,7 +230,71 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden" dir="rtl">
+    <div className={`${theme === 'light' ? 'theme-light' : ''} min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden transition-colors duration-300`} dir="rtl">
+
+      <style>{`
+  .theme-light {
+    background: #f4f6f8 !important;
+    color: #17202a !important;
+  }
+
+  .theme-light [class~="bg-[#050505]"],
+  .theme-light [class~="bg-[#0c0c0c]"],
+  .theme-light [class~="bg-[#0a0a0a]"],
+  .theme-light [class~="bg-[#111]"],
+  .theme-light [class~="bg-[#1a1a1a]"],
+  .theme-light [class~="bg-[#171717]"] {
+    background-color: #ffffff !important;
+  }
+
+  .theme-light [class~="bg-gradient-to-br"] {
+    background-image: linear-gradient(135deg, #ffffff 0%, #eef2f5 100%) !important;
+  }
+
+  .theme-light [class~="text-white"] {
+    color: #17202a !important;
+  }
+
+  .theme-light [class~="text-gray-300"] {
+    color: #374151 !important;
+  }
+
+  .theme-light [class~="text-gray-400"] {
+    color: #64748b !important;
+  }
+
+  .theme-light [class~="text-gray-500"] {
+    color: #718096 !important;
+  }
+
+  .theme-light [class~="border-white\/5"],
+  .theme-light [class~="border-white\/10"] {
+    border-color: #d9e1e8 !important;
+  }
+
+  .theme-light [class~="bg-black\/80"] {
+    background-color: rgba(15, 23, 42, 0.55) !important;
+  }
+
+  .theme-light [class~="bg-gradient-to-l"] {
+    color: #ffffff !important;
+  }
+
+  .theme-light input,
+  .theme-light select,
+  .theme-light textarea {
+    color: #17202a !important;
+  }
+
+  .theme-light [class~="hover\\:bg-[#111]"]:hover {
+    background-color: #eef2f5 !important;
+  }
+
+  .theme-light [class~="bg-[#c70000]\\/20"] {
+    background-color: rgba(199, 0, 0, 0.12) !important;
+  }
+`}</style>
+
       
       {/* 💡 4. طابور الإشعارات (يدعم إشعارات النظام العادية وإشعارات الذكاء الاصطناعي البنفسجية) */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[90%] md:w-auto min-w-[320px] max-w-lg pointer-events-none">
@@ -302,6 +375,7 @@ export default function Dashboard() {
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
           </button>
           <div className="flex-1 flex justify-between items-center">
+
             <div>
               <h1 className="text-xl md:text-2xl font-extrabold tracking-wide">
               {activeTab === 'home' && 'موجز عمليات اليوم'}
@@ -314,8 +388,36 @@ export default function Dashboard() {
             </h1>
             <p className="text-sm text-gray-500 mt-1">مركز عمليات الطوارئ (EOC)</p>
             </div>
-          </div>
-        </header>
+            </div>
+
+  <button
+    type="button"
+    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+    title={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
+    aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
+    className="relative w-[76px] h-10 rounded-full p-1 bg-[#171717] border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-105 hover:border-[#c70000]/50 shrink-0"
+  >
+    <span
+      className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.45)] transition-all duration-300 ${theme === 'dark' ? 'right-1' : 'right-[38px]'}`}
+    >
+      {theme === 'dark' ? (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+      )}
+    </span>
+
+    <span className="absolute inset-0 flex items-center justify-between px-2 text-[10px] font-bold pointer-events-none">
+      <span className={theme === 'light' ? 'text-[#c70000]' : 'text-gray-500'}>☀</span>
+      <span className={theme === 'dark' ? 'text-[#c70000]' : 'text-gray-400'}>☾</span>
+    </span>
+  </button>
+</header>
         
         {/* 💡 4. مسافات الشاشة صغرت للموبايل عشان تدي براح للعرض */}
         <div className="p-4 md:p-10">
