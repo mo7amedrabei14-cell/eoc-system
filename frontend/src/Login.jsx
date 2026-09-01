@@ -17,6 +17,14 @@ useEffect(() => {
   localStorage.setItem('dashboard-language', language);
 }, [language]);
 
+const [theme, setTheme] = useState(() => {
+  return localStorage.getItem('dashboard-theme') || 'dark';
+});
+
+useEffect(() => {
+  localStorage.setItem('dashboard-theme', theme);
+}, [theme]);
+
 
   // --- بوابة السحب للدخول (Slide to Unlock) ---
   const [showGate, setShowGate] = useState(true);
@@ -104,7 +112,18 @@ useEffect(() => {
 
   return (
     // نفس التصميم اللي اتفقنا عليه بالظبط
-        <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        <div className={`${theme === 'light' ? 'login-light' : ''} min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+
+      <style>{`
+        .login-light { background: #f4f6f8 !important; }
+        .login-light .login-card { background-color: rgba(255, 255, 255, 0.92) !important; border-color: #d9e1e8 !important; }
+        .login-light .login-form-panel { background-image: linear-gradient(135deg, #ffffff 0%, #eef2f5 100%) !important; }
+        .login-light .login-form-panel h3 { color: #17202a !important; }
+        .login-light .login-form-panel p,
+        .login-light .login-form-panel .text-gray-400 { color: #64748b !important; }
+        .login-light .login-form-panel [class~="bg-[#1a1a1a]"] { background-color: #f8fafc !important; border-color: #d9e1e8 !important; }
+        .login-light .login-form-panel input { color: #17202a !important; }
+      `}</style>
 
       <button
         type="button"
@@ -113,6 +132,29 @@ useEffect(() => {
         className="fixed top-5 left-5 z-[100] px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm font-bold backdrop-blur-md shadow-lg transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] hover:scale-105"
       >
         {language === 'ar' ? 'EN' : 'عربي'}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        title={theme === 'dark' ? (language === 'ar' ? 'تفعيل الوضع الفاتح' : 'Enable light mode') : (language === 'ar' ? 'تفعيل الوضع الداكن' : 'Enable dark mode')}
+        aria-label={theme === 'dark' ? (language === 'ar' ? 'تفعيل الوضع الفاتح' : 'Enable light mode') : (language === 'ar' ? 'تفعيل الوضع الداكن' : 'Enable dark mode')}
+        className="fixed top-5 right-5 z-[100] w-[76px] h-10 rounded-full p-1 bg-[#171717] border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-105 hover:border-[#c70000]/50"
+      >
+        <span
+          className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.45)] transition-all duration-300 ${theme === 'dark' ? 'right-1' : 'right-[38px]'}`}
+        >
+          {theme === 'dark' ? (
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            </svg>
+          )}
+        </span>
       </button>
 
       {showGate && (
@@ -191,7 +233,7 @@ useEffect(() => {
         <div className="absolute -bottom-[20%] -left-[10%] w-[50vw] h-[50vw] bg-[#c70000]/5 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }}></div>
       </div>
 
-      <div className={`relative z-10 w-full max-w-5xl bg-[#0c0c0c]/80 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden transition-all duration-1000 ease-out transform ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+      <div className={`login-card relative z-10 w-full max-w-5xl bg-[#0c0c0c]/80 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden transition-all duration-1000 ease-out transform ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
         
         <div className="md:w-5/12 bg-[#c70000] p-10 md:p-14 flex flex-col justify-between relative overflow-hidden shadow-[inset_-20px_0_40px_rgba(0,0,0,0.2)]">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,white_1px,transparent_1.5px)] bg-[length:24px_24px]"></div>
@@ -224,7 +266,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="md:w-7/12 p-10 md:p-16 flex flex-col justify-center bg-gradient-to-br from-[#111] to-[#0a0a0a]">
+        <div className="login-form-panel md:w-7/12 p-10 md:p-16 flex flex-col justify-center bg-gradient-to-br from-[#111] to-[#0a0a0a]">
           <div className="mb-10">
             <h3 className="text-2xl font-bold text-white mb-2">
   {language === 'ar' ? 'بوابة الوصول الآمن' : 'Secure Access Portal'}

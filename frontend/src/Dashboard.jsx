@@ -989,10 +989,6 @@ useEffect(() => {
       )}
     </span>
 
-    <span className="absolute inset-0 flex items-center justify-between px-2 text-[10px] font-bold pointer-events-none">
-      <span className={theme === 'light' ? 'text-[#c70000]' : 'text-gray-500'}>☀</span>
-      <span className={theme === 'dark' ? 'text-[#c70000]' : 'text-gray-400'}>☾</span>
-    </span>
   </button>
 </header>
         
