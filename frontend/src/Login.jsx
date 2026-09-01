@@ -129,7 +129,7 @@ useEffect(() => {
         type="button"
         onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
         title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-        className={`fixed top-5 left-5 z-[100] px-4 py-2 rounded-xl border text-sm font-bold backdrop-blur-md shadow-lg transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] hover:text-white hover:scale-105 ${theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-white/10 border-white/20 text-white'}`}
+        className={`fixed top-4 left-4 sm:top-5 sm:left-5 z-[100] px-4 py-2 rounded-xl border text-sm font-bold backdrop-blur-md shadow-lg transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] hover:text-white hover:scale-105 ${theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-white/10 border-white/20 text-white'}`}
       >
         {language === 'ar' ? 'EN' : 'عربي'}
       </button>
@@ -139,7 +139,7 @@ useEffect(() => {
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         title={theme === 'dark' ? (language === 'ar' ? 'تفعيل الوضع الفاتح' : 'Enable light mode') : (language === 'ar' ? 'تفعيل الوضع الداكن' : 'Enable dark mode')}
         aria-label={theme === 'dark' ? (language === 'ar' ? 'تفعيل الوضع الفاتح' : 'Enable light mode') : (language === 'ar' ? 'تفعيل الوضع الداكن' : 'Enable dark mode')}
-        className="fixed top-5 right-5 z-[100] w-[76px] h-10 rounded-full p-1 bg-[#171717] border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-105 hover:border-[#c70000]/50"
+        className="fixed top-4 right-4 sm:top-5 sm:right-5 z-[100] w-[76px] h-10 rounded-full p-1 bg-[#171717] border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-105 hover:border-[#c70000]/50"
       >
         <span
           className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.45)] transition-all duration-300 ${theme === 'dark' ? 'right-1' : 'right-[38px]'}`}
@@ -185,7 +185,7 @@ useEffect(() => {
 
           <div
             ref={trackRef}
-            className={`relative z-10 w-[calc(100vw-4rem)] max-w-[300px] self-center md:w-[340px] md:max-w-none h-16 rounded-full backdrop-blur-md overflow-hidden ${theme === 'light' ? 'bg-black/5 border border-black/10' : 'bg-white/5 border border-white/10'}`}
+            className={`relative z-10 w-[calc(100vw-2.5rem)] max-w-[340px] self-center h-16 rounded-full backdrop-blur-md overflow-hidden ${theme === 'light' ? 'bg-black/5 border border-black/10' : 'bg-white/5 border border-white/10'}`}
           >
             <div
               className="pointer-events-none absolute top-1 bottom-0 left-1 rounded-full bg-gradient-to-r from-[#c70000]/10 to-[#c70000]/50"
@@ -193,7 +193,7 @@ useEffect(() => {
             ></div>
 
             <div
-              className={`absolute inset-0 flex items-center justify-center ${theme === 'light' ? 'text-gray-500' : 'text-white/50'} text-sm font-semibold tracking-wide select-none pointer-events-none`}
+              className={`absolute inset-0 flex items-center justify-center px-16 ${theme === 'light' ? 'text-gray-500' : 'text-white/50'} text-xs sm:text-sm font-semibold tracking-wide select-none pointer-events-none`}
               style={{ opacity: 1 - dragProgress }}
             >
               <span className="whitespace-nowrap text-center">
@@ -217,7 +217,7 @@ useEffect(() => {
                 transform: `translateX(${dragX}px)`,
                 transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)',
               }}
-              className={`absolute top-1/2 left-1 -translate-y-1/2 rounded-full bg-[#c70000] shadow-[0_0_20px_rgba(199,0,0,0.6)] flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${
+              className={`absolute top-1/2 left-1 -translate-y-1/2 rounded-full bg-[#c70000] shadow-[0_0_20px_rgba(199,0,0,0.6)] flex flex-shrink-0 items-center justify-center cursor-grab active:cursor-grabbing touch-none ${
                 isUnlocking ? 'scale-110' : ''
               }`}
             >
