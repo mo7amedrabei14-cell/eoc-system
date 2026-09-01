@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
@@ -8,11 +8,56 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isMounted, setIsMounted] = useState(false); 
-  
+
+  // --- بوابة السحب للدخول (Slide to Unlock) ---
+  const [showGate, setShowGate] = useState(true);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [dragProgress, setDragProgress] = useState(0);
+  const trackRef = useRef(null);
+  const HANDLE_SIZE = 60;
+
   // دي الأداة اللي هتنقلنا للصفحة التانية
   const navigate = useNavigate();
 
-  useEffect(() => { setIsMounted(true); }, []);
+  const completeUnlock = (maxX) => {
+    setIsDragging(false);
+    setDragX(maxX);
+    setDragProgress(1);
+    setIsUnlocking(true);
+    setTimeout(() => setIsMounted(true), 150);   // كارت الدخول يبدأ يظهر
+    setTimeout(() => setShowGate(false), 750);   // البوابة تتشال من الـ DOM
+  };
+
+  const handlePointerDown = (e) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging || !trackRef.current) return;
+    const trackRect = trackRef.current.getBoundingClientRect();
+    const maxX = trackRect.width - HANDLE_SIZE - 8;
+    let newX = e.clientX - trackRect.left - HANDLE_SIZE / 2;
+    newX = Math.max(0, Math.min(newX, maxX));
+    setDragX(newX);
+    setDragProgress(maxX > 0 ? newX / maxX : 0);
+    if (maxX > 0 && newX >= maxX * 0.92) completeUnlock(maxX);
+  };
+
+  const handlePointerUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (trackRef.current) {
+      const trackRect = trackRef.current.getBoundingClientRect();
+      const maxX = trackRect.width - HANDLE_SIZE - 8;
+      if (dragX < maxX * 0.92) {
+        setDragX(0);
+        setDragProgress(0);
+      }
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -41,10 +86,71 @@ export default function Login() {
   };
 
   return (
-
-    
+    // نفس التصميم اللي اتفقنا عليه بالظبط
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir="rtl">
-      
+
+      {showGate && (
+        <div
+          className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#050505] transition-all duration-700 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+            isUnlocking ? 'opacity-0 scale-110 blur-md pointer-events-none' : 'opacity-100 scale-100'
+          }`}
+        >
+          <div className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] bg-[#c70000]/10 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }}></div>
+          <div className="absolute -bottom-[20%] -left-[10%] w-[50vw] h-[50vw] bg-[#c70000]/5 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }}></div>
+
+          <div className="relative z-10 mb-10">
+            <div className="absolute inset-0 -m-4 rounded-full bg-[#c70000]/30 blur-2xl animate-pulse" style={{ animationDuration: '3s' }}></div>
+            <svg viewBox="0 0 100 100" className="relative w-28 h-28 md:w-32 md:h-32 drop-shadow-[0_0_30px_rgba(199,0,0,0.55)]">
+              <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" />
+            </svg>
+          </div>
+
+          <h2 className="relative z-10 text-white text-xl md:text-2xl font-bold mb-1 tracking-wide">الهلال الأحمر المصري</h2>
+          <p className="relative z-10 text-white/40 text-sm mb-14">مركز عمليات الطوارئ</p>
+
+          <div
+            ref={trackRef}
+            className="relative z-10 w-[300px] md:w-[340px] h-16 rounded-full bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden"
+          >
+            <div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#c70000]/10 to-[#c70000]/50"
+              style={{ width: `${dragX + HANDLE_SIZE / 2}px`, transition: isDragging ? 'none' : 'width 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
+            ></div>
+
+            <div
+              className="absolute inset-0 flex items-center justify-center gap-1.5 text-white/50 text-sm font-semibold tracking-wide select-none pointer-events-none"
+              style={{ opacity: 1 - dragProgress }}
+            >
+              <span>اسحب لليمين للوصول الآمن</span>
+              <span className="flex">
+                <span className="animate-pulse" style={{ animationDelay: '0s' }}>›</span>
+                <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>›</span>
+                <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>›</span>
+              </span>
+            </div>
+
+            <div
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              style={{
+                width: HANDLE_SIZE,
+                height: HANDLE_SIZE,
+                transform: `translateX(${dragX}px)`,
+                transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+              }}
+              className={`absolute top-1 left-1 rounded-full bg-[#c70000] shadow-[0_0_20px_rgba(199,0,0,0.6)] flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${
+                isUnlocking ? 'scale-110' : ''
+              }`}
+            >
+              <svg viewBox="0 0 100 100" className="w-6 h-6">
+                <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="white" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] bg-[#c70000]/10 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }}></div>
         <div className="absolute -bottom-[20%] -left-[10%] w-[50vw] h-[50vw] bg-[#c70000]/5 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }}></div>
