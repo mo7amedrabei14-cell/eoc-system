@@ -72,42 +72,158 @@ const handleDragEnd = () => {
     }
   };
 
-return (
+  return (
     <>
       {!isLoginRevealed && (
+  <div
+    className="fixed inset-0 z-[9999] bg-[#030303] flex items-center justify-center overflow-hidden"
+    style={{
+      touchAction: 'none',
+      userSelect: 'none'
+    }}
+    onPointerMove={handleDragMove}
+    onPointerUp={handleDragEnd}
+    onPointerCancel={handleDragEnd}
+  >
+
+    {/* إضاءة خلفية */}
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        width: '420px',
+        height: '420px',
+        borderRadius: '50%',
+        background:
+          'radial-gradient(circle, rgba(199,0,0,0.18) 0%, rgba(120,0,0,0.08) 35%, transparent 70%)',
+        filter: 'blur(20px)',
+        opacity: 0.9
+      }}
+    />
+
+    {/* الهلال */}
+    <div
+      className="relative z-10 flex flex-col items-center"
+      onPointerDown={handleDragStart}
+      style={{
+        transform: `translateX(${dragProgress * 260}px)`,
+        transition: isDragging
+          ? 'none'
+          : 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+
+      {/* هالة الهلال */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: '180px',
+          height: '180px',
+          borderRadius: '50%',
+          background:
+            'radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 35%, transparent 70%)',
+          filter: 'blur(18px)',
+          transform: `scale(${1 + dragProgress * 0.35})`,
+          transition: isDragging ? 'none' : 'transform 0.4s ease'
+        }}
+      />
+
+      {/* الهلال */}
+      <div
+        style={{
+          fontSize: '110px',
+          lineHeight: 1,
+          color: '#ffffff',
+          textShadow: `
+            0 0 10px rgba(255,255,255,0.8),
+            0 0 25px rgba(255,255,255,0.45),
+            0 0 55px rgba(255,255,255,0.2)
+          `,
+          transform: `scale(${1 + dragProgress * 0.12})`,
+          transition: isDragging
+            ? 'none'
+            : 'transform 0.4s ease'
+        }}
+      >
+        ☾
+      </div>
+
+      {/* خط السحب */}
+      <div
+        className="mt-10 relative"
+        style={{
+          width: '260px',
+          height: '3px',
+          background: 'rgba(255,255,255,0.08)',
+          borderRadius: '999px',
+          boxShadow: '0 0 12px rgba(255,255,255,0.04)'
+        }}
+      >
+
+        {/* المسار المضيء */}
         <div
-          className="fixed inset-0 z-[100] bg-[#050505] flex items-center justify-center select-none"
-          style={{ touchAction: 'none' }}
-          onPointerMove={handleDragMove}
-          onPointerUp={handleDragEnd}
-          onPointerCancel={handleDragEnd}
-        >
-          <div
-            className="flex flex-col items-center"
-            onPointerDown={handleDragStart}
-            style={{
-              cursor: isDragging ? 'grabbing' : 'grab',
-              transform: `translateX(${dragProgress * 180}px)`,
-              transition: isDragging ? 'none' : 'transform 0.35s ease'
-            }}
-          >
-            <div
-              className="text-white text-7xl leading-none"
-              style={{
-                filter: `drop-shadow(0 0 ${15 + dragProgress * 25}px rgba(255,255,255,0.85))`
-              }}
-            >
-              ☾
-            </div>
+          className="absolute left-0 top-0 h-full rounded-full"
+          style={{
+            width: `${dragProgress * 100}%`,
+            background:
+              'linear-gradient(90deg, rgba(199,0,0,0.2), #c70000)',
+            boxShadow:
+              '0 0 12px rgba(199,0,0,0.65)',
+            transition: isDragging ? 'none' : 'width 0.4s ease'
+          }}
+        />
 
-            <div className="mt-6 text-white/40 text-xs font-medium tracking-widest">
-              اسحب الهلال للفتح
-            </div>
-          </div>
+        {/* نقطة السحب */}
+        <div
+          className="absolute top-1/2"
+          style={{
+            left: `${dragProgress * 100}%`,
+            width: '18px',
+            height: '18px',
+            borderRadius: '50%',
+            background: '#ffffff',
+            boxShadow: `
+              0 0 8px rgba(255,255,255,0.9),
+              0 0 20px rgba(255,255,255,0.45)
+            `,
+            transform: 'translate(-50%, -50%)',
+            transition: isDragging ? 'none' : 'left 0.4s ease'
+          }}
+        />
+
+      </div>
+
+      {/* النص */}
+      <div
+        className="mt-7 text-center"
+        style={{
+          opacity: Math.max(0.35, 1 - dragProgress * 0.5),
+          transition: 'opacity 0.3s ease'
+        }}
+      >
+        <div className="text-white text-sm font-medium">
+          اسحب الهلال لفتح النظام
         </div>
-      )}
 
-    // نفس التصميم اللي اتفقنا عليه بالظبط
+        <div className="mt-2 text-white/30 text-[11px]">
+          اسحب إلى اليمين للوصول الآمن
+        </div>
+      </div>
+
+    </div>
+
+    {/* حواف الشاشة */}
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        boxShadow:
+          'inset 0 0 120px rgba(0,0,0,0.9)'
+      }}
+    />
+
+  </div>
+)}
+
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir="rtl">
       
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -115,7 +231,13 @@ return (
         <div className="absolute -bottom-[20%] -left-[10%] w-[50vw] h-[50vw] bg-[#c70000]/5 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s' }}></div>
       </div>
 
-      <div className={`relative z-10 w-full max-w-5xl bg-[#0c0c0c]/80 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden transition-all duration-1000 ease-out transform ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+      <div
+  className={`relative z-10 w-full max-w-5xl bg-[#0c0c0c]/80 backdrop-blur-2xl rounded-[2rem] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden transition-all duration-1000 ease-out transform ${isMounted ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
+  style={{
+    opacity: isLoginRevealed ? 1 : dragProgress,
+    pointerEvents: isLoginRevealed ? 'auto' : 'none'
+  }}
+>
         
         <div className="md:w-5/12 bg-[#c70000] p-10 md:p-14 flex flex-col justify-between relative overflow-hidden shadow-[inset_-20px_0_40px_rgba(0,0,0,0.2)]">
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,white_1px,transparent_1.5px)] bg-[length:24px_24px]"></div>
