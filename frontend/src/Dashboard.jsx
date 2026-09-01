@@ -1,9 +1,528 @@
 import * as XLSX from 'xlsx';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+
+// Static dashboard labels are kept in Arabic in the existing screens.  This
+// table lets the whole dashboard share Login.jsx's language choice without
+// changing API values, form values, or exported data.
+const ENGLISH_UI = {
+  'رصد آلي جديد (AI) 🤖': 'New AI detection 🤖',
+  'الذكاء الاصطناعي وجد خبراً جديداً': 'AI found a new report',
+  'تحديث بواسطة:': 'Updated by:',
+  'إجراء:': 'Action:',
+  'مؤشرات الغرفة': 'Operations overview',
+  'رصد الذكاء الاصطناعي': 'AI monitoring',
+  'سجل المهام الميدانية': 'Field missions',
+  'سجل القوة البشرية': 'Workforce register',
+  'سجل الأخبار المحلية': 'Local news register',
+  'رصد الكوارث العالمية': 'Global disaster monitoring',
+  'مركز رصد الزلازل': 'Earthquake monitoring center',
+  'الفروع والمخزون الاستراتيجي': 'Branches & strategic inventory',
+  'سجل النظام': 'System log',
+  'إنهاء الجلسة الآمنة': 'End secure session',
+  'خروج': 'Log out',
+  'موجز عمليات اليوم': 'Today’s operations brief',
+  'إدارة المهام الميدانية': 'Field mission management',
+  'الانتشار الجغرافي والمخزون': 'Geographic coverage & inventory',
+  'سجل النظام والعمليات (مراقب)': 'System and operations log (monitor)',
+  'مركز عمليات الطوارئ (EOC)': 'Emergency Operations Center (EOC)',
+  'تفعيل الوضع الفاتح': 'Enable light mode',
+  'تفعيل الوضع الداكن': 'Enable dark mode',
+  'المالك': 'Owner',
+  'مشرف': 'Supervisor',
+  'جوكر': 'Joker',
+  'نظام': 'System',
+  'تحديث': 'Update',
+  'غير محدد': 'Unspecified',
+  'بدون عنوان': 'No address',
+  'المركز الرئيسي للعمليات': 'Main operations center',
+  'الرؤية الشاملة للوضع الميداني والزلزالي (على مستوى الجمهورية)': 'National overview of field operations and seismic activity',
+  'المؤشرات الحية لفرع/محافظة:': 'Live indicators for branch/governorate:',
+  'المركز العام (القاهرة)': 'Headquarters (Cairo)',
+  'المركز العام (وملحقاته)': 'Headquarters (and affiliated branches)',
+  'المركز العام': 'Headquarters',
+  'القاهرة': 'Cairo',
+  'إحصائيات يوم:': 'Statistics for:',
+  'عرض الكل': 'Show all',
+  'إلغاء التحديد (عرض الجمهورية)': 'Clear selection (national view)',
+  'إلغاء التحديد': 'Clear selection',
+  'المهام اليومية (نشطة)': 'Daily missions (active)',
+  'المهام المفتوحة': 'Open missions',
+  'الأخبار المحلية المرصودة': 'Monitored local news',
+  'استجابة': 'responses',
+  'الكوارث العالمية': 'Global disasters',
+  'الزلازل العالمية (اليوم)': 'Global earthquakes (today)',
+  'زلازل مصر المرصودة': 'Monitored Egypt earthquakes',
+  'خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)': 'Interactive branch map (click to filter or clear)',
+  'مفعل (انقر للإلغاء)': 'Active (click to clear)',
+  'انقر للفلترة': 'Click to filter',
+  'بيانات تمركز:': 'Deployment data:',
+  'البيانات الكلية (على مستوى الجمهورية)': 'National totals',
+  'قائمة التمركزات': 'Deployment list',
+  'الأرصدة اللوجستية والفنية': 'Logistics and technical inventory',
+  'إجمالي شنط الإسعاف': 'Total first-aid kits',
+  'شنطة مجهزة': 'equipped kit',
+  'أجهزة اتصال لاسلكي': 'Radio communication devices',
+  'جهاز نشط': 'active device',
+  'مخزون الإيواء': 'Shelter stock',
+  'خيمة وبطانية': 'tents and blankets',
+  'أسطول السيارات (شامل الإسعاف)': 'Vehicle fleet (including ambulances)',
+  'سيارة جاهزة': 'ready vehicle',
+  'الفرع / التمركز': 'Branch / deployment',
+  'سيارات': 'Vehicles',
+  'إسعاف': 'Ambulances',
+  'خيم': 'Tents',
+  'بطاطين': 'Blankets',
+  'مراتب': 'Mattresses',
+  'ملايات': 'Bed sheets',
+  'مخدات': 'Pillows',
+  'حصر': 'Mats',
+  'تنك مياه': 'Water tanks',
+  'بستلة': 'Buckets',
+  'جركن': 'Jerrycans',
+  'شنط إسعاف': 'First-aid kits',
+  'نقالات': 'Stretchers',
+  'مستشفى ميداني': 'Field hospital',
+  'بنك دم': 'Blood bank',
+  'لاسلكي تترا': 'TETRA radio',
+  'لاسلكي هواوي': 'Huawei radio',
+  'طفايات': 'Fire extinguishers',
+  'مكن تطهير': 'Disinfection machines',
+  'بخاخات': 'Sprayers',
+  'خوذ': 'Helmets',
+  'فيستات': 'Vests',
+  'كابات': 'Caps',
+  'نظارات': 'Goggles',
+  'بوت': 'Boots',
+  'آيس بوكس': 'Ice boxes',
+  'فرق إسعافات': 'First-aid teams',
+  'متطوعين إسعافات': 'First-aid volunteers',
+  'فرق طوارئ': 'Emergency teams',
+  'متطوعين طوارئ': 'Emergency volunteers',
+  'فرق دعم نفسي': 'Psychosocial support teams',
+  'متطوعين دعم نفسي': 'Psychosocial support volunteers',
+  'فرق توعية': 'Awareness teams',
+  'متطوعين توعية': 'Awareness volunteers',
+  'مدربين (مركز عام)': 'Trainers (headquarters)',
+  'مدربين (فرع)': 'Trainers (branch)',
+  'إصحاح بيئي': 'WASH',
+  'تأكيد الحذف': 'Confirm deletion',
+  'هل أنت متأكد من حذف هذه المهمة نهائياً؟': 'Are you sure you want to permanently delete this mission?',
+  'إلغاء': 'Cancel',
+  'نعم، احذف': 'Yes, delete',
+  'سجل متابعة المهام': 'Mission tracking register',
+  'حساب إداري | الصلاحية: كل الأقاليم': 'Administrative account | access: all regions',
+  'كل المهام': 'All missions',
+  'المهام العادية': 'Regular missions',
+  'كل الأقاليم': 'All regions',
+  'إقليم القنال': 'Canal region',
+  'إقليم الدلتا': 'Delta region',
+  'إقليم الصعيد': 'Upper Egypt region',
+  'إلغاء التاريخ': 'Clear date',
+  'السجل': 'Register',
+  'تصدير': 'Export',
+  '+ إنشاء مهمة': '+ Create mission',
+  'بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة...': 'Quick search by mission name, location, code, or type...',
+  'خط السير الأساسي': 'Main itinerary',
+  'خط سير مخصص': 'Custom itinerary',
+  'عادية': 'Regular',
+  'مفتوحة': 'Open',
+  'نشطة الآن': 'Active now',
+  'مكتملة': 'Completed',
+  'مسودة': 'Draft',
+  'نشطة': 'Active',
+  'قيد المراجعة': 'Under review',
+  'معتمدة (بانتظار الانتهاء)': 'Approved (awaiting completion)',
+  'إرجاع للمتطوع': 'Returned to volunteer',
+  'ملغاة': 'Cancelled',
+  'التاريخ': 'Date',
+  'المحافظة': 'Governorate',
+  'الفرع': 'Branch',
+  'إجراءات': 'Actions',
+  'المهام': 'Missions',
+  'الأخبار المحلية': 'Local news',
+  'الزلازل': 'Earthquakes',
+  'لا توجد سجلات مطابقة للبحث': 'No records match your search',
+  'جاري سحب السجلات السرية...': 'Loading secure records...',
+  'سجل العمليات والنشاط': 'Operations and activity log',
+  'ابحث بالاسم أو نوع الإجراء...': 'Search by name or action type...',
+  'نوع الإجراء': 'Action type',
+  'تفاصيل العملية (ماذا حدث؟)': 'Operation details (what happened?)',
+  'إجمالي الحوادث المسجلة': 'Total logged incidents',
+  'تم الإبلاغ عنها': 'Reported',
+  'بلاغات تم الرد عليها': 'Reports responded to',
+  'استجابة ميدانية (تحرك)': 'Field response (mobilized)',
+  'متوسط نقاط الاستجابة': 'Average response score',
+  'كل المحافظات': 'All governorates',
+  'كل الحوادث': 'All incidents',
+  'تصدير السجل': 'Export register',
+  '+ إضافة خبر': '+ Add news report',
+  'وصف الحادث': 'Incident description',
+  'نقاط (رد/تحرك/وصول)': 'Points (response/movement/arrival)',
+  'المتطوعين': 'Volunteers',
+  'مدخل الخبر': 'News entry user',
+  'جاري التحميل...': 'Loading...',
+  'نقاط الرد': 'Response points',
+  'نقاط التحرك': 'Movement points',
+  'نقاط الوصول': 'Arrival points',
+  'فتح الرابط': 'Open link',
+  'لا توجد أخبار مطابقة للفلاتر': 'No news matches the filters',
+  'تعديل الخبر والمؤشرات': 'Edit news report and indicators',
+  'إضافة خبر جديد': 'Add new report',
+  '1. بيانات الخبر الأساسية': '1. Basic news information',
+  'التاريخ (مطلوب)': 'Date (required)',
+  'الشهر (تلقائي)': 'Month (automatic)',
+  'نوع الخبر (مطلوب)': 'News type (required)',
+  'اختر نوع الحادث...': 'Select incident type...',
+  'وصف الحادث (مطلوب)': 'Incident description (required)',
+  'ناشر الخبر': 'News publisher',
+  'المحافظة (مطلوب)': 'Governorate (required)',
+  'اختر المحافظة...': 'Select governorate...',
+  'المنطقة': 'Area',
+  'الشارع': 'Street',
+  '2. الإبلاغ والرد (تقييم السرعة)': '2. Reporting and response (speed assessment)',
+  'تم الإبلاغ؟': 'Reported?',
+  'نعم': 'Yes',
+  'لا': 'No',
+  'توقيت الإرسال': 'Report time',
+  'تم الرد؟': 'Responded?',
+  'توقيت الرد': 'Response time',
+  'رد الفرع': 'Branch response',
+  'زمن الرد (تلقائي)': 'Response time (automatic)',
+  '3. الاستجابة الميدانية': '3. Field response',
+  'تم التحرك؟': 'Mobilized?',
+  'توقيت التحرك': 'Movement time',
+  'توقيت الوصول للميدان': 'Field arrival time',
+  'المسافة بالكيلومتر': 'Distance in kilometers',
+  'نوع التدخل': 'Intervention type',
+  'الفرع المتدخل': 'Responding branch',
+  'اسم الاستمارة': 'Form name',
+  'عدد المشاركين': 'Participant count',
+  '4. تفاصيل الحادث': '4. Incident details',
+  'اسم المستشفى': 'Hospital name',
+  'عدد المصابين': 'Injured count',
+  'عدد الوفيات': 'Fatality count',
+  'تطورات الخبر': 'News updates',
+  'لينك الخبر': 'News link',
+  'اسم مدخل الخبر': 'News entry user',
+  'ملاحظات': 'Notes',
+  'حفظ': 'Save',
+  'تنبيه': 'Alert',
+  'حسناً': 'OK',
+  'الزلازل العالمية': 'Global earthquakes',
+  'زلازل مصر': 'Egypt earthquakes',
+  'إضافة زلزال عالمي': 'Add global earthquake',
+  'إضافة زلزال محلي': 'Add local earthquake',
+  'آخر تحديث': 'Last update',
+  'القوة (ريختر)': 'Magnitude (Richter)',
+  'العمق': 'Depth',
+  'الموقع': 'Location',
+  'الدولة': 'Country',
+  'المصدر': 'Source',
+  'رصد زلزال محلي (مصر)': 'Log local earthquake (Egypt)',
+  'تعديل زلزال مصر': 'Edit Egypt earthquake',
+  'التوقيت': 'Time',
+  'المنطقة داخل مصر': 'Area within Egypt',
+  'القوة (ريختر) - إلزامي': 'Magnitude (Richter) - required',
+  'العمق (سيتم إضافة KM آلياً)': 'Depth (KM added automatically)',
+  'مثال: 10': 'Example: 10',
+  'استعلامات الذكاء الاصطناعي (OSINT God-Mode)': 'AI intelligence (OSINT God-Mode)',
+  'استخبارات الذكاء الاصطناعي (OSINT God-Mode)': 'AI intelligence (OSINT God-Mode)',
+  'رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.': 'Live tactical monitoring and strategic analysis of social media and news sites.',
+  'الروبوت نشط (دوريات المسح تعمل)': 'Robot active (scanning patrols running)',
+  'آخر فحص:': 'Last scan:',
+  'إجمالي الأخبار المرصودة': 'Total monitored reports',
+  'الدول المرصودة': 'Monitored countries',
+  'خريطة الرصد اللحظي للذكاء الاصطناعي': 'AI real-time monitoring map',
+  'إلغاء الفلترة (عرض كل الأخبار)': 'Clear filter (show all news)',
+  'خطورة:': 'Severity:',
+  'لا توجد صورة': 'No image available',
+  'حادث': 'Incident',
+  'انقر لفلترة الجدول': 'Click to filter the table',
+  'الكل': 'All',
+  'إطلاق الرادار': 'Launch radar',
+  'جاري المسح...': 'Scanning...',
+  'نوع الخبر': 'News type',
+  'الناشر': 'Publisher',
+  'لا يوجد وصف': 'No description',
+  'فتح مصدر الخبر': 'Open news source',
+  'قراءة التقرير الاستخباراتي': 'Read intelligence report',
+  'حذف السجل': 'Delete record',
+  'لا توجد أخبار مطابقة...': 'No matching news...',
+  'التقرير الاستخباراتي (OSINT)': 'Intelligence report (OSINT)',
+  'التقرير الاستراتيجي الميداني': 'Field strategic report',
+  'لا يوجد تقرير متاح لهذا الحدث.': 'No report is available for this event.',
+  'صورة الحدث': 'Event image',
+  'تفاصيل الرصد': 'Monitoring details',
+  'المحافظة (الفرع)': 'Governorate (branch)',
+  'وصف الحادث (الملخص)': 'Incident description (summary)',
+  'لينك الخبر الأصلي': 'Original news link',
+  'إغلاق التقرير': 'Close report',
+  'رسالة النظام': 'System message',
+  'علم': 'Got it',
+  'سجل القوة البشرية الفعالة (إدارة المتطوعين)': 'Active workforce register (volunteer management)',
+  'يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته وساعاته الفعلية.': 'Data is automatically compiled from field missions without duplication and linked to each volunteer’s participation count and actual hours.',
+  'إجمالي القوة (بدون تكرار)': 'Total workforce (unique)',
+  'إجمالي المتطوعين الفعليين': 'Total active volunteers',
+  'مشاركين خارجيين (غير متطوع)': 'External participants (non-volunteers)',
+  'متطوعين شاركوا +5 مهام': 'Volunteers with 5+ missions',
+  'بحث بالاسم أو الكود...': 'Search by name or ID...',
+  'كل الفروع والتمركزات': 'All branches and deployments',
+  'الكل (متطوع وغير متطوع)': 'All (volunteer and non-volunteer)',
+  'متطوعين فقط': 'Volunteers only',
+  'غير متطوعين': 'Non-volunteers',
+  'تصدير سجل القوة البشرية': 'Export workforce register',
+  'م': '#',
+  'الاسم': 'Name',
+  'رقم العضوية / الصفة': 'Membership number / role',
+  'الفرع التابع له': 'Affiliated branch',
+  'النوع': 'Type',
+  'عدد المهام': 'Mission count',
+  'إجمالي الساعات': 'Total hours',
+  'جاري حصر وتحليل الأفراد من المهام السابقة...': 'Compiling and analysing personnel from previous missions...',
+  'متطوع': 'Volunteer',
+  'غير متطوع': 'Non-volunteer',
+  'مهمة': 'mission',
+  'ساعة': 'hour',
+  'لا توجد بيانات مطابقة': 'No matching data',
+  'توثيق مهمة ميدانية': 'Document field mission',
+  'اسم الاستمارة (عنوان رئيسي)': 'Form name (main title)',
+  'مثال: تأمين مول...': 'Example: mall security...',
+  'كود الاستمارة': 'Form code',
+  'لا يمكن تعديله (للمالك فقط)': 'Only the owner can edit this',
+  'البيانات الأساسية للمهمة': 'Mission basic information',
+  'تصنيف المهمة': 'Mission classification',
+  'مهمة عادية': 'Regular mission',
+  'مهمة مفتوحة': 'Open mission',
+  'التمركز / الفرع': 'Deployment / branch',
+  'نوع المهمة': 'Mission type',
+  'مكان المهمة': 'Mission location',
+  'حالة العملية الميدانية': 'Field operation status',
+  'نشطة (لم تنتهي بعد)': 'Active (not yet completed)',
+  'مكتملة (تم الانتهاء)': 'Completed',
+  'مسؤول المهمة': 'Mission lead',
+  'تاريخ الإنشاء (يسجل آلياً)': 'Creation date (recorded automatically)',
+  'مصدر البلاغ': 'Report source',
+  'واتساب': 'WhatsApp',
+  'هاتفياً': 'By phone',
+  'التواريخ والتوقيتات': 'Dates and times',
+  'تاريخ المهمة': 'Mission date',
+  'تاريخ الخروج': 'Departure date',
+  'تاريخ الوصول للمكان': 'Arrival date',
+  'تاريخ العودة': 'Return date',
+  'تاريخ الانتهاء': 'Completion date',
+  'ساعة البدء': 'Start time',
+  'ساعة التحرك': 'Movement time',
+  'ساعة الوصول': 'Arrival time',
+  'ساعة الانتهاء': 'Completion time',
+  'تفاصيل خط السير الأساسي': 'Main itinerary details',
+  '+ إضافة مسار': '+ Add route',
+  'لا يوجد خط سير': 'No itinerary',
+  '+ تفعيل خط السير': '+ Enable itinerary',
+  'إلى (الوجهة)...': 'To (destination)...',
+  'ساعة التحرك:': 'Movement time:',
+  'ساعة الوصول:': 'Arrival time:',
+  'أيام المهمة / مسارات التحرك': 'Mission days / movement routes',
+  'خطوط سير مخصصة (لفرق أو أفراد محددين)': 'Custom itineraries (for selected teams or people)',
+  '+ إضافة يوم / مسار جديد': '+ Add day / route',
+  '+ إضافة خط سير مخصص': '+ Add custom itinerary',
+  'يرجى إضافة أيام المهمة أو المسارات...': 'Please add mission days or routes...',
+  'لا يوجد خطوط سير مخصصة.': 'No custom itineraries.',
+  'اكتب اسم اليوم (مثال: تحركات اليوم الأول)...': 'Enter the day name (e.g. first-day movements)...',
+  'اكتب اسم خط السير المخصص هنا...': 'Enter the custom itinerary name here...',
+  '+ مسار': '+ Route',
+  'حذف المخصص': 'Delete custom itinerary',
+  'الوجهة...': 'Destination...',
+  'السيارات والسائقين (أسطول المهمة)': 'Vehicles and drivers (mission fleet)',
+  '+ إضافة سيارة': '+ Add vehicle',
+  'لا يوجد سيارات': 'No vehicles',
+  '+ تفعيل أسطول السيارات': '+ Enable vehicle fleet',
+  'القوة البشرية والمشاركين': 'Workforce and participants',
+  '+ إضافة مشارك': '+ Add participant',
+  'الفريق / الكود': 'Team / code',
+  'المرحلة': 'Phase',
+  'التواجد': 'Presence',
+  'المسار': 'Route',
+  'الحالة': 'Status',
+  'حذف': 'Delete',
+  'الاسم...': 'Name...',
+  'اليوم الأول': 'First day',
+  'ذهاب وعودة': 'Round trip',
+  'بالمهمة': 'On mission',
+  'مازال بالمهمة': 'Still on mission',
+  'تم انتهاء مهمتة': 'Mission completed',
+  'مسؤول المتابعة': 'Follow-up lead',
+  'المشرف': 'Supervisor',
+  'المشرف المراجع': 'Review supervisor',
+  'معبئ الاستمارة': 'Form preparer',
+  'مستكمل الاستمارة': 'Form completer',
+  'مراجع الاستمارة': 'Form reviewer',
+  'الفريق': 'Team',
+  'كود الفريق': 'Team code',
+  'رقم السيارة': 'Vehicle number',
+  'اسم السائق': 'Driver name',
+  'المستفيدين': 'Beneficiaries',
+  '+ إضافة مستفيد': '+ Add beneficiary',
+  'التصنيف': 'Category',
+  'مباشر': 'Direct',
+  'غير مباشر': 'Indirect',
+  'سجل الميدان': 'Field log',
+  'ملاحظات داخلية': 'Internal notes',
+  'حفظ كمسودة': 'Save as draft',
+  'إرسال للمراجعة': 'Send for review',
+  'اعتماد المهمة': 'Approve mission',
+  'إنهاء المهمة': 'Complete mission',
+  'إغلاق': 'Close',
+  'حادث تصادم سيارات': 'Vehicle collision',
+  'حادث غرق سفينة': 'Ship sinking',
+  'حادث تصادم قطارات': 'Train collision',
+  'حادث انقلاب قطار': 'Train derailment',
+  'حادث انقلاب سيارة': 'Vehicle rollover',
+  'حادث فقدان أشخاص في البحر': 'Missing persons at sea',
+  'حادث تصادم سفن': 'Vessel collision',
+  'انهيار مبنى تجاري': 'Commercial building collapse',
+  'حريق مبنى سكني': 'Residential building fire',
+  'حريق مبنى تجاري': 'Commercial building fire',
+  'حريق مبنى صناعي': 'Industrial building fire',
+  'حادث انفجار': 'Explosion',
+  'انهيار مبنى صناعي': 'Industrial building collapse',
+  'انهيار ارضي': 'Landslide',
+  'حريق منطقة زراعية': 'Agricultural area fire',
+  'حادث تسرب مواد كيميائية أو غازات سامة': 'Chemical or toxic-gas leak',
+  'سيول': 'Flash floods',
+  'فيضانات': 'Floods',
+  'امطار غزيرة': 'Heavy rain',
+  'زلزال': 'Earthquake',
+  'انهيار مبنى سكني': 'Residential building collapse',
+  'حادث دهس اشخاص': 'Pedestrian accident',
+  'حريق مبنى طبي': 'Medical building fire',
+  'انهيار مبنى طبي': 'Medical building collapse',
+  'حريق مخزن': 'Warehouse fire',
+  'حريق مزرعة': 'Farm fire',
+  'حريق سيارة': 'Vehicle fire',
+  'حريق مبنى ديني': 'Religious building fire',
+  'حريق مبنى تعليمي': 'Educational building fire',
+  'حادث تدافع': 'Crowd crush',
+  'حريق مبنى رياضي': 'Sports facility fire',
+  'حريق قطار': 'Train fire',
+  'حادث تصادم سيارة بقطار': 'Car-train collision',
+  'حادث تسمم': 'Poisoning incident',
+  'حريق مبنى حكومي': 'Government building fire',
+  'انهيار مبنى حكومي': 'Government building collapse',
+  'انهيار مبنى ديني': 'Religious building collapse',
+  'اليوم': 'Today',
+  'جاري التحقق...': 'Checking...',
+  'لا توجد بيانات': 'No data',
+  'غير متاح': 'Unavailable',
+  'يناير': 'January',
+  'فبراير': 'February',
+  'مارس': 'March',
+  'أبريل': 'April',
+  'مايو': 'May',
+  'يونيو': 'June',
+  'يوليو': 'July',
+  'أغسطس': 'August',
+  'سبتمبر': 'September',
+  'أكتوبر': 'October',
+  'نوفمبر': 'November',
+  'ديسمبر': 'December',
+  'الإسكندرية': 'Alexandria',
+  'الجيزة': 'Giza',
+  'القليوبية': 'Qalyubia',
+  'البحيرة': 'Beheira',
+  'مطروح': 'Matrouh',
+  'الإسماعيلية': 'Ismailia',
+  'بورسعيد': 'Port Said',
+  'السويس': 'Suez',
+  'شمال سيناء': 'North Sinai',
+  'جنوب سيناء': 'South Sinai',
+  'الشرقية': 'Sharqia',
+  'الغربية': 'Gharbia',
+  'الدقهلية': 'Dakahlia',
+  'كفر الشيخ': 'Kafr El Sheikh',
+  'المنوفية': 'Monufia',
+  'دمياط': 'Damietta',
+  'الفيوم': 'Faiyum',
+  'بني سويف': 'Beni Suef',
+  'المنيا': 'Minya',
+  'أسيوط': 'Assiut',
+  'سوهاج': 'Sohag',
+  'قنا': 'Qena',
+  'الأقصر': 'Luxor',
+  'أسوان': 'Aswan',
+  'الوادي الجديد': 'New Valley',
+  'البحر الأحمر': 'Red Sea',
+};
+
+const translatedTextCache = new WeakMap();
+const translatedAttributeCache = new WeakMap();
+const ENGLISH_UI_PREFIXES = [
+  ['المؤشرات الحية لفرع/محافظة:', 'Live indicators for branch/governorate:'],
+  ['بيانات تمركز:', 'Deployment data:'],
+  ['تحديث بواسطة:', 'Updated by:'],
+  ['إجراء:', 'Action:'],
+  ['آخر فحص:', 'Last scan:'],
+  ['🔥 خطورة:', '🔥 Severity:'],
+];
+
+function getEnglishUiText(value) {
+  if (typeof value !== 'string') return value;
+  const leadingWhitespace = value.match(/^\s*/)?.[0] || '';
+  const trailingWhitespace = value.match(/\s*$/)?.[0] || '';
+  const key = value.trim();
+  const directTranslation = ENGLISH_UI[key];
+  if (directTranslation) return `${leadingWhitespace}${directTranslation}${trailingWhitespace}`;
+
+  const prefixTranslation = ENGLISH_UI_PREFIXES.find(([arabicPrefix]) => key.startsWith(arabicPrefix));
+  if (prefixTranslation) {
+    const [arabicPrefix, englishPrefix] = prefixTranslation;
+    return `${leadingWhitespace}${englishPrefix}${key.slice(arabicPrefix.length)}${trailingWhitespace}`;
+  }
+
+  return value;
+}
+
+function getSelectedOptionSourceText(selectElement) {
+  const selectedOption = selectElement?.options?.[selectElement.selectedIndex];
+  return selectedOption?.dataset.i18nSource || selectedOption?.text || '';
+}
+
+function localizeDashboardDom(root, language) {
+  const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let textNode;
+  while ((textNode = textWalker.nextNode())) textNodes.push(textNode);
+
+  textNodes.forEach((node) => {
+    const current = node.nodeValue || '';
+    const previous = translatedTextCache.get(node);
+    const source = previous && current === previous.rendered ? previous.source : current;
+    const rendered = language === 'en' ? getEnglishUiText(source) : source;
+    if (current !== rendered) node.nodeValue = rendered;
+    if (node.parentElement?.tagName === 'OPTION') {
+      node.parentElement.dataset.i18nSource = source;
+    }
+    translatedTextCache.set(node, { source, rendered });
+  });
+
+  root.querySelectorAll('[placeholder], [title], [aria-label], [alt]').forEach((element) => {
+    ['placeholder', 'title', 'aria-label', 'alt'].forEach((attribute) => {
+      const current = element.getAttribute(attribute);
+      if (current === null) return;
+      const previous = translatedAttributeCache.get(element)?.[attribute];
+      const source = previous && current === previous.rendered ? previous.source : current;
+      const rendered = language === 'en' ? getEnglishUiText(source) : source;
+      if (current !== rendered) element.setAttribute(attribute, rendered);
+      translatedAttributeCache.set(element, {
+        ...translatedAttributeCache.get(element),
+        [attribute]: { source, rendered },
+      });
+    });
+  });
+}
 
 
 // ==========================================
@@ -52,6 +571,35 @@ const [theme, setTheme] = useState(() => {
 useEffect(() => {
   localStorage.setItem('dashboard-theme', theme);
 }, [theme]);
+
+  // Keep the selected language in sync with Login.jsx, so it survives navigation.
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('dashboard-language') || 'ar';
+  });
+  const dashboardRootRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem('dashboard-language', language);
+  }, [language]);
+
+  useEffect(() => {
+    const root = dashboardRootRef.current;
+    if (!root) return undefined;
+
+    const localize = () => localizeDashboardDom(root, language);
+    localize();
+
+    const observer = new MutationObserver(localize);
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['placeholder', 'title', 'aria-label', 'alt'],
+    });
+
+    return () => observer.disconnect();
+  }, [language]);
 
   const [branchesList, setBranchesList] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({ active_missions: '-', ready_teams: '-', emergency_level: '-', under_review: '-', approved: '-', completed: '-', drafts: '-' });
@@ -230,7 +778,7 @@ useEffect(() => {
   };
 
   return (
-    <div className={`${theme === 'light' ? 'theme-light' : ''} min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden transition-colors duration-300`} dir="rtl">
+    <div ref={dashboardRootRef} className={`${theme === 'light' ? 'theme-light' : ''} min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden transition-colors duration-300`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
 
       <style>{`
@@ -408,6 +956,16 @@ useEffect(() => {
             <p className="text-sm text-gray-500 mt-1">مركز عمليات الطوارئ (EOC)</p>
             </div>
             </div>
+
+  <button
+    type="button"
+    onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+    title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+    aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+    className="px-3 py-2 rounded-xl bg-[#111] border border-white/10 text-white text-xs font-bold transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] shrink-0"
+  >
+    {language === 'ar' ? 'EN' : 'عربي'}
+  </button>
 
   <button
     type="button"
@@ -966,7 +1524,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
     const escapeCSV = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
     let csvContent = "";
     csvContent += "البيانات الأساسية\nاسم المهمة,تصنيف المهمة,التمركز,نوع المهمة,مكان المهمة,مسؤول المهمة,تاريخ الإنشاء,مصدر البلاغ\n";
-    csvContent += `${escapeCSV(document.getElementById('f_mission_name')?.value)},${escapeCSV(document.getElementById('f_mission_class')?.value)},${escapeCSV(document.getElementById('f_branch_id')?.options[document.getElementById('f_branch_id').selectedIndex]?.text)},${escapeCSV(document.getElementById('f_mission_type')?.value)},${escapeCSV(document.getElementById('f_mission_location')?.value)},${escapeCSV(document.getElementById('f_responsible_person')?.value)},${escapeCSV(document.getElementById('f_creation_date')?.value)},${escapeCSV(document.getElementById('f_data_source')?.value)}\n\n`;
+    csvContent += `${escapeCSV(document.getElementById('f_mission_name')?.value)},${escapeCSV(document.getElementById('f_mission_class')?.value)},${escapeCSV(getSelectedOptionSourceText(document.getElementById('f_branch_id')))},${escapeCSV(document.getElementById('f_mission_type')?.value)},${escapeCSV(document.getElementById('f_mission_location')?.value)},${escapeCSV(document.getElementById('f_responsible_person')?.value)},${escapeCSV(document.getElementById('f_creation_date')?.value)},${escapeCSV(document.getElementById('f_data_source')?.value)}\n\n`;
     csvContent += "التواريخ والتوقيتات\nتاريخ المهمة,تاريخ الخروج,تاريخ الوصول,تاريخ العودة,تاريخ الانتهاء,ساعة البدء,ساعة التحرك,ساعة الوصول,ساعة الانتهاء\n";
     csvContent += `${escapeCSV(document.getElementById('f_exit_date')?.value)},${escapeCSV(document.getElementById('f_departure_date')?.value)},${escapeCSV(document.getElementById('f_arrival_date')?.value)},${escapeCSV(document.getElementById('f_return_date')?.value)},${escapeCSV(document.getElementById('f_completion_date')?.value)},${escapeCSV(document.getElementById('f_start_time')?.value)},${escapeCSV(document.getElementById('f_departure_time')?.value)},${escapeCSV(document.getElementById('f_arrival_time')?.value)},${escapeCSV(document.getElementById('f_completion_time')?.value)}\n\n`;
     csvContent += "خطوط السير المجمعة\nالمجموعة,إلى (الوجهة),ساعة التحرك,ساعة الوصول\n";
@@ -995,7 +1553,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
         const itinSel = document.getElementById(`p_itin_${i}`);
         const phase = document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول';
         const stay = document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة';
-        csvContent += `${escapeCSV(typeSel?.options[typeSel.selectedIndex]?.text)},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_team_${i}`)?.value)},${escapeCSV(document.getElementById(`p_tcode_${i}`)?.value)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(phase)},${escapeCSV(stay)},${escapeCSV(branchSel?.options[branchSel.selectedIndex]?.text)},${escapeCSV(itinSel?.options[itinSel.selectedIndex]?.text || 'خط السير الأساسي')}\n`;
+        csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_team_${i}`)?.value)},${escapeCSV(document.getElementById(`p_tcode_${i}`)?.value)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(phase)},${escapeCSV(stay)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
       }
     });
     csvContent += "\nإحصائيات المستفيدين\nالتصنيف,مباشر,غير مباشر\n";
@@ -1026,7 +1584,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
          const pRole = document.getElementById(`p_role_${i}`)?.value?.trim() || ''; 
          const pBranch = document.getElementById(`p_branch_${i}`)?.value || '19';
          const pStatus = document.getElementById(`p_status_${i}`)?.value || 'بالمهمة';
-         const pItin = document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي';
+         const pItin = getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي';
 
          const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
 
@@ -1102,7 +1660,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
            team_code: document.getElementById(`p_tcode_${i}`)?.value || '', 
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
            branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
-           assigned_itinerary: document.getElementById(`p_itin_${i}`)?.options[document.getElementById(`p_itin_${i}`).selectedIndex]?.text || 'خط السير الأساسي',
+           assigned_itinerary: getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي',
            return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : (document.getElementById(`p_status_${i}`)?.value || 'مازال بالمهمة'),
            phase_name: document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول',
            stay_type: document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة'
