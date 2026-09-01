@@ -2973,6 +2973,7 @@ function AINewsMonitorView({ branches, isOwner }) {
   const [customAlert, setCustomAlert] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
+  const [selectedCountry, setSelectedCountry] = useState('all');
 
   const [form, setForm] = useState({
     id: null, incident_date: getLocalDate(), incident_description: '', news_type: '', news_publisher: '',
@@ -3073,8 +3074,28 @@ function AINewsMonitorView({ branches, isOwner }) {
   };
 
   // 💡 فلترة الداتا
-  const filteredNews = filterDate ? aiNewsList.filter(n => n.incident_date === filterDate) : aiNewsList;
-  const tableNews = selectedAiNewsId ? filteredNews.filter(n => n.id === selectedAiNewsId) : filteredNews;
+  const dateFilteredNews = filterDate
+  ? aiNewsList.filter(n => n.incident_date === filterDate)
+  : aiNewsList;
+
+const availableCountries = [...new Set(
+  dateFilteredNews
+    .map(n => n.governorate)
+    .filter(Boolean)
+)].sort((a, b) => a.localeCompare(b, 'ar'));
+
+const filteredNews = selectedCountry === 'all'
+  ? dateFilteredNews
+  : dateFilteredNews.filter(n => n.governorate === selectedCountry);
+
+const tableNews = selectedAiNewsId
+  ? filteredNews.filter(n => n.id === selectedAiNewsId)
+  : filteredNews;
+
+const totalAiNews = filteredNews.length;
+const totalAiCountries = new Set(
+  filteredNews.map(n => n.governorate).filter(Boolean)
+).size;
 
   // 💡 الدالة العبقرية لاستخراج الإحداثيات والصورة من نص التقرير
   const extractAiData = (updatesText) => {
@@ -3124,8 +3145,91 @@ function AINewsMonitorView({ branches, isOwner }) {
           <img src="https://github.com/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/badge.svg" alt="AI Status Badge" className="h-5 mr-auto md:mr-0" />
         </div>
       </div>
+      
+            {/* إحصائيات الرصد */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+
+        {/* عدد الأخبار */}
+        <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-gray-400 text-sm font-bold">
+                إجمالي الأخبار المرصودة
+              </p>
+
+              <p className="text-4xl font-black text-white mt-2">
+                {filteredNews.length.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-purple-500/10 text-purple-400 p-3 rounded-xl">
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12m2-8h2v8a2 2 0 01-2 2h-2M7 8h6M7 12h6M7 16h4"
+                />
+              </svg>
+            </div>
+
+          </div>
+        </div>
+
+
+        {/* عدد الدول */}
+        <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-gray-400 text-sm font-bold">
+                الدول المرصودة
+              </p>
+
+              <p className="text-4xl font-black text-white mt-2">
+                {new Set(
+                  filteredNews
+                    .map(n => n.governorate)
+                    .filter(Boolean)
+                ).size.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-purple-500/10 text-purple-400 p-3 rounded-xl">
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  strokeWidth={1.8}
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeWidth={1.8}
+                  d="M3 12h18M12 3c2.2 2.5 3.4 5.5 3.4 9s-1.2 6.5-3.4 9c-2.2-2.5-3.4-5.5-3.4-9S9.8 5.5 12 3z"
+                />
+              </svg>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
 
       {/* 💡 خريطة الرصد التكتيكية للذكاء الاصطناعي */}
+
       <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-4 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-0 h-auto md:h-[450px] animate-fade-in-up">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد اللحظي للذكاء الاصطناعي</h3>
