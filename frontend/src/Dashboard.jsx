@@ -232,6 +232,7 @@ useEffect(() => {
   return (
     <div className={`${theme === 'light' ? 'theme-light' : ''} min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden transition-colors duration-300`} dir="rtl">
 
+
       <style>{`
   .theme-light {
     background: #f4f6f8 !important;
@@ -293,6 +294,24 @@ useEffect(() => {
   .theme-light [class~="bg-[#c70000]\\/20"] {
     background-color: rgba(199, 0, 0, 0.12) !important;
   }
+
+    .theme-light header {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-bottom-color: #d9e1e8 !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08) !important;
+  }
+
+  .theme-light header > button {
+    background: #ffffff !important;
+    color: #64748b !important;
+    border-color: #d9e1e8 !important;
+  }
+
+  .theme-light header > button:hover {
+    background: #f1f5f9 !important;
+    color: #c70000 !important;
+  }
+
 `}</style>
 
       
