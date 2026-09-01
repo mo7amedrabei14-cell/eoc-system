@@ -393,55 +393,15 @@ function HomeView({ branches = [] }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-white/10 shadow-inner">
-
-  {/* فلتر الدولة */}
-  <select
-    value={selectedCountry}
-    onChange={(e) => {
-      setSelectedCountry(e.target.value);
-      setSelectedAiNewsId(null);
-    }}
-    className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer px-2"
-  >
-    <option value="all" className="bg-[#1a1a1a]">
-      كل الدول
-    </option>
-
-    {availableCountries.map((country) => (
-      <option
-        key={country}
-        value={country}
-        className="bg-[#1a1a1a]"
-      >
-        {country}
-      </option>
-    ))}
-  </select>
-
-  {/* فلتر التاريخ */}
-  <input
-    type="date"
-    value={filterDate}
-    onChange={(e) => setFilterDate(e.target.value)}
-    className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] px-2"
-  />
-
-  {/* إلغاء الفلاتر */}
-  {(filterDate || selectedCountry !== 'all') && (
-    <button
-      onClick={() => {
-        setFilterDate('');
-        setSelectedCountry('all');
-        setSelectedAiNewsId(null);
-      }}
-      className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1 rounded-lg font-bold transition-colors"
-    >
-      عرض الكل
-    </button>
-  )}
-
-</div>
+          <div className="flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-white/10 shadow-inner">
+            <span className="text-gray-400 text-xs font-bold pl-2">إحصائيات يوم:</span>
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] px-2" />
+            {filterDate && (
+              <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1 rounded-lg font-bold transition-colors">
+                عرض الكل
+              </button>
+            )}
+          </div>
           {selectedBranchName && (
             <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
           )}
