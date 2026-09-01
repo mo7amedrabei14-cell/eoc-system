@@ -8,11 +8,43 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isMounted, setIsMounted] = useState(false); 
+  const [isLoginRevealed, setIsLoginRevealed] = useState(false);
+const [dragProgress, setDragProgress] = useState(0);
+const [isDragging, setIsDragging] = useState(false);
+const [dragStartX, setDragStartX] = useState(0);
   
   // دي الأداة اللي هتنقلنا للصفحة التانية
   const navigate = useNavigate();
 
   useEffect(() => { setIsMounted(true); }, []);
+
+  const handleDragStart = (e) => {
+  setDragStartX(e.clientX);
+  setIsDragging(true);
+  e.currentTarget.setPointerCapture(e.pointerId);
+};
+
+const handleDragMove = (e) => {
+  if (!isDragging || isLoginRevealed) return;
+
+  const distance = Math.abs(e.clientX - dragStartX);
+  const progress = Math.min(distance / 180, 1);
+
+  setDragProgress(progress);
+
+  if (progress >= 0.9) {
+    setIsLoginRevealed(true);
+    setIsDragging(false);
+  }
+};
+
+const handleDragEnd = () => {
+  if (!isLoginRevealed) {
+    setDragProgress(0);
+  }
+
+  setIsDragging(false);
+};
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -40,7 +72,41 @@ export default function Login() {
     }
   };
 
-  return (
+return (
+    <>
+      {!isLoginRevealed && (
+        <div
+          className="fixed inset-0 z-[100] bg-[#050505] flex items-center justify-center select-none"
+          style={{ touchAction: 'none' }}
+          onPointerMove={handleDragMove}
+          onPointerUp={handleDragEnd}
+          onPointerCancel={handleDragEnd}
+        >
+          <div
+            className="flex flex-col items-center"
+            onPointerDown={handleDragStart}
+            style={{
+              cursor: isDragging ? 'grabbing' : 'grab',
+              transform: `translateX(${dragProgress * 180}px)`,
+              transition: isDragging ? 'none' : 'transform 0.35s ease'
+            }}
+          >
+            <div
+              className="text-white text-7xl leading-none"
+              style={{
+                filter: `drop-shadow(0 0 ${15 + dragProgress * 25}px rgba(255,255,255,0.85))`
+              }}
+            >
+              ☾
+            </div>
+
+            <div className="mt-6 text-white/40 text-xs font-medium tracking-widest">
+              اسحب الهلال للفتح
+            </div>
+          </div>
+        </div>
+      )}
+
     // نفس التصميم اللي اتفقنا عليه بالظبط
     <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-8 relative font-sans selection:bg-[#c70000] selection:text-white" dir="rtl">
       
@@ -114,5 +180,6 @@ export default function Login() {
         </div>
       </div>
     </div>
+    </>
   );
 }
