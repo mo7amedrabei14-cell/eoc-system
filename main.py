@@ -27,6 +27,11 @@ security = HTTPBearer()
 
 CLEAR_ALL_CONFIRMATION_CODE = "301014"
 
+
+class ClearAllRequest(BaseModel):
+    confirmation_code: str
+
+
 def require_owner_for_clear(user_id: int):
     role = get_user_role(user_id)
 
@@ -43,11 +48,6 @@ def validate_clear_confirmation(data: ClearAllRequest):
             status_code=400,
             detail="رمز التأكيد غير صحيح. لم يتم حذف أي بيانات."
         )
-
-
-class ClearAllRequest(BaseModel):
-    confirmation_code: str
-
 app = FastAPI(title="EOC System", version="1.0.0")
 
 app.add_middleware(
