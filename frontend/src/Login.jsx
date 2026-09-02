@@ -85,37 +85,26 @@ useEffect(() => {
       const response = await fetch('https://eoc-system-b12f.vercel.app/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-  username: username.trim(),
-  password,
-}),
-
+        body: new URLSearchParams({ username, password }),
       });
-            const data = await response.json().catch(() => ({}));
-
-      if (response.ok && data.access_token) {
+      const data = await response.json();
+      if (response.ok) {
         localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('user', JSON.stringify(data.user)); // 👈 السطر ده ضفناه عشان نحفظ بياناتك
         navigate('/dashboard');
-      } else if (response.status === 401 || response.status === 400) {
-        setErrorMsg(
-          language === 'ar'
-            ? 'اسم المستخدم أو كلمة المرور غير صحيحة'
-            : 'Incorrect username or password'
-        );
       } else {
         setErrorMsg(
-          language === 'ar'
-            ? 'الخادم غير متاح حاليًا، حاول مرة أخرى'
-            : 'The server is currently unavailable. Please try again.'
-        );
+  language === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid login credentials'
+);
+
       }
     } catch (err) {
       setErrorMsg(
-        language === 'ar'
-          ? 'تعذر الاتصال بالخادم المركزي'
-          : 'Unable to connect to the central server'
-      );
+  language === 'ar'
+    ? 'تعذر الاتصال بالخادم المركزي'
+    : 'Unable to connect to the central server'
+);
+
     } finally {
       setIsLoading(false);
     }
@@ -304,12 +293,7 @@ useEffect(() => {
 </label>
 
               <div className="relative">
-                <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none"
-autoCorrect="off"
-spellCheck={false}
-inputMode="text"
- className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#c70000] focus:ring-1 focus:ring-[#c70000] transition-all duration-300" placeholder={language === 'ar' ? 'أدخل البيانات هنا' : 'Enter your credentials here'} autoComplete="new-password" />
-                
+                <input type="text" required value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-5 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#c70000] focus:ring-1 focus:ring-[#c70000] transition-all duration-300" placeholder={language === 'ar' ? 'أدخل البيانات هنا' : 'Enter your credentials here'} autoComplete="new-password" />
               </div>
             </div>
             <div className="space-y-2 group">

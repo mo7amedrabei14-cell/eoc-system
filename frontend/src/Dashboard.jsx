@@ -1130,8 +1130,8 @@ useEffect(() => {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
       )}
 
-      <aside className={`bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 h-screen z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
-        <div className="overflow-y-auto custom-scrollbar flex-1">
+      <aside className={`bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isSidebarOpen ? (
             <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300">
               <div className="absolute top-0 right-0 w-full h-1/2 bg-[#c70000]/10 blur-2xl"></div>
