@@ -1568,6 +1568,57 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [formNeedsAttention, setFormNeedsAttention] = useState(false);
+  const formRef = useRef(null);
+
+  // تنبيت أنماط النبض مرة واحدة
+  useEffect(() => {
+    const styleId = 'pulse-animation-style';
+    let styleElement = document.getElementById(styleId);
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      styleElement.textContent = `
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(199, 0, 0, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(199, 0, 0, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(199, 0, 0, 0); }
+        }
+        .form-pulse {
+          animation: pulse 2s infinite;
+        }
+      `;
+      document.head.appendChild(styleElement);
+    }
+    // We leave the style element in the document for the lifetime of the page
+  }, []);
+
+  // حاسة الانتباه للنموذج (إضاءة خفيفة عند الحاجة للمراجعة)
+  useEffect(() => {
+    let timeoutId = null;
+    const resetFormNeedsAttention = () => {
+      setFormNeedsAttention(false);
+    };
+
+    if (formNeedsAttention) {
+      timeoutId = setTimeout(resetFormNeedsAttention, 5000); // 5 seconds
+
+      const handleClick = resetFormNeedsAttention;
+      const handleKeyPress = resetFormNeedsAttention;
+      const formElement = formRef.current;
+      if (formElement) {
+        formElement.addEventListener('click', handleClick);
+        formElement.addEventListener('keypress', handleKeyPress);
+      }
+      return () => {
+        if (formElement) {
+          formElement.removeEventListener('click', handleClick);
+          formElement.removeEventListener('keypress', handleKeyPress);
+        }
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+    }
+  }, [formNeedsAttention]);
 
   // 1. الدالة السحرية بأمان تام (لمنع أي شاشة بيضاء)
   const normalizeName = (name) => {
@@ -1637,6 +1688,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       if (res.ok) {
         const data = await res.json();
         setCurrentMissionData(data);
+        setFormNeedsAttention(true);
       } else {
         const err = await res.json();
         console.error("فشل جلب تفاصيل المهمة:", err.detail);
@@ -1983,6 +2035,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          setIsModalOpen(false);
          const data = await res.json();
          setCurrentMissionData(data);
+         setFormNeedsAttention(true);
          fetchMissions();
          setCustomAlert("✅ تم الحفظ بنجاح وتحديث الحالة.");
        } else {
@@ -2267,8 +2320,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </div>
               <button onClick={() => setIsModalOpen(false)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white p-2 rounded-xl border border-white/5"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+
+            <div ref={formRef} className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${formNeedsAttention ? 'form-pulse' : ''}`}>
               
               <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6 shadow-lg flex flex-col md:flex-row items-end gap-4">
                 <div className="flex-1 w-full">
@@ -2559,7 +2612,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">
   {isSubmitting ? "جاري الإرسال..." : "إنهاء وإغلاق المهمة"}
 </button>
-                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">إلغاء الإغلاق (إعادة فتح)</button>}
+                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">
+  {isSubmitting ? "جاري الإرسال..." : "إلغاء الإغلاق (إعادة فتح)"}
+</button>}
                 </>
               ) : (
                 /* 👷 باقي الرتب */
@@ -2583,7 +2638,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">
                         {isSubmitting ? "جاري الإرسال..." : "تم مراجعة المهمة (مستمرة)"}
                       </button>
-                      <button onClick={() => handleSubmit('Completed')} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">إنهاء وإغلاق المهمة</button>
+                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">
+                        {isSubmitting ? "جاري الإرسال..." : "إنهاء وإغلاق المهمة"}
+                      </button>
                     </>
                   )}
                   
