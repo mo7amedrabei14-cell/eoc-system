@@ -2134,7 +2134,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {isTableExpanded && <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
       
-      <div className={isTableExpanded ? "fixed top-2 bottom-2 left-2 right-2 md:top-4 md:bottom-4 md:left-4 md:right-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up w-auto max-w-none" : "flex-1 flex flex-col overflow-hidden relative"}>
+      <div className={isTableExpanded ? "fixed inset-0 z-[9999] bg-[#0c0c0c] border-0 rounded-none shadow-2xl flex flex-col overflow-hidden animate-fade-in-up w-screen h-screen" : "flex-1 flex flex-col overflow-hidden relative"}>
         
         {isTableExpanded && (
           <div className="p-4 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0">
@@ -4724,7 +4724,8 @@ function DangerConfirmModal({
                 }
               }}
               placeholder="رمز التأكيد"
-              autoComplete="off"
+              autoComplete="new-password"
+name="clear_all_confirmation"
               className="w-full bg-[#111] border border-white/10 focus:border-[#c70000]/50 rounded-xl px-4 py-3 text-white text-center tracking-[0.35em] outline-none transition-colors"
             />
           </div>
