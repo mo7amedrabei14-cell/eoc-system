@@ -330,7 +330,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
             
-            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "مشرف", "جوكر"]:
+            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"]:
                 query = base_query + " ORDER BY m.created_at DESC;"
                 cursor.execute(query)
             else:
@@ -818,7 +818,7 @@ def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)
                 FROM local_news n 
                 LEFT JOIN branches b ON n.branch_id = b.branch_id
             """
-            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "مشرف", "جوكر", "المالك"]:
+            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"]:
                 query = base_query + " ORDER BY n.created_at DESC;"
                 cursor.execute(query)
             else:
