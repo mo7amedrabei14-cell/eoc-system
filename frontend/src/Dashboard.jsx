@@ -111,8 +111,10 @@ const ENGLISH_UI = {
   'إصحاح بيئي': 'WASH',
   'تأكيد الحذف': 'Confirm deletion',
   'هل أنت متأكد من حذف هذه المهمة نهائياً؟': 'Are you sure you want to permanently delete this mission?',
+  'سيتم حذف جميع أخبار ورصد الذكاء الاصطناعي نهائياً. هذا الإجراء لا يمكن التراجع عنه.': 'All AI-monitored news will be permanently deleted. This action cannot be undone.',
   'إلغاء': 'Cancel',
   'نعم، احذف': 'Yes, delete',
+  'نعم، احذف الكل': 'Yes, delete all',
   'سجل متابعة المهام': 'Mission tracking register',
   'حساب إداري | الصلاحية: كل الأقاليم': 'Administrative account | access: all regions',
   'كل المهام': 'All missions',
@@ -4103,6 +4105,7 @@ function AINewsMonitorView({ branches, isOwner }) {
   const [isScanning, setIsScanning] = useState(false);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   const [form, setForm] = useState({
     id: null, incident_date: getLocalDate(), incident_description: '', news_type: '', news_publisher: '',
@@ -4249,53 +4252,47 @@ const totalAiCountries = new Set(
     return null;
   };
 
-  const handleClearAllAINews = async () => {
-  if (!isOwner) return;
+  const handleClearAllAINews = () => {
+    if (!isOwner) return;
+    setShowClearAllConfirm(true);
+  };
 
-  const confirmation = window.prompt(
-    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع أخبار ورصد الذكاء الاصطناعي نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
-  );
+  const confirmClearAllAINews = async () => {
+    setShowClearAllConfirm(false);
 
-  if (confirmation === null) return;
+    try {
+      const token = localStorage.getItem("access_token");
 
-  if (confirmation !== "301014") {
-    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
-    return;
-  }
+      const res = await fetch(
+        "https://eoc-system-b12f.vercel.app/api/ai-news/clear-all",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            confirmation_code: "301014"
+          })
+        }
+      );
 
-  try {
-    const token = localStorage.getItem("access_token");
+      const data = await res.json();
 
-    const res = await fetch(
-      "https://eoc-system-b12f.vercel.app/api/ai-news/clear-all",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          confirmation_code: confirmation
-        })
+      if (!res.ok) {
+        setCustomAlert(data.detail || "فشل مسح أخبار الذكاء الاصطناعي.");
+        return;
       }
-    );
 
-    const data = await res.json();
+      setCustomAlert(
+        `تم مسح جميع أخبار الذكاء الاصطناعي بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
+      );
 
-    if (!res.ok) {
-      setCustomAlert(data.detail || "فشل مسح أخبار الذكاء الاصطناعي.");
-      return;
+    } catch (error) {
+      console.error(error);
+      setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
-
-    setCustomAlert(
-      `تم مسح جميع أخبار الذكاء الاصطناعي بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
-    );
-
-  } catch (error) {
-    console.error(error);
-    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
-  }
-};
+  };
 
   return (
     <div className="space-y-6 pb-10">
@@ -4568,6 +4565,22 @@ const totalAiCountries = new Set(
           </div>
         </div>
       )}
+
+      {/* 👇 تأكيد حذف كل أخبار الذكاء الاصطناعي (تصميم موحّد مع باقي شاشات التأكيد) 👇 */}
+      {showClearAllConfirm && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+          <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+            <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
+            <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
+            <p className="text-gray-400 text-sm mb-8 leading-relaxed">سيتم حذف جميع أخبار ورصد الذكاء الاصطناعي نهائياً. هذا الإجراء لا يمكن التراجع عنه.</p>
+            <div className="flex gap-4 w-full">
+              <button onClick={() => setShowClearAllConfirm(false)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
+              <button onClick={confirmClearAllAINews} className="flex-1 bg-[#c70000] hover:bg-[#a50000] text-white px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">نعم، احذف الكل</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 👆 نهاية تأكيد حذف كل أخبار الذكاء الاصطناعي 👆 */}
 
       {/* 👇 شاشة التنبيهات عشان الزرار يرد عليك 👇 */}
       {customAlert && (
