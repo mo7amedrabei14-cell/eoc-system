@@ -2078,13 +2078,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
         {/* 💡 التعديل هنا: الزراير في الموبايل هتتوزع وتاخد عرض مناسب عشان متتزنقش */}
         <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-4 md:mt-0 shrink-0 w-full md:w-auto">
-          <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-4 md:mt-0 shrink-0 w-full md:w-auto">
 
   <button
     onClick={() => setIsTableExpanded(true)}
     className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap"
   >
-    <EyeIcon className="w-5 h-5" /> السجل
+    <EyeIcon className="w-5 h-5" />
+    السجل
   </button>
 
   {isOwner && (
@@ -2101,7 +2101,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       onClick={handleExportTableExcel}
       className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"
     >
-      <ExcelIcon /> تصدير
+      <ExcelIcon />
+      تصدير
     </button>
   )}
 
@@ -2113,9 +2114,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   </button>
 
 </div>
-          {isOwner && <button onClick={handleExportTableExcel} className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"><ExcelIcon /> تصدير</button>}
-          <button onClick={handleCreateNew} className="w-full md:w-auto justify-center bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(199,0,0,0.3)] whitespace-nowrap">+ إنشاء مهمة</button>
-        </div>
       </div>
 
       <div className="mt-4 bg-[#111] border border-white/10 rounded-2xl p-2 flex items-center gap-3 w-full shadow-inner focus-within:border-[#c70000]/50 transition-colors">
@@ -2136,7 +2134,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {isTableExpanded && <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
       
-      <div className={isTableExpanded ? "fixed top-2 bottom-2 left-2 right-2 md:top-4 md:bottom-4 md:left-4 md:right-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" : "flex-1 flex flex-col overflow-hidden relative"}>
+      <div className={isTableExpanded ? "fixed top-2 bottom-2 left-2 right-2 md:top-4 md:bottom-4 md:left-4 md:right-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up w-auto max-w-none" : "flex-1 flex flex-col overflow-hidden relative"}>
         
         {isTableExpanded && (
           <div className="p-4 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0">
