@@ -596,7 +596,7 @@ def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizati
     if not user_id: raise HTTPException(status_code=401)
     
     role = get_user_role(user_id)
-    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
+    if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
         raise HTTPException(status_code=403, detail="هذه الصفحة متاحة للمالك فقط")
 
     connection = get_connection()
@@ -1386,7 +1386,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
     if not user_id: raise HTTPException(status_code=401)
     
     role = get_user_role(user_id)
-    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
+    if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
         raise HTTPException(status_code=403, detail="عفواً، هذه الصفحة متاحة للمالك فقط")
 
     connection = get_connection()
