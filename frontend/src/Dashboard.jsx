@@ -2151,7 +2151,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {isTableExpanded && <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
       
-      <div className={isTableExpanded ? `fixed inset-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-80 md:left-4' : 'md:right-4 md:left-4'}` : "flex-1 flex flex-col overflow-hidden relative"}>
+      <div className={isTableExpanded ? `fixed inset-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-80 md:left-4' : 'md:right-20 md:left-4'}` : "flex-1 flex flex-col overflow-hidden relative"}>
         
         {isTableExpanded && (
           <div className="p-4 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0">
