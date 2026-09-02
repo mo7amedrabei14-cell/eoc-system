@@ -24,6 +24,10 @@ const ENGLISH_UI = {
   'سجل النظام': 'System log',
   'إنهاء الجلسة الآمنة': 'End secure session',
   'خروج': 'Log out',
+  'سيتم حذف جميع بيانات المهام نهائياً. هذا الإجراء لا يمكن التراجع عنه.': 'All mission data will be permanently deleted. This action cannot be undone.',
+  'سيتم حذف جميع الأخبار المحلية نهائياً. هذا الإجراء لا يمكن التراجع عنه.': 'All local news will be permanently deleted. This action cannot be undone.',
+  'سيتم حذف جميع الكوارث العالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه.': 'All global disasters will be permanently deleted. This action cannot be undone.',
+  'سيتم حذف جميع سجلات الزلازل المصرية والعالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه.': 'All Egyptian and global earthquake records will be permanently deleted. This action cannot be undone.',
   'موجز عمليات اليوم': 'Today’s operations brief',
   'إدارة المهام الميدانية': 'Field mission management',
   'الانتشار الجغرافي والمخزون': 'Geographic coverage & inventory',
@@ -1524,6 +1528,7 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner }) {
   const [customAlert, setCustomAlert] = useState(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [currentMissionData, setCurrentMissionData] = useState(null);
@@ -1689,56 +1694,39 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
     } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
   };
 
-  const handleClearAllMissions = async () => {
-  if (!isOwner) return;
+  const handleClearAllMissions = () => {
+    if (!isOwner) return;
+    setShowClearAllConfirm(true);
+  };
 
-  const confirmation = window.prompt(
-    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع بيانات المهام نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
-  );
+  const confirmClearAllMissions = async () => {
+    setShowClearAllConfirm(false);
 
-  if (confirmation === null) return;
-
-  if (confirmation !== "301014") {
-    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem("access_token");
-
-    const res = await fetch(
-      "https://eoc-system-b12f.vercel.app/api/missions/clear-all",
-      {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("https://eoc-system-b12f.vercel.app/api/missions/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          confirmation_code: confirmation
-        })
+        body: JSON.stringify({ confirmation_code: "301014" })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCustomAlert(data.detail || "فشل تنفيذ عملية المسح.");
+        return;
       }
-    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      setCustomAlert(data.detail || "فشل مسح جميع المهام.");
-      return;
+      setCustomAlert(`تم مسح جميع المهام بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
+      fetchMissions();
+    } catch (error) {
+      console.error(error);
+      setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
-
-    setCustomAlert(
-      `تم مسح جميع المهام بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
-    );
-
-    fetchMissions();
-
-  } catch (error) {
-    console.error(error);
-    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
-  }
-};
-
+  };
   const handleExportTableExcel = () => {
     if (missionsList.length === 0) return alert("لا توجد مهام لتصديرها.");
     const missionsSheet = missionsList.map(m => ({
@@ -2574,6 +2562,14 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
             </div>
         </div>
       )}
+      <DangerConfirmModal
+        show={showClearAllConfirm}
+        title="تأكيد الحذف"
+        message="سيتم حذف جميع بيانات المهام نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+        onCancel={() => setShowClearAllConfirm(false)}
+        onConfirm={confirmClearAllMissions}
+      />
+
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
@@ -2794,6 +2790,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const [filterGov, setFilterGov] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [customAlert, setCustomAlert] = useState(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   const [nd, setNd] = useState({
     news_id: null, incident_date: '', incident_description: '', news_type: '', news_publisher: '', street_name: '', area_name: '', governorate: 'القاهرة',
@@ -2911,57 +2908,39 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
     if (res.ok) { setIsModalOpen(false); fetchNews(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
   };
-const handleClearAllLocalNews = async () => {
-  if (!isOwner) return;
+  const handleClearAllLocalNews = () => {
+    if (!isOwner) return;
+    setShowClearAllConfirm(true);
+  };
 
-  const confirmation = window.prompt(
-    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع الأخبار المحلية نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
-  );
+  const confirmClearAllLocalNews = async () => {
+    setShowClearAllConfirm(false);
 
-  if (confirmation === null) return;
-
-  if (confirmation !== "301014") {
-    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem("access_token");
-
-    const res = await fetch(
-      "https://eoc-system-b12f.vercel.app/api/local-news/clear-all",
-      {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("https://eoc-system-b12f.vercel.app/api/local-news/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          confirmation_code: confirmation
-        })
+        body: JSON.stringify({ confirmation_code: "301014" })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCustomAlert(data.detail || "فشل تنفيذ عملية المسح.");
+        return;
       }
-    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      setCustomAlert(data.detail || "فشل مسح الأخبار المحلية.");
-      return;
+      setCustomAlert(`تم مسح جميع الأخبار المحلية بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
+      fetchNews();
+    } catch (error) {
+      console.error(error);
+      setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
-
-    setCustomAlert(
-      `تم مسح جميع الأخبار المحلية بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
-    );
-
-    fetchNews();
-
-  } catch (error) {
-    console.error(error);
-    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
-  }
-};
-
-
+  };
   const handleExportExcel = () => {
     if (newsList.length === 0) return setCustomAlert("لا توجد أخبار للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredNews.map(n => ({
@@ -3251,6 +3230,14 @@ useEffect(() => {
       )}
 
       {/* -- تصميم التنبيه الإداري الفخم -- */}
+      <DangerConfirmModal
+        show={showClearAllConfirm}
+        title="تأكيد الحذف"
+        message="سيتم حذف جميع الأخبار المحلية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+        onCancel={() => setShowClearAllConfirm(false)}
+        onConfirm={confirmClearAllLocalNews}
+      />
+
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
@@ -3285,6 +3272,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [disasterToDelete, setDisasterToDelete] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [filterDate, setFilterDate] = useState(getLocalDate()); // 💡 فتحت بتاريخ اليوم افتراضياً
 
   // 💡 3. القوائم
@@ -3396,55 +3384,39 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const totalDeaths = filteredDisasters.reduce((sum, d) => sum + (parseInt(d.deaths_count) || 0), 0);
   const totalInjuries = filteredDisasters.reduce((sum, d) => sum + (parseInt(d.injured_count) || 0), 0);
 
-  const handleClearAllGlobalDisasters = async () => {
-  if (!isOwner) return;
+  const handleClearAllGlobalDisasters = () => {
+    if (!isOwner) return;
+    setShowClearAllConfirm(true);
+  };
 
-  const confirmation = window.prompt(
-    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع الكوارث العالمية نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
-  );
+  const confirmClearAllGlobalDisasters = async () => {
+    setShowClearAllConfirm(false);
 
-  if (confirmation === null) return;
-
-  if (confirmation !== "301014") {
-    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem("access_token");
-
-    const res = await fetch(
-      "https://eoc-system-b12f.vercel.app/api/global-disasters/clear-all",
-      {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("https://eoc-system-b12f.vercel.app/api/global-disasters/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          confirmation_code: confirmation
-        })
+        body: JSON.stringify({ confirmation_code: "301014" })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCustomAlert(data.detail || "فشل تنفيذ عملية المسح.");
+        return;
       }
-    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      setCustomAlert(data.detail || "فشل مسح الكوارث العالمية.");
-      return;
+      setCustomAlert(`تم مسح جميع الكوارث العالمية بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
+      fetchDisasters();
+    } catch (error) {
+      console.error(error);
+      setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
-
-    setCustomAlert(
-      `تم مسح جميع الكوارث العالمية بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
-    );
-
-    fetchDisasters();
-
-  } catch (error) {
-    console.error(error);
-    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
-  }
-};
+  };
 
   return (
     <div className="space-y-6 pb-10">
@@ -3607,6 +3579,14 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
         </div>
       )}
 
+      <DangerConfirmModal
+        show={showClearAllConfirm}
+        title="تأكيد الحذف"
+        message="سيتم حذف جميع الكوارث العالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+        onCancel={() => setShowClearAllConfirm(false)}
+        onConfirm={confirmClearAllGlobalDisasters}
+      />
+
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
@@ -3627,6 +3607,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const [egyptEqs, setEgyptEqs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
@@ -3718,57 +3699,39 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     reader.readAsText(file);
   };
 
-  const handleClearAllEarthquakes = async () => {
-  if (!isOwner) return;
+  const handleClearAllEarthquakes = () => {
+    if (!isOwner) return;
+    setShowClearAllConfirm(true);
+  };
 
-  const confirmation = window.prompt(
-    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع سجلات الزلازل المصرية والعالمية نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
-  );
+  const confirmClearAllEarthquakes = async () => {
+    setShowClearAllConfirm(false);
 
-  if (confirmation === null) return;
-
-  if (confirmation !== "301014") {
-    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem("access_token");
-
-    const res = await fetch(
-      "https://eoc-system-b12f.vercel.app/api/earthquakes/clear-all",
-      {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("https://eoc-system-b12f.vercel.app/api/earthquakes/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          confirmation_code: confirmation
-        })
+        body: JSON.stringify({ confirmation_code: "301014" })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCustomAlert(data.detail || "فشل تنفيذ عملية المسح.");
+        return;
       }
-    );
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      setCustomAlert(data.detail || "فشل مسح سجلات الزلازل.");
-      return;
+      setCustomAlert(`تم مسح جميع سجلات الزلازل بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
+      fetchEarthquakes();
+    } catch (error) {
+      console.error(error);
+      setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
-
-    setCustomAlert(
-      `تم مسح جميع سجلات الزلازل بنجاح.\nإجمالي السجلات المحذوفة: ${data.deleted_count}`
-    );
-
-    fetchEarthquakes();
-
-  } catch (error) {
-    console.error(error);
-    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
-  }
-};
-
-  // 💡 التحديث والإضافة
+  };
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
@@ -4058,6 +4021,14 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         </div>
       )}
 
+      <DangerConfirmModal
+        show={showClearAllConfirm}
+        title="تأكيد الحذف"
+        message="سيتم حذف جميع سجلات الزلازل المصرية والعالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+        onCancel={() => setShowClearAllConfirm(false)}
+        onConfirm={confirmClearAllEarthquakes}
+      />
+
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] text-center">
@@ -4106,6 +4077,7 @@ function AINewsMonitorView({ branches, isOwner }) {
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [aiNewsToDelete, setAiNewsToDelete] = useState(null);
 
   const [form, setForm] = useState({
     id: null, incident_date: getLocalDate(), incident_description: '', news_type: '', news_publisher: '',
@@ -4168,14 +4140,29 @@ function AINewsMonitorView({ branches, isOwner }) {
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "سجل الرصد الآلي"); XLSX.writeFile(wb, `سجل_الذكاء_الاصطناعي.xlsx`);
   };
 
-  const handleDeleteAiNews = async (id) => {
+  const handleDeleteAiNews = (id) => {
     if (!isOwner) return setCustomAlert("عفواً، المالك فقط يمكنه الحذف.");
-    if (!window.confirm("هل أنت متأكد من حذف هذا السجل نهائياً؟")) return;
+    setAiNewsToDelete(id);
+  };
+
+  const confirmDeleteAiNews = async () => {
+    if (!aiNewsToDelete) return;
+    const id = aiNewsToDelete;
+    setAiNewsToDelete(null);
+
     try {
       const token = localStorage.getItem('access_token');
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) { setCustomAlert("تم الحذف بنجاح!"); setAiNewsList(prev => prev.filter(item => item.id !== id)); } 
-    } catch (err) { setCustomAlert("فشل الاتصال بالسيرفر."); }
+      if (res.ok) {
+        setCustomAlert("تم الحذف بنجاح!");
+        setAiNewsList(prev => prev.filter(item => item.id !== id));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setCustomAlert(data.detail || "فشل حذف السجل.");
+      }
+    } catch (err) {
+      setCustomAlert("فشل الاتصال بالسيرفر.");
+    }
   };
 
   // 💡 الدالة السحرية للتشغيل اليدوي (تم تأمينها عبر السيرفر)
@@ -4566,6 +4553,15 @@ const totalAiCountries = new Set(
         </div>
       )}
 
+      <DangerConfirmModal
+        show={aiNewsToDelete !== null}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذا السجل نهائياً؟"
+        confirmLabel="نعم، احذف"
+        onCancel={() => setAiNewsToDelete(null)}
+        onConfirm={confirmDeleteAiNews}
+      />
+
       {/* 👇 تأكيد حذف كل أخبار الذكاء الاصطناعي (تصميم موحّد مع باقي شاشات التأكيد) 👇 */}
       {showClearAllConfirm && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
@@ -4600,6 +4596,25 @@ const totalAiCountries = new Set(
         </div>
       )}
       {/* 👆 نهاية شاشة التنبيهات 👆 */}
+    </div>
+  );
+}
+
+// 💡 نافذة تأكيد موحّدة لعمليات الحذف
+function DangerConfirmModal({ show, title = 'تأكيد الحذف', message, onCancel, onConfirm, confirmLabel = 'نعم، احذف الكل' }) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+      <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+        <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <p className="text-gray-400 text-sm mb-8 leading-relaxed">{message}</p>
+        <div className="flex gap-4 w-full">
+          <button onClick={onCancel} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
+          <button onClick={onConfirm} className="flex-1 bg-[#c70000] hover:bg-[#a50000] text-white px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] transition-colors">{confirmLabel}</button>
+        </div>
+      </div>
     </div>
   );
 }
