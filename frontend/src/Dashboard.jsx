@@ -2210,7 +2210,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
   <div className="flex justify-center gap-2">
     <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
-    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
+    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="relative z-[200] p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
   </div>
 </td>
               </tr>
