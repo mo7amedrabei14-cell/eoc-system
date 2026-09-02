@@ -1687,6 +1687,56 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
     } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
   };
 
+  const handleClearAllMissions = async () => {
+  if (!isOwner) return;
+
+  const confirmation = window.prompt(
+    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع بيانات المهام نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
+  );
+
+  if (confirmation === null) return;
+
+  if (confirmation !== "301014") {
+    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const res = await fetch(
+      "https://eoc-system-b12f.vercel.app/api/missions/clear-all",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          confirmation_code: confirmation
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setCustomAlert(data.detail || "فشل مسح جميع المهام.");
+      return;
+    }
+
+    setCustomAlert(
+      `تم مسح جميع المهام بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
+    );
+
+    fetchMissions();
+
+  } catch (error) {
+    console.error(error);
+    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
+  }
+};
+
   const handleExportTableExcel = () => {
     if (missionsList.length === 0) return alert("لا توجد مهام لتصديرها.");
     const missionsSheet = missionsList.map(m => ({
@@ -2033,6 +2083,15 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
         <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-4 md:mt-0 shrink-0 w-full md:w-auto">
           <button onClick={() => setIsTableExpanded(true)} className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap">
             <EyeIcon className="w-5 h-5" /> السجل
+
+            {isOwner && (
+  <button
+    onClick={handleClearAllMissions}
+    className="flex-1 md:flex-none justify-center bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all"
+  >
+    🗑️ مسح الكل
+  </button>
+)}
           </button>
           {isOwner && <button onClick={handleExportTableExcel} className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"><ExcelIcon /> تصدير</button>}
           <button onClick={handleCreateNew} className="w-full md:w-auto justify-center bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(199,0,0,0.3)] whitespace-nowrap">+ إنشاء مهمة</button>
@@ -2850,6 +2909,56 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
     const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
     if (res.ok) { setIsModalOpen(false); fetchNews(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
   };
+const handleClearAllLocalNews = async () => {
+  if (!isOwner) return;
+
+  const confirmation = window.prompt(
+    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع الأخبار المحلية نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
+  );
+
+  if (confirmation === null) return;
+
+  if (confirmation !== "301014") {
+    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const res = await fetch(
+      "https://eoc-system-b12f.vercel.app/api/local-news/clear-all",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          confirmation_code: confirmation
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setCustomAlert(data.detail || "فشل مسح الأخبار المحلية.");
+      return;
+    }
+
+    setCustomAlert(
+      `تم مسح جميع الأخبار المحلية بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
+    );
+
+    fetchNews();
+
+  } catch (error) {
+    console.error(error);
+    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
+  }
+};
+
 
   const handleExportExcel = () => {
     if (newsList.length === 0) return setCustomAlert("لا توجد أخبار للتصدير حالياً.");
@@ -2964,6 +3073,15 @@ useEffect(() => {
               </div>
             </div>
           </div>
+
+          {isOwner && (
+  <button
+    onClick={handleClearAllLocalNews}
+    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 transition-all"
+  >
+    🗑️ مسح الكل
+  </button>
+)}
           
           <div className="flex gap-3">
             {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0"><ExcelIcon /> تصدير السجل</button>}
@@ -3276,6 +3394,56 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const totalDeaths = filteredDisasters.reduce((sum, d) => sum + (parseInt(d.deaths_count) || 0), 0);
   const totalInjuries = filteredDisasters.reduce((sum, d) => sum + (parseInt(d.injured_count) || 0), 0);
 
+  const handleClearAllGlobalDisasters = async () => {
+  if (!isOwner) return;
+
+  const confirmation = window.prompt(
+    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع الكوارث العالمية نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
+  );
+
+  if (confirmation === null) return;
+
+  if (confirmation !== "301014") {
+    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const res = await fetch(
+      "https://eoc-system-b12f.vercel.app/api/global-disasters/clear-all",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          confirmation_code: confirmation
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setCustomAlert(data.detail || "فشل مسح الكوارث العالمية.");
+      return;
+    }
+
+    setCustomAlert(
+      `تم مسح جميع الكوارث العالمية بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
+    );
+
+    fetchDisasters();
+
+  } catch (error) {
+    console.error(error);
+    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
+  }
+};
+
   return (
     <div className="space-y-6 pb-10">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
@@ -3297,6 +3465,15 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">إلغاء التاريخ</button>}
             </div>
           </div>
+
+          {isOwner && (
+  <button
+    onClick={handleClearAllGlobalDisasters}
+    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 transition-all"
+  >
+    🗑️ مسح الكل
+  </button>
+)}
 
           <div className="flex gap-3 shrink-0">
             {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon /> تحميل السجل الشامل للكوارث</button>}
@@ -3539,6 +3716,56 @@ function EarthquakesView({ isOwner, isSupervisor }) {
     reader.readAsText(file);
   };
 
+  const handleClearAllEarthquakes = async () => {
+  if (!isOwner) return;
+
+  const confirmation = window.prompt(
+    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع سجلات الزلازل المصرية والعالمية نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
+  );
+
+  if (confirmation === null) return;
+
+  if (confirmation !== "301014") {
+    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const res = await fetch(
+      "https://eoc-system-b12f.vercel.app/api/earthquakes/clear-all",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          confirmation_code: confirmation
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setCustomAlert(data.detail || "فشل مسح سجلات الزلازل.");
+      return;
+    }
+
+    setCustomAlert(
+      `تم مسح جميع سجلات الزلازل بنجاح.\nإجمالي السجلات المحذوفة: ${data.deleted_count}`
+    );
+
+    fetchEarthquakes();
+
+  } catch (error) {
+    console.error(error);
+    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
+  }
+};
+
   // 💡 التحديث والإضافة
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
@@ -3613,6 +3840,15 @@ function EarthquakesView({ isOwner, isSupervisor }) {
         <StatCard title="زلازل مصر المرصودة" value={filteredEgyptEqs.length} color="text-green-500" />
         <StatCard title="أقوى هزة / زلزال" value={maxMagnitude > 0 ? `${maxMagnitude} ريختر` : '-'} color="text-yellow-500" />
       </div>
+
+      {isOwner && (
+  <button
+    onClick={handleClearAllEarthquakes}
+    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
+  >
+    🗑️ مسح الكل
+  </button>
+)}
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-4 md:p-6 shadow-lg relative z-0 h-auto md:h-[500px]">
         {/* 💡 الفلاتر فوق الخريطة */}
@@ -4013,6 +4249,54 @@ const totalAiCountries = new Set(
     return null;
   };
 
+  const handleClearAllAINews = async () => {
+  if (!isOwner) return;
+
+  const confirmation = window.prompt(
+    "⚠️ تحذير شديد الخطورة\n\nسيتم حذف جميع أخبار ورصد الذكاء الاصطناعي نهائياً.\n\nاكتب رمز التأكيد 301014 للمتابعة:"
+  );
+
+  if (confirmation === null) return;
+
+  if (confirmation !== "301014") {
+    setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("access_token");
+
+    const res = await fetch(
+      "https://eoc-system-b12f.vercel.app/api/ai-news/clear-all",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          confirmation_code: confirmation
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setCustomAlert(data.detail || "فشل مسح أخبار الذكاء الاصطناعي.");
+      return;
+    }
+
+    setCustomAlert(
+      `تم مسح جميع أخبار الذكاء الاصطناعي بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
+    );
+
+  } catch (error) {
+    console.error(error);
+    setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
+  }
+};
+
   return (
     <div className="space-y-6 pb-10">
       
@@ -4175,6 +4459,13 @@ const totalAiCountries = new Set(
             )}
           </div>
         </div>
+
+        <button
+  onClick={handleClearAllAINews}
+  className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
+>
+  🗑️ مسح الكل
+</button>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap text-sm">

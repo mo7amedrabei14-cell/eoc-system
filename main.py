@@ -25,6 +25,29 @@ from auth import (
 
 security = HTTPBearer()
 
+CLEAR_ALL_CONFIRMATION_CODE = "301014"
+
+def require_owner_for_clear(user_id: int):
+    role = get_user_role(user_id)
+
+    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
+        raise HTTPException(
+            status_code=403,
+            detail="هذه العملية متاحة للمالك فقط"
+        )
+
+
+def validate_clear_confirmation(data: ClearAllRequest):
+    if data.confirmation_code != CLEAR_ALL_CONFIRMATION_CODE:
+        raise HTTPException(
+            status_code=400,
+            detail="رمز التأكيد غير صحيح. لم يتم حذف أي بيانات."
+        )
+
+
+class ClearAllRequest(BaseModel):
+    confirmation_code: str
+
 app = FastAPI(title="EOC System", version="1.0.0")
 
 app.add_middleware(
@@ -560,6 +583,68 @@ def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentia
     finally:
         connection.close()
 
+@app.post("/api/missions/clear-all")
+def clear_all_missions(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) FROM missions")
+            deleted_count = cursor.fetchone()[0]
+
+            # حذف تفاصيل جميع المهام أولاً
+            cursor.execute("DELETE FROM mission_itineraries")
+            cursor.execute("DELETE FROM mission_vehicles")
+            cursor.execute("DELETE FROM mission_participants")
+            cursor.execute("DELETE FROM mission_beneficiaries")
+            cursor.execute("DELETE FROM mission_eoc_staff")
+
+            # حذف المهام نفسها
+            cursor.execute("DELETE FROM missions")
+
+            # تسجيل عملية المسح في الـ Audit Log
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح جميع المهام",
+                mission_id=None,
+                entity_type="missions",
+                entity_id=None,
+                details={
+                    "action_text": f"قام المالك بمسح جميع المهام نهائياً من النظام. عدد السجلات المحذوفة: {deleted_count}"
+                }
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم مسح جميع المهام بنجاح",
+                "deleted_count": deleted_count
+            }
+
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"حدث خطأ أثناء مسح المهام: {str(e)}"
+        )
+
+    finally:
+        connection.close()
+
 @app.delete("/api/missions/{mission_id}")
 def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -852,6 +937,59 @@ def update_local_news(news_id: int, news: LocalNewsModel, credentials: HTTPAutho
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/local-news/clear-all")
+def clear_all_local_news(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) FROM local_news")
+            deleted_count = cursor.fetchone()[0]
+
+            cursor.execute("DELETE FROM local_news")
+
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح جميع الأخبار المحلية",
+                mission_id=None,
+                entity_type="local_news",
+                entity_id=None,
+                details={
+                    "action_text": f"قام المالك بمسح جميع الأخبار المحلية نهائياً. عدد السجلات المحذوفة: {deleted_count}"
+                }
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم مسح جميع الأخبار المحلية بنجاح",
+                "deleted_count": deleted_count
+            }
+
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"حدث خطأ أثناء مسح الأخبار المحلية: {str(e)}"
+        )
+
+    finally:
+        connection.close()
+
 
 @app.delete("/api/local-news/{news_id}")
 def delete_local_news(news_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -995,6 +1133,59 @@ def update_global_disaster(disaster_id: int, disaster: GlobalDisasterModel, cred
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/global-disasters/clear-all")
+def clear_all_global_disasters(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) FROM global_disasters")
+            deleted_count = cursor.fetchone()[0]
+
+            cursor.execute("DELETE FROM global_disasters")
+
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح جميع الكوارث العالمية",
+                mission_id=None,
+                entity_type="global_disasters",
+                entity_id=None,
+                details={
+                    "action_text": f"قام المالك بمسح جميع الكوارث العالمية نهائياً. عدد السجلات المحذوفة: {deleted_count}"
+                }
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم مسح جميع الكوارث العالمية بنجاح",
+                "deleted_count": deleted_count
+            }
+
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"حدث خطأ أثناء مسح الكوارث العالمية: {str(e)}"
+        )
+
+    finally:
+        connection.close()
 
 @app.delete("/api/global-disasters/{disaster_id}")
 def delete_global_disaster(disaster_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1187,6 +1378,70 @@ def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorization
         connection.rollback()
         raise HTTPException(500, str(e))
 
+@app.post("/api/earthquakes/clear-all")
+def clear_all_earthquakes(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) FROM global_earthquakes")
+            global_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM egypt_earthquakes")
+            egypt_count = cursor.fetchone()[0]
+
+            cursor.execute("DELETE FROM global_earthquakes")
+            cursor.execute("DELETE FROM egypt_earthquakes")
+
+            total_count = global_count + egypt_count
+
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح جميع الزلازل",
+                mission_id=None,
+                entity_type="earthquakes",
+                entity_id=None,
+                details={
+                    "action_text": (
+                        f"قام المالك بمسح جميع سجلات الزلازل نهائياً من النظام. "
+                        f"إجمالي السجلات المحذوفة: {total_count}"
+                    )
+                }
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم مسح جميع الزلازل بنجاح",
+                "deleted_count": total_count,
+                "global_deleted": global_count,
+                "egypt_deleted": egypt_count
+            }
+
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"حدث خطأ أثناء مسح الزلازل: {str(e)}"
+        )
+
+    finally:
+        connection.close()
+
 # =====================================================================
 # قطاع رصد الذكاء الاصطناعي - AI News Module
 # =====================================================================
@@ -1310,6 +1565,59 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
+
+@app.post("/api/ai-news/clear-all")
+def clear_all_ai_news(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) FROM ai_news")
+            deleted_count = cursor.fetchone()[0]
+
+            cursor.execute("DELETE FROM ai_news")
+
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح جميع أخبار الذكاء الاصطناعي",
+                mission_id=None,
+                entity_type="ai_news",
+                entity_id=None,
+                details={
+                    "action_text": f"قام المالك بمسح جميع أخبار الذكاء الاصطناعي نهائياً. عدد السجلات المحذوفة: {deleted_count}"
+                }
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم مسح جميع أخبار الذكاء الاصطناعي بنجاح",
+                "deleted_count": deleted_count
+            }
+
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"حدث خطأ أثناء مسح أخبار الذكاء الاصطناعي: {str(e)}"
+        )
+
     finally:
         connection.close()
 
