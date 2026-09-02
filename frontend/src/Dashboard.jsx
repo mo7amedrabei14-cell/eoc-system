@@ -536,7 +536,7 @@ const ENGLISH_UI = {
   'المنطقة (مصر)': 'Area (Egypt)',
   'لا توجد زلازل مسجلة لمصر': 'No earthquakes recorded for Egypt',
   'اختر الدولة...': 'Select country...',
-  'إجمالي المهام المفلترة': 'Total filtered missions',
+  'إجمالي المهام': 'Total filtered missions',
   'الكود': 'Code',
   'اليوم 1...': 'Day 1...',
   'إحصائيات المستفيدين': 'Beneficiary statistics',
@@ -2141,7 +2141,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {!isVolunteer && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[#0a0a0a] border-b border-white/5 shrink-0">
-        <StatCard title="إجمالي المهام المفلترة" value={regionStats.total} color="text-white" borderHighlight />
+        <StatCard title="إجمالي المهام" value={regionStats.total} color="text-white" borderHighlight />
         <StatCard title="المركز العام" value={regionStats.hq} color="text-[#c70000]" />
         <StatCard title="إقليم القنال" value={regionStats.canal} color="text-blue-400" />
         <StatCard title="إقليم الدلتا" value={regionStats.delta} color="text-green-400" />
