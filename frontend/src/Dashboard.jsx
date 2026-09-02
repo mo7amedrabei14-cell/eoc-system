@@ -987,8 +987,8 @@ useEffect(() => {
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
-      case 'audit': return <AuditLogsView />;
-      case 'human_resources': return <HumanResourcesView branches={branchesList} />;
+      case 'audit': return <AuditLogsView isOwner={isOwner} />;
+      case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} />;
       default: return <HomeView branches={branchesList} />;
     }
   };
@@ -1135,13 +1135,13 @@ useEffect(() => {
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
             
             {/* 💡 نقلنا زرار القوة البشرية هنا تحت المهام مباشرة */}
-            {isOwner && <NavItem icon={<UsersIcon />} label="سجل القوة البشرية" isActive={activeTab === 'human_resources'} onClick={() => handleNavigation('human_resources')} isOpen={isSidebarOpen} />}
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<UsersIcon />} label="سجل القوة البشرية" isActive={activeTab === 'human_resources'} onClick={() => handleNavigation('human_resources')} isOpen={isSidebarOpen} />}
 
             <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => handleNavigation('local_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.local_news} />
             <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => handleNavigation('global_disasters')} isOpen={isSidebarOpen} hasUpdate={newUpdates.global_disasters} />
             <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} hasUpdate={newUpdates.earthquakes} />
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => handleNavigation('branches_inventory')} isOpen={isSidebarOpen} />}
-            {isOwner && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
         <div className="p-4 border-t border-white/5">
@@ -2577,7 +2577,7 @@ const ExcelIcon = () => <svg className="w-5 h-5 text-green-500" fill="none" view
 // ==========================================
 // 5. شاشة سجل النظام (للمالك فقط)
 // ==========================================
-function AuditLogsView() {
+function AuditLogsView({ isOwner }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2674,9 +2674,11 @@ function AuditLogsView() {
             {uniqueActions.map(action => <option key={action} value={action}>{action}</option>)}
           </select>
 
-          <button onClick={handleExportLogs} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0 mr-auto">
-            <ExcelIcon /> تصدير السجل
-          </button>
+          {isOwner && (
+            <button onClick={handleExportLogs} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0 mr-auto">
+              <ExcelIcon /> تصدير السجل
+            </button>
+          )}
         </div>
       </div>
 
@@ -4302,7 +4304,7 @@ const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5
 // ==========================================
 // 9. شاشة القوة البشرية (للمالك فقط - تجميع من المهام بدون تكرار)
 // ==========================================
-function HumanResourcesView({ branches }) {
+function HumanResourcesView({ branches, isOwner }) {
   const [hrList, setHrList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterBranch, setFilterBranch] = useState('all');
@@ -4384,7 +4386,7 @@ function HumanResourcesView({ branches }) {
             </select>
           </div>
 
-          <button onClick={handleExportExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors w-full md:w-auto justify-center"><ExcelIcon /> تصدير سجل القوة البشرية</button>
+          {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors w-full md:w-auto justify-center"><ExcelIcon /> تصدير سجل القوة البشرية</button>}
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
