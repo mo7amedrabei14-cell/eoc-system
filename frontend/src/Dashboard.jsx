@@ -1529,7 +1529,8 @@ function BranchesAndInventoryView({ branches }) {
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner }) {
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+const [clearAllCode, setClearAllCode] = useState('');
+const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [currentMissionData, setCurrentMissionData] = useState(null);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
@@ -1696,10 +1697,16 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
 
   const handleClearAllMissions = () => {
     if (!isOwner) return;
+    setClearAllCode('');
     setShowClearAllConfirm(true);
-  };
+};
 
   const confirmClearAllMissions = async () => {
+    if (clearAllCode !== "301014") {
+        setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+        return;
+    }
+
     setShowClearAllConfirm(false);
 
     try {
@@ -1710,7 +1717,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ confirmation_code: "301014" })
+        body: JSON.stringify({ confirmation_code: clearAllCode })
       });
 
       const data = await res.json();
@@ -2563,12 +2570,18 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner })
         </div>
       )}
       <DangerConfirmModal
-        show={showClearAllConfirm}
-        title="تأكيد الحذف"
-        message="سيتم حذف جميع بيانات المهام نهائياً. هذا الإجراء لا يمكن التراجع عنه."
-        onCancel={() => setShowClearAllConfirm(false)}
-        onConfirm={confirmClearAllMissions}
-      />
+  show={showClearAllConfirm}
+  title="تأكيد الحذف"
+  message="سيتم حذف جميع بيانات المهام نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+  confirmationCode={clearAllCode}
+  onConfirmationCodeChange={setClearAllCode}
+  showConfirmationInput={true}
+  onCancel={() => {
+    setShowClearAllConfirm(false);
+    setClearAllCode('');
+  }}
+  onConfirm={confirmClearAllMissions}
+/>
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -2791,8 +2804,9 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const [filterType, setFilterType] = useState('all');
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+const [clearAllCode, setClearAllCode] = useState('');
 
-  const [nd, setNd] = useState({
+const [nd, setNd] = useState({
     news_id: null, incident_date: '', incident_description: '', news_type: '', news_publisher: '', street_name: '', area_name: '', governorate: 'القاهرة',
     is_reported: false, report_time: '',
     is_responded: false, branch_response_text: '', response_time: '',
@@ -2910,10 +2924,16 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   };
   const handleClearAllLocalNews = () => {
     if (!isOwner) return;
+    setClearAllCode('');
     setShowClearAllConfirm(true);
-  };
+};
 
   const confirmClearAllLocalNews = async () => {
+    if (clearAllCode !== "301014") {
+        setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+        return;
+    }
+
     setShowClearAllConfirm(false);
 
     try {
@@ -2924,7 +2944,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ confirmation_code: "301014" })
+        body: JSON.stringify({ confirmation_code: clearAllCode })
       });
 
       const data = await res.json();
@@ -3231,12 +3251,18 @@ useEffect(() => {
 
       {/* -- تصميم التنبيه الإداري الفخم -- */}
       <DangerConfirmModal
-        show={showClearAllConfirm}
-        title="تأكيد الحذف"
-        message="سيتم حذف جميع الأخبار المحلية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
-        onCancel={() => setShowClearAllConfirm(false)}
-        onConfirm={confirmClearAllLocalNews}
-      />
+  show={showClearAllConfirm}
+  title="تأكيد الحذف"
+  message="سيتم حذف جميع الأخبار المحلية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+  confirmationCode={clearAllCode}
+  onConfirmationCodeChange={setClearAllCode}
+  showConfirmationInput={true}
+  onCancel={() => {
+    setShowClearAllConfirm(false);
+    setClearAllCode('');
+  }}
+  onConfirm={confirmClearAllLocalNews}
+/>
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -3273,6 +3299,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [disasterToDelete, setDisasterToDelete] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+const [clearAllCode, setClearAllCode] = useState('');
   const [filterDate, setFilterDate] = useState(getLocalDate()); // 💡 فتحت بتاريخ اليوم افتراضياً
 
   // 💡 3. القوائم
@@ -3386,10 +3413,16 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
 
   const handleClearAllGlobalDisasters = () => {
     if (!isOwner) return;
+    setClearAllCode('');
     setShowClearAllConfirm(true);
-  };
+};
 
   const confirmClearAllGlobalDisasters = async () => {
+    if (clearAllCode !== "301014") {
+        setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+        return;
+    }
+
     setShowClearAllConfirm(false);
 
     try {
@@ -3400,7 +3433,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ confirmation_code: "301014" })
+        body: JSON.stringify({ confirmation_code: clearAllCode })
       });
 
       const data = await res.json();
@@ -3580,12 +3613,18 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
       )}
 
       <DangerConfirmModal
-        show={showClearAllConfirm}
-        title="تأكيد الحذف"
-        message="سيتم حذف جميع الكوارث العالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
-        onCancel={() => setShowClearAllConfirm(false)}
-        onConfirm={confirmClearAllGlobalDisasters}
-      />
+  show={showClearAllConfirm}
+  title="تأكيد الحذف"
+  message="سيتم حذف جميع الكوارث العالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+  confirmationCode={clearAllCode}
+  onConfirmationCodeChange={setClearAllCode}
+  showConfirmationInput={true}
+  onCancel={() => {
+    setShowClearAllConfirm(false);
+    setClearAllCode('');
+  }}
+  onConfirm={confirmClearAllGlobalDisasters}
+/>
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -3608,6 +3647,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const [isLoading, setIsLoading] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+const [clearAllCode, setClearAllCode] = useState('');
   
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
@@ -3701,10 +3741,16 @@ function EarthquakesView({ isOwner, isSupervisor }) {
 
   const handleClearAllEarthquakes = () => {
     if (!isOwner) return;
+    setClearAllCode('');
     setShowClearAllConfirm(true);
-  };
+};
 
   const confirmClearAllEarthquakes = async () => {
+    if (clearAllCode !== "301014") {
+        setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+        return;
+    }
+
     setShowClearAllConfirm(false);
 
     try {
@@ -3715,7 +3761,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ confirmation_code: "301014" })
+        body: JSON.stringify({ confirmation_code: clearAllCode })
       });
 
       const data = await res.json();
@@ -4022,12 +4068,18 @@ function EarthquakesView({ isOwner, isSupervisor }) {
       )}
 
       <DangerConfirmModal
-        show={showClearAllConfirm}
-        title="تأكيد الحذف"
-        message="سيتم حذف جميع سجلات الزلازل المصرية والعالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
-        onCancel={() => setShowClearAllConfirm(false)}
-        onConfirm={confirmClearAllEarthquakes}
-      />
+  show={showClearAllConfirm}
+  title="تأكيد الحذف"
+  message="سيتم حذف جميع سجلات الزلازل المصرية والعالمية نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+  confirmationCode={clearAllCode}
+  onConfirmationCodeChange={setClearAllCode}
+  showConfirmationInput={true}
+  onCancel={() => {
+    setShowClearAllConfirm(false);
+    setClearAllCode('');
+  }}
+  onConfirm={confirmClearAllEarthquakes}
+/>
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -4077,6 +4129,7 @@ function AINewsMonitorView({ branches, isOwner }) {
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+const [clearAllCode, setClearAllCode] = useState('');
   const [aiNewsToDelete, setAiNewsToDelete] = useState(null);
 
   const [form, setForm] = useState({
@@ -4241,10 +4294,16 @@ const totalAiCountries = new Set(
 
   const handleClearAllAINews = () => {
     if (!isOwner) return;
+    setClearAllCode('');
     setShowClearAllConfirm(true);
-  };
+};
 
   const confirmClearAllAINews = async () => {
+    if (clearAllCode !== "301014") {
+        setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+        return;
+    }
+
     setShowClearAllConfirm(false);
 
     try {
@@ -4259,8 +4318,8 @@ const totalAiCountries = new Set(
             "Authorization": `Bearer ${token}`
           },
           body: JSON.stringify({
-            confirmation_code: "301014"
-          })
+    confirmation_code: clearAllCode
+})
         }
       );
 
@@ -4562,21 +4621,19 @@ const totalAiCountries = new Set(
         onConfirm={confirmDeleteAiNews}
       />
 
-      {/* 👇 تأكيد حذف كل أخبار الذكاء الاصطناعي (تصميم موحّد مع باقي شاشات التأكيد) 👇 */}
-      {showClearAllConfirm && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
-          <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
-            <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
-            <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
-            <p className="text-gray-400 text-sm mb-8 leading-relaxed">سيتم حذف جميع أخبار ورصد الذكاء الاصطناعي نهائياً. هذا الإجراء لا يمكن التراجع عنه.</p>
-            <div className="flex gap-4 w-full">
-              <button onClick={() => setShowClearAllConfirm(false)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
-              <button onClick={confirmClearAllAINews} className="flex-1 bg-[#c70000] hover:bg-[#a50000] text-white px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">نعم، احذف الكل</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* 👆 نهاية تأكيد حذف كل أخبار الذكاء الاصطناعي 👆 */}
+      <DangerConfirmModal
+  show={showClearAllConfirm}
+  title="تأكيد الحذف"
+  message="سيتم حذف جميع أخبار ورصد الذكاء الاصطناعي نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+  confirmationCode={clearAllCode}
+  onConfirmationCodeChange={setClearAllCode}
+  showConfirmationInput={true}
+  onCancel={() => {
+    setShowClearAllConfirm(false);
+    setClearAllCode('');
+  }}
+  onConfirm={confirmClearAllAINews}
+/>
 
       {/* 👇 شاشة التنبيهات عشان الزرار يرد عليك 👇 */}
       {customAlert && (
@@ -4601,18 +4658,78 @@ const totalAiCountries = new Set(
 }
 
 // 💡 نافذة تأكيد موحّدة لعمليات الحذف
-function DangerConfirmModal({ show, title = 'تأكيد الحذف', message, onCancel, onConfirm, confirmLabel = 'نعم، احذف الكل' }) {
+function DangerConfirmModal({
+  show,
+  title = 'تأكيد الحذف',
+  message,
+  onCancel,
+  onConfirm,
+  confirmLabel = 'نعم، احذف الكل',
+  confirmationCode = '',
+  onConfirmationCodeChange,
+  showConfirmationInput = false
+}) {
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
       <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
-        <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
-        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-        <p className="text-gray-400 text-sm mb-8 leading-relaxed">{message}</p>
+
+        <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]">
+          <TrashIcon className="w-10 h-10" />
+        </div>
+
+        <h3 className="text-xl font-bold text-white mb-2">
+          {title}
+        </h3>
+
+        <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+          {message}
+        </p>
+
+        {showConfirmationInput && (
+          <div className="w-full mb-6 text-right">
+            <label className="block text-gray-400 text-sm font-bold mb-2">
+              أدخل رمز التأكيد للمتابعة
+            </label>
+
+            <input
+              type="password"
+              value={confirmationCode}
+              onChange={(e) => onConfirmationCodeChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onConfirm();
+                }
+              }}
+              placeholder="رمز التأكيد"
+              autoComplete="off"
+              className="w-full bg-[#111] border border-white/10 focus:border-[#c70000]/50 rounded-xl px-4 py-3 text-white text-center tracking-[0.35em] outline-none transition-colors"
+            />
+          </div>
+        )}
+
         <div className="flex gap-4 w-full">
-          <button onClick={onCancel} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
-          <button onClick={onConfirm} className="flex-1 bg-[#c70000] hover:bg-[#a50000] text-white px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] transition-colors">{confirmLabel}</button>
+
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors"
+          >
+            إلغاء
+          </button>
+
+          <button
+            onClick={onConfirm}
+            disabled={showConfirmationInput && confirmationCode !== "301014"}
+            className={`flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-colors ${
+              showConfirmationInput && confirmationCode !== "301014"
+                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                : "bg-[#c70000] hover:bg-[#a50000] text-white shadow-[0_0_15px_rgba(199,0,0,0.3)]"
+            }`}
+          >
+            {confirmLabel}
+          </button>
+
         </div>
       </div>
     </div>
