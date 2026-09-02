@@ -1077,9 +1077,20 @@ useEffect(() => {
     border-color: #d9e1e8 !important;
   }
 
-  .theme-light header > button:hover {
+    .theme-light header > button:hover {
     background: #f1f5f9 !important;
     color: #c70000 !important;
+  }
+
+  .theme-light #f_mission_name {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    caret-color: #000000 !important;
+  }
+
+  .theme-light #f_mission_name::placeholder {
+    color: #64748b !important;
+    opacity: 1 !important;
   }
 
 `}</style>
@@ -2736,7 +2747,7 @@ function AuditLogsView({ isOwner }) {
   };
 
   return (
-    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[85vh] flex-1">
+    <div className="w-full min-w-0 max-w-full bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[85vh] flex-1">
       <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-10 h-10 shrink-0 bg-[#c70000]/10 rounded-xl flex items-center justify-center border border-[#c70000]/20 text-[#c70000]"><ShieldIcon /></div>
