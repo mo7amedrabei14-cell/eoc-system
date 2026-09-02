@@ -4460,12 +4460,14 @@ const totalAiCountries = new Set(
           </div>
         </div>
 
-        <button
-  onClick={handleClearAllAINews}
-  className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
->
-  🗑️ مسح الكل
-</button>
+        {isOwner && (
+  <button
+    onClick={handleClearAllAINews}
+    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
+  >
+    🗑️ مسح الكل
+  </button>
+)}
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap text-sm">
