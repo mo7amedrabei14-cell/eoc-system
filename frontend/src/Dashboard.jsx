@@ -1093,6 +1093,12 @@ useEffect(() => {
     opacity: 1 !important;
   }
 
+    .theme-light .mission-name-cell {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+  }
+
+
 `}</style>
 
       
@@ -2145,7 +2151,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {isTableExpanded && <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
       
-      <div className={isTableExpanded ? "fixed inset-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" : "flex-1 flex flex-col overflow-hidden relative"}>
+      <div className={isTableExpanded ? "fixed inset-4 md:right-72 md:left-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" : "flex-1 flex flex-col overflow-hidden relative"}>
         
         {isTableExpanded && (
           <div className="p-4 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0">
@@ -2192,7 +2198,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </td>
                 <td className="p-4 font-mono text-gray-300 border-l border-white/5">{m.mission_code}</td>
                 <td className="p-4 font-bold text-white border-l border-white/5">{m.branch}</td>
-                <td className="p-4 text-gray-200 font-bold border-l border-white/5">{m.mission_name}</td>
+                <td className="p-4 text-gray-200 font-bold border-l border-white/5 mission-name-cell">{m.mission_name}</td>
                 <td className="p-4 text-green-400 border-l border-white/5">{m.vehicles_info}</td>
                 <td className="p-4 text-gray-300 border-l border-white/5">{m.mission_type}</td>
                 <td className="p-4 text-gray-300 border-l border-white/5">{m.mission_location}</td>
