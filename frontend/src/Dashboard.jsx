@@ -641,18 +641,6 @@ const ENGLISH_UI_PREFIXES = [
   ['سيتم عرض مهام', 'Showing missions for'],
 ];
 
-// UUID v4 generator (fallback for older browsers)
-function generateUuid() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
 function getEnglishRegionName(value) {
   if (englishRegionNameCache.has(value)) return englishRegionNameCache.get(value);
 
@@ -811,10 +799,6 @@ useEffect(() => {
     return localStorage.getItem('dashboard-language') || 'ar';
   });
   const dashboardRootRef = useRef(null);
-const submissionIdRef = useRef(null); // For idempotency key (stable per logical operation)
-const lastSubmissionTimeRef = useRef(0); // For debounce UI submissions
-const lastSeenAuditIdRef = useRef(0); // For audit log watermark
-const isPollingRef = useRef(false); // For overlap prevention in polling
 
   useEffect(() => {
     localStorage.setItem('dashboard-language', language);
@@ -846,6 +830,9 @@ const isPollingRef = useRef(false); // For overlap prevention in polling
   // 💡 1. حالات نظام الإشعارات والرادار (تم إضافة رصد الذكاء الاصطناعي)
   const [toasts, setToasts] = useState([]);
   const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false });
+  // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
+  // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
+  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0 });
 
   const userRole = userData?.role?.toUpperCase() || 'VOLUNTEER';
   const isOwner = userData?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
@@ -858,53 +845,50 @@ const isPollingRef = useRef(false); // For overlap prevention in polling
     const token = localStorage.getItem('access_token');
     if (!token || !userData) return;
 
-    // Initialize watermark (fetch latest audit log ID)
-    const initWatermark = async () => {
+    let lastSeenSignature = null; 
+
+    const checkLiveUpdates = async () => {
       try {
-        const res = await fetch('https://eoc-system-b12f.vercel.app/api/audit-logs/latest-id', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch('https://eoc-system-b12f.vercel.app/api/live-updates', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
-          lastSeenAuditIdRef.current = data.latest_id || 0;
-        }
-      } catch (e) {
-        console.error('Failed to initialize audit log watermark:', e);
-      }
-    };
+          if (data && data.length > 0) {
+            
+            if (lastSeenSignature === null) {
+              lastSeenSignature = data[0].created_at + data[0].full_name + data[0].action;
+              return;
+            }
 
-    initWatermark().then(() => {
-      // Now set up the polling with overlap prevention
-      const checkLiveUpdates = async () => {
-        if (isPollingRef.current) return; // Overlap prevention
-        isPollingRef.current = true;
+            const newActions = [];
+            for (const log of data) {
+              const currentSig = log.created_at + log.full_name + log.action;
+              if (currentSig === lastSeenSignature) break; 
+              newActions.push(log);
+            }
 
-        try {
-          const res = await fetch(`https://eoc-system-b12f.vercel.app/api/audit-logs?since_id=${lastSeenAuditIdRef.current}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-              // Process each new log (data is in ascending order by audit_id)
-              data.forEach(action => {
+            if (newActions.length > 0) {
+              lastSeenSignature = newActions[0].created_at + newActions[0].full_name + newActions[0].action;
+
+              newActions.reverse().forEach(action => {
                 const isAiLog = action.entity_type === 'ai_news' || action.full_name === 'AI Robot';
-
-                // Show notification if not from self or is AI log
+                
+                // 💡 التعديل: إظهار الإشعار لو كان من الروبوت (حتى لو هو بيستخدم التوكن بتاعك)
                 if (action.full_name !== userData?.full_name || isAiLog) {
-                  const toastId = Date.now() + Math.random();
-                  setToasts(prev => [...prev, {
-                    id: toastId,
-                    user: String(action.full_name || 'نظام'),
-                    action: String(action.action || 'تحديث'),
-                    details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''),
-                    isAi: isAiLog
+                  const toastId = Date.now() + Math.random(); 
+
+                  // إضافة الإشعار للطابور (محمي ضد الانهيار لو الداتا عبارة عن Object)
+                  setToasts(prev => [...prev, { 
+                    id: toastId, 
+                    user: String(action.full_name || 'نظام'), 
+                    action: String(action.action || 'تحديث'), 
+                    details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''), 
+                    isAi: isAiLog 
                   }]);
                   setTimeout(() => {
-                    setToasts(prev => prev.filter(t => t.id !== toastId));
+                    setToasts(prev => prev.filter(t => t.id !== toastId)); 
                   }, 10000);
 
-                  // Update the red dot indicator
+                  // تنوير النقطة الحمراء
                   setNewUpdates(prev => ({
                     ...prev,
                     missions: prev.missions || action.entity_type === 'mission',
@@ -915,34 +899,26 @@ const isPollingRef = useRef(false); // For overlap prevention in polling
                     audit: true
                   }));
 
-                  // If mission-related, dispatch custom event
-                  if (action.entity_type === 'mission' && action.entity_id) {
-                    window.dispatchEvent(new CustomEvent('mission-updated', {
-                      detail: { missionId: action.entity_id, action: action.action }
-                    }));
-                  }
+                  // 🔄 لو في تاب مفتوح فعلاً بيعرض النوع ده، خليه يعمل Refetch فوراً
+                  setLiveUpdateVersion(prev => ({
+                    ...prev,
+                    missions: prev.missions + (action.entity_type === 'mission' ? 1 : 0),
+                    local_news: prev.local_news + (action.entity_type === 'local_news' ? 1 : 0),
+                    global_disasters: prev.global_disasters + (action.entity_type === 'global_disaster' ? 1 : 0),
+                    earthquakes: prev.earthquakes + (action.entity_type === 'earthquake' ? 1 : 0),
+                    ai_news: prev.ai_news + (isAiLog ? 1 : 0),
+                  }));
                 }
               });
-
-              // Update the last seen audit ID to the highest we've seen
-              const highestId = data[data.length - 1].log_id;
-              if (highestId > lastSeenAuditIdRef.current) {
-                lastSeenAuditIdRef.current = highestId;
-              }
             }
           }
-        } catch (e) {
-          console.error('Error in checkLiveUpdates:', e);
-        } finally {
-          isPollingRef.current = false;
         }
-      };
+      } catch (e) {}
+    };
 
-      // Initial call
-      checkLiveUpdates();
-      const interval = setInterval(checkLiveUpdates, 2000); // Reduced to 2 seconds for faster updates
-      return () => clearInterval(interval);
-    });
+    checkLiveUpdates();
+    const interval = setInterval(checkLiveUpdates, 15000); 
+    return () => clearInterval(interval);
   }, [userData]);
 
   useEffect(() => {
@@ -1025,7 +1001,7 @@ const isPollingRef = useRef(false); // For overlap prevention in polling
     switch (activeTab) {
       case 'home': return <HomeView branches={branchesList} />;
       case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} />;
-      case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} />;
+      case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} />;
@@ -1580,13 +1556,17 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
-function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen }) {
+function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion }) {
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
 const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [currentMissionData, setCurrentMissionData] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // 🔑 مفتاح ثابت لكل مرة يتفتح فيها فورم "مهمة جديدة" - بيتبعت مع كل محاولة إرسال
+  // عشان السيرفر يقدر يرفض أي تكرار حتى لو الزرار اتضغط أكتر من مرة أو حصل تأخير في الشبكة.
+  const newMissionIdempotencyKey = useRef(null);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
   
   const [returnModalOpen, setReturnModalOpen] = useState(false);
@@ -1603,67 +1583,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionsList, setMissionsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [formNeedsAttention, setFormNeedsAttention] = useState(false);
-  const formRef = useRef(null);
-  const submissionIdRef = useRef(null);
-  const lastSubmissionTimeRef = useRef(0);
-  const lastSeenAuditIdRef = useRef(0);
-  const missionUpdateSources = useRef(new Set());
-  const [pulsingMissionIds, setPulsingMissionIds] = useState([]);
-
-  // تنبيت أنماط النبض مرة واحدة
-  useEffect(() => {
-    const styleId = 'pulse-animation-style';
-    let styleElement = document.getElementById(styleId);
-    if (!styleElement) {
-      styleElement = document.createElement('style');
-      styleElement.id = styleId;
-      styleElement.textContent = `
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(199, 0, 0, 0.4); }
-          70% { box-shadow: 0 0 0 10px rgba(199, 0, 0, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(199, 0, 0, 0); }
-        }
-        .form-pulse {
-          animation: pulse 2s infinite;
-        }
-        .mission-pulse {
-          animation: pulse 1.5s ease-in-out;
-        }
-      `;
-      document.head.appendChild(styleElement);
-    }
-    // We leave the style element in the document for the lifetime of the page
-  }, []);
-
-  // حاسة الانتباه للنموذج (إضاءة خفيفة عند الحاجة للمراجعة)
-  useEffect(() => {
-    let timeoutId = null;
-    const resetFormNeedsAttention = () => {
-      setFormNeedsAttention(false);
-    };
-
-    if (formNeedsAttention) {
-      timeoutId = setTimeout(resetFormNeedsAttention, 5000); // 5 seconds
-
-      const handleClick = resetFormNeedsAttention;
-      const handleKeyPress = resetFormNeedsAttention;
-      const formElement = formRef.current;
-      if (formElement) {
-        formElement.addEventListener('click', handleClick);
-        formElement.addEventListener('keypress', handleKeyPress);
-      }
-      return () => {
-        if (formElement) {
-          formElement.removeEventListener('click', handleClick);
-          formElement.removeEventListener('keypress', handleKeyPress);
-        }
-        if (timeoutId) clearTimeout(timeoutId);
-      };
-    }
-  }, [formNeedsAttention]);
 
   // 1. الدالة السحرية بأمان تام (لمنع أي شاشة بيضاء)
   const normalizeName = (name) => {
@@ -1718,75 +1637,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
       if (res.ok) setMissionsList(await res.json());
-    } catch (error) { console.error("Error:", error); }
+    } catch (error) { console.error("Error:", error); } 
     finally { setIsLoading(false); }
-  };
-
-  const fetchMissionDetails = async (missionId) => {
-    setIsLoadingDetails(true);
-    const token = localStorage.getItem('access_token');
-    try {
-      const res = await fetch(
-        `https://eoc-system-b12f.vercel.app/api/missions/${missionId}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentMissionData(data);
-        setFormNeedsAttention(true);
-      } else {
-        const err = await res.json();
-        console.error("فشل جلب تفاصيل المهمة:", err.detail);
-      }
-    } catch (error) {
-      console.error("خطأ في الاتصال أثناء جلب تفاصيل المهمة:", error);
-    } finally {
-      setIsLoadingDetails(false);
-    }
   };
 
   useEffect(() => { fetchMissions(); }, []);
 
-  // Listen for mission updates from other tabs/components
+  // 🔄 لو التاب ده مفتوح فعلاً وحصل تحديث لحظي (زي المتطوع بعت استمارة، أو الجوكر رجعها)
+  // نعمل Refetch تلقائي من غير ما ننتظر المستخدم يعمل Refresh يدوي للصفحة.
+  const isFirstLiveUpdate = useRef(true);
   useEffect(() => {
-    const handleMissionUpdate = (event) => {
-      const { missionId, action } = event.detail;
-
-      // Update the specific mission in the missions list
-      setMissionsList(prev => prev.map(mission =>
-        mission.mission_id === missionId
-          ? { ...mission, status: action === 'Completed' ? 'Completed' : action === 'Under Review' ? 'Under Review' : action === 'Approved' ? 'Approved' : action === 'Returned' ? 'Returned' : mission.status }
-          : mission
-      ));
-
-      // Show a toast notification for the mission update
-      const toastId = Date.now() + Math.random();
-      setToasts(prev => [...prev, {
-        id: toastId,
-        user: "النظام",
-        action: `تم تحديث المهمة إلى: ${action === 'Completed' ? 'مكتملة' : action === 'Under Review' ? 'قيد المراجعة' : action === 'Approved' ? 'معتمدة' : action === 'Returned' ? 'إرجاع' : action}`,
-        details: `تم تحديث المهمة بواسطة مستخدم آخر.`,
-        isAi: false
-      }]);
-      setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== toastId));
-      }, 10000);
-
-      // Start pulsing the mission card
-      setPulsingMissionIds(prev => [...prev, missionId]);
-      setTimeout(() => {
-        setPulsingMissionIds(prev => prev.filter(id => id !== missionId));
-      }, 3000);
-
-      // If this is the currently viewed mission, update it and trigger attention pulse
-      if (currentMissionData && currentMissionData.mission_id === missionId) {
-        fetchMissionDetails(missionId); // This will also set formNeedsAttention
-      }
-    };
-
-    window.addEventListener('mission-updated', handleMissionUpdate);
-    return () => window.removeEventListener('mission-updated', handleMissionUpdate);
-  }, [currentMissionData, fetchMissionDetails]);
+    if (isFirstLiveUpdate.current) { isFirstLiveUpdate.current = false; return; }
+    fetchMissions();
+  }, [liveUpdateVersion]);
 
   const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
   const removeRoute = (id) => setRoutes(routes.filter(r => r.id !== id));
@@ -1804,6 +1667,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCreateNew = () => {
     setCurrentMissionData(null);
+    newMissionIdempotencyKey.current = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
     setMissionName('');
     setMainRouteTitle('خط السير الأساسي');
     setMissionClass('عادية');
@@ -2011,19 +1875,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   const handleSubmit = async (submitStatus) => {
-     // Prevent duplicate submissions with debouncing and submission tracking
-     const now = Date.now();
-     if (now - lastSubmissionTimeRef.current < 1000) { // 1 second debounce
-        return;
-     }
+     // 🛡️ منع الإرسال المزدوج: لو فيه طلب لسه ماشي، تجاهل أي ضغطة تانية على أي زرار إرسال
      if (isSubmitting) return;
-
-     // Generate or reuse idempotency key for this logical operation
-     const idempotencyKey = submissionIdRef.current || generateUuid();
-     submissionIdRef.current = idempotencyKey;
-     const attemptId = now;
-     lastSubmissionTimeRef.current = attemptId;
-
      setIsSubmitting(true);
      try {
        const activeParticipants = {}; 
@@ -2126,49 +1979,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        const isUpdate = currentMissionData !== null;
        const url = isUpdate ? `https://eoc-system-b12f.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system-b12f.vercel.app/api/missions';
        const method = isUpdate ? 'PUT' : 'POST';
+       if (!isUpdate) missionData.idempotency_key = newMissionIdempotencyKey.current;
 
-       const res = await fetch(url, {
-         method: method,
-         headers: {
-           'Content-Type': 'application/json',
-           'Authorization': `Bearer ${token}`,
-           'Idempotency-Key': idempotencyKey
-         },
-         body: JSON.stringify(missionData)
-       });
-       if (res.ok) {
-         const data = await res.json();
-         // Only update state if this is the latest submission (prevents race conditions)
-         if (attemptId === lastSubmissionTimeRef.current) {
-           setIsModalOpen(false);
-           setCurrentMissionData(data);
-           setFormNeedsAttention(true);
-           fetchMissions();
-           setCustomAlert("✅ تم الحفظ بنجاح وتحديث الحالة.");
-
-           // Dispatch custom event for real-time updates to other components/tabs
-           window.dispatchEvent(new CustomEvent('mission-updated', {
-             detail: { missionId: data.mission_id, action: submitStatus }
-           }));
-         }
-         // Clear idempotency key on known HTTP response (success) if matches
-         if (submissionIdRef.current === idempotencyKey) {
-           submissionIdRef.current = null;
-         }
-       } else {
-           const errorData = await res.json();
-           setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errorData.detail}`);
-           // Clear idempotency key on known HTTP response (error) if matches
-           if (submissionIdRef.current === idempotencyKey) {
-             submissionIdRef.current = null;
-           }
+       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(missionData) });
+       if (res.ok) { setIsModalOpen(false); fetchMissions(); } 
+       else { 
+           const errorData = await res.json(); 
+           setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errorData.detail}`); 
        }
-     } catch (error) {
-       setCustomAlert("خطأ في الاتصال بالسيرفر!");
-       // Do NOT clear idempotency key on network error; retry will reuse same key
-     } finally {
-       setIsSubmitting(false);
-     }
+     } catch (error) { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
+     finally { setIsSubmitting(false); }
   };
 
   const StatusBadge = ({ status }) => {
@@ -2396,7 +2216,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           <tbody className="divide-y divide-white/5">
             {isLoading ? (<tr><td colSpan="16" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} className={`hover:bg-white/5 transition-colors ${pulsingMissionIds.includes(m.mission_id) ? 'mission-pulse' : ''}`}>
+              <tr key={`mission-${m.mission_id}`} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
                 <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
                 <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
@@ -2442,8 +2262,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </div>
               <button onClick={() => setIsModalOpen(false)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white p-2 rounded-xl border border-white/5"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-
-            <div ref={formRef} className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${formNeedsAttention ? 'form-pulse' : ''}`}>
+            
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
               
               <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6 shadow-lg flex flex-col md:flex-row items-end gap-4">
                 <div className="flex-1 w-full">
@@ -2721,22 +2541,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               {/* 👑 المالك (God Mode) */}
               {isOwner ? (
                 <>
-                  <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">
-  {isSubmitting ? "جاري الإرسال..." : "مسودة"}
-</button>
-                  <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">
-  {isSubmitting ? "جاري الإرسال..." : "إرسال للجوكر"}
-</button>
+                  <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">مسودة</button>
+                  <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال للجوكر</button>
                   <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
-                  <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">
-  {isSubmitting ? "جاري الإرسال..." : "تم مراجعة المهمة (مستمرة)"}
-</button>
-                  <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">
-  {isSubmitting ? "جاري الإرسال..." : "إنهاء وإغلاق المهمة"}
-</button>
-                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">
-  {isSubmitting ? "جاري الإرسال..." : "إلغاء الإغلاق (إعادة فتح)"}
-</button>}
+                  <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">تم مراجعة المهمة (مستمرة)</button>
+                  <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إنهاء وإغلاق المهمة</button>
+                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إلغاء الإغلاق (إعادة فتح)</button>}
                 </>
               ) : (
                 /* 👷 باقي الرتب */
@@ -2744,12 +2554,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة */}
                   {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
                     <>
-                      <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">
-  {isSubmitting ? "جاري الإرسال..." : "حفظ كمسودة"}
-</button>
-                      <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold">
-  {isSubmitting ? "جاري الإرسال..." : "إرسال إلى الجوكر"}
-</button>
+                      <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">حفظ كمسودة</button>
+                      <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال إلى الجوكر</button>
                     </>
                   )}
                   
@@ -2757,12 +2563,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {currentMissionData?.status === 'Under Review' && !isVolunteer && (
                     <>
                       <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
-                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">
-                        {isSubmitting ? "جاري الإرسال..." : "تم مراجعة المهمة (مستمرة)"}
-                      </button>
-                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">
-                        {isSubmitting ? "جاري الإرسال..." : "إنهاء وإغلاق المهمة"}
-                      </button>
+                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">تم مراجعة المهمة (مستمرة)</button>
+                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إنهاء وإغلاق المهمة</button>
                     </>
                   )}
                   
@@ -2770,20 +2572,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {currentMissionData?.status === 'Approved' && (
                     <>
                       {/* المتطوع يشوف زرار إرسال التحديثات فقط */}
-                      {isVolunteer && <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold">
-  {isSubmitting ? "جاري الإرسال..." : "إرسال التحديثات للجوكر"}
-</button>}
+                      {isVolunteer && <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال التحديثات للجوكر</button>}
                       
                       {/* الإداري (الجوكر وفوق) يقدر يرجعها، يخليها مستمرة، أو يقفلها */}
                       {!isVolunteer && (
                         <>
                           <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
-                          <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">
-                            {isSubmitting ? "جاري الإرسال..." : "تم مراجعة المهمة (مستمرة)"}
-                          </button>
-                          <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">
-                            {isSubmitting ? "جاري الإرسال..." : "إنهاء وإغلاق المهمة"}
-                          </button>
+                          <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">تم مراجعة المهمة (مستمرة)</button>
+                          <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إنهاء وإغلاق المهمة</button>
                         </>
                       )}
                     </>
@@ -2792,12 +2588,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {/* 4. لو الاستمارة مكتملة (مغلقة) */}
                   {currentMissionData?.status === 'Completed' && !isVolunteer && (
                     <>
-                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)]">
-                        {isSubmitting ? "جاري الإرسال..." : "حفظ التعديلات (وهي مقفولة)"}
-                      </button>
-                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)]">
-                        {isSubmitting ? "جاري الإرسال..." : "إلغاء الإغلاق (إعادة فتح)"}
-                      </button>
+                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">حفظ التعديلات (وهي مقفولة)</button>
+                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إلغاء الإغلاق (إعادة فتح)</button>
                     </>
                   )}
                 </>
@@ -2838,7 +2630,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       } else { 
                         setReturnError('برجاء كتابة سبب الإرجاع بوضوح لتوجيه المتطوع!'); 
                       }
-                    }} className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(202,138,4,0.3)] transition-all">تأكيد الإرجاع</button>
+                    }} disabled={isSubmitting} className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(202,138,4,0.3)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">تأكيد الإرجاع</button>
                   </div>
                 </div>
               </div>
@@ -5025,7 +4817,6 @@ function HumanResourcesView({ branches, isOwner }) {
   const [isLoading, setIsLoading] = useState(true);
   const [filterBranch, setFilterBranch] = useState('all');
   const [filterType, setFilterType] = useState('all');
-  const [filterMissionStatus, setFilterMissionStatus] = useState('all'); // all, active, inactive
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -5043,26 +4834,13 @@ function HumanResourcesView({ branches, isOwner }) {
       }
     };
     fetchHR();
-
-    // Listen for mission-updated events to refresh data in real-time
-    const handleMissionUpdated = () => {
-      fetchHR();
-    };
-
-    window.addEventListener('mission-updated', handleMissionUpdated);
-    return () => {
-      window.removeEventListener('mission-updated', handleMissionUpdated);
-    };
   }, []);
 
   const filteredHR = hrList.filter(p => {
     const matchBranch = filterBranch === 'all' ? true : p.branch_name === filterBranch;
     const matchType = filterType === 'all' ? true : p.participant_type === filterType;
     const matchSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || p.membership_number.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchMissionStatus = filterMissionStatus === 'all' ? true :
-      filterMissionStatus === 'active' ? p.is_currently_on_mission === true :
-      filterMissionStatus === 'inactive' ? p.is_currently_on_mission === false : true;
-    return matchBranch && matchType && matchSearch && matchMissionStatus;
+    return matchBranch && matchType && matchSearch;
   });
 
   const handleExportExcel = () => {
@@ -5074,10 +4852,7 @@ function HumanResourcesView({ branches, isOwner }) {
       "الفرع التابع له": p.branch_name === 'القاهرة' ? 'المركز العام' : p.branch_name,
       "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
       "إجمالي المهام الميدانية": p.missions_count,
-      "إجمالي الساعات (ساعة)": p.total_hours,
-      "كود الفريق": p.team_code || '',
-      "كود الإدارة": p.admin_code || '',
-      "الحالة": p.is_currently_on_mission ? 'مهمه نشطة' : 'غير نشط'
+      "إجمالي الساعات (ساعة)": p.total_hours
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "القوة البشرية");
@@ -5105,23 +4880,17 @@ function HumanResourcesView({ branches, isOwner }) {
           
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <input type="text" placeholder="بحث بالاسم أو الكود..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#c70000]/50 w-full md:w-auto" />
-
+            
             <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
               <option value="all">كل الفروع والتمركزات</option>
               <option value="المركز العام">المركز العام</option>
               {branchNames.filter(n => n !== 'القاهرة').map(g => <option key={g} value={g}>{g}</option>)}
             </select>
-
+            
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
               <option value="all">الكل (متطوع وغير متطوع)</option>
               <option value="volunteer">متطوعين فقط</option>
               <option value="non_volunteer">غير متطوعين</option>
-            </select>
-
-            <select value={filterMissionStatus} onChange={(e) => setFilterMissionStatus(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
-              <option value="all">الكل</option>
-              <option value="active">حاليًا في مهمة</option>
-              <option value="inactive">ليس حاليًا في مهمة</option>
             </select>
           </div>
 
@@ -5139,13 +4908,10 @@ function HumanResourcesView({ branches, isOwner }) {
                 <th className="p-4 font-semibold border-l border-white/5 text-center">النوع</th>
                 <th className="p-4 font-semibold text-center text-green-500 border-l border-white/5">عدد المهام</th>
                 <th className="p-4 font-semibold text-center text-orange-400">إجمالي الساعات</th>
-                <th className="p-4 font-semibold text-center border-l border-white/5">كود الفريق</th>
-                <th className="p-4 font-semibold text-center border-l border-white/5">كود الإدارة</th>
-                <th className="p-4 font-semibold text-center border-l border-white/5">الحالة</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {isLoading ? <tr><td colSpan="10" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> :
+              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> : 
                filteredHR.length > 0 ? filteredHR.map((person, idx) => (
                 <tr key={idx} className="hover:bg-white/5 transition-colors">
                   <td className="p-4 text-gray-500 font-bold border-l border-white/5 text-center">{idx + 1}</td>
@@ -5167,19 +4933,8 @@ function HumanResourcesView({ branches, isOwner }) {
                       {person.total_hours} ساعة
                     </span>
                   </td>
-                  <td className="p-4 text-center">
-                    {person.team_code || '-'}
-                  </td>
-                  <td className="p-4 text-center">
-                    {person.admin_code || '-'}
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${person.is_currently_on_mission ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-600/20 text-gray-400'}`}>
-                      {person.is_currently_on_mission ? 'مهمه نشطة' : 'غير نشط'}
-                    </span>
-                  </td>
                 </tr>
-              )) : <tr><td colSpan="10" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
+              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
             </tbody>
           </table>
         </div>

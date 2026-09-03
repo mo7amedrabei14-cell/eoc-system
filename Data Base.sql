@@ -1247,8 +1247,6 @@ CREATE TABLE public.volunteers (
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     membership_number character varying(50),
-    team_code character varying(50),
-    admin_code character varying(50),
     status_mode character varying(10) DEFAULT 'auto'::character varying NOT NULL,
     last_check_in_at timestamp without time zone,
     CONSTRAINT volunteers_status_mode_check CHECK (((status_mode)::text = ANY ((ARRAY['auto'::character varying, 'manual'::character varying])::text[])))

@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional
 from datetime import date, time, datetime
-import time
 import psycopg
 import io
 import pandas as pd
-from psycopg.types.json import Jsonb
 
 from dependencies import get_db, RequirePermission, get_current_user
 from audit import create_audit_log
@@ -39,7 +36,6 @@ class CreateMissionRequest(BaseModel):
     injured_count: int = 0
     indirect_beneficiaries: int = 0
     data_source: str | None = None
-    idempotency_key: Optional[str] = None
 
 @router.post("/", status_code=201)
 def create_mission(
@@ -48,55 +44,6 @@ def create_mission(
     connection: psycopg.Connection = Depends(get_db)
 ):
     with connection.cursor() as cursor:
-        # Atomic idempotency reservation
-        if data.idempotency_key:
-            # Start transaction: insert placeholder if not exists
-            cursor.execute("""
-                WITH ins AS (
-                    INSERT INTO idempotency_keys (idempotency_key, response, original_status)
-                    VALUES (%s, NULL::jsonb, NULL::int)
-                    ON CONFLICT (idempotency_key) DO NOTHING
-                    RETURNING idempotency_key
-                )
-                SELECT
-                    CASE WHEN (SELECT COUNT(*) FROM ins) = 1 THEN true ELSE false END AS we_are_owner,
-                    (SELECT response, original_status FROM idempotency_keys WHERE idempotency_key = %s) AS existing
-            """, (data.idempotency_key, data.idempotency_key))
-
-            result = cursor.fetchone()
-            we_are_owner = result[0]
-            existing_response = result[1]['response'] if result[1] and result[1]['response'] is not None else None
-            existing_status = result[1]['original_status'] if result[1] and result[1]['original_status'] is not None else None
-
-            # If we are not the owner, wait for the result or return what we have
-            if not we_are_owner:
-                # Wait up to 2 attempts for the owner to complete (100ms each)
-                for _ in range(2):
-                    if existing_response is not None and existing_status is not None:
-                        break
-                    cursor.execute("""
-                        SELECT response, original_status
-                        FROM idempotency_keys
-                        WHERE idempotency_key = %s
-                    """, (data.idempotency_key,))
-                    r = cursor.fetchone()
-                    existing_response = r['response'] if r and r['response'] is not None else None
-                    existing_status = r['original_status'] if r and r['original_status'] is not None else None
-                    time.sleep(0.1)
-
-                # If we still don't have a response, something went wrong
-                if existing_response is None:
-                    raise HTTPException(status_code=500, detail="Idempotency owner failed to produce a response")
-
-                return {
-                    "message": existing_response.get("message", "Mission processed"),
-                    "mission_id": existing_response.get("mission_id"),
-                    "status": existing_response.get("status")
-                } | {"original_status": existing_status}
-
-            # We are the owner - proceed with mission creation
-        # If no idempotency key, we proceed normally (non-idempotent)
-
         cursor.execute("SELECT branch_name FROM branches WHERE branch_id = %s AND is_active = TRUE;", (data.branch_id,))
         if not cursor.fetchone(): raise HTTPException(status_code=404, detail="Active branch not found")
 
@@ -119,29 +66,9 @@ def create_mission(
             )
         )
         mission = cursor.fetchone()
-        mission_id = mission[0]
-        mission_code_from_db = mission[1]
-        mission_status = mission[2]
-        create_audit_log(cursor, current_user_id, "CREATE_MISSION", mission_id, "mission", mission_id, {"mission_code": mission_code_from_db})
+        create_audit_log(cursor, current_user_id, "CREATE_MISSION", mission[0], "mission", mission[0], {"mission_code": mission[1]})
 
-        # Build final response
-        response = {
-            "message": "Mission created successfully",
-            "mission_id": mission_id,
-            "mission_code": mission_code_from_db,
-            "status": mission_status
-        }
-
-        # Finalize idempotency record if we have a key and we are the owner
-        if data.idempotency_key and we_are_owner:
-            cursor.execute("""
-                UPDATE idempotency_keys
-                SET response = %s,
-                    original_status = %s
-                WHERE idempotency_key = %s
-            """, (Jsonb(response), mission_status, data.idempotency_key))
-
-        return response
+    return {"message": "Mission created successfully", "mission_id": mission[0], "status": mission[2]}
 
 @router.get("/")
 def get_missions(

@@ -4,9 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2Pas
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date, time, datetime
-import time
 from psycopg.errors import UniqueViolation
-from psycopg.types.json import Jsonb
 
 # ملفات المشروع الخاصة بيك
 from audit import create_audit_log
@@ -278,26 +276,27 @@ class MissionCreate(BaseModel):
     responsible_person: Optional[str] = None
     data_source: Optional[str] = None
     status: str
-
+    
     exit_date: Optional[str] = None
     departure_date: Optional[str] = None
     arrival_date: Optional[str] = None
     return_date: Optional[str] = None
     completion_date: Optional[str] = None
-
+    
     start_time: Optional[str] = None
     departure_time: Optional[str] = None
     arrival_time: Optional[str] = None
     completion_time: Optional[str] = None
-
+    
     injured_count: Optional[int] = 0
     indirect_beneficiaries_total: Optional[int] = 0
     notes: Optional[str] = None
     internal_notes: Optional[str] = None
-
+    
     mission_code: Optional[str] = None
     created_at: Optional[str] = None
-
+    idempotency_key: Optional[str] = None
+    
     routes: List[RouteModel] = []
     vehicles: List[VehicleModel] = []
     participants: List[ParticipantModel] = []
@@ -382,69 +381,20 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
-
-    # Get idempotency key from header (takes precedence) or body
-    idempotency_key = None
-    if hasattr(credentials, 'scheme'):  # This is a workaround to get headers - in practice we'd need to pass headers separately
-        # Actually, let's get headers properly
-        pass
-
-    # For now, we'll get it from the body as before, but we should modify this to accept headers
-    # Since we can't easily get headers in this function signature, let's modify the approach
-    # We'll keep the body-based key for now but note that ideally it should come from headers
-
+        
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            # Atomic idempotency reservation
+            # 🛡️ حماية من الإرسال المكرر (double-submit): لو نفس الطلب اتبعت قبل كده
+            # بنفس مفتاح idempotency_key، بنرجع نفس المهمة القديمة من غير ما نسجلها تاني.
             if mission.idempotency_key:
-                # Start transaction: insert placeholder if not exists
-                cursor.execute("""
-                    WITH ins AS (
-                        INSERT INTO idempotency_keys (idempotency_key, response, original_status)
-                        VALUES (%s, NULL::jsonb, NULL::int)
-                        ON CONFLICT (idempotency_key) DO NOTHING
-                        RETURNING idempotency_key
-                    )
-                    SELECT
-                        CASE WHEN (SELECT COUNT(*) FROM ins) = 1 THEN true ELSE false END AS we_are_owner,
-                        (SELECT response, original_status FROM idempotency_keys WHERE idempotency_key = %s) AS existing
-                """, (mission.idempotency_key, mission.idempotency_key))
-
-                result = cursor.fetchone()
-                we_are_owner = result[0]
-                existing_response = result[1]['response'] if result[1] and result[1]['response'] is not None else None
-                existing_status = result[1]['original_status'] if result[1] and result[1]['original_status'] is not None else None
-
-                # If we are not the owner, wait for the result or return what we have
-                if not we_are_owner:
-                    # Wait up to 2 attempts for the owner to complete (100ms each)
-                    for _ in range(2):
-                        if existing_response is not None and existing_status is not None:
-                            break
-                        cursor.execute("""
-                            SELECT response, original_status
-                            FROM idempotency_keys
-                            WHERE idempotency_key = %s
-                        """, (mission.idempotency_key,))
-                        r = cursor.fetchone()
-                        existing_response = r['response'] if r and r['response'] is not None else None
-                        existing_status = r['original_status'] if r and r['original_status'] is not None else None
-                        time.sleep(0.1)
-
-                    # If we still don't have a response, something went wrong
-                    if existing_response is None:
-                        raise HTTPException(status_code=500, detail="Idempotency owner failed to produce a response")
-
-                    return {
-                        "message": existing_response.get("message", "Mission processed"),
-                        "mission_code": existing_response.get("mission_code"),
-                        "mission_id": existing_response.get("mission_id"),
-                        "status": existing_response.get("status")
-                    } | {"original_status": existing_status}
-
-                # We are the owner - proceed with mission creation
-            # If no idempotency key, we proceed normally (non-idempotent)
+                cursor.execute(
+                    "SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;",
+                    (mission.idempotency_key,)
+                )
+                existing = cursor.fetchone()
+                if existing:
+                    return {"message": "تم حفظ المهمة بنجاح", "mission_code": existing[1], "mission_id": existing[0]}
 
             mission_code = f"#MSN-{datetime.now().strftime('%y%m%d-%H%M%S')}"
             def none_if_empty(val): return val if val != "" else None
@@ -453,11 +403,11 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 INSERT INTO missions (
                     mission_code, mission_name, mission_classification, branch_id, mission_type, mission_location, responsible_person,
                     data_source, status, exit_date, departure_date, arrival_date, return_date, completion_date,
-                    start_time, departure_time, arrival_time, completion_time, injured_count,
-                    indirect_beneficiaries_total, notes, internal_notes
+                    start_time, departure_time, arrival_time, completion_time, injured_count, 
+                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                ) RETURNING mission_id, mission_code, status;
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                ) RETURNING mission_id;
             """, (
                 mission_code, mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
                 mission.responsible_person, mission.data_source, mission.status,
@@ -465,12 +415,10 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 none_if_empty(mission.return_date), none_if_empty(mission.completion_date),
                 none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
                 none_if_empty(mission.completion_time),
-                mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes
+                mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
+                mission.idempotency_key
             ))
-            mission_result = cursor.fetchone()
-            mission_id = mission_result[0]
-            mission_code_from_db = mission_result[1]
-            mission_status = mission_result[2]
+            mission_id = cursor.fetchone()[0]
 
             for route in mission.routes:
                 cursor.execute("""
@@ -485,7 +433,7 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 # 1. أوتوميشن الإغلاق
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
-
+                
                 # 2. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض
                 if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':
                     cursor.execute("""
@@ -510,34 +458,28 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
 
             # 💡 تسجيل اللوج
             try:
-                create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بإنشاء استمارة جديدة بكود: {mission_code_from_db}"})
+                create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بإنشاء استمارة جديدة بكود: {mission_code}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
 
-            # Build final response
-            response = {
-                "message": "تم حفظ المهمة بنجاح",
-                "mission_code": mission_code_from_db,
-                "mission_id": mission_id,
-                "status": mission_status
-            }
-
-            # Finalize idempotency record if we have a key and we are the owner
-            if mission.idempotency_key and (not mission.idempotency_key or we_are_owner):
-                cursor.execute("""
-                    UPDATE idempotency_keys
-                    SET response = %s,
-                        original_status = %s
-                    WHERE idempotency_key = %s
-                """, (Jsonb(response), mission_status, mission.idempotency_key))
-
             connection.commit()
-            return response
-
+            return {"message": "تم حفظ المهمة بنجاح", "mission_code": mission_code, "mission_id": mission_id}
+            
     except Exception as e:
         connection.rollback()
         if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
             raise HTTPException(status_code=400, detail=str(e))
+        if mission.idempotency_key and "idempotency_key" in str(e) and ("unique" in str(e).lower() or "duplicate" in str(e).lower()):
+            # 🛡️ حصل تصادم نادر: طلبين بنفس المفتاح وصلوا في نفس اللحظة تقريباً.
+            # التاني اتمنع من الداتابيز، فبنرجّع المهمة اللي اتسجلت فعلاً بدل ما نطلع خطأ.
+            try:
+                with connection.cursor() as cursor2:
+                    cursor2.execute("SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;", (mission.idempotency_key,))
+                    existing = cursor2.fetchone()
+                    if existing:
+                        return {"message": "تم حفظ المهمة بنجاح", "mission_code": existing[1], "mission_id": existing[0]}
+            except Exception:
+                pass
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/missions/{mission_id}")
@@ -757,11 +699,11 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
         connection.close()
 
 @app.get("/api/audit-logs")
-def get_audit_logs(since_id: int = 0, limit: int = 100, credentials: HTTPAuthorizationCredentials = Depends(security)):
+def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
-
+    
     role = get_user_role(user_id)
     if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
         raise HTTPException(status_code=403, detail="هذه الصفحة متاحة للمالك فقط")
@@ -769,15 +711,64 @@ def get_audit_logs(since_id: int = 0, limit: int = 100, credentials: HTTPAuthori
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            # Fetch new audit logs since the given ID, ordered by ID ascending (oldest first)
+            # ضفنا l.entity_type عشان نفلتر بيه
             cursor.execute("""
                 SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
-                WHERE l.audit_id > %s
-                ORDER BY l.audit_id ASC
-                LIMIT %s;
-            """, (since_id, limit))
+                ORDER BY l.created_at DESC LIMIT %s OFFSET %s;
+            """, (limit, skip))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
+                    "action": r[3], 
+                    "details": r[4].get("action_text", str(r[4])) if isinstance(r[4], dict) else str(r[4] or ""), 
+                    "created_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else "",
+                    "entity_type": r[6]
+                } for r in rows
+            ]
+    except Exception as e:
+        print(f"Error fetching audit logs: {e}")
+        return []
+    finally:
+        connection.close()
+
+@app.get("/api/live-updates")
+def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    🛡️ نسخة مفتوحة لكل الأدوار (بما فيهم المتطوع) من فيد التحديثات اللحظية.
+    سجل النظام الكامل (/api/audit-logs) فاضل مقفول زي ما هو للمالك/المشرف/الجوكر بس.
+    لكن المتطوع كان مش بيوصله أي تحديث لحظي خالص (كان بياخد 403) فمكنش بيعرف لما
+    الجوكر يرد عليه أو يغير حالة استمارته إلا لو عمل Refresh يدوي للصفحة.
+    الإندبوينت ده بيرجع نفس البيانات للأدوار العليا، وبيرجع نسخة مفلترة (مهام/أخبار/كوارث/زلازل/أخبار الذكاء الاصطناعي فقط)
+    للمتطوع، من غير ما يشوف حاجة إدارية حساسة (زي تعديلات المستخدمين والصلاحيات).
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+
+    role = get_user_role(user_id)
+    is_privileged = bool(role) and role["role_name"].upper() in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if is_privileged:
+                cursor.execute("""
+                    SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
+                    FROM audit_logs l
+                    LEFT JOIN users u ON l.user_id = u.user_id
+                    ORDER BY l.created_at DESC LIMIT 50;
+                """)
+            else:
+                cursor.execute("""
+                    SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
+                    FROM audit_logs l
+                    LEFT JOIN users u ON l.user_id = u.user_id
+                    WHERE l.entity_type IN ('mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news')
+                    ORDER BY l.created_at DESC LIMIT 50;
+                """)
             rows = cursor.fetchall()
             return [
                 {
@@ -789,31 +780,8 @@ def get_audit_logs(since_id: int = 0, limit: int = 100, credentials: HTTPAuthori
                 } for r in rows
             ]
     except Exception as e:
-        print(f"Error fetching audit logs: {e}")
+        print(f"Error fetching live updates: {e}")
         return []
-    finally:
-        connection.close()
-
-@app.get("/api/audit-logs/latest-id")
-def get_latest_audit_log_id(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id: raise HTTPException(status_code=401)
-
-    role = get_user_role(user_id)
-    if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
-        raise HTTPException(status_code=403, detail="هذه الصفحة متاحة للمالك فقط")
-
-    connection = get_connection()
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT MAX(audit_id) FROM audit_logs")
-            result = cursor.fetchone()
-            latest_id = result[0] if result[0] is not None else 0
-            return {"latest_id": latest_id}
-    except Exception as e:
-        print(f"Error fetching latest audit log ID: {e}")
-        raise HTTPException(status_code=500, detail="خطأ في قاعدة البيانات")
     finally:
         connection.close()
 
@@ -1799,7 +1767,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
-
+    
     role = get_user_role(user_id)
     if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
         raise HTTPException(status_code=403, detail="عفواً، هذه الصفحة متاحة للمالك فقط")
@@ -1810,10 +1778,10 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
             # دالة DISTINCT ON لمنع التكرار، مع حساب المهام وإجمالي الساعات
             cursor.execute("""
                 SELECT DISTINCT ON (
-                    p.branch_id,
-                    CASE
-                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name)
-                        ELSE TRIM(p.participation_role)
+                    p.branch_id, 
+                    CASE 
+                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
+                        ELSE TRIM(p.participation_role) 
                     END
                 )
                     p.full_name,
@@ -1821,8 +1789,6 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     p.participant_type,
                     b.branch_name,
                     p.branch_id,
-                    v.team_code,
-                    v.admin_code,
                     (
                         SELECT COUNT(DISTINCT m.mission_id)
                         FROM mission_participants mp
@@ -1831,7 +1797,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                         AND (
                             (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                            OR
+                            OR 
                             ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
                         )
                     ) as missions_count,
@@ -1839,9 +1805,9 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         SELECT ROUND(COALESCE(SUM(
                             GREATEST(
                                 EXTRACT(EPOCH FROM (
-                                    (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
+                                    (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) - 
                                     (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
-                                )) / 3600.0,
+                                )) / 3600.0, 
                                 0
                             )
                         ), 0)::numeric, 1)
@@ -1849,31 +1815,22 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         JOIN missions m ON mp.mission_id = m.mission_id
                         WHERE mp.branch_id = p.branch_id
                         AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                        AND m.completion_date IS NOT NULL
+                        AND m.completion_date IS NOT NULL 
                         AND (
                             (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                            OR
+                            OR 
                             ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
                         )
-                    ) as total_hours,
-                    CASE WHEN EXISTS (
-                        SELECT 1
-                        FROM mission_participants mp2
-                        JOIN missions m2 ON mp2.mission_id = m2.mission_id
-                        WHERE mp2.volunteer_id = p.volunteer_id
-                        AND mp2.return_status = 'مازال بالمهمة'
-                        AND m2.status NOT IN ('Completed', 'Cancelled', 'Returned')
-                    ) THEN true ELSE false END as is_currently_on_mission
+                    ) as total_hours
                 FROM mission_participants p
                 LEFT JOIN branches b ON p.branch_id = b.branch_id
-                LEFT JOIN volunteers v ON p.volunteer_id = v.volunteer_id
                 WHERE p.full_name IS NOT NULL AND TRIM(p.full_name) != ''
-                ORDER BY
-                    p.branch_id,
-                    CASE
-                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name)
-                        ELSE TRIM(p.participation_role)
-                    END,
+                ORDER BY 
+                    p.branch_id, 
+                    CASE 
+                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
+                        ELSE TRIM(p.participation_role) 
+                    END, 
                     p.participant_id DESC;
             """)
             rows = cursor.fetchall()
@@ -1885,11 +1842,8 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     "participant_type": row[2],
                     "branch_name": row[3] or "غير محدد",
                     "branch_id": row[4],
-                    "team_code": row[5] or "",
-                    "admin_code": row[6] or "",
-                    "missions_count": row[7],
-                    "total_hours": float(row[8]), # إجمالي الساعات
-                    "is_currently_on_mission": row[9]
+                    "missions_count": row[5],
+                    "total_hours": float(row[6]) # ده إجمالي الساعات
                 })
             return result
     except Exception as e:
