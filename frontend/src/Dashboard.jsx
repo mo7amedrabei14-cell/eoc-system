@@ -641,6 +641,18 @@ const ENGLISH_UI_PREFIXES = [
   ['سيتم عرض مهام', 'Showing missions for'],
 ];
 
+// UUID v4 generator (fallback for older browsers)
+function generateUuid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 function getEnglishRegionName(value) {
   if (englishRegionNameCache.has(value)) return englishRegionNameCache.get(value);
 
@@ -799,6 +811,10 @@ useEffect(() => {
     return localStorage.getItem('dashboard-language') || 'ar';
   });
   const dashboardRootRef = useRef(null);
+const submissionIdRef = useRef(null); // For idempotency key (stable per logical operation)
+const lastSubmissionTimeRef = useRef(0); // For debounce UI submissions
+const lastSeenAuditIdRef = useRef(0); // For audit log watermark
+const isPollingRef = useRef(false); // For overlap prevention in polling
 
   useEffect(() => {
     localStorage.setItem('dashboard-language', language);
@@ -842,50 +858,53 @@ useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token || !userData) return;
 
-    let lastSeenSignature = null; 
-
-    const checkLiveUpdates = async () => {
+    // Initialize watermark (fetch latest audit log ID)
+    const initWatermark = async () => {
       try {
-        const res = await fetch('https://eoc-system-b12f.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('https://eoc-system-b12f.vercel.app/api/audit-logs/latest-id', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (res.ok) {
           const data = await res.json();
-          if (data && data.length > 0) {
-            
-            if (lastSeenSignature === null) {
-              lastSeenSignature = data[0].created_at + data[0].full_name + data[0].action;
-              return;
-            }
+          lastSeenAuditIdRef.current = data.latest_id || 0;
+        }
+      } catch (e) {
+        console.error('Failed to initialize audit log watermark:', e);
+      }
+    };
 
-            const newActions = [];
-            for (const log of data) {
-              const currentSig = log.created_at + log.full_name + log.action;
-              if (currentSig === lastSeenSignature) break; 
-              newActions.push(log);
-            }
+    initWatermark().then(() => {
+      // Now set up the polling with overlap prevention
+      const checkLiveUpdates = async () => {
+        if (isPollingRef.current) return; // Overlap prevention
+        isPollingRef.current = true;
 
-            if (newActions.length > 0) {
-              lastSeenSignature = newActions[0].created_at + newActions[0].full_name + newActions[0].action;
-
-              newActions.reverse().forEach(action => {
+        try {
+          const res = await fetch(`https://eoc-system-b12f.vercel.app/api/audit-logs?since_id=${lastSeenAuditIdRef.current}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              // Process each new log (data is in ascending order by audit_id)
+              data.forEach(action => {
                 const isAiLog = action.entity_type === 'ai_news' || action.full_name === 'AI Robot';
-                
-                // 💡 التعديل: إظهار الإشعار لو كان من الروبوت (حتى لو هو بيستخدم التوكن بتاعك)
-                if (action.full_name !== userData?.full_name || isAiLog) {
-                  const toastId = Date.now() + Math.random(); 
 
-                  // إضافة الإشعار للطابور (محمي ضد الانهيار لو الداتا عبارة عن Object)
-                  setToasts(prev => [...prev, { 
-                    id: toastId, 
-                    user: String(action.full_name || 'نظام'), 
-                    action: String(action.action || 'تحديث'), 
-                    details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''), 
-                    isAi: isAiLog 
+                // Show notification if not from self or is AI log
+                if (action.full_name !== userData?.full_name || isAiLog) {
+                  const toastId = Date.now() + Math.random();
+                  setToasts(prev => [...prev, {
+                    id: toastId,
+                    user: String(action.full_name || 'نظام'),
+                    action: String(action.action || 'تحديث'),
+                    details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''),
+                    isAi: isAiLog
                   }]);
                   setTimeout(() => {
-                    setToasts(prev => prev.filter(t => t.id !== toastId)); 
+                    setToasts(prev => prev.filter(t => t.id !== toastId));
                   }, 10000);
 
-                  // تنوير النقطة الحمراء
+                  // Update the red dot indicator
                   setNewUpdates(prev => ({
                     ...prev,
                     missions: prev.missions || action.entity_type === 'mission',
@@ -895,17 +914,35 @@ useEffect(() => {
                     ai_news: prev.ai_news || isAiLog,
                     audit: true
                   }));
+
+                  // If mission-related, dispatch custom event
+                  if (action.entity_type === 'mission' && action.entity_id) {
+                    window.dispatchEvent(new CustomEvent('mission-updated', {
+                      detail: { missionId: action.entity_id, action: action.action }
+                    }));
+                  }
                 }
               });
+
+              // Update the last seen audit ID to the highest we've seen
+              const highestId = data[data.length - 1].log_id;
+              if (highestId > lastSeenAuditIdRef.current) {
+                lastSeenAuditIdRef.current = highestId;
+              }
             }
           }
+        } catch (e) {
+          console.error('Error in checkLiveUpdates:', e);
+        } finally {
+          isPollingRef.current = false;
         }
-      } catch (e) {}
-    };
+      };
 
-    checkLiveUpdates();
-    const interval = setInterval(checkLiveUpdates, 15000); 
-    return () => clearInterval(interval);
+      // Initial call
+      checkLiveUpdates();
+      const interval = setInterval(checkLiveUpdates, 2000); // Reduced to 2 seconds for faster updates
+      return () => clearInterval(interval);
+    });
   }, [userData]);
 
   useEffect(() => {
@@ -1570,6 +1607,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [formNeedsAttention, setFormNeedsAttention] = useState(false);
   const formRef = useRef(null);
+  const submissionIdRef = useRef(null);
+  const lastSubmissionTimeRef = useRef(0);
+  const lastSeenAuditIdRef = useRef(0);
+  const missionUpdateSources = useRef(new Set());
+  const [pulsingMissionIds, setPulsingMissionIds] = useState([]);
 
   // تنبيت أنماط النبض مرة واحدة
   useEffect(() => {
@@ -1586,6 +1628,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         }
         .form-pulse {
           animation: pulse 2s infinite;
+        }
+        .mission-pulse {
+          animation: pulse 1.5s ease-in-out;
         }
       `;
       document.head.appendChild(styleElement);
@@ -1701,6 +1746,47 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   useEffect(() => { fetchMissions(); }, []);
+
+  // Listen for mission updates from other tabs/components
+  useEffect(() => {
+    const handleMissionUpdate = (event) => {
+      const { missionId, action } = event.detail;
+
+      // Update the specific mission in the missions list
+      setMissionsList(prev => prev.map(mission =>
+        mission.mission_id === missionId
+          ? { ...mission, status: action === 'Completed' ? 'Completed' : action === 'Under Review' ? 'Under Review' : action === 'Approved' ? 'Approved' : action === 'Returned' ? 'Returned' : mission.status }
+          : mission
+      ));
+
+      // Show a toast notification for the mission update
+      const toastId = Date.now() + Math.random();
+      setToasts(prev => [...prev, {
+        id: toastId,
+        user: "النظام",
+        action: `تم تحديث المهمة إلى: ${action === 'Completed' ? 'مكتملة' : action === 'Under Review' ? 'قيد المراجعة' : action === 'Approved' ? 'معتمدة' : action === 'Returned' ? 'إرجاع' : action}`,
+        details: `تم تحديث المهمة بواسطة مستخدم آخر.`,
+        isAi: false
+      }]);
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== toastId));
+      }, 10000);
+
+      // Start pulsing the mission card
+      setPulsingMissionIds(prev => [...prev, missionId]);
+      setTimeout(() => {
+        setPulsingMissionIds(prev => prev.filter(id => id !== missionId));
+      }, 3000);
+
+      // If this is the currently viewed mission, update it and trigger attention pulse
+      if (currentMissionData && currentMissionData.mission_id === missionId) {
+        fetchMissionDetails(missionId); // This will also set formNeedsAttention
+      }
+    };
+
+    window.addEventListener('mission-updated', handleMissionUpdate);
+    return () => window.removeEventListener('mission-updated', handleMissionUpdate);
+  }, [currentMissionData, fetchMissionDetails]);
 
   const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
   const removeRoute = (id) => setRoutes(routes.filter(r => r.id !== id));
@@ -1925,8 +2011,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   const handleSubmit = async (submitStatus) => {
-     // Prevent duplicate submissions
+     // Prevent duplicate submissions with debouncing and submission tracking
+     const now = Date.now();
+     if (now - lastSubmissionTimeRef.current < 1000) { // 1 second debounce
+        return;
+     }
      if (isSubmitting) return;
+
+     // Generate or reuse idempotency key for this logical operation
+     const idempotencyKey = submissionIdRef.current || generateUuid();
+     submissionIdRef.current = idempotencyKey;
+     const attemptId = now;
+     lastSubmissionTimeRef.current = attemptId;
+
      setIsSubmitting(true);
      try {
        const activeParticipants = {}; 
@@ -2030,20 +2127,45 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        const url = isUpdate ? `https://eoc-system-b12f.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system-b12f.vercel.app/api/missions';
        const method = isUpdate ? 'PUT' : 'POST';
 
-       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(missionData) });
+       const res = await fetch(url, {
+         method: method,
+         headers: {
+           'Content-Type': 'application/json',
+           'Authorization': `Bearer ${token}`,
+           'Idempotency-Key': idempotencyKey
+         },
+         body: JSON.stringify(missionData)
+       });
        if (res.ok) {
-         setIsModalOpen(false);
          const data = await res.json();
-         setCurrentMissionData(data);
-         setFormNeedsAttention(true);
-         fetchMissions();
-         setCustomAlert("✅ تم الحفظ بنجاح وتحديث الحالة.");
+         // Only update state if this is the latest submission (prevents race conditions)
+         if (attemptId === lastSubmissionTimeRef.current) {
+           setIsModalOpen(false);
+           setCurrentMissionData(data);
+           setFormNeedsAttention(true);
+           fetchMissions();
+           setCustomAlert("✅ تم الحفظ بنجاح وتحديث الحالة.");
+
+           // Dispatch custom event for real-time updates to other components/tabs
+           window.dispatchEvent(new CustomEvent('mission-updated', {
+             detail: { missionId: data.mission_id, action: submitStatus }
+           }));
+         }
+         // Clear idempotency key on known HTTP response (success) if matches
+         if (submissionIdRef.current === idempotencyKey) {
+           submissionIdRef.current = null;
+         }
        } else {
            const errorData = await res.json();
            setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errorData.detail}`);
+           // Clear idempotency key on known HTTP response (error) if matches
+           if (submissionIdRef.current === idempotencyKey) {
+             submissionIdRef.current = null;
+           }
        }
      } catch (error) {
        setCustomAlert("خطأ في الاتصال بالسيرفر!");
+       // Do NOT clear idempotency key on network error; retry will reuse same key
      } finally {
        setIsSubmitting(false);
      }
@@ -2274,7 +2396,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           <tbody className="divide-y divide-white/5">
             {isLoading ? (<tr><td colSpan="16" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} className="hover:bg-white/5 transition-colors">
+              <tr key={`mission-${m.mission_id}`} className={`hover:bg-white/5 transition-colors ${pulsingMissionIds.includes(m.mission_id) ? 'mission-pulse' : ''}`}>
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
                 <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
                 <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
@@ -4903,6 +5025,7 @@ function HumanResourcesView({ branches, isOwner }) {
   const [isLoading, setIsLoading] = useState(true);
   const [filterBranch, setFilterBranch] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterMissionStatus, setFilterMissionStatus] = useState('all'); // all, active, inactive
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -4920,13 +5043,26 @@ function HumanResourcesView({ branches, isOwner }) {
       }
     };
     fetchHR();
+
+    // Listen for mission-updated events to refresh data in real-time
+    const handleMissionUpdated = () => {
+      fetchHR();
+    };
+
+    window.addEventListener('mission-updated', handleMissionUpdated);
+    return () => {
+      window.removeEventListener('mission-updated', handleMissionUpdated);
+    };
   }, []);
 
   const filteredHR = hrList.filter(p => {
     const matchBranch = filterBranch === 'all' ? true : p.branch_name === filterBranch;
     const matchType = filterType === 'all' ? true : p.participant_type === filterType;
     const matchSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || p.membership_number.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchBranch && matchType && matchSearch;
+    const matchMissionStatus = filterMissionStatus === 'all' ? true :
+      filterMissionStatus === 'active' ? p.is_currently_on_mission === true :
+      filterMissionStatus === 'inactive' ? p.is_currently_on_mission === false : true;
+    return matchBranch && matchType && matchSearch && matchMissionStatus;
   });
 
   const handleExportExcel = () => {
@@ -4938,7 +5074,10 @@ function HumanResourcesView({ branches, isOwner }) {
       "الفرع التابع له": p.branch_name === 'القاهرة' ? 'المركز العام' : p.branch_name,
       "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
       "إجمالي المهام الميدانية": p.missions_count,
-      "إجمالي الساعات (ساعة)": p.total_hours
+      "إجمالي الساعات (ساعة)": p.total_hours,
+      "كود الفريق": p.team_code || '',
+      "كود الإدارة": p.admin_code || '',
+      "الحالة": p.is_currently_on_mission ? 'مهمه نشطة' : 'غير نشط'
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "القوة البشرية");
@@ -4966,17 +5105,23 @@ function HumanResourcesView({ branches, isOwner }) {
           
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <input type="text" placeholder="بحث بالاسم أو الكود..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#c70000]/50 w-full md:w-auto" />
-            
+
             <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
               <option value="all">كل الفروع والتمركزات</option>
               <option value="المركز العام">المركز العام</option>
               {branchNames.filter(n => n !== 'القاهرة').map(g => <option key={g} value={g}>{g}</option>)}
             </select>
-            
+
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
               <option value="all">الكل (متطوع وغير متطوع)</option>
               <option value="volunteer">متطوعين فقط</option>
               <option value="non_volunteer">غير متطوعين</option>
+            </select>
+
+            <select value={filterMissionStatus} onChange={(e) => setFilterMissionStatus(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
+              <option value="all">الكل</option>
+              <option value="active">حاليًا في مهمة</option>
+              <option value="inactive">ليس حاليًا في مهمة</option>
             </select>
           </div>
 
@@ -4994,10 +5139,13 @@ function HumanResourcesView({ branches, isOwner }) {
                 <th className="p-4 font-semibold border-l border-white/5 text-center">النوع</th>
                 <th className="p-4 font-semibold text-center text-green-500 border-l border-white/5">عدد المهام</th>
                 <th className="p-4 font-semibold text-center text-orange-400">إجمالي الساعات</th>
+                <th className="p-4 font-semibold text-center border-l border-white/5">كود الفريق</th>
+                <th className="p-4 font-semibold text-center border-l border-white/5">كود الإدارة</th>
+                <th className="p-4 font-semibold text-center border-l border-white/5">الحالة</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> : 
+              {isLoading ? <tr><td colSpan="10" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> :
                filteredHR.length > 0 ? filteredHR.map((person, idx) => (
                 <tr key={idx} className="hover:bg-white/5 transition-colors">
                   <td className="p-4 text-gray-500 font-bold border-l border-white/5 text-center">{idx + 1}</td>
@@ -5019,8 +5167,19 @@ function HumanResourcesView({ branches, isOwner }) {
                       {person.total_hours} ساعة
                     </span>
                   </td>
+                  <td className="p-4 text-center">
+                    {person.team_code || '-'}
+                  </td>
+                  <td className="p-4 text-center">
+                    {person.admin_code || '-'}
+                  </td>
+                  <td className="p-4 text-center">
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${person.is_currently_on_mission ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-600/20 text-gray-400'}`}>
+                      {person.is_currently_on_mission ? 'مهمه نشطة' : 'غير نشط'}
+                    </span>
+                  </td>
                 </tr>
-              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
+              )) : <tr><td colSpan="10" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
             </tbody>
           </table>
         </div>
