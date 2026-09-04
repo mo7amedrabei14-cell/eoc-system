@@ -187,15 +187,25 @@ a, button { -webkit-tap-highlight-color: transparent; }
 ::-webkit-scrollbar-corner, .custom-scrollbar::-webkit-scrollbar-corner { background: var(--bg); }
 
 /* ───────────────────── 5) الأسطح والمكوّنات ───────────────────── */
-.surface-view { background: var(--bg); }
-.app-shell { background: var(--bg); }
+/* خلفية غرفة العمليات: وهج brand أعلى اليسار + توهّج معلوماتي خافت يمين + شبكة عمليات رقيقة
+   → إحساس Command Center في كل شاشة، ثابت (content هو اللي بيتمرر) ومتوافق مع الثيمين */
+.surface-view, .app-shell {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1100px 520px at 12% -10%, var(--accent-softer), transparent 62%),
+    radial-gradient(880px 480px at 104% -14%, color-mix(in srgb, var(--info) 6%, transparent), transparent 58%),
+    linear-gradient(var(--border-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
+  background-size: auto, auto, 54px 54px, 54px 54px;
+}
 
 /* بطاقة / لوح — سطح خلفي مرتفع */
 .card-surface {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-1);
+  /* edge-light علوي: شعرة ضوئية ترفع السطح في الداكن / غير مرئية تقريبًا في الفاتح */
+  box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.045);
 }
 .card-surface-interactive { transition: transform var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-out), border-color var(--dur) var(--ease-out); }
 .card-surface-interactive:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); border-color: var(--border-strong); }
@@ -434,6 +444,49 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
 .btn-primary:focus-visible { box-shadow: var(--ring); outline: none; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; filter: grayscale(0.2); }
 
+/* ════════════════════════════════════════════════════════════════
+   22) نظام الأيقونة الموحّد + بصريات الأفعال — Product-grade icons
+   ════════════════════════════════════════════════════════════════ */
+/* حجم بصري موحّد + وزن ضربة ثابت + رؤوس مدوّرة لكل أيقونة في الأنظمة التفاعلية */
+.action-btn svg,
+.btn-primary svg,
+.icon-btn svg,
+.btn svg,
+.segmented-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+.action-btn--icon svg { width: 1.12rem; height: 1.12rem; }
+
+/* micro-scale على الـ hover — استجابة ملموسة بدون قفز */
+.icon-btn svg, .action-btn svg { transition: transform var(--dur-fast) var(--ease-out); }
+.icon-btn:hover svg { transform: scale(1.08); }
+.action-btn:hover svg { transform: scale(1.1); }
+
+/* حلقة تركيز موحّدة لكل المدخلات — إتاحة + هوية (كل البنود التفاعلية) */
+.field:focus,
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring-soft);
+  outline: none;
+}
+
+/* هرمية الطباعة: عناوين أكثر إحكامًا ووضوحًا */
+.app-shell h1, .app-shell h2 { letter-spacing: -0.02em; }
+.app-shell h3 { letter-spacing: -0.012em; }
+button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
+
 /* ───────────────────── 8) الجداول ───────────────────── */
 .table-shell {
   background: var(--surface);
@@ -663,6 +716,72 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
   letter-spacing: var(--text-tight);
   font-variant-numeric: tabular-nums;
 }
+.kpi-card { box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.045); }
+.kpi-sub {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ───────────────────── 23) Command Center — حزام العمليات / فيد حي ───────────────────── */
+.ops-band {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 10%, var(--surface)), var(--surface) 46%, color-mix(in srgb, var(--info) 6%, var(--surface)));
+  box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.ops-band::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -4rem;
+  inset-block-start: -5rem;
+  width: 16rem; height: 16rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--accent-soft), transparent 66%);
+  pointer-events: none;
+}
+.ops-clock { font-variant-numeric: tabular-nums; letter-spacing: 0.03em; line-height: 1.1; }
+.ops-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+@keyframes dot-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 42%, transparent); opacity: 1; }
+  70%  { box-shadow: 0 0 0 6px transparent; opacity: 0.75; }
+  100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+}
+.live-dot {
+  width: 0.5rem; height: 0.5rem;
+  border-radius: 999px;
+  background: var(--ok);
+  animation: dot-pulse 2.2s var(--ease-out) infinite;
+}
+.rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.rail-item:hover { background: var(--surface-2); border-color: var(--border); transform: translateX(calc(var(--tip-dir, 1) * 3px)); }
+[dir="ltr"] .rail-item { --tip-dir: 1; }
+[dir="rtl"] .rail-item { --tip-dir: -1; }
 
 /* ───────────────────── 16) الحركات ───────────────────── */
 @keyframes fade-in-up {
@@ -962,4 +1081,34 @@ input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
     scroll-behavior: auto !important;
   }
   .stagger > * { animation-delay: 0s !important; }
+  .icon-btn:hover svg, .action-btn:hover svg { transform: none !important; }
 }
+/* ───────────────────────────────────────────────
+   Login + Slide-to-Unlock signature (Phase 5-7)
+   فـترة تحويل لوحة الدخول: نوابض + مغناطيس + رادار
+   ─────────────────────────────────────────────── */
+@keyframes radar-sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.radar-sweep { animation: radar-sweep 4.5s linear infinite; }
+
+@keyframes ripple-out { from { transform: scale(0.35); opacity: 0.9; } to { transform: scale(2.3); opacity: 0; } }
+.ripple-burst { animation: ripple-out 0.75s var(--ease-out) forwards; }
+
+@keyframes shake-x {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.error-shake { animation: shake-x 0.45s var(--ease-out); }
+
+@keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.live-blink { animation: live-blink 1.6s ease-in-out infinite; }
+
+.ops-gauge-fill { transition: width 1.15s var(--ease-out); }
+
+/* خروج البوابة بعد الإتمام: تقشّر عمق + ضباب + انزياح — بدل انتقال بسيط */
+@keyframes gate-peel {
+  0% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+  100% { transform: translateY(-16px) scale(1.045); opacity: 0; filter: blur(9px); }
+}
+.gate-peel { animation: gate-peel 0.85s var(--ease-out) forwards; }

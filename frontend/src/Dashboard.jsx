@@ -5,6 +5,13 @@ import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
+// 🔧 Module-level API base. Must be declared here (module scope), NOT inside a
+// component's effect: MissionsView's live modal-sync effect fetches
+// `${BASE}/api/missions/...` from its own scope, and a local `const BASE`
+// inside Dashboard's radar effect caused `ReferenceError: BASE is not defined`
+// → React 18 unmounts the whole tree (no error boundary) → blank page.
+const BASE = 'https://eoc-system-b12f.vercel.app';
+
 // Static dashboard labels are kept in Arabic in the existing screens.  This
 // table lets the whole dashboard share Login.jsx's language choice without
 // changing API values, form values, or exported data.
@@ -1044,7 +1051,6 @@ useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token || !userData) return;
 
-    const BASE = 'https://eoc-system-b12f.vercel.app';
     let pollTimer = null;
     realtimeUnmountedRef.current = false;
     pollBackoffRef.current = 4000;
@@ -1265,7 +1271,7 @@ useEffect(() => {
     switch (activeTab) {
       case 'home': return <HomeView branches={branchesList} />;
       case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} />;
-      case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} />;
+      case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} />;
@@ -1287,10 +1293,10 @@ useEffect(() => {
   }
 
   .theme-light [class~="bg-[#050505]"],
-  .theme-light [class~="bg-[#0c0c0c]"],
+  .theme-light [class~="bg-[var(--surface-2)]"],
   .theme-light [class~="bg-[#0a0a0a]"],
-  .theme-light [class~="bg-[#111]"],
-  .theme-light [class~="bg-[#1a1a1a]"],
+  .theme-light [class~="bg-[var(--surface-4)]"],
+  .theme-light [class~="bg-[var(--surface-3)]"],
   .theme-light [class~="bg-[#171717]"] {
     background-color: #ffffff !important;
   }
@@ -1303,15 +1309,15 @@ useEffect(() => {
     color: #17202a !important;
   }
 
-  .theme-light [class~="text-gray-300"] {
+  .theme-light [class~="text-[var(--ink-2)]"] {
     color: #374151 !important;
   }
 
-  .theme-light [class~="text-gray-400"] {
+  .theme-light [class~="text-[var(--muted-2)]"] {
     color: #64748b !important;
   }
 
-  .theme-light [class~="text-gray-500"] {
+  .theme-light [class~="text-[var(--faint)]"] {
     color: #718096 !important;
   }
 
@@ -1334,7 +1340,7 @@ useEffect(() => {
     color: #17202a !important;
   }
 
-  .theme-light [class~="hover\\:bg-[#111]"]:hover {
+  .theme-light [class~="hover\\:bg-[var(--surface-4)]"]:hover {
     background-color: #eef2f5 !important;
   }
 
@@ -1384,12 +1390,12 @@ useEffect(() => {
         {toasts.map(toastItem => (
           <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.isAi ? '!border-purple-500/50' : ''}`}>
             <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-purple-500' : 'bg-[#c70000]'} animate-pulse`}></div>
-            <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-[#c70000]/20 text-[#c70000] border-[#c70000]/30'} rounded-full flex items-center justify-center border shrink-0`}>
+            <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30'} rounded-full flex items-center justify-center border shrink-0`}>
               {toastItem.isAi ? <AIIcon className="w-5 h-5 animate-pulse" /> : <AlertIcon className="w-5 h-5 animate-bounce" />}
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-[var(--ink)] font-bold text-sm flex justify-between items-center">
-                <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[#c70000] ml-1">{toastItem.user}</span>}</span>
+                <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[var(--accent)] ml-1">{toastItem.user}</span>}</span>
                 <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="text-[var(--faint)] hover:text-[var(--ink)] transition-colors shrink-0">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -1549,6 +1555,7 @@ useEffect(() => {
       <div
         role="dialog"
         aria-label="الإشعارات اللحظية"
+        ref={notifRef}
         className={`notif-dropdown absolute end-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col overflow-hidden z-[80] ${notifClosing ? 'notif-dropdown-close' : ''}`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-soft)]">
@@ -1666,8 +1673,46 @@ function HomeView({ branches = [] }) {
   const globalEqsToday = dailyGlobalEqs.length;
   const totalEgyptEqs = dailyEgyptEqs.length;
 
+  // 🕐 ساعة العمليات الحية + حالة تشغيلية مشتقة من البيانات الراسخة (لا منطق جديد)
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const liveActive = missions.filter(m => !['Completed', 'Cancelled'].includes(m.status)).length;
+  const liveOpen = missions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const latestMissions = [...missions]
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+    .slice(0, 5);
+  const liveClock = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const liveDate = now.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const statusTone = m => {
+    if (m.status === 'Cancelled') return 'bg-[var(--warn)]';
+    if (m.status === 'Completed') return 'bg-[var(--ok)]';
+    return m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]' : 'bg-[var(--accent)]';
+  };
+
   return (
     <div id="home-view-top" className="space-y-8 pb-10 animate-fade-in-up scroll-mt-6">
+      {/* 🛰️ حزام قيادة العمليات: ساعة حية + LIVE + ملخص تشغيلي فوري */}
+      <div className="ops-band p-5 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-5 relative z-10">
+          <div className="flex items-center gap-4">
+            <span className="ops-chip text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]"><span className="live-dot" /> LIVE</span>
+            <div className="hidden sm:flex flex-col">
+              <span className="ops-clock text-2xl md:text-3xl font-black text-[var(--ink)]" dir="ltr">{liveClock}</span>
+              <span className="text-xs font-bold text-[var(--muted)] mt-1">{liveDate}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="ops-chip"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" /> مهام جارية الآن: <b className="text-[var(--ink)] tabular-nums">{liveActive}</b></span>
+            <span className="ops-chip"><span className="w-1.5 h-1.5 rounded-full bg-[var(--info)]" /> مفتوحة: <b className="text-[var(--ink)] tabular-nums">{liveOpen}</b></span>
+            <span className="ops-chip"><span className="w-1.5 h-1.5 rounded-full bg-[var(--warn)]" /> شبكة اتصال: <b className="text-[var(--ok)]">مستقرة</b></span>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-5">
         <div className="min-w-0">
           <p className="eyebrow mb-2">غرفة عمليات الطوارئ</p>
@@ -1693,11 +1738,17 @@ function HomeView({ branches = [] }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
         <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام اليومية (نشطة)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><AlertIcon/></div></div>
-          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{activeDaily}</p>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-4xl text-[var(--ink)]">{activeDaily}</p>
+            <span className="kpi-sub"><span className="live-dot" /> نشطة الآن</span>
+          </div>
         </div>
         <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام المفتوحة</h3><div className="p-2 rounded-xl text-blue-500 bg-blue-500/10 border border-blue-500/20 shrink-0"><AlertIcon/></div></div>
-          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{activeOpen}</p>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-4xl text-[var(--ink)]">{activeOpen}</p>
+            <span className="kpi-sub">تنتظر الإغلاق</span>
+          </div>
         </div>
         <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-purple-400 bg-purple-500/10 border border-purple-500/20 shrink-0"><NewsIcon/></div></div>
@@ -1705,15 +1756,24 @@ function HomeView({ branches = [] }) {
         </div>
         <div className="kpi-card card-surface border-l-4 border-l-[var(--accent)] p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
-          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{totalGlobalDisasters}</p>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-4xl text-[var(--ink)]">{totalGlobalDisasters}</p>
+            <span className="kpi-sub">الرصد العالمي</span>
+          </div>
         </div>
         <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الزلازل العالمية (اليوم)</h3><div className="p-2 rounded-xl text-red-500 bg-red-500/10 border border-red-500/20 shrink-0"><EarthquakeIcon/></div></div>
-          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{globalEqsToday}</p>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-4xl text-[var(--ink)]">{globalEqsToday}</p>
+            <span className="kpi-sub">خلال 24 ساعة</span>
+          </div>
         </div>
         <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-green-500 bg-green-500/10 border border-green-500/20 shrink-0"><EarthquakeIcon/></div></div>
-          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{totalEgyptEqs}</p>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-4xl text-[var(--ink)]">{totalEgyptEqs}</p>
+            <span className="kpi-sub">خلال 24 ساعة</span>
+          </div>
         </div>
       </div>
 
@@ -1739,6 +1799,37 @@ function HomeView({ branches = [] }) {
           </MapContainer>
         </div>
       </div>
+
+      {/* 📡 الفيد الحي — آخر التحديثات الميدانية (قراءة فقط من بيانات المهام) */}
+      <div className="card-surface p-4 md:p-6 animate-fade-in-up">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <span className="text-[var(--accent)]"><AlertIcon /></span> آخر التحديثات الميدانية
+          </h3>
+          <span className="ops-chip text-[var(--info)] border-[var(--info-soft)] bg-[var(--info-soft)]"><span className="w-1.5 h-1.5 rounded-full bg-[var(--info)] animate-pulse" /> فيد لحظي — من سجل المهام</span>
+        </div>
+        {latestMissions.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm">لا توجد مهام مسجلة بعد.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {latestMissions.map((m, i) => (
+              <div key={`rail-${m.mission_id}_${i}`} className="rail-item animate-fade-in-up" style={{ animationDelay: `${Math.min(i, 6) * 60}ms` }}>
+                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusTone(m)}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="font-bold text-sm truncate text-[var(--ink)]">{m.mission_name || 'مهمة'}</p>
+                    {m.mission_classification === 'مفتوحة' && <span className="badge badge-active shrink-0">مفتوحة</span>}
+                  </div>
+                  <p className="text-xs text-[var(--muted)] truncate mt-0.5" dir="auto">
+                    {m.branch ? `${m.branch} · ` : ''}
+                    {m.exit_date && m.exit_date !== '-' ? `تحرك: ${m.exit_date}` : formatDateTime(m.created_at)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1754,12 +1845,12 @@ function BranchesAndInventoryView({ branches }) {
 
   return (
     <div className="flex flex-col gap-8 pb-10">
-      <div className="flex justify-between items-end border-b border-white/5 pb-4">
-        <h2 className="text-xl font-bold text-[#c70000]">
+      <div className="flex justify-between items-end border-b border-[var(--border)] pb-4">
+        <h2 className="text-xl font-bold text-[var(--accent)]">
           {selectedBranchId && displayedBranches.length > 0 ? `بيانات تمركز: ${displayedBranches[0]?.name === 'القاهرة' ? 'المركز العام' : displayedBranches[0]?.name}` : 'البيانات الكلية (على مستوى الجمهورية)'}
         </h2>
         {selectedBranchId && (
-          <button onClick={() => setSelectedBranchId(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-4 py-2 rounded-lg text-sm transition-colors shadow-lg flex items-center gap-2">
+          <button onClick={() => setSelectedBranchId(null)} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white border border-[var(--border)] px-4 py-2 rounded-lg text-sm transition-colors shadow-lg flex items-center gap-2">
             إلغاء التحديد <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </button>
         )}
@@ -1769,14 +1860,14 @@ function BranchesAndInventoryView({ branches }) {
       <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[400px]">
         
         {/* 💡 اللستة هتاخد 250 بيكسل في الموبايل وتقدر تعملها سكرول */}
-        <div className="w-full lg:w-1/4 bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden flex flex-col shadow-lg h-[250px] lg:h-auto">
-          <div className="p-4 border-b border-white/5 bg-[#111]"><h3 className="text-md font-bold text-center">قائمة التمركزات</h3></div>
+        <div className="w-full lg:w-1/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg h-[250px] lg:h-auto">
+          <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-4)]"><h3 className="text-md font-bold text-center">قائمة التمركزات</h3></div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <table className="w-full text-right text-sm">
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-[var(--border)]">
                 {branches.map(branch => (
-                  <tr key={`list-${branch.id}`} onClick={() => handleSelectBranch(branch.id)} className={`transition-colors cursor-pointer ${selectedBranchId === branch.id ? 'bg-[#c70000]/20 border-r-4 border-[#c70000]' : 'hover:bg-white/5 border-r-4 border-transparent'}`}>
-                    <td className={`p-4 font-bold ${selectedBranchId === branch.id ? 'text-[#c70000]' : 'text-white'}`}>{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</td>
+                  <tr key={`list-${branch.id}`} onClick={() => handleSelectBranch(branch.id)} className={`transition-colors cursor-pointer ${selectedBranchId === branch.id ? 'bg-[var(--accent-soft)] border-r-4 border-[var(--accent)]' : 'hover:bg-[var(--surface-hover)] border-r-4 border-transparent'}`}>
+                    <td className={`p-4 font-bold ${selectedBranchId === branch.id ? 'text-[var(--accent)]' : 'text-white'}`}>{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1785,7 +1876,7 @@ function BranchesAndInventoryView({ branches }) {
         </div>
         
         {/* 💡 الخريطة هتاخد 350 بيكسل في الموبايل */}
-        <div className="w-full lg:w-3/4 bg-[#0c0c0c] border border-white/5 rounded-3xl relative overflow-hidden shadow-lg z-0 h-[350px] lg:h-auto">
+        <div className="w-full lg:w-3/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl relative overflow-hidden shadow-lg z-0 h-[350px] lg:h-auto">
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
               {branches.map(branch => branch.lat && branch.lng ? (
@@ -1801,99 +1892,99 @@ function BranchesAndInventoryView({ branches }) {
       </div>
 
       <div id="inventory-table-section" className="space-y-4 mt-4 scroll-mt-6">
-        <h3 className="text-lg font-bold text-white border-b border-white/5 pb-2">الأرصدة اللوجستية والفنية</h3>
+        <h3 className="text-lg font-bold text-white border-b border-[var(--border)] pb-2">الأرصدة اللوجستية والفنية</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InventoryCard title="إجمالي شنط الإسعاف" value={totalFirstAid.toLocaleString()} unit="شنطة مجهزة" color="text-red-500" />
           <InventoryCard title="أجهزة اتصال لاسلكي" value={totalRadios.toLocaleString()} unit="جهاز نشط" color="text-blue-500" />
           <InventoryCard title="مخزون الإيواء" value={totalTentsBlankets.toLocaleString()} unit="خيمة وبطانية" color="text-yellow-500" />
           <InventoryCard title="أسطول السيارات (شامل الإسعاف)" value={totalCars.toLocaleString()} unit="سيارة جاهزة" color="text-green-500" />
         </div>
-        <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden flex flex-col shadow-lg max-h-[600px] mt-4">
+        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg max-h-[600px] mt-4">
           <div className="flex-1 overflow-auto custom-scrollbar">
             <table className="w-full text-center text-xs whitespace-nowrap">
-              <thead className="bg-[#1a1a1a] text-gray-400 sticky top-0 z-10 shadow-md">
+              <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
                 <tr>
-                  <th className="p-4 font-semibold border-l border-white/5 sticky right-0 bg-[#1a1a1a] z-20">الفرع / التمركز</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-[#c70000]">سيارات</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-[#c70000]">إسعاف</th>
-                  <th className="p-4 font-semibold border-l border-white/5">خيم</th>
-                  <th className="p-4 font-semibold border-l border-white/5">بطاطين</th>
-                  <th className="p-4 font-semibold border-l border-white/5">مراتب</th>
-                  <th className="p-4 font-semibold border-l border-white/5">ملايات</th>
-                  <th className="p-4 font-semibold border-l border-white/5">مخدات</th>
-                  <th className="p-4 font-semibold border-l border-white/5">حصر</th>
-                  <th className="p-4 font-semibold border-l border-white/5">تنك مياه</th>
-                  <th className="p-4 font-semibold border-l border-white/5">بستلة</th>
-                  <th className="p-4 font-semibold border-l border-white/5">جركن</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-blue-400">شنط إسعاف</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-blue-400">نقالات</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-blue-400">مستشفى ميداني</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-blue-400">بنك دم</th>
-                  <th className="p-4 font-semibold border-l border-white/5">لاسلكي تترا</th>
-                  <th className="p-4 font-semibold border-l border-white/5">لاسلكي هواوي</th>
-                  <th className="p-4 font-semibold border-l border-white/5">طفايات</th>
-                  <th className="p-4 font-semibold border-l border-white/5">مكن تطهير</th>
-                  <th className="p-4 font-semibold border-l border-white/5">بخاخات</th>
-                  <th className="p-4 font-semibold border-l border-white/5">خوذ</th>
-                  <th className="p-4 font-semibold border-l border-white/5">فيستات</th>
-                  <th className="p-4 font-semibold border-l border-white/5">كابات</th>
-                  <th className="p-4 font-semibold border-l border-white/5">نظارات</th>
-                  <th className="p-4 font-semibold border-l border-white/5">بوت</th>
-                  <th className="p-4 font-semibold border-l border-white/5">آيس بوكس</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-yellow-500">فرق إسعافات</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-yellow-500">متطوعين إسعافات</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-yellow-500">فرق طوارئ</th>
-                  <th className="p-4 font-semibold border-l border-white/5 bg-[#111] text-yellow-500">متطوعين طوارئ</th>
-                  <th className="p-4 font-semibold border-l border-white/5">فرق دعم نفسي</th>
-                  <th className="p-4 font-semibold border-l border-white/5">متطوعين دعم نفسي</th>
-                  <th className="p-4 font-semibold border-l border-white/5">فرق توعية</th>
-                  <th className="p-4 font-semibold border-l border-white/5">متطوعين توعية</th>
-                  <th className="p-4 font-semibold border-l border-white/5">مدربين (مركز عام)</th>
-                  <th className="p-4 font-semibold border-l border-white/5">مدربين (فرع)</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] sticky right-0 bg-[var(--surface-3)] z-20">الفرع / التمركز</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-[var(--accent)]">سيارات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-[var(--accent)]">إسعاف</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">خيم</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">بطاطين</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">مراتب</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">ملايات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">مخدات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">حصر</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">تنك مياه</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">بستلة</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">جركن</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-blue-400">شنط إسعاف</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-blue-400">نقالات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-blue-400">مستشفى ميداني</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-blue-400">بنك دم</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">لاسلكي تترا</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">لاسلكي هواوي</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">طفايات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">مكن تطهير</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">بخاخات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">خوذ</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">فيستات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">كابات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">نظارات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">بوت</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">آيس بوكس</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-yellow-500">فرق إسعافات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-yellow-500">متطوعين إسعافات</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-yellow-500">فرق طوارئ</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)] bg-[var(--surface-4)] text-yellow-500">متطوعين طوارئ</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">فرق دعم نفسي</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">متطوعين دعم نفسي</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">فرق توعية</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">متطوعين توعية</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">مدربين (مركز عام)</th>
+                  <th className="p-4 font-semibold border-l border-[var(--border)]">مدربين (فرع)</th>
                   <th className="p-4 font-semibold">إصحاح بيئي</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-[var(--border)]">
                 {displayedBranches.map((item) => (
-                  <tr key={`inv-row-${item.id}`} className="hover:bg-white/5 transition-colors group">
-                    <td className="p-4 font-bold text-white group-hover:text-[#c70000] sticky right-0 bg-[#0c0c0c] group-hover:bg-[#1a1a1a] border-l border-white/5 z-10">{item.name === 'القاهرة' ? 'المركز العام' : item.name}</td>
-                    <td className="p-4 text-gray-300 font-bold bg-[#111]/50 border-l border-white/5">{item.cars}</td>
-                    <td className="p-4 text-gray-300 font-bold bg-[#111]/50 border-l border-white/5">{item.ambulances}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.tents}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.blankets}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.mattresses}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.bed_sheets}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.pillows}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.plastic_mats}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.water_tanks}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.plastic_buckets}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.plastic_jerrycans}</td>
-                    <td className="p-4 text-blue-400 font-bold bg-[#111]/50 border-l border-white/5">{item.first_aid_kits}</td>
-                    <td className="p-4 text-gray-300 bg-[#111]/50 border-l border-white/5">{item.stretchers}</td>
-                    <td className="p-4 text-gray-300 bg-[#111]/50 border-l border-white/5">{item.hospitals > 0 ? '✔️' : '-'}</td>
-                    <td className="p-4 text-gray-300 bg-[#111]/50 border-l border-white/5">{item.blood_banks > 0 ? '✔️' : '-'}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.motorola_radios}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.huawei_radios}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.fire_extinguishers}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.disinfection_machines}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.manual_sprayers}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.helmets}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.vests}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.caps}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.plastic_goggles}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.plastic_boots}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.ice_boxes}</td>
-                    <td className="p-4 text-yellow-500 font-bold bg-[#111]/50 border-l border-white/5">{item.first_aid_teams}</td>
-                    <td className="p-4 text-yellow-500 font-bold bg-[#111]/50 border-l border-white/5">{item.first_aid_vols}</td>
-                    <td className="p-4 text-yellow-500 font-bold bg-[#111]/50 border-l border-white/5">{item.emergency_teams}</td>
-                    <td className="p-4 text-yellow-500 font-bold bg-[#111]/50 border-l border-white/5">{item.emergency_vols}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.psych_support_teams}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.psych_support_vols}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.health_awareness_teams}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.health_awareness_vols}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.first_aid_trainers_hq}</td>
-                    <td className="p-4 text-gray-400 border-l border-white/5">{item.first_aid_trainers_branch}</td>
-                    <td className="p-4 text-gray-400">{item.wash_vols}</td>
+                  <tr key={`inv-row-${item.id}`} className="hover:bg-[var(--surface-hover)] transition-colors group">
+                    <td className="p-4 font-bold text-white group-hover:text-[var(--accent)] sticky right-0 bg-[var(--surface-2)] group-hover:bg-[var(--surface-3)] border-l border-[var(--border)] z-10">{item.name === 'القاهرة' ? 'المركز العام' : item.name}</td>
+                    <td className="p-4 text-[var(--ink-2)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.cars}</td>
+                    <td className="p-4 text-[var(--ink-2)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.ambulances}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.tents}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.blankets}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.mattresses}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.bed_sheets}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.pillows}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_mats}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.water_tanks}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_buckets}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_jerrycans}</td>
+                    <td className="p-4 text-blue-400 font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_kits}</td>
+                    <td className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.stretchers}</td>
+                    <td className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.hospitals > 0 ? '✔️' : '-'}</td>
+                    <td className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.blood_banks > 0 ? '✔️' : '-'}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.motorola_radios}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.huawei_radios}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.fire_extinguishers}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.disinfection_machines}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.manual_sprayers}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.helmets}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.vests}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.caps}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_goggles}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_boots}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.ice_boxes}</td>
+                    <td className="p-4 text-yellow-500 font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_teams}</td>
+                    <td className="p-4 text-yellow-500 font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_vols}</td>
+                    <td className="p-4 text-yellow-500 font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.emergency_teams}</td>
+                    <td className="p-4 text-yellow-500 font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.emergency_vols}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.psych_support_teams}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.psych_support_vols}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.health_awareness_teams}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.health_awareness_vols}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.first_aid_trainers_hq}</td>
+                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.first_aid_trainers_branch}</td>
+                    <td className="p-4 text-[var(--muted-2)]">{item.wash_vols}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1908,7 +1999,7 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
-function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [] }) {
+function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar' }) {
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
@@ -2414,7 +2505,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const StatusBadge = ({ status }) => {
     const statuses = {
-      'Draft': { text: 'مسودة', color: 'text-gray-400 bg-gray-400/10 border-gray-400/20' },
+      'Draft': { text: 'مسودة', color: 'text-[var(--muted-2)] bg-gray-400/10 border-gray-400/20' },
       'Active': { text: 'نشطة', color: 'text-green-500 bg-green-500/10 border-green-500/20' },
       'Under Review': { text: 'قيد المراجعة', color: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' },
       'Approved': { text: 'معتمدة (بانتظار الانتهاء)', color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' },
@@ -2487,12 +2578,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     <div className="card-surface overflow-hidden flex flex-col min-h-[700px] flex-1">
       {missionToDelete && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
-          <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
-            <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
+          <div className="bg-[var(--surface-2)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+            <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]"><TrashIcon className="w-10 h-10" /></div>
             <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
-            <p className="text-gray-400 text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذه المهمة نهائياً؟</p>
+            <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذه المهمة نهائياً؟</p>
             <div className="flex gap-4 w-full">
-              <button onClick={() => setMissionToDelete(null)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
+              <button onClick={() => setMissionToDelete(null)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">إلغاء</button>
               <button onClick={confirmDeleteMission} className="flex-1 bg-[#c70000] hover:bg-[#a50000] text-white px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">نعم، احذف</button>
             </div>
           </div>
@@ -2552,22 +2643,22 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             <button
               type="button"
               onClick={() => setIsTableExpanded(true)}
-              data-tip={language === 'ar' ? 'عرض السجل الشامل بملء الشاشة' : 'Open full-screen log'}
+              data-tip={lang === 'ar' ? 'عرض السجل الشامل بملء الشاشة' : 'Open full-screen log'}
               className="action-btn action-btn--info flex-1 sm:flex-none"
             >
               <EyeIcon />
-              <span className="hidden sm:inline">{language === 'ar' ? 'السجل' : 'Log'}</span>
+              <span className="hidden sm:inline">{lang === 'ar' ? 'السجل' : 'Log'}</span>
             </button>
 
             {isOwner && (
               <button
                 type="button"
                 onClick={handleExportTableExcel}
-                data-tip={language === 'ar' ? 'تصدير جدول Excel الحالي' : 'Export current table to Excel'}
+                data-tip={lang === 'ar' ? 'تصدير جدول Excel الحالي' : 'Export current table to Excel'}
                 className="action-btn action-btn--ok flex-1 sm:flex-none"
               >
                 <ExcelIcon />
-                <span className="hidden sm:inline">{language === 'ar' ? 'تصدير' : 'Export'}</span>
+                <span className="hidden sm:inline">{lang === 'ar' ? 'تصدير' : 'Export'}</span>
               </button>
             )}
 
@@ -2575,11 +2666,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <button
                 type="button"
                 onClick={handleClearAllMissions}
-                data-tip={language === 'ar' ? 'مسح جميع المهام نهائيًا — لا يمكن التراجع' : 'Clear all missions — irreversible'}
+                data-tip={lang === 'ar' ? 'مسح جميع المهام نهائيًا — لا يمكن التراجع' : 'Clear all missions — irreversible'}
                 className="action-btn action-btn--danger flex-1 sm:flex-none"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                <span className="hidden sm:inline">{language === 'ar' ? 'مسح الكل' : 'Clear all'}</span>
+                <span className="hidden sm:inline">{lang === 'ar' ? 'مسح الكل' : 'Clear all'}</span>
               </button>
             )}
           </div>
@@ -2591,7 +2682,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               className="btn-primary w-full justify-center whitespace-nowrap"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-              {language === 'ar' ? 'إنشاء مهمة' : 'Create mission'}
+              {lang === 'ar' ? 'إنشاء مهمة' : 'Create mission'}
             </button>
           </Magnetic>
         </div>
@@ -2785,7 +2876,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       max="2030-12-31"
                       defaultValue={getCreationDate()} 
                       disabled={!isOwner}
-                      className={!isOwner ? 'opacity-50 cursor-not-allowed text-gray-500 bg-[#0a0a0a]' : 'text-white border border-white/10'}
+                      className={!isOwner ? 'opacity-50 cursor-not-allowed text-[var(--faint)] bg-[#0a0a0a]' : 'text-white border border-[var(--border)]'}
                       title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''}
                     />
                   </FormGroup>
@@ -2808,17 +2899,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </SectionCard>
 
               {missionClass !== 'مفتوحة' && (
-                <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
+                <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
                   <div className="w-full flex flex-col items-center">
                     <div className="mb-4 -mt-2">
-                      {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[#111] hover:bg-[#c70000] text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-[#c70000]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[#111] hover:bg-green-600 text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-green-600/30">+ تفعيل خط السير</button>)}
+                      {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[var(--surface-4)] hover:bg-green-600 text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-green-600/30">+ تفعيل خط السير</button>)}
                     </div>
                     <div className="w-full">
                       {routes.map((route, index) => (
-                        <div key={route.id} className="flex flex-col md:flex-row w-full border border-white/10 rounded-lg overflow-hidden mb-2 bg-[#1a1a1a]">
-                          <div className="flex-1 flex border-l border-white/10"><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
-                          <div className="w-full md:w-auto flex border-l border-white/10"><div className="bg-[#111] text-gray-400 text-xs px-3 flex items-center justify-center border-l border-white/10">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
-                          <div className="w-full md:w-auto flex"><div className="bg-[#111] text-gray-400 text-xs px-3 flex items-center justify-center border-l border-white/10">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-gray-500 hover:text-red-500 bg-[#111] border-r border-white/5"><TrashIcon /></button>)}</div>
+                        <div key={route.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
+                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
+                          <div className="w-full md:w-auto flex border-l border-[var(--border)]"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
+                          <div className="w-full md:w-auto flex"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-[var(--faint)] hover:text-red-500 bg-[var(--surface-4)] border-r border-[var(--border)]"><TrashIcon /></button>)}</div>
                         </div>
                       ))}
                     </div>
@@ -2826,23 +2917,23 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </SectionCard>
               )}
 
-              <SectionCard title={missionClass === 'مفتوحة' ? "أيام المهمة / مسارات التحرك" : "خطوط سير مخصصة (لفرق أو أفراد محددين)"} icon={<MapIcon />} actionBtn={<button onClick={addCustomItinerary} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">{missionClass === 'مفتوحة' ? "+ إضافة يوم / مسار جديد" : "+ إضافة خط سير مخصص"}</button>}>
+              <SectionCard title={missionClass === 'مفتوحة' ? "أيام المهمة / مسارات التحرك" : "خطوط سير مخصصة (لفرق أو أفراد محددين)"} icon={<MapIcon />} actionBtn={<button onClick={addCustomItinerary} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">{missionClass === 'مفتوحة' ? "+ إضافة يوم / مسار جديد" : "+ إضافة خط سير مخصص"}</button>}>
                 <div className="space-y-4">
                   {customItineraries.length === 0 && <p className="text-center text-gray-600 text-sm">{missionClass === 'مفتوحة' ? "يرجى إضافة أيام المهمة أو المسارات..." : "لا يوجد خطوط سير مخصصة."}</p>}
                   {customItineraries.map((ci, ciIndex) => (
-                    <div key={ci.id} className="bg-[#111] border border-white/5 p-4 rounded-xl">
-                      <div className="flex justify-between items-center mb-3 border-b border-white/5 pb-2">
-                        <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder={missionClass === 'مفتوحة' ? "اكتب اسم اليوم (مثال: تحركات اليوم الأول)..." : "اكتب اسم خط السير المخصص هنا..."} className="bg-transparent text-[#c70000] font-bold outline-none w-full md:w-1/2" />
+                    <div key={ci.id} className="bg-[var(--surface-4)] border border-[var(--border)] p-4 rounded-xl">
+                      <div className="flex justify-between items-center mb-3 border-b border-[var(--border)] pb-2">
+                        <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder={missionClass === 'مفتوحة' ? "اكتب اسم اليوم (مثال: تحركات اليوم الأول)..." : "اكتب اسم خط السير المخصص هنا..."} className="bg-transparent text-[var(--accent)] font-bold outline-none w-full md:w-1/2" />
                         <div className="flex gap-2">
-                          <button onClick={() => addRouteToCustom(ci.id)} className="text-xs text-green-500 hover:bg-white/5 px-2 py-1 rounded">+ مسار</button>
-                          <button onClick={() => removeCustomItinerary(ci.id)} className="text-xs text-red-500 hover:bg-white/5 px-2 py-1 rounded">حذف المخصص</button>
+                          <button onClick={() => addRouteToCustom(ci.id)} className="text-xs text-green-500 hover:bg-[var(--surface-hover)] px-2 py-1 rounded">+ مسار</button>
+                          <button onClick={() => removeCustomItinerary(ci.id)} className="text-xs text-red-500 hover:bg-[var(--surface-hover)] px-2 py-1 rounded">حذف المخصص</button>
                         </div>
                       </div>
                       {ci.routes.map((cr, rIndex) => (
-                        <div key={cr.id} className="flex flex-col md:flex-row w-full border border-white/10 rounded-lg overflow-hidden mb-2 bg-[#1a1a1a]">
-                          <div className="flex-1 flex border-l border-white/10"><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="w-full bg-transparent text-white px-4 py-2" /></div>
-                          <div className="w-full md:w-auto flex border-l border-white/10"><input id={`r_dep_cust_${ciIndex}_${rIndex}`} type="time" defaultValue={cr.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
-                          <div className="w-full md:w-auto flex"><input id={`r_arr_cust_${ciIndex}_${rIndex}`} type="time" defaultValue={cr.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{ci.routes.length > 1 && <button onClick={() => removeRouteFromCustom(ci.id, cr.id)} className="px-3 text-gray-500"><TrashIcon /></button>}</div>
+                        <div key={cr.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
+                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="w-full bg-transparent text-white px-4 py-2" /></div>
+                          <div className="w-full md:w-auto flex border-l border-[var(--border)]"><input id={`r_dep_cust_${ciIndex}_${rIndex}`} type="time" defaultValue={cr.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
+                          <div className="w-full md:w-auto flex"><input id={`r_arr_cust_${ciIndex}_${rIndex}`} type="time" defaultValue={cr.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{ci.routes.length > 1 && <button onClick={() => removeRouteFromCustom(ci.id, cr.id)} className="px-3 text-[var(--faint)]"><TrashIcon /></button>}</div>
                         </div>
                       ))}
                     </div>
@@ -2850,10 +2941,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              <SectionCard title="السيارات والسائقين (أسطول المهمة)" icon={<CarIcon />} actionBtn={<button onClick={addVehicle} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة سيارة</button>}>
+              <SectionCard title="السيارات والسائقين (أسطول المهمة)" icon={<CarIcon />} actionBtn={<button onClick={addVehicle} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة سيارة</button>}>
                 <div className="w-full flex flex-col items-center">
                   <div className="mb-4 -mt-2">
-                    {vehicles.length > 0 ? (<button onClick={() => setVehicles([])} className="bg-[#111] hover:bg-[#c70000] text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-[#c70000]/30">لا يوجد سيارات</button>) : (<button onClick={() => setVehicles([{ id: Date.now() }])} className="bg-[#111] hover:bg-green-600 text-gray-400 px-8 py-1.5 rounded-full text-xs font-bold border border-green-600/30">+ تفعيل أسطول السيارات</button>)}
+                    {vehicles.length > 0 ? (<button onClick={() => setVehicles([])} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد سيارات</button>) : (<button onClick={() => setVehicles([{ id: Date.now() }])} className="bg-[var(--surface-4)] hover:bg-green-600 text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-green-600/30">+ تفعيل أسطول السيارات</button>)}
                   </div>
                   <div className="w-full">
                     {vehicles.map((v, index) => (<VehicleRow key={`veh-${v.id}`} index={index} onRemove={() => removeVehicle(v.id)} data={v} />))}
@@ -2861,18 +2952,18 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              <SectionCard title="القوة البشرية والمشاركين" icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
-                <div className="overflow-x-auto bg-[#111] rounded-xl border border-white/5">
+              <SectionCard title="القوة البشرية والمشاركين" icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
+                <div className="overflow-x-auto bg-[var(--surface-4)] rounded-xl border border-[var(--border)]">
                   <table className="w-full text-right text-sm min-w-[720px]">
-                    <thead className="bg-[#1a1a1a] text-gray-400 border-b border-white/5"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3">رقم العضوية / الصفة</th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-center">حذف</th></tr></thead>
-                    <tbody className="divide-y divide-white/5">
+                    <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3">رقم العضوية / الصفة</th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-center">حذف</th></tr></thead>
+                    <tbody className="divide-y divide-[var(--border)]">
                       {participants.map((p, index) => (
-                        <tr key={p.id} className="hover:bg-white/5">
+                        <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
                           <td className="p-2 text-center text-gray-600 font-bold">{index + 1}</td>
                           <td className="p-2">
                             <select id={`p_type_${index}`} value={p.participant_type || 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_type = e.target.value; setParticipants(newP); }} className="bg-transparent text-white outline-none">
-                              <option value="volunteer" className="bg-[#111]">متطوع</option>
-                              <option value="non_volunteer" className="bg-[#111]">غير متطوع</option>
+                              <option value="volunteer" className="bg-[var(--surface-4)]">متطوع</option>
+                              <option value="non_volunteer" className="bg-[var(--surface-4)]">غير متطوع</option>
                             </select>
                           </td>
                           <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." className="bg-transparent outline-none text-white w-full" /></td>
@@ -2886,7 +2977,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                                 <input id={`p_phase_${index}`} type="text" defaultValue={p.phase_name || 'اليوم الأول'} placeholder="اليوم 1..." className="bg-transparent outline-none text-purple-300 font-bold text-center w-full border-b border-transparent focus:border-purple-500 transition-colors" />
                               </td>
                               <td className="p-2">
-                                <select id={`p_stay_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'} className="bg-[#1a1a1a] text-orange-400 border border-white/5 px-1 py-1 outline-none w-full rounded text-xs font-bold">
+                                <select id={`p_stay_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'} className="bg-[var(--surface-3)] text-orange-400 border border-[var(--border)] px-1 py-1 outline-none w-full rounded text-xs font-bold">
                                   <option value="ذهاب وعودة">🔄 عودة</option>
                                   <option value="مبيت">⛺ مبيت</option>
                                 </select>
@@ -2901,18 +2992,18 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-gray-600 cursor-not-allowed' : 'text-white'}`}
                             >
                               {/* 💡 نفس التعديل هنا لجدول المشاركين */}
-                              {(!isVolunteer || userRegion === 'hq') && <option value="19" className="bg-[#111]">المركز العام</option>}
+                              {(!isVolunteer || userRegion === 'hq') && <option value="19" className="bg-[var(--surface-4)]">المركز العام</option>}
                               {branches.map(b => {
                                 const isBranchInMyRegion = (regionMap[normalizeName(b.name)] || 'hq') === userRegion;
                                 if (b.name !== 'القاهرة' && b.name !== 'المركز العام' && (!isVolunteer || isBranchInMyRegion)) {
-                                  return <option key={b.id} value={b.id} className="bg-[#111]">{b.name}</option>;
+                                  return <option key={b.id} value={b.id} className="bg-[var(--surface-4)]">{b.name}</option>;
                                 }
                                 return null;
                               })}
                             </select>
                           </td>
                           <td className="p-2">
-                            <select id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'} className="bg-[#1a1a1a] text-green-400 border border-white/5 px-2 py-1 outline-none w-full rounded max-w-[120px] truncate">
+                            <select id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'} className="bg-[var(--surface-3)] text-green-400 border border-[var(--border)] px-2 py-1 outline-none w-full rounded max-w-[120px] truncate">
                               {routes.length > 0 && missionClass !== 'مفتوحة' && <option value="خط السير الأساسي">خط السير الأساسي</option>}
                               {customItineraries.map((ci) => {
                                 const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || 'مخصص';
@@ -2921,7 +3012,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               {routes.length === 0 && customItineraries.length === 0 && <option value="بدون خط سير">بدون خط سير</option>}
                             </select>
                           </td>
-                          <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-gray-500 hover:text-red-500"><TrashIcon /></button></td>
+                          <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-[var(--faint)] hover:text-red-500"><TrashIcon /></button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -2943,14 +3034,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              <SectionCard title="إحصائيات المستفيدين" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} actionBtn={<button onClick={addBeneficiary} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة تصنيف</button>}>
+              <SectionCard title="إحصائيات المستفيدين" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} actionBtn={<button onClick={addBeneficiary} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة تصنيف</button>}>
                 <div className="space-y-4">
                   {beneficiaries.map((ben, index) => (
-                    <div key={`ben-${ben.id}`} className="flex flex-col md:flex-row gap-4 items-end bg-[#111] p-4 rounded-xl border border-white/5">
-                      <div className="flex-1 w-full"><FormGroup label="تصنيف المستفيدين"><StyledInput id={`b_cat_${index}`} defaultValue={ben?.category_name || ''} placeholder="مثال: أطفال، مصابين..." className="bg-[#1a1a1a]" /></FormGroup></div>
-                      <div className="flex-1 w-full"><FormGroup label="مستفيدين (مباشر)"><StyledInput id={`b_count_${index}`} defaultValue={ben?.direct_count || ''} type="number" placeholder="0" className="bg-[#1a1a1a]" /></FormGroup></div>
-                      <div className="flex-1 w-full"><FormGroup label="مستفيدين (غير مباشر)"><StyledInput id={`b_indirect_${index}`} defaultValue={ben?.indirect_count || ''} type="number" placeholder="0" className="bg-[#1a1a1a]" /></FormGroup></div>
-                      {beneficiaries.length > 1 && (<button onClick={() => removeBeneficiary(ben.id)} className="mb-2 p-2 text-gray-600 hover:text-red-500 bg-[#1a1a1a] rounded-lg border border-white/5"><TrashIcon /></button>)}
+                    <div key={`ben-${ben.id}`} className="flex flex-col md:flex-row gap-4 items-end bg-[var(--surface-4)] p-4 rounded-xl border border-[var(--border)]">
+                      <div className="flex-1 w-full"><FormGroup label="تصنيف المستفيدين"><StyledInput id={`b_cat_${index}`} defaultValue={ben?.category_name || ''} placeholder="مثال: أطفال، مصابين..." className="bg-[var(--surface-3)]" /></FormGroup></div>
+                      <div className="flex-1 w-full"><FormGroup label="مستفيدين (مباشر)"><StyledInput id={`b_count_${index}`} defaultValue={ben?.direct_count || ''} type="number" placeholder="0" className="bg-[var(--surface-3)]" /></FormGroup></div>
+                      <div className="flex-1 w-full"><FormGroup label="مستفيدين (غير مباشر)"><StyledInput id={`b_indirect_${index}`} defaultValue={ben?.indirect_count || ''} type="number" placeholder="0" className="bg-[var(--surface-3)]" /></FormGroup></div>
+                      {beneficiaries.length > 1 && (<button onClick={() => removeBeneficiary(ben.id)} className="mb-2 p-2 text-gray-600 hover:text-red-500 bg-[var(--surface-3)] rounded-lg border border-[var(--border)]"><TrashIcon /></button>)}
                     </div>
                   ))}
                 </div>
@@ -2958,8 +3049,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
               <SectionCard title="فريق إدارة الغرفة (الهيكل الإداري)" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}>
                 <div className="space-y-4">
-                  <div className="bg-[#111] p-4 rounded-xl border border-[#c70000]/30 shadow-[0_0_15px_rgba(199,0,0,0.05)] w-full">
-                    <FormGroup label="مسؤول المتابعة (قائد العملية)"><StyledInput id="eoc_leader" defaultValue={getStaff('مسؤول المتابعة')} placeholder="الاسم ورقم الهاتف..." className="bg-[#1a1a1a] text-lg font-bold" /></FormGroup>
+                  <div className="bg-[var(--surface-4)] p-4 rounded-xl border border-[var(--accent)]/30 shadow-[0_0_15px_rgba(199,0,0,0.05)] w-full">
+                    <FormGroup label="مسؤول المتابعة (قائد العملية)"><StyledInput id="eoc_leader" defaultValue={getStaff('مسؤول المتابعة')} placeholder="الاسم ورقم الهاتف..." className="bg-[var(--surface-3)] text-lg font-bold" /></FormGroup>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormGroup label="المشرف"><StyledInput id="eoc_supervisor" defaultValue={getStaff('المشرف')} placeholder="الاسم..." /></FormGroup>
@@ -2980,7 +3071,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       readOnly 
                       value={`موقف الاستمارة إدارياً: ${currentMissionData ? {'Draft': 'مسودة', 'Active': 'نشطة', 'Under Review': 'قيد المراجعة', 'Approved': 'معتمدة وفي انتظار الانتهاء', 'Completed': 'مكتملة (تم انتهاء المهمة)', 'Returned': 'إرجاع للمتطوع (يوجد أخطاء)', 'Cancelled': 'ملغاة'}[currentMissionData.status] || 'جديدة' : 'جديدة'}\nحالة الحدث في الميدان: ${currentMissionData?.status === 'Completed' ? 'مكتملة (تم انتهاء المهمة)' : 'الاستمارة شغالة (ولم تنتهي حتى الآن)'}`}
                       rows="4" 
-                      className="w-full bg-[#050505] border border-white/5 text-blue-400 font-bold rounded-xl p-3 text-sm outline-none resize-none cursor-not-allowed" 
+                      className="w-full bg-[#050505] border border-[var(--border)] text-blue-400 font-bold rounded-xl p-3 text-sm outline-none resize-none cursor-not-allowed" 
                     />
                   </FormGroup>
                   
@@ -3002,7 +3093,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       id="f_notes" 
                       defaultValue={currentMissionData?.notes?.replace(/\[حالة الميدان: .*?\]\n?/g, '') || ''} 
                       rows="4" 
-                      className="w-full bg-[#111] border border-white/5 focus:border-[#c70000]/50 text-white rounded-xl p-3 text-sm outline-none resize-none shadow-inner" 
+                      className="w-full bg-[var(--surface-4)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl p-3 text-sm outline-none resize-none shadow-inner" 
                       placeholder="اكتب هنا أي ملاحظات إضافية، تحديثات ميدانية متاحة للغرفة..."
                     ></textarea>
                   </FormGroup>
@@ -3014,8 +3105,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
             {/* 💡 أضفنا كلاسات بتخلي الزراير فوق بعض في الموبايل وبعرض الشاشة بالكامل لسهولة اللمس */}
             <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير الاستمارة</button>}
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
+              {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[var(--surface-3)] hover:bg-[#252525] text-green-500 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير الاستمارة</button>}
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إغلاق</button>
               
               {/* 👑 المالك (God Mode) */}
               {isOwner ? (
@@ -3077,10 +3168,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             
             {returnModalOpen && (
               <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[120] p-4">
-                <div className="bg-[#0c0c0c] border border-yellow-600/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(202,138,4,0.2)] animate-fade-in-up text-center">
+                <div className="bg-[var(--surface-2)] border border-yellow-600/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(202,138,4,0.2)] animate-fade-in-up text-center">
                   <div className="w-20 h-20 bg-yellow-600/10 rounded-full flex items-center justify-center mb-5 border border-yellow-600/20 text-yellow-500"><svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
                   <h3 className="text-xl font-bold text-white mb-2">إرجاع الاستمارة للمتطوع</h3>
-                  <p className="text-gray-400 text-sm mb-4 leading-relaxed">برجاء كتابة سبب الإرجاع أو التعديلات المطلوبة بوضوح.</p>
+                  <p className="text-[var(--muted-2)] text-sm mb-4 leading-relaxed">برجاء كتابة سبب الإرجاع أو التعديلات المطلوبة بوضوح.</p>
                   
                   {returnError && (
                     <div className="w-full bg-red-500/10 border border-red-500/30 text-red-500 text-xs font-bold p-3 rounded-xl mb-4 flex items-center justify-center gap-2">
@@ -3093,12 +3184,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     value={returnText} 
                     onChange={(e) => { setReturnText(e.target.value); setReturnError(''); }} 
                     rows="4" 
-                    className={`w-full bg-[#111] border ${returnError ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-yellow-500'} text-white rounded-xl p-3 text-sm outline-none resize-none mb-6 transition-colors`} 
+                    className={`w-full bg-[var(--surface-4)] border ${returnError ? 'border-red-500/50 focus:border-red-500' : 'border-[var(--border)] focus:border-yellow-500'} text-white rounded-xl p-3 text-sm outline-none resize-none mb-6 transition-colors`} 
                     placeholder="مثال: يرجى استكمال بيانات السيارات..."
                   ></textarea>
                   
                   <div className="flex gap-4 w-full">
-                    <button onClick={() => { setReturnModalOpen(false); setReturnError(''); }} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
+                    <button onClick={() => { setReturnModalOpen(false); setReturnError(''); }} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">إلغاء</button>
                     <button onClick={() => {
                       if (returnText.trim()) {
                         document.getElementById('f_internal_notes').value = `[مطلوب تعديل]: ${returnText}`;
@@ -3133,12 +3224,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
-            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4">
-              <svg className="w-7 h-7 text-[#c70000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
+              <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
             </div>
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
             <div className="mt-8 flex justify-end">
               <button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-red-500/50">
                 علم، جاري التعديل
@@ -3157,9 +3248,9 @@ const StyledSelect = ({ children, className="", ...props }) => (<select classNam
 const SectionCard = ({ title, icon, actionBtn, children }) => (<div className="card-surface p-5 md:p-6"><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
 
 const VehicleRow = ({ index, onRemove, data }) => (
-  <div className="flex flex-col md:flex-row w-full border border-white/10 rounded-lg overflow-hidden mb-2 bg-[#111]">
-    <div className="flex-1 flex border-b md:border-b-0 md:border-l border-white/10"><div className="bg-[#1a1a1a] text-gray-400 text-xs px-3 flex items-center justify-center">اسم السائق:</div><input id={`v_driver_${index}`} type="text" defaultValue={data?.driver_name || ''} className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
-    <div className="flex-1 flex"><div className="bg-[#1a1a1a] text-gray-400 text-xs px-3 flex items-center justify-center border-l border-white/10">رقم السيارة:</div><input id={`v_plate_${index}`} type="text" defaultValue={data?.vehicle_number || ''} className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /><button onClick={onRemove} className="px-3 text-gray-500 hover:text-red-500 bg-[#111]"><TrashIcon /></button></div>
+  <div className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-4)]">
+    <div className="flex-1 flex border-b md:border-b-0 md:border-l border-[var(--border)]"><div className="bg-[var(--surface-3)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center">اسم السائق:</div><input id={`v_driver_${index}`} type="text" defaultValue={data?.driver_name || ''} className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
+    <div className="flex-1 flex"><div className="bg-[var(--surface-3)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">رقم السيارة:</div><input id={`v_plate_${index}`} type="text" defaultValue={data?.vehicle_number || ''} className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /><button onClick={onRemove} className="px-3 text-[var(--faint)] hover:text-red-500 bg-[var(--surface-4)]"><TrashIcon /></button></div>
   </div>
 );
 
@@ -3178,13 +3269,21 @@ function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = fa
     </button>
   );
 }
-function InventoryCard({ title, value, unit, color }) { return ( <div className="bg-[#0c0c0c] border border-white/5 p-5 rounded-2xl"><p className="text-gray-400 text-xs font-bold mb-1">{title}</p><p className={`text-3xl font-black ${color}`}>{value}</p><p className="text-[10px] text-gray-500 mt-1">{unit}</p></div> ); }
+function InventoryCard({ title, value, unit, color }) {
+  return (
+    <div className="kpi-card card-surface p-5 rounded-2xl">
+      <p className="text-[var(--muted)] text-xs font-bold mb-1">{title}</p>
+      <p className={`kpi-value text-3xl ${color}`}>{value}</p>
+      <p className="text-[10px] text-[var(--faint)] mt-1">{unit}</p>
+    </div>
+  );
+}
 function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`kpi-card card-surface p-5 rounded-3xl h-32 hover-lift ${borderHighlight ? 'border-l-4 border-l-[var(--accent)]' : ''}`}>{icon && <div className="relative z-10 mb-1">{icon}</div>}<p className="text-[var(--muted)] text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p></div> ); }
 
-const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
-const TrashIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.8 12S6.1 6 12 6s9.2 6 9.2 6-3.3 6-9.2 6S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="3"/><path d="M12 9.6a2.4 2.4 0 1 0 2.4 2.4"/></svg>;
+const TrashIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16"/><path d="M9.5 7V4.4h5V7"/><path d="M6.5 7l.8 12.5a2 2 0 0 0 2 1.5h5.4a2 2 0 0 0 2-1.5L17.5 7"/><path d="M10 11v5.4M14 11v5.4"/></svg>;
 const HomeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
-const AlertIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
+const AlertIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 4.3 2.7 17.2a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9.6v3.6"/><path d="M12 16.4h.01"/></svg>;
 const UsersIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
 const MapIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>;
 const LogoutIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>;
@@ -3274,37 +3373,37 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   };
 
   return (
-    <div className="w-full min-w-0 max-w-full bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[85vh] flex-1">
-      <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
+    <div className="w-full min-w-0 max-w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[85vh] flex-1">
+      <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 shrink-0 bg-[#c70000]/10 rounded-xl flex items-center justify-center border border-[#c70000]/20 text-[#c70000]"><ShieldIcon /></div>
+          <div className="w-10 h-10 shrink-0 bg-[#c70000]/10 rounded-xl flex items-center justify-center border border-[var(--accent)]/20 text-[var(--accent)]"><ShieldIcon /></div>
           <div className="flex flex-col items-start">
             <h3 className="text-xl font-bold text-white tracking-wide whitespace-nowrap">سجل الإجراءات الرقابية</h3>
-            <span className="text-[10px] font-bold text-[#c70000] bg-[#c70000]/10 border border-[#c70000]/30 px-2 py-0.5 rounded mt-1">سري للغاية</span>
+            <span className="text-[10px] font-bold text-[var(--accent)] bg-[#c70000]/10 border border-[var(--accent)]/30 px-2 py-0.5 rounded mt-1">سري للغاية</span>
           </div>
         </div>
         
         <div className="flex items-center gap-3 w-full flex-1 overflow-x-auto custom-scrollbar pb-2 md:pb-0">
           
           {/* فلتر القطاع (مهام / أخبار) */}
-          <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner shrink-0">
-            <button onClick={() => setEntityFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'all' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكل</button>
-            <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>المهام</button>
-            <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[#c70000] text-white' : 'text-gray-400 hover:text-white'}`}>الأخبار المحلية</button>
-            <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكوارث العالمية</button>
-            <button onClick={() => setEntityFilter('earthquake')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'earthquake' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}>الزلازل</button>
+          <div className="flex items-center gap-1 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner shrink-0">
+            <button onClick={() => setEntityFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'all' ? 'bg-gray-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
+            <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>المهام</button>
+            <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[#c70000] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الأخبار المحلية</button>
+            <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكوارث العالمية</button>
+            <button onClick={() => setEntityFilter('earthquake')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'earthquake' ? 'bg-purple-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الزلازل</button>
             {/* 💡 الزرار الجديد لفلترة النظام */}
-            <button onClick={() => setEntityFilter('system')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'system' ? 'bg-gray-500 text-white' : 'text-gray-400 hover:text-white'}`}>النظام</button>
+            <button onClick={() => setEntityFilter('system')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'system' ? 'bg-gray-500 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>النظام</button>
           </div>
 
-          <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-48 shrink-0" />
+          <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-48 shrink-0" />
           
-          <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="bg-[#1a1a1a] border border-white/10 focus:border-[#c70000]/50 text-white rounded-xl px-4 py-2 text-sm outline-none cursor-pointer shrink-0">
+          <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl px-4 py-2 text-sm outline-none cursor-pointer shrink-0">
             {uniqueActions.map(action => <option key={action} value={action}>{action}</option>)}
           </select>
 
           {isOwner && (
-            <button onClick={handleExportLogs} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0 mr-auto">
+            <button onClick={handleExportLogs} className="bg-[var(--surface-3)] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0 mr-auto">
               <ExcelIcon /> تصدير السجل
             </button>
           )}
@@ -3313,32 +3412,32 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
 
       <div className="flex-1 overflow-auto custom-scrollbar relative">
         <table className="w-full text-right text-sm whitespace-nowrap">
-          <thead className="bg-[#1a1a1a] text-gray-400 sticky top-0 z-10 shadow-md">
+          <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
             <tr>
-              <th className="p-4 font-semibold border-l border-white/5 w-48">التاريخ والوقت</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-purple-400 w-24 text-center">القسم</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-[#c70000] w-48">اسم المستخدم</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-blue-400 w-40">نوع الإجراء</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)] w-48">التاريخ والوقت</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)] text-purple-400 w-24 text-center">القسم</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)] w-48">اسم المستخدم</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)] text-blue-400 w-40">نوع الإجراء</th>
               <th className="p-4 font-semibold">تفاصيل العملية (ماذا حدث؟)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
-            {isLoading ? (<tr><td colSpan="5" className="p-8 text-center text-gray-500 font-bold animate-pulse">جاري سحب السجلات السرية...</td></tr>) : 
+          <tbody className="divide-y divide-[var(--border)]">
+            {isLoading ? (<tr><td colSpan="5" className="p-8 text-center text-[var(--faint)] font-bold animate-pulse">جاري سحب السجلات السرية...</td></tr>) : 
             filteredLogs.length > 0 ? filteredLogs.map((log, idx) => (
-              <tr key={idx} className="hover:bg-white/5 transition-colors">
-                <td className="p-4 text-gray-400 font-mono border-l border-white/5" dir="ltr">{formatDateTime(log.created_at)}</td>
-                <td className="p-4 border-l border-white/5 text-center">
+              <tr key={idx} className="hover:bg-[var(--surface-hover)] transition-colors">
+                <td className="p-4 text-[var(--muted-2)] font-mono border-l border-[var(--border)]" dir="ltr">{formatDateTime(log.created_at)}</td>
+                <td className="p-4 border-l border-[var(--border)] text-center">
                   {log.entity_type === 'mission' ? <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/30">المهام</span> : 
-                   log.entity_type === 'local_news' ? <span className="bg-[#c70000]/20 text-[#c70000] px-2 py-1 rounded text-xs border border-[#c70000]/30">الأخبار المحلية</span> : 
+                   log.entity_type === 'local_news' ? <span className="bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-1 rounded text-xs border border-[var(--accent)]/30">الأخبار المحلية</span> : 
                    log.entity_type === 'global_disaster' ? <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs border border-orange-500/30">الكوارث العالمية</span> : 
                    log.entity_type === 'earthquake' ? <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs border border-purple-500/30">الزلازل</span> :
-                   <span className="bg-gray-500/20 text-gray-400 px-2 py-1 rounded text-xs border border-gray-500/30">نظام</span>}
+                   <span className="bg-gray-500/20 text-[var(--muted-2)] px-2 py-1 rounded text-xs border border-gray-500/30">نظام</span>}
                 </td>
-                <td className="p-4 font-bold text-white border-l border-white/5">{log.full_name}</td>
-                <td className="p-4 font-bold border-l border-white/5"><span className="bg-[#111] px-3 py-1 rounded-lg border border-white/10 text-xs">{log.action}</span></td>
-                <td className="p-4 text-gray-300 truncate max-w-md whitespace-normal">{log.details}</td>
+                <td className="p-4 font-bold text-white border-l border-[var(--border)]">{log.full_name}</td>
+                <td className="p-4 font-bold border-l border-[var(--border)]"><span className="bg-[var(--surface-4)] px-3 py-1 rounded-lg border border-[var(--border)] text-xs">{log.action}</span></td>
+                <td className="p-4 text-[var(--ink-2)] truncate max-w-md whitespace-normal">{log.details}</td>
               </tr>
-            )) : (<tr><td colSpan="5" className="p-8 text-center text-gray-500">لا توجد سجلات مطابقة للبحث</td></tr>)}
+            )) : (<tr><td colSpan="5" className="p-8 text-center text-[var(--faint)]">لا توجد سجلات مطابقة للبحث</td></tr>)}
           </tbody>
         </table>
       </div>
@@ -3613,22 +3712,22 @@ useEffect(() => {
         <StatCard title="متوسط نقاط الاستجابة" value={filteredNews.length ? Math.round(filteredNews.reduce((a,b)=>a+b.field_response_points,0)/filteredNews.length) : 0} color="text-yellow-500" />
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
-        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+        <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           <div className="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
             <h3 className="text-xl font-bold text-white whitespace-nowrap">الأخبار المحلية</h3>
             
             <div className="flex flex-wrap items-center gap-2 w-full">
-              <select value={filterGov} onChange={(e) => setFilterGov(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer">
+              <select value={filterGov} onChange={(e) => setFilterGov(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer">
                 <option value="all">كل المحافظات</option>
                 {governorates.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
-              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer max-w-[200px] truncate">
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer max-w-[200px] truncate">
                 <option value="all">كل الحوادث</option>
                 {newsTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
               <div className="flex items-center gap-2">
-                <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+                <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
                 {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-2 py-2 rounded-lg">الكل</button>}
               </div>
             </div>
@@ -3672,42 +3771,42 @@ useEffect(() => {
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap text-sm">
-            <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+            <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
-                <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
-                <th className="p-4 font-semibold border-l border-white/5">المحافظة</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-blue-400 max-w-[200px]">وصف الحادث</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-yellow-500">نقاط (رد/تحرك/وصول)</th>
-                <th className="p-4 font-semibold border-l border-white/5">المتطوعين</th>
-                <th className="p-4 font-semibold border-l border-white/5">مدخل الخبر</th>
-                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">إجراءات</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">المحافظة</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-blue-400 max-w-[200px]">وصف الحادث</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-yellow-500">نقاط (رد/تحرك/وصول)</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">المتطوعين</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">مدخل الخبر</th>
+                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">إجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
-              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+            <tbody className="divide-y divide-[var(--border)]">
+              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)]">جاري التحميل...</td></tr> : 
                filteredNews.length > 0 ? filteredNews.map(n => (
-                <tr key={n.news_id} className="hover:bg-white/5">
-                  <td className="p-4 text-white border-l border-white/5">{n.incident_date}</td>
-                  <td className="p-4 text-gray-300 border-l border-white/5 font-bold">{n.governorate}</td>
-                  <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{n.incident_description}</td>
-                  <td className="p-4 border-l border-white/5">
+                <tr key={n.news_id} className="hover:bg-[var(--surface-hover)]">
+                  <td className="p-4 text-white border-l border-[var(--border)]">{n.incident_date}</td>
+                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
+                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
+                  <td className="p-4 border-l border-[var(--border)]">
                     <div className="flex gap-1">
                       <span className="bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded text-xs border border-yellow-500/30" title="نقاط الرد">{n.response_time_points}</span>
                       <span className="bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded text-xs border border-orange-500/30" title="نقاط التحرك">{n.movement_points}</span>
                       <span className="bg-green-500/20 text-green-500 px-2 py-0.5 rounded text-xs border border-green-500/30" title="نقاط الوصول">{n.field_response_points}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-gray-400 border-l border-white/5">{n.participants_count}</td>
-                  <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.data_entry_name}</td>
-                  <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{n.participants_count}</td>
+                  <td className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.data_entry_name}</td>
+                  <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                     <div className="flex justify-center gap-2">
-                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon /></button>}
+                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[var(--surface-4)] hover:bg-yellow-600 text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
+                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[var(--surface-4)] hover:bg-red-600 text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
-              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد أخبار مطابقة للفلاتر</td></tr>}
+              )) : <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)]">لا توجد أخبار مطابقة للفلاتر</td></tr>}
             </tbody>
           </table>
         </div>
@@ -3715,28 +3814,28 @@ useEffect(() => {
 
       {isModalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#050505] border border-white/10 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
-            <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
+          <div className="bg-[#050505] border border-[var(--border)] rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
+            <div className="p-5 border-b border-[var(--border)] bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><NewsIcon /> {nd.news_id ? 'تعديل الخبر والمؤشرات' : 'إضافة خبر جديد'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[#111] text-gray-400 hover:bg-red-600 hover:text-white p-2 rounded-xl"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-red-600 hover:text-white p-2 rounded-xl"><TrashIcon /></button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
               
               <SectionCard title="1. بيانات الخبر الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="التاريخ (مطلوب)"><StyledInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="border-[#c70000]/30" /></FormGroup>
-                  <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(nd.incident_date)} className="bg-[#0a0a0a] text-gray-500" /></FormGroup>
+                  <FormGroup label="التاريخ (مطلوب)"><StyledInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="border-[var(--accent)]/30" /></FormGroup>
+                  <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(nd.incident_date)} className="bg-[#0a0a0a] text-[var(--faint)]" /></FormGroup>
                   <FormGroup label="نوع الخبر (مطلوب)">
-                    <StyledSelect value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})} className="border-[#c70000]/30">
-                      <option value="" disabled className="bg-[#111] text-gray-500">اختر نوع الحادث...</option>
-                      {newsTypes.map(type => <option key={type} value={type} className="bg-[#111] text-white">{type}</option>)}
+                    <StyledSelect value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})} className="border-[var(--accent)]/30">
+                      <option value="" disabled className="bg-[var(--surface-4)] text-[var(--faint)]">اختر نوع الحادث...</option>
+                      {newsTypes.map(type => <option key={type} value={type} className="bg-[var(--surface-4)] text-white">{type}</option>)}
                     </StyledSelect>
                   </FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="وصف الحادث (مطلوب)"><textarea value={nd.incident_description} onChange={e => setNd({...nd, incident_description: e.target.value})} className="w-full bg-[#111] border border-[#c70000]/30 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="2"></textarea></FormGroup></div>
+                  <div className="md:col-span-3"><FormGroup label="وصف الحادث (مطلوب)"><textarea value={nd.incident_description} onChange={e => setNd({...nd, incident_description: e.target.value})} className="w-full bg-[var(--surface-4)] border border-[var(--accent)]/30 rounded-xl p-3 text-sm outline-none text-white focus:border-[var(--accent)]" rows="2"></textarea></FormGroup></div>
                   <FormGroup label="ناشر الخبر"><StyledInput value={nd.news_publisher} onChange={e => setNd({...nd, news_publisher: e.target.value})} /></FormGroup>
                   <FormGroup label="المحافظة (مطلوب)">
-                    <StyledSelect value={nd.governorate} onChange={e => setNd({...nd, governorate: e.target.value})} className="border-[#c70000]/30">
+                    <StyledSelect value={nd.governorate} onChange={e => setNd({...nd, governorate: e.target.value})} className="border-[var(--accent)]/30">
                       <option value="" disabled>اختر المحافظة...</option>
                       {governorates.map(g => <option key={g} value={g}>{g}</option>)}
                     </StyledSelect>
@@ -3753,18 +3852,18 @@ useEffect(() => {
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت الإرسال"><StyledInput type="time" disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={!nd.is_reported ? 'opacity-50' : 'border-[#c70000]/30'}/></FormGroup>
+                  <FormGroup label="توقيت الإرسال"><StyledInput type="time" disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={!nd.is_reported ? 'opacity-50' : 'border-[var(--accent)]/30'}/></FormGroup>
                   
                   <FormGroup label="تم الرد؟">
                     <StyledSelect disabled={!nd.is_reported} value={nd.is_responded ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_responded: e.target.value === 'نعم'})} className={!nd.is_reported ? 'opacity-50' : ''}>
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت الرد"><StyledInput type="time" disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[#c70000]/30'}/></FormGroup>
+                  <FormGroup label="توقيت الرد"><StyledInput type="time" disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'}/></FormGroup>
                   
-                  <div className="md:col-span-2"><FormGroup label="رد الفرع"><StyledInput disabled={!nd.is_responded} value={nd.branch_response_text} onChange={e => setNd({...nd, branch_response_text: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[#c70000]/30'} /></FormGroup></div>
-                  <FormGroup label="زمن الرد (تلقائي)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-white/5 text-sm">{nd.is_responded ? formatDuration(responseDiff) : '-'}</div></FormGroup>
-                  <FormGroup label="حالة توقيت الرد (نقاط)"><div className="bg-[#0a0a0a] text-yellow-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_responded ? `${responsePoints} نقطة` : '-'}</div></FormGroup>
+                  <div className="md:col-span-2"><FormGroup label="رد الفرع"><StyledInput disabled={!nd.is_responded} value={nd.branch_response_text} onChange={e => setNd({...nd, branch_response_text: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'} /></FormGroup></div>
+                  <FormGroup label="زمن الرد (تلقائي)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_responded ? formatDuration(responseDiff) : '-'}</div></FormGroup>
+                  <FormGroup label="حالة توقيت الرد (نقاط)"><div className="bg-[#0a0a0a] text-yellow-500 font-bold p-3 rounded-xl border border-[var(--border)] text-sm text-center">{nd.is_responded ? `${responsePoints} نقطة` : '-'}</div></FormGroup>
                 </div>
               </SectionCard>
 
@@ -3775,14 +3874,14 @@ useEffect(() => {
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت التحرك"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[#c70000]/30'} /></FormGroup>
-                  <FormGroup label="المدة (إبلاغ ➔ تحرك)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-white/5 text-sm">{nd.is_field_response ? formatDuration(moveDiff) : '-'}</div></FormGroup>
-                  <FormGroup label="نقاط التحرك"><div className="bg-[#0a0a0a] text-orange-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_field_response ? `${movePoints} نقطة` : '-'}</div></FormGroup>
+                  <FormGroup label="توقيت التحرك"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'} /></FormGroup>
+                  <FormGroup label="المدة (إبلاغ ➔ تحرك)"><div className="bg-[#0a0a0a] text-blue-400 font-bold p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_field_response ? formatDuration(moveDiff) : '-'}</div></FormGroup>
+                  <FormGroup label="نقاط التحرك"><div className="bg-[#0a0a0a] text-orange-500 font-bold p-3 rounded-xl border border-[var(--border)] text-sm text-center">{nd.is_field_response ? `${movePoints} نقطة` : '-'}</div></FormGroup>
 
-                  <FormGroup label="طول المسافة (كم)"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.distance_km} onChange={e => setNd({...nd, distance_km: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[#c70000]/30'} placeholder="مثال: 15" /></FormGroup>
-                  <FormGroup label="توقيت الوصول (أول متطوع)"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[#c70000]/30'} /></FormGroup>
-                  <FormGroup label="الزمن المتوقع (تلقائي)"><div className="bg-[#0a0a0a] text-gray-500 p-3 rounded-xl border border-white/5 text-sm">{nd.is_field_response && expectedTravelMins !== null ? `${Math.floor(expectedTravelMins)} دقيقة` : '-'}</div></FormGroup>
-                  <FormGroup label="نقاط الاستجابة للمسافة"><div className="bg-[#0a0a0a] text-green-500 font-bold p-3 rounded-xl border border-white/5 text-sm text-center">{nd.is_field_response ? `${fieldPoints} نقطة` : '-'}</div></FormGroup>
+                  <FormGroup label="طول المسافة (كم)"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.distance_km} onChange={e => setNd({...nd, distance_km: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'} placeholder="مثال: 15" /></FormGroup>
+                  <FormGroup label="توقيت الوصول (أول متطوع)"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'} /></FormGroup>
+                  <FormGroup label="الزمن المتوقع (تلقائي)"><div className="bg-[#0a0a0a] text-[var(--faint)] p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_field_response && expectedTravelMins !== null ? `${Math.floor(expectedTravelMins)} دقيقة` : '-'}</div></FormGroup>
+                  <FormGroup label="نقاط الاستجابة للمسافة"><div className="bg-[#0a0a0a] text-green-500 font-bold p-3 rounded-xl border border-[var(--border)] text-sm text-center">{nd.is_field_response ? `${fieldPoints} نقطة` : '-'}</div></FormGroup>
                 </div>
               </SectionCard>
 
@@ -3810,19 +3909,19 @@ useEffect(() => {
 
               <SectionCard title="5. الملاحظات والمتابعة" icon={<MapIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormGroup label="تطورات الخبر"><textarea value={nd.news_updates} onChange={e => setNd({...nd, news_updates: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
-                  <FormGroup label="ملاحظات عامة"><textarea value={nd.notes} onChange={e => setNd({...nd, notes: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="3"></textarea></FormGroup>
+                  <FormGroup label="تطورات الخبر"><textarea value={nd.news_updates} onChange={e => setNd({...nd, news_updates: e.target.value})} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-white focus:border-[var(--accent)]" rows="3"></textarea></FormGroup>
+                  <FormGroup label="ملاحظات عامة"><textarea value={nd.notes} onChange={e => setNd({...nd, notes: e.target.value})} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-white focus:border-[var(--accent)]" rows="3"></textarea></FormGroup>
                   <div className="md:col-span-2"><FormGroup label="لينك الخبر (إلزامي)*"><StyledInput value={nd.news_link} onChange={e => setNd({...nd, news_link: e.target.value})} placeholder="https://..." dir="ltr" className="text-left border-blue-500/50 focus:border-blue-500 bg-blue-500/5" required /></FormGroup></div>
                 </div>
               </SectionCard>
 
             </div>
             
-            <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={handleExportSingleNewsExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto">
+            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              <button onClick={handleExportSingleNewsExcel} className="bg-[var(--surface-3)] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto">
                 <ExcelIcon /> تصدير الخبر الحالي
               </button>
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إلغاء</button>
               <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ الخبر وتقييم الأداء</button>
             </div>
           </div>
@@ -3846,12 +3945,12 @@ useEffect(() => {
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
-            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4">
-              <svg className="w-7 h-7 text-[#c70000]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
+              <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
             </div>
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
             <div className="mt-8 flex justify-end">
               <button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-red-500/50">
                 علم، جاري التعديل
@@ -4036,19 +4135,19 @@ const [clearAllCode, setClearAllCode] = useState('');
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
         <StatCard title="إجمالي الكوارث المرصودة" value={filteredDisasters.length} color="text-white" borderHighlight />
         <StatCard title="الدول/المناطق المتضررة" value={uniqueCountries} color="text-orange-400" />
-        <StatCard title="إجمالي الوفيات المرصودة" value={totalDeaths.toLocaleString()} color="text-[#c70000]" />
+        <StatCard title="إجمالي الوفيات المرصودة" value={totalDeaths.toLocaleString()} color="text-[var(--accent)]" />
         <StatCard title="إجمالي المصابين" value={totalInjuries.toLocaleString()} color="text-yellow-500" />
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
-        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+        <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           
           <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
             <h3 className="text-xl font-bold text-white flex items-center gap-2 whitespace-nowrap"><GlobalWorldIcon /> رصد الكوارث العالمية</h3>
             
             {/* 💡 فلتر التاريخ الجديد في الهيدر */}
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">إلغاء التاريخ</button>}
             </div>
           </div>
@@ -4091,46 +4190,46 @@ const [clearAllCode, setClearAllCode] = useState('');
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap text-sm">
-            <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+            <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
-                <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-orange-400">الدولة / المكان</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">نوع الكارثة</th>
-                <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">الخبر</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-center">الوفيات</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-center">المصابين</th>
-                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5 text-center">إجراءات</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-orange-400">الدولة / المكان</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">نوع الكارثة</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">الخبر</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الوفيات</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-center">المصابين</th>
+                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)] text-center">إجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
-              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500">جاري تحميل البيانات...</td></tr> : 
+            <tbody className="divide-y divide-[var(--border)]">
+              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)]">جاري تحميل البيانات...</td></tr> : 
                filteredDisasters.length > 0 ? filteredDisasters.map(d => (
-                <tr key={d.disaster_id} className="hover:bg-white/5">
-                  <td className="p-4 text-white border-l border-white/5">{d.incident_date}</td>
-                  <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{d.country}</td>
-                  <td className="p-4 text-[#c70000] border-l border-white/5 font-bold bg-[#c70000]/5">{d.disaster_type}</td>
-                  <td className="p-4 text-gray-400 border-l border-white/5 truncate max-w-[250px]">{d.news_title}</td>
-                  <td className="p-4 text-gray-300 border-l border-white/5 text-center">{d.deaths_count}</td>
-                  <td className="p-4 text-gray-300 border-l border-white/5 text-center">{d.injured_count}</td>
-                  <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                <tr key={d.disaster_id} className="hover:bg-[var(--surface-hover)]">
+                  <td className="p-4 text-white border-l border-[var(--border)]">{d.incident_date}</td>
+                  <td className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
+                  <td className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[#c70000]/5">{d.disaster_type}</td>
+                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{d.news_title}</td>
+                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.deaths_count}</td>
+                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.injured_count}</td>
+                  <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                     <div className="flex justify-center gap-2">
                       {d.news_link && (
-                        <a href={d.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                        <a href={d.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
-                      <button onClick={() => handleEdit(d)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="تعديل">
+                      <button onClick={() => handleEdit(d)} className="p-2 bg-[var(--surface-4)] hover:bg-yellow-600 text-[var(--muted-2)] hover:text-white rounded-lg transition-colors" title="تعديل">
                         <EyeIcon />
                       </button>
                       {(isOwner || isSupervisor || isJoker) && (
-                        <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف">
+                        <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-2 bg-[var(--surface-4)] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف">
                           <TrashIcon />
                         </button>
                       )}
                     </div>
                   </td>
                 </tr>
-              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد كوارث مسجلة حالياً بهذا التاريخ</td></tr>}
+              )) : <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)]">لا توجد كوارث مسجلة حالياً بهذا التاريخ</td></tr>}
             </tbody>
           </table>
         </div>
@@ -4138,10 +4237,10 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {isModalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#050505] border border-[#c70000]/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(199,0,0,0.1)] animate-fade-in-up">
-            <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
+          <div className="bg-[#050505] border border-[var(--accent)]/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(199,0,0,0.1)] animate-fade-in-up">
+            <div className="p-5 border-b border-[var(--border)] bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> {gd.disaster_id ? 'تعديل رصد الكارثة' : 'رصد كارثة عالمية جديدة'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[#111] text-gray-400 hover:bg-red-600 hover:text-white p-2 rounded-xl"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-red-600 hover:text-white p-2 rounded-xl"><TrashIcon /></button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
@@ -4150,13 +4249,13 @@ const [clearAllCode, setClearAllCode] = useState('');
                   <FormGroup label="التاريخ"><StyledInput type="date" value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} /></FormGroup>
                   <FormGroup label="الدولة (مطلوب)">
                     <StyledSelect value={gd.country} onChange={e => setGd({...gd, country: e.target.value})} className="border-orange-500/50 text-orange-400 font-bold">
-                      <option value="" disabled className="text-gray-500">اختر المكان...</option>
+                      <option value="" disabled className="text-[var(--faint)]">اختر المكان...</option>
                       {COUNTRIES_LIST.map(c => <option key={c} value={c} className="text-white">{c}</option>)}
                     </StyledSelect>
                   </FormGroup>
                   <FormGroup label="نوع الكارثة (مطلوب)">
-                    <StyledSelect value={gd.disaster_type} onChange={e => setGd({...gd, disaster_type: e.target.value})} className="border-[#c70000]/50 text-[#c70000] font-bold">
-                      <option value="" disabled className="text-gray-500">اختر النوع...</option>
+                    <StyledSelect value={gd.disaster_type} onChange={e => setGd({...gd, disaster_type: e.target.value})} className="border-[var(--accent)]/50 text-[var(--accent)] font-bold">
+                      <option value="" disabled className="text-[var(--faint)]">اختر النوع...</option>
                       {DISASTER_TYPES.map(t => <option key={t} value={t} className="text-white">{t}</option>)}
                     </StyledSelect>
                   </FormGroup>
@@ -4171,8 +4270,8 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormGroup label="عدد الوفيات"><StyledInput type="number" value={gd.deaths_count} onChange={e => setGd({...gd, deaths_count: parseInt(e.target.value) || 0})} className="bg-[#c70000]/10 text-red-400" /></FormGroup>
                   <FormGroup label="عدد المصابين"><StyledInput type="number" value={gd.injured_count} onChange={e => setGd({...gd, injured_count: parseInt(e.target.value) || 0})} className="bg-yellow-500/10 text-yellow-400" /></FormGroup>
-                  <FormGroup label="عدد المفقودين"><StyledInput type="number" value={gd.missing_count} onChange={e => setGd({...gd, missing_count: parseInt(e.target.value) || 0})} className="bg-gray-500/10 text-gray-300" /></FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="تدخلات الجمعيات الوطنية"><textarea value={gd.national_societies_interventions} onChange={e => setGd({...gd, national_societies_interventions: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-blue-500" rows="2"></textarea></FormGroup></div>
+                  <FormGroup label="عدد المفقودين"><StyledInput type="number" value={gd.missing_count} onChange={e => setGd({...gd, missing_count: parseInt(e.target.value) || 0})} className="bg-gray-500/10 text-[var(--ink-2)]" /></FormGroup>
+                  <div className="md:col-span-3"><FormGroup label="تدخلات الجمعيات الوطنية"><textarea value={gd.national_societies_interventions} onChange={e => setGd({...gd, national_societies_interventions: e.target.value})} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-white focus:border-blue-500" rows="2"></textarea></FormGroup></div>
                 </div>
               </SectionCard>
 
@@ -4181,7 +4280,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   <FormGroup label="لينك الخبر (إلزامي)*">
                     <StyledInput value={gd.news_link} onChange={e => setGd({...gd, news_link: e.target.value})} placeholder="https://..." dir="ltr" className="text-left border-blue-500/50 focus:border-blue-500 bg-blue-500/5" required />
                   </FormGroup>
-                  <FormGroup label="تطورات الخبر"><textarea value={gd.news_updates} onChange={e => setGd({...gd, news_updates: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-[#c70000]" rows="2"></textarea></FormGroup>
+                  <FormGroup label="تطورات الخبر"><textarea value={gd.news_updates} onChange={e => setGd({...gd, news_updates: e.target.value})} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-white focus:border-[var(--accent)]" rows="2"></textarea></FormGroup>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormGroup label="اسم مدخل الخبر"><StyledInput value={gd.data_entry_name} onChange={e => setGd({...gd, data_entry_name: e.target.value})} /></FormGroup>
                     <FormGroup label="ملاحظات"><StyledInput value={gd.notes} onChange={e => setGd({...gd, notes: e.target.value})} /></FormGroup>
@@ -4190,9 +4289,9 @@ const [clearAllCode, setClearAllCode] = useState('');
               </SectionCard>
             </div>
             
-            <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تحميل سجل الكارثة</button>
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إلغاء</button>
+            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              <button onClick={handleExportSingleExcel} className="bg-[var(--surface-3)] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تحميل سجل الكارثة</button>
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إلغاء</button>
               <button onClick={handleSubmit} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">حفظ وتوثيق الكارثة</button>
             </div>
           </div>
@@ -4201,12 +4300,12 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {disasterToDelete && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
-          <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
-            <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
+          <div className="bg-[var(--surface-2)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+            <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]"><TrashIcon className="w-10 h-10" /></div>
             <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
-            <p className="text-gray-400 text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذا الرصد نهائياً؟</p>
+            <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذا الرصد نهائياً؟</p>
             <div className="flex gap-4 w-full">
-              <button onClick={() => setDisasterToDelete(null)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors">إلغاء</button>
+              <button onClick={() => setDisasterToDelete(null)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">إلغاء</button>
               <button onClick={confirmDelete} className="flex-1 bg-[#c70000] hover:bg-[#a50000] text-white px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]">نعم، احذف</button>
             </div>
           </div>
@@ -4229,9 +4328,9 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
-            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4"><AlertIcon /><h3 className="text-xl font-bold text-white">تنبيه النظام</h3></div>
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4"><AlertIcon /><h3 className="text-xl font-bold text-white">تنبيه النظام</h3></div>
+            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
             <div className="mt-8 flex justify-end"><button onClick={() => setCustomAlert(null)} className="bg-[#c70000] hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg">علم، جاري التعديل</button></div>
           </div>
         </div>
@@ -4442,7 +4541,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     <div className="space-y-6 pb-10">
       
       {/* 💡 الهيدر بدون فلاتر */}
-      <div className="bg-[#111] border border-white/5 rounded-3xl p-5 shadow-lg animate-fade-in-up">
+      <div className="bg-[var(--surface-4)] border border-[var(--border)] rounded-3xl p-5 shadow-lg animate-fade-in-up">
         <h3 className="text-xl font-bold text-white flex items-center gap-2"><EarthquakeIcon/> مركز رصد الزلازل</h3>
       </div>
 
@@ -4467,25 +4566,25 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
 )}
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-4 md:p-6 shadow-lg relative z-0 h-auto md:h-[500px]">
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl p-4 md:p-6 shadow-lg relative z-0 h-auto md:h-[500px]">
         {/* 💡 الفلاتر فوق الخريطة */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد (<span className="text-red-500">عالمي 🔴</span> / <span className="text-green-500">مصر 🟢</span>)</h3>
             {selectedEqId && (
-              <button onClick={() => setSelectedEqId(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-[0_0_10px_rgba(199,0,0,0.3)]">
+              <button onClick={() => setSelectedEqId(null)} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white border border-[var(--border)] px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-[0_0_10px_rgba(199,0,0,0.3)]">
                 إلغاء الفلترة
               </button>
             )}
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>عالمي</button>
-              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'}`}>مصر</button>
-              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>الكل</button>
+            <div className="flex gap-2 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
+              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-red-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>عالمي</button>
+              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-green-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>مصر</button>
+              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
             </div>
-            <div className="flex items-center gap-2 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
+            <div className="flex items-center gap-2 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
               <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-3 py-1.5 rounded-lg font-bold">إلغاء</button>}
             </div>
@@ -4493,7 +4592,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
 
         {/* 💡 زوم أوت للخريطة */}
-        <div className="h-[300px] md:h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative mt-4 md:mt-0">
+        <div className="h-[300px] md:h-[380px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative mt-4 md:mt-0">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
@@ -4502,7 +4601,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -4512,7 +4611,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-gray-500 text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-gray-800 text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -4520,16 +4619,16 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
       </div>
 
-      <div id="earthquakes-table-section" className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
-        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
+      <div id="earthquakes-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
+        <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
           <h3 className="text-xl font-bold text-white hidden md:block">سجل بيانات الزلازل</h3>
           
           {/* 💡 حل مشكلة الزراير المقطوعة بـ flex-wrap */}
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
             {activeEqTab === 'global' || activeEqTab === 'all' ? (
               <>
-                {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير العالمي</button>}
-                <label className="bg-[#1a1a1a] text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] cursor-pointer">
+                {isOwner && <button onClick={handleExportGlobalEqs} className="bg-[var(--surface-3)] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير العالمي</button>}
+                <label className="bg-[var(--surface-3)] text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] cursor-pointer">
                   <ExcelIcon/> استيراد شيت EMSC
                   <input type="file" accept=".csv" className="hidden" onChange={handleCSVUpload} />
                 </label>
@@ -4539,7 +4638,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             
             {activeEqTab === 'egypt' || activeEqTab === 'all' ? (
               <>
-                {isOwner && <button onClick={handleExportEgyptEqs} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير مصر</button>}
+                {isOwner && <button onClick={handleExportEgyptEqs} className="bg-[var(--surface-3)] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon/> تصدير مصر</button>}
                 <button onClick={() => { setEForm({ eq_id: null, date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' }); setIsEgyptModalOpen(true); }} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)]">+ رصد زلزال مصر</button>
               </>
             ) : null}
@@ -4549,39 +4648,39 @@ const [clearAllCode, setClearAllCode] = useState('');
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           {(activeEqTab === 'global' || activeEqTab === 'all') ? (
             <div className="mb-8">
-              {activeEqTab === 'all' && <h4 className="p-4 text-red-500 font-bold bg-[#111]">الزلازل العالمية</h4>}
+              {activeEqTab === 'all' && <h4 className="p-4 text-red-500 font-bold bg-[var(--surface-4)]">الزلازل العالمية</h4>}
               <table className="w-full text-right whitespace-nowrap text-sm">
-                <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+                <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
-                    <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
-                    <th className="p-4 font-semibold border-l border-white/5">الدولة</th>
-                    <th className="p-4 font-semibold border-l border-white/5 text-red-500">القوة (ريختر)</th>
-                    <th className="p-4 font-semibold border-l border-white/5">العمق</th>
-                    <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة</th>
-                    <th className="p-4 font-semibold border-l border-white/5">الإحداثيات</th>
-                    <th className="p-4 font-semibold border-l border-white/5 text-center">الحالة</th>
-                    <th className="p-4 font-semibold border-l border-white/5 text-center">إجراءات</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)]">الدولة</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] text-red-500">القوة (ريختر)</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)]">العمق</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">المنطقة</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)]">الإحداثيات</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الحالة</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] text-center">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {isLoading ? <tr><td colSpan="8" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+                <tbody className="divide-y divide-[var(--border)]">
+                  {isLoading ? <tr><td colSpan="8" className="p-8 text-center text-[var(--faint)]">جاري التحميل...</td></tr> : 
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
-                    <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-white/5">
-                      <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
-                      <td className="p-4 text-orange-400 border-l border-white/5 font-bold">{eq.country}</td>
-                      <td className="p-4 text-red-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
-                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
-                      <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
-                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
-                      <td className="p-4 border-l border-white/5 text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{eq.status}</span></td>
-                      <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                    <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
+                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{eq.date} <span className="text-[var(--faint)]">{eq.time}</span></td>
+                      <td className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
+                      <td className="p-4 text-red-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
+                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
+                      <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
+                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
+                      <td className="p-4 border-l border-[var(--border)] text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-gray-500/20 text-[var(--muted-2)] border border-gray-500/30'}`}>{eq.status}</span></td>
+                      <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => handleEditGlobal(eq)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
+                          <button onClick={() => handleEditGlobal(eq)} className="p-2 bg-[var(--surface-4)] hover:bg-yellow-600 text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
+                          {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[var(--surface-4)] hover:bg-red-600 text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
-                  )) : <tr><td colSpan="8" className="p-8 text-center text-gray-500">لا توجد زلازل عالمية</td></tr>}
+                  )) : <tr><td colSpan="8" className="p-8 text-center text-[var(--faint)]">لا توجد زلازل عالمية</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -4589,35 +4688,35 @@ const [clearAllCode, setClearAllCode] = useState('');
 
           {(activeEqTab === 'egypt' || activeEqTab === 'all') ? (
             <div>
-              {activeEqTab === 'all' && <h4 className="p-4 text-green-500 font-bold bg-[#111]">زلازل مصر</h4>}
+              {activeEqTab === 'all' && <h4 className="p-4 text-green-500 font-bold bg-[var(--surface-4)]">زلازل مصر</h4>}
               <table className="w-full text-right whitespace-nowrap text-sm">
-                <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+                <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
-                    <th className="p-4 font-semibold border-l border-white/5">التاريخ / الوقت</th>
-                    <th className="p-4 font-semibold border-l border-white/5 text-green-500">القوة (ريختر)</th>
-                    <th className="p-4 font-semibold border-l border-white/5">العمق</th>
-                    <th className="p-4 font-semibold border-l border-white/5 max-w-[200px]">المنطقة (مصر)</th>
-                    <th className="p-4 font-semibold border-l border-white/5">الإحداثيات</th>
-                    <th className="p-4 font-semibold border-l border-white/5 text-center">إجراءات</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] text-green-500">القوة (ريختر)</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)]">العمق</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">المنطقة (مصر)</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)]">الإحداثيات</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] text-center">إجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-gray-500">جاري التحميل...</td></tr> : 
+                <tbody className="divide-y divide-[var(--border)]">
+                  {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-[var(--faint)]">جاري التحميل...</td></tr> : 
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
-                    <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-white/5">
-                      <td className="p-4 text-white border-l border-white/5 font-mono">{eq.date} <span className="text-gray-500">{eq.time}</span></td>
-                      <td className="p-4 text-green-500 border-l border-white/5 font-bold">{eq.magnitude}</td>
-                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono">{eq.depth_km}</td>
-                      <td className="p-4 text-gray-300 border-l border-white/5 truncate max-w-[200px]">{eq.region}</td>
-                      <td className="p-4 text-gray-400 border-l border-white/5 font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
-                      <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                    <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
+                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{eq.date} <span className="text-[var(--faint)]">{eq.time}</span></td>
+                      <td className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
+                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
+                      <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
+                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
+                      <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => handleEditEgypt(eq)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="p-2 bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white rounded-lg"><TrashIcon/></button>}
+                          <button onClick={() => handleEditEgypt(eq)} className="p-2 bg-[var(--surface-4)] hover:bg-yellow-600 text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
+                          {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="p-2 bg-[var(--surface-4)] hover:bg-red-600 text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
-                  )) : <tr><td colSpan="6" className="p-8 text-center text-gray-500">لا توجد زلازل مسجلة لمصر</td></tr>}
+                  )) : <tr><td colSpan="6" className="p-8 text-center text-[var(--faint)]">لا توجد زلازل مسجلة لمصر</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -4645,7 +4744,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={gForm.longitude} onChange={e => setGForm({...gForm, longitude: e.target.value})} /></FormGroup>
             </div>
             <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto">
-              <button onClick={() => setIsGlobalModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
+              <button onClick={() => setIsGlobalModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-[var(--muted-2)] bg-[var(--surface-4)]">إلغاء</button>
               <button onClick={handleGlobalSubmit} className="px-6 py-2 rounded-xl text-white bg-red-600 font-bold">حفظ</button>
             </div>
           </div>
@@ -4666,7 +4765,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={eForm.longitude} onChange={e => setEForm({...eForm, longitude: e.target.value})} /></FormGroup>
             </div>
             <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto">
-              <button onClick={() => setIsEgyptModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-gray-400 bg-[#111]">إلغاء</button>
+              <button onClick={() => setIsEgyptModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-[var(--muted-2)] bg-[var(--surface-4)]">إلغاء</button>
               <button onClick={handleEgyptSubmit} className="px-6 py-2 rounded-xl text-white bg-green-600 font-bold">حفظ</button>
             </div>
           </div>
@@ -4689,9 +4788,9 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-[#c70000]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] text-center">
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] text-center">
             <h3 className="text-xl font-bold text-white mb-4">تنبيه</h3>
-            <p className="text-gray-300 mb-6">{customAlert}</p>
+            <p className="text-[var(--ink-2)] mb-6">{customAlert}</p>
             <button onClick={() => setCustomAlert(null)} className="bg-[#c70000] px-6 py-2 rounded-xl text-white font-bold">حسناً</button>
           </div>
         </div>
@@ -4950,20 +5049,20 @@ const totalAiCountries = new Set(
     <div className="space-y-6 pb-10">
       
       {/* الهيدر ومؤشرات العمل */}
-      <div className="bg-[#111] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-[var(--surface-4)] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> استخبارات الذكاء الاصطناعي (OSINT God-Mode)</h3>
-          <p className="text-gray-400 text-sm mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
+          <p className="text-[var(--muted-2)] text-sm mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
         </div>
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
+        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
           <div className="flex flex-col gap-1 w-full md:w-auto">
             <div className="flex items-center gap-2">
               <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
               <span className="text-xs font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
             </div>
-            <div className="flex items-center gap-1.5 mt-1 border-t border-white/5 pt-1">
+            <div className="flex items-center gap-1.5 mt-1 border-t border-[var(--border)] pt-1">
               <svg className="w-3 h-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span className="text-[10px] text-gray-400 font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
+              <span className="text-[10px] text-[var(--muted-2)] font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
             </div>
           </div>
           {/* 👇 الخط اللي بيفصل والبادج بتاع جيت هاب رجعوا هنا 👇 */}
@@ -4976,11 +5075,11 @@ const totalAiCountries = new Set(
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
 
         {/* عدد الأخبار */}
-        <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
           <div className="flex items-center justify-between">
 
             <div>
-              <p className="text-gray-400 text-sm font-bold">
+              <p className="text-[var(--muted-2)] text-sm font-bold">
                 إجمالي الأخبار المرصودة
               </p>
 
@@ -5010,11 +5109,11 @@ const totalAiCountries = new Set(
 
 
         {/* عدد الدول */}
-        <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
           <div className="flex items-center justify-between">
 
             <div>
-              <p className="text-gray-400 text-sm font-bold">
+              <p className="text-[var(--muted-2)] text-sm font-bold">
                 الدول المرصودة
               </p>
 
@@ -5056,16 +5155,16 @@ const totalAiCountries = new Set(
 
       {/* 💡 خريطة الرصد التكتيكية للذكاء الاصطناعي */}
 
-      <div className="bg-[#0c0c0c] border border-purple-500/30 rounded-3xl p-4 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-0 h-auto md:h-[450px] animate-fade-in-up">
+      <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-4 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-0 h-auto md:h-[450px] animate-fade-in-up">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد اللحظي للذكاء الاصطناعي</h3>
           {selectedAiNewsId && (
-            <button onClick={() => setSelectedAiNewsId(null)} className="bg-[#111] hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-all">
+            <button onClick={() => setSelectedAiNewsId(null)} className="bg-[var(--surface-4)] hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-all">
               إلغاء الفلترة (عرض كل الأخبار)
             </button>
           )}
         </div>
-        <div className="h-[300px] md:h-[350px] w-full rounded-2xl overflow-hidden border border-white/10 relative">
+        <div className="h-[300px] md:h-[350px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
             
@@ -5091,16 +5190,16 @@ const totalAiCountries = new Set(
         </div>
       </div>
 
-      <div id="ai-table-section" className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
-        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
+      <div id="ai-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
+        <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           <div className="flex items-center gap-2">
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
             {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-purple-400 hover:text-white bg-purple-500/10 px-2 py-2 rounded-lg">الكل</button>}
           </div>
           <div className="flex flex-wrap gap-3">
             {isOwner && (
               <>
-                <button onClick={handleExportAllExcel} className="bg-[#1a1a1a] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 justify-center"><ExcelIcon /> تصدير السجل</button>
+                <button onClick={handleExportAllExcel} className="bg-[var(--surface-3)] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0 justify-center"><ExcelIcon /> تصدير السجل</button>
                 <button onClick={handleManualScanTrigger} disabled={isScanning} className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 justify-center transition-all ${isScanning ? 'bg-purple-600/50 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'}`}>
                   {isScanning ? <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري المسح...</> : <><AIIcon className="w-4 h-4"/> إطلاق الرادار</>}
                 </button>
@@ -5123,43 +5222,43 @@ const totalAiCountries = new Set(
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap text-sm">
-            <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400 border-b border-purple-500/30">
+            <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-purple-500/30">
               <tr>
-                <th className="p-4 font-semibold border-l border-white/5">التاريخ</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-purple-400">نوع الخبر</th>
-                <th className="p-4 font-semibold border-l border-white/5">المحافظة</th>
-                <th className="p-4 font-semibold border-l border-white/5 max-w-[250px]">وصف الحادث</th>
-                <th className="p-4 font-semibold border-l border-white/5">الناشر</th>
-                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5 text-center">إجراءات</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-purple-400">نوع الخبر</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">المحافظة</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[250px]">وصف الحادث</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">الناشر</th>
+                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)] text-center">إجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-[var(--border)]">
               {tableNews.length > 0 ? tableNews.map(n => {
                  const aiData = extractAiData(n.news_updates);
                  return (
-                <tr key={n.id} className="hover:bg-white/5">
-                  <td className="p-4 text-white border-l border-white/5 font-mono">{n.incident_date}</td>
-                  <td className="p-4 text-purple-400 border-l border-white/5 font-bold">
+                <tr key={n.id} className="hover:bg-[var(--surface-hover)]">
+                  <td className="p-4 text-white border-l border-[var(--border)] font-mono">{n.incident_date}</td>
+                  <td className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                     {n.news_type}
                     {aiData && aiData.severity && <span className="block mt-1 bg-red-500/20 text-red-500 px-2 py-0.5 rounded text-[10px] w-max">خطورة: {aiData.severity}/10</span>}
                   </td>
-                  <td className="p-4 text-gray-300 border-l border-white/5">{n.governorate}</td>
-                  <td className="p-4 text-gray-400 border-l border-white/5 w-[500px] min-w-[500px] whitespace-normal leading-7">
+                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{n.governorate}</td>
+                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] w-[500px] min-w-[500px] whitespace-normal leading-7">
                       {n.incident_description || 'لا يوجد وصف'}
                   </td>
-                  <td className="p-4 text-gray-500 border-l border-white/5 text-xs">{n.news_publisher}</td>
-                  <td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                  <td className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.news_publisher}</td>
+                  <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                     <div className="flex justify-center gap-2">
                       {n.news_link && (
-                        <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[#111] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                        <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[#111] hover:bg-yellow-600 text-gray-400 hover:text-white rounded-lg transition-colors" title="قراءة التقرير الاستخباراتي">
+                      <button onClick={() => handleEdit(n)} className="p-2 bg-[var(--surface-4)] hover:bg-yellow-600 text-[var(--muted-2)] hover:text-white rounded-lg transition-colors" title="قراءة التقرير الاستخباراتي">
                         <EyeIcon />
                       </button>
                       {isOwner && (
-                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[#111] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف السجل">
+                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[var(--surface-4)] hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors border border-red-500/20" title="حذف السجل">
                           <TrashIcon />
                         </button>
                       )}
@@ -5167,7 +5266,7 @@ const totalAiCountries = new Set(
                   </td>
                 </tr>
               )
-              }) : <tr><td colSpan="6" className="p-8 text-center text-gray-500 font-bold">لا توجد أخبار مطابقة...</td></tr>}
+              }) : <tr><td colSpan="6" className="p-8 text-center text-[var(--faint)] font-bold">لا توجد أخبار مطابقة...</td></tr>}
             </tbody>
           </table>
         </div>
@@ -5177,9 +5276,9 @@ const totalAiCountries = new Set(
       {isModalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-purple-500/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-fade-in-up">
-            <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
+            <div className="p-5 border-b border-[var(--border)] bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500"/> التقرير الاستخباراتي (OSINT)</h2>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[#111] text-gray-400 hover:text-red-500 p-2 rounded-xl"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:text-red-500 p-2 rounded-xl"><TrashIcon /></button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
@@ -5187,15 +5286,15 @@ const totalAiCountries = new Set(
               {/* عرض التقرير التكتيكي والصورة فوق */}
               <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-purple-500/50 p-6 rounded-2xl shadow-[0_0_20px_rgba(168,85,247,0.1)] flex flex-col md:flex-row gap-6">
                 <div className="flex-1 space-y-4">
-                   <h3 className="text-purple-400 font-bold flex items-center gap-2 border-b border-white/10 pb-2"><ShieldIcon/> التقرير الاستراتيجي الميداني</h3>
-                   <div className="text-gray-300 text-sm leading-loose whitespace-pre-wrap font-mono">
+                   <h3 className="text-purple-400 font-bold flex items-center gap-2 border-b border-[var(--border)] pb-2"><ShieldIcon/> التقرير الاستراتيجي الميداني</h3>
+                   <div className="text-[var(--ink-2)] text-sm leading-loose whitespace-pre-wrap font-mono">
                      {form.news_updates || 'لا يوجد تقرير متاح لهذا الحدث.'}
                    </div>
                 </div>
                 {/* استخراج الصورة لعرضها */}
                 {extractAiData(form.news_updates)?.img && extractAiData(form.news_updates)?.img !== 'لا توجد صورة' && (
                   <div className="w-full md:w-1/3 shrink-0">
-                    <img src={extractAiData(form.news_updates).img} alt="صورة الحدث" className="w-full h-auto rounded-xl border border-white/10 object-cover shadow-lg" />
+                    <img src={extractAiData(form.news_updates).img} alt="صورة الحدث" className="w-full h-auto rounded-xl border border-[var(--border)] object-cover shadow-lg" />
                   </div>
                 )}
               </div>
@@ -5205,7 +5304,7 @@ const totalAiCountries = new Set(
                   <FormGroup label="نوع الخبر"><StyledInput disabled value={form.news_type} className="text-purple-400 font-bold" /></FormGroup>
                   <FormGroup label="المحافظة (الفرع)"><StyledInput disabled value={form.governorate} /></FormGroup>
                   <FormGroup label="ناشر الخبر"><StyledInput disabled value={form.news_publisher} /></FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="وصف الحادث (الملخص)"><textarea readOnly value={form.incident_description} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-gray-300" rows="2"></textarea></FormGroup></div>
+                  <div className="md:col-span-3"><FormGroup label="وصف الحادث (الملخص)"><textarea readOnly value={form.incident_description} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-[var(--ink-2)]" rows="2"></textarea></FormGroup></div>
                   <FormGroup label="اسم المستشفى"><StyledInput readOnly value={form.hospital_name} /></FormGroup>
                   <FormGroup label="عدد المصابين"><StyledInput readOnly value={form.injured_count} className="text-yellow-500 font-bold" /></FormGroup>
                   <FormGroup label="عدد الوفيات"><StyledInput readOnly value={form.deaths_count} className="text-red-500 font-bold" /></FormGroup>
@@ -5214,8 +5313,8 @@ const totalAiCountries = new Set(
               </SectionCard>
             </div>
             
-            <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق التقرير</button>
+            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إغلاق التقرير</button>
             </div>
           </div>
         </div>
@@ -5247,12 +5346,12 @@ const totalAiCountries = new Set(
       {/* 👇 شاشة التنبيهات عشان الزرار يرد عليك 👇 */}
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(168,85,247,0.3)] animate-fade-in-up">
-            <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-4">
+          <div className="bg-[var(--surface-3)] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(168,85,247,0.3)] animate-fade-in-up">
+            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
               <AIIcon className="w-7 h-7 text-purple-500" />
               <h3 className="text-xl font-bold text-white">رسالة النظام</h3>
             </div>
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
             <div className="mt-8 flex justify-end">
               <button onClick={() => setCustomAlert(null)} className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] w-full">
                 علم
@@ -5282,9 +5381,9 @@ function DangerConfirmModal({
 
   return (
     <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
-      <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+      <div className="bg-[var(--surface-2)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
 
-        <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]">
+        <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]">
           <TrashIcon className="w-10 h-10" />
         </div>
 
@@ -5292,13 +5391,13 @@ function DangerConfirmModal({
           {title}
         </h3>
 
-        <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+        <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">
           {message}
         </p>
 
         {showConfirmationInput && (
           <div className="w-full mb-6 text-right">
-            <label className="block text-gray-400 text-sm font-bold mb-2">
+            <label className="block text-[var(--muted-2)] text-sm font-bold mb-2">
               أدخل رمز التأكيد للمتابعة
             </label>
 
@@ -5314,7 +5413,7 @@ function DangerConfirmModal({
               placeholder="رمز التأكيد"
               autoComplete="new-password"
 name="clear_all_confirmation"
-              className="w-full bg-[#111] border border-white/10 focus:border-[#c70000]/50 rounded-xl px-4 py-3 text-white text-center tracking-[0.35em] outline-none transition-colors"
+              className="w-full bg-[var(--surface-4)] border border-[var(--border)] focus:border-[var(--accent)]/50 rounded-xl px-4 py-3 text-white text-center tracking-[0.35em] outline-none transition-colors"
             />
           </div>
         )}
@@ -5323,7 +5422,7 @@ name="clear_all_confirmation"
 
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-gray-300 hover:bg-white/5 border border-white/10 transition-colors"
+            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors"
           >
             إلغاء
           </button>
@@ -5333,7 +5432,7 @@ name="clear_all_confirmation"
             disabled={showConfirmationInput && confirmationCode !== "301014"}
             className={`flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-colors ${
               showConfirmationInput && confirmationCode !== "301014"
-                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                ? "bg-gray-700 text-[var(--muted-2)] cursor-not-allowed"
                 : "bg-[#c70000] hover:bg-[#a50000] text-white shadow-[0_0_15px_rgba(199,0,0,0.3)]"
             }`}
           >
@@ -5457,12 +5556,18 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
           {isRefreshing && <span className="inline-flex items-center gap-2 text-xs text-[var(--muted)]"><span className="w-3 h-3 rounded-full bg-[var(--accent)] animate-pulse"/> تحديث لحظي...</span>}
         </div>
         <p className="text-sm text-[var(--muted)] mt-2">يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته وساعاته الفعلية ووضعه الحالي لحظياً.</p>
+        <div className="flex flex-wrap items-center gap-2 mt-4">
+          <span className="ops-chip text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]"><span className="live-dot" /> {lang === 'ar' ? 'متصل بقاعدة البيانات لحظياً' : 'Live database sync'}</span>
+          <span className="ops-chip"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" /> {lang === 'ar' ? 'في مهمة حاليًا' : 'Active'}: <b className="text-[var(--ink)] tabular-nums">{countActive}</b></span>
+          <span className="ops-chip"><span className="w-1.5 h-1.5 rounded-full bg-[var(--muted)]" /> {lang === 'ar' ? 'ليس في مهمة حاليًا' : 'Inactive'}: <b className="text-[var(--ink)] tabular-nums">{countInactive}</b></span>
+          <span className="ops-chip"><span className="w-1.5 h-1.5 rounded-full bg-[var(--data)]" /> {lang === 'ar' ? 'حالات 0 قيد الحصر' : 'Pending (0) '}: <b className="text-[var(--ink)] tabular-nums">{hrList.filter(p => p.missions_count > 0 && !(p.total_hours > 0)).length}</b></span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="إجمالي القوة (بدون تكرار)" value={filteredHR.length} color="text-white" borderHighlight />
         <StatCard title="في مهمة حاليًا" value={countActive} color="text-[var(--accent)]" borderHighlight />
-        <StatCard title="ليس في مهمة حاليًا" value={countInactive} color="text-gray-400" />
+        <StatCard title="ليس في مهمة حاليًا" value={countInactive} color="text-[var(--muted-2)]" />
         <StatCard title="إجمالي المتطوعين" value={hrList.filter(p => p.participant_type === 'volunteer').length} color="text-blue-400" />
       </div>
 
