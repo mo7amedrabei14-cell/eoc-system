@@ -1,40 +1,445 @@
 @import "tailwindcss";
 
-/* ========================================== */
-/* تصميم شريط التمرير (Scrollbar) للسيستم كله */
-/* ========================================== */
+/* ================================================================
+   EOC * Design System *
+   نظام تصميم متماسك: Dark / Light عبر رموز CSS موحّدة
+   اللون الأساسي: #C70000  (يُستخدم باحترافية وتوازن، لا أكثر)
+   المبادئ: Premium — Minimal — Elegant — Fluid
+   الحركة: transform + opacity فقط (بدون jank أو layout shift)
+   ================================================================ */
 
-/* عرض وارتفاع الشريط */
-::-webkit-scrollbar,
-.custom-scrollbar::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* ─────────────────────────── 1) التوكينات ─────────────────────────── */
+:root {
+  /* الدرجات الأساسية */
+  --bg: #050505;
+  --bg-deep: #020202;
+  --surface: #0c0c0c;
+  --surface-2: #111111;
+  --surface-3: #1a1a1a;
+  --surface-4: #232323;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --ink: #ffffff;
+  --ink-2: #e5e7eb;
+  --muted: #9ca3af;
+  --faint: #6b7280;
+
+  /* اللون الأساسي */
+  --accent: #c70000;
+  --accent-hover: #e50000;
+  --accent-soft: rgba(199, 0, 0, 0.12);
+  --accent-softer: rgba(199, 0, 0, 0.06);
+
+  /* الحواف والظلال */
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.28);
+  --shadow-2: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 20px 60px rgba(0, 0, 0, 0.55);
+  --ring: 0 0 0 3px rgba(199, 0, 0, 0.25);
+
+  /* الحركة */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 160ms;
+  --dur: 260ms;
+  --dur-slow: 420ms;
+
+  color-scheme: dark;
 }
 
-/* خلفية الشريط (اللون الغامق اللي بيمشي مع خلفية الموقع) */
-::-webkit-scrollbar-track,
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #050505; 
+/* ─────────────── 2) الثيم الفاتح (نفس الرموز، درجات خفيفة) ─────────────── */
+:root[data-theme="light"] {
+  --bg: #f4f4f6;
+  --bg-deep: #ececef;
+  --surface: #ffffff;
+  --surface-2: #fbfbfc;
+  --surface-3: #f1f1f4;
+  --surface-4: #e7e7ec;
+  --border: rgba(15, 20, 30, 0.08);
+  --border-strong: rgba(15, 20, 30, 0.14);
+  --ink: #101623;
+  --ink-2: #2a3346;
+  --muted: #4b5563;
+  --faint: #6b7280;
+
+  --accent: #b00000;
+  --accent-hover: #d00000;
+  --accent-soft: rgba(176, 0, 0, 0.1);
+  --accent-softer: rgba(176, 0, 0, 0.05);
+
+  --shadow-1: 0 1px 2px rgba(20, 25, 40, 0.05), 0 6px 18px rgba(20, 25, 40, 0.06);
+  --shadow-2: 0 10px 34px rgba(20, 25, 40, 0.1);
+  --shadow-3: 0 24px 70px rgba(20, 25, 40, 0.16);
+  --ring: 0 0 0 3px rgba(176, 0, 0, 0.18);
+
+  color-scheme: light;
+}
+
+/* ─────────────────────────── 3) قاعدة الشاشة ─────────────────────────── */
+html, body, #root { height: 100%; }
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out);
+}
+
+/* تحديد النص */
+::selection { background: var(--accent); color: #fff; }
+
+/* التركيز عن طريق لوحة المفاتيح فقط */
+:focus-visible { outline: none; }
+
+/* ───────────────────── 4) سكرول بار (لكل الثيمات) ───────────────────── */
+::-webkit-scrollbar, .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, .custom-scrollbar::-webkit-scrollbar-track { background: var(--bg); border-radius: 8px; }
+::-webkit-scrollbar-thumb, .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--surface-4);
+  border-radius: 8px;
+  border: 2px solid var(--bg);
+  transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover, .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+::-webkit-scrollbar-corner, .custom-scrollbar::-webkit-scrollbar-corner { background: var(--bg); }
+
+/* ───────────────────────── 5) الأسطح والمكوّنات ─────────────────────────
+   كلاسات semantics نستخدمها في الواجهة بدل الـ hex المتكرر */
+
+/* سطح الحاوية الرئيسية للشاشة */
+.surface-view {
+  background: var(--bg);
+}
+
+/* غلاف التطبيق الجذري (data-theme): يعبر بين الداكن والفاتح كفريق واحد */
+.app-shell {
+  background: var(--bg);
+}
+
+/* بطاقة / لوح */
+.card-surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out),
+              border-color var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out);
+}
+
+.section-title {
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ───────── 6) الحقول (Inputs / Selects / Textareas) ───────── */
+.field {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 0.72rem 0.9rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+.field:hover { border-color: var(--border-strong); }
+.field:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.field::placeholder { color: var(--faint); }
+
+select.field, .field option { background: var(--surface-2); color: var(--ink); }
+
+/* ───────────────────── 7) الأزرار ───────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding: 0.6rem 1.05rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out),
+              filter var(--dur-fast) var(--ease-out);
+  will-change: transform;
+  user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.btn-accent:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--accent) 65%, transparent); }
+
+.btn-ghost {
+  background: var(--surface-2);
+  color: var(--muted);
+  border-color: var(--border);
+}
+.btn-ghost:hover:not(:disabled) { color: var(--ink); border-color: var(--border-strong); background: var(--surface-3); }
+
+.btn-success { background: #059669; color: #fff; }
+.btn-success:hover:not(:disabled) { background: #047857; transform: translateY(-1px); }
+
+.btn-danger { background: var(--accent); color: #fff; }
+.btn-danger:hover:not(:disabled) { background: var(--accent-hover); }
+
+.btn-danger-soft { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 25%, transparent); }
+.btn-danger-soft:hover:not(:disabled) { background: var(--accent); color: #fff; }
+
+/* أزرار أيقونات صغيرة */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.7rem;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast), background-color var(--dur-fast), border-color var(--dur-fast);
+  will-change: transform;
+}
+.icon-btn:hover { color: var(--ink); border-color: var(--border-strong); transform: translateY(-1px); }
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn-danger:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* ───────────────────── 8) الجداول ───────────────────── */
+.table-shell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.table-shell table { width: 100%; }
+.table-shell thead th {
+  text-align: right;
+  padding: 0.95rem 1rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.table-shell tbody td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-2);
+}
+.table-shell tbody tr {
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.table-shell tbody tr:hover { background: var(--surface-2); }
+
+/* ───────────────────── 9) الشارات والحالات ───────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast);
+}
+.badge:hover { transform: translateY(-1px); }
+
+/* ───────────────────── 10) مودال/شيت ───────────────────── */
+.modal-backdrop {
+  background: color-mix(in srgb, var(--bg-deep) 78%, transparent);
+  backdrop-filter: blur(10px);
+  animation: fade-in 0.25s var(--ease-out);
+}
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-3);
+  animation: modal-in 0.38s var(--ease-out);
+  will-change: transform, opacity;
+}
+
+/* ───────────────────── 11) توست ───────────────────── */
+.toast-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(8px);
+  animation: toast-in 0.4s var(--ease-out);
+  will-change: transform, opacity;
+}
+
+/* ───────────────────── 12) هياكل سكلتون (Skeletons) ───────────────────── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-3);
   border-radius: 8px;
 }
-
-/* الجزء اللي بتسحبه بالماوس (رمادي رايق وواضح جداً) */
-::-webkit-scrollbar-thumb,
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #4b5563; 
-  border-radius: 8px;
-  /* التريكة دي بتعمل حواف سودة صغيرة بتدي شكل شيك كأن الشريط طاير */
-  border: 2px solid #050505; 
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface-4) 70%, transparent), transparent);
+  animation: shimmer 1.4s infinite;
 }
 
-/* لما تقف عليه بالماوس ينور شوية ويبقى أوضح */
-::-webkit-scrollbar-thumb:hover,
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #6b7280; 
+/* ───────────────────── 13) الحركات ───────────────────── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+@keyframes mission-flash {
+  0%   { background-color: color-mix(in srgb, var(--accent) 26%, transparent); }
+  100% { background-color: var(--surface-2); }
+}
+@keyframes live-dot {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 7px transparent; }
 }
 
-/* الزاوية التقاطع لو في شريط بالطول والعرض مع بعض */
-::-webkit-scrollbar-corner,
-.custom-scrollbar::-webkit-scrollbar-corner {
-  background: #050505; 
+.animate-fade-in-up { animation: fade-in-up 0.5s var(--ease-out) both; }
+.animate-fade-in { animation: fade-in 0.3s var(--ease-out) both; }
+.animate-modal-in { animation: modal-in 0.38s var(--ease-out) both; }
+
+/* وميض خفيف على صف المهمة المتغيّرة لحظياً (متطلب #5) */
+.mission-flash-row td {
+  animation: mission-flash 2.4s var(--ease-out) both;
+}
+
+.live-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: live-dot 2s infinite;
+}
+
+/* ───────────────────── 14) الفلاتر والرقائق ───────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  transition: all var(--dur-fast) var(--ease-out);
+  cursor: pointer;
+}
+.chip:hover { color: var(--ink); border-color: var(--border-strong); }
+.chip-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ──────────────── 15) معالجة الثيم الفاتح للكلاسات القديمة ────────────────
+   بسبب أن الجزء الأكبر من الواجهة مبنية بكلاسات Tailwind مباشرة بـ hex
+   فنضمن في الوضع الفاتح إعادة تلوينها بنفس الرموز (نفس المصدر، بدون تناقض) */
+:root[data-theme="light"] .bg-\[\#050505\] { background-color: var(--bg) !important; }
+:root[data-theme="light"] .bg-\[\#020202\] { background-color: var(--bg-deep) !important; }
+:root[data-theme="light"] .bg-\[\#0c0c0c\] { background-color: var(--surface) !important; }
+:root[data-theme="light"] .bg-\[\#0a0a0a\] { background-color: var(--surface) !important; }
+:root[data-theme="light"] .bg-\[\#111\] { background-color: var(--surface-2) !important; }
+:root[data-theme="light"] .bg-\[\#111111\] { background-color: var(--surface-2) !important; }
+:root[data-theme="light"] .bg-\[\#1a1a1a\] { background-color: var(--surface-3) !important; }
+:root[data-theme="light"] .bg-\[\#1a0505\] { background-color: color-mix(in srgb, var(--accent) 8%, var(--surface-2)) !important; }
+:root[data-theme="light"] .bg-\[\#252525\] { background-color: var(--surface-4) !important; }
+:root[data-theme="light"] .border-white\/10 { border-color: var(--border) !important; }
+:root[data-theme="light"] .border-white\/5 { border-color: var(--border) !important; }
+:root[data-theme="light"] .border-white\/20 { border-color: var(--border-strong) !important; }
+:root[data-theme="light"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+:root[data-theme="light"] .divide-white\/10 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+:root[data-theme="light"] .border-l-white\/5 { border-left-color: var(--border) !important; }
+:root[data-theme="light"] .border-r-white\/5 { border-right-color: var(--border) !important; }
+:root[data-theme="light"] .border-t-white\/5 { border-top-color: var(--border) !important; }
+:root[data-theme="light"] .border-b-white\/5 { border-bottom-color: var(--border) !important; }
+:root[data-theme="light"] .border-l-white\/10 { border-left-color: var(--border) !important; }
+:root[data-theme="light"] .border-r-white\/10 { border-right-color: var(--border) !important; }
+:root[data-theme="light"] .border-t-white\/10 { border-top-color: var(--border) !important; }
+:root[data-theme="light"] .border-b-white\/10 { border-bottom-color: var(--border) !important; }
+:root[data-theme="light"] .shadow-\[0_0_15px_rgba\(199\,0\,0\,0\.3\)\] { box-shadow: var(--shadow-2) !important; }
+
+/* النصوص المستوية */
+:root[data-theme="light"] .text-white { color: var(--ink) !important; }
+:root[data-theme="light"] .text-gray-200 { color: var(--ink-2) !important; }
+:root[data-theme="light"] .text-gray-300 { color: var(--ink-2) !important; }
+:root[data-theme="light"] .text-gray-400 { color: var(--muted) !important; }
+:root[data-theme="light"] .text-gray-500 { color: var(--faint) !important; }
+:root[data-theme="light"] .text-gray-600 { color: var(--faint) !important; }
+
+/* بقعة Sticky (خلفية الأعمدة المثبّتة) */
+:root[data-theme="light"] td.bg-\[\#1a1a1a\],
+:root[data-theme="light"] th.bg-\[\#1a1a1a\] { background-color: var(--surface-3) !important; }
+
+/* عدّاد القيمة */
+:root[data-theme="light"] input[type="date"] { color-scheme: light; }
+:root[data-theme="light"] input[type="time"] { color-scheme: light; }
+
+/* ───────────────────── 16) محسّنات عامة ───────────────────── */
+
+/* منع الهروب الأفقي على مستوى الشاشة */
+#root { overflow-x: hidden; }
+
+/* نقرة أو انتقال نهائي للروابط عموماً */
+a, button { -webkit-tap-highlight-color: transparent; }
+
+/* تحسين الوضع الفاتح للخريطة */
+:root[data-theme="light"] .leaflet-container { background: var(--surface-3); }
+
+/* إخفاء أسهم حقول الأرقام برفق */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
+
+/* ================================================================
+   تفضيلات الحركة: احترام المستخدمين اللي بيقلّلو الحركة
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

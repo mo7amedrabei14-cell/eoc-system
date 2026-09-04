@@ -326,8 +326,10 @@ class VehicleModel(BaseModel):
 class ParticipantModel(BaseModel):
     participant_type: str
     full_name: str
-    team_name: str
-    team_code: str
+    # 💡 عمودا "الفريق/الكود" حُذفا نهائيًّا من الواجهة (متطلب #2)، لذا أصبحا اختياريين
+    #    للتوافق مع أي بيانات قديمة ما زالت تصل. قاعدة البيانات لم تتغير (لا duplicate).
+    team_name: Optional[str] = None
+    team_code: Optional[str] = None
     participation_role: str
     branch_id: int
     assigned_itinerary: str
@@ -373,6 +375,9 @@ class MissionCreate(BaseModel):
     mission_code: Optional[str] = None
     created_at: Optional[str] = None
 
+    # كود الفريق/الإدارة على مستوى المهمة (حقل مستقل عن المشاركين)
+    team_code: Optional[str] = None
+
     routes: List[RouteModel] = []
     vehicles: List[VehicleModel] = []
     participants: List[ParticipantModel] = []
@@ -402,7 +407,8 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     m.responsible_person,
                     (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
                     (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
-                    m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date
+                    m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date,
+                    m.team_code
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
@@ -431,9 +437,10 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
             result = []
             for r in rows:
                 m_id = r[0]
+                # 💡 إصلاح التاريخ (متطلب #4): التاريخ النصفي يبقى كاملاً (تاريخ + وقت) بنفس توقيت النظام بدون أي تحويل
                 result.append({
                     "mission_id": m_id, "mission_code": r[1], "mission_classification": r[2] or "عادية",
-                    "created_at": r[3].strftime("%Y-%m-%d") if hasattr(r[3], 'strftime') else str(r[3]).split(' ')[0] if r[3] else "-", 
+                    "created_at": r[3].strftime("%Y-%m-%d %H:%M") if hasattr(r[3], 'strftime') else str(r[3]).split(' ')[0] if r[3] else "-",
                     "mission_name": r[4] or "بدون اسم",
                     "vol_count": r[5] or 0, "non_vol_count": r[6] or 0, "total_participants": (r[5] or 0) + (r[6] or 0),
                     "team_codes": r[7] or "-", "responsible_person": r[8] or "-", "drivers": r[9] or "-",
@@ -442,6 +449,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     "departure_date": str(r[16]) if r[16] else "-", "completion_date": str(r[17]) if r[17] else "-",
                     "notes": r[18] or "-",
                     "exit_date": str(r[19]) if len(r) > 19 and r[19] else "-",
+                    "team_code": (r[20] or "") if len(r) > 20 else "",
                     "beneficiaries": beneficiaries_dict.get(m_id, []),
                     "vehicles_info": f"{r[9] or ''} ({r[10] or ''})" if r[9] else "لا توجد سيارات" 
                 })
@@ -479,10 +487,10 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 INSERT INTO missions (
                     mission_code, mission_name, mission_classification, branch_id, mission_type, mission_location, responsible_person,
                     data_source, status, exit_date, departure_date, arrival_date, return_date, completion_date,
-                    start_time, departure_time, arrival_time, completion_time, injured_count, 
-                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key
+                    start_time, departure_time, arrival_time, completion_time, injured_count,
+                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key, team_code
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 ) RETURNING mission_id;
             """, (
                 mission_code, mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
@@ -492,7 +500,8 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
                 none_if_empty(mission.completion_time),
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
-                mission.idempotency_key
+                mission.idempotency_key,
+                mission.team_code if mission.team_code is not None else ""
             ))
             mission_id = cursor.fetchone()[0]
 
@@ -524,7 +533,7 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -569,8 +578,7 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
 
-            # 1. تحديث البيانات الأساسية (بدون تغيير كود المهمة)
-            # 1. تحديث البيانات الأساسية
+            # 1. تحديث البيانات الأساسية (بدون تغيير كود المهمة غير المُدخل)
             cursor.execute("""
                 UPDATE missions SET
                     mission_name=%s, mission_classification=%s, branch_id=%s, mission_type=%s, mission_location=%s,
@@ -578,8 +586,10 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                     arrival_date=%s, return_date=%s, completion_date=%s, start_time=%s, departure_time=%s,
                     arrival_time=%s, completion_time=%s, injured_count=%s, indirect_beneficiaries_total=%s,
                     notes=%s, internal_notes=%s,
-                    mission_code = COALESCE(%s, mission_code),
-                    created_at = COALESCE(%s::timestamp, created_at)
+                    team_code=%s,
+                    mission_code = COALESCE(%s, mission_code)
+                    -- 💡 (متطلب #4) لم نعد نكتب فوق created_at: يبقى التاريخ الفعلي للتسجيل في السيرفر
+                    -- (كان بيتحصّل لوقت منتصف الليل 00:00 عند أي تعديل فيفتقد الوقت الحقيقي)
                 WHERE mission_id=%s;
             """, (
                 mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
@@ -589,7 +599,8 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                 none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
                 none_if_empty(mission.completion_time),
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
-                none_if_empty(mission.mission_code), none_if_empty(mission.created_at),
+                mission.team_code if mission.team_code is not None else "",
+                none_if_empty(mission.mission_code),
                 mission_id
             ))
 
@@ -622,7 +633,7 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                     if active_in_other:
                         raise Exception(f"المشارك '{part.full_name}' (رقم {part.participation_role}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other[0]}).\n\nلا يمكن إضافته أو تحديث بياناته حتى يتم تسجيل عودته أولاً.")
 
-                cursor.execute("INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                cursor.execute("INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -858,6 +869,108 @@ def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(securit
     except Exception as e:
         print(f"Error fetching live updates: {e}")
         return []
+    finally:
+        connection.close()
+
+
+@app.get("/api/realtime/events")
+def get_realtime_events(
+    after_id: int = 0,
+    limit: int = 100,
+    init: int = 0,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    📡 قناة الأحداث اللحظية (متطلب #5)
+    Incremental polling بوسم تصاعدي (after_id) بدل ما ننزل كل الـ audit_logs في كل طلب.
+    المستلم بيتحدد من الـ backend بالـ user_id:
+      - الحدث المخصص (target_user_id) → بيوصله صاحبه حتى لو خارج نطاق فرعه.
+      - بث عام → الرتب العليا تشوف الكل، والمتطوع يشوف فقط أنواعه المسموحة
+        (والمهام اللي تخص فروع منطقته) مع استبعاد فعله هو (no self-notify).
+    init=1 → بيرجع آخر watermark فقط بدون أحداث (لتهيئة العمود من غير إشعارات قديمة).
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    role = get_user_role(user_id)
+    is_privileged = bool(role) and role["role_name"].upper() in [
+        "OWNER", "MANAGER", "SUPERVISOR", "JOKER", "OPERATION", "المالك", "مشرف", "جوكر", "أوبريشن",
+    ]
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if init:
+                cursor.execute("SELECT COALESCE(MAX(event_id), 0) FROM realtime_events;")
+                return {"events": [], "latest_id": cursor.fetchone()[0]}
+
+            if is_privileged:
+                cursor.execute(
+                    """
+                    SELECT e.event_id, e.event_type, e.action, e.actor_user_id,
+                           u.full_name, e.mission_id, e.details, e.target_user_id, e.created_at
+                    FROM realtime_events e
+                    LEFT JOIN users u ON e.actor_user_id = u.user_id
+                    WHERE e.event_id > %s
+                    ORDER BY e.event_id ASC
+                    LIMIT %s;
+                    """,
+                    (after_id, limit),
+                )
+            else:
+                branch_ids = [b["branch_id"] for b in get_user_branches(user_id)]
+                cursor.execute(
+                    """
+                    SELECT e.event_id, e.event_type, e.action, e.actor_user_id,
+                           u.full_name, e.mission_id, e.details, e.target_user_id, e.created_at
+                    FROM realtime_events e
+                    LEFT JOIN users u ON e.actor_user_id = u.user_id
+                    WHERE e.event_id > %s
+                      AND e.actor_user_id IS DISTINCT FROM %s
+                      AND (
+                            e.target_user_id = %s
+                            OR (
+                                e.target_user_id IS NULL
+                                AND e.event_type IN ('mission','local_news','global_disaster','earthquake','ai_news')
+                                AND (
+                                    e.event_type != 'mission'
+                                    OR e.mission_id IS NULL
+                                    OR EXISTS (
+                                        SELECT 1 FROM missions mm
+                                        WHERE mm.mission_id = e.mission_id
+                                          AND mm.branch_id = ANY(%s)
+                                    )
+                                )
+                            )
+                      )
+                    ORDER BY e.event_id ASC
+                    LIMIT %s;
+                    """,
+                    (after_id, user_id, user_id, branch_ids, limit),
+                )
+
+            rows = cursor.fetchall()
+            events = [
+                {
+                    "event_id": r[0],
+                    "event_type": r[1],
+                    "action": r[2],
+                    "actor_user_id": r[3],
+                    "actor_name": r[4] or "نظام",
+                    "mission_id": r[5],
+                    "details": r[6].get("action_text", str(r[6])) if isinstance(r[6], dict) else str(r[6] or ""),
+                    "target_user_id": r[7],
+                    "created_at": r[8].strftime("%d/%m/%Y %H:%M") if r[8] else "",
+                }
+                for r in rows
+            ]
+            latest_id = events[-1]["event_id"] if events else after_id
+            return {"events": events, "latest_id": latest_id}
+    except Exception as e:
+        print(f"Error fetching realtime events: {e}")
+        return {"events": [], "latest_id": after_id}
     finally:
         connection.close()
 

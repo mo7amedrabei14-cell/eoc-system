@@ -353,6 +353,14 @@ const ENGLISH_UI = {
   'التواجد': 'Presence',
   'المسار': 'Route',
   'الحالة': 'Status',
+  'كود الفريق/الإدارة': 'Team / Dept. code',
+  'الإشعارات اللحظية': 'Realtime notifications',
+  'تحديد الكل كمقروء': 'Mark all as read',
+  'لا توجد إشعارات بعد': 'No notifications yet',
+  'ستظهر هنا كل التحديثات اللحظية': 'All live updates will appear here',
+  'متصل': 'Connected',
+  'جاري الاتصال': 'Connecting…',
+  'حقل مستقل عن المشاركين، يُحفظ ويُسترجَع تلقائياً مع كل مهمة.': 'Separate from participants; saved & restored with the mission.',
   'حذف': 'Delete',
   'الاسم...': 'Name...',
   'اليوم الأول': 'First day',
@@ -768,6 +776,22 @@ const format12H = (timeStr) => {
   return `${h}:${m} ${ampm}`;
 };
 
+// 💡 توحيد تنسيق "تاريخ + وقت" (متطلب #4) بنفس مثال المستخدم: 04/09/2026 14:35
+// يقبل قيم السيرفر بصورها المختلفة (مع أو بدون ثواني، تاريخ فقط) ويعرضها بثبات
+// بدون أي تحويل للمنطقة الزمنية — يحافظ على التوقيت الذي يعمل به النظام.
+const formatDateTime = (val) => {
+  if (!val) return '-';
+  const s = String(val).trim();
+  const m = s.match(/^(\d{1,4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (m) {
+    const [, yy, mo, dd, hh, mm] = m;
+    const pad = (n) => String(n).padStart(2, '0');
+    const datePart = `${pad(dd)}/${pad(mo)}/${yy}`;
+    return hh !== undefined ? `${datePart} ${pad(hh)}:${mm}` : datePart;
+  }
+  return s;
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   
@@ -832,7 +856,7 @@ useEffect(() => {
   const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false });
   // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
-  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0 });
+  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0 });
 
   const userRole = userData?.role?.toUpperCase() || 'VOLUNTEER';
   const isOwner = userData?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
@@ -840,86 +864,167 @@ useEffect(() => {
   const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
   const isVolunteer = !isOwner && !isSupervisor && !isJoker;
 
-  // 💡 2. رادار الغرفة المركزية المتطور
+  // 💡 مركز الإشعارات الفوري (متطلب #5):
+  // - Incremental polling بوسم تصاعدي (event_id) — من غير ما ننزل الـ audit_logs كاملة
+  // - المستلم يتحدد من الـ backend بالـ user_id (مش مقارنة بالأسماء زي زمان)
+  // - لا تداخل بين الطلبات / لا تكرار أحداث / تنظيف عند unmount / إعادة اتصال مع backoff
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [pulseMissions, setPulseMissions] = useState([]);
+  const [liveMissionEvents, setLiveMissionEvents] = useState([]);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const lastEventIdRef = useRef(null);        // watermark تصاعدي
+  const seenEventIdsRef = useRef(new Set());  // حماية من أي تكرار أثناء إعادة المحاولة
+  const pollInFlightRef = useRef(false);      // لا تداخل بين الطلبات
+  const pollBackoffRef = useRef(4000);        // backoff لإعادة الاتصال
+  const realtimeUnmountedRef = useRef(false);
+
+  // 💡 2. رادار الغرفة المركزية المتطور (قناة ريال تايم)
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token || !userData) return;
 
-    let lastSeenSignature = null; 
+    const BASE = 'https://eoc-system-b12f.vercel.app';
+    let pollTimer = null;
+    realtimeUnmountedRef.current = false;
+    pollBackoffRef.current = 4000;
 
-    const checkLiveUpdates = async () => {
-      try {
-        const res = await fetch('https://eoc-system-b12f.vercel.app/api/live-updates', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            
-            if (lastSeenSignature === null) {
-              lastSeenSignature = data[0].created_at + data[0].full_name + data[0].action;
-              return;
-            }
+    const notifyRealtime = (e) => {
+      if (!e || !e.event_id) return;
+      // منع التكرار (لو وقع retry بعد فشل شبكة مثلاً)
+      if (seenEventIdsRef.current.has(e.event_id)) return;
+      seenEventIdsRef.current.add(e.event_id);
+      if (seenEventIdsRef.current.size > 2000) {
+        seenEventIdsRef.current = new Set([...seenEventIdsRef.current].slice(-1500));
+      }
 
-            const newActions = [];
-            for (const log of data) {
-              const currentSig = log.created_at + log.full_name + log.action;
-              if (currentSig === lastSeenSignature) break; 
-              newActions.push(log);
-            }
+      const isAi = e.event_type === 'ai_news';
+      const isMine = Number(userData?.user_id) > 0 && e.actor_user_id === Number(userData?.user_id);
 
-            if (newActions.length > 0) {
-              lastSeenSignature = newActions[0].created_at + newActions[0].full_name + newActions[0].action;
+      // تحديث حالة البيانات بالتأكيد (الريال تايم يعكس حالة الـ DB فعلًا):
+      // - عداد التحديثات لكل شاشة مفتوحة تعمل refetch من غير Refresh يدوي
+      setLiveUpdateVersion(prev => ({
+        ...prev,
+        missions: prev.missions + (e.event_type === 'mission' ? 1 : 0),
+        local_news: prev.local_news + (e.event_type === 'local_news' ? 1 : 0),
+        global_disasters: prev.global_disasters + (e.event_type === 'global_disaster' ? 1 : 0),
+        earthquakes: prev.earthquakes + (e.event_type === 'earthquake' ? 1 : 0),
+        ai_news: prev.ai_news + (isAi ? 1 : 0),
+        audit: prev.audit + 1,
+      }));
 
-              newActions.reverse().forEach(action => {
-                const isAiLog = action.entity_type === 'ai_news' || action.full_name === 'AI Robot';
-                
-                // 💡 التعديل: إظهار الإشعار لو كان من الروبوت (حتى لو هو بيستخدم التوكن بتاعك)
-                if (action.full_name !== userData?.full_name || isAiLog) {
-                  const toastId = Date.now() + Math.random(); 
+      // تنوير النقطة الحمراء في القائمة الجانبية
+      setNewUpdates(prev => ({
+        ...prev,
+        missions: prev.missions || e.event_type === 'mission',
+        local_news: prev.local_news || e.event_type === 'local_news',
+        global_disasters: prev.global_disasters || e.event_type === 'global_disaster',
+        earthquakes: prev.earthquakes || e.event_type === 'earthquake',
+        ai_news: prev.ai_news || isAi,
+        audit: true,
+      }));
 
-                  // إضافة الإشعار للطابور (محمي ضد الانهيار لو الداتا عبارة عن Object)
-                  setToasts(prev => [...prev, { 
-                    id: toastId, 
-                    user: String(action.full_name || 'نظام'), 
-                    action: String(action.action || 'تحديث'), 
-                    details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''), 
-                    isAi: isAiLog 
-                  }]);
-                  setTimeout(() => {
-                    setToasts(prev => prev.filter(t => t.id !== toastId)); 
-                  }, 10000);
+      // وميض صف المهمة المتغيّرة + تغذية أحداث المهام لفصل الـ modal
+      if (e.event_type === 'mission' && e.mission_id) {
+        const ts = Date.now();
+        setPulseMissions(prev => [
+          ...prev.filter(p => Date.now() - p.ts < 3500),
+          { id: e.mission_id, ts, nonce: Math.random() },
+        ].slice(-12));
+        setLiveMissionEvents(prev => [
+          { mission_id: e.mission_id, event_id: e.event_id, action: e.action, actor_name: e.actor_name, created_at: e.created_at },
+          ...prev,
+        ].slice(0, 20));
+      }
 
-                  // تنوير النقطة الحمراء
-                  setNewUpdates(prev => ({
-                    ...prev,
-                    missions: prev.missions || action.entity_type === 'mission',
-                    local_news: prev.local_news || action.entity_type === 'local_news',
-                    global_disasters: prev.global_disasters || action.entity_type === 'global_disaster',
-                    earthquakes: prev.earthquakes || action.entity_type === 'earthquake',
-                    ai_news: prev.ai_news || isAiLog,
-                    audit: true
-                  }));
+      // الإشعار الظاهر والتوست: لا نُظهر للمستخدم فعله هو (بالـ user_id من الـ backend)
+      if (isMine) return;
 
-                  // 🔄 لو في تاب مفتوح فعلاً بيعرض النوع ده، خليه يعمل Refetch فوراً
-                  setLiveUpdateVersion(prev => ({
-                    ...prev,
-                    missions: prev.missions + (action.entity_type === 'mission' ? 1 : 0),
-                    local_news: prev.local_news + (action.entity_type === 'local_news' ? 1 : 0),
-                    global_disasters: prev.global_disasters + (action.entity_type === 'global_disaster' ? 1 : 0),
-                    earthquakes: prev.earthquakes + (action.entity_type === 'earthquake' ? 1 : 0),
-                    ai_news: prev.ai_news + (isAiLog ? 1 : 0),
-                  }));
-                }
-              });
-            }
-          }
-        }
-      } catch (e) {}
+      const toastId = `rt-${e.event_id}-${Math.random()}`;
+      setToasts(prev => [...prev, {
+        id: toastId,
+        eventId: e.event_id,
+        user: String(e.actor_name || 'نظام'),
+        action: String(e.action || 'تحديث'),
+        details: typeof e.details === 'object' ? JSON.stringify(e.details) : String(e.details || ''),
+        isAi,
+        event_type: e.event_type,
+        mission_id: e.mission_id,
+        created_at: e.created_at,
+      }].slice(-40));
+      setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== toastId)); }, 9000);
+
+      const noticeId = `n-${e.event_id}`;
+      setNotifications(prev => {
+        if (prev.some(n => n.id === noticeId)) return prev;
+        return [{
+          id: noticeId,
+          eventId: e.event_id,
+          event_type: e.event_type,
+          action: e.action,
+          actor_name: e.actor_name,
+          details: typeof e.details === 'object' ? JSON.stringify(e.details) : String(e.details || ''),
+          mission_id: e.mission_id,
+          created_at: e.created_at,
+          read: false,
+        }, ...prev].slice(0, 40);
+      });
+      setUnreadCount(prev => prev + 1);
     };
 
-    checkLiveUpdates();
-    const interval = setInterval(checkLiveUpdates, 15000); 
-    return () => clearInterval(interval);
+    const poll = async () => {
+      if (pollInFlightRef.current) return;          // لا تداخل بين الطلبات
+      pollInFlightRef.current = true;
+      try {
+        const init = lastEventIdRef.current === null;
+        const url = init
+          ? `${BASE}/api/realtime/events?init=1`
+          : `${BASE}/api/realtime/events?after_id=${lastEventIdRef.current}&limit=100`;
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) throw new Error(`realtime status ${res.status}`);
+        const data = await res.json();
+        if (init) {
+          lastEventIdRef.current = data.latest_id || 0;   // نبدأ من الآن — بدون إعادة أحداث قديمة
+        } else {
+          const events = Array.isArray(data.events) ? data.events : [];
+          events.forEach(notifyRealtime);
+          if (events.length > 0) lastEventIdRef.current = events[events.length - 1].event_id;
+        }
+        pollBackoffRef.current = 4000;
+        if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
+      } catch (e) {
+        // network failure → backoff تصاعدي (لغاية 30 ثانية) ثم معاودة تلقائية
+        pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 30000);
+        if (!realtimeUnmountedRef.current) setRealtimeConnected(false);
+      } finally {
+        pollInFlightRef.current = false;
+      }
+    };
+
+    const schedule = () => {
+      pollTimer = setTimeout(async () => {
+        await poll();
+        if (!realtimeUnmountedRef.current) schedule();
+      }, pollBackoffRef.current);
+    };
+
+    poll();
+    schedule();
+
+    return () => {
+      realtimeUnmountedRef.current = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
   }, [userData]);
+
+  // تنظيف دائم للميض القديم (للأمان مهما طالت الجلسة في الصفحة)
+  useEffect(() => {
+    const t = setInterval(() => {
+      setPulseMissions(prev => prev.filter(p => Date.now() - p.ts < 3500));
+    }, 4000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -1001,22 +1106,22 @@ useEffect(() => {
     switch (activeTab) {
       case 'home': return <HomeView branches={branchesList} />;
       case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} />;
-      case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} />;
+      case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
-      case 'audit': return <AuditLogsView isOwner={isOwner} />;
+      case 'audit': return <AuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} />;
       default: return <HomeView branches={branchesList} />;
     }
   };
 
   return (
-    <div ref={dashboardRootRef} className={`${theme === 'light' ? 'theme-light' : ''} min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden transition-colors duration-300`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div ref={dashboardRootRef} data-theme={theme} className="app-shell min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden transition-colors duration-300" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
-
-      <style>{`
+      {/* 💡 الثيم الآن عبر data-theme + نظام CSS تصميمي واحد في index.css (light=طبقات بيضاء/ألوان حيادية، dark=أسطح عميقة) */}
+      {false && (<style>{`
   .theme-light {
     background: #f4f6f8 !important;
     color: #17202a !important;
@@ -1112,28 +1217,28 @@ useEffect(() => {
   }
 
 
-`}</style>
+`}</style>)}
 
       
       {/* 💡 4. طابور الإشعارات (يدعم إشعارات النظام العادية وإشعارات الذكاء الاصطناعي البنفسجية) */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[90%] md:w-auto min-w-[320px] max-w-lg pointer-events-none">
         {toasts.map(toastItem => (
-          <div key={toastItem.id} className={`bg-[#111] border ${toastItem.isAi ? 'border-purple-500/50 shadow-[0_10px_40px_rgba(168,85,247,0.4)]' : 'border-[#c70000]/50 shadow-[0_10px_40px_rgba(199,0,0,0.4)]'} rounded-2xl p-4 flex items-start gap-4 relative overflow-hidden animate-fade-in-up pointer-events-auto`}>
+          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.isAi ? '!border-purple-500/50' : ''}`}>
             <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-purple-500' : 'bg-[#c70000]'} animate-pulse`}></div>
             <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-[#c70000]/20 text-[#c70000] border-[#c70000]/30'} rounded-full flex items-center justify-center border shrink-0`}>
               {toastItem.isAi ? <AIIcon className="w-5 h-5 animate-pulse" /> : <AlertIcon className="w-5 h-5 animate-bounce" />}
             </div>
-            <div className="flex-1">
-              <h4 className="text-white font-bold text-sm flex justify-between items-center">
-                <span>{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[#c70000] ml-1">{toastItem.user}</span>}</span>
-                <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="text-gray-500 hover:text-white transition-colors">
+            <div className="flex-1 min-w-0">
+              <h4 className="text-[var(--ink)] font-bold text-sm flex justify-between items-center">
+                <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[#c70000] ml-1">{toastItem.user}</span>}</span>
+                <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="text-[var(--faint)] hover:text-[var(--ink)] transition-colors shrink-0">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </h4>
-              <p className={`${toastItem.isAi ? 'text-purple-400' : 'text-blue-400'} text-xs mt-2 font-bold bg-[#1a1a1a] p-2 rounded-lg border border-white/5 inline-block`}>
+              <p className={`${toastItem.isAi ? 'text-purple-400' : 'text-[#3b82f6]'} text-xs mt-2 font-bold bg-[var(--surface-3)] p-2 rounded-lg border border-[var(--border)] inline-block`}>
                 {toastItem.isAi ? 'الذكاء الاصطناعي وجد خبراً جديداً' : `إجراء: ${toastItem.action}`}
               </p>
-              <p className="text-gray-300 text-xs mt-2 leading-relaxed">{toastItem.details}</p>
+              <p className="text-[var(--ink-2)] text-xs mt-2 leading-relaxed">{toastItem.details}</p>
             </div>
           </div>
         ))}
@@ -1242,6 +1347,77 @@ useEffect(() => {
     </span>
 
   </button>
+
+  {/* 💡 جرس الإشعارات اللحظية + مؤشر الاتصال + القائمة المنسدلة */}
+  <div className="relative shrink-0">
+    <button
+      type="button"
+      onClick={() => setNotificationsOpen(o => !o)}
+      title={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
+      aria-label={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
+      className="relative w-10 h-10 rounded-xl bg-[#111] border border-white/10 text-gray-300 flex items-center justify-center transition-all duration-300 hover:text-white hover:border-[#c70000]/50 hover:bg-white/5 active:scale-95"
+    >
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+      {unreadCount > 0 && (
+        <span className="absolute -top-1.5 -left-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-[#c70000] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-fade-in">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      )}
+      <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0a0a0a] ${realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} title={realtimeConnected ? 'متصل بالخادم لحظياً' : 'جارٍ إعادة الاتصال…'}></span>
+    </button>
+
+    {notificationsOpen && (
+      <div className="absolute right-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden z-[80] animate-modal-in">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
+          <h3 className="text-sm font-bold text-white">الإشعارات اللحظية</h3>
+          <div className="flex items-center gap-2">
+            <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${realtimeConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}></span>
+              {realtimeConnected ? 'متصل' : 'جاري الاتصال'}
+            </span>
+            {unreadCount > 0 && (
+              <button type="button" onClick={() => { setNotifications(prev => prev.map(n => ({ ...n, read: true }))); setUnreadCount(0); }}
+                className="text-[11px] text-[#c70000] hover:text-white font-bold transition-colors">
+                تحديد الكل كمقروء
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {notifications.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <p className="text-3xl mb-2">🔔</p>
+              <p className="text-sm text-gray-400 font-semibold">لا توجد إشعارات بعد</p>
+              <p className="text-xs text-gray-500 mt-1">ستظهر هنا كل التحديثات اللحظية</p>
+            </div>
+          ) : notifications.map(n => (
+            <button
+              key={n.id}
+              type="button"
+              onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))}
+              className={`w-full text-right px-4 py-3 flex items-start gap-3 border-b border-white/5 transition-colors ${n.read ? 'opacity-70 hover:opacity-100' : 'bg-[#c70000]/5 hover:bg-[#c70000]/10'}`}
+            >
+              <span className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${n.event_type === 'mission' ? 'bg-[#c70000]/20 text-[#c70000]' : 'bg-white/10 text-gray-300'}`}>
+                {n.event_type === 'mission' ? <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> : <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-white truncate">{n.actor_name || 'نظام'}</span>
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-[#c70000] shrink-0"></span>}
+                </span>
+                <span className="block text-xs text-gray-300 mt-0.5 truncate">{n.action}</span>
+                <span className="block text-[11px] text-gray-500 mt-0.5 truncate">{n.created_at}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+
 </header>
         
         {/* 💡 4. مسافات الشاشة صغرت للموبايل عشان تدي براح للعرض */}
@@ -1336,15 +1512,15 @@ function HomeView({ branches = [] }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-lg relative overflow-hidden group">
+        <div className="card-surface p-6 rounded-3xl relative overflow-hidden group">
           <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">المهام اليومية (نشطة)</h3><div className="p-2 bg-[#c70000]/20 rounded-xl text-[#c70000]"><AlertIcon/></div></div>
           <p className="text-4xl font-black text-white relative z-10">{activeDaily}</p>
         </div>
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-lg relative overflow-hidden group">
+        <div className="card-surface p-6 rounded-3xl relative overflow-hidden group">
           <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">المهام المفتوحة</h3><div className="p-2 bg-blue-500/20 rounded-xl text-blue-500"><AlertIcon/></div></div>
           <p className="text-4xl font-black text-white relative z-10">{activeOpen}</p>
         </div>
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 p-6 rounded-3xl shadow-lg relative overflow-hidden group">
+        <div className="card-surface p-6 rounded-3xl relative overflow-hidden group">
           <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 bg-purple-500/20 rounded-xl text-purple-400"><NewsIcon/></div></div>
           <div className="flex items-end gap-2 relative z-10"><p className="text-4xl font-black text-white">{totalNews}</p><span className="text-xs font-bold text-purple-400 mb-1">({activeNews} استجابة)</span></div>
         </div>
@@ -1556,7 +1732,7 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
-function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion }) {
+function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [] }) {
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
@@ -1630,26 +1806,69 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState(''); 
 
-  const fetchMissions = async () => {
-    setIsLoading(true);
+  const fetchMissions = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
       if (res.ok) setMissionsList(await res.json());
-    } catch (error) { console.error("Error:", error); } 
-    finally { setIsLoading(false); }
+    } catch (error) { console.error("Error:", error); }
+    finally { if (!silent) setIsLoading(false); }
   };
 
   useEffect(() => { fetchMissions(); }, []);
 
   // 🔄 لو التاب ده مفتوح فعلاً وحصل تحديث لحظي (زي المتطوع بعت استمارة، أو الجوكر رجعها)
-  // نعمل Refetch تلقائي من غير ما ننتظر المستخدم يعمل Refresh يدوي للصفحة.
+  // نعمل Refetch تلقائي (silent) من غير ما ننتظر المستخدم يعمل Refresh يدوي — وبدون وميض سكلتونز.
   const isFirstLiveUpdate = useRef(true);
   useEffect(() => {
     if (isFirstLiveUpdate.current) { isFirstLiveUpdate.current = false; return; }
-    fetchMissions();
+    fetchMissions(true);
   }, [liveUpdateVersion]);
+
+  // 🔄 إذا كانت تفاصيل مهمة مفتوحة حاليًا وتغيّرت من مستخدم آخر (حدث لحظي يخصّها)،
+  // نعيد جلبها من السيرفر (مصدر الحقيقة) ونساندق حقول الاستمارة المعروضة — بدون أي reload.
+  const lastSyncedEventRef = useRef(null);
+  useEffect(() => {
+    const ev = Array.isArray(liveMissionEvents) && liveMissionEvents.length ? liveMissionEvents[0] : null;
+    if (!ev || !isModalOpen || !currentMissionData) return;
+    if (ev.mission_id !== currentMissionData.mission_id) return;
+    if (lastSyncedEventRef.current === ev.event_id) return;
+    lastSyncedEventRef.current = ev.event_id;
+    const token = localStorage.getItem('access_token');
+    fetch(`${BASE}/api/missions/${currentMissionData.mission_id}`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!data) return;
+        setCurrentMissionData(data);
+        const el = (id) => document.getElementById(id);
+        const idMap = {
+          f_mission_name: 'mission_name', f_mission_code: 'mission_code', f_team_code: 'team_code',
+          f_mission_class: 'mission_classification', f_mission_type: 'mission_type',
+          f_mission_location: 'mission_location', f_responsible_person: 'responsible_person',
+          f_data_source: 'data_source', f_exit_date: 'exit_date', f_departure_date: 'departure_date',
+          f_arrival_date: 'arrival_date', f_return_date: 'return_date', f_completion_date: 'completion_date',
+          f_start_time: 'start_time', f_departure_time: 'departure_time', f_arrival_time: 'arrival_time',
+          f_completion_time: 'completion_time', f_internal_notes: 'internal_notes',
+        };
+        Object.entries(idMap).forEach(([id, key]) => {
+          const node = el(id);
+          if (!node) return;
+          const v = data[key];
+          if (v !== undefined && v !== null && String(node.value) !== String(v)) node.value = v;
+        });
+        const fieldStatusNode = el('f_mission_field_status');
+        if (fieldStatusNode) {
+          fieldStatusNode.value = (data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة';
+        }
+        const notesNode = el('f_notes');
+        if (notesNode && data.notes) {
+          const cleaned = String(data.notes).replace(/^\[حالة الميدان:[^\]]*\]\s*/, '');
+          if (String(notesNode.value) !== cleaned) notesNode.value = cleaned;
+        }
+      });
+  }, [liveMissionEvents, isModalOpen, currentMissionData]);
 
   const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
   const removeRoute = (id) => setRoutes(routes.filter(r => r.id !== id));
@@ -1846,7 +2065,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const plate = document.getElementById(`v_plate_${i}`)?.value;
       if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
     });
-    csvContent += "\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,الفريق,كود الفريق,رقم العضوية/الصفة,المرحلة,نظام التواجد,الفرع,مجموعة التحرك المتبعة (خط السير)\n";
+    csvContent += `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية/الصفة,المرحلة,نظام التواجد,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
     participants.forEach((_, i) => {
       const name = document.getElementById(`p_name_${i}`)?.value;
       if (name) {
@@ -1855,7 +2074,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         const itinSel = document.getElementById(`p_itin_${i}`);
         const phase = document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول';
         const stay = document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة';
-        csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_team_${i}`)?.value)},${escapeCSV(document.getElementById(`p_tcode_${i}`)?.value)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(phase)},${escapeCSV(stay)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
+        csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(phase)},${escapeCSV(stay)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
       }
     });
     csvContent += "\nإحصائيات المستفيدين\nالتصنيف,مباشر,غير مباشر\n";
@@ -1886,9 +2105,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          const pName = document.getElementById(`p_name_${i}`)?.value;
          if (!pName) return;
 
-         const pRole = document.getElementById(`p_role_${i}`)?.value?.trim() || ''; 
+         const pRole = document.getElementById(`p_role_${i}`)?.value?.trim() || '';
          const pBranch = document.getElementById(`p_branch_${i}`)?.value || '19';
-         const pStatus = document.getElementById(`p_status_${i}`)?.value || 'بالمهمة';
+         // 💡 عمود "الحالة" حُذف نهائيًّا (متطلب #2): كل مشارك بـ"بالمهمة" افتراضيًا مع بقاء رادار التكرار نشطًا
+         const pStatus = 'بالمهمة';
          const pItin = getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي';
 
          const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
@@ -1956,17 +2176,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          injured_count: 0, indirect_beneficiaries_total: 0,
          notes: finalNotes,
          internal_notes: sysNotes,
+         team_code: document.getElementById('f_team_code')?.value || '',
          routes: allRoutes,
          vehicles: vehicles.map((_, i) => ({ driver_name: document.getElementById(`v_driver_${i}`)?.value || '', vehicle_number: document.getElementById(`v_plate_${i}`)?.value || '' })).filter(v => v.driver_name !== '' || v.vehicle_number !== ''),
          participants: participants.map((_, i) => ({
            participant_type: document.getElementById(`p_type_${i}`)?.value || 'volunteer',
            full_name: document.getElementById(`p_name_${i}`)?.value || '',
-           team_name: document.getElementById(`p_team_${i}`)?.value || '',
-           team_code: document.getElementById(`p_tcode_${i}`)?.value || '', 
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
            branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
            assigned_itinerary: getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي',
-           return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : (document.getElementById(`p_status_${i}`)?.value || 'مازال بالمهمة'),
+           return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة',
            phase_name: document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول',
            stay_type: document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة'
          })).filter(p => p.full_name !== ''),
@@ -2019,7 +2238,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       'Cancelled': { text: 'ملغاة', color: 'text-red-500 bg-red-500/10 border-red-500/20' },
     };
     const s = statuses[status] || statuses['Draft'];
-    return <span className={`px-2 py-1 rounded text-xs font-bold border ${s.color}`}>{s.text}</span>;
+    return <span className={`badge ${s.color}`}>{s.text}</span>;
   };
 
   let baseMissions = missionsList;
@@ -2074,9 +2293,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   return (
-    <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col min-h-[700px] flex-1">
+    <div className="card-surface overflow-hidden flex flex-col min-h-[700px] flex-1">
       {missionToDelete && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[200] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
           <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
             <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
             <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
@@ -2231,10 +2450,27 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {isLoading ? (<tr><td colSpan="16" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
+            {isLoading ? (
+              <tr>
+                <td colSpan="16" className="p-6">
+                  <div className="space-y-3 animate-fade-in">
+                    {[0,1,2,3,4].map(i => (
+                      <div key={i} className="flex items-center gap-3 px-2">
+                        <div className="skeleton h-3 w-24"></div>
+                        <div className="skeleton h-3 w-16"></div>
+                        <div className="skeleton h-3 w-40"></div>
+                        <div className="skeleton h-3 w-20"></div>
+                        <div className="skeleton h-3 w-32 flex-1"></div>
+                        <div className="skeleton h-6 w-8 rounded-full"></div>
+                      </div>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ) : 
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} className="hover:bg-white/5 transition-colors">
-                <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
+              <tr key={`mission-${m.mission_id}`} className={`transition-colors ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-white/5'}`}>
+                <td className="p-4 text-gray-400 font-mono border-l border-white/5">{formatDateTime(m.created_at)}</td>
                 <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
                 <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
                 <td className="p-4 text-gray-300 border-l border-white/5 font-mono text-xs whitespace-nowrap text-center">
@@ -2269,8 +2505,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       </div>
 
       {isModalOpen && (
-        <div key={currentMissionData ? `edit-${currentMissionData.mission_id}` : 'new'} className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[200] p-4">
-          <div className="bg-[#050505] border border-white/10 rounded-3xl w-full max-w-6xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
+        <div key={currentMissionData ? `edit-${currentMissionData.mission_id}` : 'new'} className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
+          <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden">
             
             <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
               <div className="flex items-center gap-4">
@@ -2405,8 +2641,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
               <SectionCard title="القوة البشرية والمشاركين" icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[#c70000] hover:text-white font-bold bg-[#c70000]/10 px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
                 <div className="overflow-x-auto bg-[#111] rounded-xl border border-white/5">
-                  <table className="w-full text-right text-sm min-w-[950px]">
-                    <thead className="bg-[#1a1a1a] text-gray-400 border-b border-white/5"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3 text-blue-400 w-32">الفريق / الكود</th><th className="p-3">رقم العضوية / الصفة</th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-yellow-500 w-32">الحالة</th><th className="p-3 text-center">حذف</th></tr></thead>
+                  <table className="w-full text-right text-sm min-w-[720px]">
+                    <thead className="bg-[#1a1a1a] text-gray-400 border-b border-white/5"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3">رقم العضوية / الصفة</th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-center">حذف</th></tr></thead>
                     <tbody className="divide-y divide-white/5">
                       {participants.map((p, index) => (
                         <tr key={p.id} className="hover:bg-white/5">
@@ -2418,12 +2654,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </select>
                           </td>
                           <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." className="bg-transparent outline-none text-white w-full" /></td>
-                          
-                          <td className="p-2 flex gap-1">
-                            <input id={`p_team_${index}`} type="text" defaultValue={p.team_name || ''} placeholder="الفريق" className="w-1/2 bg-transparent outline-none text-blue-300 border-b border-transparent focus:border-[#c70000] px-1" />
-                            <input id={`p_tcode_${index}`} type="text" defaultValue={p.team_code || ''} placeholder="الكود" className="w-1/2 bg-transparent outline-none text-blue-400 font-mono text-xs border-b border-transparent focus:border-[#c70000] px-1" />
-                          </td>
-                          
+
                           <td className="p-2">
                             <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : 'الصفة...'} className="bg-transparent outline-none text-white w-full" />
                           </td>
@@ -2468,17 +2699,25 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               {routes.length === 0 && customItineraries.length === 0 && <option value="بدون خط سير">بدون خط سير</option>}
                             </select>
                           </td>
-                          <td className="p-2">
-                            <select id={`p_status_${index}`} defaultValue={p.return_status || 'مازال بالمهمة'} disabled={currentMissionData?.status === 'Completed' && isVolunteer} className={`bg-[#1a1a1a] border border-white/5 px-2 py-1 outline-none w-full rounded font-bold ${p.return_status === 'تم انتهاء مهمتة' ? 'text-gray-500' : 'text-yellow-500'} ${(currentMissionData?.status === 'Completed' && isVolunteer) ? 'opacity-50 cursor-not-allowed' : ''}`} onChange={(e) => { e.target.classList.remove('text-yellow-500', 'text-gray-500'); e.target.classList.add(e.target.value === 'تم انتهاء مهمتة' ? 'text-gray-500' : 'text-yellow-500'); }}>
-                              <option value="مازال بالمهمة">📍 مازال بالمهمة</option>
-                              <option value="تم انتهاء مهمتة">🏠 تم انتهاء مهمتة</option>
-                            </select>
-                          </td>
                           <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-gray-500 hover:text-red-500"><TrashIcon /></button></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </SectionCard>
+
+              {/* 💡 كود الفريق/الإدارة: حقل مستقل تماماً عن جدول المشاركين (متطلب #3) */}
+              <SectionCard title="كود الفريق/الإدارة" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><circle cx="12" cy="12" r="3" /></svg>}>
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+                  <div className="w-full md:max-w-sm">
+                    <label className="flex items-center gap-2 text-[var(--muted)] text-xs font-bold mb-1.5 px-1">
+                      كود الفريق/الإدارة
+                      <button type="button" title="يُحفظ مع بيانات المهمة ويظهر فوراً عند فتحها" className="inline-flex w-4 h-4 rounded-full bg-[var(--surface-3)] text-[var(--faint)] text-[10px] items-center justify-center border border-[var(--border)]">?</button>
+                    </label>
+                    <StyledInput id="f_team_code" name="f_team_code" defaultValue={currentMissionData?.team_code || ''} placeholder="مثال: B-12" maxLength={100} />
+                  </div>
+                  <p className="text-xs text-[var(--faint)] px-1 pt-1 md:pt-0">حقل مستقل عن المشاركين، يُحفظ ويُسترجَع تلقائياً مع كل مهمة.</p>
                 </div>
               </SectionCard>
 
@@ -2558,12 +2797,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               {/* 👑 المالك (God Mode) */}
               {isOwner ? (
                 <>
-                  <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">مسودة</button>
-                  <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال للجوكر</button>
+                  <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">مسودة</button>
+                  <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال للجوكر</button>
                   <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
-                  <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">تم مراجعة المهمة (مستمرة)</button>
-                  <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إنهاء وإغلاق المهمة</button>
-                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إلغاء الإغلاق (إعادة فتح)</button>}
+                  <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
+                  <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
+                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إلغاء الإغلاق (إعادة فتح)</button>}
                 </>
               ) : (
                 /* 👷 باقي الرتب */
@@ -2571,8 +2810,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة */}
                   {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
                     <>
-                      <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">حفظ كمسودة</button>
-                      <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال إلى الجوكر</button>
+                      <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ كمسودة</button>
+                      <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال إلى الجوكر</button>
                     </>
                   )}
                   
@@ -2580,8 +2819,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {currentMissionData?.status === 'Under Review' && !isVolunteer && (
                     <>
                       <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
-                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">تم مراجعة المهمة (مستمرة)</button>
-                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إنهاء وإغلاق المهمة</button>
+                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
+                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
                     </>
                   )}
                   
@@ -2589,14 +2828,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {currentMissionData?.status === 'Approved' && (
                     <>
                       {/* المتطوع يشوف زرار إرسال التحديثات فقط */}
-                      {isVolunteer && <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال التحديثات للجوكر</button>}
+                      {isVolunteer && <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال التحديثات للجوكر</button>}
                       
                       {/* الإداري (الجوكر وفوق) يقدر يرجعها، يخليها مستمرة، أو يقفلها */}
                       {!isVolunteer && (
                         <>
                           <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
-                          <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">تم مراجعة المهمة (مستمرة)</button>
-                          <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إنهاء وإغلاق المهمة</button>
+                          <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
+                          <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
                         </>
                       )}
                     </>
@@ -2605,8 +2844,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {/* 4. لو الاستمارة مكتملة (مغلقة) */}
                   {currentMissionData?.status === 'Completed' && !isVolunteer && (
                     <>
-                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">حفظ التعديلات (وهي مقفولة)</button>
-                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إلغاء الإغلاق (إعادة فتح)</button>
+                      <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ التعديلات (وهي مقفولة)</button>
+                      <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إلغاء الإغلاق (إعادة فتح)</button>
                     </>
                   )}
                 </>
@@ -2689,10 +2928,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   );
 }
 
-const FormGroup = ({ label, children }) => (<div className="flex flex-col gap-1.5 w-full"><label className="text-gray-400 text-xs font-bold px-1">{label}</label>{children}</div>);
-const StyledInput = ({ className="", ...props }) => (<input className={`w-full bg-[#111] border border-white/5 focus:border-[#c70000]/50 text-white rounded-xl p-3 text-sm outline-none ${className}`} {...props} />);
-const StyledSelect = ({ children, className="", ...props }) => (<select className={`w-full bg-[#111] border border-white/5 focus:border-[#c70000]/50 text-white rounded-xl p-3 text-sm outline-none ${className}`} {...props}>{children}</select>);
-const SectionCard = ({ title, icon, actionBtn, children }) => (<div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6 shadow-lg"><div className="flex justify-between items-center mb-6 border-b border-white/5 pb-3"><div className="flex items-center gap-2"><span className="text-[#c70000]">{icon}</span><h4 className="text-white font-bold text-sm tracking-wide">{title}</h4></div>{actionBtn && <div>{actionBtn}</div>}</div>{children}</div>);
+const FormGroup = ({ label, children }) => (<div className="flex flex-col gap-1.5 w-full"><label className="text-[var(--muted)] text-xs font-bold px-1">{label}</label>{children}</div>);
+const StyledInput = ({ className="", ...props }) => (<input className={`field ${className}`} {...props} />);
+const StyledSelect = ({ children, className="", ...props }) => (<select className={`field ${className}`} {...props}>{children}</select>);
+const SectionCard = ({ title, icon, actionBtn, children }) => (<div className="card-surface p-5 md:p-6"><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
 
 const VehicleRow = ({ index, onRemove, data }) => (
   <div className="flex flex-col md:flex-row w-full border border-white/10 rounded-lg overflow-hidden mb-2 bg-[#111]">
@@ -2702,19 +2941,20 @@ const VehicleRow = ({ index, onRemove, data }) => (
 );
 
 // 💡 دالة زراير القائمة (مزودة بدعم النقطة الحمراء للإشعارات)
-function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = false }) { 
-  return ( 
-    <button onClick={onClick} title={!isOpen ? label : ''} className={`relative flex items-center p-4 rounded-xl transition-all duration-300 ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-gray-400 hover:bg-[#111] hover:text-white'} ${isOpen ? 'w-full gap-4' : 'w-14 justify-center mx-auto'}`}> 
+function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = false }) {
+  return (
+    <button onClick={onClick} title={!isOpen ? label : ''} className={`relative flex items-center p-4 rounded-xl transition-all duration-300 active:scale-[0.98] ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]'} ${isOpen ? 'w-full gap-4' : 'w-14 justify-center mx-auto'}`}>
+      {isActive && <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-full bg-white/90"></span>}
       <div className="shrink-0 relative">
         {icon}
         {/* 💡 نقطة التنبيه والأيقونة مقفولة */}
-        {!isOpen && hasUpdate && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border border-[#0c0c0c] shadow-[0_0_5px_rgba(239,68,68,0.8)]"></span>}
-      </div> 
-      {isOpen && <span className="font-bold text-sm tracking-wide truncate flex-1 text-right">{label}</span>} 
+        {!isOpen && hasUpdate && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#ff4d4d] rounded-full animate-pulse border border-[var(--bg)] shadow-[0_0_5px_rgba(199,0,0,0.8)]"></span>}
+      </div>
+      {isOpen && <span className="font-bold text-sm tracking-wide truncate flex-1 text-right">{label}</span>}
       {/* 💡 نقطة التنبيه والقائمة مفتوحة */}
-      {isOpen && hasUpdate && <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] shrink-0"></span>}
-    </button> 
-  ); 
+      {isOpen && hasUpdate && <span className="w-2.5 h-2.5 bg-[#ff4d4d] rounded-full animate-pulse shadow-[0_0_8px_rgba(199,0,0,0.8)] shrink-0"></span>}
+    </button>
+  );
 }
 function InventoryCard({ title, value, unit, color }) { return ( <div className="bg-[#0c0c0c] border border-white/5 p-5 rounded-2xl"><p className="text-gray-400 text-xs font-bold mb-1">{title}</p><p className={`text-3xl font-black ${color}`}>{value}</p><p className="text-[10px] text-gray-500 mt-1">{unit}</p></div> ); }
 function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`bg-[#0c0c0c] border ${borderHighlight ? 'border-[#c70000]/50' : 'border-white/5'} p-5 rounded-3xl relative h-32`}>{icon && icon}<p className="text-gray-400 text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`text-3xl font-black ${color} relative z-10`}>{value}</p></div> ); }
@@ -2733,7 +2973,7 @@ const ExcelIcon = () => <svg className="w-5 h-5 text-green-500" fill="none" view
 // ==========================================
 // 5. شاشة سجل النظام (للمالك فقط)
 // ==========================================
-function AuditLogsView({ isOwner }) {
+function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -2747,6 +2987,17 @@ function AuditLogsView({ isOwner }) {
       .then(data => { setLogs(data); setIsLoading(false); })
       .catch(() => setIsLoading(false));
   }, []);
+
+  // 🔄 سجل النظام يتحدث لحظياً (silent refetch) عند أي تغيير حقيقي في الـ DB
+  const isFirstAuditLive = useRef(true);
+  useEffect(() => {
+    if (isFirstAuditLive.current) { isFirstAuditLive.current = false; return; }
+    const token = localStorage.getItem('access_token');
+    fetch('https://eoc-system-b12f.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => { if (Array.isArray(data)) setLogs(data); })
+      .catch(() => {});
+  }, [liveUpdateVersion]);
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.full_name?.includes(searchTerm) || log.details?.includes(searchTerm);
@@ -2853,7 +3104,7 @@ function AuditLogsView({ isOwner }) {
             {isLoading ? (<tr><td colSpan="5" className="p-8 text-center text-gray-500 font-bold animate-pulse">جاري سحب السجلات السرية...</td></tr>) : 
             filteredLogs.length > 0 ? filteredLogs.map((log, idx) => (
               <tr key={idx} className="hover:bg-white/5 transition-colors">
-                <td className="p-4 text-gray-400 font-mono border-l border-white/5" dir="ltr">{log.created_at}</td>
+                <td className="p-4 text-gray-400 font-mono border-l border-white/5" dir="ltr">{formatDateTime(log.created_at)}</td>
                 <td className="p-4 border-l border-white/5 text-center">
                   {log.entity_type === 'mission' ? <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/30">المهام</span> : 
                    log.entity_type === 'local_news' ? <span className="bg-[#c70000]/20 text-[#c70000] px-2 py-1 rounded text-xs border border-[#c70000]/30">الأخبار المحلية</span> : 
@@ -3220,7 +3471,7 @@ useEffect(() => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-white/10 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
             <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><NewsIcon /> {nd.news_id ? 'تعديل الخبر والمؤشرات' : 'إضافة خبر جديد'}</h2>
@@ -3622,7 +3873,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-[#c70000]/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(199,0,0,0.1)] animate-fade-in-up">
             <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> {gd.disaster_id ? 'تعديل رصد الكارثة' : 'رصد كارثة عالمية جديدة'}</h2>
@@ -3685,7 +3936,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       )}
 
       {disasterToDelete && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
           <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
             <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]"><TrashIcon className="w-10 h-10" /></div>
             <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
@@ -4106,7 +4357,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       </div>
 
       {isGlobalModalOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-red-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -4133,7 +4384,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       )}
 
       {isEgyptModalOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-green-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -4652,7 +4903,7 @@ const totalAiCountries = new Set(
 
       {/* مودال قراءة التقرير والتعديل */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
           <div className="bg-[#050505] border border-purple-500/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-fade-in-up">
             <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500"/> التقرير الاستخباراتي (OSINT)</h2>
@@ -4758,7 +5009,7 @@ function DangerConfirmModal({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+    <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
       <div className="bg-[#0c0c0c] border border-[#c70000]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
 
         <div className="w-20 h-20 bg-[#c70000]/10 rounded-full flex items-center justify-center mb-5 border border-[#c70000]/20 text-[#c70000]">
