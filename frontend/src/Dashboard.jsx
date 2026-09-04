@@ -845,96 +845,79 @@ useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token || !userData) return;
 
+    let lastSeenSignature = null; 
+
     const checkLiveUpdates = async () => {
       try {
-        // First, get the watermark (latest audit ID)
-        const watermarkRes = await fetch('https://eoc-system-b12f.vercel.app/api/audit-logs/latest-id', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch('https://eoc-system-b12f.vercel.app/api/live-updates', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            
+            if (lastSeenSignature === null) {
+              lastSeenSignature = data[0].created_at + data[0].full_name + data[0].action;
+              return;
+            }
 
-        if (!watermarkRes.ok) {
-          console.error('Failed to fetch audit watermark');
-          return;
+            const newActions = [];
+            for (const log of data) {
+              const currentSig = log.created_at + log.full_name + log.action;
+              if (currentSig === lastSeenSignature) break; 
+              newActions.push(log);
+            }
+
+            if (newActions.length > 0) {
+              lastSeenSignature = newActions[0].created_at + newActions[0].full_name + newActions[0].action;
+
+              newActions.reverse().forEach(action => {
+                const isAiLog = action.entity_type === 'ai_news' || action.full_name === 'AI Robot';
+                
+                // 💡 التعديل: إظهار الإشعار لو كان من الروبوت (حتى لو هو بيستخدم التوكن بتاعك)
+                if (action.full_name !== userData?.full_name || isAiLog) {
+                  const toastId = Date.now() + Math.random(); 
+
+                  // إضافة الإشعار للطابور (محمي ضد الانهيار لو الداتا عبارة عن Object)
+                  setToasts(prev => [...prev, { 
+                    id: toastId, 
+                    user: String(action.full_name || 'نظام'), 
+                    action: String(action.action || 'تحديث'), 
+                    details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''), 
+                    isAi: isAiLog 
+                  }]);
+                  setTimeout(() => {
+                    setToasts(prev => prev.filter(t => t.id !== toastId)); 
+                  }, 10000);
+
+                  // تنوير النقطة الحمراء
+                  setNewUpdates(prev => ({
+                    ...prev,
+                    missions: prev.missions || action.entity_type === 'mission',
+                    local_news: prev.local_news || action.entity_type === 'local_news',
+                    global_disasters: prev.global_disasters || action.entity_type === 'global_disaster',
+                    earthquakes: prev.earthquakes || action.entity_type === 'earthquake',
+                    ai_news: prev.ai_news || isAiLog,
+                    audit: true
+                  }));
+
+                  // 🔄 لو في تاب مفتوح فعلاً بيعرض النوع ده، خليه يعمل Refetch فوراً
+                  setLiveUpdateVersion(prev => ({
+                    ...prev,
+                    missions: prev.missions + (action.entity_type === 'mission' ? 1 : 0),
+                    local_news: prev.local_news + (action.entity_type === 'local_news' ? 1 : 0),
+                    global_disasters: prev.global_disasters + (action.entity_type === 'global_disaster' ? 1 : 0),
+                    earthquakes: prev.earthquakes + (action.entity_type === 'earthquake' ? 1 : 0),
+                    ai_news: prev.ai_news + (isAiLog ? 1 : 0),
+                  }));
+                }
+              });
+            }
+          }
         }
-
-        const watermarkData = await watermarkRes.json();
-        const latestAuditId = watermarkData.latest_audit_id;
-
-        // If we don't have a last seen audit ID, set it to the latest and return
-        if (lastSeenAuditId.current === null) {
-          lastSeenAuditId.current = latestAuditId;
-          return;
-        }
-
-        // If there are no new audit logs, return
-        if (latestAuditId <= lastSeenAuditId.current) {
-          return;
-        }
-
-        // Fetch only new audit logs since the last seen ID
-        const liveUpdatesRes = await fetch(`https://eoc-system-b12f.vercel.app/api/live-updates?since=${lastSeenAuditId.current}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!liveUpdatesRes.ok) {
-          console.error('Failed to fetch live updates');
-          return;
-        }
-
-        const data = await liveUpdatesRes.json();
-
-        if (data && data.length > 0) {
-          // Process the new actions
-          data.reverse().forEach(action => {
-            const isAiLog = action.entity_type === 'ai_news' || action.full_name === 'AI Robot';
-
-            // Show all notifications received from the backend (filtering is now server-side)
-            const toastId = Date.now() + Math.random();
-
-            // إضافة الإشعار للطابور (محمي ضد الانهيار لو الداتا عبارة عن Object)
-            setToasts(prev => [...prev, {
-              id: toastId,
-              user: String(action.full_name || 'نظام'),
-              action: String(action.action || 'تحديث'),
-              details: typeof action.details === 'object' ? JSON.stringify(action.details) : String(action.details || ''),
-              isAi: isAiLog
-            }]);
-            setTimeout(() => {
-              setToasts(prev => prev.filter(t => t.id !== toastId));
-            }, 10000);
-
-            // تنوير النقطة الحمراء
-            setNewUpdates(prev => ({
-              ...prev,
-              missions: prev.missions || action.entity_type === 'mission',
-              local_news: prev.local_news || action.entity_type === 'local_news',
-              global_disasters: prev.global_disasters || action.entity_type === 'global_disaster',
-              earthquakes: prev.earthquakes || action.entity_type === 'earthquake',
-              ai_news: prev.ai_news || isAiLog,
-              audit: true
-            }));
-
-            // 🔄 لو في تاب مفتوح فعلاً بيعرض النوع ده، خليه يعمل Refetch فوراً
-            setLiveUpdateVersion(prev => ({
-              ...prev,
-              missions: prev.missions + (action.entity_type === 'mission' ? 1 : 0),
-              local_news: prev.local_news + (action.entity_type === 'local_news' ? 1 : 0),
-              global_disasters: prev.global_disasters + (action.entity_type === 'global_disaster' ? 1 : 0),
-              earthquakes: prev.earthquakes + (action.entity_type === 'earthquake' ? 1 : 0),
-              ai_news: prev.ai_news + (isAiLog ? 1 : 0),
-            }));
-          });
-
-          // Update the last seen audit ID to the latest
-          lastSeenAuditId.current = latestAuditId;
-        }
-      } catch (e) {
-        console.error('Error in checkLiveUpdates:', e);
-      }
+      } catch (e) {}
     };
 
     checkLiveUpdates();
-    const interval = setInterval(checkLiveUpdates, 15000);
+    const interval = setInterval(checkLiveUpdates, 15000); 
     return () => clearInterval(interval);
   }, [userData]);
 
@@ -1030,188 +1013,13 @@ useEffect(() => {
   };
 
   return (
-    <div ref={dashboardRootRef} className={`${theme === 'light' ? 'theme-light' : 'theme-dark'} min-h-screen font-sans selection:bg-[var(--color-primary)] selection:text-[var(--color-neutral-50)] flex overflow-hidden transition-colors duration-300`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div ref={dashboardRootRef} className={`${theme === 'light' ? 'theme-light' : ''} min-h-screen bg-[#050505] text-white font-sans selection:bg-[#c70000] selection:text-white flex overflow-hidden transition-colors duration-300`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
 
       <style>{`
-  /* Design Tokens */
-  :root {
-    /* Color Palette */
-    --color-primary: #c70000;
-    --color-primary-dark: #a50000;
-    --color-primary-light: #ff5a5a;
-
-    --color-secondary: #64748b;
-    --color-secondary-dark: #475569;
-    --color-secondary-light: #94a3b8;
-
-    --color-success: #10b981;
-    --color-success-dark: #059669;
-    --color-success-light: #34d399;
-
-    --color-warning: #f59e0b;
-    --color-warning-dark: #d97706;
-    --color-warning-light: #fbbf24;
-
-    --color-danger: #ef4444;
-    --color-danger-dark: #dc2626;
-    --color-danger-light: #f87171;
-
-    --color-info: #3b82f6;
-    --color-info-dark: #2563eb;
-    --color-info-light: #60a5fa;
-    --color-accent: #a855f7; /* purple-500 */
-    --color-accent-dark: #9333ea; /* purple-600 */
-    --color-accent-light: #c084fc; /* purple-400 */
-
-    /* Neutral Colors */
-    --color-neutral-50: #f8fafc;
-    --color-neutral-100: #f1f5f9;
-    --color-neutral-200: #e2e8f0;
-    --color-neutral-300: #cbd5e1;
-    --color-neutral-400: #94a3b8;
-    --color-neutral-500: #64748b;
-    --color-neutral-600: #475569;
-    --color-neutral-700: #334155;
-    --color-neutral-800: #1e293b;
-    --color-neutral-900: #0f172a;
-
-    /* Typography */
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'Fira Code', 'Courier New', monospace;
-
-    --font-size-xs: 0.75rem; /* 12px */
-    --font-size-sm: 0.875rem; /* 14px */
-    --font-size-base: 1rem; /* 16px */
-    --font-size-lg: 1.125rem; /* 18px */
-    --font-size-xl: 1.25rem; /* 20px */
-    --font-size-2xl: 1.5rem; /* 24px */
-    --font-size-3xl: 1.875rem; /* 30px */
-    --font-size-4xl: 2.25rem; /* 36px */
-
-    --font-weight-light: 300;
-    --font-weight-normal: 400;
-    --font-weight-medium: 500;
-    --font-weight-semibold: 600;
-    --font-weight-bold: 700;
-    --font-weight-extrabold: 800;
-
-    --line-height-none: 1;
-    --line-height-tight: 1.25;
-    --line-height-snug: 1.375;
-    --line-height-normal: 1.5;
-    --line-height-relaxed: 1.625;
-    --line-height-loose: 2;
-
-    /* Spacing */
-    --spacing-px: 1px;
-    --spacing-0: 0;
-    --spacing-0_5: 0.125rem; /* 2px */
-    --spacing-1: 0.25rem; /* 4px */
-    --spacing-1_5: 0.375rem; /* 6px */
-    --spacing-2: 0.5rem; /* 8px */
-    --spacing-2_5: 0.625rem; /* 10px */
-    --spacing-3: 0.75rem; /* 12px */
-    --spacing-3_5: 0.875rem; /* 14px */
-    --spacing-4: 1rem; /* 16px */
-    --spacing-5: 1.25rem; /* 20px */
-    --spacing-6: 1.5rem; /* 24px */
-    --spacing-7: 1.75rem; /* 28px */
-    --spacing-8: 2rem; /* 32px */
-    --spacing-9: 2.25rem; /* 36px */
-    --spacing-10: 2.5rem; /* 40px */
-    --spacing-11: 2.75rem; /* 44px */
-    --spacing-12: 3rem; /* 48px */
-    --spacing-14: 3.5rem; /* 56px */
-    --spacing-16: 4rem; /* 64px */
-    --spacing-20: 5rem; /* 80px */
-    --spacing-24: 6rem; /* 96px */
-    --spacing-28: 7rem; /* 112px */
-    --spacing-32: 8rem; /* 128px */
-    --spacing-36: 9rem; /* 144px */
-    --spacing-40: 10rem; /* 160px */
-    --spacing-44: 11rem; /* 176px */
-    --spacing-48: 12rem; /* 192px */
-    --spacing-52: 13rem; /* 208px */
-    --spacing-56: 14rem; /* 224px */
-    --spacing-60: 15rem; /* 240px */
-    --spacing-64: 16rem; /* 256px */
-    --spacing-72: 18rem; /* 288px */
-    --spacing-80: 20rem; /* 320px */
-    --spacing-96: 24rem; /* 384px */
-
-    /* Border Radius */
-    --radius-none: 0;
-    --radius-sm: 0.125rem; /* 2px */
-    --radius: 0.25rem; /* 4px */
-    --radius-md: 0.375rem; /* 6px */
-    --radius-lg: 0.5rem; /* 8px */
-    --radius-xl: 0.75rem; /* 12px */
-    --radius-2xl: 1rem; /* 16px */
-    --radius-3xl: 1.5rem; /* 24px */
-    --radius-full: 9999px;
-
-    /* Border Width */
-    --border-width-0: 0px;
-    --border-width-1: 1px;
-    --border-width-2: 2px;
-    --border-width-4: 4px;
-    --border-width-8: 8px;
-
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
-    --shadow-outline: 0 0 0 3px rgba(66, 153, 225, 0.5);
-    --shadow-ring: 0 0 0 3px rgba(66, 153, 225, 0.5);
-
-    /* Transitions */
-    --transition-default: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: 75ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .theme-dark {
-    --color-background: #050505;
-    --color-surface: #0c0c0c;
-    --color-muted: #1a1a1a;
-    --color-text: #ffffff;
-    --color-text-muted: #9ca3af;
-    --color-border: rgba(255, 255, 255, 0.1);
-    --color-border-muted: rgba(255, 255, 255, 0.05);
-  }
-
   .theme-light {
-    --color-background: #f8fafc;
-    --color-surface: #ffffff;
-    --color-muted: #f1f5f9;
-    --color-text: #17202a;
-    --color-text-muted: #64748b;
-    --color-border: #e2e8f0;
-    --color-border-muted: #cbd5e1;
-  }
-
-  .theme-dark {
-    background: var(--color-background) !important;
-    color: var(--color-text) !important;
-  }
-
-  .theme-light {
-    background: var(--color-background) !important;
-    color: var(--color-text) !important;
-  }
-
-  .theme-dark [class~="bg-[#050505]"],
-  .theme-dark [class~="bg-[#0c0c0c]"],
-  .theme-dark [class~="bg-[#0a0a0a]"],
-  .theme-dark [class~="bg-[#111]"],
-  .theme-dark [class~="bg-[#1a1a1a]"],
-  .theme-dark [class~="bg-[#171717]"] {
-    background-color: var(--color-surface) !important;
+    background: #f4f6f8 !important;
+    color: #17202a !important;
   }
 
   .theme-light [class~="bg-[#050505]"],
@@ -1220,142 +1028,72 @@ useEffect(() => {
   .theme-light [class~="bg-[#111]"],
   .theme-light [class~="bg-[#1a1a1a]"],
   .theme-light [class~="bg-[#171717]"] {
-    background-color: var(--color-surface) !important;
-  }
-
-  .theme-dark [class~="bg-gradient-to-br"] {
-    background-image: linear-gradient(135deg, var(--color-surface) 0%, var(--color-muted) 100%) !important;
+    background-color: #ffffff !important;
   }
 
   .theme-light [class~="bg-gradient-to-br"] {
-    background-image: linear-gradient(135deg, var(--color-surface) 0%, var(--color-muted) 100%) !important;
-  }
-
-  .theme-dark [class~="text-white"] {
-    color: var(--color-text) !important;
+    background-image: linear-gradient(135deg, #ffffff 0%, #eef2f5 100%) !important;
   }
 
   .theme-light [class~="text-white"] {
-    color: var(--color-text) !important;
-  }
-
-  .theme-dark [class~="text-gray-300"] {
-    color: var(--color-text-muted) !important;
+    color: #17202a !important;
   }
 
   .theme-light [class~="text-gray-300"] {
-    color: var(--color-text-muted) !important;
-  }
-
-  .theme-dark [class~="text-gray-400"] {
-    color: var(--color-text-muted) !important;
+    color: #374151 !important;
   }
 
   .theme-light [class~="text-gray-400"] {
-    color: var(--color-text-muted) !important;
-  }
-
-  .theme-dark [class~="text-gray-500"] {
-    color: var(--color-text-muted) !important;
+    color: #64748b !important;
   }
 
   .theme-light [class~="text-gray-500"] {
-    color: var(--color-text-muted) !important;
-  }
-
-  .theme-dark [class~="border-white\/5"],
-  .theme-dark [class~="border-white\/10"] {
-    border-color: var(--color-border) !important;
+    color: #718096 !important;
   }
 
   .theme-light [class~="border-white\/5"],
   .theme-light [class~="border-white\/10"] {
-    border-color: var(--color-border) !important;
-  }
-
-  .theme-dark [class~="bg-black\/80"] {
-    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: #d9e1e8 !important;
   }
 
   .theme-light [class~="bg-black\/80"] {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-  }
-
-  .theme-dark [class~="bg-gradient-to-l"] {
-    color: var(--color-text) !important;
+    background-color: rgba(15, 23, 42, 0.55) !important;
   }
 
   .theme-light [class~="bg-gradient-to-l"] {
-    color: var(--color-text) !important;
-  }
-
-  .theme-dark input,
-  .theme-dark select,
-  .theme-dark textarea {
-    color: var(--color-text) !important;
+    color: #ffffff !important;
   }
 
   .theme-light input,
   .theme-light select,
   .theme-light textarea {
-    color: var(--color-text) !important;
-  }
-
-  .theme-dark [class~="hover\\:bg-[#111]"]:hover {
-    background-color: var(--color-muted) !important;
+    color: #17202a !important;
   }
 
   .theme-light [class~="hover\\:bg-[#111]"]:hover {
-    background-color: var(--color-muted) !important;
-  }
-
-  .theme-dark [class~="bg-[#c70000]\\/20"] {
-    background-color: rgba(199, 0, 0, 0.12) !important;
+    background-color: #eef2f5 !important;
   }
 
   .theme-light [class~="bg-[#c70000]\\/20"] {
     background-color: rgba(199, 0, 0, 0.12) !important;
   }
 
-    .theme-dark header {
-    background: rgba(5, 5, 5, 0.96) !important;
-    border-bottom-color: var(--color-border) !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08) !important;
-  }
-
-  .theme-light header {
+    .theme-light header {
     background: rgba(255, 255, 255, 0.96) !important;
-    border-bottom-color: var(--color-border) !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08) !important;
-  }
-
-  .theme-dark header > button {
-    background: var(--color-surface) !important;
-    color: var(--color-text-muted) !important;
-    border-color: var(--color-border) !important;
+    border-bottom-color: #d9e1e8 !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08) !important;
   }
 
   .theme-light header > button {
-    background: var(--color-surface) !important;
-    color: var(--color-text-muted) !important;
-    border-color: var(--color-border) !important;
+    background: #ffffff !important;
+    color: #64748b !important;
+    border-color: #d9e1e8 !important;
   }
 
-    .theme-dark header > button:hover {
-    background: var(--color-muted) !important;
-    color: var(--color-primary) !important;
+    .theme-light header > button:hover {
+    background: #f1f5f9 !important;
+    color: #c70000 !important;
   }
-
-  .theme-light header > button:hover {
-    background: var(--color-muted) !important;
-    color: var(--color-primary) !important;
-  }
-
-  .theme-dark #f_mission_name {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    caret-color: #ffffff !important;
-    }
 
   .theme-light #f_mission_name {
     color: #000000 !important;
@@ -1363,19 +1101,9 @@ useEffect(() => {
     caret-color: #000000 !important;
   }
 
-  .theme-dark #f_mission_name::placeholder {
-    color: var(--color-text-muted) !important;
-    opacity: 1 !important;
-  }
-
   .theme-light #f_mission_name::placeholder {
-    color: var(--color-text-muted) !important;
+    color: #64748b !important;
     opacity: 1 !important;
-  }
-
-    .theme-dark .mission-name-cell {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
   }
 
     .theme-light .mission-name-cell {
@@ -1384,81 +1112,28 @@ useEffect(() => {
   }
 
 
-.mission-row-update {
-    animation: missionPulse 1.5s ease-out;
-  }
-
-  /* Fade in up animation */
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translate3d(0, 40px, 0);
-    }
-    to {
-      opacity: 1;
-      transform: translate3d(0, 0, 0);
-    }
-  }
-
-  /* Ping animation */
-  @keyframes ping {
-    75%, 100% {
-      transform: scale(2);
-      opacity: 0;
-    }
-  }
-
-  /* Pulse animation */
-  @keyframes pulse {
-    50% {
-      opacity: .5;
-    }
-  }
-
-  /* Bounce animation */
-  @keyframes bounce {
-    0%, 100% {
-      transform: translateY(-25%);
-      animation-timing-function: cubic-bezier(0.8,0,1,1);
-    }
-    50% {
-      transform: none;
-      animation-timing-function: cubic-bezier(0,0,0.2,1);
-    }
-  }
-
-  /* Respect user's motion preferences */
-  @media (prefers-reduced-motion: reduce) {
-    .mission-row-update,
-    * {
-      animation-duration: 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
-    }
-  }
-
 `}</style>
 
       
       {/* 💡 4. طابور الإشعارات (يدعم إشعارات النظام العادية وإشعارات الذكاء الاصطناعي البنفسجية) */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[90%] md:w-auto min-w-[320px] max-w-lg pointer-events-none">
         {toasts.map(toastItem => (
-          <div key={toastItem.id} className={`bg-[var(--color-muted)] border ${toastItem.isAi ? 'border-purple-500/50 shadow-[0_10px_40px_rgba(168,85,247,0.4)]' : 'border-[#c70000]/50 shadow-[0_10px_40px_rgba(199,0,0,0.4)]'} rounded-2xl p-4 flex items-start gap-4 relative overflow-hidden animate-fade-in-up pointer-events-auto`}>
-            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-primary)]'} animate-pulse`}></div>
-            <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent-light)] border-[var(--color-accent)]/30' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)] border-[var(--color-primary)]/30'} rounded-full flex items-center justify-center border shrink-0`}>
+          <div key={toastItem.id} className={`bg-[#111] border ${toastItem.isAi ? 'border-purple-500/50 shadow-[0_10px_40px_rgba(168,85,247,0.4)]' : 'border-[#c70000]/50 shadow-[0_10px_40px_rgba(199,0,0,0.4)]'} rounded-2xl p-4 flex items-start gap-4 relative overflow-hidden animate-fade-in-up pointer-events-auto`}>
+            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-purple-500' : 'bg-[#c70000]'} animate-pulse`}></div>
+            <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-[#c70000]/20 text-[#c70000] border-[#c70000]/30'} rounded-full flex items-center justify-center border shrink-0`}>
               {toastItem.isAi ? <AIIcon className="w-5 h-5 animate-pulse" /> : <AlertIcon className="w-5 h-5 animate-bounce" />}
             </div>
             <div className="flex-1">
-              <h4 className="font-bold text-sm flex justify-between items-center text-[var(--color-text)]">
-                <span>{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[var(--color-primary)] ml-1">{toastItem.user}</span>}</span>
-                <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+              <h4 className="text-white font-bold text-sm flex justify-between items-center">
+                <span>{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[#c70000] ml-1">{toastItem.user}</span>}</span>
+                <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="text-gray-500 hover:text-white transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </h4>
-              <p className={`${toastItem.isAi ? 'text-[var(--color-accent-light)]' : 'text-[var(--color-info)]'} text-xs mt-2 font-bold bg-[var(--color-muted)]/20 p-2 rounded-lg border border-[var(--color-border)]/5 inline-block`}>
+              <p className={`${toastItem.isAi ? 'text-purple-400' : 'text-blue-400'} text-xs mt-2 font-bold bg-[#1a1a1a] p-2 rounded-lg border border-white/5 inline-block`}>
                 {toastItem.isAi ? 'الذكاء الاصطناعي وجد خبراً جديداً' : `إجراء: ${toastItem.action}`}
               </p>
-              <p className="text-[var(--color-text-muted)] text-xs mt-2 leading-relaxed">{toastItem.details}</p>
+              <p className="text-gray-300 text-xs mt-2 leading-relaxed">{toastItem.details}</p>
             </div>
           </div>
         ))}
@@ -1468,7 +1143,7 @@ useEffect(() => {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
       )}
 
-      <aside className={`bg-[var(--color-surface)] border-l border-[var(--color-border)]/5 flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
+      <aside className={`bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isSidebarOpen ? (
             <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300">
@@ -1478,11 +1153,11 @@ useEffect(() => {
                   <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" /></svg>
                 </div>
               </div>
-              <h2 className="text-lg font-bold tracking-wide relative z-10">{userData?.full_name || 'المالك'}</h2>
-              <p className="text-xs text-[var(--color-primary)] font-semibold mt-2 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 px-3 py-1 rounded-full uppercase tracking-widest relative z-10">{userData?.role || 'OWNER'}</p>
+              <h2 className="text-lg font-bold text-white tracking-wide relative z-10">{userData?.full_name || 'المالك'}</h2>
+              <p className="text-xs text-[#c70000] font-semibold mt-2 bg-[#c70000]/10 border border-[#c70000]/20 px-3 py-1 rounded-full uppercase tracking-widest relative z-10">{userData?.role || 'OWNER'}</p>
             </div>
           ) : (
-            <div className="p-4 border-b border-[var(--color-border)]/5 flex justify-center transition-all duration-300">
+            <div className="p-4 border-b border-white/5 flex justify-center transition-all duration-300">
               <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(199,0,0,0.4)] p-1.5" title={userData?.full_name}>
                 <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" /></svg>
               </div>
@@ -1505,8 +1180,8 @@ useEffect(() => {
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
-        <div className="p-4 border-t border-[var(--color-border)]/5">
-          <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`w-full flex items-center p-4 rounded-xl transition-all duration-300 text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 ${isSidebarOpen ? 'gap-3' : 'justify-center mx-auto'}`}>
+        <div className="p-4 border-t border-white/5">
+          <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`w-full flex items-center p-4 rounded-xl transition-all duration-300 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 ${isSidebarOpen ? 'gap-3' : 'justify-center mx-auto'}`}>
             <LogoutIcon />
             {isSidebarOpen && <span className="font-semibold tracking-wide truncate">إنهاء الجلسة الآمنة</span>}
           </button>
@@ -1514,8 +1189,8 @@ useEffect(() => {
       </aside>
 
       <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative z-0">
-        <header className="px-4 md:px-10 py-4 md:py-6 border-b border-[var(--color-border)]/5 flex items-center gap-3 md:gap-5 bg-[var(--color-surface)]/80 backdrop-blur-md sticky top-0 z-40">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] bg-[var(--color-surface)]/20 hover:bg-[var(--color-muted)]/20 border-[var(--color-border)]/10 p-2 md:p-2.5 rounded-xl block transition-all">
+        <header className="px-4 md:px-10 py-4 md:py-6 border-b border-white/5 flex items-center gap-3 md:gap-5 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-40">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-white bg-[#111] p-2 md:p-2.5 rounded-xl border border-white/10 block transition-all hover:bg-white/5">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
           </button>
           <div className="flex-1 flex justify-between items-center">
@@ -1530,7 +1205,7 @@ useEffect(() => {
               {activeTab === 'branches_inventory' && 'الانتشار الجغرافي والمخزون'}
               {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
             </h1>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">مركز عمليات الطوارئ (EOC)</p>
+            <p className="text-sm text-gray-500 mt-1">مركز عمليات الطوارئ (EOC)</p>
             </div>
             </div>
 
@@ -1539,7 +1214,7 @@ useEffect(() => {
     onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
     title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
     aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-    className="px-3 py-2 rounded-xl bg-[var(--color-surface)]/20 border-[var(--color-border)]/10 text-[var(--color-text)] text-xs font-bold transition-all duration-300 hover:bg-[var(--color-primary)] hover:border-[var(--color-primary)] shrink-0"
+    className="px-3 py-2 rounded-xl bg-[#111] border border-white/10 text-white text-xs font-bold transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] shrink-0"
   >
     {language === 'ar' ? 'EN' : 'عربي'}
   </button>
@@ -1549,10 +1224,10 @@ useEffect(() => {
     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     title={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
     aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
-    className="relative w-[76px] h-10 rounded-full p-1 bg-[var(--color-surface)] border-[var(--color-border)]/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)]/50 shrink-0"
+    className="relative w-[76px] h-10 rounded-full p-1 bg-[#171717] border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-105 hover:border-[#c70000]/50 shrink-0"
   >
     <span
-      className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--color-primary)] text-[var(--color-text)] shadow-[0_0_15px_rgba(199,0,0,0.45)] transition-all duration-300 ${theme === 'dark' ? 'right-1' : 'right-[38px]'}`}
+      className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.45)] transition-all duration-300 ${theme === 'dark' ? 'right-1' : 'right-[38px]'}`}
     >
       {theme === 'dark' ? (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1587,16 +1262,10 @@ function HomeView({ branches = [] }) {
   const [news, setNews] = useState([]);
   const [globalDisasters, setGlobalDisasters] = useState([]);
   const [globalEqs, setGlobalEqs] = useState([]); 
-  const [egyptEqs, setEgyptEqs] = useState([]);
+  const [egyptEqs, setEgyptEqs] = useState([]); 
   const [selectedBranchName, setSelectedBranchName] = useState(null);
 
-  const getLocalDate = () => {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const cairoOffset = 2 * 60 * 60 * 1000; // UTC+2
-    const cairoTime = new Date(utc + cairoOffset);
-    return `${cairoTime.getFullYear()}-${String(cairoTime.getMonth() + 1).padStart(2, '0')}-${String(cairoTime.getDate()).padStart(2, '0')}`;
-  };
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const [filterDate, setFilterDate] = useState(getLocalDate());
 
   useEffect(() => {
@@ -1898,11 +1567,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 🔑 مفتاح ثابت لكل مرة يتفتح فيها فورم "مهمة جديدة" - بيتبعت مع كل محاولة إرسال
   // عشان السيرفر يقدر يرفض أي تكرار حتى لو الزرار اتضغط أكتر من مرة أو حصل تأخير في الشبكة.
   const newMissionIdempotencyKey = useRef(null);
-  const newLocalNewsIdempotencyKey = useRef(null);
-  const newGlobalDisasterIdempotencyKey = useRef(null);
-  const newEarthquakeIdempotencyKey = useRef(null);
-  const newAINewsIdempotencyKey = useRef(null);
-  const lastSeenAuditId = useRef(null);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
   
   const [returnModalOpen, setReturnModalOpen] = useState(false);
@@ -1919,13 +1583,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionsList, setMissionsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
-  const [updateTimestamp, setUpdateTimestamp] = useState(0);
-
-  useEffect(() => {
-    setUpdateTimestamp(Date.now());
-  }, [liveUpdateVersion.missions]);
-
-  const showUpdatePulse = Date.now() - updateTimestamp < 2000;
 
   // 1. الدالة السحرية بأمان تام (لمنع أي شاشة بيضاء)
   const normalizeName = (name) => {
@@ -1964,11 +1621,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   else userRegion = regionMap[normalizeName(userBranchName)] || 'hq';
 
   const getLocalDate = () => {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const cairoOffset = 2 * 60 * 60 * 1000; // UTC+2
-    const cairoTime = new Date(utc + cairoOffset);
-    return `${cairoTime.getFullYear()}-${String(cairoTime.getMonth() + 1).padStart(2, '0')}-${String(cairoTime.getDate()).padStart(2, '0')}`;
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [missionViewType, setMissionViewType] = useState('all_types'); 
@@ -2579,7 +2233,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           <tbody className="divide-y divide-white/5">
             {isLoading ? (<tr><td colSpan="16" className="p-8 text-center text-gray-500 font-bold">جاري السحب...</td></tr>) : 
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} className={`hover:bg-white/5 transition-colors ${showUpdatePulse ? 'mission-row-update' : ''}`}>
+              <tr key={`mission-${m.mission_id}`} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-gray-400 font-mono border-l border-white/5">{m.created_at}</td>
                 <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
                 <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
@@ -2914,30 +2568,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               ) : (
                 /* 👷 باقي الرتب */
                 <>
-                  {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة */}
-                  {(!currentMissionData || currentMissionData.status === 'Draft') && (
+                  {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة */}
+                  {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
                     <>
                       <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">حفظ كمسودة</button>
                       <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال إلى الجوكر</button>
-                    </>
-                  )}
-
-                  {/* 1ب. لو الاستمارة مرتجعة */}
-                  {currentMissionData?.status === 'Returned' && (
-                    <>
-                      {isVolunteer && (
-                        <>
-                          <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">حفظ كمسودة</button>
-                          <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إرسال إلى الجوكر</button>
-                        </>
-                      )}
-                      {!isVolunteer && (
-                        <>
-                          <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
-                          <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">تم مراجعة المهمة (مستمرة)</button>
-                          <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100">إنهاء وإغلاق المهمة</button>
-                        </>
-                      )}
                     </>
                   )}
                   
@@ -3247,13 +2882,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newsToDelete, setNewsToDelete] = useState(null);
   
-  const getLocalDate = () => {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const cairoOffset = 2 * 60 * 60 * 1000; // UTC+2
-    const cairoTime = new Date(utc + cairoOffset);
-    return `${cairoTime.getFullYear()}-${String(cairoTime.getMonth() + 1).padStart(2, '0')}-${String(cairoTime.getDate()).padStart(2, '0')}`;
-  };
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   // حالات الفلاتر والتنبيهات
   const [filterDate, setFilterDate] = useState(getLocalDate()); // 💡 فتحت بتاريخ اليوم افتراضياً
@@ -3262,7 +2891,6 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
-const [isSubmitting, setIsSubmitting] = useState(false);
 
 const [nd, setNd] = useState({
     news_id: null, incident_date: '', incident_description: '', news_type: '', news_publisher: '', street_name: '', area_name: '', governorate: 'القاهرة',
@@ -3339,96 +2967,46 @@ const [nd, setNd] = useState({
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      // 💡 التحقق الصارم من لينك الخبر المحلي
-      if (!nd.news_link || nd.news_link.trim() === '') {
-        setCustomAlert("عفواً، رابط الخبر (لينك الخبر) إلزامي ولا يمكن تسجيل الخبر بدونه لتأكيد المصداقية!");
-        return;
-      }
-      if (!nd.incident_date) {
-        setCustomAlert("عفواً، يجب إدخال تاريخ الحادث.");
-        return;
-      }
-      if (!nd.incident_description) {
-        setCustomAlert("عفواً، برجاء إدخال وصف الحادث لتوثيقه.");
-        return;
-      }
-      if (!nd.news_type) {
-        setCustomAlert("عفواً، يجب تحديد نوع الخبر من القائمة.");
-        return;
-      }
-      if (!nd.governorate) {
-        setCustomAlert("عفواً، يجب تحديد المحافظة التي وقع بها الحادث.");
-        return;
-      }
-
-      if (nd.is_reported && !nd.report_time) {
-        setCustomAlert("لقد أشرت إلى أنه (تم الإبلاغ)!\nبرجاء إدخال توقيت إرسال الخبر لحساب مؤشرات الأداء بشكل صحيح.");
-        return;
-      }
-
-      if (nd.is_responded) {
-        if (!nd.response_time) {
-          setCustomAlert("لقد أشرت إلى أنه (تم الرد)!\nبرجاء إدخال توقيت الرد لحساب النقاط.");
-          return;
-        }
-        if (!nd.branch_response_text) {
-          setCustomAlert("لقد أشرت إلى أنه (تم الرد)!\nبرجاء إدخال نص رد الفرع.");
-          return;
-        }
-      }
-
-      if (nd.is_field_response) {
-        if (!nd.movement_time) {
-          setCustomAlert("عفواً، تم تسجيل (استجابة ميدانية)، يجب إدخال توقيت التحرك.");
-          return;
-        }
-        if (!nd.field_arrival_time) {
-          setCustomAlert("عفواً، يجب إدخال توقيت وصول أول متطوع للميدان لحساب سرعة الاستجابة.");
-          return;
-        }
-        if (!nd.distance_km) {
-          setCustomAlert("عفواً، لحساب نقاط الاستجابة بدقة، يجب إدخال طول المسافة (كم) بين الحادث والفرع.");
-          return;
-        }
-      }
-
-      const payload = {
-        ...nd,
-        branch_id: 19,
-        incident_month: getMonthName(nd.incident_date),
-        response_time_points: nd.is_reported && nd.is_responded ? responsePoints : 0,
-        response_duration: nd.is_reported && nd.is_responded ? formatDuration(responseDiff) : '',
-        movement_points: nd.is_reported && nd.is_field_response ? movePoints : 0,
-        report_to_movement_duration: nd.is_reported && nd.is_field_response ? formatDuration(moveDiff) : '',
-        field_response_points: nd.is_field_response ? fieldPoints : 0,
-        report_to_arrival_duration: nd.is_field_response ? formatDuration(getMinutesDiff(nd.report_time, nd.field_arrival_time)) : ''
-      };
-
-      const token = localStorage.getItem('access_token');
-
-      // Generate or retain idempotency key for this submit attempt
-      if (newLocalNewsIdempotencyKey.current === null) {
-        newLocalNewsIdempotencyKey.current = crypto.randomUUID();
-      }
-
-      const url = nd.news_id ? `https://eoc-system-b12f.vercel.app/api/local-news/${nd.news_id}` : 'https://eoc-system-b12f.vercel.app/api/local-news';
-      const method = nd.news_id ? 'PUT' : 'POST';
-
-      const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) {
-        setIsModalOpen(false);
-        fetchNews();
-      } else {
-        setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر.");
-      }
-    } catch (err) {
-      setCustomAlert("فشل الاتصال بالسيرفر!");
-    } finally {
-      setIsSubmitting(false);
+    // 💡 التحقق الصارم من لينك الخبر المحلي
+    if (!nd.news_link || nd.news_link.trim() === '') return setCustomAlert("عفواً، رابط الخبر (لينك الخبر) إلزامي ولا يمكن تسجيل الخبر بدونه لتأكيد المصداقية!");
+    if (!nd.incident_date) return setCustomAlert("عفواً، يجب إدخال تاريخ الحادث.");
+    if (!nd.incident_description) return setCustomAlert("عفواً، برجاء إدخال وصف الحادث لتوثيقه.");
+    if (!nd.news_type) return setCustomAlert("عفواً، يجب تحديد نوع الخبر من القائمة.");
+    if (!nd.governorate) return setCustomAlert("عفواً، يجب تحديد المحافظة التي وقع بها الحادث.");
+    
+    if (nd.is_reported && !nd.report_time) {
+      return setCustomAlert("لقد أشرت إلى أنه (تم الإبلاغ)!\nبرجاء إدخال توقيت إرسال الخبر لحساب مؤشرات الأداء بشكل صحيح.");
     }
+    
+    if (nd.is_responded) {
+      if (!nd.response_time) return setCustomAlert("لقد أشرت إلى أنه (تم الرد)!\nبرجاء إدخال توقيت الرد لحساب النقاط.");
+      if (!nd.branch_response_text) return setCustomAlert("لقد أشرت إلى أنه (تم الرد)!\nبرجاء إدخال نص رد الفرع.");
+    }
+    
+    if (nd.is_field_response) {
+      if (!nd.movement_time) return setCustomAlert("عفواً، تم تسجيل (استجابة ميدانية)، يجب إدخال توقيت التحرك.");
+      if (!nd.field_arrival_time) return setCustomAlert("عفواً، يجب إدخال توقيت وصول أول متطوع للميدان لحساب سرعة الاستجابة.");
+      if (!nd.distance_km) return setCustomAlert("عفواً، لحساب نقاط الاستجابة بدقة، يجب إدخال طول المسافة (كم) بين الحادث والفرع.");
+    }
+
+    const payload = {
+      ...nd,
+      branch_id: 19,
+      incident_month: getMonthName(nd.incident_date),
+      response_time_points: nd.is_reported && nd.is_responded ? responsePoints : 0,
+      response_duration: nd.is_reported && nd.is_responded ? formatDuration(responseDiff) : '',
+      movement_points: nd.is_reported && nd.is_field_response ? movePoints : 0,
+      report_to_movement_duration: nd.is_reported && nd.is_field_response ? formatDuration(moveDiff) : '',
+      field_response_points: nd.is_field_response ? fieldPoints : 0,
+      report_to_arrival_duration: nd.is_field_response ? formatDuration(getMinutesDiff(nd.report_time, nd.field_arrival_time)) : ''
+    };
+
+    const token = localStorage.getItem('access_token');
+    const url = nd.news_id ? `https://eoc-system-b12f.vercel.app/api/local-news/${nd.news_id}` : 'https://eoc-system-b12f.vercel.app/api/local-news';
+    const method = nd.news_id ? 'PUT' : 'POST';
+
+    const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+    if (res.ok) { setIsModalOpen(false); fetchNews(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
   };
   const handleClearAllLocalNews = () => {
     if (!isOwner) return;
@@ -3797,13 +3375,7 @@ useEffect(() => {
 // ==========================================
 function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   // 💡 1. تعريف دوال التاريخ في أول الشاشة عشان الكل يشوفها بدون تكرار
-  const getLocalDate = () => {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const cairoOffset = 2 * 60 * 60 * 1000; // UTC+2
-    const cairoTime = new Date(utc + cairoOffset);
-    return `${cairoTime.getFullYear()}-${String(cairoTime.getMonth() + 1).padStart(2, '0')}-${String(cairoTime.getDate()).padStart(2, '0')}`;
-  };
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
 
   // 💡 2. الحالات (States) وفلتر التاريخ
@@ -3855,34 +3427,13 @@ const [clearAllCode, setClearAllCode] = useState('');
     if (!gd.country) return setCustomAlert("عفواً، يجب تحديد الدولة/المكان.");
     if (!gd.disaster_type) return setCustomAlert("عفواً، يجب تحديد نوع الكارثة.");
 
-    // Generate or retain idempotency key for this submit attempt
-    if (newGlobalDisasterIdempotencyKey.current === null) {
-      newGlobalDisasterIdempotencyKey.current = crypto.randomUUID();
-    }
-
     const payload = { ...gd, incident_month: getMonthName(gd.incident_date) };
     const token = localStorage.getItem('access_token');
     const url = gd.disaster_id ? `https://eoc-system-b12f.vercel.app/api/global-disasters/${gd.disaster_id}` : 'https://eoc-system-b12f.vercel.app/api/global-disasters';
     const method = gd.disaster_id ? 'PUT' : 'POST';
 
-    const res = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'Idempotency-Key': newGlobalDisasterIdempotencyKey.current
-      },
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      // Success: clear the idempotency key so next submit gets a new key
-      newGlobalDisasterIdempotencyKey.current = null;
-      setIsModalOpen(false);
-      fetchDisasters();
-    } else {
-      // Error: keep the idempotency key for retry
-      setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ.");
-    }
+    const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+    if (res.ok) { setIsModalOpen(false); fetchDisasters(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
   };
 
   // 💡 تطبيق الفلتر على الجدول والإحصائيات وتصدير الإكسيل
@@ -4184,13 +3735,7 @@ function EarthquakesView({ isOwner, isSupervisor }) {
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
   
-  const getLocalDate = () => {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const cairoOffset = 2 * 60 * 60 * 1000; // UTC+2
-    const cairoTime = new Date(utc + cairoOffset);
-    return `${cairoTime.getFullYear()}-${String(cairoTime.getMonth() + 1).padStart(2, '0')}-${String(cairoTime.getDate()).padStart(2, '0')}`;
-  };
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
 
   const [filterDate, setFilterDate] = useState(getLocalDate()); 
@@ -4322,92 +3867,42 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-
-    // Generate or retain idempotency key for this submit attempt
-    if (newEarthquakeIdempotencyKey.current === null) {
-      newEarthquakeIdempotencyKey.current = crypto.randomUUID();
-    }
-
+    
     // شيلنا الـ eq_id من الـ payload عشان السيرفر يقبله
-    const payload = {
-      date: gForm.date, time: gForm.time, country: gForm.country,
-      magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية',
-      month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM',
-      region: gForm.region, longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null,
-      latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null
+    const payload = { 
+      date: gForm.date, time: gForm.time, country: gForm.country, 
+      magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية', 
+      month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM', 
+      region: gForm.region, longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null, 
+      latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null 
     };
 
     const token = localStorage.getItem('access_token');
     const url = gForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/global';
     try {
-      const res = await fetch(url, {
-        method: gForm.eq_id ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': newEarthquakeIdempotencyKey.current
-        },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        // Success: clear the idempotency key so next submit gets a new key
-        newEarthquakeIdempotencyKey.current = null;
-        setIsGlobalModalOpen(false);
-        fetchEarthquakes();
-        setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!");
-      }
-      else {
-        // Error: keep the idempotency key for retry
-        setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel.");
-      }
-    } catch(e) {
-      // Error: keep the idempotency key for retry
-      setCustomAlert("خطأ في الاتصال بالسيرفر");
-    }
+      const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
+      else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
+    } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
   };
 
   const handleEgyptSubmit = async () => {
     if (!eForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!eForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-
-    // Generate or retain idempotency key for this submit attempt
-    if (newEarthquakeIdempotencyKey.current === null) {
-      newEarthquakeIdempotencyKey.current = crypto.randomUUID();
-    }
-
-    const payload = {
-      date: eForm.date, time: eForm.time, magnitude: parseFloat(eForm.magnitude),
-      depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', region: eForm.region,
-      longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null
+    
+    const payload = { 
+      date: eForm.date, time: eForm.time, magnitude: parseFloat(eForm.magnitude), 
+      depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', region: eForm.region, 
+      longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null 
     };
 
     const token = localStorage.getItem('access_token');
     const url = eForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/egypt';
     try {
-      const res = await fetch(url, {
-        method: eForm.eq_id ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': newEarthquakeIdempotencyKey.current
-        },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        // Success: clear the idempotency key so next submit gets a new key
-        newEarthquakeIdempotencyKey.current = null;
-        setIsEgyptModalOpen(false);
-        fetchEarthquakes();
-        setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!");
-      }
-      else {
-        // Error: keep the idempotency key for retry
-        setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel.");
-      }
-    } catch(e) {
-      // Error: keep the idempotency key for retry
-      setCustomAlert("خطأ في الاتصال بالسيرفر");
-    }
+      const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
+      else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
+    } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
   };
 
   const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
@@ -4709,13 +4204,7 @@ const aiIncidentIcon = new L.DivIcon({
 // 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor - God Mode)
 // ==========================================
 function AINewsMonitorView({ branches, isOwner }) {
-  const getLocalDate = () => {
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const cairoOffset = 2 * 60 * 60 * 1000; // UTC+2
-    const cairoTime = new Date(utc + cairoOffset);
-    return `${cairoTime.getFullYear()}-${String(cairoTime.getMonth() + 1).padStart(2, '0')}-${String(cairoTime.getDate()).padStart(2, '0')}`;
-  };
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
 
   const [aiNewsList, setAiNewsList] = useState([]);
@@ -4723,11 +4212,6 @@ function AINewsMonitorView({ branches, isOwner }) {
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [customAlert, setCustomAlert] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const newAiNewsScanIdempotencyKey = useRef(null);
-  const deleteAiNewsIdempotencyKey = useRef(null);
-  const clearAllAiNewsIdempotencyKey = useRef(null);
-  const lastSeenAuditId = useRef(null);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -4801,83 +4285,50 @@ const [clearAllCode, setClearAllCode] = useState('');
   };
 
   const confirmDeleteAiNews = async () => {
-    if (isSubmitting) return;
     if (!aiNewsToDelete) return;
-    setIsSubmitting(true);
     const id = aiNewsToDelete;
     setAiNewsToDelete(null);
 
-    // Generate or retain idempotency key for this delete attempt
-    if (deleteAiNewsIdempotencyKey.current === null) {
-      deleteAiNewsIdempotencyKey.current = crypto.randomUUID();
-    }
-
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/ai-news/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': deleteAiNewsIdempotencyKey.current
-        }
-      });
+      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
-        // Success: clear the idempotency key
-        deleteAiNewsIdempotencyKey.current = null;
         setCustomAlert("تم الحذف بنجاح!");
         setAiNewsList(prev => prev.filter(item => item.id !== id));
       } else {
-        // Error: keep the idempotency key for retry
         const data = await res.json().catch(() => ({}));
         setCustomAlert(data.detail || "فشل حذف السجل.");
       }
     } catch (err) {
-      // Error: keep the idempotency key for retry
       setCustomAlert("فشل الاتصال بالسيرفر.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   // 💡 الدالة السحرية للتشغيل اليدوي (تم تأمينها عبر السيرفر)
   const handleManualScanTrigger = async () => {
-    if (isSubmitting) return;
     if (!isOwner) return setCustomAlert("المالك فقط يمكنه إعطاء أمر التشغيل.");
-
-    // Generate or retain idempotency key for this submit attempt
-    if (newAiNewsScanIdempotencyKey.current === null) {
-      newAiNewsScanIdempotencyKey.current = crypto.randomUUID();
-    }
-    setIsSubmitting(true);
-
+    
     setIsScanning(true);
     try {
       const token = localStorage.getItem('access_token');
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/trigger-ai-radar', {
         method: 'POST',
-        headers: {
+        headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Idempotency-Key': newAiNewsScanIdempotencyKey.current
+          'Authorization': `Bearer ${token}` 
         }
       });
 
       if (res.ok) {
-        // Success: clear the idempotency key so next submit gets a new key
-        newAiNewsScanIdempotencyKey.current = null;
         setCustomAlert("تم إطلاق وحش الرصد (God Mode)! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة.");
       } else {
-        // Error: keep the idempotency key for retry
         const errorData = await res.json();
         setCustomAlert(`تنبيه: ${errorData.detail || 'فشل إرسال الأمر للسيرفر.'}`);
       }
-    } catch (error) {
-      // Error: keep the idempotency key for retry
-      setCustomAlert("فشل الاتصال بالسيرفر المركزي.");
-    } finally {
-      setIsScanning(false);
-      setIsSubmitting(false);
+    } catch (error) { 
+      setCustomAlert("فشل الاتصال بالسيرفر المركزي."); 
     }
+    setIsScanning(false);
   };
 
   // 💡 فلترة الداتا
@@ -4934,16 +4385,9 @@ const totalAiCountries = new Set(
 };
 
   const confirmClearAllAINews = async () => {
-    if (isSubmitting) return;
     if (clearAllCode !== "301014") {
         setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
         return;
-    }
-    setIsSubmitting(true);
-
-    // Generate or retain idempotency key for this clear-all attempt
-    if (clearAllAiNewsIdempotencyKey.current === null) {
-      clearAllAiNewsIdempotencyKey.current = crypto.randomUUID();
     }
 
     setShowClearAllConfirm(false);
@@ -4957,8 +4401,7 @@ const totalAiCountries = new Set(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-            "Idempotency-Key": clearAllAiNewsIdempotencyKey.current
+            "Authorization": `Bearer ${token}`
           },
           body: JSON.stringify({
     confirmation_code: clearAllCode
@@ -4969,13 +4412,10 @@ const totalAiCountries = new Set(
       const data = await res.json();
 
       if (!res.ok) {
-        // Error: keep the idempotency key for retry
         setCustomAlert(data.detail || "فشل مسح أخبار الذكاء الاصطناعي.");
         return;
       }
 
-      // Success: clear the idempotency key
-      clearAllAiNewsIdempotencyKey.current = null;
       setCustomAlert(
         `تم مسح جميع أخبار الذكاء الاصطناعي بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`
       );
@@ -4983,8 +4423,6 @@ const totalAiCountries = new Set(
     } catch (error) {
       console.error(error);
       setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -5397,7 +4835,6 @@ function HumanResourcesView({ branches, isOwner }) {
   const [filterBranch, setFilterBranch] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterActive, setFilterActive] = useState('all');
 
   useEffect(() => {
     const fetchHR = async () => {
@@ -5420,10 +4857,7 @@ function HumanResourcesView({ branches, isOwner }) {
     const matchBranch = filterBranch === 'all' ? true : p.branch_name === filterBranch;
     const matchType = filterType === 'all' ? true : p.participant_type === filterType;
     const matchSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || p.membership_number.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchActive = filterActive === 'all' ? true :
-      (filterActive === 'active' && p.is_on_mission === true) ||
-      (filterActive === 'inactive' && p.is_on_mission === false);
-    return matchBranch && matchType && matchSearch && matchActive;
+    return matchBranch && matchType && matchSearch;
   });
 
   const handleExportExcel = () => {
@@ -5463,23 +4897,17 @@ function HumanResourcesView({ branches, isOwner }) {
           
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <input type="text" placeholder="بحث بالاسم أو الكود..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#c70000]/50 w-full md:w-auto" />
-
+            
             <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
               <option value="all">كل الفروع والتمركزات</option>
               <option value="المركز العام">المركز العام</option>
               {branchNames.filter(n => n !== 'القاهرة').map(g => <option key={g} value={g}>{g}</option>)}
             </select>
-
+            
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
               <option value="all">الكل (متطوع وغير متطوع)</option>
               <option value="volunteer">متطوعين فقط</option>
               <option value="non_volunteer">غير متطوعين</option>
-            </select>
-
-            <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
-              <option value="all">الحالة</option>
-              <option value="active">على مهمة-active</option>
-              <option value="inactive">خارج المهمة</option>
             </select>
           </div>
 

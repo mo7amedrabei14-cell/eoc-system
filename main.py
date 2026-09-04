@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2Pas
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import date, time, datetime, timezone
+from datetime import date, time, datetime
 from psycopg.errors import UniqueViolation
 import json
 
@@ -134,19 +134,6 @@ async def idempotency_middleware(request: Request, call_next):
 
     return response
 
-
-@app.on_event("startup")
-def startup_event():
-    # Add last_seen_notification_id column to users table if it doesn't exist
-    connection = get_connection()
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_notification_id BIGINT DEFAULT 0;
-            """)
-            connection.commit()
-    finally:
-        connection.close()
 
 app.include_router(users.router)
 app.include_router(missions.router)
@@ -383,6 +370,9 @@ class MissionCreate(BaseModel):
     notes: Optional[str] = None
     internal_notes: Optional[str] = None
 
+    mission_code: Optional[str] = None
+    created_at: Optional[str] = None
+
     routes: List[RouteModel] = []
     vehicles: List[VehicleModel] = []
     participants: List[ParticipantModel] = []
@@ -404,17 +394,15 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         with connection.cursor() as cursor:
             base_query = """
-                SELECT
-                    m.mission_id, m.mission_code, m.mission_classification, m.created_at, m.mission_name,
+                SELECT 
+                    m.mission_id, m.mission_code, m.mission_classification, m.created_at, m.mission_name, 
                     (SELECT COUNT(*) FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.participant_type = 'volunteer') as vol_count,
                     (SELECT COUNT(*) FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.participant_type = 'non_volunteer') as non_vol_count,
                     (SELECT STRING_AGG(DISTINCT team_code::text, ' - ') FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.team_code != '') as team_codes,
                     m.responsible_person,
                     (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
                     (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
-                    m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source,
-                    m.departure_date, m.departure_time, m.arrival_date, m.arrival_time,
-                    m.return_date, m.start_time, m.completion_time, m.completion_date, m.notes, m.exit_date
+                    m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
@@ -473,17 +461,28 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            mission_code = f"#MSN-{datetime.now(timezone.utc).strftime('%y%m%d-%H%M%S')}"
+            # 🛡️ حماية من الإرسال المكرر (double-submit): لو نفس الطلب اتبعت قبل كده
+            # بنفس مفتاح idempotency_key، بنرجع نفس المهمة القديمة من غير ما نسجلها تاني.
+            if mission.idempotency_key:
+                cursor.execute(
+                    "SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;",
+                    (mission.idempotency_key,)
+                )
+                existing = cursor.fetchone()
+                if existing:
+                    return {"message": "تم حفظ المهمة بنجاح", "mission_code": existing[1], "mission_id": existing[0]}
+
+            mission_code = f"#MSN-{datetime.now().strftime('%y%m%d-%H%M%S')}"
             def none_if_empty(val): return val if val != "" else None
 
             cursor.execute("""
                 INSERT INTO missions (
                     mission_code, mission_name, mission_classification, branch_id, mission_type, mission_location, responsible_person,
                     data_source, status, exit_date, departure_date, arrival_date, return_date, completion_date,
-                    start_time, departure_time, arrival_time, completion_time, injured_count,
-                    indirect_beneficiaries_total, notes, internal_notes
+                    start_time, departure_time, arrival_time, completion_time, injured_count, 
+                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 ) RETURNING mission_id;
             """, (
                 mission_code, mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
@@ -492,7 +491,8 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 none_if_empty(mission.return_date), none_if_empty(mission.completion_date),
                 none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
                 none_if_empty(mission.completion_time),
-                mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes
+                mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
+                mission.idempotency_key
             ))
             mission_id = cursor.fetchone()[0]
 
@@ -533,16 +533,118 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
 
             # 💡 تسجيل اللوج
-            create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بإنشاء استمارة جديدة بكود: {mission_code}"})
+            try:
+                create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بإنشاء استمارة جديدة بكود: {mission_code}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
 
             connection.commit()
             return {"message": "تم حفظ المهمة بنجاح", "mission_code": mission_code, "mission_id": mission_id}
-        
+            
     except Exception as e:
         connection.rollback()
         if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
             raise HTTPException(status_code=400, detail=str(e))
+        if mission.idempotency_key and "idempotency_key" in str(e) and ("unique" in str(e).lower() or "duplicate" in str(e).lower()):
+            # 🛡️ حصل تصادم نادر: طلبين بنفس المفتاح وصلوا في نفس اللحظة تقريباً.
+            # التاني اتمنع من الداتابيز، فبنرجّع المهمة اللي اتسجلت فعلاً بدل ما نطلع خطأ.
+            try:
+                with connection.cursor() as cursor2:
+                    cursor2.execute("SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;", (mission.idempotency_key,))
+                    existing = cursor2.fetchone()
+                    if existing:
+                        return {"message": "تم حفظ المهمة بنجاح", "mission_code": existing[1], "mission_id": existing[0]}
+            except Exception:
+                pass
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/missions/{mission_id}")
+def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            def none_if_empty(val): return val if val != "" else None
+
+            # 1. تحديث البيانات الأساسية (بدون تغيير كود المهمة)
+            # 1. تحديث البيانات الأساسية
+            cursor.execute("""
+                UPDATE missions SET
+                    mission_name=%s, mission_classification=%s, branch_id=%s, mission_type=%s, mission_location=%s,
+                    responsible_person=%s, data_source=%s, status=%s, exit_date=%s, departure_date=%s,
+                    arrival_date=%s, return_date=%s, completion_date=%s, start_time=%s, departure_time=%s,
+                    arrival_time=%s, completion_time=%s, injured_count=%s, indirect_beneficiaries_total=%s,
+                    notes=%s, internal_notes=%s,
+                    mission_code = COALESCE(%s, mission_code),
+                    created_at = COALESCE(%s::timestamp, created_at)
+                WHERE mission_id=%s;
+            """, (
+                mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
+                mission.responsible_person, mission.data_source, mission.status,
+                none_if_empty(mission.exit_date), none_if_empty(mission.departure_date), none_if_empty(mission.arrival_date),
+                none_if_empty(mission.return_date), none_if_empty(mission.completion_date),
+                none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
+                none_if_empty(mission.completion_time),
+                mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
+                none_if_empty(mission.mission_code), none_if_empty(mission.created_at),
+                mission_id
+            ))
+
+            # 2. مسح التفاصيل القديمة (عشان منعملش تكرار)
+            cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_participants WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
+
+            # 3. إدخال التفاصيل الجديدة بعد التعديل
+            for route in mission.routes:
+                cursor.execute("INSERT INTO mission_itineraries (mission_id, group_title, route_to, departure_time, arrival_time) VALUES (%s, %s, %s, %s, %s);", (mission_id, route.group_title, route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time)))
+
+            for vehicle in mission.vehicles:
+                cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
+
+            for part in mission.participants:
+                if mission.status in ['Completed', 'مكتملة']:
+                    part.return_status = 'تم انتهاء مهمتة'
+                
+                if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':
+                    cursor.execute("""
+                        SELECT m.mission_name FROM mission_participants p
+                        JOIN missions m ON p.mission_id = m.mission_id
+                        WHERE p.participation_role = %s AND p.return_status = 'مازال بالمهمة' 
+                        AND m.status NOT IN ('Completed', 'Cancelled', 'Returned') AND m.mission_id != %s
+                    """, (part.participation_role, mission_id))
+                    active_in_other = cursor.fetchone()
+                    if active_in_other:
+                        raise Exception(f"المشارك '{part.full_name}' (رقم {part.participation_role}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other[0]}).\n\nلا يمكن إضافته أو تحديث بياناته حتى يتم تسجيل عودته أولاً.")
+
+                cursor.execute("INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+
+            for ben in mission.beneficiaries:
+                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
+
+            for staff in mission.eoc_staff:
+                cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
+
+            # 💡 تسجيل اللوج
+            try:
+                create_audit_log(cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بتحديث الاستمارة أو تغيير حالتها إلى: {mission.status}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم تحديث المهمة بنجاح"}
+            
+    except Exception as e:
+        connection.rollback()
+        if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
+            raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء التحديث: {str(e)}")
+
 @app.get("/api/missions/{mission_id}")
 def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -712,10 +814,11 @@ def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizati
 def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     🛡️ نسخة مفتوحة لكل الأدوار (بما فيهم المتطوع) من فيد التحديثات اللحظية.
-    يعيد سجلات النظام التي لم يشاهدها المستخدم بعد، بناءً على last_seen_notification_id.
-    يُحدّث last_seen_notification_id إلى أعلى audit_id تم إرجاعه.
-    لسجلات النظام الكامل (/api/audit-logs) فاضل مقفول للمالك/المشرف/الجوكر فقط.
-    للمتطوع، يعيد سجلات المهام والأخبار والكوارث والزلازل والرصد الآلي فقط (بدون السجلات الإدارية).
+    سجل النظام الكامل (/api/audit-logs) فاضل مقفول زي ما هو للمالك/المشرف/الجوكر بس.
+    لكن المتطوع كان مش بيوصله أي تحديث لحظي خالص (كان بياخد 403) فمكنش بيعرف لما
+    الجوكر يرد عليه أو يغير حالة استمارته إلا لو عمل Refresh يدوي للصفحة.
+    الإندبوينت ده بيرجع نفس البيانات للأدوار العليا، وبيرجع نسخة مفلترة (مهام/أخبار/كوارث/زلازل/أخبار الذكاء الاصطناعي فقط)
+    للمتطوع، من غير ما يشوف حاجة إدارية حساسة (زي تعديلات المستخدمين والصلاحيات).
     """
     token = credentials.credentials
     user_id = get_current_user_id(token)
@@ -727,45 +830,22 @@ def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(securit
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            # Get the user's current last_seen_notification_id
-            cursor.execute("SELECT last_seen_notification_id FROM users WHERE user_id = %s;", (user_id,))
-            row = cursor.fetchone()
-            last_seen = row[0] if row else 0
-
             if is_privileged:
-                # Privileged users see all audit logs (no entity filter) that are new
-                # Exclude actions performed by the current user, unless it's an AI news log
                 cursor.execute("""
                     SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
                     FROM audit_logs l
                     LEFT JOIN users u ON l.user_id = u.user_id
-                    WHERE l.audit_id > %s
-                    AND (l.user_id != %s OR l.entity_type = 'ai_news')
-                    ORDER BY l.audit_id ASC
-                """, (last_seen, user_id))
+                    ORDER BY l.created_at DESC LIMIT 50;
+                """)
             else:
-                # Non-privileged users see only specific entity types that are new
-                # Exclude actions performed by the current user, unless it's an AI news log
                 cursor.execute("""
                     SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
                     FROM audit_logs l
                     LEFT JOIN users u ON l.user_id = u.user_id
                     WHERE l.entity_type IN ('mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news')
-                    AND l.audit_id > %s
-                    AND (l.user_id != %s OR l.entity_type = 'ai_news')
-                    ORDER BY l.audit_id ASC
-                """, (last_seen, user_id))
+                    ORDER BY l.created_at DESC LIMIT 50;
+                """)
             rows = cursor.fetchall()
-
-            # If we have any new logs, update the user's last_seen_notification_id to the maximum audit_id returned
-            if rows:
-                max_audit_id = rows[-1][0]  # Last row has the highest audit_id because we ordered ASC
-                cursor.execute("""
-                    UPDATE users SET last_seen_notification_id = %s WHERE user_id = %s;
-                """, (max_audit_id, user_id))
-                connection.commit()
-
-            # Format and return the logs
             return [
                 {
                     "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
@@ -777,7 +857,6 @@ def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(securit
             ]
     except Exception as e:
         print(f"Error fetching live updates: {e}")
-        connection.rollback()
         return []
     finally:
         connection.close()
@@ -819,34 +898,6 @@ def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(securi
     except Exception as e:
         print(f"Error exporting audit logs: {e}")
         raise HTTPException(status_code=500, detail=f"خطأ في قاعدة البيانات: {str(e)}")
-    finally:
-        connection.close()
-
-@app.get("/api/audit-logs/latest-id")
-def get_audit_watermark(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """
-    Audit watermark endpoint for efficient incremental polling.
-    Returns the latest audit ID to allow clients to fetch only new audit logs since their last poll.
-    Accessible to all authenticated users for realtime synchronization purposes.
-    """
-    token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id: raise HTTPException(status_code=401)
-
-    connection = get_connection()
-    try:
-        with connection.cursor() as cursor:
-            # Get the latest audit ID
-            cursor.execute("SELECT COALESCE(MAX(audit_id), 0) FROM audit_logs;")
-            latest_audit_id = cursor.fetchone()[0]
-
-            return {
-                "latest_audit_id": int(latest_audit_id),
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
-    except Exception as e:
-        print(f"Error fetching audit watermark: {e}")
-        raise HTTPException(status_code=500, detail="حدث خطأ أثناء جلب watermark")
     finally:
         connection.close()
 
@@ -981,7 +1032,10 @@ def create_local_news(news: LocalNewsModel, credentials: HTTPAuthorizationCreden
             news_id = cursor.fetchone()[0]
 
             # 💡 تسجيل اللوج الخاص بالأخبار فقط (مفصول عن المهام)
-            create_audit_log(cursor, user_id, "إنشاء خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"})
+            try:
+                create_audit_log(cursor, user_id, "إنشاء خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
 
             connection.commit()
             return {"message": "تم حفظ الخبر بنجاح", "news_id": news_id}
@@ -1800,10 +1854,10 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
             # دالة DISTINCT ON لمنع التكرار، مع حساب المهام وإجمالي الساعات
             cursor.execute("""
                 SELECT DISTINCT ON (
-                    p.branch_id,
-                    CASE
-                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name)
-                        ELSE TRIM(p.participation_role)
+                    p.branch_id, 
+                    CASE 
+                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
+                        ELSE TRIM(p.participation_role) 
                     END
                 )
                     p.full_name,
@@ -1819,7 +1873,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                         AND (
                             (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                            OR
+                            OR 
                             ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
                         )
                     ) as missions_count,
@@ -1827,9 +1881,9 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         SELECT ROUND(COALESCE(SUM(
                             GREATEST(
                                 EXTRACT(EPOCH FROM (
-                                    (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
+                                    (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) - 
                                     (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
-                                )) / 3600.0,
+                                )) / 3600.0, 
                                 0
                             )
                         ), 0)::numeric, 1)
@@ -1837,36 +1891,22 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         JOIN missions m ON mp.mission_id = m.mission_id
                         WHERE mp.branch_id = p.branch_id
                         AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                        AND m.completion_date IS NOT NULL
+                        AND m.completion_date IS NOT NULL 
                         AND (
                             (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                            OR
+                            OR 
                             ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
                         )
-                    ) as total_hours,
-                    (
-                        CASE WHEN EXISTS (
-                            SELECT 1 FROM mission_participants mp2
-                            JOIN missions m2 ON mp2.mission_id = m2.mission_id
-                            WHERE mp2.branch_id = p.branch_id
-                            AND m2.status NOT IN ('Completed', 'Cancelled', 'Returned')
-                            AND (
-                                (TRIM(mp2.participation_role) != '' AND TRIM(mp2.participation_role) = TRIM(p.participation_role))
-                                OR
-                                ((TRIM(mp2.participation_role) = '' OR mp2.participation_role IS NULL) AND TRIM(mp2.full_name) = TRIM(p.full_name))
-                            )
-                            AND mp2.return_status = 'مازال بالمهمة'
-                        ) THEN true ELSE false END
-                    ) as is_on_mission
+                    ) as total_hours
                 FROM mission_participants p
                 LEFT JOIN branches b ON p.branch_id = b.branch_id
                 WHERE p.full_name IS NOT NULL AND TRIM(p.full_name) != ''
-                ORDER BY
-                    p.branch_id,
-                    CASE
-                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name)
-                        ELSE TRIM(p.participation_role)
-                    END,
+                ORDER BY 
+                    p.branch_id, 
+                    CASE 
+                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
+                        ELSE TRIM(p.participation_role) 
+                    END, 
                     p.participant_id DESC;
             """)
             rows = cursor.fetchall()
@@ -1879,8 +1919,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     "branch_name": row[3] or "غير محدد",
                     "branch_id": row[4],
                     "missions_count": row[5],
-                    "total_hours": float(row[6]),
-                    "is_on_mission": bool(row[7])
+                    "total_hours": float(row[6]) # ده إجمالي الساعات
                 })
             return result
     except Exception as e:
