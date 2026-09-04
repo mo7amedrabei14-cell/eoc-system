@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -270,8 +270,9 @@ const ENGLISH_UI = {
   'رسالة النظام': 'System message',
   'علم': 'Got it',
   'سجل القوة البشرية الفعالة (إدارة المتطوعين)': 'Active workforce register (volunteer management)',
-  'يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته وساعاته الفعلية.': 'Data is automatically compiled from field missions without duplication and linked to each volunteer’s participation count and actual hours.',
+  'يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته وساعاته الفعلية ووضعه الحالي لحظياً.': 'Data is automatically compiled from field missions without duplication and linked to each volunteer’s participation count, actual hours, and live current status.',
   'إجمالي القوة (بدون تكرار)': 'Total workforce (unique)',
+  'إجمالي المتطوعين': 'Total volunteers',
   'إجمالي المتطوعين الفعليين': 'Total active volunteers',
   'مشاركين خارجيين (غير متطوع)': 'External participants (non-volunteers)',
   'متطوعين شاركوا +5 مهام': 'Volunteers with 5+ missions',
@@ -281,6 +282,9 @@ const ENGLISH_UI = {
   'متطوعين فقط': 'Volunteers only',
   'غير متطوعين': 'Non-volunteers',
   'تصدير سجل القوة البشرية': 'Export workforce register',
+  'متاح': 'Available',
+  'يعتمد على حالة الـ Database لحظياً': 'Depends on the live Database state',
+  'تحديث لحظي...': 'Realtime update...',
   'م': '#',
   'الاسم': 'Name',
   'رقم العضوية / الصفة': 'Membership number / role',
@@ -354,6 +358,9 @@ const ENGLISH_UI = {
   'المسار': 'Route',
   'الحالة': 'Status',
   'كود الفريق/الإدارة': 'Team / Dept. code',
+  'في مهمة حاليًا': 'On a mission now',
+  'ليس في مهمة حاليًا': 'Not on a mission',
+  'حالة المشاركة': 'Participation status',
   'الإشعارات اللحظية': 'Realtime notifications',
   'تحديد الكل كمقروء': 'Mark all as read',
   'لا توجد إشعارات بعد': 'No notifications yet',
@@ -816,6 +823,9 @@ const [theme, setTheme] = useState(() => {
 
 useEffect(() => {
   localStorage.setItem('dashboard-theme', theme);
+  // 🎯 الجذر الحقيقي للثيم: <html> يوصل data-theme لحديث CSS الجذري
+  // (كل القواعد مكتوبة على :root[data-theme=...]) — بدونه كان الوضع الفاتح يبقى داكن فعلياً
+  document.documentElement.dataset.theme = theme;
 }, [theme]);
 
   // Keep the selected language in sync with Login.jsx, so it survives navigation.
@@ -1112,7 +1122,7 @@ useEffect(() => {
       case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
       case 'audit': return <AuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
-      case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} />;
+      case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} />;
       default: return <HomeView branches={branchesList} />;
     }
   };
@@ -1248,33 +1258,40 @@ useEffect(() => {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
       )}
 
-      <aside className={`bg-[#0c0c0c] border-l border-white/5 flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
+      <aside className={`bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isSidebarOpen ? (
-            <div className="p-8 border-b border-white/5 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300">
-              <div className="absolute top-0 right-0 w-full h-1/2 bg-[#c70000]/10 blur-2xl"></div>
-              <div className="relative z-10 mb-5 flex justify-center">
-                <div className="relative w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(199,0,0,0.4)] p-2">
-                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" /></svg>
+            <div className="px-6 pt-7 pb-5 border-b border-[var(--border)] relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center shadow-[0_0_26px_rgba(199,0,0,0.22)] shrink-0">
+                  <svg viewBox="0 0 100 100" className="w-7 h-7"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="var(--accent)" /></svg>
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || 'المالك'}</h2>
+                  <p className="text-[11px] text-[var(--muted)] truncate">مركز عمليات الطوارئ</p>
                 </div>
               </div>
-              <h2 className="text-lg font-bold text-white tracking-wide relative z-10">{userData?.full_name || 'المالك'}</h2>
-              <p className="text-xs text-[#c70000] font-semibold mt-2 bg-[#c70000]/10 border border-[#c70000]/20 px-3 py-1 rounded-full uppercase tracking-widest relative z-10">{userData?.role || 'OWNER'}</p>
+              <p className="relative z-10 mt-4 inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] px-3 py-1 rounded-full">
+                <span className="status-dot status-dot-live"></span>
+                {(userData?.role || 'OWNER')}
+              </p>
             </div>
           ) : (
-            <div className="p-4 border-b border-white/5 flex justify-center transition-all duration-300">
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(199,0,0,0.4)] p-1.5" title={userData?.full_name}>
-                <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="#c70000" /></svg>
+            <div className="p-4 border-b border-[var(--border)] flex justify-center">
+              <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center shadow-[0_0_18px_rgba(199,0,0,0.22)]" title={userData?.full_name}>
+                <svg viewBox="0 0 100 100" className="w-6 h-6"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="var(--accent)" /></svg>
               </div>
             </div>
           )}
 
-          <nav className="p-4 space-y-2 mt-2">
+          <nav className="p-3 space-y-1.5 mt-2">
+            {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />
-            
+
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
-            
+
             {/* 💡 نقلنا زرار القوة البشرية هنا تحت المهام مباشرة */}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<UsersIcon />} label="سجل القوة البشرية" isActive={activeTab === 'human_resources'} onClick={() => handleNavigation('human_resources')} isOpen={isSidebarOpen} />}
 
@@ -1285,8 +1302,8 @@ useEffect(() => {
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
-        <div className="p-4 border-t border-white/5">
-          <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`w-full flex items-center p-4 rounded-xl transition-all duration-300 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 ${isSidebarOpen ? 'gap-3' : 'justify-center mx-auto'}`}>
+        <div className="p-3 border-t border-[var(--border)]">
+          <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`nav-item nav-item-danger ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}>
             <LogoutIcon />
             {isSidebarOpen && <span className="font-semibold tracking-wide truncate">إنهاء الجلسة الآمنة</span>}
           </button>
@@ -1294,32 +1311,38 @@ useEffect(() => {
       </aside>
 
       <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative z-0">
-        <header className="px-4 md:px-10 py-4 md:py-6 border-b border-white/5 flex items-center gap-3 md:gap-5 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-40">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-white bg-[#111] p-2 md:p-2.5 rounded-xl border border-white/10 block transition-all hover:bg-white/5">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+        <header className="glass-header px-4 md:px-8 py-3.5 md:py-4 flex items-center gap-3 md:gap-4 sticky top-0 z-40">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label="قائمة التنقل" className="icon-btn !w-11 !h-11 shrink-0">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
           </button>
-          <div className="flex-1 flex justify-between items-center">
 
-            <div>
-              <h1 className="text-xl md:text-2xl font-extrabold tracking-wide">
-              {activeTab === 'home' && 'موجز عمليات اليوم'}
-              {activeTab === 'missions' && 'إدارة المهام الميدانية'}
-              {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
-              {activeTab === 'global_disasters' && 'رصد الكوارث العالمية'}
-              {activeTab === 'earthquakes' && 'مركز رصد الزلازل'}
-              {activeTab === 'branches_inventory' && 'الانتشار الجغرافي والمخزون'}
-              {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">مركز عمليات الطوارئ (EOC)</p>
+          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-lg md:text-2xl font-extrabold tracking-tight truncate">
+                  {activeTab === 'home' && 'موجز عمليات اليوم'}
+                  {activeTab === 'missions' && 'إدارة المهام الميدانية'}
+                  {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
+                  {activeTab === 'global_disasters' && 'رصد الكوارث العالمية'}
+                  {activeTab === 'earthquakes' && 'مركز رصد الزلازل'}
+                  {activeTab === 'branches_inventory' && 'الانتشار الجغرافي والمخزون'}
+                  {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
+                </h1>
+                <span className={`hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${realtimeConnected ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--warn-soft)] text-[var(--warn)]'}`}>
+                  <span className={`status-dot ${realtimeConnected ? 'status-dot-live' : 'animate-pulse'}`}></span>
+                  {realtimeConnected ? 'متصل لحظياً' : 'جارٍ الاتصال…'}
+                </span>
+              </div>
+              <p className="text-xs md:text-sm text-[var(--muted)] mt-0.5 truncate">مركز عمليات الطوارئ (EOC)</p>
             </div>
-            </div>
+          </div>
 
   <button
     type="button"
     onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
     title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
     aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-    className="px-3 py-2 rounded-xl bg-[#111] border border-white/10 text-white text-xs font-bold transition-all duration-300 hover:bg-[#c70000] hover:border-[#c70000] shrink-0"
+    className="btn-ghost w-14 h-10 rounded-xl shrink-0 active:scale-[0.96]"
   >
     {language === 'ar' ? 'EN' : 'عربي'}
   </button>
@@ -1329,58 +1352,54 @@ useEffect(() => {
     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     title={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
     aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
-    className="relative w-[76px] h-10 rounded-full p-1 bg-[#171717] border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-105 hover:border-[#c70000]/50 shrink-0"
+    className="relative w-[74px] h-10 rounded-full p-1 bg-[var(--surface-3)] border border-[var(--border-strong)] transition-all duration-300 hover:border-[var(--accent-soft)] active:scale-[0.97] shrink-0"
   >
+    <svg className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--faint)] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg className="absolute end-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--faint)] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
     <span
-      className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[#c70000] text-white shadow-[0_0_15px_rgba(199,0,0,0.45)] transition-all duration-300 ${theme === 'dark' ? 'right-1' : 'right-[38px]'}`}
+      className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--accent)] text-white shadow-[var(--shadow-accent)] transition-all duration-500 ${theme === 'dark' ? 'start-1' : 'start-[34px]'}`}
     >
       {theme === 'dark' ? (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
       ) : (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-        </svg>
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
       )}
     </span>
-
   </button>
 
-  {/* 💡 جرس الإشعارات اللحظية + مؤشر الاتصال + القائمة المنسدلة */}
+  {/* 💡 جرس الإشعارات اللحظية + مؤشر الاتصال + القائمة المنسدلة (RTL-aware) */}
   <div className="relative shrink-0">
     <button
       type="button"
       onClick={() => setNotificationsOpen(o => !o)}
       title={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
       aria-label={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
-      className="relative w-10 h-10 rounded-xl bg-[#111] border border-white/10 text-gray-300 flex items-center justify-center transition-all duration-300 hover:text-white hover:border-[#c70000]/50 hover:bg-white/5 active:scale-95"
+      className="icon-btn !w-11 !h-11 relative"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
         <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
       {unreadCount > 0 && (
-        <span className="absolute -top-1.5 -left-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-[#c70000] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-fade-in">
+        <span className="absolute -top-1.5 -start-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-scale-pop">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
-      <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0a0a0a] ${realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} title={realtimeConnected ? 'متصل بالخادم لحظياً' : 'جارٍ إعادة الاتصال…'}></span>
+      <span className={`absolute -bottom-1 -end-1 w-3 h-3 rounded-full border-2 border-[var(--bg)] ${realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} title={realtimeConnected ? 'متصل بالخادم لحظياً' : 'جارٍ إعادة الاتصال…'}></span>
     </button>
 
     {notificationsOpen && (
-      <div className="absolute right-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col rounded-2xl border border-white/10 bg-[#111]/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden z-[80] animate-modal-in">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
-          <h3 className="text-sm font-bold text-white">الإشعارات اللحظية</h3>
-          <div className="flex items-center gap-2">
+      <div className="notif-dropdown absolute end-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col overflow-hidden z-[80]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-soft)]">
+          <h3 className="text-sm font-bold">الإشعارات اللحظية</h3>
+          <div className="flex items-center gap-2.5">
             <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${realtimeConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
               <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}></span>
               {realtimeConnected ? 'متصل' : 'جاري الاتصال'}
             </span>
             {unreadCount > 0 && (
               <button type="button" onClick={() => { setNotifications(prev => prev.map(n => ({ ...n, read: true }))); setUnreadCount(0); }}
-                className="text-[11px] text-[#c70000] hover:text-white font-bold transition-colors">
+                className="text-[11px] text-[var(--accent)] hover:text-[var(--ink)] font-bold transition-colors">
                 تحديد الكل كمقروء
               </button>
             )}
@@ -1388,28 +1407,28 @@ useEffect(() => {
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {notifications.length === 0 ? (
-            <div className="px-4 py-10 text-center">
-              <p className="text-3xl mb-2">🔔</p>
-              <p className="text-sm text-gray-400 font-semibold">لا توجد إشعارات بعد</p>
-              <p className="text-xs text-gray-500 mt-1">ستظهر هنا كل التحديثات اللحظية</p>
+            <div className="empty-state">
+              <div className="empty-state-icon">🔔</div>
+              <p className="text-sm font-semibold text-[var(--muted)]">لا توجد إشعارات بعد</p>
+              <p className="text-xs text-[var(--faint)]">ستظهر هنا كل التحديثات اللحظية</p>
             </div>
           ) : notifications.map(n => (
             <button
               key={n.id}
               type="button"
               onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))}
-              className={`w-full text-right px-4 py-3 flex items-start gap-3 border-b border-white/5 transition-colors ${n.read ? 'opacity-70 hover:opacity-100' : 'bg-[#c70000]/5 hover:bg-[#c70000]/10'}`}
+              className={`notif-item w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)]'}`}
             >
-              <span className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${n.event_type === 'mission' ? 'bg-[#c70000]/20 text-[#c70000]' : 'bg-white/10 text-gray-300'}`}>
+              <span className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${n.event_type === 'mission' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>
                 {n.event_type === 'mission' ? <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> : <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>}
               </span>
               <span className="flex-1 min-w-0">
                 <span className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-white truncate">{n.actor_name || 'نظام'}</span>
-                  {!n.read && <span className="w-2 h-2 rounded-full bg-[#c70000] shrink-0"></span>}
+                  <span className="text-xs font-bold text-[var(--ink)] truncate">{n.actor_name || 'نظام'}</span>
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0"></span>}
                 </span>
-                <span className="block text-xs text-gray-300 mt-0.5 truncate">{n.action}</span>
-                <span className="block text-[11px] text-gray-500 mt-0.5 truncate">{n.created_at}</span>
+                <span className="block text-xs text-[var(--muted-2)] mt-0.5 truncate">{n.action}</span>
+                <span className="block text-[11px] text-[var(--faint)] mt-0.5 truncate">{n.created_at}</span>
               </span>
             </button>
           ))}
@@ -1487,67 +1506,62 @@ function HomeView({ branches = [] }) {
 
   return (
     <div id="home-view-top" className="space-y-8 pb-10 animate-fade-in-up scroll-mt-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-10 bg-[#c70000] rounded-full"></div>
-          <div>
-            <h2 className="text-3xl font-black text-white tracking-wide">المركز الرئيسي للعمليات</h2>
-            <p className="text-gray-400 text-sm mt-1">{selectedBranchName ? `المؤشرات الحية لفرع/محافظة: ${(selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'المركز العام (القاهرة)' : selectedBranchName}` : 'الرؤية الشاملة للوضع الميداني والزلزالي (على مستوى الجمهورية)'}</p>
-          </div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-5">
+        <div className="min-w-0">
+          <p className="eyebrow mb-2">غرفة عمليات الطوارئ</p>
+          <h2 className="text-2xl md:text-4xl font-black tracking-tight bg-gradient-to-l from-[var(--ink)] via-[var(--ink-2)] to-[var(--muted)] bg-clip-text text-transparent">المركز الرئيسي للعمليات</h2>
+          <p className="text-[var(--muted)] text-sm mt-2 max-w-2xl">{selectedBranchName ? `المؤشرات الحية لفرع/محافظة: ${(selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'المركز العام (القاهرة)' : selectedBranchName}` : 'الرؤية الشاملة للوضع الميداني والزلزالي (على مستوى الجمهورية)'}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-white/10 shadow-inner">
-            <span className="text-gray-400 text-xs font-bold pl-2">إحصائيات يوم:</span>
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] px-2" />
+          <div className="segmented">
+            <span className="px-3 text-xs font-bold text-[var(--muted)] whitespace-nowrap">إحصائيات يوم:</span>
+            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer px-1" />
             {filterDate && (
-              <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 hover:bg-red-500/20 px-3 py-1 rounded-lg font-bold transition-colors">
+              <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">
                 عرض الكل
               </button>
             )}
           </div>
           {selectedBranchName && (
-            <button onClick={() => setSelectedBranchName(null)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(199,0,0,0.3)] flex items-center gap-2">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
+            <button onClick={() => setSelectedBranchName(null)} className="btn-ghost px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 active:scale-[0.97]">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="card-surface p-6 rounded-3xl relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">المهام اليومية (نشطة)</h3><div className="p-2 bg-[#c70000]/20 rounded-xl text-[#c70000]"><AlertIcon/></div></div>
-          <p className="text-4xl font-black text-white relative z-10">{activeDaily}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام اليومية (نشطة)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><AlertIcon/></div></div>
+          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{activeDaily}</p>
         </div>
-        <div className="card-surface p-6 rounded-3xl relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">المهام المفتوحة</h3><div className="p-2 bg-blue-500/20 rounded-xl text-blue-500"><AlertIcon/></div></div>
-          <p className="text-4xl font-black text-white relative z-10">{activeOpen}</p>
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام المفتوحة</h3><div className="p-2 rounded-xl text-blue-500 bg-blue-500/10 border border-blue-500/20 shrink-0"><AlertIcon/></div></div>
+          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{activeOpen}</p>
         </div>
-        <div className="card-surface p-6 rounded-3xl relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-gray-400 font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 bg-purple-500/20 rounded-xl text-purple-400"><NewsIcon/></div></div>
-          <div className="flex items-end gap-2 relative z-10"><p className="text-4xl font-black text-white">{totalNews}</p><span className="text-xs font-bold text-purple-400 mb-1">({activeNews} استجابة)</span></div>
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-purple-400 bg-purple-500/10 border border-purple-500/20 shrink-0"><NewsIcon/></div></div>
+          <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-4xl text-[var(--ink)]">{totalNews}</p><span className="text-xs font-bold text-purple-400 mb-1.5">({activeNews} استجابة)</span></div>
         </div>
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-[#c70000]/30 p-6 rounded-3xl shadow-[0_0_20px_rgba(199,0,0,0.1)] relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-[#c70000]/10 rounded-full blur-2xl group-hover:bg-[#c70000]/20 transition-all"></div>
-          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-[#c70000] font-bold text-sm">الكوارث العالمية</h3><div className="p-2 bg-[#c70000]/20 rounded-xl text-[#c70000]"><GlobalWorldIcon/></div></div>
-          <p className="text-4xl font-black text-white relative z-10">{totalGlobalDisasters}</p>
+        <div className="kpi-card card-surface border-l-4 border-l-[var(--accent)] p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
+          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{totalGlobalDisasters}</p>
         </div>
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-red-500/30 p-6 rounded-3xl shadow-[0_0_20px_rgba(239,68,68,0.1)] relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl group-hover:bg-red-500/20 transition-all"></div>
-          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-red-500 font-bold text-sm">الزلازل العالمية (اليوم)</h3><div className="p-2 bg-red-500/20 rounded-xl text-red-500"><EarthquakeIcon/></div></div>
-          <p className="text-4xl font-black text-white relative z-10">{globalEqsToday}</p>
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الزلازل العالمية (اليوم)</h3><div className="p-2 rounded-xl text-red-500 bg-red-500/10 border border-red-500/20 shrink-0"><EarthquakeIcon/></div></div>
+          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{globalEqsToday}</p>
         </div>
-        <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-green-500/30 p-6 rounded-3xl shadow-[0_0_20px_rgba(34,197,94,0.1)] relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all"></div>
-          <div className="flex items-center justify-between mb-4 relative z-10"><h3 className="text-green-500 font-bold text-sm">زلازل مصر المرصودة</h3><div className="p-2 bg-green-500/20 rounded-xl text-green-500"><EarthquakeIcon/></div></div>
-          <p className="text-4xl font-black text-white relative z-10">{totalEgyptEqs}</p>
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-green-500 bg-green-500/10 border border-green-500/20 shrink-0"><EarthquakeIcon/></div></div>
+          <p className="kpi-value text-4xl text-[var(--ink)] relative z-10">{totalEgyptEqs}</p>
         </div>
       </div>
 
       {/* 💡 صغرنا المسافات الداخلية في الموبايل */}
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-4 md:p-6 shadow-lg animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-        <h3 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <MapIcon /> خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)
+      <div className="card-surface p-4 md:p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+        <h3 className="text-lg md:text-xl font-bold mb-4 flex items-center gap-2">
+          <span className="text-[var(--accent)]"><MapIcon /></span> خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)
         </h3>
         {/* 💡 الارتفاع بقى 300 في الموبايل و 450 في الديسكتوب */}
-        <div className="h-[300px] md:h-[450px] w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
+        <div className="h-[300px] md:h-[450px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
@@ -1739,6 +1753,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [currentMissionData, setCurrentMissionData] = useState(null);
+  const [isModalLoading, setIsModalLoading] = useState(false); // فتح فوري بسكلتون ثم البيانات
   const [isSubmitting, setIsSubmitting] = useState(false);
   // 🔑 مفتاح ثابت لكل مرة يتفتح فيها فورم "مهمة جديدة" - بيتبعت مع كل محاولة إرسال
   // عشان السيرفر يقدر يرفض أي تكرار حتى لو الزرار اتضغط أكتر من مرة أو حصل تأخير في الشبكة.
@@ -1895,11 +1910,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setVehicles([{ id: Date.now() }]);
     setParticipants([{ id: Date.now() }]);
     setBeneficiaries([{ id: Date.now() }]);
+    setIsModalLoading(false);
     setIsModalOpen(true);
   };
 
   const handleViewMission = async (missionId) => {
     const token = localStorage.getItem('access_token');
+    // 💡 فتح فوري: المودال يظهر بسكلتون فوراً ثم تُحقن البيانات — بدون انتظار الشبكة
+    setIsModalLoading(true);
+    setIsModalOpen(true);
     try {
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
@@ -1937,9 +1956,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         setVehicles((data.vehicles && data.vehicles.length > 0) ? data.vehicles.map((v, i) => ({ id: i, ...v })) : [{ id: Date.now() }]);
         setParticipants((data.participants && data.participants.length > 0) ? data.participants.map((p, i) => ({ id: i, ...p })) : [{ id: Date.now() }]);
         setBeneficiaries((data.beneficiaries && data.beneficiaries.length > 0) ? data.beneficiaries.map((b, i) => ({ id: i, ...b })) : [{ id: Date.now() }]);
+        setIsModalLoading(false);
         setIsModalOpen(true);
+      } else {
+        setIsModalLoading(false);
+        setIsModalOpen(false);
       }
-    } catch (error) { console.error("Error fetching details:", error); }
+    } catch (error) { console.error("Error fetching details:", error); setIsModalLoading(false); setIsModalOpen(false); }
   };
 
   const getStaff = (role) => {
@@ -2241,51 +2264,57 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     return <span className={`badge ${s.color}`}>{s.text}</span>;
   };
 
-  let baseMissions = missionsList;
+  // 💡 Memoized: الفلاتر والإحصائيات تتحسب مرة واحدة فقط عند تغيّر مدخلاتها الحقيقية
+  // (بدون إعادة حساب عند فتح/غلق المودال أو أي re-render غير متعلق) — تسريع ملموس لـ Open Modal
+  const { filteredMissions, regionStats } = useMemo(() => {
+    let baseMissions = missionsList;
 
-  // 🚨 حائط الصد: المتطوع مقفول عليه إقليمه فقط
-  if (isVolunteer) {
-    baseMissions = baseMissions.filter(m => {
-      const missionRegion = regionMap[normalizeName(m.branch)] || 'hq';
-      return missionRegion === userRegion;
-    });
-  }
+    // 🚨 حائط الصد: المتطوع مقفول عليه إقليمه فقط
+    if (isVolunteer) {
+      baseMissions = baseMissions.filter(m => {
+        const missionRegion = regionMap[normalizeName(m.branch)] || 'hq';
+        return missionRegion === userRegion;
+      });
+    }
 
-  if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
-  else if (missionViewType === 'daily') baseMissions = baseMissions.filter(m => m.mission_classification !== 'مفتوحة');
+    if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
+    else if (missionViewType === 'daily') baseMissions = baseMissions.filter(m => m.mission_classification !== 'مفتوحة');
 
-  if (filterDate) {
-     baseMissions = baseMissions.filter(m => {
-        const missionDate = m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : '');
-        const isOpenActive = m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status);
-        if (isOpenActive) return true;
-        return missionDate === filterDate;
-     });
-  }
+    if (filterDate) {
+       baseMissions = baseMissions.filter(m => {
+          const missionDate = m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : '');
+          const isOpenActive = m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status);
+          if (isOpenActive) return true;
+          return missionDate === filterDate;
+       });
+    }
 
-  if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
-  else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
+    if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
+    else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
 
-  // 💡 إحصائيات الأقاليم
-  const regionStats = {
-    total: baseMissions.length,
-    hq: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'hq').length,
-    canal: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'canal').length,
-    delta: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'delta').length,
-    saeed: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'saeed').length,
-  };
+    // 💡 إحصائيات الأقاليم
+    const regionStats = {
+      total: baseMissions.length,
+      hq: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'hq').length,
+      canal: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'canal').length,
+      delta: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'delta').length,
+      saeed: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'saeed').length,
+    };
 
-  let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === activeRegionTab) : baseMissions;
+    let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === activeRegionTab) : baseMissions;
 
-  if (searchTerm.trim() !== '') {
-    const term = searchTerm.toLowerCase();
-    filteredMissions = filteredMissions.filter(m => 
-      (m.mission_name && m.mission_name.toLowerCase().includes(term)) ||
-      (m.mission_location && m.mission_location.toLowerCase().includes(term)) ||
-      (m.mission_code && m.mission_code.toLowerCase().includes(term)) ||
-      (m.mission_type && m.mission_type.toLowerCase().includes(term))
-    );
-  }
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      filteredMissions = filteredMissions.filter(m =>
+        (m.mission_name && m.mission_name.toLowerCase().includes(term)) ||
+        (m.mission_location && m.mission_location.toLowerCase().includes(term)) ||
+        (m.mission_code && m.mission_code.toLowerCase().includes(term)) ||
+        (m.mission_type && m.mission_type.toLowerCase().includes(term))
+      );
+    }
+
+    return { filteredMissions, regionStats };
+  }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, searchTerm]);
 
   const getCreationDate = () => {
     if (currentMissionData && currentMissionData.created_at) { return String(currentMissionData.created_at).split(' ')[0]; }
@@ -2308,64 +2337,59 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         </div>
       )}
 
-      <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
-        <div className="flex flex-col gap-3">
-          
+      <div className="p-5 md:p-6 border-b border-[var(--border)] bg-[var(--surface-2)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
+        <div className="flex flex-col gap-3 w-full">
+
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-white">سجل متابعة المهام</h3>
+            <h3 className="text-lg font-bold">سجل متابعة المهام</h3>
             {isVolunteer ? (
-              <span className="bg-[#c70000]/20 text-[#c70000] px-3 py-1 rounded-lg text-xs font-bold border border-[#c70000]/30 font-mono">
-                سيتم عرض مهام {userRegion === 'delta' ? 'إقليم الدلتا' : userRegion === 'canal' ? 'إقليم القنال' : userRegion === 'saeed' ? 'إقليم الصعيد' : 'المركز العام'} فقط
-              </span>
+              <span className="badge badge-active font-mono">سيتم عرض مهام {userRegion === 'delta' ? 'إقليم الدلتا' : userRegion === 'canal' ? 'إقليم القنال' : userRegion === 'saeed' ? 'إقليم الصعيد' : 'المركز العام'} فقط</span>
             ) : (
-              <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-lg text-xs font-bold border border-blue-500/30 font-mono">
-                حساب إداري | الصلاحية: كل الأقاليم
-              </span>
+              <span className="badge badge-info font-mono">حساب إداري | الصلاحية: كل الأقاليم</span>
             )}
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setMissionViewType('all_types')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'all_types' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>كل المهام</button>
-              <button onClick={() => { setMissionViewType('daily'); setFilterDate(getLocalDate()); }} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'daily' ? 'bg-[#c70000] text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>المهام العادية</button>
-              <button onClick={() => { setMissionViewType('open'); setFilterDate(''); }} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${missionViewType === 'open' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'text-gray-400 hover:text-white'}`}>المهام المفتوحة</button>
+            <div className="segmented">
+              <button onClick={() => setMissionViewType('all_types')} className={`segmented-btn ${missionViewType === 'all_types' ? 'is-active' : ''}`}>كل المهام</button>
+              <button onClick={() => { setMissionViewType('daily'); setFilterDate(getLocalDate()); }} className={`segmented-btn ${missionViewType === 'daily' ? 'is-active-accent' : ''}`}>المهام العادية</button>
+              <button onClick={() => { setMissionViewType('open'); setFilterDate(''); }} className={`segmented-btn ${missionViewType === 'open' ? 'is-active-accent' : ''}`}>المهام المفتوحة</button>
             </div>
 
-            <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
+            <div className="hidden md:block w-px h-6 bg-[var(--border)]"></div>
 
-            <div className="flex items-center gap-1 bg-[#1a1a1a] p-1 rounded-xl border border-white/10 shadow-inner">
-              <button onClick={() => setStatusFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'all' ? 'bg-gray-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>الكل</button>
-              <button onClick={() => setStatusFilter('active')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'active' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>نشطة</button>
-              <button onClick={() => setStatusFilter('completed')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${statusFilter === 'completed' ? 'bg-teal-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}>مكتملة</button>
-              
-              <div className="w-px h-6 bg-white/10 mx-1"></div>
-              
-              {!isVolunteer && (
-                <select value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer pl-2">
-                  <option value="all" className="bg-[#111]">كل الأقاليم</option>
-                  <option value="hq" className="bg-[#111]">المركز العام (وملحقاته)</option>
-                  <option value="canal" className="bg-[#111]">إقليم القنال</option>
-                  <option value="delta" className="bg-[#111]">إقليم الدلتا</option>
-                  <option value="saeed" className="bg-[#111]">إقليم الصعيد</option>
+            <div className="segmented">
+              <button onClick={() => setStatusFilter('all')} className={`segmented-btn ${statusFilter === 'all' ? 'is-active' : ''}`}>الكل</button>
+              <button onClick={() => setStatusFilter('active')} className={`segmented-btn ${statusFilter === 'active' ? 'is-active-accent' : ''}`}>نشطة</button>
+              <button onClick={() => setStatusFilter('completed')} className={`segmented-btn ${statusFilter === 'completed' ? 'is-active-accent' : ''}`}>مكتملة</button>
+
+              {!isVolunteer && (<>
+                <div className="w-px h-6 bg-[var(--border)] mx-0.5"></div>
+                <select value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer px-2">
+                  <option value="all">كل الأقاليم</option>
+                  <option value="hq">المركز العام (وملحقاته)</option>
+                  <option value="canal">إقليم القنال</option>
+                  <option value="delta">إقليم الدلتا</option>
+                  <option value="saeed">إقليم الصعيد</option>
                 </select>
-              )}
+              </>)}
             </div>
 
-            <div className="hidden md:block w-px h-6 bg-white/10 mx-1"></div>
+            <div className="hidden md:block w-px h-6 bg-[var(--border)]"></div>
 
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)] shadow-inner" />
-              {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-red-500 hover:text-white bg-red-500/10 px-3 py-2 rounded-lg font-bold transition-colors">إلغاء التاريخ</button>}
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="field !py-1.5 !px-3 w-auto" />
+              {filterDate && <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">إلغاء التاريخ</button>}
             </div>
           </div>
         </div>
 
         {/* 💡 التعديل هنا: الزراير في الموبايل هتتوزع وتاخد عرض مناسب عشان متتزنقش */}
-        <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-4 md:mt-0 shrink-0 w-full md:w-auto">
+        <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 shrink-0 w-full md:w-auto">
 
   <button
     onClick={() => setIsTableExpanded(true)}
-    className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 hover:border-transparent px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all whitespace-nowrap"
+    className="btn-ghost flex-1 md:flex-none !text-blue-400 border-blue-500/30 whitespace-nowrap"
   >
     <EyeIcon className="w-5 h-5" />
     السجل
@@ -2374,7 +2398,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   {isOwner && (
     <button
       onClick={handleClearAllMissions}
-      className="flex-1 md:flex-none justify-center bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all"
+      className="btn-ghost flex-1 md:flex-none !text-red-400 border-red-500/30 whitespace-nowrap"
     >
       🗑️ مسح الكل
     </button>
@@ -2383,7 +2407,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   {isOwner && (
     <button
       onClick={handleExportTableExcel}
-      className="flex-1 md:flex-none justify-center bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap"
+      className="btn-ghost flex-1 md:flex-none !text-green-500 border-green-500/30 whitespace-nowrap"
     >
       <ExcelIcon />
       تصدير
@@ -2392,7 +2416,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   <button
     onClick={handleCreateNew}
-    className="w-full md:w-auto justify-center bg-[#c70000] hover:bg-[#a50000] text-white px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(199,0,0,0.3)] whitespace-nowrap"
+    className="btn-accent flex-1 md:flex-none !px-6 whitespace-nowrap"
   >
     + إنشاء مهمة
   </button>
@@ -2400,56 +2424,56 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 </div>
       </div>
 
-      <div className="mt-4 bg-[#111] border border-white/10 rounded-2xl p-2 flex items-center gap-3 w-full shadow-inner focus-within:border-[#c70000]/50 transition-colors">
-        <svg className="w-5 h-5 text-gray-500 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-        <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-white text-sm w-full outline-none font-bold" />
-        {searchTerm && <button onClick={() => setSearchTerm('')} className="bg-red-500/10 text-red-500 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-500/20">مسح</button>}
+      <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
+        <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
+        {searchTerm && <button onClick={() => setSearchTerm('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
 
       {!isVolunteer && (
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[#0a0a0a] border-b border-white/5 shrink-0">
-        <StatCard title="إجمالي المهام" value={regionStats.total} color="text-white" borderHighlight />
-        <StatCard title="المركز العام" value={regionStats.hq} color="text-[#c70000]" />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[var(--surface-week)] border-b border-[var(--border)] shrink-0">
+        <StatCard title="إجمالي المهام" value={regionStats.total} color="text-[var(--ink)]" borderHighlight />
+        <StatCard title="المركز العام" value={regionStats.hq} color="text-[var(--accent)]" />
         <StatCard title="إقليم القنال" value={regionStats.canal} color="text-blue-400" />
         <StatCard title="إقليم الدلتا" value={regionStats.delta} color="text-green-400" />
         <StatCard title="إقليم الصعيد" value={regionStats.saeed} color="text-yellow-400" />
       </div>
       )}
 
-      {isTableExpanded && <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
-      
-      <div className={isTableExpanded ? `fixed inset-4 z-[150] bg-[#0c0c0c] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-80 md:left-10' : 'md:right-30 md:left-10'}` : "flex-1 flex flex-col overflow-hidden relative"}>
-        
+      {isTableExpanded && <div className="fixed inset-0 bg-[var(--bg-deep)]/85 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
+
+      <div className={isTableExpanded ? `fixed inset-4 z-[150] card-surface rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-80 md:left-10' : 'md:right-30 md:left-10'}` : "flex-1 flex flex-col overflow-hidden relative"}>
+
         {isTableExpanded && (
-          <div className="p-4 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2"><EyeIcon className="w-5 h-5" /> سجل متابعة المهام الميدانية الشامل</h2>
-            <button onClick={() => setIsTableExpanded(false)} className="bg-[#111] hover:bg-red-600 text-gray-400 hover:text-white p-2 rounded-xl transition-colors shadow-sm"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+          <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
+            <h2 className="text-lg font-bold flex items-center gap-2 relative z-10"><span className="text-[var(--accent)]"><EyeIcon className="w-5 h-5" /></span> سجل متابعة المهام الميدانية الشامل</h2>
+            <button onClick={() => setIsTableExpanded(false)} className="icon-btn icon-btn-danger"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
           </div>
         )}
-        
+
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap">
-          <thead className="sticky top-0 z-20 bg-[#1a1a1a]">
-            <tr className="text-gray-400 text-sm">
-              <th className="p-4 font-semibold border-l border-white/5">تاريخ الإنشاء</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">تاريخ المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-blue-400">تصنيف المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5 text-green-400">فترة المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5">كود المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5">التمركز (الفرع)</th>
-              <th className="p-4 font-semibold border-l border-white/5">اسم المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5">السيارات والسائقين</th>
-              <th className="p-4 font-semibold border-l border-white/5">نوع المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5">مكان المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5">مسؤول المهمة</th>
-              <th className="p-4 font-semibold border-l border-white/5">مصدر البلاغ</th>
-              <th className="p-4 font-semibold border-l border-white/5">تاريخ التحرك</th>
-              <th className="p-4 font-semibold border-l border-white/5">تاريخ الانتهاء</th>
-              <th className="p-4 font-semibold border-l border-white/5">الحالة</th>
-              <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">الإجراءات</th>
+          <thead className="sticky top-0 z-20 bg-[var(--surface-3)]">
+            <tr className="text-[var(--muted)] text-sm">
+              <th className="p-4 font-semibold border-l border-[var(--border)]">تاريخ الإنشاء</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">تاريخ المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)] text-blue-400">تصنيف المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)] text-green-400">فترة المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">كود المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">التمركز (الفرع)</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">اسم المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">السيارات والسائقين</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">نوع المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">مكان المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">مسؤول المهمة</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">مصدر البلاغ</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">تاريخ التحرك</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">تاريخ الانتهاء</th>
+              <th className="p-4 font-semibold border-l border-[var(--border)]">الحالة</th>
+              <th className="p-4 font-semibold sticky left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.0)] border-l border-[var(--border)]">الإجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-[var(--border)]">
             {isLoading ? (
               <tr>
                 <td colSpan="16" className="p-6">
@@ -2467,38 +2491,40 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   </div>
                 </td>
               </tr>
-            ) : 
+            ) :
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} className={`transition-colors ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-white/5'}`}>
-                <td className="p-4 text-gray-400 font-mono border-l border-white/5">{formatDateTime(m.created_at)}</td>
-                <td className="p-4 text-white font-bold font-mono border-l border-white/5 bg-[#c70000]/10">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
-                <td className="p-4 font-bold border-l border-white/5"><span className={`px-3 py-1 rounded-lg text-xs ${m.mission_classification === 'مفتوحة' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>{m.mission_classification || 'عادية'}</span></td>
-                <td className="p-4 text-gray-300 border-l border-white/5 font-mono text-xs whitespace-nowrap text-center">
-                  <div className="flex items-center justify-center gap-2 bg-[#111] px-2 py-1.5 rounded-lg border border-white/5">
-                    <span className="text-green-400">من: {m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : 'غير مسجل')}</span>
-                    <span className="text-gray-600">|</span>
-                    <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-gray-400" : "text-blue-400 animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل') : '(حتى الآن...)'}</span>
+              <tr key={`mission-${m.mission_id}`} className={`transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'}`}>
+                <td className="p-4 text-[var(--muted)] font-mono border-l border-[var(--border)]">{formatDateTime(m.created_at)}</td>
+                <td className="p-4 font-bold font-mono border-l border-[var(--border)] bg-[var(--accent-softer)]">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
+                <td className="p-4 font-bold border-l border-[var(--border)]"><span className={`px-3 py-1 rounded-lg text-xs font-bold ${m.mission_classification === 'مفتوحة' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-[var(--surface-week)] text-[var(--muted)] border border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
+                <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-mono text-xs whitespace-nowrap text-center">
+                  <div className="flex items-center justify-center gap-2 bg-[var(--surface-2)] px-2 py-1.5 rounded-lg border border-[var(--border)]">
+                    <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : 'غير مسجل')}</span>
+                    <span className="text-[var(--faint)]">|</span>
+                    <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
                 </td>
-                <td className="p-4 font-mono text-gray-300 border-l border-white/5">{m.mission_code}</td>
-                <td className="p-4 font-bold text-white border-l border-white/5">{m.branch}</td>
-                <td className="p-4 text-gray-200 font-bold border-l border-white/5 mission-name-cell">{m.mission_name}</td>
-                <td className="p-4 text-green-400 border-l border-white/5">{m.vehicles_info}</td>
-                <td className="p-4 text-gray-300 border-l border-white/5">{m.mission_type}</td>
-                <td className="p-4 text-gray-300 border-l border-white/5">{m.mission_location}</td>
-                <td className="p-4 text-gray-400 border-l border-white/5">{m.responsible_person}</td>
-                <td className="p-4 text-gray-400 border-l border-white/5">{m.data_source}</td>
-                <td className="p-4 text-gray-400 border-l border-white/5">{m.departure_date}</td>
-                <td className="p-4 text-gray-400 border-l border-white/5">{m.completion_date}</td>
-                <td className="p-4 border-l border-white/5 text-center"><StatusBadge status={m.status} /></td>
-<td className="p-4 sticky left-0 z-10 bg-[#1a1a1a] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-white/5">
+                <td className="p-4 font-mono text-[var(--ink-2)] border-l border-[var(--border)]">{m.mission_code}</td>
+                <td className="p-4 font-bold border-l border-[var(--border)]">{m.branch}</td>
+                <td className="p-4 text-[var(--ink)] font-bold border-l border-[var(--border)] mission-name-cell">{m.mission_name}</td>
+                <td className="p-4 text-[var(--ok)] border-l border-[var(--border)]">{m.vehicles_info}</td>
+                <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{m.mission_type}</td>
+                <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{m.mission_location}</td>
+                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.responsible_person}</td>
+                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.data_source}</td>
+                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.departure_date}</td>
+                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.completion_date}</td>
+                <td className="p-4 border-l border-[var(--border)] text-center"><StatusBadge status={m.status} /></td>
+<td className="p-4 sticky left-0 z-10 bg-[var(--surface)] shadow-[4px_0_15px_rgba(0,0,0,0.0)] border-l border-[var(--border)]">
   <div className="flex justify-center gap-2">
-    <button onClick={() => handleViewMission(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-[#c70000] text-gray-400 rounded-lg"><EyeIcon /></button>
-    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="p-2 bg-[#1a1a1a] hover:bg-red-600 text-gray-400 rounded-lg"><TrashIcon /></button>}
+    <button onClick={() => handleViewMission(m.mission_id)} className="icon-btn" title="فتح المهمة"><EyeIcon /></button>
+    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
   </div>
 </td>
               </tr>
-            )) : (<tr><td colSpan="16" className="p-8 text-center text-gray-500">لا توجد مهام مطابقة</td></tr>)}
+            )) : (
+              <tr><td colSpan="16"><div className="empty-state"><div className="empty-state-icon">📋</div><p className="text-sm font-semibold text-[var(--muted)]">لا توجد مهام مطابقة</p></div></td></tr>
+            )}
           </tbody>
         </table>
         </div>
@@ -2507,23 +2533,46 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       {isModalOpen && (
         <div key={currentMissionData ? `edit-${currentMissionData.mission_id}` : 'new'} className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
           <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden">
-            
-            <div className="p-5 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center shrink-0 rounded-t-3xl">
+
+            <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
-                <h2 className="text-lg font-bold text-gray-300 flex items-center gap-2"><span className="bg-[#c70000] w-2 h-6 rounded-sm"></span>توثيق مهمة ميدانية</h2>
+                <div className="flex items-center gap-3">
+                  <span className="w-1.5 h-8 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]"></span>
+                  <h2 className="text-lg font-bold">توثيق مهمة ميدانية</h2>
+                </div>
                 {currentMissionData && <StatusBadge status={currentMissionData.status} />}
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[#111] hover:bg-[#c70000] text-gray-400 hover:text-white p-2 rounded-xl border border-white/5"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              <button onClick={() => setIsModalOpen(false)} className="icon-btn icon-btn-danger"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-            
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              
-              <div className="bg-[#0c0c0c] border border-white/5 rounded-2xl p-6 shadow-lg flex flex-col md:flex-row items-end gap-4">
-                <div className="flex-1 w-full">
-                  <label className="block text-[#c70000] text-sm font-bold mb-2">اسم الاستمارة (عنوان رئيسي)</label>
-                  <input id="f_mission_name" type="text" defaultValue={missionName} onChange={(e) => setMissionName(e.target.value)} placeholder="مثال: تأمين مول..." className="w-full bg-transparent border-b-2 border-white/10 focus:border-[#c70000] text-white text-2xl font-bold pb-2 outline-none" />
+
+            {isModalLoading ? (
+              <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+                <div className="flex flex-col md:flex-row items-end gap-4">
+                  <div className="flex-1 w-full space-y-3">
+                    <div className="skeleton h-4 w-40"></div>
+                    <div className="skeleton h-10 w-full"></div>
+                  </div>
+                  <div className="w-full md:w-48 space-y-3">
+                    <div className="skeleton h-4 w-28"></div>
+                    <div className="skeleton h-10 w-full"></div>
+                  </div>
                 </div>
-                <div className="w-full md:w-48"><FormGroup label="كود الاستمارة"><StyledInput id="f_mission_code" disabled={!isOwner} defaultValue={currentMissionData?.mission_code || ''} placeholder="#MSN-AUTO" className={`text-center font-mono ${!isOwner ? 'text-gray-500 bg-[#0a0a0a] opacity-50 cursor-not-allowed' : 'text-white bg-[#111] border border-white/10'}`} title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''} /></FormGroup></div>
+                <div className="card-surface p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[0,1,2,3,4,5].map(i => <div key={i} className="space-y-2"><div className="skeleton h-3.5 w-24"></div><div className="skeleton h-10 w-full"></div></div>)}
+                  </div>
+                </div>
+                <div className="skeleton h-40 w-full rounded-2xl"></div>
+              </div>
+            ) : (
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+
+              <div className="card-surface p-6 flex flex-col md:flex-row items-end gap-4">
+                <div className="flex-1 w-full">
+                  <label className="block text-[var(--accent)] text-sm font-bold mb-2">اسم الاستمارة (عنوان رئيسي)</label>
+                  <input id="f_mission_name" type="text" defaultValue={missionName} onChange={(e) => setMissionName(e.target.value)} placeholder="مثال: تأمين مول..." className="w-full bg-transparent border-b-2 border-[var(--border-strong)] focus:border-[var(--accent)] text-[var(--ink)] text-2xl font-bold pb-2 outline-none transition-colors" />
+                </div>
+                <div className="w-full md:w-48"><FormGroup label="كود الاستمارة"><StyledInput id="f_mission_code" disabled={!isOwner} defaultValue={currentMissionData?.mission_code || ''} placeholder="#MSN-AUTO" className={`text-center font-mono ${!isOwner ? 'text-[var(--faint)] opacity-50 cursor-not-allowed' : ''}`} title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''} /></FormGroup></div>
               </div>
 
               <SectionCard title="البيانات الأساسية للمهمة" icon={<AlertIcon />}>
@@ -2788,9 +2837,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </SectionCard>
 
             </div>
-            
+            )}
+
             {/* 💡 أضفنا كلاسات بتخلي الزراير فوق بعض في الموبايل وبعرض الشاشة بالكامل لسهولة اللمس */}
-            <div className="p-4 md:p-5 border-t border-white/10 bg-[#0a0a0a] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
               {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير الاستمارة</button>}
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5">إغلاق</button>
               
@@ -2943,21 +2993,20 @@ const VehicleRow = ({ index, onRemove, data }) => (
 // 💡 دالة زراير القائمة (مزودة بدعم النقطة الحمراء للإشعارات)
 function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = false }) {
   return (
-    <button onClick={onClick} title={!isOpen ? label : ''} className={`relative flex items-center p-4 rounded-xl transition-all duration-300 active:scale-[0.98] ${isActive ? 'bg-gradient-to-l from-[#c70000] to-[#990000] text-white shadow-[0_0_20px_rgba(199,0,0,0.3)]' : 'text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)]'} ${isOpen ? 'w-full gap-4' : 'w-14 justify-center mx-auto'}`}>
-      {isActive && <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-full bg-white/90"></span>}
+    <button onClick={onClick} title={!isOpen ? label : ''} className={`nav-item active:scale-[0.98] ${isActive ? 'is-active' : ''} ${isOpen ? '' : 'w-14 justify-center mx-auto'}`}>
       <div className="shrink-0 relative">
         {icon}
         {/* 💡 نقطة التنبيه والأيقونة مقفولة */}
-        {!isOpen && hasUpdate && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#ff4d4d] rounded-full animate-pulse border border-[var(--bg)] shadow-[0_0_5px_rgba(199,0,0,0.8)]"></span>}
+        {hasUpdate && <span className="absolute -top-1 -end-1 w-2.5 h-2.5 bg-[#ff4d4d] rounded-full animate-pulse border border-[var(--bg)] shadow-[0_0_5px_rgba(199,0,0,0.8)]"></span>}
       </div>
-      {isOpen && <span className="font-bold text-sm tracking-wide truncate flex-1 text-right">{label}</span>}
-      {/* 💡 نقطة التنبيه والقائمة مفتوحة */}
-      {isOpen && hasUpdate && <span className="w-2.5 h-2.5 bg-[#ff4d4d] rounded-full animate-pulse shadow-[0_0_8px_rgba(199,0,0,0.8)] shrink-0"></span>}
+      {isOpen && <span className="font-bold text-sm tracking-wide truncate flex-1 text-start">{label}</span>}
+      {/* 💡 نقطة التنبيه والقائمة مفتوحة (صغيرة في نهاية الصف) */}
+      {isOpen && hasUpdate && <span className="w-2 h-2 bg-[#ff4d4d] rounded-full animate-pulse shadow-[0_0_8px_rgba(199,0,0,0.8)] shrink-0"></span>}
     </button>
   );
 }
 function InventoryCard({ title, value, unit, color }) { return ( <div className="bg-[#0c0c0c] border border-white/5 p-5 rounded-2xl"><p className="text-gray-400 text-xs font-bold mb-1">{title}</p><p className={`text-3xl font-black ${color}`}>{value}</p><p className="text-[10px] text-gray-500 mt-1">{unit}</p></div> ); }
-function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`bg-[#0c0c0c] border ${borderHighlight ? 'border-[#c70000]/50' : 'border-white/5'} p-5 rounded-3xl relative h-32`}>{icon && icon}<p className="text-gray-400 text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`text-3xl font-black ${color} relative z-10`}>{value}</p></div> ); }
+function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`kpi-card card-surface p-5 rounded-3xl h-32 hover-lift ${borderHighlight ? 'border-l-4 border-l-[var(--accent)]' : ''}`}>{icon && <div className="relative z-10 mb-1">{icon}</div>}<p className="text-[var(--muted)] text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p></div> ); }
 
 const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
 const TrashIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
@@ -5080,36 +5129,53 @@ const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5
 // ==========================================
 // 9. شاشة القوة البشرية (للمالك فقط - تجميع من المهام بدون تكرار)
 // ==========================================
-function HumanResourcesView({ branches, isOwner }) {
+function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0 }) {
   const [hrList, setHrList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterBranch, setFilterBranch] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterActive, setFilterActive] = useState('all'); // الكل / في مهمة حاليًا / ليس في مهمة حاليًا
   const [searchTerm, setSearchTerm] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const fetchInFlight = useRef(false);
 
-  useEffect(() => {
-    const fetchHR = async () => {
-      const token = localStorage.getItem('access_token');
-      try {
-        const res = await fetch('https://eoc-system-b12f.vercel.app/api/human-resources', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) {
-          setHrList(await res.json());
-        }
-      } catch (err) {
-        console.error("Failed to fetch HR");
-      } finally {
-        setIsLoading(false);
+  const fetchHR = useCallback(async (silent = false) => {
+    if (fetchInFlight.current) return; // منع التداخل / الطلبات المكررة
+    fetchInFlight.current = true;
+    if (silent) setIsRefreshing(true);
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch('https://eoc-system-b12f.vercel.app/api/human-resources', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        // حسب #13: الفلتر يعتمد على حقيقة الـ Backend (active_mission مش محسوبة في الـ UI)
+        setHrList(await res.json());
       }
-    };
-    fetchHR();
+    } catch (err) {
+      console.error("Failed to fetch HR");
+    } finally {
+      fetchInFlight.current = false;
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   }, []);
 
-  const filteredHR = hrList.filter(p => {
+  useEffect(() => { fetchHR(); }, [fetchHR]);
+
+  // تحديث لحظي صامت: لو أي مهمة اتغيرت في النظام، ينعكس في "في مهمة حاليًا" فوراً
+  useEffect(() => {
+    if (liveUpdateVersion > 0) fetchHR(true);
+  }, [liveUpdateVersion, fetchHR]);
+
+  const filteredHR = useMemo(() => hrList.filter(p => {
     const matchBranch = filterBranch === 'all' ? true : p.branch_name === filterBranch;
     const matchType = filterType === 'all' ? true : p.participant_type === filterType;
+    const matchActive = filterActive === 'all' ? true : filterActive === 'active' ? !!p.active_mission : !p.active_mission;
     const matchSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || p.membership_number.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchBranch && matchType && matchSearch;
-  });
+    return matchBranch && matchType && matchActive && matchSearch;
+  }), [hrList, filterBranch, filterType, filterActive, searchTerm]);
+
+  const countActive = hrList.filter(p => p.active_mission).length;
+  const countInactive = hrList.length - countActive;
 
   const handleExportExcel = () => {
     if (filteredHR.length === 0) return alert("لا توجد بيانات لتصديرها.");
@@ -5119,6 +5185,7 @@ function HumanResourcesView({ branches, isOwner }) {
       "رقم العضوية / الصفة": p.membership_number,
       "الفرع التابع له": p.branch_name === 'القاهرة' ? 'المركز العام' : p.branch_name,
       "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
+      "حالة المشاركة": p.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا',
       "إجمالي المهام الميدانية": p.missions_count,
       "إجمالي الساعات (ساعة)": p.total_hours
     })));
@@ -5129,80 +5196,128 @@ function HumanResourcesView({ branches, isOwner }) {
 
   const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
 
+  // الفلاتر الثلاثية حسب حقيقة الـ Backend مباشرة
+  const activeFilterOptions = [
+    { key: 'all', label: 'الكل', count: hrList.length },
+    { key: 'active', label: 'في مهمة حاليًا', count: countActive },
+    { key: 'inactive', label: 'ليس في مهمة حاليًا', count: countInactive },
+  ];
+
   return (
     <div className="space-y-6 pb-10 animate-fade-in-up">
-      <div className="bg-[#111] border border-[#c70000]/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(199,0,0,0.1)]">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2"><UsersIcon className="text-[#c70000]"/> سجل القوة البشرية الفعالة (إدارة المتطوعين)</h3>
-        <p className="text-gray-400 text-sm mt-2">يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته وساعاته الفعلية.</p>
+      <div className="card-surface p-5 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-xl font-bold flex items-center gap-2"><UsersIcon className="text-[var(--accent)]"/> سجل القوة البشرية الفعالة (إدارة المتطوعين)</h3>
+          {isRefreshing && <span className="inline-flex items-center gap-2 text-xs text-[var(--muted)]"><span className="w-3 h-3 rounded-full bg-[var(--accent)] animate-pulse"/> تحديث لحظي...</span>}
+        </div>
+        <p className="text-sm text-[var(--muted)] mt-2">يتم استخراج البيانات تلقائياً من المهام الميدانية بدون تكرار، وربط المتطوع بعدد مشاركاته وساعاته الفعلية ووضعه الحالي لحظياً.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="إجمالي القوة (بدون تكرار)" value={filteredHR.length} color="text-white" borderHighlight />
-        <StatCard title="إجمالي المتطوعين الفعليين" value={filteredHR.filter(p => p.participant_type === 'volunteer').length} color="text-blue-400" />
-        <StatCard title="مشاركين خارجيين (غير متطوع)" value={filteredHR.filter(p => p.participant_type === 'non_volunteer').length} color="text-yellow-500" />
-        <StatCard title="متطوعين شاركوا +5 مهام" value={filteredHR.filter(p => p.missions_count >= 5).length} color="text-green-500" />
+        <StatCard title="في مهمة حاليًا" value={countActive} color="text-[var(--accent)]" borderHighlight />
+        <StatCard title="ليس في مهمة حاليًا" value={countInactive} color="text-gray-400" />
+        <StatCard title="إجمالي المتطوعين" value={hrList.filter(p => p.participant_type === 'volunteer').length} color="text-blue-400" />
       </div>
 
-      <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
-        <div className="p-6 border-b border-white/5 bg-[#111] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
-          
+      <div className="card-surface overflow-hidden flex flex-col h-[660px]">
+        <div className="p-6 border-b border-[var(--border)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10 bg-[var(--surface-2)]">
+
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <input type="text" placeholder="بحث بالاسم أو الكود..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#c70000]/50 w-full md:w-auto" />
-            
-            <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
+            <input type="text" placeholder="بحث بالاسم أو الكود..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="field w-full md:w-56" />
+
+            <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="field cursor-pointer w-full md:w-auto">
               <option value="all">كل الفروع والتمركزات</option>
               <option value="المركز العام">المركز العام</option>
               {branchNames.filter(n => n !== 'القاهرة').map(g => <option key={g} value={g}>{g}</option>)}
             </select>
-            
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer w-full md:w-auto">
+
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="field cursor-pointer w-full md:w-auto">
               <option value="all">الكل (متطوع وغير متطوع)</option>
               <option value="volunteer">متطوعين فقط</option>
               <option value="non_volunteer">غير متطوعين</option>
             </select>
           </div>
 
-          {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] hover:bg-[#252525] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors w-full md:w-auto justify-center"><ExcelIcon /> تصدير سجل القوة البشرية</button>}
+          {isOwner && <button onClick={handleExportExcel} className="btn-ghost text-green-500 border border-green-500/30 w-full md:w-auto justify-center"><ExcelIcon /> تصدير سجل القوة البشرية</button>}
+        </div>
+
+        {/* #13: فلتر المشاركين حسب حقيقة الـ Backend — يظهر لحظياً مع الـ Realtime */}
+        <div className="px-6 py-4 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--surface)]">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[var(--surface-week)] border border-[var(--border)]">
+            {activeFilterOptions.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setFilterActive(opt.key)}
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.97] ${
+                  filterActive === opt.key
+                    ? 'bg-[var(--accent)] text-white shadow-[0_4px_16px_rgba(199,0,0,0.35)]'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                }`}
+              >
+                {opt.label}
+                <span className={`text-xs px-1.5 py-0.5 rounded-md font-mono ${filterActive === opt.key ? 'bg-white/20 text-white' : 'bg-[var(--surface-week)] text-[var(--muted)] border border-[var(--border)]'}`}>{opt.count}</span>
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-[var(--muted)] inline-flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse"/> يعتمد على حالة الـ Database لحظياً
+          </span>
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap text-sm">
-            <thead className="sticky top-0 z-20 bg-[#1a1a1a] text-gray-400">
+            <thead className="sticky top-0 z-20 bg-[var(--surface-2)] text-[var(--muted)]">
               <tr>
-                <th className="p-4 font-semibold border-l border-white/5 w-16 text-center">م</th>
-                <th className="p-4 font-semibold border-l border-white/5">الاسم</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-[#c70000]">رقم العضوية / الصفة</th>
-                <th className="p-4 font-semibold border-l border-white/5">الفرع التابع له</th>
-                <th className="p-4 font-semibold border-l border-white/5 text-center">النوع</th>
-                <th className="p-4 font-semibold text-center text-green-500 border-l border-white/5">عدد المهام</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] w-16 text-center">م</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">الاسم</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">رقم العضوية / الصفة</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">الفرع التابع له</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-center">النوع</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الحالة الآن</th>
+                <th className="p-4 font-semibold text-center text-green-500 border-l border-[var(--border)]">عدد المهام</th>
                 <th className="p-4 font-semibold text-center text-orange-400">إجمالي الساعات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
-              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-gray-500 font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr> : 
-               filteredHR.length > 0 ? filteredHR.map((person, idx) => (
-                <tr key={idx} className="hover:bg-white/5 transition-colors">
-                  <td className="p-4 text-gray-500 font-bold border-l border-white/5 text-center">{idx + 1}</td>
-                  <td className="p-4 text-white font-bold border-l border-white/5">{person.full_name}</td>
-                  <td className="p-4 text-[#c70000] font-mono font-bold border-l border-white/5">{person.membership_number}</td>
-                  <td className="p-4 text-gray-300 border-l border-white/5">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
-                  <td className="p-4 border-l border-white/5 text-center">
-                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${person.participant_type === 'volunteer' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-gray-600/20 text-gray-400 border border-gray-600/30'}`}>
+            <tbody className="divide-y divide-[var(--border)]">
+              {isLoading ? (
+                <tr><td colSpan="8" className="p-8 text-center text-[var(--muted)] font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr>
+              ) : filteredHR.length > 0 ? filteredHR.map((person, idx) => (
+                <tr key={idx} className="hover:bg-[var(--surface-2)]/70 transition-colors">
+                  <td className="p-4 text-[var(--muted)] font-bold border-l border-[var(--border)] text-center">{idx + 1}</td>
+                  <td className="p-4 font-bold border-l border-[var(--border)] flex items-center gap-2">
+                    <span>{person.full_name}</span>
+                  </td>
+                  <td className="p-4 text-[var(--accent)] font-mono font-bold border-l border-[var(--border)]">{person.membership_number}</td>
+                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
+                  <td className="p-4 border-l border-[var(--border)] text-center">
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${person.participant_type === 'volunteer' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-[var(--surface-week)] text-[var(--muted)] border border-[var(--border)]'}`}>
                       {person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}
                     </span>
                   </td>
-                  <td className="p-4 border-l border-white/5 text-center">
-                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.missions_count >= 5 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-[#111] text-gray-300 border border-white/10'}`}>
+                  <td className="p-4 border-l border-[var(--border)] text-center">
+                    {person.active_mission ? (
+                      <span className="badge badge-active inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"/> في مهمة حاليًا
+                      </span>
+                    ) : (
+                      <span className="badge badge-neutral inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-current"/> متاح
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4 border-l border-[var(--border)] text-center">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.missions_count >= 5 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-[var(--surface-week)] text-[var(--muted-2)] border border-[var(--border)]'}`}>
                       {person.missions_count} مهمة
                     </span>
                   </td>
                   <td className="p-4 text-center">
-                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.total_hours > 0 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-[#111] text-gray-500 border border-white/10'}`}>
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.total_hours > 0 ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-[var(--surface-week)] text-[var(--muted)] border border-[var(--border)]'}`}>
                       {person.total_hours} ساعة
                     </span>
                   </td>
                 </tr>
-              )) : <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا توجد بيانات مطابقة</td></tr>}
+              )) : <tr><td colSpan="8" className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة</td></tr>}
             </tbody>
           </table>
         </div>

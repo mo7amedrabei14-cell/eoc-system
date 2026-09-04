@@ -1994,9 +1994,9 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         SELECT ROUND(COALESCE(SUM(
                             GREATEST(
                                 EXTRACT(EPOCH FROM (
-                                    (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) - 
+                                    (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
                                     (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
-                                )) / 3600.0, 
+                                )) / 3600.0,
                                 0
                             )
                         ), 0)::numeric, 1)
@@ -2004,13 +2004,30 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         JOIN missions m ON mp.mission_id = m.mission_id
                         WHERE mp.branch_id = p.branch_id
                         AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                        AND m.completion_date IS NOT NULL 
+                        AND m.completion_date IS NOT NULL
                         AND (
                             (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                            OR 
+                            OR
                             ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
                         )
-                    ) as total_hours
+                    ) as total_hours,
+                    (
+                        -- "في مهمة حاليًا" = مشارك ما زال ملتحقاً بمهمة غير منتهية فعلية (من الـ DB مش من الـ UI)
+                        -- بنفس معيار "رادار التتبع" لمنع التكرار حتى يظل متسقاً مع بقية النظام
+                        EXISTS (
+                            SELECT 1
+                            FROM mission_participants mp
+                            JOIN missions m ON mp.mission_id = m.mission_id
+                            WHERE mp.branch_id = p.branch_id
+                            AND mp.return_status = 'مازال بالمهمة'
+                            AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
+                            AND (
+                                (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
+                                OR
+                                ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
+                            )
+                        )
+                    ) as active_mission
                 FROM mission_participants p
                 LEFT JOIN branches b ON p.branch_id = b.branch_id
                 WHERE p.full_name IS NOT NULL AND TRIM(p.full_name) != ''
@@ -2032,7 +2049,8 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     "branch_name": row[3] or "غير محدد",
                     "branch_id": row[4],
                     "missions_count": row[5],
-                    "total_hours": float(row[6]) # ده إجمالي الساعات
+                    "total_hours": float(row[6]), # ده إجمالي الساعات
+                    "active_mission": bool(row[7])
                 })
             return result
     except Exception as e:

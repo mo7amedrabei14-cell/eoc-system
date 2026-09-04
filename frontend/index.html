@@ -9,6 +9,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Emergency Operations Center</title>
+    <script>
+      // 🎯 طبق الثيم المحفوظ قبل أول رسم حتى لا يومض الداكن ثم الفاتح (متطلب #14)
+      try { var th = localStorage.getItem('dashboard-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+      try { var lg = localStorage.getItem('dashboard-language'); if (lg) document.documentElement.lang = lg; } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
