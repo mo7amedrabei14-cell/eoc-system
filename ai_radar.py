@@ -8,7 +8,7 @@ import concurrent.futures
 import random
 from bs4 import BeautifulSoup
 import google.generativeai as genai
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -219,7 +219,7 @@ def scan_single_source(publisher, url, now_utc):
                 )
 
                 payload = {
-                    "incident_date": datetime.now().strftime("%Y-%m-%d"),
+                    "incident_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
                     "incident_description": ai_data.get("incident_description", entry.title),
                     "news_type": ai_data.get("news_type", "أخرى / غير مصنف"),
                     "news_publisher": publisher,
@@ -254,14 +254,14 @@ def run_ai_scanner():
         print("⚠️ المفاتيح مفقودة!")
         return
 
-    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT God-Mode)...")
+    print(f"\n[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT God-Mode)...")
     now_utc = datetime.utcnow()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=30) as executor:
         futures = [executor.submit(scan_single_source, pub, url, now_utc) for pub, url in RSS_FEEDS.items()]
         concurrent.futures.wait(futures)
 
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء من المسح الميداني بنجاح.")
+    print(f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] ✅ تم الانتهاء من المسح الميداني بنجاح.")
 
 if __name__ == '__main__':
     run_ai_scanner()

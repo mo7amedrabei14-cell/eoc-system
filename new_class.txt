@@ -1,0 +1,31 @@
+class MissionCreate(BaseModel):
+    mission_name: str
+    mission_classification: str = "عادية"
+    branch_id: int
+    mission_type: Optional[str] = None
+    mission_location: Optional[str] = None
+    responsible_person: Optional[str] = None
+    data_source: Optional[str] = None
+    status: str
+
+    exit_date: Optional[str] = None
+    departure_date: Optional[str] = None
+    arrival_date: Optional[str] = None
+    return_date: Optional[str] = None
+    completion_date: Optional[str] = None
+
+    start_time: Optional[str] = None
+    departure_time: Optional[str] = None
+    arrival_time: Optional[str] = None
+    completion_time: Optional[str] = None
+
+    injured_count: Optional[int] = 0
+    indirect_beneficiaries_total: Optional[int] = 0
+    notes: Optional[str] = None
+    internal_notes: Optional[str] = None
+
+    routes: List[RouteModel] = []
+    vehicles: List[VehicleModel] = []
+    participants: List[ParticipantModel] = []
+    beneficiaries: List[BeneficiaryModel] = []
+    eoc_staff: List[EOCStaffModel] = []

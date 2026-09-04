@@ -1,0 +1,82 @@
+@app.post("/api/missions")
+def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+        
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            mission_code = f"#MSN-{datetime.now().strftime('%y%m%d-%H%M%S')}"
+            def none_if_empty(val): return val if val != "" else None
+
+            cursor.execute("""
+                INSERT INTO missions (
+                    mission_code, mission_name, mission_classification, branch_id, mission_type, mission_location, responsible_person,
+                    data_source, status, exit_date, departure_date, arrival_date, return_date, completion_date,
+                    start_time, departure_time, arrival_time, completion_time, injured_count,
+                    indirect_beneficiaries_total, notes, internal_notes
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                ) RETURNING mission_id;
+            """, (
+                mission_code, mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
+                mission.responsible_person, mission.data_source, mission.status,
+                none_if_empty(mission.exit_date), none_if_empty(mission.departure_date), none_if_empty(mission.arrival_date),
+                none_if_empty(mission.return_date), none_if_empty(mission.completion_date),
+                none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
+                none_if_empty(mission.completion_time),
+                mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes
+            ))
+            mission_id = cursor.fetchone()[0]
+
+            for route in mission.routes:
+                cursor.execute("""
+                    INSERT INTO mission_itineraries (mission_id, group_title, route_to, departure_time, arrival_time)
+                    VALUES (%s, %s, %s, %s, %s);
+                """, (mission_id, route.group_title, route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time)))
+
+            for vehicle in mission.vehicles:
+                cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
+
+            for part in mission.participants:
+                # 1. أوتوميشن الإغلاق
+                if mission.status in ['Completed', 'مكتملة']:
+                    part.return_status = 'تم انتهاء مهمتة'
+                
+                # 2. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض
+                if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':
+                    cursor.execute("""
+                        SELECT m.mission_name FROM mission_participants p
+                        JOIN missions m ON p.mission_id = m.mission_id
+                        WHERE p.participation_role = %s AND p.return_status = 'مازال بالمهمة' AND m.status NOT IN ('Completed', 'Cancelled', 'Returned')
+                    """, (part.participation_role,))
+                    active_in_other = cursor.fetchone()
+                    if active_in_other:
+                        raise Exception(f"المشارك '{part.full_name}' (رقم {part.participation_role}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other[0]}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً.")
+
+                cursor.execute("""
+                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (mission_id, part.participant_type, part.full_name, part.team_name, part.team_code, part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+
+            for ben in mission.beneficiaries:
+                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
+
+            for staff in mission.eoc_staff:
+                cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
+
+            # 💡 تسجيل اللوج
+            try:
+                create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بإنشاء استمارة جديدة بكود: {mission_code}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم حفظ المهمة بنجاح", "mission_code": mission_code, "mission_id": mission_id}
+        
+    except Exception as e:
+        connection.rollback()
+        if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
+            raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
