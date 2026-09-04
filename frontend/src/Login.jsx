@@ -91,6 +91,7 @@ export default function Login() {
     setDragX(maxX);
     setDragProgress(1);
     setIsUnlocking(true);
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch (e) {}
     setTimeout(() => setIsMounted(true), 160);      // كارت الدخول يبدأ بالدخول
     setTimeout(() => setShowGate(false), 820);       // البوابة تُزال من الـ DOM
   };
@@ -208,14 +209,14 @@ export default function Login() {
           }`}
           dir={language === 'ar' ? 'rtl' : 'ltr'}
         >
-          {/* تألق محيطي خلف الشعار */}
-          <div className="pointer-events-none absolute -top-[12%] -start-[10%] w-[46vw] h-[46vw] bg-[var(--accent-glow)] rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4.5s' }} />
-          <div className="pointer-events-none absolute -bottom-[16%] -end-[8%] w-[42vw] h-[42vw] bg-[var(--accent-glow)] rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6.5s' }} />
+          {/* تألق محيطي خلف الشعار — يستجيب لحركة السحب (الضوء يكبر تدريجياً) */}
+          <div className="pointer-events-none absolute -top-[12%] -start-[10%] w-[46vw] h-[46vw] bg-[var(--accent-glow)] rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4.5s', transform: `scale(${1 + dragProgress * 0.28})` }} />
+          <div className="pointer-events-none absolute -bottom-[16%] -end-[8%] w-[42vw] h-[42vw] bg-[var(--accent-glow)] rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6.5s', transform: `scale(${1 + dragProgress * 0.22})` }} />
 
           <div className="relative z-10 flex flex-col items-center px-6 py-8">
-            {/* شعار الهلال مع هالة تنفّس */}
-            <div className="relative mb-8">
-              <div className="absolute inset-0 -m-5 rounded-full bg-[var(--accent-glow)] blur-2xl animate-pulse" style={{ animationDuration: '3.5s' }} />
+            {/* شعار الهلال مع هالة تنفّس — يرتفع بخفة مع تقدم السحب (فكرة "الباب يُفتح") */}
+            <div className="relative mb-8" style={{ transform: `translateY(${-dragProgress * 7}px) scale(${1 - dragProgress * 0.035})`, transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.34,1.45,0.64,1)' }}>
+              <div className="absolute inset-0 -m-5 rounded-full bg-[var(--accent-glow)] blur-2xl animate-pulse" style={{ animationDuration: '3.5s', opacity: 0.6 + dragProgress * 0.4 }} />
               <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center">
                 <CrescentIcon className="w-14 h-14 md:w-16 md:h-16 text-[var(--accent)] drop-shadow-[0_0_14px_var(--accent-glow)]" />
               </div>
@@ -243,6 +244,16 @@ export default function Login() {
                   width: `${dragX}px`,
                   boxShadow: '0 0 22px var(--accent-glow), inset 0 0 8px rgba(255,255,255,0.08)',
                   transition: isDragging ? 'none' : 'width 0.5s cubic-bezier(0.34,1.45,0.64,1)',
+                }}
+              />
+
+              {/* ذيل ضوئي خفيف خلف المقبض — يستجيب لحظةً بلحظة للحركة */}
+              <div
+                className="pointer-events-none absolute left-0 top-1/2 z-[5] w-[72px] h-9 rounded-full bg-[var(--accent-glow)] blur-xl"
+                style={{
+                  transform: `translate3d(${dragX - 34}px, -50%, 0)`,
+                  opacity: dragProgress * 0.5,
+                  transition: isDragging ? 'none' : 'opacity 0.5s cubic-bezier(0.34,1.45,0.64,1), transform 0.5s cubic-bezier(0.34,1.45,0.64,1)',
                 }}
               />
 

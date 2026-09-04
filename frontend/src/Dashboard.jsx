@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -297,6 +297,10 @@ const ENGLISH_UI = {
   'غير متطوع': 'Non-volunteer',
   'مهمة': 'mission',
   'ساعة': 'hour',
+  'قيد الحصر': 'Calculating',
+  'لا مشاركات': 'No missions',
+  'لا توجد مشاركات ميدانية سابقة': 'No previous field participation',
+  'يوجد مهام بدون تاريخ انتهاء محسوب — المدة لم تُحتسب بعد': 'Missions present but hours not calculated yet',
   'لا توجد بيانات مطابقة': 'No matching data',
   'توثيق مهمة ميدانية': 'Document field mission',
   'اسم الاستمارة (عنوان رئيسي)': 'Form name (main title)',
@@ -799,6 +803,113 @@ const formatDateTime = (val) => {
   return s;
 };
 
+/* ════════════════════════════════════════════════════════════════
+   Motion Primitives — أدوات حركة قابلة لإعادة الاستخدام
+   • عداد رقمي متحرك (count-up) — transform/digit فقط، يحترم reduced-motion
+   • تأثير مغناطيسي خفيف للـ CTA — transform3d فقط، لا reflow
+   ════════════════════════════════════════════════════════════════ */
+function useAnimatedNumber(target) {
+  const [display, setDisplay] = useState(target);
+  const prevRef = useRef(target);
+  const rafRef = useRef(null);
+  useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) { setDisplay(target); prevRef.current = target; return undefined; }
+    const from = prevRef.current;
+    if (from === target) { setDisplay(target); return undefined; }
+    const start = performance.now();
+    const dur = 520;
+    const tick = (now) => {
+      const p = Math.min((now - start) / dur, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      setDisplay(from + (target - from) * e);
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+      else prevRef.current = target;
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [target]);
+  return display;
+}
+
+function Magnetic({ children, strength = 0.2, className = '' }) {
+  const ref = useRef(null);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const reducedRef = useRef(false);
+  useLayoutEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedRef.current = mq.matches;
+    const onChange = () => { reducedRef.current = mq.matches; if (mq.matches) setPos({ x: 0, y: 0 }); };
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
+  const handleMove = (e) => {
+    if (reducedRef.current || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    setPos({
+      x: (e.clientX - (r.left + r.width / 2)) * strength,
+      y: (e.clientY - (r.top + r.height / 2)) * strength * 0.45,
+    });
+  };
+  const handleLeave = () => setPos({ x: 0, y: 0 });
+  const moving = pos.x !== 0 || pos.y !== 0;
+  return (
+    <div
+      ref={ref}
+      className={`inline-flex ${className}`}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      style={{
+        transform: `translate3d(${pos.x.toFixed(1)}px, ${pos.y.toFixed(1)}px, 0)`,
+        transition: reducedRef.current ? 'none' : (moving ? 'transform 90ms linear' : 'transform 0.4s var(--ease-out)'),
+        willChange: 'transform',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   خلية ساعات الميدان — معنى ذكي فوري:
+   • ساعات فعلية         → رقم حي بتعداد + شريط قياس نسبي (ذهبي = قياس لا تحذير)
+   • مهام بلا ساعات        → "قيد الحصر" (لا 0 زائف) — الحقيقة: لم تُحتسب بعد
+   • لا مشاركات           → "—" لا مشاركات (لا 0 ساعة مضلّلة)
+   ════════════════════════════════════════════════════════════════ */
+function HoursCell({ person, maxHours, lang = 'ar' }) {
+  const ar = lang !== 'en';
+  const animated = useAnimatedNumber(person.total_hours > 0 ? person.total_hours : 0);
+  const hasHours = person.total_hours > 0;
+  const hasMissions = person.missions_count > 0;
+  const scale = hasHours ? Math.max((person.total_hours / Math.max(maxHours, 1)) * 100, 2.5) : 0;
+
+  if (!hasMissions) {
+    return (
+      <div className="hm" title={ar ? 'لا توجد مشاركات ميدانية سابقة' : 'No previous field participation'}>
+        <div className="hm-main"><span className="hm-num hm-num--none">—</span></div>
+        <div className="hm-track hm-track--none"><div className="hm-fill" /></div>
+        <span className="hm-chip hm-chip--none">{ar ? 'لا مشاركات' : 'No missions'}</span>
+      </div>
+    );
+  }
+  if (!hasHours) {
+    return (
+      <div className="hm" title={ar ? 'يوجد مهام بدون تاريخ انتهاء محسوب — المدة لم تُحتسب بعد' : 'Missions present but hours not calculated yet'}>
+        <div className="hm-main"><span className="hm-num hm-num--pend">0</span><span className="hm-unit">{ar ? 'ساعة' : 'hrs'}</span></div>
+        <div className="hm-track hm-track--none"><div className="hm-fill" /></div>
+        <span className="hm-chip hm-chip--pend">{ar ? 'قيد الحصر' : 'Calculating'}</span>
+      </div>
+    );
+  }
+  const avg = person.missions_count > 0 ? person.total_hours / person.missions_count : 0;
+  return (
+    <div className="hm" title={ar ? `إجمالي ${person.missions_count} مهمة · متوسط ${avg.toFixed(1)} ساعة/مهمة` : `${person.missions_count} missions · avg ${avg.toFixed(1)} hrs/mission`}>
+      <div className="hm-main"><span className="hm-num">{animated.toFixed(1)}</span><span className="hm-unit">{ar ? 'ساعة' : 'hrs'}</span></div>
+      <div className="hm-track"><div className="hm-fill" style={{ '--hm-scale': scale / 100 }} /></div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   
@@ -880,7 +991,45 @@ useEffect(() => {
   // - لا تداخل بين الطلبات / لا تكرار أحداث / تنظيف عند unmount / إعادة اتصال مع backoff
   const [notifications, setNotifications] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifClosing, setNotifClosing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef(null);
+  const bellRef = useRef(null);
+  const notifCloseTimerRef = useRef(null);
+
+  // 💡 إغلاق ذكي: ضغط خارج اللوحة أو زر Esc يغلقها بحركة خروج سلسة (لا تكرار مستمعين)
+  const closeNotifPanel = useCallback(({ refocus = false } = {}) => {
+    setNotificationsOpen((open) => {
+      if (!open) return open;
+      setNotifClosing(true);
+      if (notifCloseTimerRef.current) clearTimeout(notifCloseTimerRef.current);
+      notifCloseTimerRef.current = setTimeout(() => {
+        setNotificationsOpen(false);
+        setNotifClosing(false);
+        if (refocus) bellRef.current?.focus();
+        notifCloseTimerRef.current = null;
+      }, 175);
+      return open;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsOpen) return undefined;
+    const onPointerDown = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) closeNotifPanel();
+    };
+    const onKey = (e) => { if (e.key === 'Escape') closeNotifPanel({ refocus: true }); };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKey, true);
+    };
+  }, [notificationsOpen, closeNotifPanel]);
+
+  useEffect(() => () => {
+    if (notifCloseTimerRef.current) clearTimeout(notifCloseTimerRef.current);
+  }, []);
   const [pulseMissions, setPulseMissions] = useState([]);
   const [liveMissionEvents, setLiveMissionEvents] = useState([]);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
@@ -1115,14 +1264,14 @@ useEffect(() => {
   const renderContent = () => {
     switch (activeTab) {
       case 'home': return <HomeView branches={branchesList} />;
-      case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} />;
+      case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} />;
       case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
-      case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} />;
+      case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
       case 'audit': return <AuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
-      case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} />;
+      case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
       default: return <HomeView branches={branchesList} />;
     }
   };
@@ -1367,34 +1516,46 @@ useEffect(() => {
     </span>
   </button>
 
-  {/* 💡 جرس الإشعارات اللحظية + مؤشر الاتصال + القائمة المنسدلة (RTL-aware) */}
-  <div className="relative shrink-0">
+  {/* 💡 جرس الإشعارات + مؤشر الاتصال + القائمة (RTL-aware، إغلاق بالضغط خارجها أو Esc) */}
+  <div className="relative shrink-0" ref={notifRef}>
     <button
+      ref={bellRef}
       type="button"
-      onClick={() => setNotificationsOpen(o => !o)}
+      onClick={() => {
+        if (notificationsOpen) { closeNotifPanel(); return; }
+        if (notifCloseTimerRef.current) clearTimeout(notifCloseTimerRef.current);
+        setNotifClosing(false);
+        setNotificationsOpen(true);
+      }}
       title={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
       aria-label={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
+      aria-expanded={notificationsOpen}
       className="icon-btn !w-11 !h-11 relative"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
         <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
+      {unreadCount > 0 && <span className="bell-ring" />}
       {unreadCount > 0 && (
-        <span className="absolute -top-1.5 -start-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-scale-pop">
+        <span key={unreadCount} className="absolute -top-1.5 -start-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-scale-pop">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
-      <span className={`absolute -bottom-1 -end-1 w-3 h-3 rounded-full border-2 border-[var(--bg)] ${realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} title={realtimeConnected ? 'متصل بالخادم لحظياً' : 'جارٍ إعادة الاتصال…'}></span>
+      <span className={`absolute -bottom-1 -end-1 w-3 h-3 rounded-full border-2 border-[var(--bg)] ${realtimeConnected ? 'bg-[var(--ok)]' : 'bg-[var(--warn)] animate-pulse'}`} title={realtimeConnected ? 'متصل بالخادم لحظياً' : 'جارٍ إعادة الاتصال…'}></span>
     </button>
 
     {notificationsOpen && (
-      <div className="notif-dropdown absolute end-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col overflow-hidden z-[80]">
+      <div
+        role="dialog"
+        aria-label="الإشعارات اللحظية"
+        className={`notif-dropdown absolute end-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col overflow-hidden z-[80] ${notifClosing ? 'notif-dropdown-close' : ''}`}
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-soft)]">
           <h3 className="text-sm font-bold">الإشعارات اللحظية</h3>
           <div className="flex items-center gap-2.5">
-            <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${realtimeConnected ? 'text-emerald-400' : 'text-amber-400'}`}>
-              <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`}></span>
+            <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${realtimeConnected ? 'text-[var(--ok)]' : 'text-[var(--warn)]'}`}>
+              <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-[var(--ok)]' : 'bg-[var(--warn)] animate-pulse'}`}></span>
               {realtimeConnected ? 'متصل' : 'جاري الاتصال'}
             </span>
             {unreadCount > 0 && (
@@ -1412,12 +1573,13 @@ useEffect(() => {
               <p className="text-sm font-semibold text-[var(--muted)]">لا توجد إشعارات بعد</p>
               <p className="text-xs text-[var(--faint)]">ستظهر هنا كل التحديثات اللحظية</p>
             </div>
-          ) : notifications.map(n => (
+          ) : notifications.map((n, i) => (
             <button
               key={n.id}
               type="button"
               onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))}
-              className={`notif-item w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)]'}`}
+              className={`notif-item notif-item-in w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)]'}`}
+              style={{ animationDelay: `${Math.min(i, 8) * 42}ms` }}
             >
               <span className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${n.event_type === 'mission' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>
                 {n.event_type === 'mission' ? <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> : <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>}
@@ -2384,44 +2546,55 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           </div>
         </div>
 
-        {/* 💡 التعديل هنا: الزراير في الموبايل هتتوزع وتاخد عرض مناسب عشان متتزنقش */}
-        <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 shrink-0 w-full md:w-auto">
+        {/* 🔥 أكشن بار المهام — هرمية واضحة: ثانوية مجمّعة خفيفة + أساسية منفردة مُميَّزة */}
+        <div className="actionbar justify-center md:justify-end w-full md:w-auto">
+          <div className="actionbar-segment w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setIsTableExpanded(true)}
+              data-tip={language === 'ar' ? 'عرض السجل الشامل بملء الشاشة' : 'Open full-screen log'}
+              className="action-btn action-btn--info flex-1 sm:flex-none"
+            >
+              <EyeIcon />
+              <span className="hidden sm:inline">{language === 'ar' ? 'السجل' : 'Log'}</span>
+            </button>
 
-  <button
-    onClick={() => setIsTableExpanded(true)}
-    className="btn-ghost flex-1 md:flex-none !text-blue-400 border-blue-500/30 whitespace-nowrap"
-  >
-    <EyeIcon className="w-5 h-5" />
-    السجل
-  </button>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleExportTableExcel}
+                data-tip={language === 'ar' ? 'تصدير جدول Excel الحالي' : 'Export current table to Excel'}
+                className="action-btn action-btn--ok flex-1 sm:flex-none"
+              >
+                <ExcelIcon />
+                <span className="hidden sm:inline">{language === 'ar' ? 'تصدير' : 'Export'}</span>
+              </button>
+            )}
 
-  {isOwner && (
-    <button
-      onClick={handleClearAllMissions}
-      className="btn-ghost flex-1 md:flex-none !text-red-400 border-red-500/30 whitespace-nowrap"
-    >
-      🗑️ مسح الكل
-    </button>
-  )}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleClearAllMissions}
+                data-tip={language === 'ar' ? 'مسح جميع المهام نهائيًا — لا يمكن التراجع' : 'Clear all missions — irreversible'}
+                className="action-btn action-btn--danger flex-1 sm:flex-none"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span className="hidden sm:inline">{language === 'ar' ? 'مسح الكل' : 'Clear all'}</span>
+              </button>
+            )}
+          </div>
 
-  {isOwner && (
-    <button
-      onClick={handleExportTableExcel}
-      className="btn-ghost flex-1 md:flex-none !text-green-500 border-green-500/30 whitespace-nowrap"
-    >
-      <ExcelIcon />
-      تصدير
-    </button>
-  )}
-
-  <button
-    onClick={handleCreateNew}
-    className="btn-accent flex-1 md:flex-none !px-6 whitespace-nowrap"
-  >
-    + إنشاء مهمة
-  </button>
-
-</div>
+          <Magnetic strength={0.18} className="flex-1 sm:flex-none">
+            <button
+              type="button"
+              onClick={handleCreateNew}
+              className="btn-primary w-full justify-center whitespace-nowrap"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              {language === 'ar' ? 'إنشاء مهمة' : 'Create mission'}
+            </button>
+          </Magnetic>
+        </div>
       </div>
 
       <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
@@ -3461,18 +3634,39 @@ useEffect(() => {
             </div>
           </div>
 
-          {isOwner && (
-  <button
-    onClick={handleClearAllLocalNews}
-    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 transition-all"
-  >
-    🗑️ مسح الكل
-  </button>
-)}
-          
-          <div className="flex gap-3">
-            {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525] shrink-0"><ExcelIcon /> تصدير السجل</button>}
-            <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0">+ إضافة خبر</button>
+          <div className="actionbar shrink-0">
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                data-tip="تصدير السجل إلى Excel"
+                className="action-btn action-btn--ok shrink-0"
+              >
+                <ExcelIcon />
+                <span className="hidden md:inline">تصدير السجل</span>
+              </button>
+            )}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleClearAllLocalNews}
+                data-tip="مسح جميع الأخبار نهائيًا"
+                className="action-btn action-btn--danger shrink-0"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span className="hidden md:inline">مسح الكل</span>
+              </button>
+            )}
+            <Magnetic strength={0.16} className="shrink-0">
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                className="btn-primary whitespace-nowrap"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                <span>إضافة خبر</span>
+              </button>
+            </Magnetic>
           </div>
         </div>
 
@@ -3859,18 +4053,39 @@ const [clearAllCode, setClearAllCode] = useState('');
             </div>
           </div>
 
-          {isOwner && (
-  <button
-    onClick={handleClearAllGlobalDisasters}
-    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 transition-all"
-  >
-    🗑️ مسح الكل
-  </button>
-)}
-
-          <div className="flex gap-3 shrink-0">
-            {isOwner && <button onClick={handleExportExcel} className="bg-[#1a1a1a] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#252525]"><ExcelIcon /> تحميل السجل الشامل للكوارث</button>}
-            <button onClick={handleCreateNew} className="bg-[#c70000] hover:bg-[#a50000] text-white px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2">+ رصد كارثة</button>
+          <div className="actionbar shrink-0">
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                data-tip="تحميل السجل الشامل للكوارث"
+                className="action-btn action-btn--ok shrink-0"
+              >
+                <ExcelIcon />
+                <span className="hidden md:inline">تحميل السجل</span>
+              </button>
+            )}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleClearAllGlobalDisasters}
+                data-tip="مسح جميع الكوارث نهائيًا"
+                className="action-btn action-btn--danger shrink-0"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span className="hidden md:inline">مسح الكل</span>
+              </button>
+            )}
+            <Magnetic strength={0.16} className="shrink-0">
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                className="btn-primary whitespace-nowrap"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                <span>رصد كارثة</span>
+              </button>
+            </Magnetic>
           </div>
         </div>
 
@@ -4026,7 +4241,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 }
 
 
-function EarthquakesView({ isOwner, isSupervisor }) {
+function EarthquakesView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [activeEqTab, setActiveEqTab] = useState('all'); 
   const [globalEqs, setGlobalEqs] = useState([]);
   const [egyptEqs, setEgyptEqs] = useState([]);
@@ -4239,12 +4454,17 @@ const [clearAllCode, setClearAllCode] = useState('');
       </div>
 
       {isOwner && (
-  <button
-    onClick={handleClearAllEarthquakes}
-    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
-  >
-    🗑️ مسح الكل
-  </button>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleClearAllEarthquakes}
+            data-tip={lang === 'ar' ? 'مسح جميع الزلازل المرصودة نهائيًا' : 'Clear all observed earthquakes — irreversible'}
+            className="action-btn action-btn--danger shrink-0"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <span className="hidden md:inline">{lang === 'ar' ? 'مسح الكل' : 'Clear all'}</span>
+          </button>
+        </div>
 )}
 
       <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-4 md:p-6 shadow-lg relative z-0 h-auto md:h-[500px]">
@@ -4503,7 +4723,7 @@ const aiIncidentIcon = new L.DivIcon({
 // ==========================================
 // 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor - God Mode)
 // ==========================================
-function AINewsMonitorView({ branches, isOwner }) {
+function AINewsMonitorView({ branches, isOwner, lang = 'ar' }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
 
@@ -4890,13 +5110,16 @@ const totalAiCountries = new Set(
         </div>
 
         {isOwner && (
-  <button
-    onClick={handleClearAllAINews}
-    className="bg-red-950/40 hover:bg-red-700 text-red-400 hover:text-white border border-red-500/40 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
-  >
-    🗑️ مسح الكل
-  </button>
-)}
+          <button
+            type="button"
+            onClick={handleClearAllAINews}
+            data-tip={lang === 'ar' ? 'مسح جميع أخبار الرادار نهائيًا' : 'Clear all radar news — irreversible'}
+            className="action-btn action-btn--danger shrink-0"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <span className="hidden md:inline">{lang === 'ar' ? 'مسح الكل' : 'Clear all'}</span>
+          </button>
+        )}
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-right whitespace-nowrap text-sm">
@@ -5129,7 +5352,7 @@ const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5
 // ==========================================
 // 9. شاشة القوة البشرية (للمالك فقط - تجميع من المهام بدون تكرار)
 // ==========================================
-function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0 }) {
+function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = 'ar' }) {
   const [hrList, setHrList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterBranch, setFilterBranch] = useState('all');
@@ -5166,6 +5389,26 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0 }) {
     if (liveUpdateVersion > 0) fetchHR(true);
   }, [liveUpdateVersion, fetchHR]);
 
+  // 💡 وميض الصف عند تغيّر حالة "في مهمة حاليًا" لحظياً — يخبر المستخدم "إيه اللي اتغير"
+  const prevActiveRef = useRef({});
+  const [flashActive, setFlashActive] = useState({});
+  useEffect(() => {
+    const cur = {};
+    hrList.forEach(p => {
+      const k = `${p.branch_id}::${p.membership_number}`;
+      cur[k] = !!p.active_mission;
+    });
+    const flipped = Object.keys(cur).filter(k => k in prevActiveRef.current && prevActiveRef.current[k] !== cur[k]);
+    prevActiveRef.current = cur;
+    if (flipped.length === 0) return undefined;
+    const t = Date.now();
+    setFlashActive(m => { const n = { ...m }; flipped.forEach(k => { n[k] = t; }); return n; });
+    const tid = setTimeout(() => {
+      setFlashActive(m => { const n = { ...m }; flipped.forEach(k => delete n[k]); return n; });
+    }, 2400);
+    return () => clearTimeout(tid);
+  }, [hrList]);
+
   const filteredHR = useMemo(() => hrList.filter(p => {
     const matchBranch = filterBranch === 'all' ? true : p.branch_name === filterBranch;
     const matchType = filterType === 'all' ? true : p.participant_type === filterType;
@@ -5173,6 +5416,9 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0 }) {
     const matchSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || p.membership_number.toLowerCase().includes(searchTerm.toLowerCase());
     return matchBranch && matchType && matchActive && matchSearch;
   }), [hrList, filterBranch, filterType, filterActive, searchTerm]);
+
+  // مقياس نسبي لشريط الساعات (بالنسبة لصاحب أعلى ساعات في العرض الحالي)
+  const maxHours = useMemo(() => filteredHR.reduce((mx, p) => Math.max(mx, p.total_hours || 0), 0), [filteredHR]);
 
   const countActive = hrList.filter(p => p.active_mission).length;
   const countInactive = hrList.length - countActive;
@@ -5275,15 +5521,18 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0 }) {
                 <th className="p-4 font-semibold border-l border-[var(--border)]">الفرع التابع له</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">النوع</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الحالة الآن</th>
-                <th className="p-4 font-semibold text-center text-green-500 border-l border-[var(--border)]">عدد المهام</th>
-                <th className="p-4 font-semibold text-center text-orange-400">إجمالي الساعات</th>
+                <th className="p-4 font-semibold text-center text-[var(--ok)] border-l border-[var(--border)]">عدد المهام</th>
+                <th className="p-4 font-semibold text-center text-[var(--data)]">إجمالي الساعات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? (
                 <tr><td colSpan="8" className="p-8 text-center text-[var(--muted)] font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr>
-              ) : filteredHR.length > 0 ? filteredHR.map((person, idx) => (
-                <tr key={idx} className="hover:bg-[var(--surface-2)]/70 transition-colors">
+              ) : filteredHR.length > 0 ? filteredHR.map((person, idx) => {
+              const pKey = `${person.branch_id}::${person.membership_number}`;
+              const flashing = flashActive[pKey] ? 'mission-flash-row' : '';
+              return (
+                <tr key={pKey} className={`${flashing} hover:bg-[var(--surface-2)]/70 transition-colors`}>
                   <td className="p-4 text-[var(--muted)] font-bold border-l border-[var(--border)] text-center">{idx + 1}</td>
                   <td className="p-4 font-bold border-l border-[var(--border)] flex items-center gap-2">
                     <span>{person.full_name}</span>
@@ -5291,9 +5540,9 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0 }) {
                   <td className="p-4 text-[var(--accent)] font-mono font-bold border-l border-[var(--border)]">{person.membership_number}</td>
                   <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
                   <td className="p-4 border-l border-[var(--border)] text-center">
-                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${person.participant_type === 'volunteer' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-[var(--surface-week)] text-[var(--muted)] border border-[var(--border)]'}`}>
-                      {person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}
-                    </span>
+                    {person.participant_type === 'volunteer'
+                      ? <span className="badge badge-info">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</span>
+                      : <span className="badge badge-neutral">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</span>}
                   </td>
                   <td className="p-4 border-l border-[var(--border)] text-center">
                     {person.active_mission ? (
@@ -5307,17 +5556,17 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0 }) {
                     )}
                   </td>
                   <td className="p-4 border-l border-[var(--border)] text-center">
-                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.missions_count >= 5 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-[var(--surface-week)] text-[var(--muted-2)] border border-[var(--border)]'}`}>
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.missions_count >= 5 ? 'bg-[var(--ok-soft)] text-[var(--ok)] border border-[var(--border-strong)]' : 'bg-[var(--surface-week)] text-[var(--muted-2)] border border-[var(--border)]'}`}>
                       {person.missions_count} مهمة
                     </span>
                   </td>
                   <td className="p-4 text-center">
-                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.total_hours > 0 ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-[var(--surface-week)] text-[var(--muted)] border border-[var(--border)]'}`}>
-                      {person.total_hours} ساعة
-                    </span>
+                    <HoursCell person={person} maxHours={maxHours} lang={lang} />
                   </td>
                 </tr>
-              )) : <tr><td colSpan="8" className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة</td></tr>}
+              );
+            })
+              : <tr><td colSpan="8" className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة</td></tr>}
             </tbody>
           </table>
         </div>

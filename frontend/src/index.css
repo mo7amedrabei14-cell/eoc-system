@@ -53,6 +53,22 @@
   --info-soft: rgba(90, 162, 255, 0.12);
   --danger-soft: rgba(199, 0, 0, 0.14);
 
+  /* ◈── الخريطة الدلالية للألوان ─────────────────────────────
+     Brand    → --accent (#C70000)  ·  لحظات الحسم والهوية
+     Success  → --ok                ·  اكتمال / متاح / متصل
+     Warning  → --warn              ·  انتباه / حالة تحتاج مراجعة فقط
+     Error    → --accent (+danger-soft) ·  حذف / فشل / مخالفة
+     Info     → --info              ·  معلومة / قيد الحصر / حالة محايدة معلّقة
+     Data/قياس → --data (ذهبي هادئ) ·  كميات وقياسات ميدانية (ساعات) — ليس تحذيرًا
+     Neutral  → --muted / surfaces  ·  القراءة العامّة
+     Disabled → --disabled / --disabled-fg
+     Active   → --ok توهج حي       ·  Inactive → --muted
+  ──────────────────────────────────────────────────────────── */
+  --data: #d9a441;
+  --data-soft: rgba(217, 164, 65, 0.13);
+  --disabled: rgba(255, 255, 255, 0.06);
+  --disabled-fg: #4a4e57;
+
   /* الحواف */
   --radius-xs: 8px;
   --radius: 14px;
@@ -117,6 +133,10 @@
   --info: #2f7be0;
   --info-soft: rgba(47, 123, 224, 0.1);
   --danger-soft: rgba(174, 0, 0, 0.1);
+  --data: #a6781f;
+  --data-soft: rgba(166, 120, 31, 0.12);
+  --disabled: rgba(18, 22, 34, 0.06);
+  --disabled-fg: #a2a7b0;
 
   --shadow-1: 0 1px 2px rgba(20, 25, 45, 0.05), 0 6px 20px rgba(20, 25, 45, 0.06);
   --shadow-2: 0 12px 40px rgba(20, 25, 45, 0.1);
@@ -297,6 +317,123 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
 .icon-btn:focus-visible { box-shadow: var(--ring-soft); }
 .icon-btn-danger:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
 
+/* ════════════════════════════════════════════════════════════════
+   نظام الأكشن بار — هرمية واضحة (Primary مُميَّز / Secondary خفيف)
+   ════════════════════════════════════════════════════════════════ */
+.actionbar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+/* مجموعة الأكشنات الثانوية — كتلة موحّدة أخف من الزر الأساسي */
+.actionbar-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.action-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 2.4rem;
+  padding: 0 0.85rem;
+  border-radius: 0.65rem;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+.action-btn svg { width: 1.05rem; height: 1.05rem; flex-shrink: 0; }
+.action-btn:hover { color: var(--ink); background: var(--surface-3); }
+.action-btn:active { transform: scale(0.95); }
+.action-btn:focus-visible { box-shadow: var(--ring-soft); outline: none; }
+.action-btn--danger:hover { color: var(--accent); background: var(--danger-soft); }
+.action-btn--ok:hover { color: var(--ok); background: var(--ok-soft); }
+.action-btn--info:hover { color: var(--info); background: var(--info-soft); }
+.action-btn--icon { width: 2.4rem; padding: 0; }
+
+/* Tooltip مخصّص (RTL/LTR-aware) لزر الأيقونة */
+.action-btn[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-start: 50%;
+  transform: translateX(calc(var(--tip-dir, 1) * -50%)) translateY(-4px) scale(0.96);
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--surface-4);
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-1);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  z-index: 80;
+}
+[dir="ltr"] .action-btn[data-tip]::after { --tip-dir: 1; }
+[dir="rtl"] .action-btn[data-tip]::after { --tip-dir: -1; }
+.action-btn[data-tip]:hover::after,
+.action-btn[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(calc(var(--tip-dir, 1) * -50%)) translateY(0) scale(1);
+}
+
+/* الزر الأساسي — Premium CTA */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1.35rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent) 55%, var(--accent-deep));
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 10px 28px -12px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out);
+  will-change: transform;
+}
+.btn-primary::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent);
+  pointer-events: none;
+}
+.btn-primary svg { width: 1.1rem; height: 1.1rem; flex-shrink: 0; transition: transform var(--dur-fast) var(--ease-out); }
+.btn-primary:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 16px 42px -12px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.18); }
+.btn-primary:hover svg { transform: translateX(calc(var(--tip-dir, 1) * 2px)); }
+.btn-primary:active { transform: translateY(0) scale(0.97); filter: brightness(0.96); }
+.btn-primary:focus-visible { box-shadow: var(--ring); outline: none; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; filter: grayscale(0.2); }
+
 /* ───────────────────── 8) الجداول ───────────────────── */
 .table-shell {
   background: var(--surface);
@@ -344,6 +481,38 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
 .badge-neutral { background: var(--surface-week); color: var(--muted); border-color: var(--border); }
 .badge-danger { background: var(--danger-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
 .badge-info { background: var(--info-soft); color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+
+/* ── 9b) قياس ساعات الميدان (Hours Metric) — ذهبي قياس لا تحذير ── */
+.hm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 84px;
+  padding: 0.15rem 0.3rem;
+}
+.hm-main { display: flex; align-items: baseline; gap: 0.28rem; font-variant-numeric: tabular-nums; line-height: 1; }
+.hm-num { font-size: 0.98rem; font-weight: 800; color: var(--ink); letter-spacing: -0.01em; }
+.hm-num--none { color: var(--faint); }
+.hm-num--pend { color: var(--muted); }
+.hm-unit { font-size: 0.6rem; font-weight: 700; color: var(--data); letter-spacing: 0.03em; }
+.hm-track { position: relative; width: 72px; height: 3px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.hm-fill {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(var(--hm-scale, 0));
+  transform-origin: start;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--data-soft), var(--data));
+  animation: hm-expand 0.75s var(--ease-out) both;
+}
+[dir="ltr"] .hm-fill { transform-origin: left; }
+[dir="rtl"] .hm-fill { transform-origin: right; }
+.hm-track--none .hm-fill { background: var(--surface-4); }
+.hm-chip { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.42rem; border-radius: 999px; line-height: 1.2; white-space: nowrap; }
+.hm-chip--pend { background: var(--info-soft); color: var(--info); }
+.hm-chip--none { background: var(--surface-week); color: var(--faint); border: 1px solid var(--border); }
+@keyframes hm-expand { from { transform: scaleX(0); } }
 
 /* نقطة حالة حية */
 .status-dot {
@@ -414,6 +583,27 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
   transition: background-color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
 }
 .notif-item:hover { background: var(--surface-hover); }
+/* خروج سلس + دخول متتابع للعناصر */
+.notif-dropdown-close { animation: dropdown-out 0.18s var(--ease-out) forwards; }
+.notif-item-in { animation: fade-in-up 0.32s var(--ease-out) both; }
+/* رنين هادئ على الجرس عند وصول إشعار جديد */
+.bell-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 0.9rem;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: bell-ring 2.6s var(--ease-out) infinite;
+}
+@keyframes dropdown-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+@keyframes bell-ring {
+  0%         { transform: scale(0.82); opacity: 0.55; }
+  70%, 100%  { transform: scale(1.45); opacity: 0; }
+}
 
 /* ───────────────── 13) هياكل سكلتون (Skeletons) ───────────────── */
 .skeleton {
