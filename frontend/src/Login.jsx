@@ -512,20 +512,32 @@ export default function Login() {
               key={showGate ? 'gate' : 'form'}
               className="p-7 sm:p-10 lg:p-10"
             >
-              <div className="stagger flex flex-col gap-5 max-w-md mx-auto md:mx-0 w-full">
-                <div className="mb-2">
-                  <span className="eyebrow mb-3">
-                    {language === 'ar' ? 'بوابة الدخول' : 'SECURE ACCESS'}
-                  </span>
-                  <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight">
-                    {language === 'ar' ? 'بوابة الوصول الآمن' : 'Secure Access Portal'}
-                  </h3>
-                  <p className="text-[var(--muted)] text-sm mt-1.5">
-                    {language === 'ar'
-                      ? 'أدخل بيانات الاعتماد الموثقة للمتابعة إلى مركز العمليات.'
-                      : 'Enter your verified credentials to continue into the operations center.'}
-                  </p>
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start gap-8 lg:gap-12">
+                {/* عمود المقدمة/الثقة — نفس المحتوى، يُعاد توزيعه ليستخدم عرض الكارت بالكامل */}
+                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
+                  <div>
+                    <span className="eyebrow mb-3">
+                      {language === 'ar' ? 'بوابة الدخول' : 'SECURE ACCESS'}
+                    </span>
+                    <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight">
+                      {language === 'ar' ? 'بوابة الوصول الآمن' : 'Secure Access Portal'}
+                    </h3>
+                    <p className="text-[var(--muted)] text-sm mt-1.5 leading-relaxed">
+                      {language === 'ar'
+                        ? 'أدخل بيانات الاعتماد الموثقة للمتابعة إلى مركز العمليات.'
+                        : 'Enter your verified credentials to continue into the operations center.'}
+                    </p>
+                  </div>
+                  <div className="hidden lg:flex items-center gap-2 text-[var(--faint)] text-xs">
+                    <span className="text-[var(--ok)]"><ShieldIcon /></span>
+                    <span className="font-mono tracking-wide">
+                      {language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}
+                    </span>
+                  </div>
                 </div>
+
+                {/* عمود النموذج */}
+                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 stagger flex flex-col gap-5">
 
                 {errorMsg && (
                   <div className="error-shake flex items-start gap-3 rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent-softer)] px-4 py-3 text-[var(--ink)]" style={{ animation: 'fade-in 0.35s var(--ease-out)' }}>
@@ -613,11 +625,12 @@ export default function Login() {
                   </button>
                 </form>
 
-                <div className="flex items-center gap-2 text-[var(--faint)] text-xs">
+                <div className="flex items-center gap-2 text-[var(--faint)] text-xs lg:hidden">
                   <span className="text-[var(--ok)]"><ShieldIcon /></span>
                   <span className="font-mono tracking-wide">
                     {language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}
                   </span>
+                </div>
                 </div>
               </div>
             </div>
