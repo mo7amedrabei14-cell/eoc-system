@@ -74,22 +74,15 @@ export default function Login() {
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
-  // 🎉 مراسم الافتتاح — «مفاجأة» لطيفة مرة واحدة فقط عند فتح التطبيق لأول مرة
-  // في كل جلسة (sessionStorage) — لا تُعاد مع كل إعادة تحميل، وتُحترم reduced-motion.
-  const [openingCeremony, setOpeningCeremony] = useState(() => {
-    try {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-      if (sessionStorage.getItem('eoc_opening_seen')) return false;
-      return true;
-    } catch (e) { return false; }
-  });
+  // 🎉 مراسم الافتتاح — تظهر مع كل Refresh / تحميل جديد خارج الجلسة
+  // الافتتاحية تعمل دائمًا عند كل Refresh بدون أي استثناء.
+  const [openingCeremony, setOpeningCeremony] = useState(true);
   const usernameRef = useRef(null);
 
   useEffect(() => {
     if (!openingCeremony) return undefined;
     const brand = document.getElementById('opening-crest');
     const brandStamp = () => {
-      try { sessionStorage.setItem('eoc_opening_seen', '1'); } catch (e) {}
       setOpeningCeremony(false);
     };
     // نُطلق «الطابع» بعد انتهاء الضربة الضوئية ثم نُغلق المراسم
@@ -129,7 +122,8 @@ export default function Login() {
   const dragPhaseRef = useRef(0); // وضع مغناطيسي مرن أثناء السحب
   const HANDLE_SIZE = 60;
   const isRTL = language === 'ar';
-  const dirSign = isRTL ? -1 : 1;
+  // بوابة السحب تبدأ دائمًا من الشمال وتتحرك إلى اليمين، حتى مع اللغة العربية.
+  const dirSign = 1;
 
   // تشغيل القياسات (readiness) بعد دخول الكارت
   useEffect(() => {
@@ -167,8 +161,8 @@ export default function Login() {
     if (!isDragging || !trackRef.current) return;
     const trackRect = trackRef.current.getBoundingClientRect();
     const maxX = trackRect.width - HANDLE_SIZE - 8;
-    // المسافة تُقاس من "حافة البداية" المنطقية (يمين في RTL / يسار في LTR)
-    const fromStart = isRTL ? trackRect.right - e.clientX : e.clientX - trackRect.left;
+    // السحب ثابت من الشمال إلى اليمين في كل اللغات.
+    const fromStart = e.clientX - trackRect.left;
     const target = Math.max(0, Math.min(fromStart - HANDLE_SIZE / 2, maxX));
     // لمسة مغناطيسية: الهدف يُتبع بنسبة متليّنة تجعل المقبض "ينجذب" بدل قفزة جامدة
     dragPhaseRef.current += (target - dragPhaseRef.current) * 0.5;
@@ -216,8 +210,9 @@ export default function Login() {
     if (!trackRef.current || isDragging || isUnlocking) return;
     const trackRect = trackRef.current.getBoundingClientRect();
     const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
-    const isFwd = isRTL ? e.key === 'ArrowLeft' : e.key === 'ArrowRight';
-    const isBack = isRTL ? e.key === 'ArrowRight' : e.key === 'ArrowLeft';
+    // لوحة المفاتيح تتبع نفس الاتجاه: السهم الأيمن للتقدم.
+    const isFwd = e.key === 'ArrowRight';
+    const isBack = e.key === 'ArrowLeft';
     if (e.key === 'Enter' && dragProgress >= 0.8) { completeUnlock(maxX); return; }
     if (!isFwd && !isBack) return;
     e.preventDefault();
@@ -323,14 +318,14 @@ export default function Login() {
           className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--bg)] ${
             isUnlocking ? 'gate-peel pointer-events-none' : ''
           }`}
-          dir={isRTL ? 'rtl' : 'ltr'}
+          dir="ltr"
         >
           {/* تألق محيطي — يشتغل مع تقدّم السحب */}
           <div className="pointer-events-none absolute -top-[12%] -start-[10%] w-[46vw] h-[46vw] bg-[var(--accent-glow)] rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4.5s', transform: `scale(${1 + dragProgress * 0.28})` }} />
           <div className="pointer-events-none absolute -bottom-[16%] -end-[8%] w-[42vw] h-[42vw] bg-[var(--accent-glow)] rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6.5s', transform: `scale(${1 + dragProgress * 0.22})` }} />
 
           <div className="relative z-10 flex flex-col items-center px-6 py-6 w-full max-w-[440px]">
-            {/* 🎉 المفاجأة عند الفتح — «مراسم الافتتاح» (مرة واحدة لكل جلسة) */}
+            {/* 🎉 المفاجأة عند الفتح — «مراسم الافتتاح» تعمل مع كل Refresh */}
             {openingCeremony && (
               <div aria-hidden="true" className="opening-ceremony pointer-events-none absolute inset-0 z-[70]">
                 <div className="opening-slash" />
@@ -359,7 +354,7 @@ export default function Login() {
                 {dragProgress >= 0.92 && <span className="ripple-burst absolute inset-0 rounded-full bg-[var(--ok)]" />}
               </div>
 
-              <div id="opening-crest" className={`relative w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
+              <div id="opening-crest" className={`relative w-24 h-24 md:w-28 md:h-28 rounded-full bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
                 <CrescentIcon className={`w-14 h-14 md:w-16 md:h-16 drop-shadow-[0_0_14px_var(--accent-glow)] transition-colors duration-500 ${dragProgress >= 0.92 ? 'text-[var(--ok)]' : 'text-[var(--accent)]'}`} />
               </div>
             </div>
@@ -396,22 +391,22 @@ export default function Login() {
                 <span key={p} className="pointer-events-none absolute top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[var(--border-strong)]/70" style={{ insetInlineStart: `calc(${p * 100}%)`, transform: 'translate(-50%, -50%)', marginInlineStart: p === 0.92 ? '-6px' : '0' }} />
               ))}
 
-              {/* تعبئة التقدم — تنمو من حافة البداية */}
+              {/* تعبئة التقدم — تنمو من الشمال إلى اليمين */}
               <div
                 className="pointer-events-none absolute top-1 bottom-1 rounded-full bg-gradient-to-r from-[var(--accent-softer)] via-[var(--accent)] to-[var(--accent)]"
                 style={{
-                  insetInlineStart: 4,
+                  left: 4,
                   width: `${dragX}px`,
                   boxShadow: '0 0 22px var(--accent-glow), inset 0 0 8px rgba(255,255,255,0.08)',
                   transition: isDragging ? 'none' : 'width 0.5s cubic-bezier(0.34,1.45,0.64,1)',
                 }}
               />
 
-              {/* ذيل ضوئي خلف المقبض */}
+              {/* ذيل ضوئي خلف المقبض — من الشمال إلى اليمين */}
               <div
                 className="pointer-events-none absolute top-1/2 z-[5] w-[72px] h-9 rounded-full bg-[var(--accent-glow)] blur-xl"
                 style={{
-                  insetInlineStart: 4,
+                  left: 4,
                   width: `${dragX}px`,
                   transform: `translate3d(0, -50%, 0)`,
                   opacity: dragProgress * 0.5,
@@ -429,7 +424,7 @@ export default function Login() {
                 <ChevronsIcon />
               </div>
 
-              {/* المقبض — يتحرك فيزيائيًا (translateX معكوس في RTL) */}
+              {/* المقبض — يتحرك فيزيائيًا من الشمال إلى اليمين */}
               <div
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
@@ -443,7 +438,7 @@ export default function Login() {
                 aria-valuenow={Math.round(dragProgress * 100)}
                 aria-label={language === 'ar' ? 'اسحب لفتح الوصول' : 'Slide to unlock'}
                 style={{
-                  insetInlineStart: 4,
+                  left: 4,
                   width: HANDLE_SIZE,
                   height: HANDLE_SIZE,
                   transform: `translateX(${dirSign * dragX}px)`,
