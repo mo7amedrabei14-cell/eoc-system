@@ -85,8 +85,17 @@ async def idempotency_middleware(request: Request, call_next):
                     row = cursor.fetchone()
                     if row and row[0] is not None:  # response is not null
                         # Return the cached response
-                        cached_response = json.loads(row[0])
-                        return JSONResponse(content=cached_response, status_code=row[1])
+                        # psycopg3 يقرأ عمود jsonb كـ dict جاهز؛ لا نلجأ لـ json.loads إلا إذا
+                        # كانت القيمة نصية (ملفقة/مخزنة يدوياً). هذا يمنع TypeError → 500.
+                        cached = row[0]
+                        if isinstance(cached, str):
+                            cached_response = json.loads(cached)
+                        elif isinstance(cached, dict):
+                            cached_response = cached
+                        else:
+                            cached_response = None
+                        if cached_response is not None:
+                            return JSONResponse(content=cached_response, status_code=row[1])
             finally:
                 connection.close()
 
@@ -379,6 +388,11 @@ class MissionCreate(BaseModel):
     # كود الفريق/الإدارة على مستوى المهمة (حقل مستقل عن المشاركين)
     team_code: Optional[str] = None
 
+    # مفتاح الحماية من الإرسال المكرر (double-submit): يُرسَل أيضاً في ترويسة
+    # Idempotency-Key، لكن يُخزَّن في قاعدة البيانات ضمن صف المهمة. كان مفقوداً
+    # من النموذج بينما كان الكود يقرأ mission.idempotency_key → AttributeError → 500.
+    idempotency_key: Optional[str] = None
+
     routes: List[RouteModel] = []
     vehicles: List[VehicleModel] = []
     participants: List[ParticipantModel] = []
@@ -566,20 +580,27 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
         connection.close()
 
 @app.post("/api/missions")
-def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredentials = Depends(security)):
+def create_mission(
+    mission: MissionCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    idempotency_key_header: Optional[str] = Header(None),
+):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
-        
+    # مفتاح الحماية يُقرأ من الترويسة أولاً (الواجهة ترسله في الـ header)،
+    # مع مرونة دعم إرساله داخل الـ body أيضاً للتوافق مع أي عميل قديم.
+    ikey = mission.idempotency_key or idempotency_key_header or None
+
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
             # 🛡️ حماية من الإرسال المكرر (double-submit): لو نفس الطلب اتبعت قبل كده
             # بنفس مفتاح idempotency_key، بنرجع نفس المهمة القديمة من غير ما نسجلها تاني.
-            if mission.idempotency_key:
+            if ikey:
                 cursor.execute(
                     "SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;",
-                    (mission.idempotency_key,)
+                    (ikey,)
                 )
                 existing = cursor.fetchone()
                 if existing:
@@ -605,7 +626,7 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
                 none_if_empty(mission.completion_time),
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
-                mission.idempotency_key,
+                ikey,
                 mission.team_code if mission.team_code is not None else ""
             ))
             mission_id = cursor.fetchone()[0]
@@ -666,12 +687,12 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
         connection.rollback()
         if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
             raise HTTPException(status_code=400, detail=str(e))
-        if mission.idempotency_key and "idempotency_key" in str(e) and ("unique" in str(e).lower() or "duplicate" in str(e).lower()):
+        if ikey and "idempotency_key" in str(e) and ("unique" in str(e).lower() or "duplicate" in str(e).lower()):
             # 🛡️ حصل تصادم نادر: طلبين بنفس المفتاح وصلوا في نفس اللحظة تقريباً.
             # التاني اتمنع من الداتابيز، فبنرجّع المهمة اللي اتسجلت فعلاً بدل ما نطلع خطأ.
             try:
                 with connection.cursor() as cursor2:
-                    cursor2.execute("SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;", (mission.idempotency_key,))
+                    cursor2.execute("SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;", (ikey,))
                     existing = cursor2.fetchone()
                     if existing:
                         return {"message": "تم حفظ المهمة بنجاح", "mission_code": existing[1], "mission_id": existing[0]}
@@ -680,15 +701,34 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/missions/{mission_id}")
-def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAuthorizationCredentials = Depends(security)):
+def update_mission(
+    mission_id: int,
+    mission: MissionCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    idempotency_key_header: Optional[str] = Header(None),
+):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
-        
+    # مفتاح الحماية من الإرسال المكرر — يُقرأ من الترويسة أولاً (الواجهة ترسله في الـ header)؛
+    # يعمل جنباً إلى جنب مع مفتاح المهمة المخزَّن في قاعدة البيانات (DB هو مصدر الحقيقة).
+    ikey = mission.idempotency_key or idempotency_key_header or None
+
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
+
+            # 🛡️ منع الإرسال المكرر (double-submit / إعادة المحاولة): لو نفس الطلب
+            # بنفس المفتاح اتعمل فعلاً من قبل على نفس الاستمارة، بنرجع نجاح فوراً
+            # من غير ما ننفذ أي mutation ثانية (بدون تكرار المشاركين/الإشعارات/اللوج).
+            if ikey:
+                cursor.execute(
+                    "SELECT 1 FROM missions WHERE mission_id = %s AND idempotency_key = %s;",
+                    (mission_id, ikey)
+                )
+                if cursor.fetchone():
+                    return {"message": "تم تحديث المهمة بنجاح"}
 
             # 1. تحديث البيانات الأساسية (بدون تغيير كود المهمة غير المُدخل)
             cursor.execute("""
@@ -699,6 +739,7 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                     arrival_time=%s, completion_time=%s, injured_count=%s, indirect_beneficiaries_total=%s,
                     notes=%s, internal_notes=%s,
                     team_code=%s,
+                    idempotency_key = COALESCE(%s, idempotency_key),
                     mission_code = COALESCE(%s, mission_code)
                     -- 💡 (متطلب #4) لم نعد نكتب فوق created_at: يبقى التاريخ الفعلي للتسجيل في السيرفر
                     -- (كان بيتحصّل لوقت منتصف الليل 00:00 عند أي تعديل فيفتقد الوقت الحقيقي)
@@ -712,6 +753,7 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                 none_if_empty(mission.completion_time),
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
                 mission.team_code if mission.team_code is not None else "",
+                ikey,
                 none_if_empty(mission.mission_code),
                 mission_id
             ))

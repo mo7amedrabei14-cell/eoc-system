@@ -620,13 +620,13 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 
 /* قائمة الإشعارات — مدعومة RTL عبر logical properties */
+/* معتمة بالكامل: --glass كان شبه شفاف + backdrop blur فكان يظهر ما خلفه من المحتوى.
+   source of truth: الخلفية المعتمة من الألوان الفعلية للسمة (غامق/فاتح) بدون أي alpha. */
 .notif-dropdown {
-  background: var(--glass);
+  background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-3);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
   animation: dropdown-in 0.34s var(--ease-spring);
   transform-origin: top start;
   will-change: transform, opacity;

@@ -1642,7 +1642,6 @@ useEffect(() => {
       <div
         role="dialog"
         aria-label="الإشعارات اللحظية"
-        ref={notifRef}
         className={`notif-dropdown absolute end-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col overflow-hidden z-[80] ${notifClosing ? 'notif-dropdown-close' : ''}`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-soft)]">
@@ -2103,6 +2102,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 🔑 مفتاح ثابت لكل مرة يتفتح فيها فورم "مهمة جديدة" - بيتبعت مع كل محاولة إرسال
   // عشان السيرفر يقدر يرفض أي تكرار حتى لو الزرار اتضغط أكتر من مرة أو حصل تأخير في الشبكة.
   const newMissionIdempotencyKey = useRef(null);
+  // 🔒 قفل إرسال لحظي (متزامن): يمنع أي ضغطة مزدوجة / Enter متكرر أثناء تنفيذ mutation
+  // (isSubmitting هو state غير متزامن، فحده وحده لا يمنع السباق في نفس الـ tick)
+  const submitLockRef = useRef(false);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
   
   const [returnModalOpen, setReturnModalOpen] = useState(false);
@@ -2345,11 +2347,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const confirmDeleteMission = async () => {
     if (!missionToDelete) return;
+    // 🔒 قفل متزامن: mutation واحدة في نفس السياق في كل لحظة (حذف ↔ إرسال/إرجاع...)
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) { setMissionToDelete(null); fetchMissions(); } 
+      if (res.ok) { setMissionToDelete(null); fetchMissions(); }
     } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
+    finally { submitLockRef.current = false; }
   };
 
   const handleClearAllMissions = () => {
@@ -2489,8 +2495,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   const handleSubmit = async (submitStatus) => {
-     // 🛡️ منع الإرسال المزدوج: لو فيه طلب لسه ماشي، تجاهل أي ضغطة تانية على أي زرار إرسال
-     if (isSubmitting) return;
+     // 🛡️ منع الإرسال المزدوج: قفل متزامن (useRef) + تعطيل الأزرار (state) —
+     // القفل يُغلق لحظياً قبل أي await، فلا يمر أي double-click / Enter متكرر.
+     if (submitLockRef.current || isSubmitting) return;
+     submitLockRef.current = true;
      setIsSubmitting(true);
      try {
        const activeParticipants = {}; 
@@ -2619,7 +2627,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errorData.detail}`);
        }
      } catch (error) { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
-     finally { setIsSubmitting(false); }
+     finally { setIsSubmitting(false); submitLockRef.current = false; }
   };
 
   const StatusBadge = ({ status }) => {
@@ -5733,7 +5741,17 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
             </select>
           </div>
 
-          {isOwner && <button onClick={handleExportExcel} className="btn-ghost text-green-500 border border-green-500/30 w-full md:w-auto justify-center"><ExcelIcon /> تصدير سجل القوة البشرية</button>}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              data-tip="تصدير السجل إلى Excel"
+              className="action-btn action-btn--ok shrink-0"
+            >
+              <ExcelIcon />
+              <span className="hidden md:inline">تصدير سجل القوة البشرية</span>
+            </button>
+          )}
         </div>
 
         {/* #13: فلتر المشاركين حسب حقيقة الـ Backend — يظهر لحظياً مع الـ Realtime */}
