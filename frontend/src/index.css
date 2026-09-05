@@ -1330,3 +1330,290 @@ input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
   100% { background-color: transparent; }
 }
 .update-glow-notif { animation: update-glow-notif 2.2s var(--ease-out); }
+
+/* ════════════════════════════════════════════════════════════════
+   PREMIUM ELEVATION — نظام الرفع البصري الموحّد (EOC Command Layer)
+   ────────────────────────────────────────────────────────────────
+   مرجع التصميم: Lightswind-style interaction quality
+   (Interactive Cards / Morphing surfaces / Premium Buttons /
+    Fluid Panels / Custom Loaders / Micro-interactions)
+   مطبّقة بطريقة خفيفة على الـ GPU (transform/opacity فقط) وبشخصية EOC
+   — لا WebGL ثقيلة، لا لصوصية، لا clutter.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── 24) رمز ذكاء اصطناعي (بنفسجي) كجزء من البالتة الدلالية ── */
+:root {
+  --ai: #b17af8;
+  --ai-soft: rgba(177, 122, 248, 0.14);
+  --accent-brand-hi: #ff3b30;
+  --hairline-global: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+}
+:root[data-theme="light"] {
+  --ai: #7c3aed;
+  --ai-soft: rgba(124, 58, 237, 0.11);
+}
+
+/* ── 25) توحيد الألوان الدلالية — إلغاء الألوان العشوائية ──
+   كل نصوص/خلفيات/حدود Tailwind الزرقاء والخضراء والحمراء والبنفسجية
+   تُوجَّه إلى رموز النظام عوضًا عن hex ثابتة:
+     Red/Danger → --accent (#C70000 family)   Blue/Info → --info
+     Green/OK   → --ok                         Orange/Warn → --warn
+     Purple/AI  → --ai                         Teal → --ok
+   → لون واحد يُدار من مكان واحد + يتبع الثيمين تلقائيًا. */
+.app-shell :is(.text-red-600, .text-red-500, .text-red-400) { color: var(--accent) !important; }
+.app-shell :is(.text-blue-600, .text-blue-500, .text-blue-400, .text-blue-300) { color: var(--info) !important; }
+.app-shell :is(.text-green-600, .text-green-500, .text-green-400, .text-teal-500) { color: var(--ok) !important; }
+.app-shell :is(.text-orange-500, .text-orange-400) { color: var(--warn) !important; }
+.app-shell :is(.text-purple-700, .text-purple-500, .text-purple-400, .text-purple-300) { color: var(--ai) !important; }
+
+/* خلفيات الصلب (الأزرار) — عائلة الخطر فقط توحَّد مع الهوية (#C70000)
+   البقية (أخضر/أزرق/بنفسجي/برتقالي) تبقى كدرجات Tailwind العميقة
+   حتى يظل النص الأبيض فوقها ضمن حد الأداء اللوني (لا استرخاص للنقيضين). */
+.app-shell .bg-red-700, .app-shell .bg-red-600, .app-shell .bg-red-500 { background-color: var(--accent) !important; }
+
+/* خلفيات/حدود ملوّنة شفافة → نُقدّمه رموز ناعمة */
+.app-shell :is(.bg-red-500\/10, .bg-red-500\/20, .bg-red-500\/5) { background-color: var(--danger-soft) !important; }
+.app-shell :is(.bg-blue-500\/10, .bg-blue-500\/20, .bg-blue-500\/5) { background-color: var(--info-soft) !important; }
+.app-shell :is(.bg-green-500\/10, .bg-green-500\/20, .bg-green-500\/5) { background-color: var(--ok-soft) !important; }
+.app-shell :is(.bg-orange-500\/10, .bg-orange-500\/20) { background-color: var(--warn-soft) !important; }
+.app-shell :is(.bg-purple-500\/10, .bg-purple-500\/20, .bg-purple-600\/50) { background-color: var(--ai-soft) !important; }
+.app-shell :is(.bg-teal-500\/10) { background-color: var(--ok-soft) !important; }
+
+.app-shell :is(.border-red-500, .border-red-500\/50, .border-red-500\/30, .border-red-500\/20, .border-red-600\/30) { border-color: color-mix(in srgb, var(--accent) 45%, transparent) !important; }
+.app-shell :is(.border-blue-500, .border-blue-500\/50, .border-blue-500\/30, .border-blue-500\/20) { border-color: color-mix(in srgb, var(--info) 45%, transparent) !important; }
+.app-shell :is(.border-green-500, .border-green-500\/50, .border-green-500\/30, .border-green-500\/20, .border-green-600\/30) { border-color: color-mix(in srgb, var(--ok) 45%, transparent) !important; }
+.app-shell :is(.border-orange-500, .border-orange-500\/50, .border-orange-500\/30, .border-orange-500\/20) { border-color: color-mix(in srgb, var(--warn) 45%, transparent) !important; }
+.app-shell :is(.border-purple-500, .border-purple-500\/50, .border-purple-500\/30, .border-purple-500\/20) { border-color: color-mix(in srgb, var(--ai) 45%, transparent) !important; }
+.app-shell :is(.border-teal-500\/20) { border-color: color-mix(in srgb, var(--ok) 40%, transparent) !important; }
+
+/* ── 26) الجداول — Premium Data Grid ──
+   رأس ثابت بهبوط طفيف، صف بتفاعل أكسنت عند الـ hover،
+   دخول متتابع للصفوف، وقيم tabular ثابتة. */
+.app-shell table thead th {
+  position: relative;
+  background: color-mix(in srgb, var(--surface-3) 92%, transparent);
+  color: var(--muted);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.app-shell table tbody tr {
+  transition: background-color 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), color 0.18s var(--ease-out);
+}
+.app-shell table tbody tr:hover { background-color: color-mix(in srgb, var(--accent) 4%, transparent); }
+.app-shell table tbody td { font-variant-numeric: tabular-nums; }
+/* حركة كشف الصفوف برفق — غير قفزة، لا اطالة */
+.app-shell table tbody tr:nth-child(-n+14) { animation: fade-in 0.4s var(--ease-out) backwards; }
+.app-shell table tbody tr:nth-child(2) { animation-delay: 24ms; }
+.app-shell table tbody tr:nth-child(3) { animation-delay: 48ms; }
+.app-shell table tbody tr:nth-child(4) { animation-delay: 72ms; }
+.app-shell table tbody tr:nth-child(5) { animation-delay: 96ms; }
+.app-shell table tbody tr:nth-child(6) { animation-delay: 120ms; }
+.app-shell table tbody tr:nth-child(7) { animation-delay: 144ms; }
+.app-shell table tbody tr:nth-child(8) { animation-delay: 168ms; }
+.app-shell table tbody tr:nth-child(9) { animation-delay: 192ms; }
+.app-shell table tbody tr:nth-child(10) { animation-delay: 216ms; }
+
+/* ── 27) الأزرار — Premium Press & Shine ──
+   زر أساسي: لمعان ضوئي يمسح الزر عند الـ hover + نبضة ضغط خفيفة. */
+.btn-primary::after, .btn-accent::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 36%, rgba(255, 255, 255, 0.28) 50%, transparent 64%);
+  transform: translateX(calc(var(--shine-dir, 1) * -130%));
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.7s var(--ease-out), opacity 0.28s var(--ease-out);
+}
+[dir="ltr"] .btn-primary::after, [dir="ltr"] .btn-accent::after { --shine-dir: 1; }
+[dir="rtl"] .btn-primary::after, [dir="rtl"] .btn-accent::after { --shine-dir: -1; }
+.btn-primary:hover::after, .btn-accent:hover::after {
+  opacity: 1;
+  transform: translateX(calc(var(--shine-dir, 1) * 130%));
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary::after, .btn-accent::after { display: none; }
+}
+/* خيار "رفع عند الضغط" للزر الأساسي */
+.btn-primary:active { transform: translateY(1px) scale(0.98); }
+
+/* ── 28) البطاقات — Interactive Card Depth ──
+   حافة ضوئية علوية + توهج أكسنت عند الـ hover + زاوية تعكس اللمعان. */
+.card-surface { position: relative; }
+.card-surface::before {
+  content: "";
+  position: absolute;
+  inset-inline: -1px;
+  top: -1px;
+  height: 1px;
+  border-radius: inherit;
+  background: var(--hairline-global);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.hover-lift { position: relative; }
+.hover-lift::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -1px;
+  inset-block: 0;
+  width: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), transparent);
+  opacity: 0;
+  transform: scaleY(0.6);
+  transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out);
+  pointer-events: none;
+}
+.hover-lift:hover::after { opacity: 1; transform: scaleY(1); }
+.hover-lift:hover { box-shadow: var(--shadow-2), 0 0 30px -14px var(--accent-glow); }
+
+/* بطاقات KPI: عداد متقدّم داخل الكارت عند الـ hover */
+.kpi-card { transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), transform 0.3s var(--ease-out); }
+.kpi-card:hover { border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); }
+
+/* ── 29) المودال — Layer Choreography ──
+   خلفية تتنفس بالـ blur، الكارت يقفز بنابض ثم تظهر التفاصيل فوقه بترتيب. */
+.modal-backdrop { animation: fade-in 0.26s var(--ease-out); }
+.modal-card { animation: modal-in 0.46s var(--ease-spring); }
+.modal-card > * { animation: fade-in-up 0.5s var(--ease-out) backwards; }
+.modal-card > *:nth-child(2) { animation-delay: 60ms; }
+.modal-card > *:nth-child(3) { animation-delay: 110ms; }
+.modal-card > *:nth-child(4) { animation-delay: 160ms; }
+
+/* ── 30) الحقول — Focus & Caret Premium ── */
+.field { transition-property: border-color, box-shadow, background-color, transform, color;
+          transition-duration: 160ms, 160ms, 160ms, 160ms, 160ms;
+          transition-timing-function: var(--ease-out); }
+.field:focus { caret-color: var(--accent); }
+.field:disabled { opacity: 0.55; cursor: not-allowed; }
+select.field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a2a6b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 0.8rem center;
+  background-size: 14px;
+  padding-inline-end: 0.9rem;
+}
+[dir="ltr"] select.field {
+  background-position: right 0.8rem center;
+}
+
+/* ── 31) الرقائق والتبويبات — Morphing Selection ──
+   الرقاقة النشطة: تحوّل شكل ناعم + مؤشر أكسنت يتوسّع من المركز. */
+.chip { transition: background-color 0.18s var(--ease-out), color 0.18s var(--ease-out), border-color 0.18s var(--ease-out), transform 0.18s var(--ease-out); }
+.chip:active { transform: scale(0.96); }
+.chip-active { position: relative; }
+.chip-active::after {
+  content: "";
+  position: absolute;
+  inset-inline: 14%;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: chip-underline 0.3s var(--ease-out);
+}
+@keyframes chip-underline {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+/* ── 32) Loaders — Custom Command Loaders ──
+   محل الـ spinner الافتراضي: قلادة حلقية EOC + نبض تحميل للبطاقات. */
+.eoc-loader {
+  width: 2.6rem; height: 2.6rem;
+  border-radius: 999px;
+  border: 2.5px solid var(--surface-3);
+  border-top-color: var(--accent);
+  box-shadow: 0 0 18px -4px var(--accent-glow);
+  animation: eoc-spin 0.8s linear infinite;
+}
+@keyframes eoc-spin { to { transform: rotate(360deg); } }
+.skeleton { border-radius: var(--radius); }
+
+/* ── 33) Toast — Premium Notify Card ──
+   حافة أكسنت جانبية + قسم شفاف يعكس نوع الحدث. */
+.toast-item { position: relative; }
+.toast-item::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: -1px;
+  inset-block: 14%;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent-deep));
+  box-shadow: 0 0 10px var(--accent-glow);
+  opacity: 0.9;
+}
+
+/* ── 34) شريط تنقّل — Morphing Rail Touch ──
+   العنصر النشط يحصل على انزياح بسيط + لمسة "مضغوطة" خفيفة عند النقر. */
+.nav-item:active { transform: scale(0.98); }
+.nav-item.is-active { font-weight: 800; }
+
+/* ── 35) Leaflet — تطابق الثيمين تمامًا ── */
+.app-shell .leaflet-container {
+  background: var(--surface-3);
+  font-family: inherit;
+}
+.app-shell .leaflet-control-zoom a {
+  background: var(--surface-2) !important;
+  color: var(--ink) !important;
+  border-color: var(--border-strong) !important;
+}
+.app-shell .leaflet-control-zoom a:hover { background: var(--surface-3) !important; }
+.app-shell .leaflet-popup-content-wrapper, .app-shell .leaflet-popup-tip {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  box-shadow: var(--shadow-2) !important;
+  border: 1px solid var(--border-strong);
+}
+.app-shell .leaflet-bar a { border-color: var(--border-strong); }
+.app-shell .leaflet-container .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  color: var(--faint);
+}
+
+/* ── 36) Empty states و Focus Ring موحّد ── */
+.empty-state { animation: fade-in 0.4s var(--ease-out); }
+.empty-state-icon {
+  box-shadow: 0 0 24px -8px var(--accent-glow);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+}
+.empty-state:hover .empty-state-icon { transform: translateY(-2px) rotate(-3deg); }
+:where(.app-shell) :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── 37) اختيار الصف / تحديد النص يتبع الهوية ── */
+.app-shell ::selection { background: color-mix(in srgb, var(--accent) 85%, transparent); color: #fff; }
+
+/* ── 38) ضبط reduced-motion على الطبقة الجديدة ── */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell table tbody tr { animation: none !important; }
+  .app-shell table tbody tr:hover td { background-color: transparent; }
+  .hover-lift::after, .card-surface::before { display: none; }
+  .chip-active::after { animation: none; }
+  .modal-card > * { animation: none !important; }
+  .toast-item::after { opacity: 0.6; }
+}
+
+/* ── 39) شاشة الدخول — احترام تقليل الحركة (Reduced Motion) ──
+   تُبطئ/توقف فقط المؤثرات الزخرفية، مع إبقاء وظائف السحب والدخول سليمة. */
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep, .ops-gauge-fill, .ripple-burst,
+  .animate-scale-pop, .live-blink, .gate-peel, .error-shake { animation: none !important; }
+  .gate-peel { transition: none; }
+}
+
+/* ── 40) بوابة السحب — نبض إرشادي هادئ للمقبض عند السكون ──
+   "تنفّس" بطيء يوجّه المستخدم الجديد نحو تفاعل السحب، ويتوقف فورًا أثناء السحب/الفتح. */
+@keyframes handle-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0.95; transform: scale(1.12); }
+}
+.handle-breathe { animation: handle-breathe 2.6s var(--ease-in-out) infinite; will-change: transform, opacity; }
+@media (prefers-reduced-motion: reduce) {
+  .handle-breathe { animation: none; opacity: 0.6; }
+}

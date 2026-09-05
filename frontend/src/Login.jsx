@@ -74,6 +74,7 @@ export default function Login() {
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const usernameRef = useRef(null);
 
   /* ── اللغة والثيم: نفس مفاتيح لوحة التحكم بالضبط ───────────── */
   const [language, setLanguage] = useState(() => localStorage.getItem('dashboard-language') || 'ar');
@@ -81,6 +82,9 @@ export default function Login() {
 
   useEffect(() => {
     localStorage.setItem('dashboard-language', language);
+    // 🎯 مزامنة الجذر الحقيقي مع اللغة (ذاتها أسلوب لوحة التحكم)
+    document.documentElement.lang = language === 'en' ? 'en' : 'ar';
+    document.documentElement.dir = language === 'en' ? 'ltr' : 'rtl';
   }, [language]);
 
   useEffect(() => {
@@ -175,6 +179,15 @@ export default function Login() {
     };
     springRef.current = requestAnimationFrame(step);
   };
+
+  // 🎯 بعد فتح البوابة، امنح لوحة المفاتيح التركيز فورًا على حقل المستخدم
+  // (لا يحتاج المستخدم أن ينقر — الوصول يكون مباشرًا بعد السحب)
+  useEffect(() => {
+    if (!showGate && usernameRef.current) {
+      const t = setTimeout(() => usernameRef.current.focus(), 360);
+      return () => clearTimeout(t);
+    }
+  }, [showGate]);
 
   // إتاحة كاملة للوحة المفاتيح (تقدم/تراجع حسب الاتجاه + Enter عند الاقتراب من النهاية)
   const handleKnobKey = (e) => {
@@ -405,8 +418,8 @@ export default function Login() {
                 }}
                 className={`absolute top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-full ${isDragging ? 'scale-110' : ''} ${isUnlocking ? 'pointer-events-none' : ''}`}
               >
-                {/* هالة متتبعة للمقبض */}
-                <span className="absolute -inset-2 rounded-full bg-[var(--accent-glow)] blur-md opacity-70" />
+                {/* هالة متتبعة للمقبض — تنفّس إرشادي عند السكون فقط */}
+                <span className={`absolute -inset-2 rounded-full bg-[var(--accent-glow)] blur-md ${!isDragging && !isUnlocking ? 'handle-breathe' : 'opacity-70'}`} />
                 {isUnlocking && <span className="absolute inset-0 rounded-full bg-[var(--ok)] animate-ping opacity-50" />}
                 {isUnlocking && <span className="ripple-burst absolute inset-6 rounded-full border-2 border-[var(--ok)]" />}
                 {/* قلب المقبض */}
@@ -559,6 +572,7 @@ export default function Login() {
                         <UserIcon />
                       </span>
                       <input
+                        ref={usernameRef}
                         type="text"
                         required
                         value={username}

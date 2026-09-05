@@ -1124,10 +1124,11 @@ def get_realtime_events(
                     FROM realtime_events e
                     LEFT JOIN users u ON e.actor_user_id = u.user_id
                     WHERE e.event_id > %s
+                      AND e.actor_user_id IS DISTINCT FROM %s
                     ORDER BY e.event_id ASC
                     LIMIT %s;
                     """,
-                    (after_id, limit),
+                    (after_id, user_id, limit),
                 )
             else:
                 branch_ids = [b["branch_id"] for b in get_user_branches(user_id)]

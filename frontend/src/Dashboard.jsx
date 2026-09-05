@@ -898,6 +898,15 @@ const formatDateTime = (val) => {
 };
 
 /* ════════════════════════════════════════════════════════════════
+   خريطة أساس حسب الثيم — World_Light_Gray في الفاتح / World_Dark_Gray في الداكن
+   حتى لا تبقى الخريطة داكنة داخل وضع فاتح مضاء (مشكلة اتساق حقيقية)
+   ════════════════════════════════════════════════════════════════ */
+const baseMapUrl = (theme) =>
+  theme === 'light'
+    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+    : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+
+/* ════════════════════════════════════════════════════════════════
    Motion Primitives — أدوات حركة قابلة لإعادة الاستخدام
    • عداد رقمي متحرك (count-up) — transform/digit فقط، يحترم reduced-motion
    • تأثير مغناطيسي خفيف للـ CTA — transform3d فقط، لا reflow
@@ -1041,6 +1050,10 @@ useEffect(() => {
 
   useEffect(() => {
     localStorage.setItem('dashboard-language', language);
+    // 🎯 مزامنة الجذر الحقيقي (html) مع اللغة: lang للقارئات + dir للمحرك
+    // (بدونها بتفضل لغة الصفحة الحقيقية عكس ما يقرأه المستخدم في الشاشة)
+    document.documentElement.lang = language === 'en' ? 'en' : 'ar';
+    document.documentElement.dir = language === 'en' ? 'ltr' : 'rtl';
   }, [language]);
 
   useEffect(() => {
@@ -1362,16 +1375,16 @@ useEffect(() => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <HomeView branches={branchesList} />;
-      case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} />;
+      case 'home': return <HomeView branches={branchesList} theme={theme} />;
+      case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} theme={theme} />;
       case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
-      case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} />;
-      case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} />;
+      case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} theme={theme} />;
+      case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} theme={theme} />;
       case 'audit': return <AuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
-      default: return <HomeView branches={branchesList} />;
+      default: return <HomeView branches={branchesList} theme={theme} />;
     }
   };
 
@@ -1713,7 +1726,7 @@ useEffect(() => {
 // ==========================================
 // 1. شاشة الداش بورد (موجز العمليات التفاعلي)
 // ==========================================
-function HomeView({ branches = [] }) {
+function HomeView({ branches = [], theme = 'dark' }) {
   const [missions, setMissions] = useState([]);
   const [news, setNews] = useState([]);
   const [globalDisasters, setGlobalDisasters] = useState([]);
@@ -1877,7 +1890,7 @@ function HomeView({ branches = [] }) {
         {/* 💡 الارتفاع بقى 300 في الموبايل و 450 في الديسكتوب */}
         <div className="h-[300px] md:h-[450px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
+            <TileLayer url={baseMapUrl(theme)} />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
                 <Marker keyboard={false} key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { setSelectedBranchName(prev => prev === branch.name ? null : branch.name); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); } }}>
@@ -1926,7 +1939,7 @@ function HomeView({ branches = [] }) {
   );
 }
 
-function BranchesAndInventoryView({ branches }) {
+function BranchesAndInventoryView({ branches, theme = 'dark' }) {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const displayedBranches = selectedBranchId ? branches.filter(b => b.id === selectedBranchId) : branches;
   const totalFirstAid = displayedBranches.reduce((sum, b) => sum + (b.first_aid_kits || 0), 0);
@@ -1970,7 +1983,7 @@ function BranchesAndInventoryView({ branches }) {
         {/* 💡 الخريطة هتاخد 350 بيكسل في الموبايل */}
         <div className="w-full lg:w-3/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl relative overflow-hidden shadow-lg z-0 h-[350px] lg:h-auto">
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
+              <TileLayer url={baseMapUrl(theme)} />
               {branches.map(branch => branch.lat && branch.lng ? (
                   <Marker keyboard={false} key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { handleSelectBranch(branch.id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('inventory-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
                     <Tooltip direction="top">
@@ -3426,6 +3439,20 @@ function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = fa
     </button>
   );
 }
+// 💡 صف تحميل بريميوم للجداول — حلقة EOC + نص قراءة لطيف بدل النص المجرد
+const TableLoadingRow = ({ colSpan = 7, label = null }) => (
+  <tr>
+    <td colSpan={colSpan} className="p-6 md:p-10 text-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="eoc-loader"></div>
+        <span className="text-xs font-bold text-[var(--faint)] tracking-wide">
+          {label || 'جاري التحميل…'}
+        </span>
+      </div>
+    </td>
+  </tr>
+);
+
 function InventoryCard({ title, value, unit, color }) {
   return (
     <div className="kpi-card card-surface p-5 rounded-2xl">
@@ -3579,7 +3606,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
-            {isLoading ? (<tr><td colSpan="5" className="p-8 text-center text-[var(--faint)] font-bold animate-pulse">جاري سحب السجلات السرية...</td></tr>) : 
+            {isLoading ? (<TableLoadingRow colSpan={5} label="جاري سحب السجلات السرية…" />) : 
             filteredLogs.length > 0 ? filteredLogs.map((log, idx) => (
               <tr key={idx} className="hover:bg-[var(--surface-hover)] transition-colors">
                 <td className="p-4 text-[var(--muted-2)] font-mono border-l border-[var(--border)]" dir="ltr">{formatDateTime(log.created_at)}</td>
@@ -3940,7 +3967,7 @@ useEffect(() => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
-              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)]">جاري التحميل...</td></tr> : 
+              {isLoading ? <TableLoadingRow colSpan={7} /> : 
                filteredNews.length > 0 ? filteredNews.map(n => (
                 <tr key={n.news_id} className="hover:bg-[var(--surface-hover)]">
                   <td className="p-4 text-white border-l border-[var(--border)]">{n.incident_date}</td>
@@ -4359,7 +4386,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
-              {isLoading ? <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)]">جاري تحميل البيانات...</td></tr> : 
+              {isLoading ? <TableLoadingRow colSpan={7} label="جاري تحميل البيانات…" /> : 
                filteredDisasters.length > 0 ? filteredDisasters.map(d => (
                 <tr key={d.disaster_id} className="hover:bg-[var(--surface-hover)]">
                   <td className="p-4 text-white border-l border-[var(--border)]">{d.incident_date}</td>
@@ -4497,7 +4524,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 }
 
 
-function EarthquakesView({ isOwner, isSupervisor, lang = 'ar' }) {
+function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', theme = 'dark' }) {
   const [activeEqTab, setActiveEqTab] = useState('all'); 
   const [globalEqs, setGlobalEqs] = useState([]);
   const [egyptEqs, setEgyptEqs] = useState([]);
@@ -4751,7 +4778,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         {/* 💡 زوم أوت للخريطة */}
         <div className="h-[300px] md:h-[380px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative mt-4 md:mt-0">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
+            <TileLayer url={baseMapUrl(theme)}/>
             
             {(activeEqTab === 'global' || activeEqTab === 'all') && tableGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
@@ -4820,7 +4847,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {isLoading ? <tr><td colSpan="8" className="p-8 text-center text-[var(--faint)]">جاري التحميل...</td></tr> : 
+                  {isLoading ? <TableLoadingRow colSpan={8} /> : 
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
                     <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
                       <td className="p-4 text-white border-l border-[var(--border)] font-mono">{eq.date} <span className="text-[var(--faint)]">{eq.time}</span></td>
@@ -4858,7 +4885,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {isLoading ? <tr><td colSpan="6" className="p-8 text-center text-[var(--faint)]">جاري التحميل...</td></tr> : 
+                  {isLoading ? <TableLoadingRow colSpan={6} /> : 
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
                     <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
                       <td className="p-4 text-white border-l border-[var(--border)] font-mono">{eq.date} <span className="text-[var(--faint)]">{eq.time}</span></td>
@@ -4979,7 +5006,7 @@ const aiIncidentIcon = new L.DivIcon({
 // ==========================================
 // 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor - God Mode)
 // ==========================================
-function AINewsMonitorView({ branches, isOwner, lang = 'ar' }) {
+function AINewsMonitorView({ branches, isOwner, lang = 'ar', theme = 'dark' }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
 
@@ -5323,7 +5350,7 @@ const totalAiCountries = new Set(
         </div>
         <div className="h-[300px] md:h-[350px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"/>
+            <TileLayer url={baseMapUrl(theme)}/>
             
             {filteredNews.map(news => {
               const aiData = extractAiData(news.news_updates);
@@ -5799,7 +5826,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? (
-                <tr><td colSpan="8" className="p-8 text-center text-[var(--muted)] font-bold">جاري حصر وتحليل الأفراد من المهام السابقة...</td></tr>
+                <TableLoadingRow colSpan={8} label="جاري حصر وتحليل الأفراد من المهام السابقة..." />
               ) : filteredHR.length > 0 ? filteredHR.map((person, idx) => {
               const pKey = `${person.branch_id}::${person.membership_number}`;
               const flashing = flashActive[pKey] ? 'mission-flash-row' : '';
