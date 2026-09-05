@@ -1541,7 +1541,7 @@ input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
 
 /* ── 28) البطاقات — Interactive Card Depth ──
    حافة ضوئية علوية + توهج أكسنت عند الـ hover + زاوية تعكس اللمعان. */
-.card-surface { position: relative; }
+:where(.card-surface):not(.fixed):not(.absolute) { position: relative; }
 .card-surface::before {
   content: "";
   position: absolute;
