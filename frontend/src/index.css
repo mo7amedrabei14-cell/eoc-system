@@ -1617,3 +1617,24 @@ select.field {
 @media (prefers-reduced-motion: reduce) {
   .handle-breathe { animation: none; opacity: 0.6; }
 }
+
+/* ── 41) العمود اللاصق في نهاية الجداول (سجل المهام) ──
+   عمود الإجراءات: خلفية معتمة تمنع تداخل الأعمدة أثناء السحب الأفقي
+   + ظل منطقي (RTL/LTR-aware) يفصل العمود عن المحتوى المنزلق. */
+.app-shell .sticky-end-col { position: sticky; inset-inline-end: 0; }
+.app-shell .sticky-end-col::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  inset-inline-start: -14px;
+  width: 14px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+[dir="rtl"] .app-shell .sticky-end-col::before { background: linear-gradient(to right, transparent, color-mix(in srgb, #000 26%, transparent)); }
+[dir="ltr"] .app-shell .sticky-end-col::before { background: linear-gradient(to left, transparent, color-mix(in srgb, #000 26%, transparent)); }
+.app-shell [dir="rtl"] .sticky-end-col::before { background: linear-gradient(to right, transparent, color-mix(in srgb, #000 26%, transparent)); }
+.app-shell [dir="ltr"] .sticky-end-col::before { background: linear-gradient(to left, transparent, color-mix(in srgb, #000 26%, transparent)); }
+.app-shell [data-theme="light"] [dir="rtl"] .sticky-end-col::before,
+.app-shell [data-theme="light"] .sticky-end-col::before { background: linear-gradient(to right, transparent, color-mix(in srgb, #000 10%, transparent)); }
+.app-shell [data-theme="light"] [dir="ltr"] .sticky-end-col::before { background: linear-gradient(to left, transparent, color-mix(in srgb, #000 10%, transparent)); }

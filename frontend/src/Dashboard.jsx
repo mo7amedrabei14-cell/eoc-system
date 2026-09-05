@@ -2862,28 +2862,28 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         )}
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap">
-          <thead className="sticky top-0 z-20 bg-[var(--surface-3)]">
-            <tr className="text-[var(--muted)] text-sm">
-              <th className="p-4 font-semibold border-l border-[var(--border)]">تاريخ الإنشاء</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">تاريخ المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)] text-blue-400">تصنيف المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)] text-green-400">فترة المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">كود المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">التمركز (الفرع)</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">اسم المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">السيارات والسائقين</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">نوع المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">مكان المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">مسؤول المهمة</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">مصدر البلاغ</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">تاريخ التحرك</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">تاريخ الانتهاء</th>
-              <th className="p-4 font-semibold border-l border-[var(--border)]">الحالة</th>
-              <th className="p-4 font-semibold sticky left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.0)] border-l border-[var(--border)]">الإجراءات</th>
+          <table className="w-full text-start border-separate border-spacing-0">
+          <thead className="sticky top-0 z-20">
+            <tr className="text-[var(--muted-2)] text-[11px] md:text-xs">
+              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ الإنشاء</th>
+              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--accent)]">تاريخ المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--info)]">تصنيف المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--ok)]">فترة المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">كود المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">التمركز (الفرع)</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">اسم المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">السيارات والسائقين</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">نوع المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مكان المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مسؤول المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مصدر البلاغ</th>
+              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ التحرك</th>
+              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ الانتهاء</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">الحالة</th>
+              <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">الإجراءات</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border)]">
+          <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan="16" className="p-6">
@@ -2903,34 +2903,44 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </tr>
             ) :
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} className={`transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'}`}>
-                <td className="p-4 text-[var(--muted)] font-mono border-l border-[var(--border)]">{formatDateTime(m.created_at)}</td>
-                <td className="p-4 font-bold font-mono border-l border-[var(--border)] bg-[var(--accent-softer)]">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</td>
-                <td className="p-4 font-bold border-l border-[var(--border)]"><span className={`px-3 py-1 rounded-lg text-xs font-bold ${m.mission_classification === 'مفتوحة' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-[var(--surface-week)] text-[var(--muted)] border border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
-                <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-mono text-xs whitespace-nowrap text-center">
-                  <div className="flex items-center justify-center gap-2 bg-[var(--surface-2)] px-2 py-1.5 rounded-lg border border-[var(--border)]">
+              <tr key={`mission-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'}`}>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.created_at)}</td>
+                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</span></td>
+                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
+                <td className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60">
+                  <div className="inline-flex items-center gap-2 bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] font-mono text-[11px] whitespace-nowrap">
                     <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : 'غير مسجل')}</span>
                     <span className="text-[var(--faint)]">|</span>
                     <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
                 </td>
-                <td className="p-4 font-mono text-[var(--ink-2)] border-l border-[var(--border)]">{m.mission_code}</td>
-                <td className="p-4 font-bold border-l border-[var(--border)]">{m.branch}</td>
-                <td className="p-4 text-[var(--ink)] font-bold border-l border-[var(--border)] mission-name-cell">{m.mission_name}</td>
-                <td className="p-4 text-[var(--ok)] border-l border-[var(--border)]">{m.vehicles_info}</td>
-                <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{m.mission_type}</td>
-                <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{m.mission_location}</td>
-                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.responsible_person}</td>
-                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.data_source}</td>
-                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.departure_date}</td>
-                <td className="p-4 text-[var(--muted)] border-l border-[var(--border)]">{m.completion_date}</td>
-                <td className="p-4 border-l border-[var(--border)] text-center"><StatusBadge status={m.status} /></td>
-<td className="p-4 sticky left-0 z-10 bg-[var(--surface)] shadow-[4px_0_15px_rgba(0,0,0,0.0)] border-l border-[var(--border)]">
-  <div className="flex justify-center gap-2">
-    <button onClick={() => handleViewMission(m.mission_id)} className="icon-btn" title="فتح المهمة"><EyeIcon /></button>
-    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
-  </div>
-</td>
+                <td className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_code}</td>
+                <td className="px-3 md:px-4 py-3 font-semibold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.branch}</td>
+                <td className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60 min-w-[180px] max-w-[280px]">
+                  <button
+                    type="button"
+                    onClick={() => handleViewMission(m.mission_id)}
+                    aria-label={`فتح مهمة: ${m.mission_name}`}
+                    title={m.mission_name}
+                    className="mission-name-cell block w-full max-w-full truncate bg-transparent border-0 p-0 text-start font-bold cursor-pointer underline underline-offset-4 decoration-transparent transition-[text-decoration-color,transform] duration-200 hover:decoration-[var(--accent)] active:scale-[0.99]"
+                  >
+                    {m.mission_name}
+                  </button>
+                </td>
+                <td className="px-3 md:px-4 py-3 text-[var(--ok)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[140px] max-w-[220px]"><span className="block truncate" title={m.vehicles_info}>{m.vehicles_info}</span></td>
+                <td className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_type}</td>
+                <td className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.departure_date}</td>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.completion_date}</td>
+                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><StatusBadge status={m.status} /></td>
+                <td className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
+                  <div className="flex justify-center gap-1.5">
+                    <button onClick={() => handleViewMission(m.mission_id)} className="icon-btn" title="فتح المهمة"><EyeIcon /></button>
+                    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
+                  </div>
+                </td>
               </tr>
             )) : (
               <tr><td colSpan="16"><div className="empty-state"><div className="empty-state-icon">📋</div><p className="text-sm font-semibold text-[var(--muted)]">لا توجد مهام مطابقة</p></div></td></tr>

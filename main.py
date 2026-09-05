@@ -1010,19 +1010,31 @@ def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizati
         with connection.cursor() as cursor:
             # ضفنا l.entity_type عشان نفلتر بيه
             cursor.execute("""
-                SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
+                SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
                 ORDER BY l.created_at DESC LIMIT %s OFFSET %s;
             """, (limit, skip))
             rows = cursor.fetchall()
+            # 🎯 عرض/جلب الـactor في سجل النظام بشكل سليم (إصلاح "مستخدم محذوف" عند المالك):
+            #    - الاسم الرباعي إن وُجد، وإلا نستعين بـ username كبديل.
+            #    - لو السجل نفسه بلا user_id (فعل بلا فاعل مسجّل) → "غير محدد"
+            #      بدل الوصف المضلِّل "مستخدم محذوف" — دون تغيير أي مستخدم/صلاحية/بيانات.
+            def _actor_name(r):
+                if r[2]:
+                    return r[2]
+                if r[3]:
+                    return r[3]
+                if r[1] is not None:
+                    return f"مستخدم #{r[1]}"
+                return "غير محدد"
             return [
                 {
-                    "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
-                    "action": r[3], 
-                    "details": r[4].get("action_text", str(r[4])) if isinstance(r[4], dict) else str(r[4] or ""), 
-                    "created_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else "",
-                    "entity_type": r[6]
+                    "log_id": r[0], "user_id": r[1], "full_name": _actor_name(r),
+                    "action": r[4],
+                    "details": r[5].get("action_text", str(r[5])) if isinstance(r[5], dict) else str(r[5] or ""),
+                    "created_at": r[6].strftime("%Y-%m-%d %H:%M:%S") if r[6] else "",
+                    "entity_type": r[7]
                 } for r in rows
             ]
     except Exception as e:
