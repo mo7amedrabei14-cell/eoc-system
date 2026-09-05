@@ -45,12 +45,14 @@ WHERE mp.volunteer_id IS NULL
   AND (mp.branch_id IS NULL OR v.branch_id IS NULL OR v.branch_id = mp.branch_id);
 
 -- ── 4) Backfill: user_id = حساب دخول المتطوع إن وُجد (username = رقم العضوية) ──
+-- ملاحظة: في UPDATE...FROM لا يمكن الرجوع لجدول الهدف (mp) داخل JOIN في FROM—
+--           يُسمح به في WHERE فقط، فأدرجنا JOIN في شروط WHERE.
 UPDATE mission_participants mp
 SET user_id = u.user_id
-FROM users u
-JOIN volunteers v ON v.volunteer_id = mp.volunteer_id
+FROM users u, volunteers v
 WHERE mp.user_id IS NULL
   AND mp.volunteer_id IS NOT NULL
+  AND v.volunteer_id = mp.volunteer_id
   AND LOWER(TRIM(u.username)) = LOWER(TRIM(v.membership_number));
 
 -- ── 5) إزالة التكرارات التاريخية (نفس الهوية داخل نفس المهمة) ────────────────

@@ -448,6 +448,12 @@ const ENGLISH_UI = {
   'اليوم': 'Today',
   'جاري التحقق...': 'Checking...',
   'لا توجد بيانات': 'No data',
+  'تعذر فتح الاستمارة': 'Couldn\'t open the form',
+  'فشل تحميل بيانات الاستمارة من السيرفر.': 'Failed to load the form data from the server.',
+  'تم إبقاء الاستمارة مفتوحة — أعد المحاولة أو تواصل مع المالك.': 'The form stays open — retry or contact the owner.',
+  'رمز الخطأ:': 'Error code:',
+  'خطأ في الاتصال بالخادم': 'Server connection error',
+  'إعادة المحاولة': 'Retry',
   'غير متاح': 'Unavailable',
   'يناير': 'January',
   'فبراير': 'February',
@@ -2089,6 +2095,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentMissionData, setCurrentMissionData] = useState(null);
   const [isModalLoading, setIsModalLoading] = useState(false); // فتح فوري بسكلتون ثم البيانات
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 💡 خطأ فتح الاستمارة: يُعرض داخل المودال ولا يغلقه أبداً
+  const [modalError, setModalError] = useState(null);
+  // 💡 حماية من التكرار والسباق: الطلب قيد التشغيل + آخر مهمة فُتحت (لإعادة المحاولة)
+  const inFlightMissionRef = useRef(null);
+  const currentMissionIdRef = useRef(null);
   // 🔑 مفتاح ثابت لكل مرة يتفتح فيها فورم "مهمة جديدة" - بيتبعت مع كل محاولة إرسال
   // عشان السيرفر يقدر يرفض أي تكرار حتى لو الزرار اتضغط أكتر من مرة أو حصل تأخير في الشبكة.
   const newMissionIdempotencyKey = useRef(null);
@@ -2197,6 +2208,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         if (!data) return;
+        setModalError(null);
         setCurrentMissionData(data);
         triggerFormGlow();
         const el = (id) => document.getElementById(id);
@@ -2242,6 +2254,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const removeBeneficiary = (id) => setBeneficiaries(beneficiaries.filter(b => b.id !== id));
 
   const handleCreateNew = () => {
+    inFlightMissionRef.current = null;   // تجاهل أي استجابة مهمة قادمة متأخرة
+    currentMissionIdRef.current = null;
+    setModalError(null);
     setCurrentMissionData(null);
     newMissionIdempotencyKey.current = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
     setMissionName('');
@@ -2257,14 +2272,20 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   const handleViewMission = async (missionId) => {
+    if (inFlightMissionRef.current === missionId) return; // منع طلبات مكررة من النقر المزدوج
     const token = localStorage.getItem('access_token');
+    inFlightMissionRef.current = missionId;
+    currentMissionIdRef.current = missionId;
     // 💡 فتح فوري: المودال يظهر بسكلتون فوراً ثم تُحقن البيانات — بدون انتظار الشبكة
+    setModalError(null);
     setIsModalLoading(true);
     setIsModalOpen(true);
     try {
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (inFlightMissionRef.current !== missionId) return; // فُتحت مهمة/فورم أخرى في الأثناء — تجاهل القديم
       if (res.ok) {
         const data = await res.json();
+        if (inFlightMissionRef.current !== missionId) return; // فحص ثانٍ بعد قراءة JSON
         setCurrentMissionData(data);
         setMissionName(data.mission_name || '');
         setMissionClass(data.mission_classification || 'عادية');
@@ -2298,13 +2319,22 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         setVehicles((data.vehicles && data.vehicles.length > 0) ? data.vehicles.map((v, i) => ({ id: i, ...v })) : [{ id: Date.now() }]);
         setParticipants((data.participants && data.participants.length > 0) ? data.participants.map((p, i) => ({ id: i, ...p })) : [{ id: Date.now() }]);
         setBeneficiaries((data.beneficiaries && data.beneficiaries.length > 0) ? data.beneficiaries.map((b, i) => ({ id: i, ...b })) : [{ id: Date.now() }]);
+        inFlightMissionRef.current = null; // انتهى الطلب بنجاح — يسمح بإعادة الفتح لاحقاً
         setIsModalLoading(false);
         setIsModalOpen(true);
       } else {
+        // 💡 لا نغلق الاستمارة بسبب خطأ من السيرفر: نعرض خطأ واضحاً داخل المودال مع إعادة المحاولة
+        inFlightMissionRef.current = null;
         setIsModalLoading(false);
-        setIsModalOpen(false);
+        setModalError({ status: res.status });
       }
-    } catch (error) { console.error("Error fetching details:", error); setIsModalLoading(false); setIsModalOpen(false); }
+    } catch (error) {
+      if (inFlightMissionRef.current !== missionId) return;
+      inFlightMissionRef.current = null;
+      console.error("Error fetching details:", error);
+      setIsModalLoading(false);
+      setModalError({ status: 0 }); // فشل اتصال/شبكة
+    }
   };
 
   const getStaff = (role) => {
@@ -2916,6 +2946,30 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   </div>
                 </div>
                 <div className="skeleton h-40 w-full rounded-2xl"></div>
+              </div>
+            ) : modalError ? (
+              <div className="p-8 overflow-y-auto custom-scrollbar flex-1 grid place-items-center">
+                <div className="card-surface p-6 rounded-2xl max-w-md w-full text-center space-y-4">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-[var(--danger-soft)] text-[var(--accent)] flex items-center justify-center">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4m0 4h.01M10.29 4.86 2.7 17.2a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.71 4.86a2 2 0 0 0-3.42 0Z"/></svg>
+                  </div>
+                  <h3 className="text-lg font-bold">تعذر فتح الاستمارة</h3>
+                  <p className="text-sm text-[var(--muted)]">فشل تحميل بيانات الاستمارة من السيرفر.</p>
+                  <p className="text-xs text-[var(--faint)]">تم إبقاء الاستمارة مفتوحة — أعد المحاولة أو تواصل مع المالك.</p>
+                  <div className="flex items-center justify-center gap-2">
+                    {modalError.status === 0 ? (
+                      <span className="text-xs text-[var(--faint)]">خطأ في الاتصال بالخادم</span>
+                    ) : (
+                      <>
+                        <span className="text-xs text-[var(--faint)]">رمز الخطأ: </span>
+                        <code dir="ltr" className="text-xs font-mono bg-[var(--surface-4)] px-2 py-0.5 rounded border border-[var(--border)]">{modalError.status}</code>
+                      </>
+                    )}
+                  </div>
+                  <div className="pt-1">
+                    <button type="button" onClick={() => handleViewMission(currentMissionIdRef.current)} className="btn-primary w-full">إعادة المحاولة</button>
+                  </div>
+                </div>
               </div>
             ) : (
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
