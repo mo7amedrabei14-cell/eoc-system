@@ -492,7 +492,7 @@ export default function Login() {
               {/* القياسات: صف ثلاثي متناظر */}
               <div className="w-full max-w-md grid grid-cols-3 gap-6 sm:gap-8">
                 {[
-                  { key: 'readiness', label: language === 'ar' ? 'جاهزية العمليات' : 'Ops readiness', val: 98, color: 'var(--accent)' },
+                  { key: 'readiness', label: language === 'ar' ? 'جاهزية العمليات' : 'Ops readiness', val: 100, color: 'var(--accent)' },
                   { key: 'field', label: language === 'ar' ? 'الربط الميداني' : 'Field-team link', val: 100, color: 'var(--ok)' },
                   { key: 'secure', label: language === 'ar' ? 'تشفير القناة' : 'Channel encryption', val: 100, color: 'var(--ok)' },
                 ].map((g) => (

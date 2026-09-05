@@ -1068,6 +1068,12 @@ useEffect(() => {
   // 💡 1. حالات نظام الإشعارات والرادار (الجديدة)
   // 💡 1. حالات نظام الإشعارات والرادار (تم إضافة رصد الذكاء الاصطناعي)
   const [toasts, setToasts] = useState([]);
+  // 🎬 إغلاق التوست بأنيميشن انكماش أنيق (Premium Motion): نضيف حالة closing
+  // أولاً لكي تلعب أنيميشن الخروج (toast-out) ثم نزيل العنصر بعد انتهائها.
+  const dismissToast = (id) => {
+    setToasts(prev => prev.map(t => t.id === id ? { ...t, closing: true } : t));
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 320);
+  };
   const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false });
   // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
@@ -1205,7 +1211,7 @@ useEffect(() => {
         mission_id: e.mission_id,
         created_at: e.created_at,
       }].slice(-40));
-      setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== toastId)); }, 9000);
+      setTimeout(() => { dismissToast(toastId); }, 9000);
 
       const noticeId = `n-${e.event_id}`;
       setNotifications(prev => {
@@ -1475,7 +1481,7 @@ useEffect(() => {
       {/* 💡 4. طابور الإشعارات (يدعم إشعارات النظام العادية وإشعارات الذكاء الاصطناعي البنفسجية) */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[90%] md:w-auto min-w-[320px] max-w-lg pointer-events-none">
         {toasts.map(toastItem => (
-          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.isAi ? '!border-purple-500/50' : ''}`}>
+          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.closing ? 'toast-item-closing' : ''} ${toastItem.isAi ? '!border-purple-500/50' : ''}`}>
             <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-purple-500' : 'bg-[#c70000]'} animate-pulse`}></div>
             <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30'} rounded-full flex items-center justify-center border shrink-0`}>
               {toastItem.isAi ? <AIIcon className="w-5 h-5 animate-pulse" /> : <AlertIcon className="w-5 h-5 animate-bounce" />}
@@ -1483,7 +1489,7 @@ useEffect(() => {
             <div className="flex-1 min-w-0">
               <h4 className="text-[var(--ink)] font-bold text-sm flex justify-between items-center">
                 <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[var(--accent)] ml-1">{toastItem.user}</span>}</span>
-                <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toastItem.id))} className="text-[var(--faint)] hover:text-[var(--ink)] transition-colors shrink-0">
+                <button onClick={() => dismissToast(toastItem.id)} className="text-[var(--faint)] hover:text-[var(--ink)] transition-colors shrink-0">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </h4>
@@ -1506,7 +1512,7 @@ useEffect(() => {
             <div className="px-6 pt-7 pb-5 border-b border-[var(--border)] relative overflow-hidden">
               <div className="absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
               <div className="relative z-10 flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center shadow-[0_0_26px_rgba(199,0,0,0.22)] shrink-0">
+                <div className="sidebar-brand w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center shadow-[0_0_26px_rgba(199,0,0,0.22)] shrink-0">
                   <svg viewBox="0 0 100 100" className="w-7 h-7"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="var(--accent)" /></svg>
                 </div>
                 <div className="min-w-0">
@@ -1527,7 +1533,7 @@ useEffect(() => {
             </div>
           )}
 
-          <nav className="p-3 space-y-1.5 mt-2">
+          <nav key={isSidebarOpen ? 'nav-open' : 'nav-closed'} className="nav-shell p-3 space-y-1.5 mt-2">
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />
@@ -3264,7 +3270,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <>
                   <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">مسودة</button>
                   <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال للجوكر</button>
-                  <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
+                  <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للمتطوع</button>
                   <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
                   <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
                   {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إلغاء الإغلاق (إعادة فتح)</button>}
@@ -3283,7 +3289,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {/* 2. الإداري (الجوكر والمشرف) لو الاستمارة قيد المراجعة */}
                   {currentMissionData?.status === 'Under Review' && !isVolunteer && (
                     <>
-                      <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للتعديل</button>
+                      <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للتعديل</button>
                       <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
                       <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
                     </>
@@ -3298,7 +3304,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       {/* الإداري (الجوكر وفوق) يقدر يرجعها، يخليها مستمرة، أو يقفلها */}
                       {!isVolunteer && (
                         <>
-                          <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold">إرجاع للمتطوع</button>
+                          <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للمتطوع</button>
                           <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(34,197,94,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
                           <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-[#c70000] hover:bg-[#a50000] text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
                         </>
@@ -3342,14 +3348,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   <div className="flex gap-4 w-full">
                     <button onClick={() => { setReturnModalOpen(false); setReturnError(''); }} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">إلغاء</button>
                     <button onClick={() => {
+                      // 🔒 قفل متزامن قبل أي خطوة — لا تعديل للـDOM ولا غلق للمودال لو فيه إرسال جارٍ
+                      if (submitLockRef.current || isSubmitting) return;
                       if (returnText.trim()) {
                         document.getElementById('f_internal_notes').value = `[مطلوب تعديل]: ${returnText}`;
                         setReturnModalOpen(false);
                         setReturnText('');
                         setReturnError('');
                         handleSubmit('Returned');
-                      } else { 
-                        setReturnError('برجاء كتابة سبب الإرجاع بوضوح لتوجيه المتطوع!'); 
+                      } else {
+                        setReturnError('برجاء كتابة سبب الإرجاع بوضوح لتوجيه المتطوع!');
                       }
                     }} disabled={isSubmitting} className="flex-1 bg-yellow-600 hover:bg-yellow-500 text-gray-900 px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(202,138,4,0.3)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">تأكيد الإرجاع</button>
                   </div>
@@ -3411,8 +3419,6 @@ function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = fa
     <button onClick={onClick} title={!isOpen ? label : ''} className={`nav-item active:scale-[0.98] ${isActive ? 'is-active' : ''} ${isOpen ? '' : 'w-14 justify-center mx-auto'}`}>
       <div className="shrink-0 relative">
         {icon}
-        {/* 💡 نقطة التنبيه والأيقونة مقفولة */}
-        {hasUpdate && <span className="absolute -top-1 -end-1 w-2.5 h-2.5 bg-[#ff4d4d] rounded-full animate-pulse border border-[var(--bg)] shadow-[0_0_5px_rgba(199,0,0,0.8)]"></span>}
       </div>
       <span className={`nav-label font-bold text-sm tracking-wide flex-1 text-start ${isOpen ? 'nav-label-on' : 'nav-label-off'}`}>{label}</span>
       {/* 💡 نقطة التنبيه والقائمة مفتوحة (صغيرة في نهاية الصف) */}
