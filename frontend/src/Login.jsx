@@ -550,7 +550,6 @@ export default function Login() {
 
             {/* نموذج الوصول الموحّد */}
             <div
-              key={showGate ? 'gate' : 'form'}
               className="p-7 sm:p-10 lg:p-10"
             >
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start gap-8 lg:gap-12">
