@@ -10,6 +10,7 @@ import json
 
 # ملفات المشروع الخاصة بيك
 from audit import create_audit_log
+from realtime import notify_participant_accounts
 from db import get_connection
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
@@ -385,6 +386,110 @@ class MissionCreate(BaseModel):
     eoc_staff: List[EOCStaffModel] = []
 
 
+# =============================================================================
+# هوية المشارِك — الجذر الحقيقي (#4)
+# المشارك لم يعد مجرد اسم/صفة نصية تُطابَق بالنصوص؛ الهوية الفعلية (volunteer_id /
+# user_id / membership_number) تتحل من قاعدة البيانات نفسها وتُخزَّن مع المشاركة.
+# => مصدر الحقيقة هو الـ Database، لا أسماء الأشخاص ولا الـ React state.
+# =============================================================================
+
+def resolve_participant_identity(cursor, part):
+    """
+    يعيد (volunteer_id, user_id, membership_number, owner_mission_id) للمشارك:
+
+    - المتطوع: يُربط بسجل volunteers عبر رقم العضوية (participation_role = رقم العضوية).
+      ومنه نشتق user_id لو للمتطوع حساب دخول (username = رقم العضوية).
+    - غير المتطوع: نحتفظ برقم/صفة العرض كما هو (سلوك قائم).
+    - owner_mission_id: إن كان المشارك ما زال ملتحقاً بمهمة نشطة أخرى → رقمها
+      (يستخدمه رادار التتبع لمنع خروج المتطوع في مهمتين معاً)، وإلا None.
+    """
+    membership = (part.participation_role or "").strip()
+    volunteer_id = None
+    user_id = None
+    owner_mission_id = None
+
+    if part.participant_type == "volunteer" and membership:
+        # 1. الربط بسجل المتطوع بالرقم الموحّد (نفس الفرع أولاً)
+        cursor.execute(
+            """
+            SELECT v.volunteer_id, v.membership_number
+            FROM volunteers v
+            WHERE LOWER(TRIM(v.membership_number)) = LOWER(%s)
+            ORDER BY (v.branch_id IS NULL OR %s IS NULL OR v.branch_id = %s) DESC, v.volunteer_id ASC
+            LIMIT 1;
+            """,
+            (membership, part.branch_id, part.branch_id),
+        )
+        row = cursor.fetchone()
+        if row:
+            volunteer_id = row[0]
+            if row[1]:
+                membership = row[1]  # الرقم الرسمي كما في سجل المتطوع
+            # 2. حساب دخول المتطوع إن وُجد (username = رقم العضوية)
+            cursor.execute(
+                """
+                SELECT u.user_id
+                FROM users u
+                JOIN volunteers v ON v.volunteer_id = %s
+                WHERE LOWER(TRIM(u.username)) = LOWER(TRIM(v.membership_number))
+                LIMIT 1;
+                """,
+                (volunteer_id,),
+            )
+            ur = cursor.fetchone()
+            if ur:
+                user_id = ur[0]
+
+    # 3. رادار المنع: هل ما زال ملتحقاً بمهمة نشطة أخرى؟ (بالهوية الفعلية، لا بالنصوص)
+    #    تعريف "النشطة" مطابق تماماً لتعريف القوة البشرية (same source of truth):
+    #    المسوّدة ليست تحركاً فعلياً، فمن كان مدرجاً في مسودة فقط لا يمنع تكليفه.
+    if part.return_status == "مازال بالمهمة" and membership:
+        if volunteer_id is not None:
+            cursor.execute(
+                """
+                SELECT m.mission_name
+                FROM mission_participants p
+                JOIN missions m ON p.mission_id = m.mission_id
+                WHERE p.volunteer_id = %s AND p.return_status = 'مازال بالمهمة'
+                  AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
+                LIMIT 1;
+                """,
+                (volunteer_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT m.mission_name
+                FROM mission_participants p
+                JOIN missions m ON p.mission_id = m.mission_id
+                WHERE p.membership_number = %s AND p.return_status = 'مازال بالمهمة'
+                  AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
+                LIMIT 1;
+                """,
+                (membership,),
+            )
+        row = cursor.fetchone()
+        if row:
+            owner_mission_id = row[0]
+
+    return volunteer_id, user_id, membership, owner_mission_id
+
+
+def dedupe_participants(participants):
+    """يمنع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الإدخال) — يحتفظ بآخر إدخال."""
+    seen = set()
+    result = []
+    for part in reversed(participants):
+        if part.participant_type == "volunteer":
+            key = (part.branch_id, (part.participation_role or "").strip().lower())
+            if key in seen:
+                continue
+            seen.add(key)
+        result.append(part)
+    result.reverse()
+    return result
+
+
 @app.get("/api/missions")
 def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -514,26 +619,26 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
 
-            for part in mission.participants:
+            # منع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الرادار والإدخال)
+            participant_user_ids = []
+            for part in dedupe_participants(mission.participants):
                 # 1. أوتوميشن الإغلاق
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
-                
-                # 2. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض
-                if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':
-                    cursor.execute("""
-                        SELECT m.mission_name FROM mission_participants p
-                        JOIN missions m ON p.mission_id = m.mission_id
-                        WHERE p.participation_role = %s AND p.return_status = 'مازال بالمهمة' AND m.status NOT IN ('Completed', 'Cancelled', 'Returned')
-                    """, (part.participation_role,))
-                    active_in_other = cursor.fetchone()
-                    if active_in_other:
-                        raise Exception(f"المشارك '{part.full_name}' (رقم {part.participation_role}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other[0]}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً.")
+
+                # 2. الهوية الفعلية (الـ DB هي مصدر الحقيقة): ربط المتطوع + حساب دخوله + رادار المنع
+                volunteer_id, user_id, membership, active_in_other = resolve_participant_identity(cursor, part)
+                if user_id:
+                    participant_user_ids.append(user_id)
+
+                # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية لا بالنصوص)
+                if active_in_other is not None:
+                    raise Exception(f"المشارك '{part.full_name}' (رقم {membership}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً.")
 
                 cursor.execute("""
-                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -546,6 +651,13 @@ def create_mission(mission: MissionCreate, credentials: HTTPAuthorizationCredent
                 create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بإنشاء استمارة جديدة بكود: {mission_code}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
+
+            # 💡 إشعار المتطوعين المشاركين المربوطين بحسابات دخول (بالـ user_id لا الأسماء)
+            if participant_user_ids:
+                try:
+                    notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, participant_user_ids)
+                except Exception as e:
+                    print(f"Participant notify error: {e}")
 
             connection.commit()
             return {"message": "تم حفظ المهمة بنجاح", "mission_code": mission_code, "mission_id": mission_id}
@@ -605,6 +717,30 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
             ))
 
             # 2. مسح التفاصيل القديمة (عشان منعملش تكرار)
+            # ── حفظ (snapshot) بيانات المشاركين الحالية قبل المسح —
+            #    الاستمارة لا تعرض كل الأعمدة (مثل team_name / team_code، ومرحلة وتواجد
+            #    المتطوع في المهام غير المفتوحة). فالقاعدة الحقيقية: الـ DB هي مصدر الحقيقة،
+            #    وأي تعديل في الاستمارة لا يجب أن يمسح بيانات يُدخلها نظام/مستخدم آخر.
+            existing_participants = {}
+            cursor.execute("""
+                SELECT participant_type, full_name, participation_role, membership_number, branch_id,
+                       assigned_itinerary, return_status, phase_name, stay_type, team_name, team_code,
+                       user_id
+                FROM mission_participants
+                WHERE mission_id = %s
+                ORDER BY participant_id DESC;
+            """, (mission_id,))
+            for (ptype, fname, prole, mnum, bid, itin, rstatus, phase, stay, tname, tcode, puser_id) in cursor.fetchall():
+                mkey = (mnum or '').strip().lower() if (mnum or '').strip() else (fname or '').strip().lower()
+                if not mkey:
+                    continue
+                ident = (str(bid or ''), mkey)
+                if ident in existing_participants:
+                    continue  # أقدم صف لنفس الهوية داخل نفس المهمة — نأخذ أحدثه كمصدر
+                existing_participants[ident] = {
+                    "phase_name": phase, "stay_type": stay, "team_name": tname or '', "team_code": tcode or '',
+                    "user_id": puser_id,
+                }
             cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_participants WHERE mission_id = %s", (mission_id,))
@@ -618,22 +754,43 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
 
-            for part in mission.participants:
+            # منع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الرادار والإدخال)
+            participant_user_ids = []
+            reinserted_idents = set()
+            for part in dedupe_participants(mission.participants):
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
-                
-                if part.return_status == 'مازال بالمهمة' and part.participation_role.strip() != '':
-                    cursor.execute("""
-                        SELECT m.mission_name FROM mission_participants p
-                        JOIN missions m ON p.mission_id = m.mission_id
-                        WHERE p.participation_role = %s AND p.return_status = 'مازال بالمهمة' 
-                        AND m.status NOT IN ('Completed', 'Cancelled', 'Returned') AND m.mission_id != %s
-                    """, (part.participation_role, mission_id))
-                    active_in_other = cursor.fetchone()
-                    if active_in_other:
-                        raise Exception(f"المشارك '{part.full_name}' (رقم {part.participation_role}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other[0]}).\n\nلا يمكن إضافته أو تحديث بياناته حتى يتم تسجيل عودته أولاً.")
 
-                cursor.execute("INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                # الهوية الفعلية (الـ DB هي مصدر الحقيقة) + رادار المنع بالهوية لا بالنصوص
+                volunteer_id, user_id, membership, active_in_other = resolve_participant_identity(cursor, part)
+                if user_id:
+                    participant_user_ids.append(user_id)
+
+                mkey = membership.strip().lower() if (membership or '').strip() else (part.full_name or '').strip().lower()
+                if mkey:
+                    reinserted_idents.add((str(part.branch_id or ''), mkey))
+
+                if active_in_other is not None:
+                    raise Exception(f"المشارك '{part.full_name}' (رقم {membership}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته أو تحديث بياناته حتى يتم تسجيل عودته أولاً.")
+
+                # ── استعادة الحقول التي لا تعرضها/لا تُدارُ من الاستمارة (مصدر الحقيقة):
+                #    لو نفس الشخص موجود قبل التعديل بنفس الهوية، نحافظ على بياناته القائمة
+                #    إلا إذا غيّر المدخل القيمة فعلاً (القيمة غير الفارغة/الافتراضية تفوز).
+                mkey = membership.strip().lower() if (membership or '').strip() else (part.full_name or '').strip().lower()
+                prev = existing_participants.get((str(part.branch_id or ''), mkey)) if mkey else None
+                if prev:
+                    if (mission.mission_classification or '') != 'مفتوحة':
+                        if part.phase_name in (None, '', 'اليوم الأول'):
+                            part.phase_name = prev.get("phase_name") or part.phase_name
+                        if part.stay_type in (None, '', 'ذهاب وعودة'):
+                            part.stay_type = prev.get("stay_type") or part.stay_type
+                    part.team_name = part.team_name or prev.get("team_name") or ''
+                    part.team_code = part.team_code or prev.get("team_code") or ''
+
+                cursor.execute("""
+                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -646,6 +803,17 @@ def update_mission(mission_id: int, mission: MissionCreate, credentials: HTTPAut
                 create_audit_log(cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بتحديث الاستمارة أو تغيير حالتها إلى: {mission.status}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
+
+            # إشعار المتطوعين المربوطين بحسابات: من أُبقوا + من أُزيلوا من الاستمارة
+            try:
+                notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, participant_user_ids)
+                removed_user_ids = [
+                    (v.get("user_id") or 0) for ident, v in existing_participants.items()
+                    if ident not in reinserted_idents and v.get("user_id")
+                ]
+                notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, removed_user_ids)
+            except Exception as e:
+                print(f"Participant notify error: {e}")
 
             connection.commit()
             return {"message": "تم تحديث المهمة بنجاح"}
@@ -679,8 +847,8 @@ def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentia
             cursor.execute("SELECT driver_name, vehicle_number FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             mission_data["vehicles"] = [{"driver_name": r[0], "vehicle_number": r[1]} for r in cursor.fetchall()]
             
-            cursor.execute("SELECT participant_type, full_name, team_name, team_code, participation_role, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s", (mission_id,))
-            mission_data["participants"] = [{"participant_type": r[0], "full_name": r[1], "team_name": r[2], "team_code": r[3], "participation_role": r[4], "branch_id": r[5], "assigned_itinerary": r[6], "return_status": r[7], "phase_name": r[8], "stay_type": r[9]} for r in cursor.fetchall()]
+            cursor.execute("SELECT participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s ORDER BY participant_id", (mission_id,))
+            mission_data["participants"] = [{"participant_type": r[0], "full_name": r[1], "team_name": r[2], "team_code": r[3], "participation_role": r[4], "volunteer_id": r[5], "user_id": r[6], "membership_number": r[7], "branch_id": r[8], "assigned_itinerary": r[9], "return_status": r[10], "phase_name": r[11], "stay_type": r[12]} for r in cursor.fetchall()]
             
             cursor.execute("SELECT category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             mission_data["beneficiaries"] = [{"category_name": r[0], "direct_count": r[1], "indirect_count": r[2]} for r in cursor.fetchall()]
@@ -1964,80 +2132,102 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            # دالة DISTINCT ON لمنع التكرار، مع حساب المهام وإجمالي الساعات
+            # =========================================================================
+            # حساب القوة البشرية من الهوية الفعلية لا من النصوص (#4)
+            # - كل سطر مشاركة له مفتاح هوية جذري (identity key):
+            #     vid:branch:volunteer_id        (المتطوع المرتبط بسجله في volunteers)
+            #     rid:branch:membership_number   (غير مرتبط + عنده رقم عضوية/صفة)
+            #     nm:branch:full_name            (بدون رقم وصلاً — أثر تاريخي فقط)
+            # - عدد المهام = عدد المهمات الفعلية المتميزة للنفس الهوية
+            # - الساعات تُحسب من التواريخ الحقيقية للمهمة المكتملة (لا 0 ساعة بديلة)
+            # - المهمة الحالية تُرجع ببيانها (id/كود/اسم) حتى نعرف في أي مهمة هو الآن
+            # =========================================================================
             cursor.execute("""
-                SELECT DISTINCT ON (
-                    p.branch_id, 
-                    CASE 
-                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
-                        ELSE TRIM(p.participation_role) 
-                    END
+                WITH ident AS (
+                    SELECT
+                        mp.participant_id,
+                        mp.mission_id,
+                        mp.branch_id,
+                        mp.full_name,
+                        mp.membership_number,
+                        mp.participant_type,
+                        mp.volunteer_id,
+                        mp.return_status,
+                        CASE
+                            WHEN mp.volunteer_id IS NOT NULL THEN 'vid:' || COALESCE(mp.branch_id, 0) || ':' || mp.volunteer_id
+                            WHEN TRIM(COALESCE(mp.membership_number, '')) <> '' THEN 'rid:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.membership_number)
+                            ELSE 'nm:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.full_name)
+                        END AS k
+                    FROM mission_participants mp
+                    WHERE mp.full_name IS NOT NULL AND TRIM(mp.full_name) <> ''
+                      AND mp.participant_type IN ('volunteer', 'non_volunteer')
+                ),
+                person AS (
+                    SELECT DISTINCT ON (k)
+                        k,
+                        full_name,
+                        membership_number,
+                        participant_type,
+                        branch_id,
+                        volunteer_id
+                    FROM ident
+                    ORDER BY k, participant_id DESC
+                ),
+                -- المهمة الحالية الفعلية: مشارك "مازال بالمهمة" في مهمة غير منتهية، بالنسبة لكل هوية
+                active AS (
+                    SELECT DISTINCT ON (i.k)
+                        i.k,
+                        m.mission_id,
+                        m.mission_code,
+                        m.mission_name
+                    FROM ident i
+                    JOIN missions m ON m.mission_id = i.mission_id
+                    WHERE i.return_status = 'مازال بالمهمة'
+                      AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
+                    ORDER BY i.k, m.created_at DESC, m.mission_id DESC
+                ),
+                -- إحصاءات لكل هوية من البيانات الحقيقية فقط (مهام فعلية غير ملغاة)
+                stats AS (
+                    SELECT
+                        i.k,
+                        COUNT(DISTINCT i.mission_id)
+                            FILTER (WHERE m.status NOT IN ('Draft', 'Cancelled', 'Returned')) AS missions_count,
+                        ROUND(COALESCE(SUM(
+                            CASE
+                                WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
+                                 AND m.completion_date IS NOT NULL
+                                THEN GREATEST(
+                                    EXTRACT(EPOCH FROM (
+                                        (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
+                                        (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
+                                    )) / 3600.0,
+                                    0
+                                )
+                                ELSE 0
+                            END
+                        ), 0)::numeric, 1) AS total_hours
+                    FROM ident i
+                    JOIN missions m ON m.mission_id = i.mission_id
+                    GROUP BY i.k
                 )
+                SELECT
                     p.full_name,
-                    COALESCE(NULLIF(TRIM(p.participation_role), ''), 'بدون رقم/صفة') AS membership_number,
+                    COALESCE(NULLIF(TRIM(p.membership_number), ''), 'بدون رقم/صفة') AS membership_number,
                     p.participant_type,
-                    b.branch_name,
+                    COALESCE(b.branch_name, 'غير محدد') AS branch_name,
                     p.branch_id,
-                    (
-                        SELECT COUNT(DISTINCT m.mission_id)
-                        FROM mission_participants mp
-                        JOIN missions m ON mp.mission_id = m.mission_id
-                        WHERE mp.branch_id = p.branch_id
-                        AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                        AND (
-                            (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                            OR 
-                            ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
-                        )
-                    ) as missions_count,
-                    (
-                        SELECT ROUND(COALESCE(SUM(
-                            GREATEST(
-                                EXTRACT(EPOCH FROM (
-                                    (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
-                                    (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
-                                )) / 3600.0,
-                                0
-                            )
-                        ), 0)::numeric, 1)
-                        FROM mission_participants mp
-                        JOIN missions m ON mp.mission_id = m.mission_id
-                        WHERE mp.branch_id = p.branch_id
-                        AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                        AND m.completion_date IS NOT NULL
-                        AND (
-                            (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                            OR
-                            ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
-                        )
-                    ) as total_hours,
-                    (
-                        -- "في مهمة حاليًا" = مشارك ما زال ملتحقاً بمهمة غير منتهية فعلية (من الـ DB مش من الـ UI)
-                        -- بنفس معيار "رادار التتبع" لمنع التكرار حتى يظل متسقاً مع بقية النظام
-                        EXISTS (
-                            SELECT 1
-                            FROM mission_participants mp
-                            JOIN missions m ON mp.mission_id = m.mission_id
-                            WHERE mp.branch_id = p.branch_id
-                            AND mp.return_status = 'مازال بالمهمة'
-                            AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                            AND (
-                                (TRIM(mp.participation_role) != '' AND TRIM(mp.participation_role) = TRIM(p.participation_role))
-                                OR
-                                ((TRIM(mp.participation_role) = '' OR mp.participation_role IS NULL) AND TRIM(mp.full_name) = TRIM(p.full_name))
-                            )
-                        )
-                    ) as active_mission
-                FROM mission_participants p
-                LEFT JOIN branches b ON p.branch_id = b.branch_id
-                WHERE p.full_name IS NOT NULL AND TRIM(p.full_name) != ''
-                ORDER BY 
-                    p.branch_id, 
-                    CASE 
-                        WHEN TRIM(p.participation_role) = '' OR p.participation_role IS NULL THEN TRIM(p.full_name) 
-                        ELSE TRIM(p.participation_role) 
-                    END, 
-                    p.participant_id DESC;
+                    p.volunteer_id,
+                    COALESCE(s.missions_count, 0) AS missions_count,
+                    COALESCE(s.total_hours, 0) AS total_hours,
+                    (a.mission_id IS NOT NULL) AS active_mission,
+                    a.mission_id AS active_mission_id,
+                    a.mission_code AS active_mission_code,
+                    a.mission_name AS active_mission_name
+                FROM person p
+                LEFT JOIN stats s  ON s.k = p.k
+                LEFT JOIN active a ON a.k = p.k
+                LEFT JOIN branches b ON b.branch_id = p.branch_id
+                ORDER BY p.branch_id, p.k;
             """)
             rows = cursor.fetchall()
             result = []
@@ -2046,11 +2236,15 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     "full_name": row[0],
                     "membership_number": row[1],
                     "participant_type": row[2],
-                    "branch_name": row[3] or "غير محدد",
+                    "branch_name": row[3],
                     "branch_id": row[4],
-                    "missions_count": row[5],
-                    "total_hours": float(row[6]), # ده إجمالي الساعات
-                    "active_mission": bool(row[7])
+                    "volunteer_id": row[5],
+                    "missions_count": row[6],
+                    "total_hours": float(row[7] or 0),   # الساعات من بيانات حقيقية فقط
+                    "active_mission": bool(row[8]),
+                    "active_mission_id": row[9],
+                    "active_mission_code": row[10],
+                    "active_mission_name": row[11]
                 })
             return result
     except Exception as e:

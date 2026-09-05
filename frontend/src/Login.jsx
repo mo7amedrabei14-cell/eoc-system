@@ -252,9 +252,11 @@ export default function Login() {
       <button
         type="button"
         onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+        title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
+        aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
         className="fixed top-4 start-5 z-[60] px-4 py-2 rounded-xl border text-xs font-bold tracking-wider backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-105 hover:border-[var(--accent)] hover:!text-[var(--accent)] border-[var(--border)] bg-[var(--surface)]/70 text-[var(--muted)]"
       >
-        {language === 'ar' ? 'EN' : 'عربي'}
+        {language === 'ar' ? 'EN' : 'AR'}
       </button>
 
       <button
@@ -430,7 +432,7 @@ export default function Login() {
       {/* ═══════════ كارت القيادة (Command Deck) ═══════════ */}
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4 sm:p-8">
         <div
-          className={`w-full max-w-[1180px] bg-[var(--surface)]/85 backdrop-blur-2xl rounded-[2rem] border border-[var(--border)] shadow-[var(--shadow-3)] flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          className={`w-full max-w-[860px] bg-[var(--surface)]/85 backdrop-blur-2xl rounded-[2rem] border border-[var(--border)] shadow-[var(--shadow-3)] flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
             isMounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}
         >
@@ -470,50 +472,45 @@ export default function Login() {
           </div>
 
           {/* ─── الجسم: الجاهزية (يمينً/شمالًا) + نموذج الوصول ─── */}
-          <div className="grid md:grid-cols-[5fr_7fr]">
-            {/* جانب الجاهزية: رادار + قياسات */}
-            <div
-              key={showGate ? 'gate' : 'readiness'}
-              className="relative overflow-hidden px-6 sm:px-8 py-6 md:p-8 flex md:flex-col items-center md:items-start gap-6 bg-[var(--surface-2)]/45 md:border-e border-[var(--border)]/70"
-            >
-              <div className="pointer-events-none absolute -top-16 -start-16 w-56 h-56 rounded-full bg-[var(--accent-glow)] blur-[90px] opacity-40" />
+          <div className="flex flex-col">
+            {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة (جزء من الكارت الواحد) */}
+            <div className="relative overflow-hidden px-6 sm:px-8 pt-8 pb-6 flex flex-col items-center gap-6 bg-[var(--surface-2)]/45 border-b border-[var(--border)]/70">
+              <div className="pointer-events-none absolute -top-20 start-1/2 -translate-x-1/2 w-80 h-48 rounded-full bg-[var(--accent-glow)] blur-[95px] opacity-35" />
 
-              {/* الرادار */}
-              <div className="relative shrink-0 w-24 h-24 md:w-28 md:h-28 rounded-full border border-[var(--border-strong)] bg-[var(--surface-2)]/70 overflow-hidden">
+              {/* الرادار (مصغّر ومركزي) */}
+              <div className="relative shrink-0 w-24 h-24 rounded-full border border-[var(--border-strong)] bg-[var(--surface-2)]/70 overflow-hidden">
                 <div className="radar-sweep absolute inset-0" style={{ background: 'conic-gradient(from 0deg, var(--accent-glow) 0deg, transparent 72deg)' }} />
                 <span className="absolute inset-[18%] rounded-full border border-[var(--border)]" />
                 <span className="absolute inset-[38%] rounded-full border border-[var(--border)]" />
                 <span className="absolute top-[12%] end-[24%] w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
                 <span className="absolute bottom-[20%] start-[22%] w-1.5 h-1.5 rounded-full bg-[var(--ok)] animate-pulse" style={{ animationDelay: '1.2s' }} />
                 <span className="absolute inset-0 flex items-center justify-center">
-                  <CrescentIcon className="w-7 h-7 text-[var(--accent)] opacity-90" />
+                  <CrescentIcon className="w-6 h-6 text-[var(--accent)] opacity-90" />
                 </span>
               </div>
 
-              {/* القياسات */}
-              <div className="flex-1 w-full grid grid-cols-1 gap-4">
+              {/* القياسات: صف ثلاثي متناظر */}
+              <div className="w-full max-w-md grid grid-cols-3 gap-6 sm:gap-8">
                 {[
                   { key: 'readiness', label: language === 'ar' ? 'جاهزية العمليات' : 'Ops readiness', val: 98, color: 'var(--accent)' },
-                  { key: 'field', label: language === 'ar' ? 'الربط بالفرق الميدانية' : 'Field-team link', val: 100, color: 'var(--ok)' },
+                  { key: 'field', label: language === 'ar' ? 'الربط الميداني' : 'Field-team link', val: 100, color: 'var(--ok)' },
                   { key: 'secure', label: language === 'ar' ? 'تشفير القناة' : 'Channel encryption', val: 100, color: 'var(--ok)' },
                 ].map((g) => (
-                  <div key={g.key} className="min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="text-[11px] font-bold text-[var(--muted)] truncate">{g.label}</span>
-                      <span className="font-mono text-[11px] font-bold tabular-nums" style={{ color: g.color }}>{g.val}%</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-[var(--surface-3)] overflow-hidden">
+                  <div key={g.key} className="min-w-0 flex flex-col items-center gap-2">
+                    <span className="font-mono text-xl font-bold tabular-nums leading-none" style={{ color: g.color }}>{g.val}<span className="text-[10px] text-[var(--muted)]">%</span></span>
+                    <div className="h-1 w-full rounded-full bg-[var(--surface-3)] overflow-hidden">
                       <div className="ops-gauge-fill h-full rounded-full" style={{ width: gaugesOn ? `${g.val}%` : '0%', background: `linear-gradient(90deg, ${g.color}, var(--accent-glow))`, boxShadow: `0 0 10px ${g.color}` }} />
                     </div>
+                    <span className="text-[10px] font-bold text-[var(--muted)] truncate max-w-full">{g.label}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* جانب نموذج الوصول */}
+            {/* نموذج الوصول الموحّد */}
             <div
               key={showGate ? 'gate' : 'form'}
-              className="p-7 sm:p-10 lg:p-12 bg-[var(--surface)]"
+              className="p-7 sm:p-10 lg:p-10"
             >
               <div className="stagger flex flex-col gap-5 max-w-md mx-auto md:mx-0 w-full">
                 <div className="mb-2">

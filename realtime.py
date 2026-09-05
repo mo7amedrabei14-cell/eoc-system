@@ -35,6 +35,35 @@ def resolve_mission_creator(cursor, mission_id: Optional[int]) -> Optional[int]:
     return row[0] if row else None
 
 
+def notify_participant_accounts(
+    cursor,
+    mission_id: int,
+    mission_name: Optional[str],
+    actor_user_id: int,
+    participant_user_ids,
+):
+    """
+    توجيه حدث مخصص (بالـ user_id) لكل مشارك له حساب دخول — حتى يصل المتطوع
+    إشعار فوري بتكليفه أو بتغيّر مهمته، مهما كان فرعه (مصدر الحقيقة: الـ DB).
+    - لا يرسل للفاعل نفسه (no self-notify).
+    - لا تكرار: كل مشارك-حساب يصل له حدث واحد لكل عملية.
+    """
+    seen: set = set()
+    for uid in participant_user_ids or []:
+        if not uid or uid == actor_user_id or uid in seen:
+            continue
+        seen.add(uid)
+        create_realtime_event(
+            cursor,
+            event_type="mission",
+            action=f"تم تحديث مهمتك: {mission_name or 'مهمة'}",
+            actor_user_id=actor_user_id,
+            mission_id=mission_id,
+            details={"affected": "participant", "mission_name": mission_name or ""},
+            target_user_id=uid,
+        )
+
+
 def create_realtime_event(
     cursor,
     event_type: str,

@@ -808,8 +808,9 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   to { transform: translateX(100%); }
 }
 @keyframes mission-flash {
-  0%   { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
-  100% { background-color: transparent; }
+  0%   { background-color: color-mix(in srgb, var(--accent) 20%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 22px -6px var(--accent-glow); }
+  45%  { background-color: color-mix(in srgb, var(--accent) 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 16px -8px var(--accent-glow); }
+  100% { background-color: transparent; box-shadow: inset 0 0 0 1px transparent; }
 }
 @keyframes live-dot {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
@@ -855,7 +856,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 .stagger > *:nth-child(8) { animation-delay: 0.38s; }
 
 /* وميض خفيف على صف المهمة المتغيّرة لحظياً */
-.mission-flash-row td { animation: mission-flash 2.2s var(--ease-out) both; }
+.mission-flash-row td { animation: mission-flash 2.3s var(--ease-out); }
 
 .live-dot {
   width: 0.5rem;
@@ -962,6 +963,55 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   color: #ff5c5c !important;
   background: color-mix(in srgb, #ff4d4d 12%, transparent) !important;
 }
+
+/* ── #2 حركة الشريط الجانبي (Premium Motion) ──────────────────────────────── */
+/* انزلاق مفتوح/مغلق بنابض طري + عمق ناعم */
+.sidebar-shell {
+  transition:
+    width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    right 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.42s var(--ease-out);
+  will-change: width, transform;
+}
+.sidebar-shell:has(+ main) { box-shadow: 0 0 0 1px var(--border); }
+
+.nav-item { transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.nav-item svg { transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out); }
+.nav-item:hover svg { transform: scale(1.12); filter: drop-shadow(0 0 5px var(--accent-glow)); }
+
+/* العنصر النشط: تدرّج ناعم + توهج داخلي خفيف + أيقونة منتعشة */
+.nav-item.is-active {
+  color: var(--ink);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 15%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent), 0 3px 14px -6px var(--accent-glow);
+}
+.nav-item.is-active svg { transform: scale(1.08); filter: drop-shadow(0 0 6px var(--accent-glow)); }
+
+/* الشريط الجانبي النشط: ينزلق بدلالة الحافة المنطقية (RTL/LTR) */
+.nav-item.is-active::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 24%; bottom: 24%;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow), 0 0 22px var(--accent-glow);
+  animation: nav-rail-in 0.5s var(--ease-out) both;
+}
+@keyframes nav-rail-in {
+  from { transform: scaleY(0.25) translateX(4px); opacity: 0; }
+  to   { transform: scaleY(1) translateX(0); opacity: 1; }
+}
+/* انحسار ناعم لعنوان العنصر عند الطي (يظل مركباً ويتقلّص بدل القفز) */
+.nav-label {
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 0.28s var(--ease-out), max-width 0.3s var(--ease-out), transform 0.28s var(--ease-out);
+}
+.nav-label-on { opacity: 1; max-width: 12rem; transform: translateX(0); }
+.nav-label-off { opacity: 0; max-width: 0; transform: translateX(-6px); }
+[dir="ltr"] .nav-label-off { transform: translateX(6px); }
 
 /* ───────────────── 19) عداد الاختيار / الفلاتر الإضافية ───────────────── */
 .tooltip-trigger { position: relative; }
@@ -1112,3 +1162,37 @@ input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
   100% { transform: translateY(-16px) scale(1.045); opacity: 0; filter: blur(9px); }
 }
 .gate-peel { animation: gate-peel 0.85s var(--ease-out) forwards; }
+
+/* ───────────────────────────────────────────────
+   #8 Update Glow — "إيه اللي اتغير؟"
+   توهّج خفيف بريميوم حول أي عنصر اتغيّر لحظياً
+   (بطاقة مهمة / حقل استمارة / صف مشارك / رسالة إشعار)
+   قصير، أنيق، لافت — بدون تشويش مستمر.
+   ─────────────────────────────────────────────── */
+@keyframes update-glow {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+  30%  { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 26px 2px color-mix(in srgb, var(--accent) 22%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  100% { box-shadow: 0 0 0 0 transparent; border-color: var(--border); }
+}
+.update-glow { animation: update-glow 1.9s var(--ease-out); }
+
+@keyframes update-glow-field {
+  0%   { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 60%, transparent); }
+  40%  { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ok) 40%, transparent), 0 0 20px color-mix(in srgb, var(--ok) 25%, transparent); }
+  100% { box-shadow: inset 0 0 0 1px transparent; }
+}
+.update-glow-field { animation: update-glow-field 1.7s var(--ease-out); }
+
+@keyframes update-glow-row {
+  0%   { background-color: color-mix(in srgb, var(--accent) 14%, transparent); }
+  50%  { background-color: color-mix(in srgb, var(--accent) 8%, transparent); }
+  100% { background-color: transparent; }
+}
+.update-glow-row { animation: update-glow-row 1.9s var(--ease-out); }
+
+@keyframes update-glow-notif {
+  0%   { background-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+  55%  { background-color: color-mix(in srgb, var(--accent) 12%, transparent); }
+  100% { background-color: transparent; }
+}
+.update-glow-notif { animation: update-glow-notif 2.2s var(--ease-out); }

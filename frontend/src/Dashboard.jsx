@@ -651,6 +651,25 @@ const ENGLISH_UI = {
   'جبال الهند': 'Himalayas',
   'أنتاركتيكا': 'Antarctica',
   'جزيرة': 'Island',
+
+  // ── أفعال/أحداث الـ backend (تنبعث في realtime + audit لوحة) — تُترجم نصاً نصاً في وضع الإنجليزية
+  'إنشاء مهمة': 'Mission created',
+  'تحديث/مراجعة': 'Update / review',
+  'حذف مهمة': 'Mission deleted',
+  'إنشاء خبر': 'News created',
+  'تحديث خبر': 'News updated',
+  'حذف خبر': 'News deleted',
+  'رصد كارثة عالمية': 'Global disaster recorded',
+  'تحديث كارثة عالمية': 'Global disaster updated',
+  'حذف كارثة عالمية': 'Global disaster deleted',
+  'رفع سجل زلازل': 'Earthquake log uploaded',
+  'إضافة زلزال': 'Earthquake added',
+  'تعديل زلزال': 'Earthquake edited',
+  'رصد خبر آلي': 'AI news alert',
+  'تحديث خبر آلي': 'AI news updated',
+  'حذف خبر آلي': 'AI news deleted',
+  'إجراء:': 'Action:',
+  'الكل': 'All',
 };
 
 const translatedTextCache = new WeakMap();
@@ -665,6 +684,8 @@ const ENGLISH_UI_PREFIXES = [
   ['آخر فحص:', 'Last scan:'],
   ['🔥 خطورة:', '🔥 Severity:'],
   ['سيتم عرض مهام', 'Showing missions for'],
+  ['تم تحديث مهمتك: ', 'Your mission was updated: '],
+  ['تم إنهاء مهمتك: ', 'Your mission has ended: '],
 ];
 
 function getEnglishRegionName(value) {
@@ -724,13 +745,73 @@ function getEnglishUiText(value) {
   const prefixTranslation = ENGLISH_UI_PREFIXES.find(([arabicPrefix]) => key.startsWith(arabicPrefix));
   if (prefixTranslation) {
     const [arabicPrefix, englishPrefix] = prefixTranslation;
-    return `${leadingWhitespace}${englishPrefix}${key.slice(arabicPrefix.length)}${trailingWhitespace}`;
+    const tail = key.slice(arabicPrefix.length);
+    // نترجم أيضًا ما بعد البادئة (مثل: إجراء: حذف مهمة) حتى لا يبقى عربي في وضع الإنجليزية
+    return `${leadingWhitespace}${englishPrefix}${localizeActionSuffix(tail)}${trailingWhitespace}`;
   }
 
   const generatedTranslation = translateGeneratedUiText(key);
   if (generatedTranslation !== key) return `${leadingWhitespace}${generatedTranslation}${trailingWhitespace}`;
 
+  // أمان أخير: أي نص عربي يحوي مقاطع أفعال معروفة (action_text وغيرها) يُترجم جزئياً
+  const suffixedTranslation = localizeActionSuffix(key);
+  if (suffixedTranslation !== key) return `${leadingWhitespace}${suffixedTranslation}${trailingWhitespace}`;
+
   return value;
+}
+
+// 💡 ترجمة جُمل action_text الصادرة من الـ backend (نستبدل المقاطع العربية المعروفة
+// بالإنجليزية في وضع الإنجليزية — والاسم/البيانات المدخلة تبقى كما هي لأنها بيانات وليست نص واجهة).
+function localizeActionSuffix(value) {
+  if (typeof value !== 'string' || !value) return value;
+  const PAIRS = [
+    ['قام بإنشاء استمارة جديدة بكود: ', 'Created a new form with code: '],
+    ['قام بتحديث الاستمارة أو تغيير حالتها إلى: ', 'Updated the form or changed its status to: '],
+    ['قام بحذف الاستمارة رقم ', 'Deleted form #'],
+    ['قام بإضافة خبر محلي جديد في منطقة: ', 'Added local news in area: '],
+    ['قام بتحديث بيانات الخبر في منطقة: ', 'Updated news data in area: '],
+    ['قام بحذف الخبر رقم ', 'Deleted news #'],
+    ['قام برصد كارثة جديدة (', 'Recorded new disaster ('],
+    ['قام بتحديث بيانات كارثة (', 'Updated disaster data ('],
+    ['قام بحذف رصد الكارثة رقم ', 'Deleted disaster record #'],
+    ['قام برفع ملف زلازل عالمية يحتوي على ', 'Uploaded a global earthquake file with '],
+    ['أضاف زلزال عالمي بقوة ', 'Added a global earthquake of magnitude '],
+    ['أضاف زلزال محلي (مصر) بقوة ', 'Added a local (Egypt) earthquake of magnitude '],
+    ['عدّل بيانات زلزال عالمي بقوة ', 'Edited a global earthquake of magnitude '],
+    ['عدّل بيانات زلزال محلي (مصر) بقوة ', 'Edited a local (Egypt) earthquake of magnitude '],
+    ['محرك الذكاء الاصطناعي رصد خبراً جديداً (', 'AI engine detected new news ('],
+    ['تم تحديث بيانات رصد الذكاء الاصطناعي للخبر رقم ', 'Updated AI news data for #'],
+    ['تم حذف الرصد الآلي رقم ', 'Deleted AI detection #'],
+    [' نهائياً من النظام', ' permanently'],
+    [' نهائياً', ' permanently'],
+    [' سجل', ' records'],
+    [' في ', ' in '],
+    [' بقوة ', ' of magnitude '],
+    [' في: ', ' in: '],
+    [') في: ', ') in: '],
+  ];
+  let out = value;
+  PAIRS.forEach(([ar, en]) => { out = out.split(ar).join(en); });
+  return out;
+}
+
+// 💡 تفاصيل الإشعار (details) — نعرض الجملة النظيفة بدل JSON خام، ونترجمها في وضع الإنجليزية
+function localizeMissionDetails(raw, language) {
+  let d = raw;
+  if (typeof d === 'string') {
+    const t = d.trim();
+    if (t.startsWith('{') && t.endsWith('}')) {
+      try { d = JSON.parse(t); } catch { /* ابقِه كنص */ }
+    }
+  }
+  if (d === null || d === undefined || d === '') return d ?? '';
+  if (typeof d === 'object') {
+    if (d.action_text) return language === 'en' ? localizeActionSuffix(String(d.action_text)) : String(d.action_text);
+    if (d.mission_name) return language === 'en' ? `Your mission was updated: ${d.mission_name}` : `تم تحديث مهمتك: ${d.mission_name}`;
+    return raw; // حقل غير متوقع — نحافظ على القيمة الأصلية حتى لا نفقد معلومة
+  }
+  const s = String(d);
+  return language === 'en' ? localizeActionSuffix(s) : s;
 }
 
 function getSelectedOptionSourceText(selectElement) {
@@ -1401,9 +1482,9 @@ useEffect(() => {
                 </button>
               </h4>
               <p className={`${toastItem.isAi ? 'text-purple-400' : 'text-[#3b82f6]'} text-xs mt-2 font-bold bg-[var(--surface-3)] p-2 rounded-lg border border-[var(--border)] inline-block`}>
-                {toastItem.isAi ? 'الذكاء الاصطناعي وجد خبراً جديداً' : `إجراء: ${toastItem.action}`}
+                {toastItem.isAi ? 'الذكاء الاصطناعي وجد خبراً جديداً' : <>{'إجراء: '}{toastItem.action}</>}
               </p>
-              <p className="text-[var(--ink-2)] text-xs mt-2 leading-relaxed">{toastItem.details}</p>
+              <p className="text-[var(--ink-2)] text-xs mt-2 leading-relaxed">{localizeMissionDetails(toastItem.details, language)}</p>
             </div>
           </div>
         ))}
@@ -1413,7 +1494,7 @@ useEffect(() => {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
       )}
 
-      <aside className={`bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] transition-all duration-300 ${isSidebarOpen ? 'right-0 w-64 md:w-72' : '-right-80 md:right-0 w-64 md:w-20'}`}>
+      <aside className={`sidebar-shell bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] ${isSidebarOpen ? 'right-0 w-64 md:w-72 shadow-[12px_0_40px_-18px_rgba(0,0,0,0.55)]' : '-right-80 md:right-0 w-64 md:w-20'}`}>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isSidebarOpen ? (
             <div className="px-6 pt-7 pb-5 border-b border-[var(--border)] relative overflow-hidden">
@@ -1495,11 +1576,11 @@ useEffect(() => {
   <button
     type="button"
     onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-    title={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-    aria-label={language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+    title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
+    aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
     className="btn-ghost w-14 h-10 rounded-xl shrink-0 active:scale-[0.96]"
   >
-    {language === 'ar' ? 'EN' : 'عربي'}
+    {language === 'ar' ? 'EN' : 'AR'}
   </button>
 
   <button
@@ -1585,7 +1666,7 @@ useEffect(() => {
               key={n.id}
               type="button"
               onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))}
-              className={`notif-item notif-item-in w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)]'}`}
+              className={`notif-item notif-item-in w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)] ' + (notifications.find(x => !x.read)?.id === n.id ? 'update-glow-notif' : '')}`}
               style={{ animationDelay: `${Math.min(i, 8) * 42}ms` }}
             >
               <span className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${n.event_type === 'mission' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>
@@ -2098,6 +2179,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 🔄 إذا كانت تفاصيل مهمة مفتوحة حاليًا وتغيّرت من مستخدم آخر (حدث لحظي يخصّها)،
   // نعيد جلبها من السيرفر (مصدر الحقيقة) ونساندق حقول الاستمارة المعروضة — بدون أي reload.
   const lastSyncedEventRef = useRef(null);
+  const [formGlowOn, setFormGlowOn] = useState(false);
+  const formGlowTimer = useRef(null);
+  const triggerFormGlow = () => {
+    setFormGlowOn(true);
+    clearTimeout(formGlowTimer.current);
+    formGlowTimer.current = setTimeout(() => setFormGlowOn(false), 2400);
+  };
   useEffect(() => {
     const ev = Array.isArray(liveMissionEvents) && liveMissionEvents.length ? liveMissionEvents[0] : null;
     if (!ev || !isModalOpen || !currentMissionData) return;
@@ -2110,6 +2198,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       .then(data => {
         if (!data) return;
         setCurrentMissionData(data);
+        triggerFormGlow();
         const el = (id) => document.getElementById(id);
         const idMap = {
           f_mission_name: 'mission_name', f_mission_code: 'mission_code', f_team_code: 'team_code',
@@ -2796,7 +2885,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {isModalOpen && (
         <div key={currentMissionData ? `edit-${currentMissionData.mission_id}` : 'new'} className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
-          <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden">
+          <div className={`modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden ${formGlowOn ? 'update-glow' : ''}`}>
 
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
@@ -3263,7 +3352,7 @@ function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = fa
         {/* 💡 نقطة التنبيه والأيقونة مقفولة */}
         {hasUpdate && <span className="absolute -top-1 -end-1 w-2.5 h-2.5 bg-[#ff4d4d] rounded-full animate-pulse border border-[var(--bg)] shadow-[0_0_5px_rgba(199,0,0,0.8)]"></span>}
       </div>
-      {isOpen && <span className="font-bold text-sm tracking-wide truncate flex-1 text-start">{label}</span>}
+      <span className={`nav-label font-bold text-sm tracking-wide flex-1 text-start ${isOpen ? 'nav-label-on' : 'nav-label-off'}`}>{label}</span>
       {/* 💡 نقطة التنبيه والقائمة مفتوحة (صغيرة في نهاية الصف) */}
       {isOpen && hasUpdate && <span className="w-2 h-2 bg-[#ff4d4d] rounded-full animate-pulse shadow-[0_0_8px_rgba(199,0,0,0.8)] shrink-0"></span>}
     </button>
@@ -3280,7 +3369,7 @@ function InventoryCard({ title, value, unit, color }) {
 }
 function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`kpi-card card-surface p-5 rounded-3xl h-32 hover-lift ${borderHighlight ? 'border-l-4 border-l-[var(--accent)]' : ''}`}>{icon && <div className="relative z-10 mb-1">{icon}</div>}<p className="text-[var(--muted)] text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p></div> ); }
 
-const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2.8 12S6.1 6 12 6s9.2 6 9.2 6-3.3 6-9.2 6S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="3"/><path d="M12 9.6a2.4 2.4 0 1 0 2.4 2.4"/></svg>;
+const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.8 12S6.1 6 12 6s9.2 6 9.2 6-3.3 6-9.2 6S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="3"/><path d="M12 9.6a2.4 2.4 0 1 0 2.4 2.4"/></svg>;
 const TrashIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16"/><path d="M9.5 7V4.4h5V7"/><path d="M6.5 7l.8 12.5a2 2 0 0 0 2 1.5h5.4a2 2 0 0 0 2-1.5L17.5 7"/><path d="M10 11v5.4M14 11v5.4"/></svg>;
 const HomeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const AlertIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 4.3 2.7 17.2a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9.6v3.6"/><path d="M12 16.4h.01"/></svg>;
@@ -3290,7 +3379,7 @@ const LogoutIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24
 const InventoryIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>;
 const CheckIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const PendingIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ExcelIcon = () => <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
+const ExcelIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5L13.5 3z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 3v6h6"/><path strokeLinecap="round" strokeWidth={2} d="M9 13.5h6M9 16.5h6M9 19h4"/></svg>;
 // ==========================================
 // 5. شاشة سجل النظام (للمالك فقط)
 // ==========================================
@@ -5651,12 +5740,21 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                   </td>
                   <td className="p-4 border-l border-[var(--border)] text-center">
                     {person.active_mission ? (
-                      <span className="badge badge-active inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"/> في مهمة حاليًا
-                      </span>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="badge badge-active inline-flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"/> {lang === 'ar' ? 'في مهمة حاليًا' : 'On mission'}
+                        </span>
+                        {(person.active_mission_code || person.active_mission_name) && (
+                          <span className="text-[10px] text-[var(--accent)] font-mono font-semibold max-w-[180px] truncate"
+                                title={person.active_mission_name || person.active_mission_code || ''}>
+                            {person.active_mission_code || ''}
+                            {person.active_mission_name ? ` · ${person.active_mission_name}` : ''}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="badge badge-neutral inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-current"/> متاح
+                        <span className="w-1.5 h-1.5 rounded-full bg-current"/> {lang === 'ar' ? 'متاح' : 'Available'}
                       </span>
                     )}
                   </td>
