@@ -1056,6 +1056,49 @@ useEffect(() => {
     document.documentElement.dir = language === 'en' ? 'ltr' : 'rtl';
   }, [language]);
 
+  // ✨ توهّج الضوء (Lightswind signature) — مندوب pointermove على الجذر، حقن خفيف
+  // لطبقة .spot-glow داخل كل .spot-card وضبط --spot-x/--spot-y عبر requestAnimationFrame
+  useEffect(() => {
+    const root = dashboardRootRef.current;
+    if (!root) return;
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const spots = new Map(); // element -> glow div
+    let raf = null;
+
+    const applySpot = (el, x, y) => {
+      el.style.setProperty('--spot-x', `${x}%`);
+      el.style.setProperty('--spot-y', `${y}%`);
+    };
+
+    const onMove = (e) => {
+      const t = e.target;
+      const card = t.closest ? t.closest('.spot-card') : null;
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => applySpot(card, x, y));
+      // حقن طبقة التوهّج عند أول مرور (مرة واحدة لكل بطاقة)
+      if (!spots.has(card)) {
+        const glow = document.createElement('div');
+        glow.className = 'spot-glow';
+        card.appendChild(glow);
+        spots.set(card, glow);
+      }
+    };
+
+    root.addEventListener('pointermove', onMove, { passive: true });
+    return () => {
+      root.removeEventListener('pointermove', onMove);
+      if (raf) cancelAnimationFrame(raf);
+      spots.forEach((glow) => glow.remove());
+      spots.clear();
+    };
+  }, []);
+
   useEffect(() => {
     const root = dashboardRootRef.current;
     if (!root) return undefined;
@@ -1502,7 +1545,12 @@ useEffect(() => {
             <div className="flex-1 min-w-0">
               <h4 className="text-[var(--ink)] font-bold text-sm flex justify-between items-center">
                 <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[var(--accent)] ml-1">{toastItem.user}</span>}</span>
-                <button onClick={() => dismissToast(toastItem.id)} className="text-[var(--faint)] hover:text-[var(--ink)] transition-colors shrink-0">
+                <button
+                  onClick={() => dismissToast(toastItem.id)}
+                  aria-label={language === 'en' ? 'Dismiss notification' : 'إغلاق الإشعار'}
+                  title={language === 'en' ? 'Dismiss' : 'إغلاق'}
+                  className="text-[var(--faint)] hover:text-[var(--ink)] transition-colors shrink-0"
+                >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </h4>
@@ -1801,7 +1849,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
   return (
     <div id="home-view-top" className="space-y-8 pb-10 animate-fade-in-up scroll-mt-6">
       {/* 🛰️ حزام قيادة العمليات: ساعة حية + LIVE + ملخص تشغيلي فوري */}
-      <div className="ops-band p-5 md:p-6">
+      <div className="ops-band p-5 md:p-6 spot-card">
         <div className="flex flex-wrap items-center justify-between gap-5 relative z-10">
           <div className="flex items-center gap-4">
             <span className="ops-chip text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]"><span className="live-dot" /> LIVE</span>
@@ -1841,39 +1889,39 @@ function HomeView({ branches = [], theme = 'dark' }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
-        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام اليومية (نشطة)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><AlertIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-4xl text-[var(--ink)]">{activeDaily}</p>
             <span className="kpi-sub"><span className="live-dot" /> نشطة الآن</span>
           </div>
         </div>
-        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام المفتوحة</h3><div className="p-2 rounded-xl text-blue-500 bg-blue-500/10 border border-blue-500/20 shrink-0"><AlertIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-4xl text-[var(--ink)]">{activeOpen}</p>
             <span className="kpi-sub">تنتظر الإغلاق</span>
           </div>
         </div>
-        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-purple-400 bg-purple-500/10 border border-purple-500/20 shrink-0"><NewsIcon/></div></div>
           <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-4xl text-[var(--ink)]">{totalNews}</p><span className="text-xs font-bold text-purple-400 mb-1.5">({activeNews} استجابة)</span></div>
         </div>
-        <div className="kpi-card card-surface border-l-4 border-l-[var(--accent)] p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+        <div className="kpi-card card-surface border-l-4 border-l-[var(--accent)] p-5 rounded-3xl hover-lift relative overflow-hidden h-32 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-4xl text-[var(--ink)]">{totalGlobalDisasters}</p>
             <span className="kpi-sub">الرصد العالمي</span>
           </div>
         </div>
-        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الزلازل العالمية (اليوم)</h3><div className="p-2 rounded-xl text-red-500 bg-red-500/10 border border-red-500/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-4xl text-[var(--ink)]">{globalEqsToday}</p>
             <span className="kpi-sub">خلال 24 ساعة</span>
           </div>
         </div>
-        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32">
+        <div className="kpi-card card-surface p-5 rounded-3xl hover-lift relative overflow-hidden h-32 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-green-500 bg-green-500/10 border border-green-500/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-4xl text-[var(--ink)]">{totalEgyptEqs}</p>
@@ -2164,7 +2212,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   // 4. استخراج بيانات اليوزر وتحديد إقليمه (تأمين ثلاثي الأبعاد ضد أخطاء الكاش)
-  const currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+  let currentUserData = {};
+  try {
+    currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+  } catch (e) {
+    currentUserData = {}; // كاش تالف في localStorage — لا نكسر التطبيق
+  }
   const username = String(currentUserData?.username || '').toLowerCase();
   const userBranchId = Number(currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19);
   const userBranchName = String(currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام');
@@ -3472,7 +3525,7 @@ function InventoryCard({ title, value, unit, color }) {
     </div>
   );
 }
-function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`kpi-card card-surface p-5 rounded-3xl h-32 hover-lift ${borderHighlight ? 'border-l-4 border-l-[var(--accent)]' : ''}`}>{icon && <div className="relative z-10 mb-1">{icon}</div>}<p className="text-[var(--muted)] text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p></div> ); }
+function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`kpi-card card-surface p-5 rounded-3xl h-32 hover-lift spot-card ${borderHighlight ? 'border-l-4 border-l-[var(--accent)]' : ''}`}>{icon && <div className="relative z-10 mb-1">{icon}</div>}<p className="text-[var(--muted)] text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p></div> ); }
 
 const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.8 12S6.1 6 12 6s9.2 6 9.2 6-3.3 6-9.2 6S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="3"/><path d="M12 9.6a2.4 2.4 0 1 0 2.4 2.4"/></svg>;
 const TrashIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16"/><path d="M9.5 7V4.4h5V7"/><path d="M6.5 7l.8 12.5a2 2 0 0 0 2 1.5h5.4a2 2 0 0 0 2-1.5L17.5 7"/><path d="M10 11v5.4M14 11v5.4"/></svg>;
@@ -3698,7 +3751,16 @@ const [nd, setNd] = useState({
   const getMonthName = (dateStr) => {
     if (!dateStr) return '';
     const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    return months[new Date(dateStr).getMonth()];
+    // تتولى صيغ ISO (YYYY-MM-DD) و DD/MM/YYYY مباشرةً حتى لا يفسّرها محرك JS كيوم/شهر معكوسين
+    const iso = String(dateStr).split('T')[0].split('-');
+    if (iso.length === 3 && iso[0].length === 4) {
+      return months[Number(iso[1]) - 1] || '';
+    }
+    const dmy = String(dateStr).split('/');
+    if (dmy.length === 3) {
+      return months[Number(dmy[1]) - 1] || '';
+    }
+    return months[new Date(dateStr).getMonth()] || '';
   };
 
   const responseDiff = getMinutesDiff(nd.report_time, nd.response_time);
@@ -3849,41 +3911,6 @@ const [nd, setNd] = useState({
   };
 
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
-
-// 💡 حالة وقت آخر فحص
-const [lastRunTime, setLastRunTime] = useState('جاري التحقق...');
-
-useEffect(() => {
-  const fetchLastRun = async () => {
-    try {
-      const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/runs?per_page=1');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.workflow_runs && data.workflow_runs.length > 0) {
-          const lastRun = data.workflow_runs[0];
-          const dateObj = new Date(lastRun.updated_at);
-          const now = new Date();
-          const isToday = dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth();
-          const formattedTime = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-          const dayStr = isToday ? 'اليوم' : dateObj.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
-          
-          setLastRunTime(`${dayStr}، الساعة ${formattedTime}`);
-        } else {
-          setLastRunTime('لا توجد بيانات');
-        }
-      } else {
-        setLastRunTime('غير متاح');
-      }
-    } catch (e) {
-      setLastRunTime('غير متاح');
-    }
-  };
-  
-  fetchLastRun();
-  const interval = setInterval(fetchLastRun, 60000);
-  return () => clearInterval(interval);
-}, []);
-
 
   const branchNames = [...new Set(branches.map(b => b.name))];
   const newsTypes = ['حادث تصادم سيارات', 'حادث غرق سفينة', 'حادث تصادم قطارات', 'حادث انقلاب قطار', 'حادث انقلاب سيارة', 'حادث فقدان أشخاص في البحر', 'حادث تصادم سفن', 'انهيار مبنى تجاري', 'حريق مبنى سكني', 'حريق مبنى تجاري', 'حريق مبنى صناعي', 'حادث انفجار', 'انهيار مبنى صناعي', 'انهيار ارضي', 'حريق منطقة زراعية', 'حادث تسرب مواد كيميائية أو غازات سامة', 'سيول', 'فيضانات', 'امطار غزيرة', 'زلزال', 'انهيار مبنى سكني', 'حادث دهس اشخاص', 'حريق مبنى طبي', 'انهيار مبنى طبي', 'حريق مخزن', 'حريق مزرعة', 'حريق سيارة', 'حريق مبنى ديني', 'حريق مبنى تعليمي', 'حادث تدافع', 'حريق مبنى رياضي', 'حريق قطار', 'حادث تصادم سيارة بقطار', 'حادث تسمم', 'حريق مبنى حكومي', 'انهيار مبنى حكومي', 'انهيار مبنى ديني'];
@@ -4163,7 +4190,15 @@ useEffect(() => {
 function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   // 💡 1. تعريف دوال التاريخ في أول الشاشة عشان الكل يشوفها بدون تكرار
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
+  const getMonthName = (dateStr) => {
+    if (!dateStr) return '';
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const iso = String(dateStr).split('T')[0].split('-');
+    if (iso.length === 3 && iso[0].length === 4) return months[Number(iso[1]) - 1] || '';
+    const dmy = String(dateStr).split('/');
+    if (dmy.length === 3) return months[Number(dmy[1]) - 1] || '';
+    return months[new Date(dateStr).getMonth()] || '';
+  };
 
   // 💡 2. الحالات (States) وفلتر التاريخ
   const [disasters, setDisasters] = useState([]);
@@ -4544,7 +4579,15 @@ function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', theme = 'dark' })
 const [clearAllCode, setClearAllCode] = useState('');
   
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
+  const getMonthName = (dateStr) => {
+    if (!dateStr) return '';
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const iso = String(dateStr).split('T')[0].split('-');
+    if (iso.length === 3 && iso[0].length === 4) return months[Number(iso[1]) - 1] || '';
+    const dmy = String(dateStr).split('/');
+    if (dmy.length === 3) return months[Number(dmy[1]) - 1] || '';
+    return months[new Date(dateStr).getMonth()] || '';
+  };
 
   const [filterDate, setFilterDate] = useState(getLocalDate()); 
   const [selectedEqId, setSelectedEqId] = useState(null); // 💡 فلتر الخريطة الجديد
@@ -5018,7 +5061,15 @@ const aiIncidentIcon = new L.DivIcon({
 // ==========================================
 function AINewsMonitorView({ branches, isOwner, lang = 'ar', theme = 'dark' }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const getMonthName = (dateStr) => { if (!dateStr) return ''; const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']; return months[new Date(dateStr).getMonth()]; };
+  const getMonthName = (dateStr) => {
+    if (!dateStr) return '';
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const iso = String(dateStr).split('T')[0].split('-');
+    if (iso.length === 3 && iso[0].length === 4) return months[Number(iso[1]) - 1] || '';
+    const dmy = String(dateStr).split('/');
+    if (dmy.length === 3) return months[Number(dmy[1]) - 1] || '';
+    return months[new Date(dateStr).getMonth()] || '';
+  };
 
   const [aiNewsList, setAiNewsList] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -5837,58 +5888,23 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? (
                 <TableLoadingRow colSpan={8} label="جاري حصر وتحليل الأفراد من المهام السابقة..." />
-              ) : filteredHR.length > 0 ? filteredHR.map((person, idx) => {
-              const pKey = `${person.branch_id}::${person.membership_number}`;
-              const flashing = flashActive[pKey] ? 'mission-flash-row' : '';
-              return (
-                <tr key={pKey} className={`${flashing} hover:bg-[var(--surface-2)]/70 transition-colors`}>
-                  <td className="p-4 text-[var(--muted)] font-bold border-l border-[var(--border)] text-center">{idx + 1}</td>
-                  <td className="p-4 font-bold border-l border-[var(--border)] flex items-center gap-2">
-                    <span>{person.full_name}</span>
-                  </td>
-                  <td className="p-4 text-[var(--accent)] font-mono font-bold border-l border-[var(--border)]">{person.membership_number}</td>
-                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
-                  <td className="p-4 border-l border-[var(--border)] text-center">
-                    {person.participant_type === 'volunteer'
-                      ? <span className="badge badge-info">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</span>
-                      : <span className="badge badge-neutral">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</span>}
-                  </td>
-                  <td className="p-4 border-l border-[var(--border)] text-center">
-                    {person.active_mission ? (
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="badge badge-active inline-flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"/> {lang === 'ar' ? 'في مهمة حاليًا' : 'On mission'}
-                        </span>
-                        {(person.active_mission_code || person.active_mission_name) && (
-                          <span className="text-[10px] text-[var(--accent)] font-mono font-semibold max-w-[180px] truncate"
-                                title={person.active_mission_name || person.active_mission_code || ''}>
-                            {person.active_mission_code || ''}
-                            {person.active_mission_name ? ` · ${person.active_mission_name}` : ''}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="badge badge-neutral inline-flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-current"/> {lang === 'ar' ? 'متاح' : 'Available'}
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4 border-l border-[var(--border)] text-center">
-                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${person.missions_count >= 5 ? 'bg-[var(--ok-soft)] text-[var(--ok)] border border-[var(--border-strong)]' : 'bg-[var(--surface-week)] text-[var(--muted-2)] border border-[var(--border)]'}`}>
-                      {person.missions_count} مهمة
-                    </span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <HoursCell person={person} maxHours={maxHours} lang={lang} />
-                  </td>
+              ) : filteredHR.length === 0 ? (
+                <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
+              ) : filteredHR.map((person, index) => (
+                <tr key={person.id || person.membership_number || index} className="hover:bg-[var(--surface-2)]">
+                  <td className="p-4 text-center">{index + 1}</td>
+                  <td className="p-4 font-semibold">{person.full_name}</td>
+                  <td className="p-4">{person.membership_number}</td>
+                  <td className="p-4">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
+                  <td className="p-4 text-center">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</td>
+                  <td className="p-4 text-center">{person.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا'}</td>
+                  <td className="p-4 text-center">{person.missions_count}</td>
+                  <td className="p-4 text-center">{person.total_hours}</td>
                 </tr>
-              );
-            })
-              : <tr><td colSpan="8" className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة</td></tr>}
+              ))}
             </tbody>
           </table>
         </div>
       </div>
     </div>
-  );
-}
+)}

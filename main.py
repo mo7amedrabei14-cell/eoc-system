@@ -120,24 +120,41 @@ async def idempotency_middleware(request: Request, call_next):
                     # We cannot get the body, so we skip storage.
                     return response
 
-                # Store the response in the database
-                connection = get_connection()
-                try:
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            """
-                            INSERT INTO idempotency_keys (idempotency_key, response, original_status)
-                            VALUES (%s, %s, %s)
-                            ON CONFLICT (idempotency_key) DO UPDATE
-                            SET response = EXCLUDED.response,
-                                original_status = EXCLUDED.original_status,
-                                created_at = CURRENT_TIMESTAMP
-                            """,
-                            (idempotency_key, json.dumps(response_body.decode() if isinstance(response_body, bytes) else response_body), status_code)
-                        )
-                        connection.commit()
-                finally:
-                    connection.close()
+                # ⚠️ فقط نخزّن الاستجابات الناجحة (2xx). لو خزّنا أخطاءً (4xx/5xx)
+                # كانت ستُعاد للأبد على كل إعادة محاولة بنفس المفتاح — خطأ عابر
+                # (403/400/500) كان يتحوّل إلى فشل دائم. المستخدم يقرأ الفشل
+                # فيستطيع إعادة المحاولة بمفتاح جديد حتى ينجح.
+                if status_code < 400:
+                    connection = get_connection()
+                    try:
+                        with connection.cursor() as cursor:
+                            cursor.execute(
+                                """
+                                INSERT INTO idempotency_keys (idempotency_key, response, original_status)
+                                VALUES (%s, %s, %s)
+                                ON CONFLICT (idempotency_key) DO UPDATE
+                                SET response = EXCLUDED.response,
+                                    original_status = EXCLUDED.original_status,
+                                    created_at = CURRENT_TIMESTAMP
+                                """,
+                                (idempotency_key, json.dumps(response_body.decode() if isinstance(response_body, bytes) else response_body), status_code)
+                            )
+                            connection.commit()
+                    finally:
+                        connection.close()
+                else:
+                    # استجابة خطأ: نحذف أي قيمة مخزّنة سابقاً لهذا المفتاح
+                    # حتى لا يُحتجز المفتاح بفشل قديم، ويبقى التكرار آمناً.
+                    connection = get_connection()
+                    try:
+                        with connection.cursor() as cursor:
+                            cursor.execute(
+                                "DELETE FROM idempotency_keys WHERE idempotency_key = %s;",
+                                (idempotency_key,)
+                            )
+                            connection.commit()
+                    finally:
+                        connection.close()
             except Exception as e:
                 # If there's an error in storing, we log it but don't fail the request.
                 print(f"Error storing idempotency response: {e}")
@@ -648,9 +665,9 @@ def create_mission(
                     part.return_status = 'تم انتهاء مهمتة'
 
                 # 2. الهوية الفعلية (الـ DB هي مصدر الحقيقة): ربط المتطوع + حساب دخوله + رادار المنع
-                volunteer_id, user_id, membership, active_in_other = resolve_participant_identity(cursor, part)
-                if user_id:
-                    participant_user_ids.append(user_id)
+                volunteer_id, participant_user_id, membership, active_in_other = resolve_participant_identity(cursor, part)
+                if participant_user_id:
+                    participant_user_ids.append(participant_user_id)
 
                 # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية لا بالنصوص)
                 if active_in_other is not None:
@@ -659,7 +676,7 @@ def create_mission(
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -699,6 +716,8 @@ def create_mission(
             except Exception:
                 pass
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
 
 @app.put("/api/missions/{mission_id}")
 def update_mission(
@@ -804,9 +823,9 @@ def update_mission(
                     part.return_status = 'تم انتهاء مهمتة'
 
                 # الهوية الفعلية (الـ DB هي مصدر الحقيقة) + رادار المنع بالهوية لا بالنصوص
-                volunteer_id, user_id, membership, active_in_other = resolve_participant_identity(cursor, part)
-                if user_id:
-                    participant_user_ids.append(user_id)
+                volunteer_id, participant_user_id, membership, active_in_other = resolve_participant_identity(cursor, part)
+                if participant_user_id:
+                    participant_user_ids.append(participant_user_id)
 
                 mkey = membership.strip().lower() if (membership or '').strip() else (part.full_name or '').strip().lower()
                 if mkey:
@@ -832,7 +851,7 @@ def update_mission(
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -849,9 +868,14 @@ def update_mission(
             # إشعار المتطوعين المربوطين بحسابات: من أُبقوا + من أُزيلوا من الاستمارة
             try:
                 notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, participant_user_ids)
+                # من أُزيلوا فعلاً: أي مشارك لم يَعُد ضمن القائمة الجديدة ولم يبقَ مُعاد
+                # إدخاله. نستبعد صراحةً من أبقيناهم (بيانات snapshot قد تختلف مفتاحاً
+                # لو تغيّر trim/case بين الإدخالين) حتى لا يصله إشعار مزدوج ("أُبقيت"
+                # و"أُزيلت") لنفس التحديث.
+                kept_user_ids = set(participant_user_ids)
                 removed_user_ids = [
                     (v.get("user_id") or 0) for ident, v in existing_participants.items()
-                    if ident not in reinserted_idents and v.get("user_id")
+                    if ident not in reinserted_idents and v.get("user_id") and v.get("user_id") not in kept_user_ids
                 ]
                 notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, removed_user_ids)
             except Exception as e:
@@ -865,6 +889,8 @@ def update_mission(
         if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
             raise HTTPException(status_code=400, detail=str(e))
         raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء التحديث: {str(e)}")
+    finally:
+        connection.close()
 
 @app.get("/api/missions/{mission_id}")
 def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -979,10 +1005,14 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
             if not cursor.fetchone(): raise HTTPException(status_code=404)
                 
             cursor.execute("DELETE FROM missions WHERE mission_id = %s", (mission_id,))
-            
-            # 💡 تسجيل اللوج
+
+            # 💡 تسجيل اللوج — نفس نمط بقية endpoints الحذف: نمرّر
+            # entity_id فقط (وليس mission_id) حتى لا يرتبك قيد FK لو كان
+            # audit_logs.mission_id يشير إلى missions (بعد الحذف لا يوجد الصف
+            # فيفشل insert ويضيع اللوج بصمت). اللوج يُسجَّل بعد الحذف بنفس
+            # المعاملة، ويسقط أي خطأ في الـ insert وحده دون الرجوع عن الحذف.
             try:
-                create_audit_log(cursor, user_id, "حذف مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بحذف الاستمارة رقم {mission_id} نهائياً من النظام"})
+                create_audit_log(cursor, user_id, "حذف مهمة", mission_id=None, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بحذف الاستمارة رقم {mission_id} نهائياً من النظام"})
             except Exception as e:
                 print(f"Audit Error: {e}")
 
@@ -1065,27 +1095,37 @@ def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(securit
         with connection.cursor() as cursor:
             if is_privileged:
                 cursor.execute("""
-                    SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
+                    SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type
                     FROM audit_logs l
                     LEFT JOIN users u ON l.user_id = u.user_id
                     ORDER BY l.created_at DESC LIMIT 50;
                 """)
             else:
                 cursor.execute("""
-                    SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
+                    SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type
                     FROM audit_logs l
                     LEFT JOIN users u ON l.user_id = u.user_id
                     WHERE l.entity_type IN ('mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news')
                     ORDER BY l.created_at DESC LIMIT 50;
                 """)
             rows = cursor.fetchall()
+            # 🎯 نفس تركيب الـ actor السليم اللي في /api/audit-logs — حتى لو user_id = NULL
+            # (فعل مسجّل بلا فاعل) نعرض "غير محدد" بدل الوصف المضلِّل "مستخدم محذوف".
+            def _actor_name(r):
+                if r[2]:
+                    return r[2]
+                if r[3]:
+                    return r[3]
+                if r[1] is not None:
+                    return f"مستخدم #{r[1]}"
+                return "غير محدد"
             return [
                 {
-                    "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
-                    "action": r[3],
-                    "details": r[4].get("action_text", str(r[4])) if isinstance(r[4], dict) else str(r[4] or ""),
-                    "created_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else "",
-                    "entity_type": r[6]
+                    "log_id": r[0], "user_id": r[1], "full_name": _actor_name(r),
+                    "action": r[4],
+                    "details": r[5].get("action_text", str(r[5])) if isinstance(r[5], dict) else str(r[5] or ""),
+                    "created_at": r[6].strftime("%Y-%m-%d %H:%M:%S") if r[6] else "",
+                    "entity_type": r[7]
                 } for r in rows
             ]
     except Exception as e:
@@ -1211,24 +1251,34 @@ def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(securi
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT l.audit_id, l.user_id, u.full_name, l.action, l.details, l.created_at, l.entity_type
+                SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
                 ORDER BY l.created_at DESC;
             """)
             rows = cursor.fetchall()
-            
+
+            # 🎯 نفس تركيب الـ actor السليم (الاسم ↔ username ↔ رقم المستخدم ↔ "غير محدد")
+            def _actor_name(r):
+                if r[2]:
+                    return r[2]
+                if r[3]:
+                    return r[3]
+                if r[1] is not None:
+                    return f"مستخدم #{r[1]}"
+                return "غير محدد"
+
             result = []
             for r in rows:
-                details_val = r[4]
+                details_val = r[5]
                 details_str = details_val.get("action_text", str(details_val)) if isinstance(details_val, dict) else str(details_val or "")
-                created_val = r[5]
+                created_val = r[6]
                 created_str = created_val.strftime("%Y-%m-%d %H:%M:%S") if hasattr(created_val, 'strftime') else str(created_val) if created_val else "غير مسجل"
-                    
+
                 result.append({
-                    "log_id": r[0], "user_id": r[1], "full_name": r[2] or "مستخدم محذوف",
-                    "action": r[3], "details": details_str, "created_at": created_str,
-                    "entity_type": r[6]
+                    "log_id": r[0], "user_id": r[1], "full_name": _actor_name(r),
+                    "action": r[4], "details": details_str, "created_at": created_str,
+                    "entity_type": r[7]
                 })
             return result
     except Exception as e:
@@ -1375,10 +1425,12 @@ def create_local_news(news: LocalNewsModel, credentials: HTTPAuthorizationCreden
 
             connection.commit()
             return {"message": "تم حفظ الخبر بنجاح", "news_id": news_id}
-            
+
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
 
 
 @app.put("/api/local-news/{news_id}")
@@ -1423,6 +1475,8 @@ def update_local_news(news_id: int, news: LocalNewsModel, credentials: HTTPAutho
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
 
 @app.post("/api/local-news/clear-all")
 def clear_all_local_news(
@@ -1585,6 +1639,8 @@ def create_global_disaster(disaster: GlobalDisasterModel, credentials: HTTPAutho
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
 
 @app.put("/api/global-disasters/{disaster_id}")
 def update_global_disaster(disaster_id: int, disaster: GlobalDisasterModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1620,6 +1676,8 @@ def update_global_disaster(disaster_id: int, disaster: GlobalDisasterModel, cred
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        connection.close()
 
 @app.post("/api/global-disasters/clear-all")
 def clear_all_global_disasters(
@@ -1750,6 +1808,8 @@ def add_global_eqs_bulk(eqs: List[GlobalEqModel], credentials: HTTPAuthorization
     except Exception as e:
         connection.rollback()
         raise HTTPException(500, str(e))
+    finally:
+        connection.close()
 
 @app.post("/api/earthquakes/global")
 def add_global_eq(eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1769,6 +1829,8 @@ def add_global_eq(eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials =
     except Exception as e:
         connection.rollback()
         raise HTTPException(500, str(e))
+    finally:
+        connection.close()
 
 @app.delete("/api/earthquakes/global/{eq_id}")
 def delete_global_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1812,6 +1874,8 @@ def add_egypt_eq(eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = D
     except Exception as e:
         connection.rollback()
         raise HTTPException(500, str(e))
+    finally:
+        connection.close()
 
 @app.delete("/api/earthquakes/egypt/{eq_id}")
 def delete_egypt_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1844,6 +1908,8 @@ def update_global_eq(eq_id: int, eq: GlobalEqModel, credentials: HTTPAuthorizati
     except Exception as e:
         connection.rollback()
         raise HTTPException(500, str(e))
+    finally:
+        connection.close()
 
 @app.put("/api/earthquakes/egypt/{eq_id}")
 def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1864,6 +1930,8 @@ def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorization
     except Exception as e:
         connection.rollback()
         raise HTTPException(500, str(e))
+    finally:
+        connection.close()
 
 @app.post("/api/earthquakes/clear-all")
 def clear_all_earthquakes(

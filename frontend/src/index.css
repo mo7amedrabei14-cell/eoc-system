@@ -1638,3 +1638,178 @@ select.field {
 .app-shell [data-theme="light"] [dir="rtl"] .sticky-end-col::before,
 .app-shell [data-theme="light"] .sticky-end-col::before { background: linear-gradient(to right, transparent, color-mix(in srgb, #000 10%, transparent)); }
 .app-shell [data-theme="light"] [dir="ltr"] .sticky-end-col::before { background: linear-gradient(to left, transparent, color-mix(in srgb, #000 10%, transparent)); }
+
+/* ── 42) الطبقة الفاخرة — Lightswind Signature Layer ──
+   كل القيم هنا تُقرأ من التوكينات (--surface / --ink / --accent / --accent-glow…)
+   إذًا تعمل تلقائيًا بنفس الجودة في الوضعين الداكن والفاتح، وفي RTL و LTR،
+   وتُعطَّل العمليات الحركية مع prefers-reduced-motion. */
+
+/* (أ) spotlight يتتبع المؤشر — يُحقن div بواسطة JS داخل أي عنصر يحمل .spot-card */
+.spot-card { position: relative; overflow: hidden; }
+.spot-card .spot-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(
+    620px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    transparent 42%
+  );
+  opacity: 0;
+  transition: opacity 0.45s var(--ease-out);
+  pointer-events: none;
+  will-change: opacity;
+}
+.spot-card:hover .spot-glow { opacity: 1; }
+.spot-card .spot-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    320px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    color-mix(in srgb, color-mix(in srgb, var(--accent) 22%, #fff) 10%, transparent),
+    transparent 60%
+  );
+  mix-blend-mode: screen;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spot-card .spot-glow { opacity: 0 !important; }
+}
+
+/* (ب) أزرار أساسية بهوية ثلاثية الأبعاد — حافة ضوئية علوية + عمق سفلي */
+.btn-primary, .btn-accent {
+  position: relative;
+  isolation: isolate;
+}
+.btn-primary::before, .btn-accent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.03) 42%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+.btn-primary > *, .btn-accent > * { position: relative; z-index: 1; }
+.btn-primary, .btn-accent {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -2px 4px rgba(0, 0, 0, 0.22), var(--shadow-accent);
+}
+.btn-primary:hover, .btn-accent:hover:not(:disabled) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -2px 4px rgba(0, 0, 0, 0.2), 0 10px 30px -8px var(--accent-glow);
+}
+
+/* (ج) بطاقات تفاعلية: إطار متدرّج يظهر عند الـ hover (hover-lift موجود مسبقًا) */
+.hover-lift { box-shadow: inset 0 0 0 1px transparent; }
+.hover-lift:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, var(--border)), var(--shadow-2), 0 0 34px -12px var(--accent-glow);
+}
+
+/* (د) تحسين دخول البطاقات/الخطوط — انزلاق رقيق غير قافز */
+.kpi-card { transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), transform 0.3s var(--ease-out), background-color 0.3s var(--ease-out); }
+
+/* (هـ) مقدمة العنوان: خط تحته يتمدد من المركز */
+.eyebrow { position: relative; }
+.eyebrow::before { transition: width 0.4s var(--ease-out); }
+.eyebrow:hover::before { width: 26px; }
+
+/* (و) إبراز عنوان الصفحة عند دخول العرض */
+.home-view-title { animation: fade-in-up 0.55s var(--ease-out) backwards; }
+
+/* ── 43) مراسم الافتتاح — Opening Ceremony (مفاجأة فتح التطبيق) ──
+   مرة واحدة لكل جلسة: ضربة ضوئية قطرية + شرارات + «طابع» الشعار بنابض.
+   كل الألوان من التوكينات → تعمل في الثيمين، وتُعطَّل كليًا مع reduced-motion. */
+
+/* الستارة: وميض خفيف يغطي الشاشة قبل الضربة */
+.opening-ceremony { animation: opening-fade 1.9s var(--ease-out) forwards; }
+@keyframes opening-fade {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+/* الضربة الضوئية القطرية */
+.opening-slash {
+  position: absolute;
+  top: -20%; bottom: -20%;
+  inset-inline-start: 50%;
+  width: min(46vw, 340px);
+  transform: translateX(-50%) rotate(-14deg);
+  background: linear-gradient(
+    100deg,
+    transparent,
+    color-mix(in srgb, color-mix(in srgb, var(--accent) 30%, #fff) 22%, transparent),
+    rgba(255, 255, 255, 0.28),
+    color-mix(in srgb, color-mix(in srgb, var(--accent) 30%, #fff) 22%, transparent),
+    transparent
+  );
+  animation: opening-slash 1.25s var(--ease-out) 0.12s both;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+}
+[dir="ltr"] .opening-slash { animation-name: opening-slash-ltr; }
+@keyframes opening-slash {
+  0%   { translate: 40vw 0; opacity: 0; }
+  18%  { opacity: 1; }
+  100% { translate: -40vw 0; opacity: 0; }
+}
+@keyframes opening-slash-ltr {
+  0%   { translate: -40vw 0; opacity: 0; }
+  18%  { opacity: 1; }
+  100% { translate: 40vw 0; opacity: 0; }
+}
+
+/* الشرارات الصاعدة حول الشعار */
+.opening-spark {
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 80%, #fff);
+  box-shadow: 0 0 12px 2px var(--accent-glow);
+  animation: opening-spark 0.9s var(--ease-out) both;
+}
+@keyframes opening-spark {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.4); }
+  30%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-22px) scale(0.2); }
+}
+
+/* حلقة نابضة حول الشعار أثناء الضربة */
+.opening-crest-ring {
+  position: absolute;
+  width: 9.5rem; height: 9.5rem;
+  inset-inline-start: 50%;
+  inset-block-start: 50%;
+  margin-inline-start: -4.75rem;
+  margin-block-start: -6rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: opening-ring 1s var(--ease-out) 0.45s both;
+  pointer-events: none;
+}
+@keyframes opening-ring {
+  0%   { transform: scale(0.5); opacity: 0; }
+  40%  { opacity: 0.9; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+/* «طابع» الشعار: يهبط بنابض مع توهج أكسنت */
+@keyframes opening-stamp {
+  0%   { transform: translateY(-10px) scale(0.82); opacity: 0; }
+  60%  { transform: translateY(2px) scale(1.04); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+#opening-crest.opening-stamped { animation: opening-stamp 0.7s var(--ease-spring) 0.1s both; }
+#opening-crest.opening-stamped::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 34px 4px var(--accent-glow);
+  animation: opening-ring 0.9s var(--ease-out) 0.15s both;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening-ceremony, .opening-slash, .opening-spark, .opening-crest-ring,
+  #opening-crest.opening-stamped, #opening-crest.opening-stamped::after { animation: none !important; opacity: 0 !important; }
+}

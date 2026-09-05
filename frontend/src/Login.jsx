@@ -74,7 +74,29 @@ export default function Login() {
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  // 🎉 مراسم الافتتاح — «مفاجأة» لطيفة مرة واحدة فقط عند فتح التطبيق لأول مرة
+  // في كل جلسة (sessionStorage) — لا تُعاد مع كل إعادة تحميل، وتُحترم reduced-motion.
+  const [openingCeremony, setOpeningCeremony] = useState(() => {
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+      if (sessionStorage.getItem('eoc_opening_seen')) return false;
+      return true;
+    } catch (e) { return false; }
+  });
   const usernameRef = useRef(null);
+
+  useEffect(() => {
+    if (!openingCeremony) return undefined;
+    const brand = document.getElementById('opening-crest');
+    const brandStamp = () => {
+      try { sessionStorage.setItem('eoc_opening_seen', '1'); } catch (e) {}
+      setOpeningCeremony(false);
+    };
+    // نُطلق «الطابع» بعد انتهاء الضربة الضوئية ثم نُغلق المراسم
+    const t = setTimeout(() => { if (brand) brand.classList.add('opening-stamped'); }, 480);
+    const t2 = setTimeout(brandStamp, 1900);
+    return () => { clearTimeout(t); clearTimeout(t2); };
+  }, [openingCeremony]);
 
   /* ── اللغة والثيم: نفس مفاتيح لوحة التحكم بالضبط ───────────── */
   const [language, setLanguage] = useState(() => localStorage.getItem('dashboard-language') || 'ar');
@@ -308,6 +330,17 @@ export default function Login() {
           <div className="pointer-events-none absolute -bottom-[16%] -end-[8%] w-[42vw] h-[42vw] bg-[var(--accent-glow)] rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6.5s', transform: `scale(${1 + dragProgress * 0.22})` }} />
 
           <div className="relative z-10 flex flex-col items-center px-6 py-6 w-full max-w-[440px]">
+            {/* 🎉 المفاجأة عند الفتح — «مراسم الافتتاح» (مرة واحدة لكل جلسة) */}
+            {openingCeremony && (
+              <div aria-hidden="true" className="opening-ceremony pointer-events-none absolute inset-0 z-[70]">
+                <div className="opening-slash" />
+                <span className="opening-spark" style={{ insetInlineStart: '18%', insetBlockStart: '34%', animationDelay: '0.55s' }} />
+                <span className="opening-spark" style={{ insetInlineStart: '72%', insetBlockStart: '28%', animationDelay: '0.7s' }} />
+                <span className="opening-spark" style={{ insetInlineStart: '56%', insetBlockStart: '70%', animationDelay: '0.85s' }} />
+                <span className="opening-spark" style={{ insetInlineStart: '88%', insetBlockStart: '55%', animationDelay: '1s' }} />
+              </div>
+            )}
+            {openingCeremony && <div aria-hidden="true" className="opening-crest-ring" />}
             {/* حلقة تقدم حول الشعار (conic) — تمتلئ مع السحب */}
             <div
               className="relative mb-9"
@@ -326,7 +359,7 @@ export default function Login() {
                 {dragProgress >= 0.92 && <span className="ripple-burst absolute inset-0 rounded-full bg-[var(--ok)]" />}
               </div>
 
-              <div className={`relative w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
+              <div id="opening-crest" className={`relative w-24 h-24 md:w-28 md:h-28 rounded-3xl bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
                 <CrescentIcon className={`w-14 h-14 md:w-16 md:h-16 drop-shadow-[0_0_14px_var(--accent-glow)] transition-colors duration-500 ${dragProgress >= 0.92 ? 'text-[var(--ok)]' : 'text-[var(--accent)]'}`} />
               </div>
             </div>
