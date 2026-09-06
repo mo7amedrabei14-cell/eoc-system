@@ -917,8 +917,6 @@ function useAnimatedNumber(target) {
   const prevRef = useRef(target);
   const rafRef = useRef(null);
   useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) { setDisplay(target); prevRef.current = target; return undefined; }
     const from = prevRef.current;
     if (from === target) { setDisplay(target); return undefined; }
     const start = performance.now();
@@ -939,16 +937,8 @@ function useAnimatedNumber(target) {
 function Magnetic({ children, strength = 0.2, className = '' }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const reducedRef = useRef(false);
-  useLayoutEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reducedRef.current = mq.matches;
-    const onChange = () => { reducedRef.current = mq.matches; if (mq.matches) setPos({ x: 0, y: 0 }); };
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
   const handleMove = (e) => {
-    if (reducedRef.current || !ref.current) return;
+    if (!ref.current) return;
     const r = ref.current.getBoundingClientRect();
     setPos({
       x: (e.clientX - (r.left + r.width / 2)) * strength,
@@ -965,7 +955,7 @@ function Magnetic({ children, strength = 0.2, className = '' }) {
       onMouseLeave={handleLeave}
       style={{
         transform: `translate3d(${pos.x.toFixed(1)}px, ${pos.y.toFixed(1)}px, 0)`,
-        transition: reducedRef.current ? 'none' : (moving ? 'transform 90ms linear' : 'transform 0.4s var(--ease-out)'),
+        transition: moving ? 'transform 90ms linear' : 'transform 0.4s var(--ease-out)',
         willChange: 'transform',
       }}
     >
@@ -1062,7 +1052,6 @@ useEffect(() => {
   useEffect(() => {
     const root = dashboardRootRef.current;
     if (!root) return;
-    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const spots = new Map(); // element -> glow div
     let raf = null;
@@ -6158,7 +6147,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                 onClick={() => setFilterActive(opt.key)}
                 className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.97] ${
                   filterActive === opt.key
-                    ? 'bg-[var(--accent)] text-white shadow-[0_4px_16px_rgba(199,0,0,0.35)]'
+                    ? 'bg-[var(--accent)] text-white shadow-[0_4px_16px_rgba(199,0,0,0.35)] eoc-frame'
                     : 'text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >

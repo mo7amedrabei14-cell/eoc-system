@@ -7,7 +7,6 @@
    • الثيم الفاتح والداكن من نفس الرموز — تبديل متدرّج بدون اهتزاز
    • اللون الرئيسي #C70000 يُستخدم بذكاء وتوازن (لحظات التركيز فقط)
    • كل الحركة عبر transform + opacity فقط → بدون jank / layout shift
-   • يحترم prefers-reduced-motion
    ════════════════════════════════════════════════════════════════════ */
 
 /* ─────────────────────────── 1) التوكينات ─────────────────────────── */
@@ -148,6 +147,55 @@
   color-scheme: light;
 }
 
+/* ── تفاعل التركيز المميّز — مذنّب الإطار الضوئي (EOC Focus Comet) ──
+   زاوية تُدار برمجيًّا (registered custom property) لتدوير ضوء يسافر
+   حول حدود الحقل/التحكم النشط. الحركة دائرية بلا اتجاه → تعمل تلقائيًّا
+   في RTL و LTR، والرموز (accent/surface) تجعلها تعمل في الوضعَين. */
+:root {
+  /* الحشوة الداخلية: تطابق خلفية `.field` تمامًا حتى لا تتغيّر مساحة الحقل */
+  --eoc-frame-fill: linear-gradient(var(--surface-2), var(--surface-2));
+  /* مذنّب حالات التركيز العادي: هالة خفيفة مستمرة + رأس ضوئي ساطع متحرك */
+  --eoc-frame-comet: conic-gradient(
+      from var(--eoc-focus-angle) at 50% 50%,
+      color-mix(in srgb, var(--accent) 6%, transparent) 0deg,
+      color-mix(in srgb, var(--accent) 18%, transparent) 55deg,
+      color-mix(in srgb, var(--accent) 88%, transparent) 80deg,
+      color-mix(in srgb, var(--accent) 26%, transparent) 108deg,
+      color-mix(in srgb, var(--accent) 8%, transparent) 150deg,
+      transparent 230deg,
+      color-mix(in srgb, var(--accent) 14%, transparent) 300deg,
+      color-mix(in srgb, var(--accent) 6%, transparent) 340deg);
+  /* مذنّب الحقول الإلزامية الناقصة: إطار أحمر واضح دائم + رأس متحرك */
+  --eoc-frame-comet-invalid: conic-gradient(
+      from var(--eoc-focus-angle) at 50% 50%,
+      color-mix(in srgb, var(--accent) 38%, transparent) 0deg,
+      color-mix(in srgb, var(--accent) 92%, transparent) 58deg,
+      color-mix(in srgb, var(--accent) 42%, transparent) 88deg,
+      color-mix(in srgb, var(--accent) 26%, transparent) 125deg,
+      color-mix(in srgb, var(--accent) 26%, transparent) 360deg);
+  /* مذنّب العناصر فوق خلفية أكسنت صريحة (أزرار/رقائق نشطة): ضوء فاتح */
+  --eoc-frame-comet-on-accent: conic-gradient(
+      from var(--eoc-focus-angle) at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0deg,
+      rgba(255, 255, 255, 0.16) 55deg,
+      rgba(255, 255, 255, 0.85) 80deg,
+      rgba(255, 255, 255, 0.24) 108deg,
+      rgba(255, 255, 255, 0.08) 150deg,
+      transparent 230deg,
+      rgba(255, 255, 255, 0.12) 300deg,
+      rgba(255, 255, 255, 0.05) 340deg);
+}
+
+@property --eoc-focus-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes eoc-focus-spin {
+  to { --eoc-focus-angle: 360deg; }
+}
+
 /* ─────────────────────────── 3) قاعدة الشاشة ─────────────────────────── */
 html, body, #root { height: 100%; }
 
@@ -273,11 +321,123 @@ input[type="time"].field::-webkit-datetime-edit-ampm-field {
   text-align: center;
 }
 
-/* ── الحقول الإلزامية الناقصة (متطلب الحقول الإلزامية): إطار أحمر ناعم + توهج ── */
-.field-invalid {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent-glow), 0 0 12px -2px var(--accent-glow);
+/* ════════ تفاعل التركيز المميّز — مذنّب يتحرك حول الحقل النشط ════════
+   - الحقل القياسي `.field` عند التركيز: إطار ضوئي يسافر حول الحدود + توهج
+     أحمر طبقي (لا يتغيّر حجم/حشوة الحقل؛ الحدود تصبح شفافة والمذنّب يرسم اللون).
+   - الحقل الإلزامي الناقص `.field-invalid`: إطار أحمر دائم واضح + رأس متحرك.
+   - على فقدان التركيز: الحدود والتوهج يختفيان بسلاسة عبر الـ transition
+     الحالي لـ `.field` (border-color / box-shadow).                        ─── */
+
+input.field:focus,
+select.field:focus,
+textarea.field:focus {
+  --eoc-focus-angle: 0deg;
+  border-color: transparent !important; /* يتفوق على القاعدة العامة أدناه */
+  background-image: var(--eoc-frame-fill), var(--eoc-frame-comet);
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent),
+    0 0 0 4px var(--accent-softer),
+    0 16px 34px -16px var(--accent-glow) !important;
+  animation: eoc-focus-spin 2.2s linear infinite;
 }
+
+.field-invalid {
+  --eoc-focus-angle: 0deg;
+  border-color: transparent !important;
+  background-image: var(--eoc-frame-fill), var(--eoc-frame-comet-invalid) !important;
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 0 0 1px var(--accent-glow),
+    0 0 12px -2px var(--accent-glow),
+    0 0 26px -4px var(--accent-glow) !important;
+  animation: eoc-focus-spin 2.2s linear infinite;
+}
+
+/* حقل إلزامي ناقص + مُركَّز في آنٍ واحد: التحقق (الأحمر) يبقى مسيطرًا
+   على التركيز العادي — اختيارية (0,3,1) تتفوق على كل ما سبق. */
+input.field:focus.field-invalid,
+select.field:focus.field-invalid,
+textarea.field:focus.field-invalid {
+  border-color: transparent !important;
+  background-image: var(--eoc-frame-fill), var(--eoc-frame-comet-invalid) !important;
+  box-shadow:
+    0 0 0 1px var(--accent-glow),
+    0 0 12px -2px var(--accent-glow),
+    0 0 26px -4px var(--accent-glow) !important;
+  animation: eoc-focus-spin 2.2s linear infinite;
+}
+
+/* حقل القائمة (select) يحتفظ بسهمه أثناء التركيز/الحالة الإلزامية/التوليفة */
+select.field:focus,
+select.field-invalid,
+select.field:focus.field-invalid {
+  background-image:
+    var(--eoc-frame-fill),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a2a6b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"),
+    var(--eoc-frame-comet);
+  background-repeat: no-repeat;
+  background-position: 0 0, left 0.8rem center, 0 0;
+  background-size: auto, 14px, auto;
+}
+select.field-invalid,
+select.field:focus.field-invalid {
+  background-image:
+    var(--eoc-frame-fill),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a2a6b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"),
+    var(--eoc-frame-comet-invalid) !important;
+}
+[dir="ltr"] select.field:focus,
+[dir="ltr"] select.field-invalid,
+[dir="ltr"] select.field:focus.field-invalid {
+  background-position: 0 0, right 0.8rem center, 0 0;
+}
+
+/* ── الحقول النحيفة (بدون سطح معروف): توهج فاخر على التركيز ──
+   `!important` لأن القاعدة العامة أدناه (`input[type=...]:focus` وغيرها)
+   لها نفس التحديد وتأتي لاحقًا — نضمن فوز التوهج المميّز على كل حقل. */
+input:not(.field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus,
+select:not(.field):focus,
+textarea:not(.field):focus {
+  outline: none;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 18px -6px var(--accent-glow) !important;
+}
+
+/* ─── تحكمات الاختيار/الفلترة: إطار المذنّب على العنصر النشط/المحدّد ───
+   إطار 1.5px يُرسم فوق حافة العنصر عبر mask (لا يغيّر الأبعاد أو الـ layout)
+   ومذنّب يعبر به — أبيض فوق خلفية الأكسنت، وأحمر فوق الخلفيات الحيادية. */
+.segmented-btn.is-active-accent,
+.segmented-btn.is-active,
+.chip-active,
+.eoc-frame { position: relative; }
+
+.segmented-btn.is-active-accent::before,
+.segmented-btn.is-active::before,
+.chip-active::before,
+.eoc-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  pointer-events: none;
+  --eoc-focus-angle: 0deg;
+  animation: eoc-focus-spin 2.4s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+}
+.segmented-btn.is-active-accent::before,
+.eoc-frame::before { background: var(--eoc-frame-comet-on-accent); }
+.segmented-btn.is-active::before,
+.chip-active::before { background: var(--eoc-frame-comet); }
 
 /* ───────────────────── 7) الأزرار ───────────────────── */
 .btn {
@@ -676,14 +836,6 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
     transform: translateY(-10px) scale(0.6);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .toast-item {
-    animation: fade-in 0.2s var(--ease-out) both;
-  }
-  .toast-item-closing {
-    animation: fade-out 0.15s var(--ease-out) both;
-  }
-}
 
 /* قائمة الإشعارات — مدعومة RTL عبر logical properties */
 /* معتمة بالكامل: --glass كان شبه شفاف + backdrop blur فكان يظهر ما خلفه من المحتوى.
@@ -730,9 +882,6 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 @keyframes bell-ring-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .bell-ring { animation: none; opacity: 0.85; }
 }
 @keyframes dropdown-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
@@ -1388,19 +1537,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: p
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
 
-/* ================================================================
-   تفضيلات الحركة: احترام المستخدمين اللي بيقلّلو الحركة
-   ================================================================ */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-  .stagger > * { animation-delay: 0s !important; }
-  .icon-btn:hover svg, .action-btn:hover svg { transform: none !important; }
-}
 /* ───────────────────────────────────────────────
    Login + Slide-to-Unlock signature (Phase 5-7)
    فـترة تحويل لوحة الدخول: نوابض + مغناطيس + رادار
@@ -1566,9 +1702,6 @@ input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
   opacity: 1;
   transform: translateX(calc(var(--shine-dir, 1) * 130%));
 }
-@media (prefers-reduced-motion: reduce) {
-  .btn-primary::after, .btn-accent::after { display: none; }
-}
 /* خيار "رفع عند الضغط" للزر الأساسي */
 .btn-primary:active { transform: translateY(1px) scale(0.98); }
 
@@ -1723,24 +1856,6 @@ select.field {
 /* ── 37) اختيار الصف / تحديد النص يتبع الهوية ── */
 .app-shell ::selection { background: color-mix(in srgb, var(--accent) 85%, transparent); color: #fff; }
 
-/* ── 38) ضبط reduced-motion على الطبقة الجديدة ── */
-@media (prefers-reduced-motion: reduce) {
-  .app-shell table tbody tr { animation: none !important; }
-  .app-shell table tbody tr:hover td { background-color: transparent; }
-  .hover-lift::after, .card-surface::before { display: none; }
-  .chip-active::after { animation: none; }
-  .modal-card > * { animation: none !important; }
-  .toast-item::after { opacity: 0.6; }
-}
-
-/* ── 39) شاشة الدخول — احترام تقليل الحركة (Reduced Motion) ──
-   تُبطئ/توقف فقط المؤثرات الزخرفية، مع إبقاء وظائف السحب والدخول سليمة. */
-@media (prefers-reduced-motion: reduce) {
-  .radar-sweep, .ops-gauge-fill, .ripple-burst,
-  .animate-scale-pop, .live-blink, .gate-peel, .error-shake { animation: none !important; }
-  .gate-peel { transition: none; }
-}
-
 /* ── 40) بوابة السحب — نبض إرشادي هادئ للمقبض عند السكون ──
    "تنفّس" بطيء يوجّه المستخدم الجديد نحو تفاعل السحب، ويتوقف فورًا أثناء السحب/الفتح. */
 @keyframes handle-breathe {
@@ -1748,9 +1863,6 @@ select.field {
   50%      { opacity: 0.95; transform: scale(1.12); }
 }
 .handle-breathe { animation: handle-breathe 2.6s var(--ease-in-out) infinite; will-change: transform, opacity; }
-@media (prefers-reduced-motion: reduce) {
-  .handle-breathe { animation: none; opacity: 0.6; }
-}
 
 /* ── 41) العمود اللاصق في نهاية الجداول (سجل المهام) ──
    عمود الإجراءات: خلفية معتمة تمنع تداخل الأعمدة أثناء السحب الأفقي
@@ -1775,8 +1887,7 @@ select.field {
 
 /* ── 42) الطبقة الفاخرة — Lightswind Signature Layer ──
    كل القيم هنا تُقرأ من التوكينات (--surface / --ink / --accent / --accent-glow…)
-   إذًا تعمل تلقائيًا بنفس الجودة في الوضعين الداكن والفاتح، وفي RTL و LTR،
-   وتُعطَّل العمليات الحركية مع prefers-reduced-motion. */
+   إذًا تعمل تلقائيًا بنفس الجودة في الوضعين الداكن والفاتح، وفي RTL و LTR. */
 
 /* (أ) spotlight يتتبع المؤشر — يُحقن div بواسطة JS داخل أي عنصر يحمل .spot-card */
 .spot-card { position: relative; overflow: hidden; }
@@ -1805,9 +1916,6 @@ select.field {
     transparent 60%
   );
   mix-blend-mode: screen;
-}
-@media (prefers-reduced-motion: reduce) {
-  .spot-card .spot-glow { opacity: 0 !important; }
 }
 
 /* (ب) أزرار أساسية بهوية ثلاثية الأبعاد — حافة ضوئية علوية + عمق سفلي */
@@ -1941,9 +2049,4 @@ select.field {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 34px 4px var(--accent-glow);
   animation: opening-ring 0.9s var(--ease-out) 0.15s both;
   pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .opening-ceremony, .opening-slash, .opening-spark, .opening-crest-ring,
-  #opening-crest.opening-stamped, #opening-crest.opening-stamped::after { animation: none !important; opacity: 0 !important; }
 }
