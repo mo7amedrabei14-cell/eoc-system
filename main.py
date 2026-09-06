@@ -418,6 +418,50 @@ class MissionCreate(BaseModel):
 
 
 # =============================================================================
+# الحقول الإلزامية (#6) — تُفرض في السيرفر ذاته (لا يُمكِن الاختراق عبر API مباشر)
+# =============================================================================
+
+def validate_mission_required_fields(mission):
+    """
+    تتأكد من وجود كل الحقول الإلزامية في المهمة وتعيد قائمة بأسماء الناقص منها.
+    فارغة ([]) = المهمة سليمة. تُستخدم في POST و PUT معاً.
+    """
+    def val(v):
+        return v is not None and str(v).strip() != ""
+
+    missing = []
+    if not val(getattr(mission, "exit_date", None)):
+        missing.append("تاريخ المهمة")
+    if not val(getattr(mission, "departure_time", None)):
+        missing.append("ساعة التحرك / البدء")
+    if not any(val(p.full_name) for p in (mission.participants or [])):
+        missing.append("إضافة مشارك واحد على الأقل")
+
+    staff_map = {s.role_name: s.staff_name for s in (mission.eoc_staff or [])}
+    for role, label in [("مسؤول المتابعة", "مسؤول المتابعة (قائد العملية)"),
+                        ("المشرف", "المشرف"),
+                        ("الجوكر", "الجوكر"),
+                        ("معبئ الاستمارة", "معبئ الاستمارة")]:
+        if not val(staff_map.get(role)):
+            missing.append(label)
+    return missing
+
+
+def validate_mission_completion(mission):
+    """
+    قاعدة الإنهاء (#6): لا يجوز أن تصبح المهمة "مكتملة/Completed" إلا بوجود
+    تاريخ الانتهاء وساعة الانتهاء معاً.
+    """
+    def val(v):
+        return v is not None and str(v).strip() != ""
+
+    if mission.status in ("Completed", "مكتملة"):
+        if not (val(mission.completion_date) and val(mission.completion_time)):
+            return "لا يمكن إنهاء وإغلاق المهمة إلا بعد إدخال تاريخ الانتهاء وساعة الانتهاء معاً."
+    return None
+
+
+# =============================================================================
 # هوية المشارِك — الجذر الحقيقي (#4)
 # المشارك لم يعد مجرد اسم/صفة نصية تُطابَق بالنصوص؛ الهوية الفعلية (volunteer_id /
 # user_id / membership_number) تتحل من قاعدة البيانات نفسها وتُخزَّن مع المشاركة.
@@ -609,6 +653,14 @@ def create_mission(
     # مع مرونة دعم إرساله داخل الـ body أيضاً للتوافق مع أي عميل قديم.
     ikey = mission.idempotency_key or idempotency_key_header or None
 
+    # 🛡️ الحقول الإلزامية + قاعدة الإنهاء — تُفرض في السيرفر قبل أي PROCESS للطلب
+    missing_required = validate_mission_required_fields(mission)
+    if missing_required:
+        raise HTTPException(status_code=400, detail="الحقول الإلزامية التالية مطلوبة: " + "، ".join(missing_required))
+    completion_error = validate_mission_completion(mission)
+    if completion_error:
+        raise HTTPException(status_code=400, detail=completion_error)
+
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
@@ -732,6 +784,14 @@ def update_mission(
     # مفتاح الحماية من الإرسال المكرر — يُقرأ من الترويسة أولاً (الواجهة ترسله في الـ header)؛
     # يعمل جنباً إلى جنب مع مفتاح المهمة المخزَّن في قاعدة البيانات (DB هو مصدر الحقيقة).
     ikey = mission.idempotency_key or idempotency_key_header or None
+
+    # 🛡️ الحقول الإلزامية + قاعدة الإنهاء — تُفرض في السيرفر قبل أي PROCESS للطلب
+    missing_required = validate_mission_required_fields(mission)
+    if missing_required:
+        raise HTTPException(status_code=400, detail="الحقول الإلزامية التالية مطلوبة: " + "، ".join(missing_required))
+    completion_error = validate_mission_completion(mission)
+    if completion_error:
+        raise HTTPException(status_code=400, detail=completion_error)
 
     connection = get_connection()
     try:

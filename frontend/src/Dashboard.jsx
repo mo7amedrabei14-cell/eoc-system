@@ -2409,6 +2409,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [vehicles, setVehicles] = useState([{ id: 1 }]);
   const [participants, setParticipants] = useState([{ id: 1 }]);
   const [beneficiaries, setBeneficiaries] = useState([{ id: 1 }]);
+  // 📋 الحقول الإلزامية (متطلب جديد): touched بعد أول محاولة مرفوضة،
+  // attemptStatus آخر status حاول المستخدم تنفيذه (لعرض أخطاء الإنهاء عند التمام فقط)،
+  // validationNonce يتغير عند أي تعديل على حقل إلزامي لإعادة الحساب الفوري.
+  const [requiredTouched, setRequiredTouched] = useState(false);
+  const [attemptStatus, setAttemptStatus] = useState(null);
+  const [missingFields, setMissingFields] = useState([]);
+  const [validationNonce, setValidationNonce] = useState(0);
   const [missionName, setMissionName] = useState('');
 
   const [missionsList, setMissionsList] = useState([]);
@@ -2792,7 +2799,60 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
+  // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
+  const FIELD_LABELS = {
+    field_exit_date: 'تاريخ المهمة',
+    field_departure_time: 'ساعة التحرك / البدء',
+    field_participants: 'إضافة مشارك واحد على الأقل (بالاسم)',
+    field_leader: 'مسؤول المتابعة (قائد العملية)',
+    field_supervisor: 'المشرف',
+    field_joker: 'الجوكر',
+    field_filler: 'معبئ الاستمارة',
+    field_completion_date: 'تاريخ الانتهاء (لإنهاء المهمة)',
+    field_completion_time: 'ساعة الانتهاء (لإنهاء المهمة)',
+  };
+
+  // 🔎 قراءة الحقول الإلزامية الناقصة من الـ DOM (المصدر الحقيقي للبيانات)
+  const readMissingFields = (status) => {
+    const v = (id) => String(document.getElementById(id)?.value || '').trim();
+    const missing = [];
+    if (!v('f_exit_date')) missing.push('field_exit_date');
+    if (!v('f_departure_time')) missing.push('field_departure_time');
+    if (!(participants || []).some(p => String(p.full_name || '').trim() !== '')) missing.push('field_participants');
+    if (!v('eoc_leader')) missing.push('field_leader');
+    if (!v('eoc_supervisor')) missing.push('field_supervisor');
+    if (!v('eoc_joker')) missing.push('field_joker');
+    if (!v('eoc_filler')) missing.push('field_filler');
+    if (status === 'Completed') {
+      if (!v('f_completion_date')) missing.push('field_completion_date');
+      if (!v('f_completion_time')) missing.push('field_completion_time');
+    }
+    return missing;
+  };
+
+  // 🔄 إعادة الحساب الفوري للحقول الناقصة بعد أي تعديل (بعد أول محاولة مرفوضة فقط)
+  useEffect(() => {
+    if (requiredTouched) setMissingFields(readMissingFields(attemptStatus));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participants, validationNonce]);
+
+  const bumpValidation = () => setValidationNonce(n => n + 1);
+
   const handleSubmit = async (submitStatus) => {
+     // 📋 متطلب الحقول الإلزامية: أي إجراء يغيّر حالة المهمة (حفظ/إرسال/اعتماد/إنهاء)
+     // ممنوع ما دام حقل إلزامي ناقص — ما عدا "الإرجاع" (قرار رافض للسوبرفايزر يعمل دائماً).
+     // الفحص قبل القفل المتزامن حتى لا يعلق القفل عند العودة المبكرة.
+     if (submitStatus !== 'Returned') {
+       const missing = readMissingFields(submitStatus);
+       if (missing.length) {
+         setRequiredTouched(true);
+         setAttemptStatus(submitStatus);
+         setMissingFields(missing);
+         setCustomAlert('⚠️ لا يمكن إتمام هذه العملية — يُرجى استكمال الحقول الإلزامية التالية:\n\n' +
+           missing.map(k => `• ${FIELD_LABELS[k] || k}`).join('\n'));
+         return;
+       }
+     }
      // 🛡️ منع الإرسال المزدوج: قفل متزامن (useRef) + تعطيل الأزرار (state) —
      // القفل يُغلق لحظياً قبل أي await، فلا يمر أي double-click / Enter متكرر.
      if (submitLockRef.current || isSubmitting) return;
@@ -3346,13 +3406,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <SectionCard title="التواريخ والتوقيتات" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
                 <div className="grid grid-cols-3 gap-4">
                   {/* تواريخ */}
-                  <FormGroup className="items-center text-center" label="تاريخ المهمة"><StyledInput className="text-center" id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
                   <FormGroup className="items-center text-center" label="تاريخ الوصول"><StyledInput className="text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء"><StyledInput className="text-center" id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
                   {/* أوقات */}
-                  <FormGroup className="items-center text-center" label="ساعة التحرك / البدء"><StyledInput className="text-center" id="f_departure_time" type="time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" type="time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
                   <FormGroup className="items-center text-center" label="ساعة الوصول"><StyledInput className="text-center" id="f_arrival_time" type="time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="ساعة الانتهاء"><StyledInput className="text-center" id="f_completion_time" type="time" defaultValue={currentMissionData?.completion_time || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_time')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_completion_time') ? 'field-invalid' : ''}`} id="f_completion_time" type="time" defaultValue={currentMissionData?.completion_time || ''} onChange={bumpValidation} /></FormGroup>
                   {/* حقول مخفية لضمان عدم تلف الحفظ وحساب الساعات */}
                   <input type="hidden" id="f_departure_date" defaultValue={currentMissionData?.departure_date || ''} />
                   <input type="hidden" id="f_start_time" defaultValue={currentMissionData?.start_time || ''} />
@@ -3413,8 +3473,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              <SectionCard title="القوة البشرية والمشاركين" icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
-                <div className="overflow-x-auto bg-[var(--surface-4)] rounded-xl border border-[var(--border)]">
+              <SectionCard title={<span>القوة البشرية والمشاركين <span className="text-[var(--accent)]">*</span></span>} icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
+                {requiredTouched && missingFields.includes('field_participants') && <p className="text-[var(--accent)] text-xs font-bold mb-2 flex items-center gap-1.5 px-1">⚠ يجب إضافة مشارك واحد على الأقل بالاسم لإتمام أي عملية على المهمة.</p>}
+                <div className={`overflow-x-auto bg-[var(--surface-4)] rounded-xl border ${requiredTouched && missingFields.includes('field_participants') ? 'border-[var(--accent)]/60' : 'border-[var(--border)]'}`}>
                   <table className="w-full text-right text-sm min-w-[720px]">
                     <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3">رقم العضوية / الصفة</th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-center">حذف</th></tr></thead>
                     <tbody className="divide-y divide-[var(--border)]">
@@ -3427,7 +3488,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               <option value="non_volunteer" className="bg-[var(--surface-4)]">غير متطوع</option>
                             </select>
                           </td>
-                          <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." className="bg-transparent outline-none text-white w-full" /></td>
+                          <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." onChange={(e) => { const newP = [...participants]; newP[index].full_name = e.target.value; setParticipants(newP); }} className="bg-transparent outline-none text-white w-full" /></td>
 
                           <td className="p-2">
                             <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : 'الصفة...'} className="bg-transparent outline-none text-white w-full" />
@@ -3511,13 +3572,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <SectionCard title="فريق إدارة الغرفة (الهيكل الإداري)" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}>
                 <div className="space-y-4">
                   <div className="bg-[var(--surface-4)] p-4 rounded-xl border border-[var(--accent)]/30 shadow-[0_0_15px_rgba(199,0,0,0.05)] w-full">
-                    <FormGroup label="مسؤول المتابعة (قائد العملية)"><StyledInput id="eoc_leader" defaultValue={getStaff('مسؤول المتابعة')} placeholder="الاسم ورقم الهاتف..." className="bg-[var(--surface-3)] text-lg font-bold" /></FormGroup>
+                    <FormGroup required label="مسؤول المتابعة (قائد العملية)" invalid={requiredTouched && missingFields.includes('field_leader')}><StyledInput id="eoc_leader" defaultValue={getStaff('مسؤول المتابعة')} placeholder="الاسم ورقم الهاتف..." className={`bg-[var(--surface-3)] text-lg font-bold ${requiredTouched && missingFields.includes('field_leader') ? 'field-invalid' : ''}`} onChange={bumpValidation} /></FormGroup>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormGroup label="المشرف"><StyledInput id="eoc_supervisor" defaultValue={getStaff('المشرف')} placeholder="الاسم..." /></FormGroup>
+                    <FormGroup required label="المشرف" invalid={requiredTouched && missingFields.includes('field_supervisor')}><StyledInput id="eoc_supervisor" defaultValue={getStaff('المشرف')} placeholder="الاسم..." className={requiredTouched && missingFields.includes('field_supervisor') ? 'field-invalid' : ''} onChange={bumpValidation} /></FormGroup>
                     <FormGroup label="المشرف المراجع"><StyledInput id="eoc_reviewer" defaultValue={getStaff('المشرف المراجع')} placeholder="الاسم..." /></FormGroup>
-                    <FormGroup label="الجوكر"><StyledInput id="eoc_joker" defaultValue={getStaff('الجوكر')} placeholder="الاسم..." /></FormGroup>
-                    <FormGroup label="معبئ الاستمارة"><StyledInput id="eoc_filler" defaultValue={getStaff('معبئ الاستمارة')} placeholder="الاسم..." /></FormGroup>
+                    <FormGroup required label="الجوكر" invalid={requiredTouched && missingFields.includes('field_joker')}><StyledInput id="eoc_joker" defaultValue={getStaff('الجوكر')} placeholder="الاسم..." className={requiredTouched && missingFields.includes('field_joker') ? 'field-invalid' : ''} onChange={bumpValidation} /></FormGroup>
+                    <FormGroup required label="معبئ الاستمارة" invalid={requiredTouched && missingFields.includes('field_filler')}><StyledInput id="eoc_filler" defaultValue={getStaff('معبئ الاستمارة')} placeholder="الاسم..." className={requiredTouched && missingFields.includes('field_filler') ? 'field-invalid' : ''} onChange={bumpValidation} /></FormGroup>
                     <FormGroup label="مستكمل الاستمارة"><StyledInput id="eoc_completer" defaultValue={getStaff('مستكمل الاستمارة')} placeholder="الاسم..." /></FormGroup>
                     <FormGroup label="مراجع الاستمارة"><StyledInput id="eoc_final_reviewer" defaultValue={getStaff('مراجع الاستمارة')} placeholder="الاسم..." /></FormGroup>
                   </div>
@@ -3705,7 +3766,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   );
 }
 
-const FormGroup = ({ label, className = "", children }) => (<div className={`flex flex-col gap-1.5 w-full ${className}`}><label className="text-[var(--muted)] text-xs font-bold px-1">{label}</label>{children}</div>);
+const FormGroup = ({ label, className = "", required = false, invalid = false, children }) => (<div className={`flex flex-col gap-1.5 w-full ${className}`}><div className={`flex items-center gap-1 px-1 text-xs font-bold ${invalid ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}><span>{label}</span>{required && <span className="text-[var(--accent)] text-sm leading-none">*</span>}{invalid && <span className="text-[10px] font-bold text-[var(--accent)]">إلزامي</span>}</div>{children}</div>);
 const StyledInput = ({ className="", ...props }) => (<input className={`field ${className}`} {...props} />);
 const StyledSelect = ({ children, className="", ...props }) => (<select className={`field ${className}`} {...props}>{children}</select>);
 const SectionCard = ({ title, icon, actionBtn, children }) => (<div className="card-surface p-5 md:p-6"><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);

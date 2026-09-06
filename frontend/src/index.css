@@ -262,12 +262,22 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
 
 /* ── حقول الوقت (ساعة التحرك وغيرها): عرض وحشوة كافيان حتى يظهر AM/PM كاملاً بلا قص ── */
 input[type="time"].field {
-  min-width: 8.75rem;
-  padding-right: 0.5rem;
-  padding-left: 0.5rem;
+  min-width: 9rem;
+  padding-right: 0.4rem;
+  padding-left: 0.6rem;
 }
 input[type="time"].field::-webkit-datetime-edit { padding: 0; }
-input[type="time"].field::-webkit-datetime-edit-ampm-field { padding: 0 1px; }
+input[type="time"].field::-webkit-datetime-edit-ampm-field {
+  padding: 0 4px;          /* أتسع من padding السابق حتى لا يُقصّ الحرف الأخير (M) في AM/PM */
+  min-width: 2.3em;
+  text-align: center;
+}
+
+/* ── الحقول الإلزامية الناقصة (متطلب الحقول الإلزامية): إطار أحمر ناعم + توهج ── */
+.field-invalid {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent-glow), 0 0 12px -2px var(--accent-glow);
+}
 
 /* ───────────────────── 7) الأزرار ───────────────────── */
 .btn {
