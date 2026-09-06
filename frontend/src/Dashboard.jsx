@@ -910,7 +910,7 @@ const baseMapUrl = (theme) =>
 
 /* ════════════════════════════════════════════════════════════════
    Motion Primitives — أدوات حركة قابلة لإعادة الاستخدام
-   • عداد رقمي متحرك (count-up) — transform/digit فقط، يحترم reduced-motion
+   • عداد رقمي متحرك (count-up) — transform/digit فقط، بلا jank
    • تأثير مغناطيسي خفيف للـ CTA — transform3d فقط، لا reflow
    ════════════════════════════════════════════════════════════════ */
 function useAnimatedNumber(target) {
@@ -1115,12 +1115,77 @@ useEffect(() => {
   // 💡 1. حالات نظام الإشعارات والرادار (الجديدة)
   // 💡 1. حالات نظام الإشعارات والرادار (تم إضافة رصد الذكاء الاصطناعي)
   const [toasts, setToasts] = useState([]);
-  // 🎬 إغلاق التوست بأنيميشن انكماش أنيق (Premium Motion): نضيف حالة closing
-  // أولاً لكي تلعب أنيميشن الخروج (toast-out) ثم نزيل العنصر بعد انتهائها.
+  // 🎬 طابور الإشعارات الذكي (Premium Motion):
+  // - MAX_VISIBLE_TOASTS فقط يظهر في النافذة؛ الباقي ينتظر في الطابور مع عدّاد «+N إشعارات».
+  // - كل توست يُختم بـ shownAt لحظة دخوله النافذة المرئية → ينقضي بعد TOAST_LIFETIME_MS
+  //   كمَوْجَة واحدة (لا واحدًا واحدًا ثم ننتظر 9 ثوانٍ لكل توست).
+  // - dismissToast/closeAllToasts تضيف حالة closing فتلعب أنيميشن الخروج ثم يحذفه عدّاد
+  //   التنظيف المركزي بعد TOAST_EXIT_MS — لا timers متضاربة، لا تكرار عمليات حذف.
+  const MAX_VISIBLE_TOASTS = 4;
+  const TOAST_LIFETIME_MS = 9000;
+  const TOAST_EXIT_MS = 320;
+
   const dismissToast = (id) => {
-    setToasts(prev => prev.map(t => t.id === id ? { ...t, closing: true } : t));
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 320);
+    setToasts(prev => prev.map(t => t.id === id ? { ...t, closing: true, closingAt: Date.now() } : t));
   };
+
+  const closeAllToasts = () => {
+    setToasts(prev => prev.map(t => t.closing ? t : { ...t, closing: true, closingAt: Date.now() }));
+  };
+
+  // الضغط على «+N إشعارات أخرى»: يُخرج أقدم توست مرئي (أو يُظهر أول توست في الطابور) ليحلّ
+  // الموضع التالي — فيتدفق الطابور للتقدّم بشكل سلس لا قطرة واحدة.
+  const flowNextQueued = () => {
+    setToasts(prev => {
+      const shown = prev.find(t => !t.closing && t.shownAt);
+      if (shown) return prev.map(t => t.id === shown.id ? { ...t, closing: true, closingAt: Date.now() } : t);
+      const first = prev.find(t => !t.closing && !t.shownAt);
+      if (first) return prev.map(t => t.id === first.id ? { ...t, shownAt: Date.now() } : t);
+      return prev;
+    });
+  };
+
+  // موجة انقضاء موحّدة: كل ~750ms نُعلّم المنقضي بـ closing، ونحذف المنتهي منه بعد أن تلعب
+  // أنيميشن الخروج — الدفعة تنسحب معًا بدل التنقيط الواحد لملء الشاشة.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setToasts(prev => {
+        let mutated = false;
+        const next = [];
+        for (const t of prev) {
+          if (t.closing) {
+            // انتهاء أنيميشن الخروج → حذف نهائي (لا نفتح عدّاد 9 ثوانٍ جديد على المغلق)
+            if (now - (t.closingAt ?? 0) >= TOAST_EXIT_MS) { mutated = true; continue; }
+            next.push(t);
+            continue;
+          }
+          if (t.shownAt && now - t.shownAt >= TOAST_LIFETIME_MS) { mutated = true; next.push({ ...t, closing: true, closingAt: now }); continue; }
+          next.push(t);
+        }
+        return mutated ? next : prev;
+      });
+    }, 750);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ختم shownAt فور دخول التوست النافذة المرئية (أول MAX_VISIBLE_TOASTS غير المغلق):
+  // يَضمن أن عدّاد الـ 9 ثوانٍ يبدأ من لحظة الظهور الفعلي، لا من لحظة وصوله للطابور.
+  useEffect(() => {
+    setToasts(prev => {
+      let mutated = false;
+      let visible = 0;
+      const next = prev.map(t => {
+        if (t.closing) return t;
+        if (visible >= MAX_VISIBLE_TOASTS) return t;
+        visible += 1;
+        if (!t.shownAt) { mutated = true; return { ...t, shownAt: Date.now() }; }
+        return t;
+      });
+      return mutated ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toasts.length]);
   const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false });
   // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
@@ -1215,7 +1280,7 @@ useEffect(() => {
 
   // 📶 مؤشر اتصال المتصفح (Offline/Online) — حالة حرجة في غرفة العمليات:
   // عند انقطاع النت نعرض شريطًا واضحًا، وعند عودته نقول "تتم استعادة الاتصال"
-  // ثم نعود هادئين — كله عبر tokens (يعمل في الوضعين) ويحترم reduced-motion.
+  // ثم نعود هادئين — كله عبر tokens (يعمل في الوضعين) وبدون كبح للحركة.
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [justReconnected, setJustReconnected] = useState(false);
   const reconnectedTimerRef = useRef(null);
@@ -1319,8 +1384,8 @@ useEffect(() => {
         event_type: e.event_type,
         mission_id: e.mission_id,
         created_at: e.created_at,
+        // ⏱️ انقضاء الموجة يُدار مركزيًا عبر shownAt (لا يوجد timer خاص بكل توست)
       }].slice(-40));
-      setTimeout(() => { dismissToast(toastId); }, 9000);
 
       const noticeId = `n-${e.event_id}`;
       setNotifications(prev => {
@@ -1524,6 +1589,14 @@ useEffect(() => {
     },
   ];
 
+  // ── نافذة الطابور المرئية + عدّاد المتبقي لطبقة الرسم (F7) ──
+  // المقفل (closing) يرسم أثناء أنيميشن الخروج؛ غير المقفل يظهر أول MAX_VISIBLE_TOASTS فقط.
+  const closingToasts = toasts.filter(t => t.closing);
+  const liveToasts = toasts.filter(t => !t.closing);
+  const visibleToasts = liveToasts.slice(0, MAX_VISIBLE_TOASTS);
+  const visibleLiveCount = visibleToasts.length;
+  const queuedCount = liveToasts.length - visibleLiveCount;
+
   const palQuery = paletteQuery.trim().toLowerCase();
   const palResults = [];
   const palFlat = [];
@@ -1556,16 +1629,27 @@ useEffect(() => {
 
       
       {/* 💡 4. طابور الإشعارات (يدعم إشعارات النظام العادية وإشعارات الذكاء الاصطناعي البنفسجية) */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[90%] md:w-auto min-w-[320px] max-w-lg pointer-events-none">
-        {toasts.map(toastItem => (
-          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.closing ? 'toast-item-closing' : ''} ${toastItem.isAi ? '!border-purple-500/50' : ''}`}>
-            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-purple-500' : 'bg-[var(--accent)]'} animate-pulse`}></div>
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[min(94vw,640px)] pointer-events-none">
+        {visibleLiveCount >= 2 && (
+          <button
+            type="button"
+            onClick={closeAllToasts}
+            className="toast-close-all pointer-events-auto self-center"
+            title={language === 'en' ? 'Dismiss all visible notifications' : 'إغلاق كل الإشعارات الظاهرة'}
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" /></svg>
+            {language === 'en' ? 'Close all' : 'إغلاق الكل'}
+          </button>
+        )}
+        {[...visibleToasts, ...closingToasts].map(toastItem => (
+          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.closing ? 'toast-item-closing' : ''} ${toastItem.isAi ? 'toast-item-ai !border-purple-500/50' : ''}`}>
+            <div className={`absolute start-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-purple-500' : 'bg-[var(--accent)]'} animate-pulse`}></div>
             <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30'} rounded-full flex items-center justify-center border shrink-0`}>
               {toastItem.isAi ? <AIIcon className="w-5 h-5 animate-pulse" /> : <AlertIcon className="w-5 h-5 animate-bounce" />}
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-[var(--ink)] font-bold text-sm flex justify-between items-center">
-                <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[var(--accent)] ml-1">{toastItem.user}</span>}</span>
+                <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[var(--accent)] ms-1">{toastItem.user}</span>}</span>
                 <button
                   onClick={() => dismissToast(toastItem.id)}
                   aria-label={language === 'en' ? 'Dismiss notification' : 'إغلاق الإشعار'}
@@ -1580,8 +1664,20 @@ useEffect(() => {
               </p>
               <p className="text-[var(--ink-2)] text-xs mt-2 leading-relaxed">{localizeMissionDetails(toastItem.details, language)}</p>
             </div>
+            {/* ⏱️ شريط العدّاد التنازلي — يعكس 9 ثوانٍ وينكمش نحو النهاية المنطقية */}
+            <span className={`toast-timer ${toastItem.isAi ? 'toast-timer-ai' : ''}`}></span>
           </div>
         ))}
+        {queuedCount > 0 && (
+          <button
+            type="button"
+            onClick={flowNextQueued}
+            className="toast-stack-chip pointer-events-auto self-center"
+            title={language === 'en' ? 'Show next queued notifications' : 'إظهار الإشعارات التالية في الطابور'}
+          >
+            {language === 'en' ? `+${queuedCount} more notifications` : `+${queuedCount} إشعارات أخرى`}
+          </button>
+        )}
       </div>
 
       {/* 💡 لوحة الأوامر السريعة (⌘K) — زجاجية بإضاءة Lightswind، تنقل كامل بالكيبورد */}
@@ -1808,7 +1904,7 @@ useEffect(() => {
       <div
         role="dialog"
         aria-label="الإشعارات اللحظية"
-        className={`notif-dropdown absolute end-0 top-12 w-[min(92vw,360px)] max-h-[70vh] flex flex-col overflow-hidden z-[80] ${notifClosing ? 'notif-dropdown-close' : ''}`}
+        className={`notif-dropdown absolute end-0 top-12 w-[min(94vw,400px)] max-h-[min(84vh,680px)] min-h-[min(62vh,460px)] flex flex-col overflow-hidden z-[80] ${notifClosing ? 'notif-dropdown-close' : ''}`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-soft)]">
           <h3 className="text-sm font-bold">الإشعارات اللحظية</h3>
@@ -1828,9 +1924,13 @@ useEffect(() => {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {notifications.length === 0 ? (
             <div className="empty-state">
-              <div className="empty-state-icon">🔔</div>
+              <div className="empty-state-icon animate-float-slow">🔔</div>
               <p className="text-sm font-semibold text-[var(--muted)]">لا توجد إشعارات بعد</p>
-              <p className="text-xs text-[var(--faint)]">ستظهر هنا كل التحديثات اللحظية</p>
+              <p className="text-xs text-[var(--faint)]">ستظهر هنا كل التحديثات اللحظية فور حدوثها</p>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--muted-2)] mt-1">
+                <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-[var(--ok)]' : 'bg-[var(--warn)] animate-pulse'}`}></span>
+                {realtimeConnected ? 'متصل — بانتظار الأحداث' : 'جارٍ الاتصال…'}
+              </span>
             </div>
           ) : notifications.map((n, i) => (
             <button

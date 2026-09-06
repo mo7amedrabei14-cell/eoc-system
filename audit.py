@@ -21,7 +21,8 @@ def create_audit_log(
     entity_id: Optional[int] = None,
     details: Optional[dict[str, Any]] = None,
     realtime: bool = True,
-    target_user_id: Optional[int] = None
+    target_user_id: Optional[int] = None,
+    actor_user_id: Optional[int] = None,
 ):
     """
     تسجيل اللوج الأمني + (اختياري) حدث لحظي في نفس المعاملة.
@@ -65,7 +66,10 @@ def create_audit_log(
                 cursor,
                 event_type=entity_type,
                 action=action,
-                actor_user_id=user_id,
+                # actor_user_id: للبوت الآلي نمرر None ليعامل كنظام/غير محدد
+                # (لا يُستبعد أحد via no-self-notify، ويظهر كـ "نظام") —
+                # سجل audit_logs يحتفظ بـ user_id الفعلي كما هو.
+                actor_user_id=actor_user_id if actor_user_id is not None else user_id,
                 mission_id=entity_id if entity_type == "mission" else None,
                 details=details,
                 target_user_id=target_user_id,

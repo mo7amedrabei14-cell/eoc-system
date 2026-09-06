@@ -51,6 +51,82 @@ def validate_clear_confirmation(data: ClearAllRequest):
             status_code=400,
             detail="رمز التأكيد غير صحيح. لم يتم حذف أي بيانات."
         )
+
+
+def ensure_schema():
+    """
+    🛡️ تهيئة البنية الآمنة (idempotent) عند كل تشغيل — بدون الحاجة لتشغيل
+    ملفات migration يدوياً على قاعدة Neon (السبب الجذري لانقطاع الإشعارات:
+    جدول realtime_events لم يكن موجوداً على اللوحة الحية).
+    - realtime_events + فهارسها (قناة الإشعارات اللحظية) — create_realtime_event
+    - idempotency_keys (الحماية من الإرسال المكرر في الـ middleware) — بدونه
+      كل حفظ مهمة كان يفشل 500 لأن الـ middleware يقرأه في كل طلب كتابة.
+    - missions.team_code / mission_participants.participant_position + نقل
+      الصفة التاريخية لغير المتطوع (مطابق لملف 20260906).
+    كل أمر آمن للإعادة (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+    """
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # ── 1) فيد الأحداث اللحظية (Realtime Events)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS realtime_events (
+                    event_id       BIGSERIAL PRIMARY KEY,
+                    event_type     TEXT NOT NULL,
+                    action         TEXT NOT NULL,
+                    actor_user_id  INTEGER,
+                    target_user_id INTEGER,
+                    mission_id     INTEGER,
+                    details        JSONB,
+                    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS realtime_events_id_idx ON realtime_events (event_id);"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS realtime_events_mission_idx ON realtime_events (mission_id, event_id);"
+            )
+
+            # ── 2) جدول مفاتيح الإرسال المكرر (Idempotency)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS idempotency_keys (
+                    idempotency_key VARCHAR(255) PRIMARY KEY,
+                    response        JSONB,
+                    original_status INTEGER,
+                    created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            # تأمين إضافي لو الجدول موجود بأعمدة ناقصة
+            cursor.execute("ALTER TABLE idempotency_keys ADD COLUMN IF NOT EXISTS response JSONB;")
+            cursor.execute("ALTER TABLE idempotency_keys ADD COLUMN IF NOT EXISTS original_status INTEGER;")
+            cursor.execute("ALTER TABLE idempotency_keys ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;")
+
+            # ── 3) أعمدة تكميلية + ترحيل صفة غير المتطوع (idempotent)
+            cursor.execute("ALTER TABLE missions ADD COLUMN IF NOT EXISTS team_code VARCHAR(100) DEFAULT '';")
+            cursor.execute("ALTER TABLE mission_participants ADD COLUMN IF NOT EXISTS participant_position VARCHAR(100);")
+            cursor.execute("""
+                UPDATE mission_participants
+                SET participant_position = participation_role
+                WHERE participant_type = 'non_volunteer'
+                  AND (participant_position IS NULL OR TRIM(participant_position) = '')
+                  AND participation_role IS NOT NULL AND TRIM(participation_role) <> '';
+            """)
+        connection.commit()
+    except Exception as e:
+        print(f"ensure_schema error (will retry on next boot): {e}")
+    finally:
+        connection.close()
+
+
+# 🚀 تهيئة فورية عند أول تشغيل لأي worker (Vercel serverless) — آمن للإعادة
+# ولا يكسر الإقلاع لو القاعدة لحظةً ما غير متاحة (يُحاول في التشغيل التالي).
+try:
+    ensure_schema()
+except Exception as e:
+    print(f"Startup schema bootstrap failed: {e}")
+
+
 app = FastAPI(title="EOC System", version="1.0.0")
 
 app.add_middleware(
@@ -96,6 +172,11 @@ async def idempotency_middleware(request: Request, call_next):
                             cached_response = None
                         if cached_response is not None:
                             return JSONResponse(content=cached_response, status_code=row[1])
+            except Exception as e:
+                # 🛡️ حماية من أي خلل عابر هنا (جدول غير موجود لحظياً / اتصال):
+                # لا يجب أن يفشل كل طلب كتابة بسبب فحص التكرار — نكمل التنفيذ
+                # الطبيعي (ensure_schema ينشئ الجدول عند أول إقلاع).
+                print(f"Idempotency pre-check error (continuing without cache): {e}")
             finally:
                 connection.close()
 
@@ -2145,7 +2226,7 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
             new_id = cursor.fetchone()[0]
 
             try:
-                create_audit_log(cursor, user_id, "رصد خبر آلي", mission_id=None, entity_type="ai_news", entity_id=new_id, details={"action_text": f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"})
+                create_audit_log(cursor, user_id, "رصد خبر آلي", mission_id=None, entity_type="ai_news", entity_id=new_id, details={"action_text": f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"}, actor_user_id=None)
             except Exception as e: pass
 
             connection.commit()
@@ -2180,7 +2261,7 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
             ))
 
             try:
-                create_audit_log(cursor, user_id, "تحديث خبر آلي", mission_id=None, entity_type="ai_news", entity_id=news_id, details={"action_text": f"تم تحديث بيانات رصد الذكاء الاصطناعي للخبر رقم {news_id}"})
+                create_audit_log(cursor, user_id, "تحديث خبر آلي", mission_id=None, entity_type="ai_news", entity_id=news_id, details={"action_text": f"تم تحديث بيانات رصد الذكاء الاصطناعي للخبر رقم {news_id}"}, actor_user_id=None)
             except Exception as e: pass
 
             connection.commit()
@@ -2326,9 +2407,12 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
             # =========================================================================
             # حساب القوة البشرية من الهوية الفعلية لا من النصوص (#4)
             # - كل سطر مشاركة له مفتاح هوية جذري (identity key):
-            #     vid:branch:volunteer_id        (المتطوع المرتبط بسجله في volunteers)
-            #     rid:branch:membership_number   (غير مرتبط + عنده رقم عضوية/صفة)
-            #     nm:branch:full_name            (بدون رقم وصلاً — أثر تاريخي فقط)
+            #     vid:volunteer_id             (المتطوع المرتبط — عبر كل الفروع)
+            #     rid:membership_number        (غير مرتبط + عنده رقم عضوية/صفة — عبر كل الفروع)
+            #     nm:branch:full_name          (بدون رقم وصلاً — يظل مقيداً بالفرع، فالأسماء تتكرر)
+            #   🔧 الإصلاح: الهوية بلا فرع للمتطوع/رقم العضوية حتى يُدمج كل
+            #   مهام نفس الشخص (ولو في فروع مختلفة) في صف واحد ويُجمع ساعاته
+            #   جمعاً حقيقياً (M1=3h + M2=4h ⇒ 7h) بدل انقسامه على أكثر من صف.
             # - عدد المهام = عدد المهمات الفعلية المتميزة للنفس الهوية
             # - الساعات تُحسب من التواريخ الحقيقية للمهمة المكتملة (لا 0 ساعة بديلة)
             # - المهمة الحالية تُرجع ببيانها (id/كود/اسم) حتى نعرف في أي مهمة هو الآن
@@ -2346,8 +2430,8 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         mp.volunteer_id,
                         mp.return_status,
                         CASE
-                            WHEN mp.volunteer_id IS NOT NULL THEN 'vid:' || COALESCE(mp.branch_id, 0) || ':' || mp.volunteer_id
-                            WHEN TRIM(COALESCE(mp.membership_number, '')) <> '' THEN 'rid:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.membership_number)
+                            WHEN mp.volunteer_id IS NOT NULL THEN 'vid:' || mp.volunteer_id
+                            WHEN TRIM(COALESCE(mp.membership_number, '')) <> '' THEN 'rid:' || TRIM(mp.membership_number)
                             ELSE 'nm:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.full_name)
                         END AS k
                     FROM mission_participants mp

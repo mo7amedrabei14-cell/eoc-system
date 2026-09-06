@@ -504,16 +504,27 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
 
 /* ── حقول الوقت (ساعة التحرك وغيرها): عرض وحشوة كافيان حتى يظهر AM/PM كاملاً بلا قص ── */
 input[type="time"].field {
-  min-width: 9rem;
-  padding-right: 0.4rem;
-  padding-left: 0.6rem;
+  min-width: 10rem;
+  box-sizing: border-box;
+  direction: ltr;
+  text-align: left;
+  padding: 0 0.8rem 0 0.6rem;
 }
-input[type="time"].field::-webkit-datetime-edit { padding: 0; }
+
+input[type="time"].field::-webkit-datetime-edit {
+  direction: ltr;
+  padding: 0;
+  white-space: nowrap;
+}
+
 input[type="time"].field::-webkit-datetime-edit-ampm-field {
-  padding: 0 12px 0 4px;
+  direction: ltr;
+  padding: 0 8px 0 4px;
   min-width: 3.5em;
   text-align: center;
+  white-space: nowrap;
 }
+
 
 /* ════════ تفاعل التركيز المميّز — مذنّب يتحرك حول الحقل النشط ════════
    - الحقل القياسي `.field` عند التركيز: إطار ضوئي يسافر حول الحدود + توهج
@@ -994,10 +1005,38 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   box-shadow: var(--shadow-3);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  animation: toast-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* backwards (لا both): بعد انتهاء الدخول تُحرَّر transform حتى يعمل hover-lift / press */
+  animation: toast-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
   transform-origin: center top;
   will-change: transform, opacity;
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), filter var(--dur) var(--ease-out);
 }
+/* ── توهّج خلفي نابض يدخل مع التوست (أحمر هوية / بنفسجي AI) + hover يرتفع ويتوهّج ── */
+.toast-item { position: relative; isolation: isolate; }
+/* نرفع محتوى التوست فوق توهّج ::before فقط — لا نلمس العناصر المطلقة (الشريط الجانبي/العداد)
+   حتى لا نكسر position:absolute القادم من Tailwind (unlayered يتفوق على الـ utilities layer). */
+.toast-item > *:not(.absolute):not(.toast-timer) { position: relative; z-index: 1; }
+.toast-item::before {
+  content: "";
+  position: absolute;
+  inset: 0; /* داخل البطاقة (overflow-hidden يقطع أي امتداد خارجي) — غسلة داخلية ناعمة */
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 95% at 50% -25%, var(--accent-glow), transparent 58%),
+              radial-gradient(80% 70% at 50% 125%, color-mix(in srgb, var(--info) 12%, transparent), transparent 55%);
+  opacity: 0;
+  animation: toast-bloomin 0.9s var(--ease-out) forwards;
+  transition: opacity 0.35s var(--ease-out), filter 0.35s var(--ease-out);
+  pointer-events: none;
+}
+.toast-item-ai::before {
+  background: radial-gradient(120% 95% at 50% -25%, rgba(177, 122, 248, 0.32), transparent 58%),
+              radial-gradient(80% 70% at 50% 125%, rgba(177, 122, 248, 0.15), transparent 55%);
+}
+.toast-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-3), 0 16px 44px -12px var(--accent-glow); }
+.toast-item-ai:hover { box-shadow: var(--shadow-3), 0 16px 44px -16px rgba(177, 122, 248, 0.5); }
+.toast-item:active { transform: scale(0.99); }
+@keyframes toast-bloomin { from { opacity: 0; } to { opacity: 1; } }
 .toast-item-closing {
   animation: toast-out 0.34s cubic-bezier(0.55, 0, 0.85, 0.36) both;
   pointer-events: none;
@@ -1030,6 +1069,80 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
     transform: translateY(-10px) scale(0.6);
   }
 }
+
+/* ── شريط العدّاد التنازلي للتوست (F8): ينكمش خلال 9 ثوانٍ نحو النهاية المنطقية ──
+   منطقي (transform-origin start) → يعمل يمينًا في RTL ويسارًا في LTR تلقائيًا. */
+.toast-timer {
+  position: absolute;
+  inset-inline: 10px;
+  bottom: 4px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-hover), var(--accent-deep), transparent);
+  opacity: 0.85;
+  transform-origin: start;
+  animation: toast-timer 9s linear forwards;
+  pointer-events: none;
+}
+.toast-timer-ai {
+  background: linear-gradient(90deg, #b17af8, transparent);
+}
+[dir="ltr"] .toast-timer { transform-origin: left; }
+[dir="rtl"] .toast-timer { transform-origin: right; }
+@keyframes toast-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* ── عدّاد الطابور «+N إشعارات أخرى» (F7) ── */
+.toast-stack-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--glass);
+  border: 1px solid var(--border-strong);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transform-origin: center top;
+  transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  animation: toast-in 0.4s var(--ease-out) backwards;
+}
+.toast-stack-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+.toast-stack-chip:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)); box-shadow: var(--shadow-2); }
+.toast-stack-chip:active { transform: scale(0.97); }
+
+/* ── شريحة «إغلاق الكل» (F7) — تظهر عند وجود إشعارين مرئيين فأكثر ── */
+.toast-close-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.toast-close-all:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--accent-softer); }
+.toast-close-all:active { transform: scale(0.96); }
 
 /* قائمة الإشعارات — مدعومة RTL عبر logical properties */
 /* معتمة بالكامل: --glass كان شبه شفاف + backdrop blur فكان يظهر ما خلفه من المحتوى.
@@ -1996,8 +2109,7 @@ select.field {
 .skeleton { border-radius: var(--radius); }
 
 /* ── 33) Toast — Premium Notify Card ──
-   حافة أكسنت جانبية + قسم شفاف يعكس نوع الحدث. */
-.toast-item { position: relative; }
+   حافة أكسنت جانبية (logical → RTL/LTR) + لمعة شبه نابضة خفيفة تعطي إحساسًا حيًا. */
 .toast-item::after {
   content: "";
   position: absolute;
@@ -2006,8 +2118,17 @@ select.field {
   width: 2px;
   border-radius: 999px;
   background: linear-gradient(180deg, var(--accent-hover), var(--accent-deep));
+  background-size: 100% 240%;
   box-shadow: 0 0 10px var(--accent-glow);
   opacity: 0.9;
+  animation: toast-edge-pulse 3.2s ease-in-out infinite;
+}
+.toast-item-ai::after {
+  background: linear-gradient(180deg, #c9a1ff, #7c3aed);
+}
+@keyframes toast-edge-pulse {
+  0%, 100% { opacity: 0.9; filter: brightness(1); }
+  50%      { opacity: 0.45; filter: brightness(1.35); }
 }
 
 /* ── 34) شريط تنقّل — Morphing Rail Touch ──
@@ -2153,7 +2274,7 @@ select.field {
 
 /* ── 43) مراسم الافتتاح — Opening Ceremony (مفاجأة فتح التطبيق) ──
    مرة واحدة لكل جلسة: ضربة ضوئية قطرية + شرارات + «طابع» الشعار بنابض.
-   كل الألوان من التوكينات → تعمل في الثيمين، وتُعطَّل كليًا مع reduced-motion. */
+   كل الألوان من التوكينات → تعمل في الثيمين دون أي كبح للحركة. */
 
 /* الستارة: وميض خفيف يغطي الشاشة قبل الضربة */
 .opening-ceremony { animation: opening-fade 1.9s var(--ease-out) forwards; }
