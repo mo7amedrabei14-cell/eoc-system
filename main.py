@@ -358,6 +358,8 @@ class ParticipantModel(BaseModel):
     team_name: Optional[str] = None
     team_code: Optional[str] = None
     participation_role: str
+    # 🆕 صفة المشارك (لغير المتطوعين) — حقل مخصص منفصل عن رقم العضوية الخاص بالمتطوعين
+    participant_position: Optional[str] = None
     branch_id: int
     assigned_itinerary: str
     return_status: str = "مازال بالمهمة"
@@ -436,6 +438,12 @@ def validate_mission_required_fields(mission):
         missing.append("ساعة التحرك / البدء")
     if not any(val(p.full_name) for p in (mission.participants or [])):
         missing.append("إضافة مشارك واحد على الأقل")
+
+    # 🆕 صفة المشارك إلزامية لكل مشارك غير متطوع (المتطوع يُعرف برقم العضوية فقط)
+    for i, p in enumerate(mission.participants or []):
+        if p.participant_type == "non_volunteer" and \
+                not val(getattr(p, "participant_position", None)):
+            missing.append(f"صفة المشارك (غير المتطوع: {p.full_name or ('مشارك ' + str(i + 1))})")
 
     staff_map = {s.role_name: s.staff_name for s in (mission.eoc_staff or [])}
     for role, label in [("مسؤول المتابعة", "مسؤول المتابعة (قائد العملية)"),
@@ -726,9 +734,9 @@ def create_mission(
                     raise Exception(f"المشارك '{part.full_name}' (رقم {membership}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً.")
 
                 cursor.execute("""
-                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.participant_position or '', volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -909,9 +917,9 @@ def update_mission(
                     part.team_code = part.team_code or prev.get("team_code") or ''
 
                 cursor.execute("""
-                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.participant_position or '', volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -975,8 +983,8 @@ def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentia
             cursor.execute("SELECT driver_name, vehicle_number FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             mission_data["vehicles"] = [{"driver_name": r[0], "vehicle_number": r[1]} for r in cursor.fetchall()]
             
-            cursor.execute("SELECT participant_type, full_name, team_name, team_code, participation_role, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s ORDER BY participant_id", (mission_id,))
-            mission_data["participants"] = [{"participant_type": r[0], "full_name": r[1], "team_name": r[2], "team_code": r[3], "participation_role": r[4], "volunteer_id": r[5], "user_id": r[6], "membership_number": r[7], "branch_id": r[8], "assigned_itinerary": r[9], "return_status": r[10], "phase_name": r[11], "stay_type": r[12]} for r in cursor.fetchall()]
+            cursor.execute("SELECT participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s ORDER BY participant_id", (mission_id,))
+            mission_data["participants"] = [{"participant_type": r[0], "full_name": r[1], "team_name": r[2], "team_code": r[3], "participation_role": r[4], "participant_position": r[5], "volunteer_id": r[6], "user_id": r[7], "membership_number": r[8], "branch_id": r[9], "assigned_itinerary": r[10], "return_status": r[11], "phase_name": r[12], "stay_type": r[13]} for r in cursor.fetchall()]
             
             cursor.execute("SELECT category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             mission_data["beneficiaries"] = [{"category_name": r[0], "direct_count": r[1], "indirect_count": r[2]} for r in cursor.fetchall()]
@@ -2334,6 +2342,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         mp.full_name,
                         mp.membership_number,
                         mp.participant_type,
+                        mp.participant_position,
                         mp.volunteer_id,
                         mp.return_status,
                         CASE
@@ -2351,6 +2360,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         full_name,
                         membership_number,
                         participant_type,
+                        participant_position,
                         branch_id,
                         volunteer_id
                     FROM ident
@@ -2415,6 +2425,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     p.full_name,
                     COALESCE(NULLIF(TRIM(p.membership_number), ''), 'بدون رقم/صفة') AS membership_number,
                     p.participant_type,
+                    COALESCE(p.participant_position, '') AS participant_position,
                     COALESCE(b.branch_name, 'غير محدد') AS branch_name,
                     p.branch_id,
                     p.volunteer_id,
@@ -2437,15 +2448,16 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     "full_name": row[0],
                     "membership_number": row[1],
                     "participant_type": row[2],
-                    "branch_name": row[3],
-                    "branch_id": row[4],
-                    "volunteer_id": row[5],
-                    "missions_count": row[6],
-                    "total_hours": float(row[7] or 0),   # الساعات من بيانات حقيقية فقط
-                    "active_mission": bool(row[8]),
-                    "active_mission_id": row[9],
-                    "active_mission_code": row[10],
-                    "active_mission_name": row[11]
+                    "participant_position": row[3],
+                    "branch_name": row[4],
+                    "branch_id": row[5],
+                    "volunteer_id": row[6],
+                    "missions_count": row[7],
+                    "total_hours": float(row[8] or 0),   # الساعات من بيانات حقيقية فقط
+                    "active_mission": bool(row[9]),
+                    "active_mission_id": row[10],
+                    "active_mission_code": row[11],
+                    "active_mission_name": row[12]
                 })
             return result
     except Exception as e:

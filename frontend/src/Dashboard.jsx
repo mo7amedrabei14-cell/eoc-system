@@ -295,6 +295,7 @@ const ENGLISH_UI = {
   'م': '#',
   'الاسم': 'Name',
   'رقم العضوية / الصفة': 'Membership number / role',
+  'صفة المشارك': 'Participant Designation',
   'الفرع التابع له': 'Affiliated branch',
   'النوع': 'Type',
   'عدد المهام': 'Mission count',
@@ -2771,7 +2772,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const plate = document.getElementById(`v_plate_${i}`)?.value;
       if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
     });
-    csvContent += `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية/الصفة,المرحلة,نظام التواجد,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
+    csvContent += `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,المرحلة,نظام التواجد,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
     participants.forEach((_, i) => {
       const name = document.getElementById(`p_name_${i}`)?.value;
       if (name) {
@@ -2780,7 +2781,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         const itinSel = document.getElementById(`p_itin_${i}`);
         const phase = document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول';
         const stay = document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة';
-        csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(phase)},${escapeCSV(stay)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
+        csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(phase)},${escapeCSV(stay)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
       }
     });
     csvContent += "\nإحصائيات المستفيدين\nالتصنيف,مباشر,غير مباشر\n";
@@ -2810,6 +2811,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     field_filler: 'معبئ الاستمارة',
     field_completion_date: 'تاريخ الانتهاء (لإنهاء المهمة)',
     field_completion_time: 'ساعة الانتهاء (لإنهاء المهمة)',
+    field_participant_position: 'صفة المشارك (لغير المتطوعين)',
   };
 
   // 🔎 قراءة الحقول الإلزامية الناقصة من الـ DOM (المصدر الحقيقي للبيانات)
@@ -2819,6 +2821,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (!v('f_exit_date')) missing.push('field_exit_date');
     if (!v('f_departure_time')) missing.push('field_departure_time');
     if (!(participants || []).some(p => String(p.full_name || '').trim() !== '')) missing.push('field_participants');
+    // 🆕 صفة المشارك إلزامية لكل مشارك غير متطوع (المتطوع يُعرف برقم العضوية فقط)
+    const positionMissing = participants.some((p, i) =>
+      (p.participant_type || 'volunteer') === 'non_volunteer' &&
+      !String(document.getElementById(`p_position_${i}`)?.value || '').trim());
+    if (positionMissing) missing.push('field_participant_position');
     if (!v('eoc_leader')) missing.push('field_leader');
     if (!v('eoc_supervisor')) missing.push('field_supervisor');
     if (!v('eoc_joker')) missing.push('field_joker');
@@ -2944,6 +2951,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
            participant_type: document.getElementById(`p_type_${i}`)?.value || 'volunteer',
            full_name: document.getElementById(`p_name_${i}`)?.value || '',
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
+           participant_position: document.getElementById(`p_position_${i}`)?.value || '',
            branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
            assigned_itinerary: getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي',
            return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة',
@@ -3476,8 +3484,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <SectionCard title={<span>القوة البشرية والمشاركين <span className="text-[var(--accent)]">*</span></span>} icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
                 {requiredTouched && missingFields.includes('field_participants') && <p className="text-[var(--accent)] text-xs font-bold mb-2 flex items-center gap-1.5 px-1">⚠ يجب إضافة مشارك واحد على الأقل بالاسم لإتمام أي عملية على المهمة.</p>}
                 <div className={`overflow-x-auto bg-[var(--surface-4)] rounded-xl border ${requiredTouched && missingFields.includes('field_participants') ? 'border-[var(--accent)]/60' : 'border-[var(--border)]'}`}>
-                  <table className="w-full text-right text-sm min-w-[720px]">
-                    <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3">رقم العضوية / الصفة</th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-center">حذف</th></tr></thead>
+                  <table className="w-full text-right text-sm min-w-[900px]">
+                    <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]"><tr><th className="p-3">م</th><th className="p-3">النوع</th><th className="p-3">الاسم</th><th className="p-3">رقم العضوية</th><th className="p-3 text-[var(--accent)]">صفة المشارك <span className="text-[var(--accent)]">*</span></th>{missionClass === 'مفتوحة' && <><th className="p-3 text-purple-400 w-24">المرحلة</th><th className="p-3 text-orange-400 w-28">التواجد</th></>}<th className="p-3">الفرع</th><th className="p-3 text-green-400">المسار</th><th className="p-3 text-center">حذف</th></tr></thead>
                     <tbody className="divide-y divide-[var(--border)]">
                       {participants.map((p, index) => (
                         <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
@@ -3491,7 +3499,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." onChange={(e) => { const newP = [...participants]; newP[index].full_name = e.target.value; setParticipants(newP); }} className="bg-transparent outline-none text-white w-full" /></td>
 
                           <td className="p-2">
-                            <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : 'الصفة...'} className="bg-transparent outline-none text-white w-full" />
+                            <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : '—'} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'} className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : 'text-white'}`} />
+                          </td>
+                          <td className="p-2">
+                            <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
                           </td>
                           {missionClass === 'مفتوحة' && (
                             <>
@@ -6062,6 +6073,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "م": i + 1,
       "الاسم الرباعي": p.full_name,
       "رقم العضوية / الصفة": p.membership_number,
+      "صفة المشارك": p.participant_position || '',
       "الفرع التابع له": p.branch_name === 'القاهرة' ? 'المركز العام' : p.branch_name,
       "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
       "حالة المشاركة": p.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا',
@@ -6167,6 +6179,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                 <th className="p-4 font-semibold border-l border-[var(--border)] w-16 text-center">م</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">الاسم</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">رقم العضوية / الصفة</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">صفة المشارك</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">الفرع التابع له</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">النوع</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الحالة الآن</th>
@@ -6176,14 +6189,15 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? (
-                <TableLoadingRow colSpan={8} label="جاري حصر وتحليل الأفراد من المهام السابقة..." />
+                <TableLoadingRow colSpan={9} label="جاري حصر وتحليل الأفراد من المهام السابقة..." />
               ) : filteredHR.length === 0 ? (
-                <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
+                <tr><td colSpan={9} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
               ) : filteredHR.map((person, index) => (
                 <tr key={person.id || person.membership_number || index} className={`transition-colors duration-300 ${person.active_mission ? 'hr-active-row' : ''} hover:bg-[var(--surface-2)]`}>
                   <td className="p-4 text-center">{index + 1}</td>
                   <td className="p-4 font-semibold">{person.full_name}</td>
                   <td className="p-4">{person.membership_number}</td>
+                  <td className="p-4">{person.participant_position || '—'}</td>
                   <td className="p-4">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
                   <td className="p-4 text-center">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</td>
                   <td className="p-4 text-center">{person.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا'}</td>

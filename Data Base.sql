@@ -847,6 +847,7 @@ CREATE TABLE public.mission_participants (
     participant_type character varying(50),
     full_name character varying(150),
     participation_role character varying(100),
+    participant_position character varying(100),
     branch_id integer,
     assigned_itinerary character varying(150) DEFAULT 'خط السير الأساسي'::character varying,
     team_name character varying(100) DEFAULT ''::character varying,
