@@ -3344,15 +3344,18 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </SectionCard>
 
               <SectionCard title="التواريخ والتوقيتات" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-3 gap-4">
+                  {/* تواريخ */}
                   <FormGroup className="items-center text-center" label="تاريخ المهمة"><StyledInput className="text-center" id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الخروج"><StyledInput className="text-center" id="f_departure_date" type="date" defaultValue={currentMissionData?.departure_date || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الوصول للمكان"><StyledInput className="text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><StyledInput className="text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
                   <FormGroup className="items-center text-center" label="تاريخ الانتهاء"><StyledInput className="text-center" id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} /></FormGroup>
-                  <FormGroup label="ساعة البدء"><StyledInput id="f_start_time" type="time" defaultValue={currentMissionData?.start_time || ''} /></FormGroup>
-                  <FormGroup label="ساعة التحرك"><StyledInput id="f_departure_time" type="time" defaultValue={currentMissionData?.departure_time || ''} /></FormGroup>
-                  <FormGroup label="ساعة الوصول"><StyledInput id="f_arrival_time" type="time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
-                  <FormGroup label="ساعة الانتهاء"><StyledInput id="f_completion_time" type="time" defaultValue={currentMissionData?.completion_time || ''} /></FormGroup>
+                  {/* أوقات */}
+                  <FormGroup className="items-center text-center" label="ساعة التحرك / البدء"><StyledInput className="text-center" id="f_departure_time" type="time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الوصول"><StyledInput className="text-center" id="f_arrival_time" type="time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الانتهاء"><StyledInput className="text-center" id="f_completion_time" type="time" defaultValue={currentMissionData?.completion_time || ''} /></FormGroup>
+                  {/* حقول مخفية لضمان عدم تلف الحفظ وحساب الساعات */}
+                  <input type="hidden" id="f_departure_date" defaultValue={currentMissionData?.departure_date || ''} />
+                  <input type="hidden" id="f_start_time" defaultValue={currentMissionData?.start_time || ''} />
                 </div>
               </SectionCard>
 

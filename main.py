@@ -2312,6 +2312,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                 -- إحصاءات لكل هوية من البيانات الحقيقية فقط (مهام فعلية غير ملغاة)
                 -- كل مهمة تُحسب مرة واحدة للشخص مهما تكرر تسجيل مشاركته فيها (سطر لكل مرحلة/يوم)
                 -- والساعات من زمن المهمة الفعلي نفسه: (الانتهاء) - (التحرك/الانطلاق)
+                -- المهمة المازالت نشطة (بلا تاريخ انتهاء): تُحسب ساعاتها المحققة حتى اللحظة من زمن انطلاقها الفعلي
                 stats AS (
                     SELECT
                         d.k,
@@ -2324,14 +2325,24 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                             BOOL_OR(m.status NOT IN ('Draft', 'Cancelled', 'Returned')) AS mission_valid,
                             MAX(CASE
                                 WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                                 AND m.completion_date IS NOT NULL
-                                THEN GREATEST(
-                                    EXTRACT(EPOCH FROM (
-                                        (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
-                                        (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
-                                    )) / 3600.0,
-                                    0
-                                )
+                                THEN CASE
+                                    WHEN m.completion_date IS NOT NULL
+                                    THEN GREATEST(
+                                        EXTRACT(EPOCH FROM (
+                                            (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
+                                            (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
+                                        )) / 3600.0,
+                                        0
+                                    )
+                                    -- المهمة ما زالت نشطة: يُحتسب ما تحقق فعلياً من زمن الانطلاق الحقيقي حتى اللحظة (من الداتا المخزنة فقط + الآن)
+                                    ELSE GREATEST(
+                                        EXTRACT(EPOCH FROM (
+                                            LOCALTIMESTAMP -
+                                            (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, m.created_at::time))
+                                        )) / 3600.0,
+                                        0
+                                    )
+                                END
                                 ELSE 0
                             END) AS mission_hours
                         FROM ident i
