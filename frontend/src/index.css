@@ -262,14 +262,14 @@ select.field, .field option { background: var(--surface-2); color: var(--ink); }
 
 /* ── حقول الوقت (ساعة التحرك وغيرها): عرض وحشوة كافيان حتى يظهر AM/PM كاملاً بلا قص ── */
 input[type="time"].field {
-  min-width: 9rem;
-  padding-right: 0.6rem;
+  min-width: 10rem;
+  padding-right: 0.4rem;
   padding-left: 0.6rem;
 }
 input[type="time"].field::-webkit-datetime-edit { padding: 0; }
 input[type="time"].field::-webkit-datetime-edit-ampm-field {
-  padding: 0 6px;          /* أتسع من padding السابق حتى لا يُقصّ الحرف الأخير (M) في AM/PM */
-  min-width: 2.5em;
+  padding: 0 4px;          /* أتسع من padding السابق حتى لا يُقصّ الحرف الأخير (M) في AM/PM */
+  min-width: 3em;
   text-align: center;
 }
 
