@@ -260,6 +260,15 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .field::placeholder { color: var(--faint); }
 select.field, .field option { background: var(--surface-2); color: var(--ink); }
 
+/* ── حقول الوقت (ساعة التحرك وغيرها): عرض وحشوة كافيان حتى يظهر AM/PM كاملاً بلا قص ── */
+input[type="time"].field {
+  min-width: 8.75rem;
+  padding-right: 0.5rem;
+  padding-left: 0.5rem;
+}
+input[type="time"].field::-webkit-datetime-edit { padding: 0; }
+input[type="time"].field::-webkit-datetime-edit-ampm-field { padding: 0 1px; }
+
 /* ───────────────────── 7) الأزرار ───────────────────── */
 .btn {
   display: inline-flex;
@@ -919,6 +928,20 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 
 /* وميض خفيف على صف المهمة المتغيّرة لحظياً */
 .mission-flash-row td { animation: mission-flash 2.3s var(--ease-out); }
+
+/* ── صف "في مهمة حاليًا" في سجل القوة البشرية: تمييز برتقالي فوري ──
+   يُطبق تلقائياً من حالة الـ DB لحظياً ويُرفع فور خروج الشخص من المهمة */
+.hr-active-row,
+.hr-active-row td {
+  background-color: color-mix(in srgb, var(--warn) 13%, transparent);
+}
+.hr-active-row td:first-child {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+.hr-active-row:hover,
+.hr-active-row:hover td {
+  background-color: var(--surface-2);
+}
 
 .live-dot {
   width: 0.5rem;

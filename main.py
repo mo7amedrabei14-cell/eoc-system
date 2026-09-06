@@ -2310,13 +2310,19 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     ORDER BY i.k, m.created_at DESC, m.mission_id DESC
                 ),
                 -- إحصاءات لكل هوية من البيانات الحقيقية فقط (مهام فعلية غير ملغاة)
+                -- كل مهمة تُحسب مرة واحدة للشخص مهما تكرر تسجيل مشاركته فيها (سطر لكل مرحلة/يوم)
+                -- والساعات من زمن المهمة الفعلي نفسه: (الانتهاء) - (التحرك/الانطلاق)
                 stats AS (
                     SELECT
-                        i.k,
-                        COUNT(DISTINCT i.mission_id)
-                            FILTER (WHERE m.status NOT IN ('Draft', 'Cancelled', 'Returned')) AS missions_count,
-                        ROUND(COALESCE(SUM(
-                            CASE
+                        d.k,
+                        COUNT(*) FILTER (WHERE d.mission_valid) AS missions_count,
+                        ROUND(COALESCE(SUM(CASE WHEN d.mission_valid THEN d.mission_hours ELSE 0 END), 0)::numeric, 1) AS total_hours
+                    FROM (
+                        SELECT
+                            i.k,
+                            i.mission_id,
+                            BOOL_OR(m.status NOT IN ('Draft', 'Cancelled', 'Returned')) AS mission_valid,
+                            MAX(CASE
                                 WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                                  AND m.completion_date IS NOT NULL
                                 THEN GREATEST(
@@ -2327,11 +2333,12 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                                     0
                                 )
                                 ELSE 0
-                            END
-                        ), 0)::numeric, 1) AS total_hours
-                    FROM ident i
-                    JOIN missions m ON m.mission_id = i.mission_id
-                    GROUP BY i.k
+                            END) AS mission_hours
+                        FROM ident i
+                        JOIN missions m ON m.mission_id = i.mission_id
+                        GROUP BY i.k, i.mission_id
+                    ) d
+                    GROUP BY d.k
                 )
                 SELECT
                     p.full_name,

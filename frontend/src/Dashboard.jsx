@@ -3345,11 +3345,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
               <SectionCard title="التواريخ والتوقيتات" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  <FormGroup label="تاريخ المهمة"><StyledInput id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} /></FormGroup>
-                  <FormGroup label="تاريخ الخروج"><StyledInput id="f_departure_date" type="date" defaultValue={currentMissionData?.departure_date || ''} /></FormGroup>
-                  <FormGroup label="تاريخ الوصول للمكان"><StyledInput id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
-                  <FormGroup label="تاريخ العودة"><StyledInput id="f_return_date" type="date" defaultValue={currentMissionData?.return_date || ''} /></FormGroup>
-                  <FormGroup label="تاريخ الانتهاء"><StyledInput id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ المهمة"><StyledInput className="text-center" id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الخروج"><StyledInput className="text-center" id="f_departure_date" type="date" defaultValue={currentMissionData?.departure_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الوصول للمكان"><StyledInput className="text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء"><StyledInput className="text-center" id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} /></FormGroup>
                   <FormGroup label="ساعة البدء"><StyledInput id="f_start_time" type="time" defaultValue={currentMissionData?.start_time || ''} /></FormGroup>
                   <FormGroup label="ساعة التحرك"><StyledInput id="f_departure_time" type="time" defaultValue={currentMissionData?.departure_time || ''} /></FormGroup>
                   <FormGroup label="ساعة الوصول"><StyledInput id="f_arrival_time" type="time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
@@ -3703,7 +3702,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   );
 }
 
-const FormGroup = ({ label, children }) => (<div className="flex flex-col gap-1.5 w-full"><label className="text-[var(--muted)] text-xs font-bold px-1">{label}</label>{children}</div>);
+const FormGroup = ({ label, className = "", children }) => (<div className={`flex flex-col gap-1.5 w-full ${className}`}><label className="text-[var(--muted)] text-xs font-bold px-1">{label}</label>{children}</div>);
 const StyledInput = ({ className="", ...props }) => (<input className={`field ${className}`} {...props} />);
 const StyledSelect = ({ children, className="", ...props }) => (<select className={`field ${className}`} {...props}>{children}</select>);
 const SectionCard = ({ title, icon, actionBtn, children }) => (<div className="card-surface p-5 md:p-6"><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
@@ -6117,7 +6116,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
               ) : filteredHR.length === 0 ? (
                 <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
               ) : filteredHR.map((person, index) => (
-                <tr key={person.id || person.membership_number || index} className="hover:bg-[var(--surface-2)]">
+                <tr key={person.id || person.membership_number || index} className={`transition-colors duration-300 ${person.active_mission ? 'hr-active-row' : ''} hover:bg-[var(--surface-2)]`}>
                   <td className="p-4 text-center">{index + 1}</td>
                   <td className="p-4 font-semibold">{person.full_name}</td>
                   <td className="p-4">{person.membership_number}</td>
