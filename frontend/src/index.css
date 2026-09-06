@@ -316,7 +316,7 @@ input[type="time"].field {
 }
 input[type="time"].field::-webkit-datetime-edit { padding: 0; }
 input[type="time"].field::-webkit-datetime-edit-ampm-field {
-  padding: 0 8px 0 4px;
+  padding: 0 12px 0 4px;
   min-width: 3.5em;
   text-align: center;
 }
