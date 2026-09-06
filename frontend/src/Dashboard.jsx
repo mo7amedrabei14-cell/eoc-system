@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import EocSelect from './components/EocSelect';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -3100,13 +3101,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
               {!isVolunteer && (<>
                 <div className="w-px h-6 bg-[var(--border)] mx-0.5"></div>
-                <select value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer px-2">
+                <EocSelect variant="toolbar" className="px-2" value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)}>
                   <option value="all">كل الأقاليم</option>
                   <option value="hq">المركز العام (وملحقاته)</option>
                   <option value="canal">إقليم القنال</option>
                   <option value="delta">إقليم الدلتا</option>
                   <option value="saeed">إقليم الصعيد</option>
-                </select>
+                </EocSelect>
               </>)}
             </div>
 
@@ -3480,10 +3481,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
                           <td className="p-2 text-center text-[var(--muted-2)] font-bold">{index + 1}</td>
                           <td className="p-2">
-                            <select id={`p_type_${index}`} value={p.participant_type || 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_type = e.target.value; setParticipants(newP); }} className="bg-transparent text-white outline-none">
+                            <EocSelect variant="cell" id={`p_type_${index}`} value={p.participant_type || 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_type = e.target.value; setParticipants(newP); }}>
                               <option value="volunteer" className="bg-[var(--surface-4)]">متطوع</option>
                               <option value="non_volunteer" className="bg-[var(--surface-4)]">غير متطوع</option>
-                            </select>
+                            </EocSelect>
                           </td>
                           <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." onChange={(e) => { const newP = [...participants]; newP[index].full_name = e.target.value; setParticipants(newP); }} className="bg-transparent outline-none text-white w-full" /></td>
 
@@ -3499,19 +3500,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                                 <input id={`p_phase_${index}`} type="text" defaultValue={p.phase_name || 'اليوم الأول'} placeholder="اليوم 1..." className="bg-transparent outline-none text-purple-300 font-bold text-center w-full border-b border-transparent focus:border-purple-500 transition-colors" />
                               </td>
                               <td className="p-2">
-                                <select id={`p_stay_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'} className="bg-[var(--surface-3)] text-orange-400 border border-[var(--border)] px-1 py-1 outline-none w-full rounded text-xs font-bold">
+                                <EocSelect variant="cell" className="text-orange-400 font-bold" id={`p_stay_${index}`} defaultValue={p.stay_type || 'ذهاب وعودة'}>
                                   <option value="ذهاب وعودة">🔄 عودة</option>
                                   <option value="مبيت">⛺ مبيت</option>
-                                </select>
+                                </EocSelect>
                               </td>
                             </>
                           )}
                           <td className="p-2">
-                            <select 
-                              id={`p_branch_${index}`} 
-                              defaultValue={p.branch_id || userBranchId} 
+                            <EocSelect
+                              variant="cell"
+                              id={`p_branch_${index}`}
+                              defaultValue={p.branch_id || userBranchId}
                               disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}
-                              className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : 'text-white'}`}
                             >
                               {/* 💡 نفس التعديل هنا لجدول المشاركين */}
                               {(!isVolunteer || userRegion === 'hq') && <option value="19" className="bg-[var(--surface-4)]">المركز العام</option>}
@@ -3522,17 +3523,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                                 }
                                 return null;
                               })}
-                            </select>
+                            </EocSelect>
                           </td>
                           <td className="p-2">
-                            <select id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'} className="bg-[var(--surface-3)] text-green-400 border border-[var(--border)] px-2 py-1 outline-none w-full rounded max-w-[120px] truncate">
+                            <EocSelect variant="cell" className="text-green-400 max-w-[120px]" id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'}>
                               {routes.length > 0 && missionClass !== 'مفتوحة' && <option value="خط السير الأساسي">خط السير الأساسي</option>}
                               {customItineraries.map((ci) => {
                                 const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || 'مخصص';
                                 return <option key={ci.id} value={ciTitle}>{ciTitle}</option>;
                               })}
                               {routes.length === 0 && customItineraries.length === 0 && <option value="بدون خط سير">بدون خط سير</option>}
-                            </select>
+                            </EocSelect>
                           </td>
                           <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-[var(--faint)] hover:text-[var(--accent)]"><TrashIcon /></button></td>
                         </tr>
@@ -3768,7 +3769,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
 const FormGroup = ({ label, className = "", required = false, invalid = false, children }) => (<div className={`flex flex-col gap-1.5 w-full ${className}`}><div className={`flex items-center gap-1 px-1 text-xs font-bold ${invalid ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}><span>{label}</span>{required && <span className="text-[var(--accent)] text-sm leading-none">*</span>}{invalid && <span className="text-[10px] font-bold text-[var(--accent)]">إلزامي</span>}</div>{children}</div>);
 const StyledInput = ({ className="", ...props }) => (<input className={`field ${className}`} {...props} />);
-const StyledSelect = ({ children, className="", ...props }) => (<select className={`field ${className}`} {...props}>{children}</select>);
+const StyledSelect = (props) => <EocSelect variant="field" {...props} />;
 const SectionCard = ({ title, icon, actionBtn, children }) => (<div className="card-surface p-5 md:p-6"><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
 
 const VehicleRow = ({ index, onRemove, data }) => (
@@ -3934,9 +3935,9 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
 
           <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-48 shrink-0" />
           
-          <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl px-4 py-2 text-sm outline-none cursor-pointer shrink-0">
+          <EocSelect variant="toolbar" className="shrink-0" value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
             {uniqueActions.map(action => <option key={action} value={action}>{action}</option>)}
-          </select>
+          </EocSelect>
 
           {isOwner && (
             <button onClick={handleExportLogs} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-green-500 border border-green-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shrink-0 mr-auto">
@@ -4228,14 +4229,14 @@ const [nd, setNd] = useState({
             <h3 className="text-xl font-bold text-white whitespace-nowrap">الأخبار المحلية</h3>
             
             <div className="flex flex-wrap items-center gap-2 w-full">
-              <select value={filterGov} onChange={(e) => setFilterGov(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer">
+              <EocSelect variant="toolbar" value={filterGov} onChange={(e) => setFilterGov(e.target.value)}>
                 <option value="all">كل المحافظات</option>
                 {governorates.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer max-w-[200px] truncate">
+              </EocSelect>
+              <EocSelect variant="toolbar" className="max-w-[200px]" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
                 <option value="all">كل الحوادث</option>
                 {newsTypes.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              </EocSelect>
               <div className="flex items-center gap-2">
                 <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
                 {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-2 py-2 rounded-lg">الكل</button>}
@@ -6112,17 +6113,17 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <input type="text" placeholder="بحث بالاسم أو الكود..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="field w-full md:w-56" />
 
-            <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)} className="field cursor-pointer w-full md:w-auto">
+            <EocSelect variant="field" className="cursor-pointer w-full md:w-auto" value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
               <option value="all">كل الفروع والتمركزات</option>
               <option value="المركز العام">المركز العام</option>
               {branchNames.filter(n => n !== 'القاهرة').map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+            </EocSelect>
 
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="field cursor-pointer w-full md:w-auto">
+            <EocSelect variant="field" className="cursor-pointer w-full md:w-auto" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
               <option value="all">الكل (متطوع وغير متطوع)</option>
               <option value="volunteer">متطوعين فقط</option>
               <option value="non_volunteer">غير متطوعين</option>
-            </select>
+            </EocSelect>
           </div>
 
           {isOwner && (
