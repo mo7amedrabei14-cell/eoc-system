@@ -858,6 +858,34 @@ ALTER SEQUENCE public.mission_participants_participant_id_seq OWNED BY public.mi
 
 
 --
+-- Name: mission_participant_itineraries; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.mission_participant_itineraries (
+    id bigint NOT NULL,
+    participant_id bigint NOT NULL,
+    mission_id integer NOT NULL,
+    itinerary_group character varying(150) NOT NULL
+);
+
+
+ALTER TABLE public.mission_participant_itineraries OWNER TO neondb_owner;
+
+--
+-- Name: mission_participant_itineraries_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE public.mission_participant_itineraries ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.mission_participant_itineraries_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: mission_status_history; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
@@ -4795,6 +4823,38 @@ ALTER TABLE ONLY public.mission_participant_sessions
 
 ALTER TABLE ONLY public.mission_participants
     ADD CONSTRAINT mission_participants_pkey PRIMARY KEY (participant_id);
+
+
+--
+-- Name: mission_participant_itineraries mission_participant_itineraries_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mission_participant_itineraries
+    ADD CONSTRAINT mission_participant_itineraries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mission_participant_itineraries fk_mpi_mission; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mission_participant_itineraries
+    ADD CONSTRAINT fk_mpi_mission FOREIGN KEY (mission_id) REFERENCES public.missions(mission_id) ON DELETE CASCADE;
+
+
+--
+-- Name: mission_participant_itineraries fk_mpi_participant; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mission_participant_itineraries
+    ADD CONSTRAINT fk_mpi_participant FOREIGN KEY (participant_id) REFERENCES public.mission_participants(participant_id) ON DELETE CASCADE;
+
+
+--
+-- Name: mission_participant_itineraries uq_mpi_participant_group; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mission_participant_itineraries
+    ADD CONSTRAINT uq_mpi_participant_group UNIQUE (participant_id, itinerary_group);
 
 
 --

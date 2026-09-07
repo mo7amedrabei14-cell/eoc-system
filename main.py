@@ -485,8 +485,10 @@ class ParticipantModel(BaseModel):
     return_status: str = "مازال بالمهمة"
     phase_name: str = "اليوم الأول"
     stay_type: str = "ذهاب وعودة"
-    # 🆕 فترات المشاركة — فقط للمهمات المفتوحة (#3)
+    # 🆕 فترات المشاركة — للمهمات المفتوحة كحساب فعلي، وللعادية كتجاوز (خروج مبكر)
     participation_periods: List[PeriodModel] = []
+    # 🆕 الأيام المخصصة للمشارك (متعدد) — مهمات مفتوحة فقط: يرث المشارك ساعات اليوم افتراضياً
+    assigned_days: List[str] = []
 
 class BeneficiaryModel(BaseModel):
     category_name: str
@@ -695,6 +697,23 @@ def dedupe_participants(participants):
     return result
 
 
+def compute_participant_status(mission_status, return_status, periods):
+    """
+    الحالة الآلية للمشارك (عمود "الحالة") — لا تُدخل يدوياً أبداً:
+    - المهمة منتهية  ⇒ "تم انتهاء مهمتة"
+    - عودة مسجلة    ⇒ "تم انتهاء مهمتة"
+    - فترات صريحة: أي فترة مفتوحة بلا check_out ⇒ "مازال بالمهمة"، كلها مغلقة ⇒ "تم انتهاء مهمتة"
+    - بلا فترات (يرث الأيام) والمهمة نشطة ⇒ "مازال بالمهمة"
+    """
+    if mission_status in ('Completed', 'مكتملة'):
+        return 'تم انتهاء مهمتة'
+    if return_status == 'تم انتهاء مهمتة':
+        return 'تم انتهاء مهمتة'
+    if periods:
+        return 'مازال بالمهمة' if any(not p['check_out_time'] for p in periods) else 'تم انتهاء مهمتة'
+    return 'مازال بالمهمة'
+
+
 @app.get("/api/missions")
 def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -864,17 +883,38 @@ def create_mission(
                 pid = cursor.fetchone()[0]
                 inserted_participants.append((pid, part))
 
-            # 🆕 فترات المشاركة — مهمات مفتوحة فقط (#3)
+            # 🆕 فترات المشاركة — لجميع المهمات:
+            #    - المفتوحة: الفترات الفعلية (تجاوز عن ساعات اليوم الموروثة)
+            #    - العادية: تجاوز فردي فقط (خروج مبكر) — بلا فترات = يرث زمن المهمة كاملاً
+            session_rows = []
+            for pid, part in inserted_participants:
+                for period in (part.participation_periods or []):
+                    session_rows.append((pid, mission_id, period.session_date, period.check_in_time, period.check_out_time, period.notes))
+            if session_rows:
+                cursor.executemany("""
+                    INSERT INTO mission_participant_sessions (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, session_rows)
+
+            # 🆕 تخصيص الأيام للمشارك (متعدد) — مهمات مفتوحة: المشارك يرث ساعات اليوم المخصص
             if mission.mission_classification == 'مفتوحة':
-                session_rows = []
+                day_rows = []
                 for pid, part in inserted_participants:
-                    for period in (part.participation_periods or []):
-                        session_rows.append((pid, mission_id, period.session_date, period.check_in_time, period.check_out_time, period.notes))
-                if session_rows:
+                    for day_title in (part.assigned_days or []):
+                        day_rows.append((pid, mission_id, day_title))
+                if day_rows:
                     cursor.executemany("""
-                        INSERT INTO mission_participant_sessions (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                    """, session_rows)
+                        INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
+                        VALUES (%s, %s, %s)
+                    """, day_rows)
+                # 🆕 اتساق الحالة الآلية مع الرادار: مشارك مفتوح كل فتراته مغلقة ⇒ انتهت مهمته
+                for pid, part in inserted_participants:
+                    periods = part.participation_periods or []
+                    if periods and all(per.check_out_time for per in periods):
+                        cursor.execute("""
+                            UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة'
+                            WHERE participant_id = %s
+                        """, (pid,))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -1011,6 +1051,7 @@ def update_mission(
             cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_participant_sessions WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_participant_itineraries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_participants WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
@@ -1064,17 +1105,38 @@ def update_mission(
                 pid = cursor.fetchone()[0]
                 reinserted_participants.append((pid, part))
 
-            # 🆕 فترات المشاركة — مهمات مفتوحة فقط (#3)
+            # 🆕 فترات المشاركة — لجميع المهمات:
+            #    - المفتوحة: الفترات الفعلية (تجاوز عن ساعات اليوم الموروثة)
+            #    - العادية: تجاوز فردي فقط (خروج مبكر) — بلا فترات = يرث زمن المهمة كاملاً
+            session_rows = []
+            for pid, part in reinserted_participants:
+                for period in (part.participation_periods or []):
+                    session_rows.append((pid, mission_id, period.session_date, period.check_in_time, period.check_out_time, period.notes))
+            if session_rows:
+                cursor.executemany("""
+                    INSERT INTO mission_participant_sessions (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, session_rows)
+
+            # 🆕 تخصيص الأيام للمشارك (متعدد) — مهمات مفتوحة: المشارك يرث ساعات اليوم المخصص
             if mission.mission_classification == 'مفتوحة':
-                session_rows = []
+                day_rows = []
                 for pid, part in reinserted_participants:
-                    for period in (part.participation_periods or []):
-                        session_rows.append((pid, mission_id, period.session_date, period.check_in_time, period.check_out_time, period.notes))
-                if session_rows:
+                    for day_title in (part.assigned_days or []):
+                        day_rows.append((pid, mission_id, day_title))
+                if day_rows:
                     cursor.executemany("""
-                        INSERT INTO mission_participant_sessions (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                    """, session_rows)
+                        INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
+                        VALUES (%s, %s, %s)
+                    """, day_rows)
+                # 🆕 اتساق الحالة الآلية مع الرادار: مشارك مفتوح كل فتراته مغلقة ⇒ انتهت مهمته
+                for pid, part in reinserted_participants:
+                    periods = part.participation_periods or []
+                    if periods and all(per.check_out_time for per in periods):
+                        cursor.execute("""
+                            UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة'
+                            WHERE participant_id = %s
+                        """, (pid,))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -1115,6 +1177,89 @@ def update_mission(
     finally:
         connection.close()
 
+class EndParticipationRequest(BaseModel):
+    """إنهاء مشاركة واحد أو أكثر (bulk) — مهمات مفتوحة/نشطة."""
+    participant_ids: List[int] = []
+
+@app.post("/api/missions/{mission_id}/end-participation")
+def end_participation(
+    mission_id: int,
+    data: EndParticipationRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    "إنهاء المشاركة الآن" (فردي أو جماعي):
+    - تسجيل العودة return_status = 'تم انتهاء مهمتة' (يحرر المتطوع من رادار المنع)
+    - غلق أي فترة مفتوحة بلا check_out بالوقت الحالي
+    - لو المشارك بلا فترات، يُسجَّل له سطر إنهاء موثق (إغلاق اليوم/العملية)
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+
+    ids = list(dict.fromkeys(data.participant_ids or []))  # إزالة التكرار مع حفظ الترتيب
+    if not ids:
+        raise HTTPException(status_code=400, detail="لم يتم اختيار أي مشارك")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT mission_name, departure_time FROM missions WHERE mission_id = %s", (mission_id,))
+            mrow = cursor.fetchone()
+            if not mrow:
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+            mission_name, departure_time = mrow[0], mrow[1]
+
+            # قصره على مشاركين فعليين في هذه المهمة فقط
+            cursor.execute(
+                "SELECT participant_id FROM mission_participants WHERE mission_id = %s AND participant_id = ANY(%s)",
+                (mission_id, ids),
+            )
+            valid_ids = [row[0] for row in cursor.fetchall()]
+            if not valid_ids:
+                raise HTTPException(status_code=404, detail="لا يوجد مشاركون صالحون في هذه المهمة")
+
+            for pid in valid_ids:
+                # 1. تسجيل العودة (يحرر من الرادار)
+                cursor.execute(
+                    "UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة' WHERE participant_id = %s",
+                    (pid,),
+                )
+                # 2. غلق أي فترة مفتوحة بلا check_out
+                cursor.execute(
+                    "UPDATE mission_participant_sessions SET check_out_time = CURRENT_TIME WHERE participant_id = %s AND check_out_time IS NULL",
+                    (pid,),
+                )
+                # 3. لو بلا فترات: سطر توثيق للإنهاء (تسجيل معلومة الحضور/الخروج)
+                cursor.execute(
+                    "SELECT 1 FROM mission_participant_sessions WHERE participant_id = %s LIMIT 1",
+                    (pid,),
+                )
+                if not cursor.fetchone():
+                    cursor.execute(
+                        """INSERT INTO mission_participant_sessions
+                           (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
+                           VALUES (%s, %s, CURRENT_DATE, %s, CURRENT_TIME, 'إنهاء المشاركة')""",
+                        (pid, mission_id, departure_time),
+                    )
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "إنهاء مشاركة", mission_id=mission_id,
+                    entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"إنهاء مشاركة {len(valid_ids)} مشارك في المهمة: {mission_name}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"updated": valid_ids, "mission_id": mission_id}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء إنهاء المشاركة: {str(e)}")
+    finally:
+        connection.close()
+
 @app.get("/api/missions/{mission_id}")
 def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -1140,16 +1285,21 @@ def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentia
             
             cursor.execute("SELECT participant_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s ORDER BY participant_id", (mission_id,))
             participant_rows = cursor.fetchall()
+            mission_status = mission_data.get("status")
             mission_data["participants"] = []
             for r in participant_rows:
                 pid = r[0]
                 cursor.execute("SELECT session_date, check_in_time, check_out_time, notes FROM mission_participant_sessions WHERE participant_id = %s ORDER BY session_date, check_in_time", (pid,))
                 periods = [{"session_date": str(s[0]) if s[0] else "", "check_in_time": str(s[1]) if s[1] else "", "check_out_time": str(s[2]) if s[2] else "", "notes": s[3]} for s in cursor.fetchall()]
+                cursor.execute("SELECT itinerary_group FROM mission_participant_itineraries WHERE participant_id = %s ORDER BY itinerary_group", (pid,))
+                assigned_days = [d[0] for d in cursor.fetchall()]
                 mission_data["participants"].append({
                     "participant_id": pid, "participant_type": r[1], "full_name": r[2], "team_name": r[3], "team_code": r[4],
                     "participation_role": r[5], "participant_position": r[6], "volunteer_id": r[7], "user_id": r[8],
                     "membership_number": r[9], "branch_id": r[10], "assigned_itinerary": r[11], "return_status": r[12],
-                    "phase_name": r[13], "stay_type": r[14], "participation_periods": periods
+                    "phase_name": r[13], "stay_type": r[14], "participation_periods": periods,
+                    "assigned_days": assigned_days,
+                    "status": compute_participant_status(mission_status, r[12], periods)
                 })
             
             cursor.execute("SELECT category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
@@ -2548,11 +2698,10 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                       AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                     ORDER BY i.k, m.created_at DESC, m.mission_id DESC
                 ),
-                -- 🆕 ساعات المهمة المفتوحة (مفتوحة) من فترات المشاركة الفعلية لكل شخص (#3)
-                -- كل فترة = (session_date + check_out) - (session_date + check_in)
-                -- فترة بدون check_out (ما زالت جارية) لا تُحتسب — تُرك للاستكمال؛ وإن لم توجد
-                -- أي فترة مكتملة، تتراجع المهمة لحساب المهمة الأساسي أدناه.
-                open_hours AS (
+                -- 🆕 ساعات المشاركة الفعلية (فترات مكتملة) لكل شخص لكل مهمة (#3)
+                -- المفتوحة: الفترات الفعلية تتجاوز ساعات اليوم الموروثة
+                -- العادية: الفترات = تجاوز فردي (خروج مبكر)؛ بلا فترات يبقى حساب المهمة الأساسي
+                explicit_hours AS (
                     SELECT
                         i.k,
                         mp.mission_id,
@@ -2571,6 +2720,30 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     WHERE mps.check_out_time IS NOT NULL
                     GROUP BY i.k, mp.mission_id
                 ),
+                -- 🆕 ساعات اليوم الموروثة (مهمات مفتوحة بلا فترات يدوية):
+                -- المشارك يخصَّص لأيام (mission_participant_itineraries)، ويرث زمن اليوم
+                -- المخصص = نافذة (آخر وصول − أول تحرك) لكل يوم ضمن خطوط سير المهمة.
+                inherited_hours AS (
+                    SELECT
+                        i.k,
+                        mpi.mission_id,
+                        SUM(
+                            GREATEST(
+                                EXTRACT(EPOCH FROM (dw.window)) / 3600.0,
+                                0
+                            )
+                        ) AS hours
+                    FROM mission_participant_itineraries mpi
+                    JOIN mission_participants mp ON mp.participant_id = mpi.participant_id
+                    JOIN ident i ON i.participant_id = mp.participant_id
+                    JOIN (
+                        SELECT mission_id, group_title, (MAX(arrival_time) - MIN(departure_time)) AS window
+                        FROM mission_itineraries
+                        WHERE arrival_time IS NOT NULL AND departure_time IS NOT NULL
+                        GROUP BY mission_id, group_title
+                    ) dw ON dw.mission_id = mpi.mission_id AND dw.group_title = mpi.itinerary_group
+                    GROUP BY i.k, mpi.mission_id
+                ),
                 -- إحصاءات لكل هوية من البيانات الحقيقية فقط (مهام فعلية غير ملغاة)
                 -- كل مهمة تُحسب مرة واحدة للشخص مهما تكرر تسجيل مشاركته فيها (سطر لكل مرحلة/يوم)
                 -- والساعات من زمن المهمة الفعلي نفسه: (الانتهاء) - (التحرك/الانطلاق)
@@ -2588,9 +2761,15 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                             MAX(CASE
                                 WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                                 THEN CASE
-                                    -- 🆕 المهمة المفتوحة: ساعات من فترات المشاركة الفعلية (إن وُجدت)
-                                    WHEN m.mission_classification = 'مفتوحة' AND oh.hours IS NOT NULL
-                                    THEN oh.hours
+                                    -- 🆕 المفتوحة: فترات فعلية مكتملة (تجاوز) ⇒ ساعاتها الفعلية
+                                    WHEN m.mission_classification = 'مفتوحة' AND eh.hours IS NOT NULL
+                                    THEN eh.hours
+                                    -- 🆕 المفتوحة: بلا فترات ⇒ يرث ساعات اليوم المخصص
+                                    WHEN m.mission_classification = 'مفتوحة' AND ih.hours IS NOT NULL
+                                    THEN ih.hours
+                                    -- 🆕 العادية: مشارك بفترة تجاوز (خروج مبكر) ⇒ ساعاته الشخصية فقط
+                                    WHEN m.mission_classification <> 'مفتوحة' AND eh.hours IS NOT NULL
+                                    THEN eh.hours
                                     WHEN m.completion_date IS NOT NULL
                                     THEN GREATEST(
                                         EXTRACT(EPOCH FROM (
@@ -2612,7 +2791,8 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                             END) AS mission_hours
                         FROM ident i
                         JOIN missions m ON m.mission_id = i.mission_id
-                        LEFT JOIN open_hours oh ON oh.mission_id = i.mission_id AND oh.k = i.k
+                        LEFT JOIN explicit_hours eh ON eh.mission_id = i.mission_id AND eh.k = i.k
+                        LEFT JOIN inherited_hours ih ON ih.mission_id = i.mission_id AND ih.k = i.k
                         GROUP BY i.k, i.mission_id
                     ) d
                     GROUP BY d.k
