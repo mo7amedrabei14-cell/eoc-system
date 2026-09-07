@@ -502,26 +502,57 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .field::placeholder { color: var(--faint); }
 select.field, .field option { background: var(--surface-2); color: var(--ink); }
 
-/* ── حقول الوقت (ساعة التحرك وغيرها): عرض وحشوة كافيان حتى يظهر AM/PM كاملاً بلا قص ── */
+/* ── حقول الوقت (ساعة التحرك وغيرها): بلا قص — تؤدي الساعة كاملة بإتجاه LTR ──
+   الأعراض المُصلَحة:
+   - الحرف الأخير من AM/PM («M») كان يُقتص: حقل AM/PM كان له min-width 3.5em
+     فكانت القيمة تُدفع يميناً وتتخطّى عمودها الضيّق (شبكة الثلاثة أعمدة).
+   - أيقونة ساعة النظام كانت تتراكب على النص فتُخفيه.
+   - الحشوة العمودية (التي كانت 0) كانت تضغّط الحقل فيبدو قصيراً.
+   الحل: القيمة تتوسّط عمودها داخل منطقة تحرير متجانسة، حقل AM/PM حرّ الأبعاد بلا
+   مزيد أطوال، والحشوة اليمنى تحجز مساحة ثابتة لأيقونة الساعة — فيظهر
+   «HH:MM AM/PM» كاملاً («M» ظاهرة) وتبقى الأيقونة في موضعها الطبيعي. */
 input[type="time"].field {
-  min-width: 10rem;
+  min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
   direction: ltr;
-  text-align: left;
-  padding: 0 0.8rem 0 0.6rem;
+  text-align: center;
+  padding: 0.68rem 1.75rem 0.68rem 0.5rem; /* يحاذي ارتفاع .field الفعلي + يمين لأيقونة الساعة */
 }
 
 input[type="time"].field::-webkit-datetime-edit {
   direction: ltr;
   padding: 0;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+input[type="time"].field::-webkit-datetime-edit-hour-field,
+input[type="time"].field::-webkit-datetime-edit-minute-field {
+  padding: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 input[type="time"].field::-webkit-datetime-edit-ampm-field {
   direction: ltr;
-  padding: 0 8px 0 4px;
-  min-width: 3.5em;
+  padding: 0 2px 0 3px;
+  min-width: 0;          /* كان 3.5em — سبب الإزاحة وقطع حرف الـ M */
   text-align: center;
+  white-space: nowrap;
+}
+
+input[type="time"].field::-webkit-calendar-picker-indicator {
+  margin: 0;
+  opacity: 0.65;
+  cursor: pointer;
+}
+
+/* حماية عامة لكل حقول الوقت (بما فيها مسارات خط السير) من قص AM/PM */
+input[type="time"]::-webkit-datetime-edit-ampm-field {
+  min-width: 0;
   white-space: nowrap;
 }
 
@@ -604,14 +635,56 @@ select.field:focus.field-invalid {
 
 /* ── الحقول النحيفة (بدون سطح معروف): توهج فاخر على التركيز ──
    `!important` لأن القاعدة العامة أدناه (`input[type=...]:focus` وغيرها)
-   لها نفس التحديد وتأتي لاحقًا — نضمن فوز التوهج المميّز على كل حقل. */
-input:not(.field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus,
+   لها نفس التحديد وتأتي لاحقًا — نضمن فوز التوهج المميّز على كل حقل.
+   (الحقول اليدوية `.eoc-manual-field` مستثناة — لها تفاعل المذنّب الكامل أدناه). */
+input:not(.field):not(.eoc-manual-field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus,
 select:not(.field):focus,
 textarea:not(.field):focus {
   outline: none;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
     0 0 18px -6px var(--accent-glow) !important;
+}
+
+/* ════════════ الحقول اليدوية (.eoc-manual-field) — إدخال النص الحر الفاخر ════════════
+   تُطبَّق على حقول الكتابة اليدوية (مشارك/مسار/سيارة/مسار مخصص) التي كانت تبدو مجردة
+   (bg-transparent + outline-none) لتأخذ نفس تفاعل حقول البيانات (.field) تماماً:
+   - فراغ/عدم تركيز: سطح شبه شفاف ناعم + حلقة خفيفة → مظهر فخم ومتسق مع النظام.
+   - تركيز: الإطار الكامل يضيء بمذنّب نوّار يسافر حول الحدود + توهج أحمر (#C70000)
+     هادئ — نفس تقنية .field حرفياً (حدّ شفاف حامل للمذنّب + background لطبقتين
+     padding-box/border-box + توهج). بلا أي تغيير في الأبعاد/الحشوة/النصوص/السلوك.
+   ملاحظة ضبط: --eoc-frame-fill شبه شفاف كي لا تُطلى الخلفية كتلة صمّاء تخفي
+   تظليل الصف أو الحاوية أسفل الحقل. التمرير الانتقالي بـ --ease-out الفخم للنظام. */
+.eoc-manual-field {
+  --eoc-frame-fill: linear-gradient(
+    color-mix(in srgb, var(--surface-3) 60%, transparent),
+    color-mix(in srgb, var(--surface-3) 60%, transparent)
+  );
+  border: 1px solid transparent; /* حامل المذنّب — لا يغيّر الأبعاد (box-sizing: border-box) */
+  border-radius: calc(var(--radius) - 4px);
+  background-color: color-mix(in srgb, var(--surface-3) 30%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 45%, transparent);
+  transition:
+    border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    background-color var(--dur) var(--ease-out);
+}
+.eoc-manual-field:hover {
+  background-color: color-mix(in srgb, var(--surface-3) 46%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 78%, transparent);
+}
+.eoc-manual-field:focus {
+  --eoc-focus-angle: 0deg;
+  border-color: transparent !important;
+  background-image: var(--eoc-frame-fill), var(--eoc-frame-comet);
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+  background-repeat: no-repeat;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent),
+    0 0 0 4px var(--accent-softer),
+    0 16px 34px -16px var(--accent-glow) !important;
+  animation: eoc-focus-spin 2.2s linear infinite;
 }
 
 /* ─── تحكمات الاختيار/الفلترة: إطار المذنّب على العنصر النشط/المحدّد ───

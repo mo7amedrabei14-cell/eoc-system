@@ -125,12 +125,25 @@ const EocSelect = ({
       if (root?.contains(e.target) || menu?.contains(e.target)) return;
       close();
     };
+    // 💡 الموبايل: التمرير داخل قائمة الخيارات نفسها (لفّ الإصبع للوصول لخيار أبعد)
+    // كان يقفل القائمة لأن مستمع scroll يلتقط بالمرور أي تمرير حدث داخل القائمة
+    // المنبوذة (scroll لا يتبث نحو window، لكن الالتقاط في طور السقوط يصل إليها).
+    // الحل الجذري: على الأجهزة التي مؤشرها الأساسي لمس (pointer: coarse) لا نُغلق
+    // إلا عند التمرير خارج القائمة (الخلفية/الصفحة)؛ التمرير داخل القائمة يبقيها
+    // مفتوحة وقائمة الخيارات كلها في متناول الإصبع.
+    // على سطح المكتب (مؤشر أساسي دقيق) السلوك يبقى حرفياً كما هو الآن دون أي تغيير.
+    const onScroll = (e) => {
+      const menu = menuRef.current;
+      const isCoarsePrimary = window.matchMedia('(pointer: coarse)').matches;
+      if (isCoarsePrimary && menu && e.target instanceof Node && menu.contains(e.target)) return;
+      close();
+    };
     document.addEventListener('pointerdown', onDocPointerDown, true);
-    window.addEventListener('scroll', close, true);
+    window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', close);
     return () => {
       document.removeEventListener('pointerdown', onDocPointerDown, true);
-      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', close);
     };
   }, [open]);

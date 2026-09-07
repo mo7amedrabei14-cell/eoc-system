@@ -12,6 +12,9 @@ def audit_value(value):
     return value
 
 
+_ACTOR_NOT_PROVIDED = object()  # حارس: يميّز «لم يُمرَّر الفاعل» عن «تمرير None صراحةً»
+
+
 def create_audit_log(
     cursor,
     user_id: int,
@@ -22,7 +25,7 @@ def create_audit_log(
     details: Optional[dict[str, Any]] = None,
     realtime: bool = True,
     target_user_id: Optional[int] = None,
-    actor_user_id: Optional[int] = None,
+    actor_user_id=_ACTOR_NOT_PROVIDED,
 ):
     """
     تسجيل اللوج الأمني + (اختياري) حدث لحظي في نفس المعاملة.
@@ -61,15 +64,24 @@ def create_audit_log(
 
     # ── الأحداث اللحظية: كل تغيير حقيقي يسجَّل كحدث ويحدَّد مستلمه من الـ backend
     if realtime and entity_type is not None:
+        # الفاعل في القناة اللحظية:
+        #   - الاستدعاءات التي لا تمرر actor_user_id (كلها) → فاعل = user_id المسجِّل.
+        #   - تمرير None صراحةً (بوت الذكاء الاصطناعي) → فاعل = NULL = «نظام»
+        #     (لا يُستبعد أحد عبر no-self-notify، ويظهر كـ "نظام" في الواجهة)
+        #     بينما يبقى سجل audit_logs محتفظاً بـ user_id الفعلي كما هو.
+        # قبل هذا الإصلاح كان تمرير None يتحول تلقائياً إلى user_id=1 (مالك حقيقي)
+        # فيُستبعد المالك من إشعارات البوت ويعتقد أنها توقفت عن الوصول إليه.
+        if actor_user_id is _ACTOR_NOT_PROVIDED:
+            realtime_actor = user_id
+        else:
+            realtime_actor = actor_user_id  # يجوز أن يكون None → النظام
+
         try:
             create_realtime_event(
                 cursor,
                 event_type=entity_type,
                 action=action,
-                # actor_user_id: للبوت الآلي نمرر None ليعامل كنظام/غير محدد
-                # (لا يُستبعد أحد via no-self-notify، ويظهر كـ "نظام") —
-                # سجل audit_logs يحتفظ بـ user_id الفعلي كما هو.
-                actor_user_id=actor_user_id if actor_user_id is not None else user_id,
+                actor_user_id=realtime_actor,
                 mission_id=entity_id if entity_type == "mission" else None,
                 details=details,
                 target_user_id=target_user_id,

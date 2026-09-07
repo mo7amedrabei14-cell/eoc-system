@@ -3501,7 +3501,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              <SectionCard title="التواريخ والتوقيتات" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
+              <SectionCard title="التواريخ والتوقيتات" className="pt-6 pb-10 md:pt-7 md:pb-12" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
                 <div className="grid grid-cols-3 gap-4">
                   {/* تواريخ */}
                   <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
@@ -3526,7 +3526,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     <div className="w-full">
                       {routes.map((route, index) => (
                         <div key={route.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
-                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
+                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
                           <div className="w-full md:w-auto flex border-l border-[var(--border)]"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
                           <div className="w-full md:w-auto flex"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)] border-r border-[var(--border)]"><TrashIcon /></button>)}</div>
                         </div>
@@ -3542,7 +3542,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   {customItineraries.map((ci, ciIndex) => (
                     <div key={ci.id} className="bg-[var(--surface-4)] border border-[var(--border)] p-4 rounded-xl">
                       <div className="flex justify-between items-center mb-3 border-b border-[var(--border)] pb-2">
-                        <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder={missionClass === 'مفتوحة' ? "اكتب اسم اليوم (مثال: تحركات اليوم الأول)..." : "اكتب اسم خط السير المخصص هنا..."} className="bg-transparent text-[var(--accent)] font-bold outline-none w-full md:w-1/2" />
+                        <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder={missionClass === 'مفتوحة' ? "اكتب اسم اليوم (مثال: تحركات اليوم الأول)..." : "اكتب اسم خط السير المخصص هنا..."} className="eoc-manual-field bg-transparent text-[var(--accent)] font-bold outline-none w-full md:w-1/2" />
                         <div className="flex gap-2">
                           <button onClick={() => addRouteToCustom(ci.id)} className="text-xs text-green-500 hover:bg-[var(--surface-hover)] px-2 py-1 rounded">+ مسار</button>
                           <button onClick={() => removeCustomItinerary(ci.id)} className="text-xs text-[var(--accent)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded">حذف المخصص</button>
@@ -3550,7 +3550,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       </div>
                       {ci.routes.map((cr, rIndex) => (
                         <div key={cr.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
-                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="w-full bg-transparent text-white px-4 py-2" /></div>
+                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="eoc-manual-field w-full bg-transparent text-white px-4 py-2" /></div>
                           <div className="w-full md:w-auto flex border-l border-[var(--border)]"><input id={`r_dep_cust_${ciIndex}_${rIndex}`} type="time" defaultValue={cr.departure_time || ''} className="bg-transparent text-white px-2 w-28 text-center" /></div>
                           <div className="w-full md:w-auto flex"><input id={`r_arr_cust_${ciIndex}_${rIndex}`} type="time" defaultValue={cr.arrival_time || ''} className="bg-transparent text-white px-2 w-28 text-center" />{ci.routes.length > 1 && <button onClick={() => removeRouteFromCustom(ci.id, cr.id)} className="px-3 text-[var(--faint)]"><TrashIcon /></button>}</div>
                         </div>
@@ -3586,13 +3586,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               <option value="non_volunteer" className="bg-[var(--surface-4)]">غير متطوع</option>
                             </EocSelect>
                           </td>
-                          <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." onChange={(e) => { const newP = [...participants]; newP[index].full_name = e.target.value; setParticipants(newP); }} className="bg-transparent outline-none text-white w-full" /></td>
+                          <td className="p-2"><input id={`p_name_${index}`} type="text" defaultValue={p.full_name || ''} placeholder="الاسم..." onChange={(e) => { const newP = [...participants]; newP[index].full_name = e.target.value; setParticipants(newP); }} className="eoc-manual-field bg-transparent outline-none text-white w-full" /></td>
 
                           <td className="p-2">
-                            <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : '—'} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'} className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : 'text-white'}`} />
+                            <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : '—'} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : 'text-white'}`} />
                           </td>
                           <td className="p-2">
-                            <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
+                            <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
                           </td>
                           {missionClass === 'مفتوحة' && (
                             <>
@@ -3870,12 +3870,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 const FormGroup = ({ label, className = "", required = false, invalid = false, children }) => (<div className={`flex flex-col gap-1.5 w-full ${className}`}><div className={`flex items-center gap-1 px-1 text-xs font-bold ${invalid ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}><span>{label}</span>{required && <span className="text-[var(--accent)] text-sm leading-none">*</span>}{invalid && <span className="text-[10px] font-bold text-[var(--accent)]">إلزامي</span>}</div>{children}</div>);
 const StyledInput = ({ className="", ...props }) => (<input className={`field ${className}`} {...props} />);
 const StyledSelect = (props) => <EocSelect variant="field" {...props} />;
-const SectionCard = ({ title, icon, actionBtn, children }) => (<div className="card-surface p-5 md:p-6"><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
+const SectionCard = ({ title, icon, actionBtn, children, className = "" }) => (<div className={`card-surface p-5 md:p-6 ${className}`}><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
 
 const VehicleRow = ({ index, onRemove, data }) => (
   <div className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-4)]">
-    <div className="flex-1 flex border-b md:border-b-0 md:border-l border-[var(--border)]"><div className="bg-[var(--surface-3)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center">اسم السائق:</div><input id={`v_driver_${index}`} type="text" defaultValue={data?.driver_name || ''} className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
-    <div className="flex-1 flex"><div className="bg-[var(--surface-3)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">رقم السيارة:</div><input id={`v_plate_${index}`} type="text" defaultValue={data?.vehicle_number || ''} className="w-full bg-transparent outline-none text-white text-sm px-4 py-2" /><button onClick={onRemove} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)]"><TrashIcon /></button></div>
+    <div className="flex-1 flex border-b md:border-b-0 md:border-l border-[var(--border)]"><div className="bg-[var(--surface-3)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center">اسم السائق:</div><input id={`v_driver_${index}`} type="text" defaultValue={data?.driver_name || ''} className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
+    <div className="flex-1 flex"><div className="bg-[var(--surface-3)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">رقم السيارة:</div><input id={`v_plate_${index}`} type="text" defaultValue={data?.vehicle_number || ''} className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /><button onClick={onRemove} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)]"><TrashIcon /></button></div>
   </div>
 );
 
