@@ -95,11 +95,15 @@ const EocSelect = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultValue, value, isControlled, options]);
 
-  // تموضع القائمة عند فتحها (تفتح للأسفل، وتقلب للأعلى قرب نهاية الشاشة)
-  useLayoutEffect(() => {
-    if (!open || !rootRef.current) return;
-    const rect = rootRef.current.getBoundingClientRect();
-    const dir = getComputedStyle(rootRef.current).direction || 'rtl';
+  // حساب تموضع القائمة (تفتح للأسفل، وتقلب للأعلى قرب نهاية الشاشة، وترسو
+  // على يمين/يسار حسب الاتجاه RTL/LTR). نستخرجه في دالة واحدة لاستعماله مرّتين:
+  // لحظياً عند الفتح (كي تظهر القائمة في موضعها الصحيح من أول إطار بلا وميض)،
+  // ومرة أخرى في useLayoutEffect لضبط الموضع عند أي إعادة فتح/إعادة تموضع.
+  const computePos = () => {
+    const root = rootRef.current;
+    if (!root) return null;
+    const rect = root.getBoundingClientRect();
+    const dir = getComputedStyle(root).direction || 'rtl';
     const vw = window.innerWidth;
     const maxW = Math.min(340, vw - 16);
     const maxMenuH = Math.min(300, window.innerHeight * 0.7);
@@ -112,7 +116,14 @@ const EocSelect = ({
       left: dir === 'rtl' ? undefined : Math.min(Math.max(rect.left, 8), vw - maxW),
       right: dir === 'rtl' ? Math.min(Math.max(vw - rect.right, 8), vw - maxW) : undefined,
     };
-    setPos({ minW: rect.width, maxW, openUp, ...style });
+    return { minW: rect.width, maxW, openUp, ...style };
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const p = computePos();
+    if (p) setPos(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // إغلاق عند الضغط خارج الغلاف/القائمة، أو عند التمرير أو تغيير حجم النافذة
@@ -125,17 +136,16 @@ const EocSelect = ({
       if (root?.contains(e.target) || menu?.contains(e.target)) return;
       close();
     };
-    // 💡 الموبايل: التمرير داخل قائمة الخيارات نفسها (لفّ الإصبع للوصول لخيار أبعد)
-    // كان يقفل القائمة لأن مستمع scroll يلتقط بالمرور أي تمرير حدث داخل القائمة
-    // المنبوذة (scroll لا يتبث نحو window، لكن الالتقاط في طور السقوط يصل إليها).
-    // الحل الجذري: على الأجهزة التي مؤشرها الأساسي لمس (pointer: coarse) لا نُغلق
-    // إلا عند التمرير خارج القائمة (الخلفية/الصفحة)؛ التمرير داخل القائمة يبقيها
-    // مفتوحة وقائمة الخيارات كلها في متناول الإصبع.
-    // على سطح المكتب (مؤشر أساسي دقيق) السلوك يبقى حرفياً كما هو الآن دون أي تغيير.
+    // التمرير داخل قائمة الخيارات نفسها (لفّ العجلة/الإصبع/شريط التمرير للوصول
+    // لخيار أبعد) يجب ألا يُقفل القائمة — على كل الأجهزة. القائمة منبوذة إلى body،
+    // وscroll لا يتبث نحو window لكن الالتقاط في طور السقوط يصل إليها، لذا نفحص
+    // الهدف: إذا كان داخل القائمة نتركها مفتوحة، وإلا (الخلفية/الصفحة/المودال)
+    // نغلق كما هو متوقّع. كان القيد سابقاً مقصوراً على اللمس (pointer: coarse)
+    // فكان التمرير داخل القائمة يُقفلها على سطح المكتب — هذا جذر الخلل المُبلَّغ
+    // («القائمة تنغلق فور محاولة اختيار خيار»).
     const onScroll = (e) => {
       const menu = menuRef.current;
-      const isCoarsePrimary = window.matchMedia('(pointer: coarse)').matches;
-      if (isCoarsePrimary && menu && e.target instanceof Node && menu.contains(e.target)) return;
+      if (menu && e.target instanceof Node && menu.contains(e.target)) return;
       close();
     };
     document.addEventListener('pointerdown', onDocPointerDown, true);
@@ -149,7 +159,14 @@ const EocSelect = ({
   }, [open]);
 
   const closeMenu = () => { setOpen(false); setActive(-1); };
-  const openMenu = () => { if (disabled) return; setActive(selectedIndex); setOpen(true); };
+  const openMenu = () => {
+    if (disabled) return;
+    // نحسب الموضع قبل فتح القائمة كي تظهر في موضعها الصحيح من أول إطار (بلا وميض).
+    const p = computePos();
+    if (p) setPos(p);
+    setActive(selectedIndex);
+    setOpen(true);
+  };
   const toggleOpen = () => { if (disabled) return; if (open) closeMenu(); else openMenu(); };
 
   const commit = (opt) => {
