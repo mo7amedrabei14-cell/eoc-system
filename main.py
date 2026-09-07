@@ -368,6 +368,38 @@ def get_dashboard_stats(credentials: HTTPAuthorizationCredentials = Depends(secu
     finally:
         connection.close()
 
+@app.get("/api/volunteers/all")
+def get_all_volunteers(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    كل المتطوعين عبر كل الفروع (متطلب #6) — لاختيار مشارك من أي فرع في نموذج المهمة.
+    يُعاد اسم الفرع الفعلي لكل متطوع حتى يعرف المستخدم من أين هو.
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT v.volunteer_id, v.full_name, v.phone, v.membership_number, v.branch_id,
+                       COALESCE(b.branch_name, 'غير محدد') AS branch_name
+                FROM volunteers v
+                LEFT JOIN branches b ON b.branch_id = v.branch_id
+                WHERE v.is_active = TRUE
+                ORDER BY v.full_name;
+            """)
+            rows = cursor.fetchall()
+            return [
+                {"volunteer_id": r[0], "full_name": r[1], "phone": r[2], "membership_number": r[3],
+                 "branch_id": r[4], "branch_name": r[5]}
+                for r in rows
+            ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء جلب المتطوعين")
+    finally:
+        connection.close()
+
 @app.get("/api/branches/locations")
 def get_branches_locations(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -431,6 +463,13 @@ class VehicleModel(BaseModel):
     driver_name: str
     vehicle_number: str
 
+class PeriodModel(BaseModel):
+    """فترة مشاركة participant — مهمات مفتوحة فقط."""
+    session_date: str
+    check_in_time: str
+    check_out_time: Optional[str] = None
+    notes: Optional[str] = None
+
 class ParticipantModel(BaseModel):
     participant_type: str
     full_name: str
@@ -446,6 +485,8 @@ class ParticipantModel(BaseModel):
     return_status: str = "مازال بالمهمة"
     phase_name: str = "اليوم الأول"
     stay_type: str = "ذهاب وعودة"
+    # 🆕 فترات المشاركة — فقط للمهمات المفتوحة (#3)
+    participation_periods: List[PeriodModel] = []
 
 class BeneficiaryModel(BaseModel):
     category_name: str
@@ -800,6 +841,7 @@ def create_mission(
 
             # منع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الرادار والإدخال)
             participant_user_ids = []
+            inserted_participants = []  # (participant_id, participant_model) for session linking
             for part in dedupe_participants(mission.participants):
                 # 1. أوتوميشن الإغلاق
                 if mission.status in ['Completed', 'مكتملة']:
@@ -816,8 +858,23 @@ def create_mission(
 
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING participant_id;
                 """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.participant_position or '', volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                pid = cursor.fetchone()[0]
+                inserted_participants.append((pid, part))
+
+            # 🆕 فترات المشاركة — مهمات مفتوحة فقط (#3)
+            if mission.mission_classification == 'مفتوحة':
+                session_rows = []
+                for pid, part in inserted_participants:
+                    for period in (part.participation_periods or []):
+                        session_rows.append((pid, mission_id, period.session_date, period.check_in_time, period.check_out_time, period.notes))
+                if session_rows:
+                    cursor.executemany("""
+                        INSERT INTO mission_participant_sessions (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, session_rows)
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -953,6 +1010,7 @@ def update_mission(
                 }
             cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_participant_sessions WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_participants WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
@@ -967,6 +1025,7 @@ def update_mission(
             # منع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الرادار والإدخال)
             participant_user_ids = []
             reinserted_idents = set()
+            reinserted_participants = []  # (participant_id, participant_model) for session linking
             for part in dedupe_participants(mission.participants):
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
@@ -999,8 +1058,23 @@ def update_mission(
 
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING participant_id;
                 """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.participant_position or '', volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                pid = cursor.fetchone()[0]
+                reinserted_participants.append((pid, part))
+
+            # 🆕 فترات المشاركة — مهمات مفتوحة فقط (#3)
+            if mission.mission_classification == 'مفتوحة':
+                session_rows = []
+                for pid, part in reinserted_participants:
+                    for period in (part.participation_periods or []):
+                        session_rows.append((pid, mission_id, period.session_date, period.check_in_time, period.check_out_time, period.notes))
+                if session_rows:
+                    cursor.executemany("""
+                        INSERT INTO mission_participant_sessions (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, session_rows)
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -1064,8 +1138,19 @@ def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentia
             cursor.execute("SELECT driver_name, vehicle_number FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             mission_data["vehicles"] = [{"driver_name": r[0], "vehicle_number": r[1]} for r in cursor.fetchall()]
             
-            cursor.execute("SELECT participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s ORDER BY participant_id", (mission_id,))
-            mission_data["participants"] = [{"participant_type": r[0], "full_name": r[1], "team_name": r[2], "team_code": r[3], "participation_role": r[4], "participant_position": r[5], "volunteer_id": r[6], "user_id": r[7], "membership_number": r[8], "branch_id": r[9], "assigned_itinerary": r[10], "return_status": r[11], "phase_name": r[12], "stay_type": r[13]} for r in cursor.fetchall()]
+            cursor.execute("SELECT participant_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s ORDER BY participant_id", (mission_id,))
+            participant_rows = cursor.fetchall()
+            mission_data["participants"] = []
+            for r in participant_rows:
+                pid = r[0]
+                cursor.execute("SELECT session_date, check_in_time, check_out_time, notes FROM mission_participant_sessions WHERE participant_id = %s ORDER BY session_date, check_in_time", (pid,))
+                periods = [{"session_date": str(s[0]) if s[0] else "", "check_in_time": str(s[1]) if s[1] else "", "check_out_time": str(s[2]) if s[2] else "", "notes": s[3]} for s in cursor.fetchall()]
+                mission_data["participants"].append({
+                    "participant_id": pid, "participant_type": r[1], "full_name": r[2], "team_name": r[3], "team_code": r[4],
+                    "participation_role": r[5], "participant_position": r[6], "volunteer_id": r[7], "user_id": r[8],
+                    "membership_number": r[9], "branch_id": r[10], "assigned_itinerary": r[11], "return_status": r[12],
+                    "phase_name": r[13], "stay_type": r[14], "participation_periods": periods
+                })
             
             cursor.execute("SELECT category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             mission_data["beneficiaries"] = [{"category_name": r[0], "direct_count": r[1], "indirect_count": r[2]} for r in cursor.fetchall()]
@@ -2463,6 +2548,29 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                       AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                     ORDER BY i.k, m.created_at DESC, m.mission_id DESC
                 ),
+                -- 🆕 ساعات المهمة المفتوحة (مفتوحة) من فترات المشاركة الفعلية لكل شخص (#3)
+                -- كل فترة = (session_date + check_out) - (session_date + check_in)
+                -- فترة بدون check_out (ما زالت جارية) لا تُحتسب — تُرك للاستكمال؛ وإن لم توجد
+                -- أي فترة مكتملة، تتراجع المهمة لحساب المهمة الأساسي أدناه.
+                open_hours AS (
+                    SELECT
+                        i.k,
+                        mp.mission_id,
+                        SUM(
+                            GREATEST(
+                                EXTRACT(EPOCH FROM (
+                                    (mps.session_date + COALESCE(mps.check_out_time, mps.check_in_time)) -
+                                    (mps.session_date + mps.check_in_time)
+                                )) / 3600.0,
+                                0
+                            )
+                        ) AS hours
+                    FROM mission_participant_sessions mps
+                    JOIN mission_participants mp ON mp.participant_id = mps.participant_id
+                    JOIN ident i ON i.participant_id = mp.participant_id
+                    WHERE mps.check_out_time IS NOT NULL
+                    GROUP BY i.k, mp.mission_id
+                ),
                 -- إحصاءات لكل هوية من البيانات الحقيقية فقط (مهام فعلية غير ملغاة)
                 -- كل مهمة تُحسب مرة واحدة للشخص مهما تكرر تسجيل مشاركته فيها (سطر لكل مرحلة/يوم)
                 -- والساعات من زمن المهمة الفعلي نفسه: (الانتهاء) - (التحرك/الانطلاق)
@@ -2480,6 +2588,9 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                             MAX(CASE
                                 WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                                 THEN CASE
+                                    -- 🆕 المهمة المفتوحة: ساعات من فترات المشاركة الفعلية (إن وُجدت)
+                                    WHEN m.mission_classification = 'مفتوحة' AND oh.hours IS NOT NULL
+                                    THEN oh.hours
                                     WHEN m.completion_date IS NOT NULL
                                     THEN GREATEST(
                                         EXTRACT(EPOCH FROM (
@@ -2501,6 +2612,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                             END) AS mission_hours
                         FROM ident i
                         JOIN missions m ON m.mission_id = i.mission_id
+                        LEFT JOIN open_hours oh ON oh.mission_id = i.mission_id AND oh.k = i.k
                         GROUP BY i.k, i.mission_id
                     ) d
                     GROUP BY d.k
