@@ -88,7 +88,7 @@ check("5 وراثة كاملة = 10س", compute_working_hours(open_m, 'نشطة'
 
 # ── 6) مهمة عادية: مدة المهمة دون تغيير 10س (08:00→18:00) ──
 normal_m = {'mission_classification': 'عادية', 'departure_date': '2026-09-08', 'departure_time': '08:00', 'arrival_date': '2026-09-08', 'arrival_time': '18:00'}
-check("6 عادية مدة = 10س", compute_working_hours(normal_m, 'نشطة', [], [], []), 10.0)
+check("6 عادية حية now=الوصول → 10س", compute_working_hours(normal_m, 'نشطة', [], [], [], now=datetime.datetime(2026,9,8,18,0)), 10.0)
 
 # ── 3) انفصال+عودة في عادية: قطعتان 6+2 = 8 (المهمة 10س تبقى للمهمة نفسها) ──
 seg_n = [{'start_dt': datetime.datetime(2026,9,8,8,0), 'end_dt': datetime.datetime(2026,9,8,14,0)},
@@ -96,11 +96,11 @@ seg_n = [{'start_dt': datetime.datetime(2026,9,8,8,0), 'end_dt': datetime.dateti
 seg_n2 = [{'start_dt': datetime.datetime(2026,9,8,8,0), 'end_dt': datetime.datetime(2026,9,8,14,0)},
          {'start_dt': datetime.datetime(2026,9,8,17,0), 'end_dt': datetime.datetime(2026,9,8,19,0)}]
 check("7 عادية انفصال+عودة = 8س", compute_working_hours(normal_m, 'نشطة', seg_n2, [], []), 8.0)
-check("8 عادية بلا قطع (المهمة تبقى 10س)", compute_working_hours(normal_m, 'نشطة', [], [], []), 10.0)
+check("8 عادية بلا قطع حية now=الوصول → 10س", compute_working_hours(normal_m, 'نشطة', [], [], [], now=datetime.datetime(2026,9,8,18,0)), 10.0)
 
 # ── 6) مهمة عادية مبيت: انطلاق 23:00 → انتهاء 03:00 اليوم التالي = 4س ──
 normal_ovn = {'mission_classification': 'عادية', 'departure_date': '2026-09-08', 'departure_time': '23:00', 'completion_date': '2026-09-09', 'completion_time': '03:00'}
-check("6b عادية مبيت = 4س", compute_working_hours(normal_ovn, 'نشطة', [], [], []), 4.0)
+check("6b عادية مبيت حية now=04:00 → 4س", compute_working_hours(normal_ovn, 'نشطة', [], [], [], now=datetime.datetime(2026,9,9,4,0)), 4.0)
 
 # ── 7) قطاع مفتوح على مهمة مكتملة يُسقف بنهاية المهمة ──
 compl_m = {'mission_classification': 'عادية', 'departure_date': '2026-09-08', 'departure_time': '08:00', 'completion_date': '2026-09-08', 'completion_time': '18:00'}
@@ -111,6 +111,52 @@ check("7 قطاع مفتوح على مكتملة → حتى 18:00 = 2س", comput
 seg_stray = [{'start_dt': datetime.datetime(2026,9,8,15,0), 'end_dt': datetime.datetime(2026,9,8,16,0)}]  # بلا group
 check("7b قطاع بلا يوم (1س) + Day1 وراثة 6س = 7س",
       compute_working_hours(open_m, 'نشطة', seg_stray, ['اليوم الأول'], routes_open), 7.0)
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  الجزء A.2 — المحرك الموحد: ساعات حية (now مُثبَّت) + لا انحياز للتصنيف
+# ═══════════════════════════════════════════════════════════════════════════
+print()
+print("═" * 70)
+print(" الجزء A.2 — ساعات العمل الحية (ساعة مثبتة) + المحرك الموحد")
+print("═" * 70)
+
+one = datetime.datetime
+live_m = {'mission_classification': 'عادية', 'departure_date': '2026-09-08', 'departure_time': '10:00',
+          'arrival_date': '2026-09-08', 'arrival_time': '17:00'}
+T09 = one(2026, 9, 8, 9, 0); T12 = one(2026, 9, 8, 12, 0)
+T17 = one(2026, 9, 8, 17, 0); T18 = one(2026, 9, 8, 18, 0)
+
+check("L1 حية بلا قطع now=17 → 7س", compute_working_hours(live_m, 'نشطة', [], [], [], now=T17), 7.0)
+check("L2 حية بلا قطع now=12 → ساعتان فقط", compute_working_hours(live_m, 'نشطة', [], [], [], now=T12), 2.0)
+check("L3 سقف الخطة now=18 (بعد الوصول) → 7س", compute_working_hours(live_m, 'نشطة', [], [], [], now=T18), 7.0)
+check("L4 حارس now قبل الانطلاق → 0", compute_working_hours(live_m, 'نشطة', [], [], [], now=T09), 0.0)
+
+ovn = {'mission_classification': 'عادية', 'departure_date': '2026-09-08', 'departure_time': '23:00',
+       'arrival_date': '2026-09-09', 'arrival_time': '03:00'}
+check("L5 مبيت حي now=+1 01:00 → 2س", compute_working_hours(ovn, 'نشطة', [], [], [], now=one(2026, 9, 9, 1, 0)), 2.0)
+check("L6 مبيت حي now=+1 04:00 → 4س (مقيد بالوصول 03:00)", compute_working_hours(ovn, 'نشطة', [], [], [], now=one(2026, 9, 9, 4, 0)), 4.0)
+
+comp_m2 = {'mission_classification': 'عادية', 'departure_date': '2026-09-08', 'departure_time': '10:00',
+           'arrival_date': '2026-09-08', 'arrival_time': '17:00'}
+check("L7 مكتملة متجمّدة حتى لو now=18 → 7س", compute_working_hours(comp_m2, 'Completed', [], [], [], now=T18), 7.0)
+
+# المساواة بين التصنيفين: نفس المدخلات ⇒ نفس الناتج (عادية ≡ مفتوحة)
+def cfree(m, status, seg, days, routes, now=None):
+    a = compute_working_hours({**m, 'mission_classification': 'عادية'}, status, seg, days, routes, now=now)
+    b = compute_working_hours({**m, 'mission_classification': 'مفتوحة'}, status, seg, days, routes, now=now)
+    return a, b
+
+a1, b1 = cfree(live_m, 'نشطة', [], [], [], now=T12)
+check("L8 لا تصنيف (حية بلا أيام) — القيمتان متساويتان", a1, b1)
+check("L8b القيمة الحقيقية 2", a1, 2.0)
+a2, b2 = cfree(open_m, 'نشطة', seg_n2, [], [], now=T12)
+check("L9 لا تصنيف (بقطاعات) — متساويتان", a2 == b2, True)
+a3, b3 = cfree(open_m, 'نشطة', seg_d1, ['اليوم الأول', 'اليوم الثاني'], routes_open, now=T12)
+check("L10 لا تصنيف (بأيام مخصصة) — متساويتان", a3 == b3, True)
+
+# القاعدة 2: قطاعات بلا أيام مخصصة ⇒ مجموعها الفعلي (لا تصنيف)
+check("L11 قاعدة2 بلا أيام → مجموع القطع = 8س",
+      compute_working_hours(open_m, 'نشطة', seg_n2, [], routes_open, now=T18), 8.0)
 
 print()
 print("═" * 70)
@@ -128,6 +174,12 @@ try:
     cur.execute("DELETE FROM missions WHERE mission_code LIKE 'TEST-SEG-%'")
     conn.commit()
     ensure_schema(cur)
+
+    # مرساة زمنية من قاعدة البيانات نفسها (لا افتراض بمنطقة محلية) —
+    # نُثبّت مهام الانحدار في الماضي لنتائج حتمية خالية من "زمن مستقبلي".
+    cur.execute("SELECT CURRENT_DATE")
+    db_today = cur.fetchone()[0]
+    past = db_today - datetime.timedelta(days=2)
 
     code = 'TEST-SEG-' + datetime.datetime.now().strftime('%H%M%S')
 
@@ -207,6 +259,10 @@ try:
         r = hrow(name)
         return float(r[ci['total_hours']]) if r else None
 
+    def hcol(name, col):
+        r = hrow(name)
+        return float(r[ci[col]]) if r else None
+
     for r in rows:
         if r[ci['full_name']] and ('TEST_SEG_' in r[ci['full_name']] or 'TEST_SEG_N' in r[ci['full_name']]):
             print(f"  HR {r[ci['full_name']]}: hours={r[ci['total_hours']]} active={r[ci['active_mission']]}")
@@ -226,6 +282,140 @@ try:
     check("7 تعديل أوقات اليوم لا يغيّر قطاعات R1 (تبقى 3س)", hval('TEST_SEG_R1'), 3.0)
     check("7 P2 وراثة تغيّرت مع خطة السير (10→20 = 10س)", hval('TEST_SEG_P2'), 10.0)
 
+    # ── عدد ساعات آخر مهمة (العمود الجديد قبل إجمالي الساعات) ──
+    check("HR-P1 آخر مهمة = 9س", hcol('TEST_SEG_P1', 'last_mission_hours'), 9.0)
+    check("HR-P2 آخر مهمة = 10س", hcol('TEST_SEG_P2', 'last_mission_hours'), 10.0)
+    check("HR-R1 آخر مهمة = 3س (محفوظ رغم الإزالة)", hcol('TEST_SEG_R1', 'last_mission_hours'), 3.0)
+    check("HR-N1 آخر مهمة = 4س", hcol('TEST_SEG_N1', 'last_mission_hours'), 4.0)
+    check("HR-P1 آخر مهمة == إجمالي الساعات (مهمة واحدة)", hcol('TEST_SEG_P1', 'last_mission_hours'), hval('TEST_SEG_P1'))
+
+    # ═══════════════════════════════════════════════════════════════════════
+    #  المحرك الموحد — محاكاة GET تماماً (نفس الاستعلامات التي تُبنى بها
+    #  المشاركة/الساعات في main.py) لفحص هوية المهمة عند نمو خط السير.
+    # ═══════════════════════════════════════════════════════════════════════
+    def get_like(mid, pid):
+        cur.execute("SELECT * FROM missions WHERE mission_id = %s", (mid,))
+        row = cur.fetchone()
+        if not row: return None
+        m = dict(zip([d[0] for d in cur.description], row))
+        for k, v in list(m.items()):
+            if v is not None and not isinstance(v, (str, int, float, bool)): m[k] = str(v)
+        cur.execute("SELECT group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date FROM mission_itineraries WHERE mission_id = %s", (mid,))
+        m['routes'] = [{"group_title": r[0], "route_from": r[1] or "", "route_to": r[2], "departure_time": str(r[3]) if r[3] else "", "arrival_time": str(r[4]) if r[4] else "", "departure_date": str(r[5]) if r[5] else "", "arrival_date": str(r[6]) if r[6] else ""} for r in cur.fetchall()]
+        cur.execute("SELECT participant_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s AND roster_active = true ORDER BY participant_id", (mid,))
+        found = None
+        for r in cur.fetchall():
+            if r[0] != pid: continue
+            cur.execute("SELECT session_date, check_in_time, check_out_time, notes, start_dt, end_dt, itinerary_group FROM mission_participant_sessions WHERE participant_id = %s ORDER BY COALESCE(start_dt, session_date), start_dt", (pid,))
+            segments = [{"session_date": str(s[0]) if s[0] else "", "check_in_time": str(s[1]) if s[1] else "", "check_out_time": str(s[2]) if s[2] else "", "notes": s[3], "start_dt": main.fmt_dt(s[4]), "end_dt": main.fmt_dt(s[5]), "itinerary_group": s[6]} for s in cur.fetchall()]
+            cur.execute("SELECT itinerary_group FROM mission_participant_itineraries WHERE participant_id = %s ORDER BY itinerary_group", (pid,))
+            days = [d[0] for d in cur.fetchall()]
+            found = {
+                "participant_id": r[0], "classification": m.get("mission_classification"),
+                "status": compute_participant_status(m.get("status"), r[12], segments),
+                "working_hours": compute_working_hours(m, m.get("status"), segments, days, m["routes"]),
+                "segments": segments, "seg_count": len(segments), "assigned_days": days,
+            }
+        return found
+
+    # ── نمو خط السير يحفظ الهوية: بلا أيام/قطع ⇒ مدة المهمة المتجمدة لا تتأثر ──
+    cur.execute("""
+        INSERT INTO missions (mission_code, mission_name, mission_classification, branch_id, status, created_at,
+                              departure_date, departure_time, completion_date, completion_time)
+        VALUES (%s, 'TEST_SEG_GROW', 'عادية', 19, 'Completed', NOW(),
+                %s, '09:00', %s, '13:00')
+        RETURNING mission_id
+    """, (code + '-G', past, past))
+    gid = cur.fetchone()[0]
+    cur.execute("INSERT INTO mission_participants (mission_id, full_name, participant_type, branch_id, return_status) VALUES (%s,'TEST_SEG_G1','volunteer',19,'تم انتهاء مهمتة') RETURNING participant_id", (gid,))
+    g1 = cur.fetchone()[0]
+    cur.execute("INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_date, departure_time, arrival_date, arrival_time) VALUES (%s,'خط السير الأساسي','القاهرة','الجيزة',%s,'09:00',%s,'13:00')", (gid, past, past))
+    conn.commit()
+
+    base = get_like(gid, g1)
+    check("G1 المهمة نفسها 'عادية'", base['classification'], 'عادية')
+    check("G2 بلا أيام وقطع → مدة المهمة متجمّدة 4س", base['working_hours'], 4.0)
+    check("G3 صفر قطاعات مبدئياً", base['seg_count'], 0)
+
+    # النمو عبر PUT-equivalent: خط أساسي ثانٍ + مجموعة مخصصة + تعديل أوقات مسار
+    cur.execute("INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_date, departure_time, arrival_date, arrival_time) VALUES (%s,'خط السير الأساسي','القاهرة','المعادي',%s,'10:00',%s,'12:00')", (gid, past, past))
+    cur.execute("INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_date, departure_time, arrival_date, arrival_time) VALUES (%s,'اليوم الميداني','القاهرة','العبور',%s,'08:00',%s,'20:00')", (gid, past, past))
+    cur.execute("UPDATE mission_itineraries SET departure_time = '07:00' WHERE mission_id = %s AND route_to = 'الجيزة'", (gid,))
+    conn.commit()
+
+    after = get_like(gid, g1)
+    check("G4 نفس المشارك (participant_id محفوظ)", after['participant_id'], base['participant_id'])
+    check("G5 التصنيف لم ينقلب لمفتوحة (هوية)", after['classification'], 'عادية')
+    check("G6 لا قطع جديدة بعد النمو", after['seg_count'], 0)
+    check("G7 ساعات المتجمّدة لم تتغيّر بخط السير وحده", after['working_hours'], base['working_hours'])
+    check("G7b تساوي فعلي 4", after['working_hours'], 4.0)
+
+    # تخصيص يوم بعد النمو ⇒ القاعدة 1 (نافذة المجموعة المخصصة 08→20 = 12س)
+    cur.execute("INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group) VALUES (%s,%s,'اليوم الميداني')", (g1, gid))
+    conn.commit()
+    assigned = get_like(gid, g1)
+    check("G8 مع التخصيص → 12س (نافذة 'اليوم الميداني')", assigned['working_hours'], 12.0)
+
+    cur.execute(hr); rows = cur.fetchall(); cols = [d[0] for d in cur.description]; ci = {c:i for i,c in enumerate(cols)}
+    check("G9 HR-G1 آخر مهمة = 12س", hcol('TEST_SEG_G1', 'last_mission_hours'), 12.0)
+    check("G9b HR-G1 الإجمالي = 12س (مجموع حقيقي)", hcol('TEST_SEG_G1', 'total_hours'), 12.0)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    #  الإصلاح الجذري لـ HTTP 500: تسجيل انفصال بلا segment مفتوح
+    #  لم يَعُد يخالف NOT NULL على session_date
+    # ═══════════════════════════════════════════════════════════════════════
+    cur.execute("SELECT is_nullable FROM information_schema.columns WHERE table_name='mission_participant_sessions' AND column_name='session_date'")
+    check("M1 session_date أصبح nullable (DROP NOT NULL)", cur.fetchone()[0], 'YES')
+
+    cur.execute("""
+        INSERT INTO missions (mission_code, mission_name, mission_classification, branch_id, status, created_at,
+                              departure_date, departure_time, completion_date, completion_time)
+        VALUES (%s, 'TEST_SEG_LEAVE', 'عادية', 19, 'Completed', NOW(), %s, '08:00', %s, '14:00')
+        RETURNING mission_id
+    """, (code + '-L', past, past))
+    lid = cur.fetchone()[0]
+    cur.execute("INSERT INTO mission_participants (mission_id, full_name, participant_type, branch_id, return_status) VALUES (%s,'TEST_SEG_L1','volunteer',19,'مازال بالمهمة') RETURNING participant_id", (lid,))
+    l1 = cur.fetchone()[0]
+    conn.commit()
+    leave_dt = datetime.datetime.combine(past, datetime.time(10, 30))
+
+    # (أ) شكل الـ drop الجديد: session_date=تاريخ — ينجح بلا 500
+    try:
+        cur.execute("""INSERT INTO mission_participant_sessions
+                       (participant_id, mission_id, session_date, check_in_time, start_dt, end_dt, itinerary_group, notes)
+                       VALUES (%s, %s, %s, %s, NULL, %s, NULL, 'انفصال')""",
+                    (l1, lid, leave_dt.date(), leave_dt.time(), leave_dt))
+        conn.commit(); drop_ok = True
+    except Exception as e:
+        conn.rollback(); drop_ok = False; print("  ! drop insert فشل:", e)
+    check("M2 مسار الـ drop (session_date بتاريخ) ينجح — لا 500", drop_ok, True)
+
+    # (ب) الشكل القديم NULL أصبح مسموحاً أيضاً (تحزُّم إضافي)
+    try:
+        cur.execute("INSERT INTO mission_participant_sessions (participant_id, mission_id, session_date, check_in_time, start_dt, end_dt, itinerary_group, notes) VALUES (%s, %s, NULL, NULL, NULL, %s, NULL, 'انفصال')", (l1, lid, leave_dt))
+        conn.commit(); legacy_ok = True
+    except Exception as e:
+        conn.rollback(); legacy_ok = False; print("  ! legacy NULL insert فشل:", e)
+    check("M3 الشكل القديم (session_date=NULL) لم يَعُد مرفوضاً", legacy_ok, True)
+
+    # (ج) الاثنان start_dt=NULL ⇒ لا يُحتسبان (ساعات L1 = 0 — لا ساعات وهمية)
+    gl = get_like(lid, l1)
+    check("M4 قطعتا انفصال مسجلتان", gl['seg_count'], 2)
+    check("M5 قطعتا القطع start_dt فارغ (غير محتسبتين)", gl['segments'][1]['start_dt'] is None, True)
+    check("M6 ساعات L1 = 0 (لا شيء يُحتسب — لا وهمية)", gl['working_hours'], 0.0)
+
+    # (د) سجل انفصال حقيقي ببداية مرجعية (08:00→10:30 = 2.5س) — الرحل الطبيعي للعادية
+    cur.execute("INSERT INTO mission_participants (mission_id, full_name, participant_type, branch_id, return_status) VALUES (%s,'TEST_SEG_L2','volunteer',19,'تم انتهاء مهمتة') RETURNING participant_id", (lid,))
+    l2 = cur.fetchone()[0]
+    cur.execute("""INSERT INTO mission_participant_sessions
+                   (participant_id, mission_id, session_date, check_in_time, start_dt, end_dt, itinerary_group, notes)
+                   VALUES (%s, %s, %s, %s, %s, %s, NULL, 'انفصال (من بداية المشاركة)')""",
+                (l2, lid, leave_dt.date(), leave_dt.time(),
+                 datetime.datetime.combine(past, datetime.time(8, 0)), leave_dt))
+    conn.commit()
+    gl2 = get_like(lid, l2)
+    check("M7 انفصال ببداية مرجعية = 2.5س (يُحتسب طبيعياً)", gl2['working_hours'], 2.5)
+
     # ── 9) منطق idempotency لـ /join (فحص كود المصدر: رفض تكرار الفتح) ──
     has_guard_sql = (
         "SELECT 1 FROM mission_participant_sessions WHERE participant_id = %s AND itinerary_group = %s AND end_dt IS NULL" in src
@@ -233,6 +423,17 @@ try:
     )
     print(f"[{'OK' if has_guard_sql else 'FAIL'}] 9 /join فحص idempotency موجود في المصدر (رفض تكرار الفتح)")
     if not has_guard_sql: failures.append("idempotency-guard")
+
+    # ── 10) عقد إصلاح الـ 500 (فحص كود المصدر): لا إدراج بـ session_date=NULL ──
+    old_null_omit = "VALUES (%s, %s, NULL, NULL, NULL, %s, %s, 'انفصال')" not in src
+    new_drop_fix = (
+        "VALUES (%s, %s, %s, %s, NULL, %s, %s, 'انفصال')" in src
+        and "leave_dt.date()" in src
+        and "start_dt, end_dt, itinerary_group, notes" in src
+    )
+    no500_contract = old_null_omit and new_drop_fix
+    print(f"[{'OK' if no500_contract else 'FAIL'}] 10 إصلاح الـ 500 في المصدر (drop-path يكتب session_date=تاريخ، لا NULL)")
+    if not no500_contract: failures.append("leave-no500-source")
 
 finally:
     # ── تنظيف كامل لصفوف الاختبار ──

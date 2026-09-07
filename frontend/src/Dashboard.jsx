@@ -2489,6 +2489,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 🔒 قفل إرسال لحظي (متزامن): يمنع أي ضغطة مزدوجة / Enter متكرر أثناء تنفيذ mutation
   // (isSubmitting هو state غير متزامن، فحده وحده لا يمنع السباق في نفس الـ tick)
   const submitLockRef = useRef(false);
+  // 🆕 عدّادات حية للساعات: نحتفظ بالقيم في refs ثابتة حتى لا يعيد جدولة نفسه الـ useEffect (deps = refs فقط)
+  const isModalOpenRef = useRef(isModalOpen);
+  isModalOpenRef.current = isModalOpen;
+  const liveMissionIdRef = useRef(null);
+  liveMissionIdRef.current = currentMissionData?.mission_id ?? null;
+  const liveMissionStatusRef = useRef(null);
+  liveMissionStatusRef.current = currentMissionData?.status ?? null;
   const [isTableExpanded, setIsTableExpanded] = useState(false);
   
   const [returnModalOpen, setReturnModalOpen] = useState(false);
@@ -2502,6 +2509,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [beneficiaries, setBeneficiaries] = useState([{ id: 1 }]);
   // 🆕 نافذة انضمام / تسجيل انفصال (segment dialog) — قطاعات الدخول/الخروج (#3)
   const [segmentDialog, setSegmentDialog] = useState(null); // { mode: 'join'|'leave', participantId }
+  // 🛡️ قفل تقديم الانضمام/الانفصال ضد النقر المزدوج (يُغلق فراغ إعادة الرسم قبل isSubmitting)
+  const segmentSubmitLockRef = useRef(false);
   // 🆕 كل المتطوعين عبر كل الفروع — لاختيار مشارك من أي فرع (#6)
   const [allVolunteers, setAllVolunteers] = useState([]);
   // 📋 الحقول الإلزامية (متطلب جديد): touched بعد أول محاولة مرفوضة،
@@ -2565,6 +2574,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [missionViewType, setMissionViewType] = useState('all_types'); 
   const [missionClass, setMissionClass] = useState('عادية');
+
+  // 🔧 المحرك الموحد: هل للمهمة أيام/مجموعات مخصصة فعلية (بعناوين)؟
+  //    تحل محل الاعتماد على التصنيف (مفتوحة/عادية) لتحريك أعمدة الجدول
+  //    ومنتقى الأيام واشتراط اليوم في الانضمام/الانفصال.
+  const hasDayGroups = customItineraries.length > 0
+    && customItineraries.some(ci => String(ci.title || '').trim() !== '');
   const [statusFilter, setStatusFilter] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState(''); 
 
@@ -2641,6 +2656,52 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       });
   }, [liveMissionEvents, isModalOpen, currentMissionData]);
 
+  // 🆕 ساعات العمل الحية: نحدّث دورياً كل 15 ثانية بينما النافذة مفتوحة والمهمة نشطة.
+  // تعتمد على refs ثابتة فقط (mission_id/status/isModalOpen) فلا يستطيع إعادة جدولة نفسه أبداً.
+  useEffect(() => {
+    const pid = liveMissionIdRef.current;
+    const st = liveMissionStatusRef.current;
+    if (!pid || !isModalOpenRef.current) return undefined;
+    if (['Completed', 'Cancelled'].includes(st)) return undefined; // جليدت / ملغاة → لا عدّ حي للدقائق
+    const token = localStorage.getItem('access_token');
+    let cancelled = false;
+    const applyLive = (data) => {
+      if (cancelled || !data) return;
+      if (String(data.mission_id) !== String(liveMissionIdRef.current)) return;
+      if (!isModalOpenRef.current) return; // النافذة أُغلقت أثناء الـ await
+      setCurrentMissionData(prev => {
+        if (!prev) return prev;
+        const merged = { ...prev };
+        if (data.working_hours !== undefined && prev.working_hours !== data.working_hours) merged.working_hours = data.working_hours;
+        if (data.status !== undefined && prev.status !== data.status) merged.status = data.status;
+        if (data.return_status !== undefined && prev.return_status !== data.return_status) merged.return_status = data.return_status;
+        // دمج المشاركين: الساعات/الحالة/الأيام فقط — لا نلمس تعديلات جارية (names/roles/inputs)
+        const srcMap = new Map((Array.isArray(data.participants) ? data.participants : []).map(pp => [String(pp.participant_id), pp]));
+        merged.participants = (prev.participants || []).map(pp => {
+          const sp = srcMap.get(String(pp.participant_id));
+          if (!sp) return pp;
+          const np = { ...pp };
+          if (sp.working_hours !== undefined) np.working_hours = sp.working_hours;
+          if (sp.status !== undefined) np.status = sp.status;
+          if (sp.return_status !== undefined) np.return_status = sp.return_status;
+          if (sp.assigned_days !== undefined) np.assigned_days = sp.assigned_days;
+          return np;
+        });
+        return merged;
+      });
+    };
+    const tick = async () => {
+      try {
+        const r = await fetch(`${BASE}/api/missions/${pid}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r.ok) return;
+        applyLive(await r.json());
+      } catch { /* انقطاع لحظي — نتجاهل ولا نكسر المودال */ }
+    };
+    tick();
+    const iv = setInterval(tick, 15000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []); // deps ثابتة → يعمل مرة واحدة ويقرأ القيم الحية من refs
+
   const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
   const removeRoute = (id) => setRoutes(routes.filter(r => r.id !== id));
   const addCustomItinerary = () => setCustomItineraries([...customItineraries, { id: Date.now(), title: '', routes: [{ id: Date.now() }] }]);
@@ -2662,18 +2723,20 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
   const submitSegmentAction = async (mode) => {
     if (!segmentDialog || !currentMissionData) return;
+    if (segmentSubmitLockRef.current) return; // 🛡️ منع النقر المزدوج
+    segmentSubmitLockRef.current = true;
+    try {
     const target = participants.find(pp => pp.id === segmentDialog.participantId);
     const pid = target?.participant_id;
     if (!pid) return setCustomAlert("هذا المشارك غير محفوظ في السيرفر بعد — احفظ المهمة أولاً.");
     const dateVal = document.getElementById('sd_date')?.value || '';
     const timeVal = document.getElementById('sd_time')?.value || '';
     if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
-    const dayVal = missionClass === 'مفتوحة' ? (document.getElementById('sd_day')?.value || null) : null;
-    if (missionClass === 'مفتوحة' && !dayVal) return setCustomAlert("اختر اليوم/المسار أولاً (الأيام المخصصة للمشارك).");
+    const dayVal = hasDayGroups ? (document.getElementById('sd_day')?.value || null) : null;
+    if (hasDayGroups && !dayVal) return setCustomAlert("اختر اليوم/الخط سير أولاً (المخصصات لهذا المشارك).");
     const dt = `${dateVal} ${timeVal}`;
     const token = localStorage.getItem('access_token');
     setIsSubmitting(true);
-    try {
       const body = mode === 'join'
         ? { participant_id: pid, itinerary_group: dayVal, join_datetime: dt }
         : { participant_id: pid, itinerary_group: dayVal, leave_datetime: dt };
@@ -2691,10 +2754,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         : `✅ تم تسجيل انفصال ${target?.full_name || 'المشارك'}${dayVal ? ` عن «${dayVal}»` : ''}\nالنهاية: ${dt}`);
       await handleViewMission(currentMissionData.mission_id); // تحديث الحالة والساعات من السيرفر
     } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); }
-    finally { setIsSubmitting(false); }
+    finally { setIsSubmitting(false); segmentSubmitLockRef.current = false; }
   };
 
-  // 🆕 اختيار أيام متعددة — المهمات المفتوحة
+  // 🔧 اختيار أيام/خطوط متعددة — أي مهمة لها مجموعات
   const [daysPicker, setDaysPicker] = useState(null); // participant index or null
   const toggleAssignedDay = (pIndex, title) => setParticipants(prev => prev.map((p, i) => {
     if (i !== pIndex) return p;
@@ -2773,33 +2836,21 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         setMissionName(data.mission_name || '');
         setMissionClass(data.mission_classification || 'عادية');
         
+        // 🔧 المحرك الموحد: خط سير أساسي + أيام/مجموعات مخصصة معاً —
+        //    تبقى المهمة نفسها مهما نما خط سيرها (بلا تصنيف). 'خط السير الأساسي'
+        //    يذهب لمحرّره البسيط (من/إلى + تواريخ كاملة)؛ والباقي لمجموعات مخصصة.
         if (data.routes && data.routes.length > 0) {
-          if (data.mission_classification === 'مفتوحة') {
-             // 🆕 المهمة المفتوحة: أيام/مسارات مخصصة متعددة فقط (بلا خط سير أساسي)
-             setRoutes([]);
-             const customR = data.routes.filter(r => r.group_title !== 'خط السير الأساسي');
-             if (customR.length > 0) {
-               const grouped = customR.reduce((acc, curr) => {
-                 if (!acc[curr.group_title]) acc[curr.group_title] = [];
-                 acc[curr.group_title].push({ id: Date.now() + Math.random(), ...curr });
-                 return acc;
-               }, {});
-               setCustomItineraries(Object.keys(grouped).map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
-             } else { setCustomItineraries([]); }
-          } else {
-             const mainR = data.routes.filter(r => r.group_title === 'خط السير الأساسي');
-             const customR = data.routes.filter(r => r.group_title !== 'خط السير الأساسي');
-             setRoutes(mainR.length ? mainR.map((r, i) => ({ id: i, ...r })) : []);
-             
-             if (customR.length > 0) {
-               const grouped = customR.reduce((acc, curr) => {
-                 if (!acc[curr.group_title]) acc[curr.group_title] = [];
-                 acc[curr.group_title].push({ id: Date.now() + Math.random(), ...curr });
-                 return acc;
-               }, {});
-               setCustomItineraries(Object.keys(grouped).map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
-             } else { setCustomItineraries([]); }
-          }
+          const mainR = data.routes.filter(r => r.group_title === 'خط السير الأساسي');
+          const customR = data.routes.filter(r => r.group_title !== 'خط السير الأساسي');
+          setRoutes(mainR.length ? mainR.map((r, i) => ({ id: i, ...r })) : [{ id: Date.now() }]);
+          if (customR.length > 0) {
+            const grouped = customR.reduce((acc, curr) => {
+              if (!acc[curr.group_title]) acc[curr.group_title] = [];
+              acc[curr.group_title].push({ id: Date.now() + Math.random(), ...curr });
+              return acc;
+            }, {});
+            setCustomItineraries(Object.keys(grouped).map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
+          } else { setCustomItineraries([]); }
         } else { setRoutes([{ id: Date.now() }]); setCustomItineraries([]); }
 
         setVehicles((data.vehicles && data.vehicles.length > 0) ? data.vehicles.map((v, i) => ({ id: i, ...v })) : [{ id: Date.now() }]);
@@ -2934,15 +2985,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     csvContent += `${escapeCSV(document.getElementById('f_mission_name')?.value)},${escapeCSV(document.getElementById('f_mission_class')?.value)},${escapeCSV(getSelectedOptionSourceText(document.getElementById('f_branch_id')))},${escapeCSV(document.getElementById('f_mission_type')?.value)},${escapeCSV(document.getElementById('f_mission_location')?.value)},${escapeCSV(document.getElementById('f_responsible_person')?.value)},${escapeCSV(document.getElementById('f_creation_date')?.value)},${escapeCSV(document.getElementById('f_data_source')?.value)}\n\n`;
     csvContent += "التواريخ والتوقيتات\nتاريخ المهمة,تاريخ الخروج,تاريخ الوصول,تاريخ العودة,تاريخ الانتهاء,ساعة البدء,ساعة التحرك,ساعة الوصول,ساعة الانتهاء\n";
     csvContent += `${escapeCSV(document.getElementById('f_exit_date')?.value)},${escapeCSV(document.getElementById('f_departure_date')?.value)},${escapeCSV(document.getElementById('f_arrival_date')?.value)},${escapeCSV(document.getElementById('f_return_date')?.value)},${escapeCSV(document.getElementById('f_completion_date')?.value)},${escapeCSV(document.getElementById('f_start_time')?.value)},${escapeCSV(document.getElementById('f_departure_time')?.value)},${escapeCSV(document.getElementById('f_arrival_time')?.value)},${escapeCSV(document.getElementById('f_completion_time')?.value)}\n\n`;
-    csvContent += "خطوط السير المجمعة\nالمجموعة,إلى (الوجهة),ساعة التحرك,ساعة الوصول\n";
+    csvContent += "خطوط السير المجمعة\nالمجموعة,من,إلى (الوجهة),تاريخ التحرك,ساعة التحرك,تاريخ الوصول,ساعة الوصول\n";
     routes.forEach((_, i) => {
+      const from = document.getElementById(`r_from_main_${i}`)?.value;
       const to = document.getElementById(`r_to_main_${i}`)?.value;
-      if (to) csvContent += `خط السير الأساسي,${escapeCSV(to)},${escapeCSV(document.getElementById(`r_dep_main_${i}`)?.value)},${escapeCSV(document.getElementById(`r_arr_main_${i}`)?.value)}\n`;
+      if (from || to) csvContent += `خط السير الأساسي,${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(document.getElementById(`r_dep_date_main_${i}`)?.value)},${escapeCSV(document.getElementById(`r_dep_main_${i}`)?.value)},${escapeCSV(document.getElementById(`r_arr_date_main_${i}`)?.value)},${escapeCSV(document.getElementById(`r_arr_main_${i}`)?.value)}\n`;
     });
     customItineraries.forEach((ci, ciIndex) => {
       ci.routes.forEach((_, rIndex) => {
+        const from = document.getElementById(`r_from_cust_${ciIndex}_${rIndex}`)?.value;
         const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
-        if (to) csvContent += `${escapeCSV(ci.title)},${escapeCSV(to)},${escapeCSV(document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value)},${escapeCSV(document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value)}\n`;
+        if (from || to) csvContent += `${escapeCSV(ci.title)},${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(document.getElementById(`r_dep_date_cust_${ciIndex}_${rIndex}`)?.value)},${escapeCSV(document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value)},${escapeCSV(document.getElementById(`r_arr_date_cust_${ciIndex}_${rIndex}`)?.value)},${escapeCSV(document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value)}\n`;
       });
     });
     csvContent += "\nالسيارات والسائقين\nاسم السائق,رقم السيارة\n";
@@ -2951,7 +3004,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const plate = document.getElementById(`v_plate_${i}`)?.value;
       if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
     });
-    csvContent += missionClass === 'مفتوحة'
+    csvContent += hasDayGroups
       ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الأيام,الحالة,الساعات,الفرع\n`
       : `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,المرحلة,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
     participants.forEach((_, i) => {
@@ -2959,7 +3012,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       if (name) {
         const typeSel = document.getElementById(`p_type_${i}`);
         const branchSel = document.getElementById(`p_branch_${i}`);
-        if (missionClass === 'مفتوحة') {
+        if (hasDayGroups) {
           const days = (participants[i]?.assigned_days || []).join(' + ') || '—';
           const st = participants[i]?.status || 'مازال بالمهمة';
           const wh = participants[i]?.working_hours != null ? `${+Number(participants[i].working_hours).toFixed(1)}س` : '—';
@@ -3080,17 +3133,27 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        if (hasDuplicateError) return;
 
        const allRoutes = [];
-       // 💡 المهمة المفتوحة: أيام/مسارات مخصصة متعددة فقط (بلا خط سير أساسي)
-       if (missionClass !== 'مفتوحة') {
-         routes.forEach((_, i) => {
-           const to = document.getElementById(`r_to_main_${i}`)?.value;
-           if (to) allRoutes.push({ group_title: 'خط السير الأساسي', route_to: to, departure_time: document.getElementById(`r_dep_main_${i}`)?.value || null, arrival_time: document.getElementById(`r_arr_main_${i}`)?.value || null, departure_date: document.getElementById('f_departure_date')?.value || null, arrival_date: document.getElementById('f_arrival_date')?.value || null });
+       // 🔧 المحرك الموحد: خط السير الأساسي يُرسَل دائماً (بكل المسارات) وبتواريخ
+       //    كاملة لكل مسار (التاريخ من صف المسار نفسه لا من حقول المهمة المخفية).
+       //    «من/إلى» حقول منفصلة (route_from / route_to).
+       routes.forEach((_, i) => {
+         const from = document.getElementById(`r_from_main_${i}`)?.value;
+         const to = document.getElementById(`r_to_main_${i}`)?.value;
+         if (from || to) allRoutes.push({
+           group_title: 'خط السير الأساسي',
+           route_from: from || null,
+           route_to: to,
+           departure_time: document.getElementById(`r_dep_main_${i}`)?.value || null,
+           arrival_time: document.getElementById(`r_arr_main_${i}`)?.value || null,
+           departure_date: document.getElementById(`r_dep_date_main_${i}`)?.value || null,
+           arrival_date: document.getElementById(`r_arr_date_main_${i}`)?.value || null
          });
-       }
+       });
        customItineraries.forEach((ci, ciIndex) => {
          ci.routes.forEach((_, rIndex) => {
+           const from = document.getElementById(`r_from_cust_${ciIndex}_${rIndex}`)?.value;
            const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
-           if (to) allRoutes.push({ group_title: ci.title || 'خط سير مخصص', route_to: to, departure_time: document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_time: document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || null, departure_date: document.getElementById(`r_dep_date_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_date: document.getElementById(`r_arr_date_cust_${ciIndex}_${rIndex}`)?.value || null });
+           if (from || to) allRoutes.push({ group_title: ci.title || 'خط سير مخصص', route_from: from || null, route_to: to, departure_time: document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_time: document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || null, departure_date: document.getElementById(`r_dep_date_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_date: document.getElementById(`r_arr_date_cust_${ciIndex}_${rIndex}`)?.value || null });
          });
        });
 
@@ -3141,12 +3204,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
            participant_position: document.getElementById(`p_position_${i}`)?.value || '',
            branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
-           assigned_itinerary: missionClass === 'مفتوحة' ? '' : (getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي'),
+           assigned_itinerary: hasDayGroups ? '' : (getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي'),
            return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة',
            phase_name: document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول',
            stay_type: document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة',
-           // 🆕 أيام متعددة — مهمات مفتوحة فقط (القطاعات تُدار عبر انضمام/انفصال)
-           ...(missionClass === 'مفتوحة' ? { assigned_days: participants[i]?.assigned_days || [] } : {})
+           // 🔧 أيام/مجموعات متعددة — أي مهمة لها مجموعات فعلية (القطاعات تُدار عبر انضمام/انفصال)
+           ...(hasDayGroups ? { assigned_days: participants[i]?.assigned_days || [] } : {})
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
          eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== '')
@@ -3621,33 +3684,32 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              {/* 💡 المهمة المفتوحة: أيام/مسارات متعددة فقط (بلا خط سير أساسي) */}
-              {missionClass !== 'مفتوحة' && (
-                <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
-                  <div className="w-full flex flex-col items-center">
-                    <div className="mb-4 -mt-2">
-                      {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل خط السير</button>)}
-                    </div>
-                    <div className="w-full">
-                      {routes.map((route, index) => (
-                        <div key={route.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
-                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
-                          <div className="w-full md:w-auto flex border-l border-[var(--border)]"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" dir="ltr" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-1 w-32 text-center time-field" /></div>
-                          <div className="w-full md:w-auto flex"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" dir="ltr" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-1 w-32 text-center time-field" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)] border-r border-[var(--border)]"><TrashIcon /></button>)}</div>
-                        </div>
-                      ))}
-                    </div>
+              {/* 🔧 المحرك الموحد: خط السير الأساسي يعمل لكل المهمات — «من/إلى» حقول
+                  منفصلة + تاريخ ووقت كاملان لكل مسار (المبيت overnight آمن) */}
+              <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
+                <div className="w-full flex flex-col items-center">
+                  <div className="mb-4 -mt-2">
+                    {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل خط السير</button>)}
                   </div>
-                </SectionCard>
-              )}
+                  <div className="w-full">
+                    {routes.map((route, index) => (
+                      <div key={route.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
+                        <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_from_main_${index}`} type="text" defaultValue={route.route_from || ''} placeholder="من (نقطة الانطلاق)..." className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /><span className="text-[var(--faint)] self-center px-1">⇠</span><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
+                        <div className="w-full md:w-auto flex border-l border-[var(--border)]"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">تاريخ التحرك:</div><input id={`r_dep_date_main_${index}`} type="date" defaultValue={route.departure_date || ''} className="bg-transparent text-white px-1 w-32 text-center" /><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" dir="ltr" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" /></div>
+                        <div className="w-full md:w-auto flex"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">تاريخ الوصول:</div><input id={`r_arr_date_main_${index}`} type="date" defaultValue={route.arrival_date || ''} className="bg-transparent text-white px-1 w-32 text-center" /><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" dir="ltr" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)] border-r border-[var(--border)]"><TrashIcon /></button>)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </SectionCard>
 
-              <SectionCard title={missionClass === 'مفتوحة' ? "أيام المهمة / مسارات التحرك (خطوط سير مخصصة)" : "خطوط سير مخصصة (لفرق أو أفراد محددين)"} icon={<MapIcon />} actionBtn={<button onClick={addCustomItinerary} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">{missionClass === 'مفتوحة' ? "+ إضافة يوم / مسار جديد" : "+ إضافة خط سير مخصص"}</button>}>
+              <SectionCard title="الأيام / خطوط السير المخصصة (لفرق أو أفراد محددين)" icon={<MapIcon />} actionBtn={<button onClick={addCustomItinerary} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة يوم / مسار جديد</button>}>
                 <div className="space-y-4">
-                  {customItineraries.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm">{missionClass === 'مفتوحة' ? "يرجى إضافة أيام المهمة أو المسارات..." : "لا يوجد خطوط سير مخصصة."}</p>}
+                  {customItineraries.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm">لا توجد أيام أو خطوط سير مخصصة بعد.</p>}
                   {customItineraries.map((ci, ciIndex) => (
                     <div key={ci.id} className="bg-[var(--surface-4)] border border-[var(--border)] p-4 rounded-xl">
                       <div className="flex justify-between items-center mb-3 border-b border-[var(--border)] pb-2">
-                        <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder={missionClass === 'مفتوحة' ? "اكتب اسم اليوم (مثال: تحركات اليوم الأول)..." : "اكتب اسم خط السير المخصص هنا..."} className="eoc-manual-field bg-transparent text-[var(--accent)] font-bold outline-none w-full md:w-1/2" />
+                        <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder="اكتب اسم اليوم أو خط السير المخصص (مثال: تحركات اليوم الأول)..." className="eoc-manual-field bg-transparent text-[var(--accent)] font-bold outline-none w-full md:w-1/2" />
                         <div className="flex gap-2">
                           <button onClick={() => addRouteToCustom(ci.id)} className="text-xs text-green-500 hover:bg-[var(--surface-hover)] px-2 py-1 rounded">+ مسار</button>
                           <button onClick={() => removeCustomItinerary(ci.id)} className="text-xs text-[var(--accent)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded">حذف المخصص</button>
@@ -3655,7 +3717,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       </div>
                       {ci.routes.map((cr, rIndex) => (
                         <div key={cr.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
-                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="eoc-manual-field w-full bg-transparent text-white px-4 py-2" /></div>
+                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_from_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_from || ''} placeholder="من..." className="eoc-manual-field w-full bg-transparent text-white px-4 py-2" /><span className="text-[var(--faint)] self-center px-1">⇠</span><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="eoc-manual-field w-full bg-transparent text-white px-4 py-2" /></div>
                           <div className="w-full md:w-auto flex border-l border-[var(--border)]">
                             <div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">الانطلاق:</div>
                             <div className="bg-[var(--surface-4)] text-[var(--faint)] text-[10px] px-1 flex items-center justify-center">📅</div>
@@ -3698,11 +3760,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <th className="p-3">الاسم</th>
                         <th className="p-3">رقم العضوية</th>
                         <th className="p-3 text-[var(--accent)]">صفة المشارك <span className="text-[var(--accent)]">*</span></th>
-                        {missionClass === 'مفتوحة' && <th className="p-3 text-orange-400 w-20">الحالة</th>}
-                        {missionClass === 'مفتوحة' && <th className="p-3 text-purple-400">الأيام</th>}
+                        {hasDayGroups && <th className="p-3 text-orange-400 w-20">الحالة</th>}
+                        {hasDayGroups && <th className="p-3 text-purple-400">الأيام</th>}
                         <th className="p-3 text-cyan-400">الساعات</th>
                         <th className="p-3">الفرع</th>
-                        {missionClass !== 'مفتوحة' && <th className="p-3 text-green-400">المسار</th>}
+                        {!hasDayGroups && <th className="p-3 text-green-400">المسار</th>}
                         <th className="p-3 text-center">إجراءات</th>
                         <th className="p-3 text-center">حذف</th>
                       </tr>
@@ -3730,8 +3792,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
                           </td>
 
-                          {/* 🔴 الحالة — تلقائية فقط (مفتوحة) */}
-                          {missionClass === 'مفتوحة' && (
+                          {/* 🔴 الحالة — تلقائية فقط (أي مهمة لها أيام/مجموعات) */}
+                          {hasDayGroups && (
                             <td className="p-2 text-center">
                               {(() => {
                                 const st = p.status || (p.return_status === 'تم انتهاء مهمتة' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة');
@@ -3740,8 +3802,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </td>
                           )}
 
-                          {/* 🔴 الأيام — اختيار متعدد (مفتوحة) */}
-                          {missionClass === 'مفتوحة' && (
+                          {/* 🔴 الأيام — اختيار متعدد (أي مهمة لها أيام/مجموعات) */}
+                          {hasDayGroups && (
                             <td className="p-2 text-center">
                               <button type="button" onClick={() => setDaysPicker(daysPicker === index ? null : index)} title="تحديد أيام المهمة" className={`text-xs font-bold px-2 py-1 rounded-lg border ${((p.assigned_days || []).length > 0) ? 'text-purple-400 bg-purple-400/10 border-purple-400/30' : 'text-[var(--muted-2)] bg-[var(--surface-3)] border-[var(--border)]'}`}>
                                 الأيام ({(p.assigned_days || []).length})
@@ -3765,8 +3827,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </EocSelect>
                           </td>
 
-                          {/* المسار — عادية فقط */}
-                          {missionClass !== 'مفتوحة' && (
+                          {/* المسار — مهمات بلا مجموعات فقط */}
+                          {!hasDayGroups && (
                             <td className="p-2">
                               <EocSelect variant="cell" className="text-green-400 max-w-[120px]" id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'}>
                                 {routes.length > 0 && <option value="خط السير الأساسي">خط السير الأساسي</option>}
@@ -3817,11 +3879,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             ? 'تُسجَّل قطعة مشاركة جديدة تبدأ من التاريخ والوقت أدناه. الساعات السابقة (القيمة الافتراضية من خطة السير) تبقى كما هي.'
                             : 'يُسجَّل انفصال عن المهمة من التاريخ والوقت أدناه. إن لم يكن هناك انضمام مفتوح، تُحسب الفترة من بداية اليوم تلقائياً.'}
                         </p>
-                        {missionClass === 'مفتوحة' && (
+                        {hasDayGroups && (
                           <div className="mb-4">
-                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">اليوم / المسار</label>
+                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">اليوم / خط السير</label>
                             {targetDays.length === 0 ? (
-                              <p className="text-xs text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg px-3 py-2">حدد الأيام المخصصة لهذا المشارك أولاً من زر «الأيام» في الجدول.</p>
+                              <p className="text-xs text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg px-3 py-2">حدد الأيام/الخطوط المخصصة لهذا المشارك أولاً من زر «الأيام» في الجدول.</p>
                             ) : (
                               <EocSelect id="sd_day" defaultValue={targetDays[0]}>
                                 {targetDays.map(d => <option key={d} value={d} className="bg-[var(--surface-4)]">{d}</option>)}
@@ -3851,7 +3913,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 );
               })()}
 
-              {/* 🔴 محدد الأيام المتعددة — مهمات مفتوحة */}
+              {/* 🔴 محدد الأيام/الخطوط المتعددة — أي مهمة لها مجموعات */}
               {daysPicker !== null && (() => {
                 const dp = participants[daysPicker];
                 if (!dp) return null;
@@ -3861,12 +3923,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-3)]">
                         <h3 className="font-bold text-white flex items-center gap-2">
                           <span className="text-purple-400">📅</span>
-                          أيام المهمة — {dp.full_name || 'مشارك'}
+                          الأيام/الخطوط المخصصة — {dp.full_name || 'مشارك'}
                         </h3>
                         <button onClick={() => setDaysPicker(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
                       </div>
                       <div className="p-5 max-h-[50vh] overflow-y-auto">
-                        {customItineraries.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm py-4">لا توجد أيام (خط سير مخصص) بعد. أضف يوماً أولاً في قسم "أيام المهمة".</p>}
+                        {customItineraries.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm py-4">لا توجد أيام أو خطوط سير مخصصة بعد. أضف مجموعة أولاً في قسم "الأيام / خطوط السير المخصصة".</p>}
                         {customItineraries.map(ci => {
                           const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || `مخصص ${ci.id}`;
                           const checked = (dp.assigned_days || []).includes(ciTitle);
@@ -6411,6 +6473,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
       "حالة المشاركة": p.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا',
       "إجمالي المهام الميدانية": p.missions_count,
+      "عدد ساعات آخر مهمة": p.last_mission_hours,
       "إجمالي الساعات (ساعة)": p.total_hours
     })));
     const wb = XLSX.utils.book_new();
@@ -6517,14 +6580,15 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">النوع</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الحالة الآن</th>
                 <th className="p-4 font-semibold text-center text-[var(--ok)] border-l border-[var(--border)]">عدد المهام</th>
+                <th className="p-4 font-semibold text-center text-[var(--warn)] border-l border-[var(--border)]">عدد ساعات آخر مهمة</th>
                 <th className="p-4 font-semibold text-center text-[var(--data)]">إجمالي الساعات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? (
-                <TableLoadingRow colSpan={9} label="جاري حصر وتحليل الأفراد من المهام السابقة..." />
+                <TableLoadingRow colSpan={10} label="جاري حصر وتحليل الأفراد من المهام السابقة..." />
               ) : filteredHR.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
+                <tr><td colSpan={10} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
               ) : filteredHR.map((person, index) => (
                 <tr key={person.id || person.membership_number || index} className={`transition-colors duration-300 ${person.active_mission ? 'hr-active-row' : ''} hover:bg-[var(--surface-2)]`}>
                   <td className="p-4 text-center">{index + 1}</td>
@@ -6535,6 +6599,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                   <td className="p-4 text-center">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</td>
                   <td className="p-4 text-center">{person.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا'}</td>
                   <td className="p-4 text-center">{person.missions_count}</td>
+                  <td className="p-4 text-center">{person.last_mission_hours}</td>
                   <td className="p-4 text-center">{person.total_hours}</td>
                 </tr>
               ))}

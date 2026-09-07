@@ -10,7 +10,7 @@ import json
 
 # ملفات المشروع الخاصة بيك
 from audit import create_audit_log
-from realtime import notify_participant_accounts
+from realtime import notify_participant_accounts, create_realtime_event
 from db import get_connection
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
@@ -112,6 +112,18 @@ def ensure_schema():
                   AND (participant_position IS NULL OR TRIM(participant_position) = '')
                   AND participation_role IS NOT NULL AND TRIM(participation_role) <> '';
             """)
+
+            # ── 4) البنية الموحدة (المحرك الواحد): من/إلى للخطوط + أعمدة القطاع
+            #    (idempotent — نفس بنية migration 20260907_unify_engine.sql حتى
+            #    تلتئم اللوحة الحية تلقائياً على أي worker جديد)
+            cursor.execute("ALTER TABLE mission_itineraries ADD COLUMN IF NOT EXISTS route_from VARCHAR(255);")
+            cursor.execute("ALTER TABLE mission_itineraries ADD COLUMN IF NOT EXISTS departure_date DATE;")
+            cursor.execute("ALTER TABLE mission_itineraries ADD COLUMN IF NOT EXISTS arrival_date DATE;")
+            cursor.execute("ALTER TABLE mission_participant_sessions ADD COLUMN IF NOT EXISTS itinerary_group VARCHAR(150);")
+            cursor.execute("ALTER TABLE mission_participant_sessions ADD COLUMN IF NOT EXISTS start_dt TIMESTAMP;")
+            cursor.execute("ALTER TABLE mission_participant_sessions ADD COLUMN IF NOT EXISTS end_dt TIMESTAMP;")
+            # الإصلاح الجذري لـ 500: session_date لم يعد إلزامياً (آمن للإعادة)
+            cursor.execute("ALTER TABLE mission_participant_sessions ALTER COLUMN session_date DROP NOT NULL;")
         connection.commit()
     except Exception as e:
         print(f"ensure_schema error (will retry on next boot): {e}")
@@ -455,7 +467,8 @@ def get_branches_locations(credentials: HTTPAuthorizationCredentials = Depends(s
 
 class RouteModel(BaseModel):
     group_title: str
-    route_to: str
+    route_from: Optional[str] = None  # من (نقطة الانطلاق)
+    route_to: str                     # إلى (الوجهة)
     departure_time: Optional[str] = None
     arrival_time: Optional[str] = None
     # 🆕 تواريخ كاملة لكل يوم/مسار (مهمات مفتوحة) — دعم المبيت overnight
@@ -823,19 +836,31 @@ def reference_segment_start(cursor, mission_row, itinerary_group=None):
     return None
 
 
-def segment_hours(segments):
-    """مجموع ساعات الـ segments: مغلقة (فرق ثابت) + مفتوحة (من start_dt إلى الآن)."""
+def segment_hours(segments, now=None):
+    """مجموع ساعات الـ segments: مغلقة (فرق ثابت) + مفتوحة (من start_dt إلى now)."""
     total = 0.0
-    now = datetime.now()
+    now = now or datetime.now()
     for s in segments:
         start = s.get('start_dt')
+        if isinstance(start, str):
+            start = parse_dt_input(start)
         if not start:
             continue
-        end = s.get('end_dt') or now
+        end = s.get('end_dt')
+        if isinstance(end, str):
+            end = parse_dt_input(end)
+        end = end or now
         secs = (end - start).total_seconds()
         if secs > 0:
             total += secs / 3600.0
     return round(total, 2)
+
+
+def validate_segment_datetime(dt_value, now=None):
+    """رفض زمن مُدخل في المستقبل (400) — حتمي تحت ساعة مثبّتة في الاختبارات."""
+    now = now or datetime.now()
+    if dt_value and dt_value > now:
+        raise HTTPException(status_code=400, detail="الزمن المُدخل في المستقبل")
 
 
 def mission_start_dt(mission_data):
@@ -862,22 +887,29 @@ def mission_end_dt(mission_data):
     return None
 
 
-def compute_working_hours(mission_data, mission_status, segments, assigned_days, routes):
+def compute_working_hours(mission_data, mission_status, segments, assigned_days, routes, now=None):
     """
-    ساعات عمل المشارك (عرض) — نفس منطق HR:
-    - المفتوحة: لكل يوم مخصص — يوم له قطاعات ⇒ مجموع مددها الفعلية؛ يوم بلا قطاعات ⇒ يرث
-      نافذة اليوم (الافتراضي)؛ والقطاعات بلا يوم (نادرة) تُضاف مستقلة. الـ segment المفتوح
-      يُحسب حتى الآن — أو حتى نهاية المهمة إن كانت اكتملت.
-    - العادية: له قطاعات ⇒ مجموع مددها (تجاوز فردي)؛ بلا قطاعات ⇒ مدة المهمة (حسابها دون تغيير).
+    ساعات عمل المشارك — محرك واحد موحّد (لا فرق Normal/Open — التصنيف للعرض فقط):
+    (1) لديه أيام/خطوط مخصصة ⇒ لكل مجموعة قطاعاتها الفعلية وإلا نافذتها؛ + قطاعات بلا مجموعة.
+    (2) وإلا لديه قطاعات ⇒ مجموع مددها الفعلية.
+    (3) وإلا ⇒ افتراضي خطة المهمة: مكتملة ⇒ مدة المهمة (مجمّدة دون تغيير)؛
+        نشطة ⇒ min(الآن, نهاية الخطة) − البداية (ساعات مباشرة).
+    الـ segment المفتوح يُحسب حتى الآن — أو حتى نهاية المهمة إن اكتملت.
     """
-    classification = mission_data.get('mission_classification') or 'عادية'
-    end_cap = mission_end_dt(mission_data) if mission_status in ('Completed', 'مكتملة') else None
+    now = now or datetime.now()
+    completed = mission_status in ('Completed', 'مكتملة')
+    end_cap = mission_end_dt(mission_data) if completed else None
 
     def seg_dur(s):
         start = s.get('start_dt')
+        if isinstance(start, str):
+            start = parse_dt_input(start)  # GET يُسلّم نصوصًا — نقبل datetime أيضًا
         if not start:
             return 0.0
-        end = s.get('end_dt') or (end_cap or datetime.now())
+        end = s.get('end_dt')
+        if isinstance(end, str):
+            end = parse_dt_input(end)
+        end = end or (end_cap or now)
         secs = (end - start).total_seconds()
         return (secs / 3600.0) if secs > 0 else 0.0
 
@@ -896,30 +928,36 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         w = (max(s[1] for s in spans) - min(s[0] for s in spans)).total_seconds()
         return (w / 3600.0) if w > 0 else 0.0
 
-    if classification == 'مفتوحة':
-        if segments:
-            # خليط: قطاعات كل يوم إن وُجدت له، وإلا وراثة نافذة اليوم (الافتراضي لا يضاعف)
-            seg_by_day = {}
-            stray = 0.0
-            for s in segments:
-                g = s.get('itinerary_group')
-                if g:
-                    seg_by_day[g] = seg_by_day.get(g, 0.0) + seg_dur(s)
-                else:
-                    stray += seg_dur(s)
-            total = stray + sum(
-                seg_by_day.get(day, day_window(day)) for day in (assigned_days or [])
-            )
-            return round(total, 2)
-        total = sum(day_window(day) for day in (assigned_days or []))
+    assigned = assigned_days or []
+
+    # (1) أيام/مجموعات مخصصة ⇒ خليط لكل مجموعة + قطاعات بلا مجموعة
+    if assigned:
+        seg_by_day = {}
+        stray = 0.0
+        for s in segments:
+            g = s.get('itinerary_group')
+            if g:
+                seg_by_day[g] = seg_by_day.get(g, 0.0) + seg_dur(s)
+            else:
+                stray += seg_dur(s)
+        total = stray + sum(seg_by_day.get(day, day_window(day)) for day in assigned)
         return round(total, 2)
 
-    # عادية: قطاعات ⇒ مجموع مددها (تجاوز فردي)؛ بلا قطاعات ⇒ مدة المهمة كاملة دون تغيير
+    # (2) بلا أيام مخصصة: كل القطاعات مجموعها الفعلي
     if segments:
         return round(sum(seg_dur(s) for s in segments), 2)
+
+    # (3) افتراضي خطة المهمة — مباشر/مجمّد
     start = mission_start_dt(mission_data)
-    end = mission_end_dt(mission_data)
-    if start and end and end > start:
+    if not start:
+        return 0.0
+    if completed:
+        end = end_cap
+    else:
+        end = mission_end_dt(mission_data) or now
+        if now < end:
+            end = now  # نشطة وسقف الخطة لم يصل بعد ⇒ ساعات حتى الآن
+    if end and end > start:
         return round((end - start).total_seconds() / 3600.0, 2)
     return 0.0
 
@@ -1061,9 +1099,9 @@ def create_mission(
 
             for route in mission.routes:
                 cursor.execute("""
-                    INSERT INTO mission_itineraries (mission_id, group_title, route_to, departure_time, arrival_time, departure_date, arrival_date)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, route.group_title, route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time), none_if_empty(route.departure_date), none_if_empty(route.arrival_date)))
+                    INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+                """, (mission_id, route.group_title, none_if_empty(route.route_from), route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time), none_if_empty(route.departure_date), none_if_empty(route.arrival_date)))
 
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
@@ -1107,25 +1145,25 @@ def create_mission(
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, session_rows)
 
-            # 🆕 تخصيص الأيام للمشارك (متعدد) — مهمات مفتوحة: المشارك يرث ساعات اليوم المخصص
-            if mission.mission_classification == 'مفتوحة':
-                day_rows = []
-                for pid, part in inserted_participants:
-                    for day_title in (part.assigned_days or []):
-                        day_rows.append((pid, mission_id, day_title))
-                if day_rows:
-                    cursor.executemany("""
-                        INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
-                        VALUES (%s, %s, %s)
-                    """, day_rows)
-                # 🆕 اتساق الحالة الآلية مع الرادار: مشارك مفتوح كل فتراته مغلقة ⇒ انتهت مهمته
-                for pid, part in inserted_participants:
-                    periods = part.participation_periods or []
-                    if periods and all(per.check_out_time for per in periods):
-                        cursor.execute("""
-                            UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة'
-                            WHERE participant_id = %s
-                        """, (pid,))
+            # 🆕 تخصيص الأيام/الخطوط للمشارك (متعدد) — أي مهمة لها مجموعات:
+            #    المشارك يرث ساعات المجموعة المخصصة. (لا يُقيَّد بالتصنيف — المحرك موحّد)
+            day_rows = []
+            for pid, part in inserted_participants:
+                for day_title in (part.assigned_days or []):
+                    day_rows.append((pid, mission_id, day_title))
+            if day_rows:
+                cursor.executemany("""
+                    INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
+                    VALUES (%s, %s, %s)
+                """, day_rows)
+            # 🆕 اتساق الحالة الآلية مع الرادار: مشارك كل فتراته مغلقة ⇒ انتهت مهمته
+            for pid, part in inserted_participants:
+                periods = part.participation_periods or []
+                if periods and all(per.check_out_time for per in periods):
+                    cursor.execute("""
+                        UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة'
+                        WHERE participant_id = %s
+                    """, (pid,))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -1273,7 +1311,7 @@ def update_mission(
 
             # 3. إدخال التفاصيل الجديدة بعد التعديل
             for route in mission.routes:
-                cursor.execute("INSERT INTO mission_itineraries (mission_id, group_title, route_to, departure_time, arrival_time, departure_date, arrival_date) VALUES (%s, %s, %s, %s, %s, %s, %s);", (mission_id, route.group_title, route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time), none_if_empty(route.departure_date), none_if_empty(route.arrival_date)))
+                cursor.execute("INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, route.group_title, none_if_empty(route.route_from), route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time), none_if_empty(route.departure_date), none_if_empty(route.arrival_date)))
 
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
@@ -1359,17 +1397,17 @@ def update_mission(
                       AND participant_id <> ALL(%s);
                 """, (mission_id, kept_pids))
 
-            # 🆕 تخصيص الأيام للمشارك (متعدد) — مهمات مفتوحة: المشارك يرث ساعات اليوم المخصص
-            if mission.mission_classification == 'مفتوحة':
-                day_rows = []
-                for pid, part in new_participants:
-                    for day_title in (part.assigned_days or []):
-                        day_rows.append((pid, mission_id, day_title))
-                if day_rows:
-                    cursor.executemany("""
-                        INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
-                        VALUES (%s, %s, %s)
-                    """, day_rows)
+            # 🆕 تخصيص الأيام/الخطوط للمشارك (متعدد) — أي مهمة لها مجموعات:
+            #    المشارك يرث ساعات المجموعة المخصصة. (لا يُقيَّد بالتصنيف — المحرك موحّد)
+            day_rows = []
+            for pid, part in new_participants:
+                for day_title in (part.assigned_days or []):
+                    day_rows.append((pid, mission_id, day_title))
+            if day_rows:
+                cursor.executemany("""
+                    INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
+                    VALUES (%s, %s, %s)
+                """, day_rows)
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
@@ -1534,12 +1572,13 @@ def mission_join(
             join_dt = parse_dt_input(data.join_datetime)
             if not join_dt:
                 raise HTTPException(status_code=400, detail="زمن الانضمام غير صالح (الصيغة المتوقعة: YYYY-MM-DD HH:MM)")
+            validate_segment_datetime(join_dt)
 
+            # تحقق اليوم/المجموعة بناءً على البيانات لا التصنيف (المحرك موحّد):
+            #   لو أُرسل اليوم → يجب أن يكون ضمن تخصيصات المشارك؛
+            #   وإلا لو للمشارك أيام مخصصة → إلزامي اختيار أحدها.
             itinerary_group = None
-            if classification == 'مفتوحة':
-                if not data.itinerary_group:
-                    raise HTTPException(status_code=400, detail="في المهمة المفتوحة يجب اختيار اليوم/المسار للانضمام")
-                # يجب أن يكون اليوم ضمن الأيام المخصصة للمشارك
+            if data.itinerary_group:
                 cursor.execute(
                     "SELECT 1 FROM mission_participant_itineraries WHERE participant_id = %s AND itinerary_group = %s",
                     (data.participant_id, data.itinerary_group),
@@ -1547,6 +1586,13 @@ def mission_join(
                 if not cursor.fetchone():
                     raise HTTPException(status_code=400, detail="اليوم المختار غير مخصص لهذا المشارك")
                 itinerary_group = data.itinerary_group
+            else:
+                cursor.execute(
+                    "SELECT 1 FROM mission_participant_itineraries WHERE participant_id = %s",
+                    (data.participant_id,),
+                )
+                if cursor.fetchone():
+                    raise HTTPException(status_code=400, detail="يجب اختيار اليوم/المسار للانضمام — المشارك مخصص له أيام/خطوط")
 
             # منع التكرار: لا تُفتح جلستان مفتوحتان لنفس المشارك/اليوم
             if itinerary_group:
@@ -1584,6 +1630,24 @@ def mission_join(
                 )
             except Exception as e:
                 print(f"Audit Error: {e}")
+
+            # بث لحظي للمعنيين (منعزلة عن المعاملة بمعاملة فرعية — لا تُفسد الحفظ لو فشلت)
+            try:
+                create_realtime_event(
+                    cursor,
+                    event_type="mission",
+                    action=f"انضمام {participant_name}",
+                    actor_user_id=user_id,
+                    mission_id=mission_id,
+                    details={
+                        "action_text": f"{participant_name} انضم{' إلى يوم: ' + itinerary_group if itinerary_group else ''} في {mission_name} عند {data.join_datetime}",
+                        "affected": "participant",
+                        "mission_name": mission_name,
+                    },
+                    resolve_creator=True,
+                )
+            except Exception as e:
+                print(f"Realtime Error: {e}")
 
             connection.commit()
             return {"message": "تم تسجيل الانضمام", "participant_id": data.participant_id, "mission_id": mission_id}
@@ -1637,11 +1701,13 @@ def mission_leave(
             leave_dt = parse_dt_input(data.leave_datetime)
             if not leave_dt:
                 raise HTTPException(status_code=400, detail="زمن الانفصال غير صالح (الصيغة المتوقعة: YYYY-MM-DD HH:MM)")
+            validate_segment_datetime(leave_dt)
 
+            # تحقق اليوم/المجموعة بناءً على البيانات لا التصنيف (المحرك موحّد):
+            #   لو أُرسل اليوم → يجب أن يكون ضمن تخصيصات المشارك؛
+            #   وإلا لو للمشارك أيام مخصصة → إلزامي اختيار أحدها.
             itinerary_group = None
-            if classification == 'مفتوحة':
-                if not data.itinerary_group:
-                    raise HTTPException(status_code=400, detail="في المهمة المفتوحة يجب اختيار اليوم/المسار للانفصال")
+            if data.itinerary_group:
                 cursor.execute(
                     "SELECT 1 FROM mission_participant_itineraries WHERE participant_id = %s AND itinerary_group = %s",
                     (data.participant_id, data.itinerary_group),
@@ -1649,6 +1715,13 @@ def mission_leave(
                 if not cursor.fetchone():
                     raise HTTPException(status_code=400, detail="اليوم المختار غير مخصص لهذا المشارك")
                 itinerary_group = data.itinerary_group
+            else:
+                cursor.execute(
+                    "SELECT 1 FROM mission_participant_itineraries WHERE participant_id = %s",
+                    (data.participant_id,),
+                )
+                if cursor.fetchone():
+                    raise HTTPException(status_code=400, detail="يجب اختيار اليوم/المسار للانفصال — المشارك مخصص له أيام/خطوط")
 
             # 1. يوجد segment مفتوح ⇒ نغلقه (لا نُنشئ غيره — لا تكرار)
             if itinerary_group:
@@ -1682,12 +1755,15 @@ def mission_leave(
                         (data.participant_id, mission_id, ref_start.date(), ref_start.time(), ref_start, leave_dt, itinerary_group),
                     )
                 else:
-                    # لا بداية معروفة — سجّل drop بنقطة النهاية فقط (ساعات صفرية محتملة)
+                    # لا بداية معروفة — سجّل drop بنقطة النهاية فقط (ساعات صفرية).
+                    # ⚠️ الإصلاح الجذري لـ HTTP 500: كان يُرسل session_date=NULL وكان العمود
+                    #    NOT NULL ⇒ v2_enforce_not_null. الآن نُرسل تاريخ الانفصال الحقيقي،
+                    #    ويبقى start_dt=NULL حتّى لا يُحسب هذا السجل في الساعات.
                     cursor.execute(
                         """INSERT INTO mission_participant_sessions
                            (participant_id, mission_id, session_date, check_in_time, start_dt, end_dt, itinerary_group, notes)
-                           VALUES (%s, %s, NULL, NULL, NULL, %s, %s, 'انفصال')""",
-                        (data.participant_id, mission_id, leave_dt, itinerary_group),
+                           VALUES (%s, %s, %s, %s, NULL, %s, %s, 'انفصال')""",
+                        (data.participant_id, mission_id, leave_dt.date(), leave_dt.time(), leave_dt, itinerary_group),
                     )
 
             # الحالة → تم انتهاء مهمتة (يحرر من الرادار)
@@ -1704,6 +1780,24 @@ def mission_leave(
                 )
             except Exception as e:
                 print(f"Audit Error: {e}")
+
+            # بث لحظي للمعنيين (منعزلة عن المعاملة بمعاملة فرعية — لا تُفسد الحفظ لو فشلت)
+            try:
+                create_realtime_event(
+                    cursor,
+                    event_type="mission",
+                    action=f"انفصال {participant_name}",
+                    actor_user_id=user_id,
+                    mission_id=mission_id,
+                    details={
+                        "action_text": f"{participant_name} انفصل{' عن يوم: ' + itinerary_group if itinerary_group else ''} في {mission_name} عند {data.leave_datetime}",
+                        "affected": "participant",
+                        "mission_name": mission_name,
+                    },
+                    resolve_creator=True,
+                )
+            except Exception as e:
+                print(f"Realtime Error: {e}")
 
             connection.commit()
             return {"message": "تم تسجيل الانفصال", "participant_id": data.participant_id, "mission_id": mission_id}
@@ -1731,8 +1825,8 @@ def get_mission_details(mission_id: int, credentials: HTTPAuthorizationCredentia
             for k, v in mission_data.items():
                 if v is not None and not isinstance(v, (str, int, float, bool)): mission_data[k] = str(v)
             
-            cursor.execute("SELECT group_title, route_to, departure_time, arrival_time, departure_date, arrival_date FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
-            mission_data["routes"] = [{"group_title": r[0], "route_to": r[1], "departure_time": str(r[2]) if r[2] else "", "arrival_time": str(r[3]) if r[3] else "", "departure_date": str(r[4]) if r[4] else "", "arrival_date": str(r[5]) if r[5] else ""} for r in cursor.fetchall()]
+            cursor.execute("SELECT group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+            mission_data["routes"] = [{"group_title": r[0], "route_from": r[1] or "", "route_to": r[2], "departure_time": str(r[3]) if r[3] else "", "arrival_time": str(r[4]) if r[4] else "", "departure_date": str(r[5]) if r[5] else "", "arrival_date": str(r[6]) if r[6] else ""} for r in cursor.fetchall()]
 
             cursor.execute("SELECT driver_name, vehicle_number FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             mission_data["vehicles"] = [{"driver_name": r[0], "vehicle_number": r[1]} for r in cursor.fetchall()]
@@ -3256,55 +3350,89 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     WHERE eh.itinerary_group IS NULL
                     GROUP BY i.k, eh.mission_id
                 ),
-                -- إحصاءات لكل هوية من البيانات الحقيقية فقط (مهام فعلية غير ملغاة)
-                -- كل مهمة تُحسب مرة واحدة للشخص مهما تكرر تسجيل مشاركته فيها (سطر لكل مرحلة/يوم)
-                -- والساعات من زمن المهمة الفعلي نفسه: (الانتهاء) - (التحرك/الانطلاق)
-                -- المهمة المازالت نشطة (بلا تاريخ انتهاء): تُحسب ساعاتها المحققة حتى اللحظة من زمن انطلاقها الفعلي
+                -- (2) هوية بلا أيام مخصصة في المهمة ⇒ كل قطاعاتها الصريحة تُجمع كلها
+                --     (قطاعات بأيامها حتى لو لم تُخصَّص — تعديل/انضمام على مهمة عادية)
+                bare_explicit AS (
+                    SELECT
+                        i.k,
+                        eh.mission_id,
+                        SUM(eh.hours) AS hours
+                    FROM explicit_hours eh
+                    JOIN ident i ON i.participant_id = eh.participant_id
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM mission_participant_itineraries mpi
+                        WHERE mpi.mission_id = eh.mission_id
+                          AND mpi.participant_id = eh.participant_id
+                    )
+                    GROUP BY i.k, eh.mission_id
+                ),
+                -- 🔧 المحرك الموحد: حساب ساعات كل مهمة بهوية البيانات لا بالتصنيف — المهمة
+                --    تُحسب مرة واحدة لكل هوية مهما تكرر تسجيل مشاركته فيها (#4):
+                --   (1) له أيام مخصصة ⇒ خليط الأيام (قطاعات المجموعة المرصودة أو وراثة نافذتها) + قطاعات بلا يوم
+                --   (2) وإلا له قطاعات ⇒ مجموعها الفعلي كلها
+                --   (3) وإلا ⇒ افتراضي خطة المهمة: مكتملة ⇒ مدة المهمة (مجمّدة دون تغيير)؛
+                --       نشطة ⇒ min(الآن, نهاية الخطة) − الانطلاق (ساعات مباشرة).
+                mission_hours AS (
+                    SELECT
+                        i.k,
+                        i.mission_id,
+                        MAX(m.created_at) AS created_at,
+                        MAX((m.status NOT IN ('Draft', 'Cancelled', 'Returned'))::int)::boolean AS is_valid,
+                        MAX(CASE
+                            WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
+                            THEN CASE
+                                WHEN odm.hours IS NOT NULL THEN odm.hours + COALESCE(oe.hours, 0)
+                                WHEN be.hours IS NOT NULL THEN be.hours
+                                WHEN m.completion_date IS NOT NULL THEN GREATEST(
+                                    EXTRACT(EPOCH FROM (
+                                        (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
+                                        (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
+                                    )) / 3600.0,
+                                    0
+                                )
+                                ELSE GREATEST(
+                                    EXTRACT(EPOCH FROM (
+                                        LEAST(
+                                            LOCALTIMESTAMP,
+                                            COALESCE(
+                                                (COALESCE(m.arrival_date, m.completion_date)::timestamp
+                                                 + COALESCE(m.arrival_time, m.completion_time, '00:00'::time)),
+                                                LOCALTIMESTAMP
+                                            )
+                                        ) -
+                                        (COALESCE(m.departure_date, m.created_at::date)
+                                         + COALESCE(m.departure_time, m.start_time, m.created_at::time))
+                                    )) / 3600.0,
+                                    0
+                                )
+                            END
+                            ELSE 0
+                        END) AS hours
+                    FROM ident i
+                    JOIN missions m ON m.mission_id = i.mission_id
+                    LEFT JOIN open_day_mix odm ON odm.mission_id = i.mission_id AND odm.k = i.k
+                    LEFT JOIN open_extra oe ON oe.mission_id = i.mission_id AND oe.k = i.k
+                    LEFT JOIN bare_explicit be ON be.mission_id = i.mission_id AND be.k = i.k
+                    GROUP BY i.k, i.mission_id
+                ),
+                -- 🆕 «عدد ساعات آخر مهمة» — أحدث مهمة فعلية (غير ملغاة/مسودة) للهوية،
+                --    بنفس حساب الساعات الموحد؛ نشطة ⇒ مباشر حتى اللحظة، مكتملة ⇒ مجمّدة.
+                --    الترتيب بـ created_at ثم mission_id (مطرد) يجعل الاختيار حتمياً عند التساوي.
+                last_mission AS (
+                    SELECT DISTINCT ON (k)
+                        k,
+                        mission_hours.hours AS last_mission_hours
+                    FROM mission_hours
+                    WHERE is_valid
+                    ORDER BY k, created_at DESC, mission_id DESC
+                ),
                 stats AS (
                     SELECT
-                        d.k,
-                        COUNT(*) FILTER (WHERE d.mission_valid) AS missions_count,
-                        ROUND(COALESCE(SUM(CASE WHEN d.mission_valid THEN d.mission_hours ELSE 0 END), 0)::numeric, 1) AS total_hours
-                    FROM (
-                        SELECT
-                            i.k,
-                            i.mission_id,
-                            BOOL_OR(m.status NOT IN ('Draft', 'Cancelled', 'Returned')) AS mission_valid,
-                            MAX(CASE
-                                WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                                THEN CASE
-                                    -- 🆕 المفتوحة: خليط الأيام (قطاعات اليوم المرصودة + وراثة ما لم يُرصد) + قطاعات بلا يوم
-                                    WHEN m.mission_classification = 'مفتوحة'
-                                    THEN COALESCE(odm.hours, 0) + COALESCE(oe.hours, 0)
-                                    -- 🆕 العادية: مشارك بقطاعات تجاوز (خروج مبكر/عودة) ⇒ مجموع مددها الفعلية
-                                    WHEN m.mission_classification <> 'مفتوحة' AND oe.hours IS NOT NULL
-                                    THEN oe.hours
-                                    WHEN m.completion_date IS NOT NULL
-                                    THEN GREATEST(
-                                        EXTRACT(EPOCH FROM (
-                                            (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
-                                            (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
-                                        )) / 3600.0,
-                                        0
-                                    )
-                                    -- المهمة ما زالت نشطة: يُحتسب ما تحقق فعلياً من زمن الانطلاق الحقيقي حتى اللحظة (من الداتا المخزنة فقط + الآن)
-                                    ELSE GREATEST(
-                                        EXTRACT(EPOCH FROM (
-                                            LOCALTIMESTAMP -
-                                            (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, m.created_at::time))
-                                        )) / 3600.0,
-                                        0
-                                    )
-                                END
-                                ELSE 0
-                            END) AS mission_hours
-                        FROM ident i
-                        JOIN missions m ON m.mission_id = i.mission_id
-                        LEFT JOIN open_day_mix odm ON odm.mission_id = i.mission_id AND odm.k = i.k
-                        LEFT JOIN open_extra oe ON oe.mission_id = i.mission_id AND oe.k = i.k
-                        GROUP BY i.k, i.mission_id
-                    ) d
-                    GROUP BY d.k
+                        k,
+                        COUNT(*) FILTER (WHERE is_valid) AS missions_count,
+                        ROUND(COALESCE(SUM(CASE WHEN is_valid THEN hours ELSE 0 END), 0)::numeric, 1) AS total_hours
+                    FROM mission_hours
+                    GROUP BY k
                 )
                 SELECT
                     p.full_name,
@@ -3319,11 +3447,13 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     (a.mission_id IS NOT NULL) AS active_mission,
                     a.mission_id AS active_mission_id,
                     a.mission_code AS active_mission_code,
-                    a.mission_name AS active_mission_name
+                    a.mission_name AS active_mission_name,
+                    COALESCE(ROUND(lm.last_mission_hours::numeric, 1), 0) AS last_mission_hours
                 FROM person p
                 LEFT JOIN stats s  ON s.k = p.k
                 LEFT JOIN active a ON a.k = p.k
                 LEFT JOIN branches b ON b.branch_id = p.branch_id
+                LEFT JOIN last_mission lm ON lm.k = p.k
                 ORDER BY p.branch_id, p.k;
             """)
             rows = cursor.fetchall()
@@ -3342,7 +3472,8 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     "active_mission": bool(row[9]),
                     "active_mission_id": row[10],
                     "active_mission_code": row[11],
-                    "active_mission_name": row[12]
+                    "active_mission_name": row[12],
+                    "last_mission_hours": float(row[13] or 0)   # 🆕 ساعات آخر مهمة (مباشر/مجمّدة)
                 })
             return result
     except Exception as e:

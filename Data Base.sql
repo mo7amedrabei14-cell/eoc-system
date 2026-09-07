@@ -5409,5 +5409,12 @@ WHERE start_dt IS NULL
   AND session_date IS NOT NULL
   AND check_in_time IS NOT NULL;
 
+-- ─── المحرك الموحد (Unified Mission Engine) — 2026-09-07 ───────────────
+-- من/إلى كحقلين منفصلين: route_from (نقطة الانطلاق)
+ALTER TABLE mission_itineraries ADD COLUMN IF NOT EXISTS route_from VARCHAR(255);
+
+-- الإصلاح الجذري لـ HTTP 500: session_date لم يعد فرضاً
+ALTER TABLE mission_participant_sessions ALTER COLUMN session_date DROP NOT NULL;
+
 \unrestrict RyJN2tnZ8roAp24tNFtks9yu8dn1hfTkwRtGft6LSkRdZIhpxFMFG8MRjrSDZt9
 
