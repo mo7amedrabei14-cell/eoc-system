@@ -2474,4 +2474,7 @@ select.field {
 
   /* 3) مساحة أكبر لعنوان الشاشة في الهيدر على الشاشات الضيقة */
   .glass-header { padding-inline: 0.75rem; gap: 0.625rem; }
+
+  /* 4) حقل الوقت: تقليص أيقونة الساعة لمساحة أكبر للنص */
+  .time-field::-webkit-calendar-picker-indicator { width: 18px; }
 }
