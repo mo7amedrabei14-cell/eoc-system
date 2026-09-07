@@ -3502,7 +3502,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </SectionCard>
 
               <SectionCard title="التواريخ والتوقيتات" className="pt-6 pb-10 md:pt-7 md:pb-12" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
-                <div className="grid grid-cols-3 gap-4">
+                {/* 💡 الموبايل: عمود واحد حتى لا تتزاحم حقول التاريخ/الوقت (كانت 3 أعمدة دائمة)؛
+                    سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* تواريخ */}
                   <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
                   <FormGroup className="items-center text-center" label="تاريخ الوصول"><StyledInput className="text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
