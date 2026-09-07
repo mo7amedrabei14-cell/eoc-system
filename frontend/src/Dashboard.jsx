@@ -2500,8 +2500,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [vehicles, setVehicles] = useState([{ id: 1 }]);
   const [participants, setParticipants] = useState([{ id: 1 }]);
   const [beneficiaries, setBeneficiaries] = useState([{ id: 1 }]);
-  // 🆕 محرر فترات المشاركة (مهمات مفتوحة) — يفتح مودالاً لكل مشارك (#3)
-  const [periodsEditor, setPeriodsEditor] = useState(null); // { participantId, index }
+  // 🆕 نافذة انضمام / تسجيل انفصال (segment dialog) — قطاعات الدخول/الخروج (#3)
+  const [segmentDialog, setSegmentDialog] = useState(null); // { mode: 'join'|'leave', participantId }
   // 🆕 كل المتطوعين عبر كل الفروع — لاختيار مشارك من أي فرع (#6)
   const [allVolunteers, setAllVolunteers] = useState([]);
   // 📋 الحقول الإلزامية (متطلب جديد): touched بعد أول محاولة مرفوضة،
@@ -2655,19 +2655,44 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const removeParticipant = (id) => setParticipants(participants.filter(p => p.id !== id));
   const removeBeneficiary = (id) => setBeneficiaries(beneficiaries.filter(b => b.id !== id));
 
-  // 🆕 فترات المشاركة — إضافة/تعديل/حذف فترات لمشارك محدد
-  const openPeriodsEditor = (participantId) => setPeriodsEditor({ participantId, index: participants.findIndex(p => p.id === participantId) });
-  const removePeriod = (participantId, periodId) => setParticipants(participants.map(p => p.id === participantId ? { ...p, participation_periods: (p.participation_periods || []).filter(per => per.id !== periodId) } : p));
-  const updatePeriod = (participantId, periodId, field, value) => setParticipants(participants.map(p => p.id === participantId ? { ...p, participation_periods: (p.participation_periods || []).map(per => per.id === periodId ? { ...per, [field]: value } : per) } : p));
-
-  // 🆕 فترات المشاركة: تعبئة افتراضية حسب نوع المهمة (عادية = تاريخ خروج + وقت انطلاق)
-  const addPeriod = (participantId) => setParticipants(participants.map(p => {
-    if (p.id !== participantId) return p;
-    const base = missionClass !== 'مفتوحة'
-      ? { id: Date.now(), session_date: document.getElementById('f_exit_date')?.value || '', check_in_time: document.getElementById('f_departure_time')?.value || '', check_out_time: '', notes: 'خروج مبكر' }
-      : { id: Date.now(), session_date: '', check_in_time: '', check_out_time: '', notes: '' };
-    return { ...p, participation_periods: [...(p.participation_periods || []), base] };
-  }));
+  // 🆕 انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (لا نافذة فترات يدوية)
+  const openSegmentDialog = (mode, p) => {
+    if (!currentMissionData) return setCustomAlert("احفظ المهمة أولاً ثم سجّل الانضمام أو الانفصال.");
+    setSegmentDialog({ mode, participantId: p.id });
+  };
+  const submitSegmentAction = async (mode) => {
+    if (!segmentDialog || !currentMissionData) return;
+    const target = participants.find(pp => pp.id === segmentDialog.participantId);
+    const pid = target?.participant_id;
+    if (!pid) return setCustomAlert("هذا المشارك غير محفوظ في السيرفر بعد — احفظ المهمة أولاً.");
+    const dateVal = document.getElementById('sd_date')?.value || '';
+    const timeVal = document.getElementById('sd_time')?.value || '';
+    if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
+    const dayVal = missionClass === 'مفتوحة' ? (document.getElementById('sd_day')?.value || null) : null;
+    if (missionClass === 'مفتوحة' && !dayVal) return setCustomAlert("اختر اليوم/المسار أولاً (الأيام المخصصة للمشارك).");
+    const dt = `${dateVal} ${timeVal}`;
+    const token = localStorage.getItem('access_token');
+    setIsSubmitting(true);
+    try {
+      const body = mode === 'join'
+        ? { participant_id: pid, itinerary_group: dayVal, join_datetime: dt }
+        : { participant_id: pid, itinerary_group: dayVal, leave_datetime: dt };
+      const url = `${BASE}/api/missions/${currentMissionData.mission_id}/${mode === 'join' ? 'join' : 'leave'}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setCustomAlert(`🚫 ${data.detail || 'فشل العملية — حاول مرة أخرى.'}`); return; }
+      setSegmentDialog(null);
+      setCustomAlert(mode === 'join'
+        ? `✅ تم تسجيل انضمام ${target?.full_name || 'المشارك'}${dayVal ? ` على «${dayVal}»` : ''}\nالبداية: ${dt}`
+        : `✅ تم تسجيل انفصال ${target?.full_name || 'المشارك'}${dayVal ? ` عن «${dayVal}»` : ''}\nالنهاية: ${dt}`);
+      await handleViewMission(currentMissionData.mission_id); // تحديث الحالة والساعات من السيرفر
+    } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); }
+    finally { setIsSubmitting(false); }
+  };
 
   // 🆕 اختيار أيام متعددة — المهمات المفتوحة
   const [daysPicker, setDaysPicker] = useState(null); // participant index or null
@@ -2677,35 +2702,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     return { ...p, assigned_days: days.includes(title) ? days.filter(d => d !== title) : [...days, title] };
   }));
 
-  // 🆕 إنهاء المشاركة: تحديد + إنهاء جماعي
-  const [selectedParticipantIds, setSelectedParticipantIds] = useState([]);
-  const toggleSelect = (pid) => setSelectedParticipantIds(prev => prev.includes(pid) ? prev.filter(id => id !== pid) : [...prev, pid]);
-  const endParticipationNow = async () => {
-    if (!currentMissionData || selectedParticipantIds.length === 0) return;
-    if (!window.confirm(`هل تريد إنهاء مشاركة ${selectedParticipantIds.length} مشارك(ين) في هذه المهمة؟\nسيتم تسجيل خروجهم فوراً.`)) return;
-    const token = localStorage.getItem('access_token');
-    try {
-      const res = await fetch(`${BASE}/api/missions/${currentMissionData.mission_id}/end-participation`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ participant_ids: selectedParticipantIds })
-      });
-      if (res.ok) {
-        // تحديث محلي: الحالة + إغلاق الفترات
-        const now = new Date().toISOString().slice(11, 19);
-        setParticipants(prev => prev.map(p => {
-          if (!selectedParticipantIds.includes(p.participant_id)) return p;
-          const closedPeriods = (p.participation_periods || []).map(per => per.check_out_time ? per : { ...per, check_out_time: now });
-          if (closedPeriods.length === 0) closedPeriods.push({ id: Date.now(), session_date: new Date().toISOString().slice(0, 10), check_in_time: '', check_out_time: now, notes: 'إنهاء المشاركة' });
-          return { ...p, return_status: 'تم انتهاء مهمتة', status: 'تم انتهاء مهمتة', participation_periods: closedPeriods };
-        }));
-        setSelectedParticipantIds([]);
-      } else {
-        const err = await res.json();
-        alert(`خطأ: ${err.detail || 'فشل إنهاء المشاركة'}`);
-      }
-    } catch (e) { alert('خطأ في الاتصال بالسيرفر'); }
-  };
-
+  
   // 🆕 تحميل كل المتطوعين عبر الفروع لاختيار المشارك (#6)
   const loadAllVolunteers = async () => {
     const token = localStorage.getItem('access_token');
@@ -2750,8 +2747,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setVehicles([{ id: Date.now() }]);
     setParticipants([{ id: Date.now() }]);
     setBeneficiaries([{ id: Date.now() }]);
-    setPeriodsEditor(null);
-    setSelectedParticipantIds([]);
+    setSegmentDialog(null);
     setDaysPicker(null);
     loadAllVolunteers(); // 🆕 كل الفروع (#6)
     setIsModalLoading(false);
@@ -2956,7 +2952,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
     });
     csvContent += missionClass === 'مفتوحة'
-      ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الأيام,الحالة,الفرع\n`
+      ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الأيام,الحالة,الساعات,الفرع\n`
       : `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,المرحلة,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
     participants.forEach((_, i) => {
       const name = document.getElementById(`p_name_${i}`)?.value;
@@ -2966,7 +2962,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         if (missionClass === 'مفتوحة') {
           const days = (participants[i]?.assigned_days || []).join(' + ') || '—';
           const st = participants[i]?.status || 'مازال بالمهمة';
-          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(days)},${escapeCSV(st)},${escapeCSV(getSelectedOptionSourceText(branchSel))}\n`;
+          const wh = participants[i]?.working_hours != null ? `${+Number(participants[i].working_hours).toFixed(1)}س` : '—';
+          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(days)},${escapeCSV(st)},${escapeCSV(wh)},${escapeCSV(getSelectedOptionSourceText(branchSel))}\n`;
         } else {
           const itinSel = document.getElementById(`p_itin_${i}`);
           const phase = document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول';
@@ -3087,13 +3084,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        if (missionClass !== 'مفتوحة') {
          routes.forEach((_, i) => {
            const to = document.getElementById(`r_to_main_${i}`)?.value;
-           if (to) allRoutes.push({ group_title: 'خط السير الأساسي', route_to: to, departure_time: document.getElementById(`r_dep_main_${i}`)?.value || null, arrival_time: document.getElementById(`r_arr_main_${i}`)?.value || null });
+           if (to) allRoutes.push({ group_title: 'خط السير الأساسي', route_to: to, departure_time: document.getElementById(`r_dep_main_${i}`)?.value || null, arrival_time: document.getElementById(`r_arr_main_${i}`)?.value || null, departure_date: document.getElementById('f_departure_date')?.value || null, arrival_date: document.getElementById('f_arrival_date')?.value || null });
          });
        }
        customItineraries.forEach((ci, ciIndex) => {
          ci.routes.forEach((_, rIndex) => {
            const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
-           if (to) allRoutes.push({ group_title: ci.title || 'خط سير مخصص', route_to: to, departure_time: document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_time: document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || null });
+           if (to) allRoutes.push({ group_title: ci.title || 'خط سير مخصص', route_to: to, departure_time: document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_time: document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || null, departure_date: document.getElementById(`r_dep_date_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_date: document.getElementById(`r_arr_date_cust_${ciIndex}_${rIndex}`)?.value || null });
          });
        });
 
@@ -3148,9 +3145,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
            return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة',
            phase_name: document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول',
            stay_type: document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة',
-           // 🆕 فترات المشاركة — مهمة مفتوحة وعادية
-           participation_periods: (participants[i]?.participation_periods || []).map(per => ({ session_date: per.session_date || '', check_in_time: per.check_in_time || '', check_out_time: per.check_out_time || '', notes: per.notes || '' })).filter(per => per.session_date && per.check_in_time),
-           // 🆕 أيام متعددة — مهمات مفتوحة فقط
+           // 🆕 أيام متعددة — مهمات مفتوحة فقط (القطاعات تُدار عبر انضمام/انفصال)
            ...(missionClass === 'مفتوحة' ? { assigned_days: participants[i]?.assigned_days || [] } : {})
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
@@ -3180,7 +3175,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        if (res.ok) {
          // Success: clear the idempotency key so next submit gets a new key
          newMissionIdempotencyKey.current = null;
-         setSelectedParticipantIds([]);
+         setSegmentDialog(null);
          setDaysPicker(null);
          setIsModalOpen(false);
          fetchMissions();
@@ -3661,8 +3656,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       {ci.routes.map((cr, rIndex) => (
                         <div key={cr.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
                           <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="eoc-manual-field w-full bg-transparent text-white px-4 py-2" /></div>
-                          <div className="w-full md:w-auto flex border-l border-[var(--border)]"><input id={`r_dep_cust_${ciIndex}_${rIndex}`} type="time" dir="ltr" defaultValue={cr.departure_time || ''} className="bg-transparent text-white px-1 w-32 text-center time-field" /></div>
-                          <div className="w-full md:w-auto flex"><input id={`r_arr_cust_${ciIndex}_${rIndex}`} type="time" dir="ltr" defaultValue={cr.arrival_time || ''} className="bg-transparent text-white px-1 w-32 text-center time-field" />{ci.routes.length > 1 && <button onClick={() => removeRouteFromCustom(ci.id, cr.id)} className="px-3 text-[var(--faint)]"><TrashIcon /></button>}</div>
+                          <div className="w-full md:w-auto flex border-l border-[var(--border)]">
+                            <div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">الانطلاق:</div>
+                            <div className="bg-[var(--surface-4)] text-[var(--faint)] text-[10px] px-1 flex items-center justify-center">📅</div>
+                            <input id={`r_dep_date_cust_${ciIndex}_${rIndex}`} type="date" defaultValue={cr.departure_date || ''} className="bg-transparent text-white px-1 w-32 text-center" />
+                            <input id={`r_dep_cust_${ciIndex}_${rIndex}`} type="time" dir="ltr" defaultValue={cr.departure_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" />
+                          </div>
+                          <div className="w-full md:w-auto flex border-l border-[var(--border)]">
+                            <div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">الوصول:</div>
+                            <div className="bg-[var(--surface-4)] text-[var(--faint)] text-[10px] px-1 flex items-center justify-center">🏁</div>
+                            <input id={`r_arr_date_cust_${ciIndex}_${rIndex}`} type="date" defaultValue={cr.arrival_date || ''} className="bg-transparent text-white px-1 w-32 text-center" />
+                            <input id={`r_arr_cust_${ciIndex}_${rIndex}`} type="time" dir="ltr" defaultValue={cr.arrival_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" />
+                            {ci.routes.length > 1 && <button onClick={() => removeRouteFromCustom(ci.id, cr.id)} className="px-3 text-[var(--faint)]"><TrashIcon /></button>}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -3687,23 +3693,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   <table className="w-full text-right text-sm min-w-[1000px]">
                     <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]">
                       <tr>
-                        {missionClass === 'مفتوحة' && currentMissionData && (
-                          <th className="p-3 w-10 text-center">
-                            <input
-                              type="checkbox"
-                              checked={participants.length > 0 && participants.every(p => selectedParticipantIds.includes(p.participant_id))}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedParticipantIds(participants.map(p => p.participant_id).filter(Boolean));
-                                } else {
-                                  setSelectedParticipantIds([]);
-                                }
-                              }}
-                              className="accent-[var(--accent)] w-4 h-4 cursor-pointer"
-                              title="تحديد الكل"
-                            />
-                          </th>
-                        )}
                         <th className="p-3">م</th>
                         <th className="p-3">النوع</th>
                         <th className="p-3">الاسم</th>
@@ -3711,30 +3700,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <th className="p-3 text-[var(--accent)]">صفة المشارك <span className="text-[var(--accent)]">*</span></th>
                         {missionClass === 'مفتوحة' && <th className="p-3 text-orange-400 w-20">الحالة</th>}
                         {missionClass === 'مفتوحة' && <th className="p-3 text-purple-400">الأيام</th>}
-                        <th className="p-3 text-cyan-400">الفترات</th>
+                        <th className="p-3 text-cyan-400">الساعات</th>
                         <th className="p-3">الفرع</th>
                         {missionClass !== 'مفتوحة' && <th className="p-3 text-green-400">المسار</th>}
+                        <th className="p-3 text-center">إجراءات</th>
                         <th className="p-3 text-center">حذف</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
-                      {/* شريط إنهاء المشاركة الجماعي — مهمات مفتوحة فقط */}
-                      {missionClass === 'مفتوحة' && currentMissionData && selectedParticipantIds.length > 0 && (
-                        <tr className="bg-[var(--accent)]/10">
-                          <td colSpan={11} className="p-2 text-center">
-                            <button onClick={endParticipationNow} className="text-xs font-bold text-white bg-[var(--accent)] hover:bg-[var(--accent-soft)] px-4 py-1.5 rounded-lg">🔴 إنهاء المشاركة الآن ({selectedParticipantIds.length})</button>
-                            <button onClick={() => setSelectedParticipantIds([])} className="text-xs text-[var(--muted-2)] hover:text-white mr-3 underline">إلغاء التحديد</button>
-                          </td>
-                        </tr>
-                      )}
                       {participants.map((p, index) => (
                         <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
-                          {/* خانة التحديد — مهمات مفتوحة مع مهمة موجودة فقط */}
-                          {missionClass === 'مفتوحة' && currentMissionData && (
-                            <td className="p-2 text-center">
-                              <input type="checkbox" checked={selectedParticipantIds.includes(p.participant_id)} onChange={() => toggleSelect(p.participant_id)} className="accent-[var(--accent)] w-4 h-4 cursor-pointer" />
-                            </td>
-                          )}
                           <td className="p-2 text-center text-[var(--muted-2)] font-bold">{index + 1}</td>
                           <td className="p-2">
                             <EocSelect variant="cell" id={`p_type_${index}`} value={p.participant_type || 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_type = e.target.value; setParticipants(newP); }}>
@@ -3774,11 +3749,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </td>
                           )}
 
-                          {/* الفترات — متاحة لجميع الأنواع */}
+                          {/* 🕒 الساعات — تُحسب من القطاعات (segments) أو الافتراضي من خطة السير */}
                           <td className="p-2 text-center">
-                            <button type="button" onClick={() => openPeriodsEditor(p.id)} title="تعديل فترات المشاركة" className="text-xs text-cyan-400 hover:text-white font-bold bg-cyan-400/10 hover:bg-cyan-400/20 border border-cyan-400/30 px-2 py-1 rounded-lg whitespace-nowrap">
-                              {(p.participation_periods || []).length > 0 ? `⏱ ${(p.participation_periods || []).length} فترة` : '⏱ فترات'}
-                            </button>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-cyan-400/10 text-cyan-400' : 'text-[var(--faint)]'}`}>
+                              {p.working_hours != null ? `${+Number(p.working_hours).toFixed(1)}س` : '—'}
+                            </span>
                           </td>
 
                           {/* الفرع — كل الفروع بدون فلترة (داخل جدول المشاركين فقط) */}
@@ -3804,6 +3779,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </td>
                           )}
 
+                          {/* إجراءات انضمام / انفصال — القطاعات تُدار عبر السيرفر */}
+                          <td className="p-2 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={!currentMissionData || !p.participant_id} title={!currentMissionData ? 'احفظ المهمة أولاً لتتمكن من تسجيل الانضمام' : 'تسجيل انضمام جديد'} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
+                              <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={!currentMissionData || !p.participant_id} title={!currentMissionData ? 'احفظ المهمة أولاً لتتمكن من تسجيل الانفصال' : 'تسجيل انفصال'} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
+                            </div>
+                          </td>
                           <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-[var(--faint)] hover:text-[var(--accent)]"><TrashIcon /></button></td>
                         </tr>
                       ))}
@@ -3812,52 +3794,57 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              {/* 🆕 محرر فترات المشاركة — مهمات مفتوحة (#3): انضمام/خروج/عودة لكل مشارك */}
-              {periodsEditor && (() => {
-                const editingP = participants.find(pp => pp.id === periodsEditor.participantId);
-                const perList = editingP?.participation_periods || [];
+              {/* ✅ نافذة انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (#3) */}
+              {segmentDialog && (() => {
+                const isJoin = segmentDialog.mode === 'join';
+                const target = participants.find(pp => pp.id === segmentDialog.participantId) || {};
+                const targetDays = [...(target.assigned_days || [])];
+                const today = new Date().toISOString().slice(0, 10);
+                const nowTime = new Date().toTimeString().slice(0, 5);
                 return (
-                  <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-2xl card-surface rounded-2xl shadow-2xl border border-[var(--border-strong)] overflow-hidden animate-fade-in-up">
+                  <div className="fixed inset-0 z-[222] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-md card-surface rounded-2xl shadow-2xl border border-[var(--border-strong)] overflow-hidden animate-fade-in-up">
                       <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-3)]">
                         <h3 className="font-bold text-white flex items-center gap-2">
-                          <span className="text-cyan-400">⏱</span>
-                          فترات المشاركة — {editingP?.full_name || 'مشارك'}
+                          <span className={isJoin ? 'text-green-400' : 'text-[var(--accent)]'}>{isJoin ? '📥' : '📤'}</span>
+                          {isJoin ? 'انضمام' : 'تسجيل الانفصال'} — {target.full_name || 'مشارك'}
                         </h3>
-                        <button onClick={() => setPeriodsEditor(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
+                        <button onClick={() => setSegmentDialog(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
                       </div>
-                      <div className="p-5 max-h-[60vh] overflow-y-auto">
-                        <p className="text-xs text-[var(--faint)] mb-3 leading-relaxed">
-                          {missionClass === 'مفتوحة'
-                            ? 'الافتراضي: يرث المشارك ساعات اليوم المخصص. الفترات هنا للتعديلات فقط (خروج مبكر / انضمام متأخر / خروج وعودة).'
-                            : 'فارغ = يُحسب من زمن المهمة. أضف فترة فقط عند الخروج المبكر أو الانضمام المتأخر (تجاوز فردي).'}
+                      <div className="p-5">
+                        <p className="text-xs text-[var(--faint)] mb-4 leading-relaxed">
+                          {isJoin
+                            ? 'تُسجَّل قطعة مشاركة جديدة تبدأ من التاريخ والوقت أدناه. الساعات السابقة (القيمة الافتراضية من خطة السير) تبقى كما هي.'
+                            : 'يُسجَّل انفصال عن المهمة من التاريخ والوقت أدناه. إن لم يكن هناك انضمام مفتوح، تُحسب الفترة من بداية اليوم تلقائياً.'}
                         </p>
-                        {perList.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm py-6">لا توجد فترات مسجلة بعد.</p>}
-                        {perList.map((per, perIndex) => (
-                          <div key={per.id} className="flex flex-col md:flex-row gap-2 items-end bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 mb-2">
-                            <div className="flex-1 w-full">
-                              <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
-                              <input type="date" value={per.session_date || ''} onChange={(e) => updatePeriod(editingP.id, per.id, 'session_date', e.target.value)} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
-                            </div>
-                            <div className="w-full md:w-32">
-                              <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">البداية</label>
-                              <input type="time" value={per.check_in_time || ''} onChange={(e) => updatePeriod(editingP.id, per.id, 'check_in_time', e.target.value)} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
-                            </div>
-                            <div className="w-full md:w-32">
-                              <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">النهاية</label>
-                              <input type="time" value={per.check_out_time || ''} onChange={(e) => updatePeriod(editingP.id, per.id, 'check_out_time', e.target.value)} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
-                            </div>
-                            <div className="flex-1 w-full">
-                              <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">ملاحظات</label>
-                              <input type="text" value={per.notes || ''} onChange={(e) => updatePeriod(editingP.id, per.id, 'notes', e.target.value)} placeholder="اختياري" className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
-                            </div>
-                            <button onClick={() => removePeriod(editingP.id, per.id)} className="mb-0.5 p-2 text-[var(--muted-2)] hover:text-[var(--accent)] bg-[var(--surface-3)] rounded-lg border border-[var(--border)]"><TrashIcon /></button>
+                        {missionClass === 'مفتوحة' && (
+                          <div className="mb-4">
+                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">اليوم / المسار</label>
+                            {targetDays.length === 0 ? (
+                              <p className="text-xs text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg px-3 py-2">حدد الأيام المخصصة لهذا المشارك أولاً من زر «الأيام» في الجدول.</p>
+                            ) : (
+                              <EocSelect id="sd_day" defaultValue={targetDays[0]}>
+                                {targetDays.map(d => <option key={d} value={d} className="bg-[var(--surface-4)]">{d}</option>)}
+                              </EocSelect>
+                            )}
                           </div>
-                        ))}
+                        )}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
+                            <input id="sd_date" type="date" defaultValue={today} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
+                            <input id="sd_time" type="time" defaultValue={nowTime} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
+                          </div>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--border)] bg-[var(--surface-3)]">
-                        <button onClick={() => addPeriod(editingP.id)} className="text-xs text-cyan-400 hover:text-white font-bold bg-cyan-400/10 px-3 py-1.5 rounded-lg">+ إضافة فترة</button>
-                        <button onClick={() => setPeriodsEditor(null)} className="text-xs bg-[var(--accent)] hover:bg-[var(--accent-soft)] text-white font-bold px-5 py-2 rounded-lg">تم</button>
+                        <button onClick={() => setSegmentDialog(null)} className="text-xs text-[var(--muted-2)] hover:text-white underline">إلغاء</button>
+                        <button onClick={() => submitSegmentAction(segmentDialog.mode)} className={`text-white font-bold px-6 py-2 rounded-xl text-xs hover:opacity-90 ${isJoin ? 'bg-green-500 hover:bg-green-600' : 'bg-[var(--accent)] hover:bg-[var(--accent-soft)]'}`}>
+                          {isSubmitting ? 'جاري الحفظ...' : (isJoin ? 'تسجيل الانضمام' : 'تسجيل الانفصال')}
+                        </button>
                       </div>
                     </div>
                   </div>
