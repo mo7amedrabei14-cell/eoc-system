@@ -2024,6 +2024,14 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
             cursor.execute("SELECT mission_id FROM missions WHERE mission_id = %s", (mission_id,))
             if not cursor.fetchone(): raise HTTPException(status_code=404)
                 
+            # حذف التفاصيل أولاً لتجنب تعليق records يتيماً (لا FK CASCADE في الـ DB)
+            cursor.execute("DELETE FROM mission_participant_sessions WHERE participant_id IN (SELECT participant_id FROM mission_participants WHERE mission_id = %s)", (mission_id,))
+            cursor.execute("DELETE FROM mission_participant_itineraries WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_participants WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM missions WHERE mission_id = %s", (mission_id,))
 
             # 💡 تسجيل اللوج — نفس نمط بقية endpoints الحذف: نمرّر
@@ -2245,7 +2253,7 @@ def get_realtime_events(
                     "mission_id": r[5],
                     "details": r[6].get("action_text", str(r[6])) if isinstance(r[6], dict) else str(r[6] or ""),
                     "target_user_id": r[7],
-                    "created_at": r[8].strftime("%d/%m/%Y %H:%M") if r[8] else "",
+                    "created_at": r[8].strftime("%Y-%m-%d %H:%M") if r[8] else "",
                 }
                 for r in rows
             ]
