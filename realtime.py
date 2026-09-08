@@ -90,35 +90,29 @@ def create_realtime_event(
             for key, value in details.items()
         }
 
-    # 🛡️ ✂️ كل العمل هنا داخل SAVEPOINT (with cursor: في psycopg3): لو فشل حدث
-    # اللحظية لأي سبب (جدول غير موجود/خلل schema/قيمة خارجة)، يتراجع الحفظ إلى
-    # موضع النقطة فقط ويشتغل الاستثناء — فلا يُسمم أبداً معاملة الحفظ الأساسية
-    # (المهمة/المشاركين/الساعات). قبل هذا الإصلاح كان أي فشل حقيق في INSERT
-    # يلغى بصمت كل المعاملة (PostgreSQL: COMMIT يتحول ROLLBACK) مع رسالة "نجاح".
-    with cursor:
-        # ── تحديد المستلم من الـ backend:
-        #    الرتبة العليا اللي بتغيّر مهمة بتخاطب منشئ المهمة (صاحبها) بالـ user_id
-        if target_user_id is None and resolve_creator and event_type == "mission":
-            creator = resolve_mission_creator(cursor, mission_id)
-            if creator is not None and creator != actor_user_id:
-                target_user_id = creator
+    # ── تحديد المستلم من الـ backend:
+    #    الرتبة العليا اللي بتغيّر مهمة بتخاطب منشئ المهمة (صاحبها) بالـ user_id
+    if target_user_id is None and resolve_creator and event_type == "mission":
+        creator = resolve_mission_creator(cursor, mission_id)
+        if creator is not None and creator != actor_user_id:
+            target_user_id = creator
 
-        cursor.execute(
-            """
-            INSERT INTO realtime_events (
-                event_type, action, actor_user_id, mission_id, target_user_id, details
-            )
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING event_id, created_at;
-            """,
-            (
-                event_type,
-                action,
-                actor_user_id,
-                mission_id,
-                target_user_id,
-                Jsonb(details) if details is not None else None,
-            ),
+    cursor.execute(
+        """
+        INSERT INTO realtime_events (
+            event_type, action, actor_user_id, mission_id, target_user_id, details
         )
+        VALUES (%s, %s, %s, %s, %s, %s)
+        RETURNING event_id, created_at;
+        """,
+        (
+            event_type,
+            action,
+            actor_user_id,
+            mission_id,
+            target_user_id,
+            Jsonb(details) if details is not None else None,
+        ),
+    )
 
-        return cursor.fetchone()
+    return cursor.fetchone()

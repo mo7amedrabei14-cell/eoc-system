@@ -930,6 +930,16 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
 
     assigned = assigned_days or []
 
+    # (مهم) المكتملة تتجمّد دائماً — لا تُحسب قواعد اليوم/القطاعات عليها
+    if completed:
+        start = mission_start_dt(mission_data)
+        if not start:
+            return 0.0
+        end = end_cap
+        if end and end > start:
+            return round((end - start).total_seconds() / 3600.0, 2)
+        return 0.0
+
     # (1) أيام/مجموعات مخصصة ⇒ خليط لكل مجموعة + قطاعات بلا مجموعة
     if assigned:
         seg_by_day = {}
@@ -947,16 +957,13 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
     if segments:
         return round(sum(seg_dur(s) for s in segments), 2)
 
-    # (3) افتراضي خطة المهمة — مباشر/مجمّد
+    # (3) افتراضي خطة المهمة — مباشر/مجمّد (غير مكتملة فقط)
     start = mission_start_dt(mission_data)
     if not start:
         return 0.0
-    if completed:
-        end = end_cap
-    else:
-        end = mission_end_dt(mission_data) or now
-        if now < end:
-            end = now  # نشطة وسقف الخطة لم يصل بعد ⇒ ساعات حتى الآن
+    end = mission_end_dt(mission_data) or now
+    if now < end:
+        end = now  # نشطة وسقف الخطة لم يصل بعد ⇒ ساعات حتى الآن
     if end and end > start:
         return round((end - start).total_seconds() / 3600.0, 2)
     return 0.0
@@ -1574,9 +1581,9 @@ def mission_join(
                 raise HTTPException(status_code=400, detail="زمن الانضمام غير صالح (الصيغة المتوقعة: YYYY-MM-DD HH:MM)")
             validate_segment_datetime(join_dt)
 
-            # تحقق اليوم/المجموعة بناءً على البيانات لا التصنيف (المحرك موحّد):
+            # تحقق اليوم/المجموعة — اختياري تماماً (لا إجبار)
             #   لو أُرسل اليوم → يجب أن يكون ضمن تخصيصات المشارك؛
-            #   وإلا لو للمشارك أيام مخصصة → إلزامي اختيار أحدها.
+            #   وإلا → بدون مجموعة (خط السير الأساسي/العام)
             itinerary_group = None
             if data.itinerary_group:
                 cursor.execute(
@@ -1584,15 +1591,9 @@ def mission_join(
                     (data.participant_id, data.itinerary_group),
                 )
                 if not cursor.fetchone():
-                    raise HTTPException(status_code=400, detail="اليوم المختار غير مخصص لهذا المشارك")
+                    raise HTTPException(status_code=400, detail="خط السير المختار غير مخصص لهذا المشارك")
                 itinerary_group = data.itinerary_group
-            else:
-                cursor.execute(
-                    "SELECT 1 FROM mission_participant_itineraries WHERE participant_id = %s",
-                    (data.participant_id,),
-                )
-                if cursor.fetchone():
-                    raise HTTPException(status_code=400, detail="يجب اختيار اليوم/المسار للانضمام — المشارك مخصص له أيام/خطوط")
+            # لا يوجد else — itinerary_group يبقى None إذا لم يُرسل
 
             # منع التكرار: لا تُفتح جلستان مفتوحتان لنفس المشارك/اليوم
             if itinerary_group:
@@ -1704,8 +1705,9 @@ def mission_leave(
             validate_segment_datetime(leave_dt)
 
             # تحقق اليوم/المجموعة بناءً على البيانات لا التصنيف (المحرك موحّد):
+            # تحقق اليوم/المجموعة — اختياري تماماً (لا إجبار)
             #   لو أُرسل اليوم → يجب أن يكون ضمن تخصيصات المشارك؛
-            #   وإلا لو للمشارك أيام مخصصة → إلزامي اختيار أحدها.
+            #   وإلا → بدون مجموعة (خط السير الأساسي/العام)
             itinerary_group = None
             if data.itinerary_group:
                 cursor.execute(
@@ -1713,15 +1715,9 @@ def mission_leave(
                     (data.participant_id, data.itinerary_group),
                 )
                 if not cursor.fetchone():
-                    raise HTTPException(status_code=400, detail="اليوم المختار غير مخصص لهذا المشارك")
+                    raise HTTPException(status_code=400, detail="خط السير المختار غير مخصص لهذا المشارك")
                 itinerary_group = data.itinerary_group
-            else:
-                cursor.execute(
-                    "SELECT 1 FROM mission_participant_itineraries WHERE participant_id = %s",
-                    (data.participant_id,),
-                )
-                if cursor.fetchone():
-                    raise HTTPException(status_code=400, detail="يجب اختيار اليوم/المسار للانفصال — المشارك مخصص له أيام/خطوط")
+            # لا يوجد else — itinerary_group يبقى None إذا لم يُرسل
 
             # 1. يوجد segment مفتوح ⇒ نغلقه (لا نُنشئ غيره — لا تكرار)
             if itinerary_group:
@@ -3381,8 +3377,7 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                         MAX(CASE
                             WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                             THEN CASE
-                                WHEN odm.hours IS NOT NULL THEN odm.hours + COALESCE(oe.hours, 0)
-                                WHEN be.hours IS NOT NULL THEN be.hours
+                                -- Completed missions always freeze (byte-identical with Python rule 3)
                                 WHEN m.completion_date IS NOT NULL THEN GREATEST(
                                     EXTRACT(EPOCH FROM (
                                         (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
@@ -3390,6 +3385,9 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                                     )) / 3600.0,
                                     0
                                 )
+                                -- Active missions: day-mix / explicit-segments / live default
+                                WHEN odm.hours IS NOT NULL THEN odm.hours + COALESCE(oe.hours, 0)
+                                WHEN be.hours IS NOT NULL THEN be.hours
                                 ELSE GREATEST(
                                     EXTRACT(EPOCH FROM (
                                         LEAST(
@@ -3443,12 +3441,12 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     p.branch_id,
                     p.volunteer_id,
                     COALESCE(s.missions_count, 0) AS missions_count,
+                    COALESCE(ROUND(lm.last_mission_hours::numeric, 1), 0) AS last_mission_hours,
                     COALESCE(s.total_hours, 0) AS total_hours,
                     (a.mission_id IS NOT NULL) AS active_mission,
                     a.mission_id AS active_mission_id,
                     a.mission_code AS active_mission_code,
-                    a.mission_name AS active_mission_name,
-                    COALESCE(ROUND(lm.last_mission_hours::numeric, 1), 0) AS last_mission_hours
+                    a.mission_name AS active_mission_name
                 FROM person p
                 LEFT JOIN stats s  ON s.k = p.k
                 LEFT JOIN active a ON a.k = p.k
@@ -3468,12 +3466,12 @@ def get_human_resources(credentials: HTTPAuthorizationCredentials = Depends(secu
                     "branch_id": row[5],
                     "volunteer_id": row[6],
                     "missions_count": row[7],
-                    "total_hours": float(row[8] or 0),   # الساعات من بيانات حقيقية فقط
-                    "active_mission": bool(row[9]),
-                    "active_mission_id": row[10],
-                    "active_mission_code": row[11],
-                    "active_mission_name": row[12],
-                    "last_mission_hours": float(row[13] or 0)   # 🆕 ساعات آخر مهمة (مباشر/مجمّدة)
+                    "last_mission_hours": float(row[8] or 0),   # 🆕 ساعات آخر مهمة (مباشر/مجمّدة)
+                    "total_hours": float(row[9] or 0),          # إجمالي الساعات (تراكمي)
+                    "active_mission": bool(row[10]),
+                    "active_mission_id": row[11],
+                    "active_mission_code": row[12],
+                    "active_mission_name": row[13],
                 })
             return result
     except Exception as e:

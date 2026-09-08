@@ -1799,7 +1799,7 @@ useEffect(() => {
         </div>
       </aside>
 
-      <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative z-0">
+      <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative">
         <header className="glass-header px-4 md:px-8 py-3.5 md:py-4 flex items-center gap-3 md:gap-4 sticky top-0 z-40">
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label="قائمة التنقل" className="icon-btn !w-11 !h-11 shrink-0">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
@@ -2726,17 +2726,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (segmentSubmitLockRef.current) return; // 🛡️ منع النقر المزدوج
     segmentSubmitLockRef.current = true;
     try {
-    const target = participants.find(pp => pp.id === segmentDialog.participantId);
-    const pid = target?.participant_id;
-    if (!pid) return setCustomAlert("هذا المشارك غير محفوظ في السيرفر بعد — احفظ المهمة أولاً.");
-    const dateVal = document.getElementById('sd_date')?.value || '';
-    const timeVal = document.getElementById('sd_time')?.value || '';
-    if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
-    const dayVal = hasDayGroups ? (document.getElementById('sd_day')?.value || null) : null;
-    if (hasDayGroups && !dayVal) return setCustomAlert("اختر اليوم/الخط سير أولاً (المخصصات لهذا المشارك).");
-    const dt = `${dateVal} ${timeVal}`;
-    const token = localStorage.getItem('access_token');
-    setIsSubmitting(true);
+      const target = participants.find(pp => pp.id === segmentDialog.participantId);
+      const pid = target?.participant_id;
+      if (!pid) return setCustomAlert("هذا المشارك غير محفوظ في السيرفر بعد — احفظ المهمة أولاً.");
+      const dateVal = document.getElementById('sd_date')?.value || '';
+      const timeVal = document.getElementById('sd_time')?.value || '';
+      if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
+      // itinerary_group now always optional - send if selected, otherwise null
+      const dayVal = document.getElementById('sd_day')?.value || null;
+      const dt = `${dateVal} ${timeVal}`;
+      const token = localStorage.getItem('access_token');
+      setIsSubmitting(true);
       const body = mode === 'join'
         ? { participant_id: pid, itinerary_group: dayVal, join_datetime: dt }
         : { participant_id: pid, itinerary_group: dayVal, leave_datetime: dt };
@@ -2839,14 +2839,26 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         // 🔧 المحرك الموحد: خط سير أساسي + أيام/مجموعات مخصصة معاً —
         //    تبقى المهمة نفسها مهما نما خط سيرها (بلا تصنيف). 'خط السير الأساسي'
         //    يذهب لمحرّره البسيط (من/إلى + تواريخ كاملة)؛ والباقي لمجموعات مخصصة.
+        //    تحويل backend date/time → datetime-local للـ RouteCard UI
+        const combineDateTime = (date, time) => (date && time ? `${date}T${time}` : '');
         if (data.routes && data.routes.length > 0) {
           const mainR = data.routes.filter(r => r.group_title === 'خط السير الأساسي');
           const customR = data.routes.filter(r => r.group_title !== 'خط السير الأساسي');
-          setRoutes(mainR.length ? mainR.map((r, i) => ({ id: i, ...r })) : [{ id: Date.now() }]);
+          setRoutes(mainR.length ? mainR.map((r, i) => ({
+            id: i,
+            ...r,
+            departure_datetime: combineDateTime(r.departure_date, r.departure_time),
+            arrival_datetime: combineDateTime(r.arrival_date, r.arrival_time)
+          })) : [{ id: Date.now() }]);
           if (customR.length > 0) {
             const grouped = customR.reduce((acc, curr) => {
               if (!acc[curr.group_title]) acc[curr.group_title] = [];
-              acc[curr.group_title].push({ id: Date.now() + Math.random(), ...curr });
+              acc[curr.group_title].push({
+                id: Date.now() + Math.random(),
+                ...curr,
+                departure_datetime: combineDateTime(curr.departure_date, curr.departure_time),
+                arrival_datetime: combineDateTime(curr.arrival_date, curr.arrival_time)
+              });
               return acc;
             }, {});
             setCustomItineraries(Object.keys(grouped).map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
@@ -2989,13 +3001,25 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     routes.forEach((_, i) => {
       const from = document.getElementById(`r_from_main_${i}`)?.value;
       const to = document.getElementById(`r_to_main_${i}`)?.value;
-      if (from || to) csvContent += `خط السير الأساسي,${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(document.getElementById(`r_dep_date_main_${i}`)?.value)},${escapeCSV(document.getElementById(`r_dep_main_${i}`)?.value)},${escapeCSV(document.getElementById(`r_arr_date_main_${i}`)?.value)},${escapeCSV(document.getElementById(`r_arr_main_${i}`)?.value)}\n`;
+      const depVal = document.getElementById(`r_dep_main_${i}`)?.value || '';
+      const arrVal = document.getElementById(`r_arr_main_${i}`)?.value || '';
+      const depDate = depVal.split('T')[0] || '';
+      const depTime = depVal.split('T')[1] || '';
+      const arrDate = arrVal.split('T')[0] || '';
+      const arrTime = arrVal.split('T')[1] || '';
+      if (from || to) csvContent += `خط السير الأساسي,${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(depDate)},${escapeCSV(depTime)},${escapeCSV(arrDate)},${escapeCSV(arrTime)}\n`;
     });
     customItineraries.forEach((ci, ciIndex) => {
       ci.routes.forEach((_, rIndex) => {
         const from = document.getElementById(`r_from_cust_${ciIndex}_${rIndex}`)?.value;
         const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
-        if (from || to) csvContent += `${escapeCSV(ci.title)},${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(document.getElementById(`r_dep_date_cust_${ciIndex}_${rIndex}`)?.value)},${escapeCSV(document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value)},${escapeCSV(document.getElementById(`r_arr_date_cust_${ciIndex}_${rIndex}`)?.value)},${escapeCSV(document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value)}\n`;
+        const depVal = document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || '';
+        const arrVal = document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || '';
+        const depDate = depVal.split('T')[0] || '';
+        const depTime = depVal.split('T')[1] || '';
+        const arrDate = arrVal.split('T')[0] || '';
+        const arrTime = arrVal.split('T')[1] || '';
+        if (from || to) csvContent += `${escapeCSV(ci.title)},${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(depDate)},${escapeCSV(depTime)},${escapeCSV(arrDate)},${escapeCSV(arrTime)}\n`;
       });
     });
     csvContent += "\nالسيارات والسائقين\nاسم السائق,رقم السيارة\n";
@@ -3005,7 +3029,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
     });
     csvContent += hasDayGroups
-      ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الأيام,الحالة,الساعات,الفرع\n`
+      ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,خط السير المخصص,الحالة,الساعات,الفرع\n`
       : `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,المرحلة,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
     participants.forEach((_, i) => {
       const name = document.getElementById(`p_name_${i}`)?.value;
@@ -3136,24 +3160,29 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        // 🔧 المحرك الموحد: خط السير الأساسي يُرسَل دائماً (بكل المسارات) وبتواريخ
        //    كاملة لكل مسار (التاريخ من صف المسار نفسه لا من حقول المهمة المخفية).
        //    «من/إلى» حقول منفصلة (route_from / route_to).
+       //    datetime-local parsing: split 'YYYY-MM-DDTHH:MM' into date/time
        routes.forEach((_, i) => {
          const from = document.getElementById(`r_from_main_${i}`)?.value;
          const to = document.getElementById(`r_to_main_${i}`)?.value;
+         const depVal = document.getElementById(`r_dep_main_${i}`)?.value || '';
+         const arrVal = document.getElementById(`r_arr_main_${i}`)?.value || '';
          if (from || to) allRoutes.push({
            group_title: 'خط السير الأساسي',
            route_from: from || null,
            route_to: to,
-           departure_time: document.getElementById(`r_dep_main_${i}`)?.value || null,
-           arrival_time: document.getElementById(`r_arr_main_${i}`)?.value || null,
-           departure_date: document.getElementById(`r_dep_date_main_${i}`)?.value || null,
-           arrival_date: document.getElementById(`r_arr_date_main_${i}`)?.value || null
+           departure_date: depVal.split('T')[0] || null,
+           departure_time: depVal.split('T')[1] || null,
+           arrival_date: arrVal.split('T')[0] || null,
+           arrival_time: arrVal.split('T')[1] || null
          });
        });
        customItineraries.forEach((ci, ciIndex) => {
          ci.routes.forEach((_, rIndex) => {
            const from = document.getElementById(`r_from_cust_${ciIndex}_${rIndex}`)?.value;
            const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
-           if (from || to) allRoutes.push({ group_title: ci.title || 'خط سير مخصص', route_from: from || null, route_to: to, departure_time: document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_time: document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || null, departure_date: document.getElementById(`r_dep_date_cust_${ciIndex}_${rIndex}`)?.value || null, arrival_date: document.getElementById(`r_arr_date_cust_${ciIndex}_${rIndex}`)?.value || null });
+           const depVal = document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || '';
+           const arrVal = document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || '';
+           if (from || to) allRoutes.push({ group_title: ci.title || 'خط سير مخصص', route_from: from || null, route_to: to, departure_date: depVal.split('T')[0] || null, departure_time: depVal.split('T')[1] || null, arrival_date: arrVal.split('T')[0] || null, arrival_time: arrVal.split('T')[1] || null });
          });
        });
 
@@ -3685,7 +3714,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </SectionCard>
 
               {/* 🔧 المحرك الموحد: خط السير الأساسي يعمل لكل المهمات — «من/إلى» حقول
-                  منفصلة + تاريخ ووقت كاملان لكل مسار (المبيت overnight آمن) */}
+                  منفصلة + تاريخ ووقت كاملان لكل مسار (المبيت overnight آمن)
+                  يتطابق مع واجهة "الأيام / خطوط السير المخصصة": صفان (من/إلى) + (تاريخ ووقت الانطلاق/الوصول) */}
               <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
                 <div className="w-full flex flex-col items-center">
                   <div className="mb-4 -mt-2">
@@ -3693,11 +3723,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   </div>
                   <div className="w-full">
                     {routes.map((route, index) => (
-                      <div key={route.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
-                        <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_from_main_${index}`} type="text" defaultValue={route.route_from || ''} placeholder="من (نقطة الانطلاق)..." className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /><span className="text-[var(--faint)] self-center px-1">⇠</span><input id={`r_to_main_${index}`} type="text" defaultValue={route.route_to || ''} placeholder="إلى (الوجهة)..." className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /></div>
-                        <div className="w-full md:w-auto flex border-l border-[var(--border)]"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">تاريخ التحرك:</div><input id={`r_dep_date_main_${index}`} type="date" defaultValue={route.departure_date || ''} className="bg-transparent text-white px-1 w-32 text-center" /><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة التحرك:</div><input id={`r_dep_main_${index}`} type="time" dir="ltr" defaultValue={route.departure_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" /></div>
-                        <div className="w-full md:w-auto flex"><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">تاريخ الوصول:</div><input id={`r_arr_date_main_${index}`} type="date" defaultValue={route.arrival_date || ''} className="bg-transparent text-white px-1 w-32 text-center" /><div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">ساعة الوصول:</div><input id={`r_arr_main_${index}`} type="time" dir="ltr" defaultValue={route.arrival_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" />{routes.length > 1 && (<button onClick={() => removeRoute(route.id)} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)] border-r border-[var(--border)]"><TrashIcon /></button>)}</div>
-                      </div>
+                      <RouteCard
+                        key={route.id}
+                        route={route}
+                        index={index}
+                        prefix="main"
+                        onChange={(updated) => setRoutes(prev => prev.map((r, i) => i === index ? { ...r, ...updated } : r))}
+                        onRemove={removeRoute}
+                        showRemove={routes.length > 1}
+                        isBasic={true}
+                      />
                     ))}
                   </div>
                 </div>
@@ -3716,22 +3751,22 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         </div>
                       </div>
                       {ci.routes.map((cr, rIndex) => (
-                        <div key={cr.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
-                          <div className="flex-1 flex border-l border-[var(--border)]"><input id={`r_from_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_from || ''} placeholder="من..." className="eoc-manual-field w-full bg-transparent text-white px-4 py-2" /><span className="text-[var(--faint)] self-center px-1">⇠</span><input id={`r_to_cust_${ciIndex}_${rIndex}`} type="text" defaultValue={cr.route_to || ''} placeholder="الوجهة..." className="eoc-manual-field w-full bg-transparent text-white px-4 py-2" /></div>
-                          <div className="w-full md:w-auto flex border-l border-[var(--border)]">
-                            <div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">الانطلاق:</div>
-                            <div className="bg-[var(--surface-4)] text-[var(--faint)] text-[10px] px-1 flex items-center justify-center">📅</div>
-                            <input id={`r_dep_date_cust_${ciIndex}_${rIndex}`} type="date" defaultValue={cr.departure_date || ''} className="bg-transparent text-white px-1 w-32 text-center" />
-                            <input id={`r_dep_cust_${ciIndex}_${rIndex}`} type="time" dir="ltr" defaultValue={cr.departure_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" />
-                          </div>
-                          <div className="w-full md:w-auto flex border-l border-[var(--border)]">
-                            <div className="bg-[var(--surface-4)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">الوصول:</div>
-                            <div className="bg-[var(--surface-4)] text-[var(--faint)] text-[10px] px-1 flex items-center justify-center">🏁</div>
-                            <input id={`r_arr_date_cust_${ciIndex}_${rIndex}`} type="date" defaultValue={cr.arrival_date || ''} className="bg-transparent text-white px-1 w-32 text-center" />
-                            <input id={`r_arr_cust_${ciIndex}_${rIndex}`} type="time" dir="ltr" defaultValue={cr.arrival_time || ''} className="bg-transparent text-white px-1 w-24 text-center time-field" />
-                            {ci.routes.length > 1 && <button onClick={() => removeRouteFromCustom(ci.id, cr.id)} className="px-3 text-[var(--faint)]"><TrashIcon /></button>}
-                          </div>
-                        </div>
+                        <RouteCard
+                          key={cr.id}
+                          route={cr}
+                          index={rIndex}
+                          prefix={`cust_${ciIndex}`}
+                          onChange={(updated) => {
+                            setCustomItineraries(prev => prev.map((c, cIdx) =>
+                              cIdx === ciIndex
+                                ? { ...c, routes: c.routes.map((r, rIdx) => rIdx === rIndex ? { ...r, ...updated } : r) }
+                                : c
+                            ));
+                          }}
+                          onRemove={() => removeRouteFromCustom(ci.id, cr.id)}
+                          showRemove={ci.routes.length > 1}
+                          isBasic={false}
+                        />
                       ))}
                     </div>
                   ))}
@@ -3760,11 +3795,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <th className="p-3">الاسم</th>
                         <th className="p-3">رقم العضوية</th>
                         <th className="p-3 text-[var(--accent)]">صفة المشارك <span className="text-[var(--accent)]">*</span></th>
-                        {hasDayGroups && <th className="p-3 text-orange-400 w-20">الحالة</th>}
-                        {hasDayGroups && <th className="p-3 text-purple-400">الأيام</th>}
                         <th className="p-3 text-cyan-400">الساعات</th>
+                        <th className="p-3 text-purple-400">خط السير المخصص</th>
                         <th className="p-3">الفرع</th>
-                        {!hasDayGroups && <th className="p-3 text-green-400">المسار</th>}
                         <th className="p-3 text-center">إجراءات</th>
                         <th className="p-3 text-center">حذف</th>
                       </tr>
@@ -3792,30 +3825,34 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
                           </td>
 
-                          {/* 🔴 الحالة — تلقائية فقط (أي مهمة لها أيام/مجموعات) */}
-                          {hasDayGroups && (
-                            <td className="p-2 text-center">
-                              {(() => {
-                                const st = p.status || (p.return_status === 'تم انتهاء مهمتة' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة');
-                                return <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${st === 'مازال بالمهمة' ? 'bg-green-400/20 text-green-400' : 'bg-gray-400/20 text-gray-400'}`}>{st === 'مازال بالمهمة' ? '🟢' : '⚪'} {st}</span>;
-                              })()}
-                            </td>
-                          )}
-
-                          {/* 🔴 الأيام — اختيار متعدد (أي مهمة لها أيام/مجموعات) */}
-                          {hasDayGroups && (
-                            <td className="p-2 text-center">
-                              <button type="button" onClick={() => setDaysPicker(daysPicker === index ? null : index)} title="تحديد أيام المهمة" className={`text-xs font-bold px-2 py-1 rounded-lg border ${((p.assigned_days || []).length > 0) ? 'text-purple-400 bg-purple-400/10 border-purple-400/30' : 'text-[var(--muted-2)] bg-[var(--surface-3)] border-[var(--border)]'}`}>
-                                الأيام ({(p.assigned_days || []).length})
-                              </button>
-                            </td>
-                          )}
-
                           {/* 🕒 الساعات — تُحسب من القطاعات (segments) أو الافتراضي من خطة السير */}
                           <td className="p-2 text-center">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-cyan-400/10 text-cyan-400' : 'text-[var(--faint)]'}`}>
                               {p.working_hours != null ? `${+Number(p.working_hours).toFixed(1)}س` : '—'}
                             </span>
+                          </td>
+
+                          {/* خط السير المخصص — موحد لكل أنواع المهام (يعرض الأيام/المجموعات المخصصة للمشارك) */}
+                          <td className="p-2">
+                            <button
+                              type="button"
+                              onClick={() => setDaysPicker(daysPicker === index ? null : index)}
+                              title="تحديد خطوط السير المخصصة للمشارك"
+                              className={`text-xs font-bold px-2 py-1 rounded-lg border w-full text-right ${((p.assigned_days || []).length > 0) ? 'text-purple-400 bg-purple-400/10 border-purple-400/30' : 'text-[var(--muted-2)] bg-[var(--surface-3)] border-[var(--border)]'}`}
+                            >
+                              {((p.assigned_days || []).length > 0) ? (
+                                <>
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="text-purple-400">📍</span>
+                                    {p.assigned_days.map((day, i) => (
+                                      <span key={day} className="inline-block bg-purple-400/20 text-purple-300 px-1.5 py-0.5 rounded text-[10px] mr-1">{day}</span>
+                                    ))}
+                                  </span>
+                                </>
+                              ) : (
+                                'خط السير المخصص'
+                              )}
+                            </button>
                           </td>
 
                           {/* الفرع — كل الفروع بدون فلترة (داخل جدول المشاركين فقط) */}
@@ -3826,20 +3863,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               ))}
                             </EocSelect>
                           </td>
-
-                          {/* المسار — مهمات بلا مجموعات فقط */}
-                          {!hasDayGroups && (
-                            <td className="p-2">
-                              <EocSelect variant="cell" className="text-green-400 max-w-[120px]" id={`p_itin_${index}`} defaultValue={p.assigned_itinerary || 'خط السير الأساسي'}>
-                                {routes.length > 0 && <option value="خط السير الأساسي">خط السير الأساسي</option>}
-                                {customItineraries.map((ci) => {
-                                  const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || 'مخصص';
-                                  return <option key={ci.id} value={ciTitle}>{ciTitle}</option>;
-                                })}
-                                {routes.length === 0 && customItineraries.length === 0 && <option value="بدون خط سير">بدون خط سير</option>}
-                              </EocSelect>
-                            </td>
-                          )}
 
                           {/* إجراءات انضمام / انفصال — القطاعات تُدار عبر السيرفر */}
                           <td className="p-2 text-center">
@@ -3879,18 +3902,18 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             ? 'تُسجَّل قطعة مشاركة جديدة تبدأ من التاريخ والوقت أدناه. الساعات السابقة (القيمة الافتراضية من خطة السير) تبقى كما هي.'
                             : 'يُسجَّل انفصال عن المهمة من التاريخ والوقت أدناه. إن لم يكن هناك انضمام مفتوح، تُحسب الفترة من بداية اليوم تلقائياً.'}
                         </p>
-                        {hasDayGroups && (
-                          <div className="mb-4">
-                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">اليوم / خط السير</label>
-                            {targetDays.length === 0 ? (
-                              <p className="text-xs text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg px-3 py-2">حدد الأيام/الخطوط المخصصة لهذا المشارك أولاً من زر «الأيام» في الجدول.</p>
-                            ) : (
-                              <EocSelect id="sd_day" defaultValue={targetDays[0]}>
-                                {targetDays.map(d => <option key={d} value={d} className="bg-[var(--surface-4)]">{d}</option>)}
-                              </EocSelect>
-                            )}
-                          </div>
-                        )}
+                        {/* خط السير / المجموعة — اختياري، يعمل مع أي نوع مهمة */}
+                        <div className="mb-4">
+                          <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">خط السير / المجموعة (اختياري)</label>
+                          {targetDays.length === 0 ? (
+                            <p className="text-xs text-[var(--muted)] bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2">لا توجد خطوط سير مخصصة لهذا المشارك. اتركه فارغاً لاستخدام خط السير الأساسي، أو أضف خطوطاً مخصصة من الجدول.</p>
+                          ) : (
+                            <EocSelect id="sd_day" defaultValue={targetDays[0]} placeholder="اختر خط السير (اختياري)">
+                              <option value="">— خط السير الأساسي —</option>
+                              {targetDays.map(d => <option key={d} value={d} className="bg-[var(--surface-4)]">{d}</option>)}
+                            </EocSelect>
+                          )}
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
@@ -3913,29 +3936,37 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 );
               })()}
 
-              {/* 🔴 محدد الأيام/الخطوط المتعددة — أي مهمة لها مجموعات */}
+              {/* 🔴 محدد الأيام/الخطوط المتعددة — يعمل مع أي نوع مهمة (خط السير الأساسي + المخصص) */}
               {daysPicker !== null && (() => {
                 const dp = participants[daysPicker];
                 if (!dp) return null;
+                // Build list of all available route options: basic routes + custom itineraries
+                const basicRouteOption = routes.length > 0 ? 'خط السير الأساسي' : null;
+                const customOptions = customItineraries.map(ci => {
+                  const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || `مخصص ${ci.id}`;
+                  return ciTitle;
+                });
+                const allOptions = [basicRouteOption, ...customOptions].filter(Boolean);
+
                 return (
                   <div className="fixed inset-0 z-[221] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setDaysPicker(null)}>
                     <div className="w-full max-w-sm card-surface rounded-2xl shadow-2xl border border-[var(--border-strong)] overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-3)]">
                         <h3 className="font-bold text-white flex items-center gap-2">
-                          <span className="text-purple-400">📅</span>
-                          الأيام/الخطوط المخصصة — {dp.full_name || 'مشارك'}
+                          <span className="text-purple-400">📍</span>
+                          خطوط السير المخصصة — {dp.full_name || 'مشارك'}
                         </h3>
                         <button onClick={() => setDaysPicker(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
                       </div>
                       <div className="p-5 max-h-[50vh] overflow-y-auto">
-                        {customItineraries.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm py-4">لا توجد أيام أو خطوط سير مخصصة بعد. أضف مجموعة أولاً في قسم "الأيام / خطوط السير المخصصة".</p>}
-                        {customItineraries.map(ci => {
-                          const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || `مخصص ${ci.id}`;
-                          const checked = (dp.assigned_days || []).includes(ciTitle);
+                        {allOptions.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm py-4">لا توجد خطوط سير متاحة. أضف مسارات في قسم "تفاصيل خط السير الأساسي" أو "الأيام / خطوط السير المخصصة".</p>}
+                        {allOptions.map((opt, idx) => {
+                          const checked = (dp.assigned_days || []).includes(opt);
+                          const isBasic = opt === 'خط السير الأساسي';
                           return (
-                            <label key={ci.id} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-purple-400/10 border border-purple-400/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
-                              <input type="checkbox" checked={checked} onChange={() => toggleAssignedDay(daysPicker, ciTitle)} className="accent-purple-400 w-4 h-4" />
-                              <span className={`text-sm font-bold ${checked ? 'text-purple-400' : 'text-[var(--muted-2)]'}`}>📅 {ciTitle}</span>
+                            <label key={opt} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-purple-400/10 border border-purple-400/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleAssignedDay(daysPicker, opt)} className="accent-purple-400 w-4 h-4" />
+                              <span className={`text-sm font-bold ${checked ? 'text-purple-400' : 'text-[var(--muted-2)]'}`}>{isBasic ? '🛣️' : '📅'} {opt}</span>
                             </label>
                           );
                         })}
@@ -4183,6 +4214,107 @@ const VehicleRow = ({ index, onRemove, data }) => (
     <div className="flex-1 flex"><div className="bg-[var(--surface-3)] text-[var(--muted-2)] text-xs px-3 flex items-center justify-center border-l border-[var(--border)]">رقم السيارة:</div><input id={`v_plate_${index}`} type="text" defaultValue={data?.vehicle_number || ''} className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2" /><button onClick={onRemove} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)]"><TrashIcon /></button></div>
   </div>
 );
+
+// 🛣️ Shared RouteCard Component — Unified two-row design for Basic & Custom routes
+// Row 1: من [FROM] ← إلى [TO]
+// Row 2: التحرك [datetime-local]    الوصول [datetime-local]
+const RouteCard = ({
+  route,
+  index,
+  prefix,  // 'main' or 'cust_0' etc.
+  onChange,
+  onRemove,
+  showRemove,
+  isBasic
+}) => {
+  // Use pre-computed datetime-local from handleViewMission, or fall back to combining date/time
+  const depDateTime = route.departure_datetime || (route.departure_date && route.departure_time
+    ? `${route.departure_date}T${route.departure_time}`
+    : '');
+  const arrDateTime = route.arrival_datetime || (route.arrival_date && route.arrival_time
+    ? `${route.arrival_date}T${route.arrival_time}`
+    : '');
+
+  const handleDepChange = (e) => {
+    const val = e.target.value; // YYYY-MM-DDTHH:MM
+    if (!val) {
+      onChange?.({ ...route, departure_date: '', departure_time: '', departure_datetime: '' });
+      return;
+    }
+    const [date, time] = val.split('T');
+    onChange?.({ ...route, departure_date: date, departure_time: time, departure_datetime: val });
+  };
+
+  const handleArrChange = (e) => {
+    const val = e.target.value;
+    if (!val) {
+      onChange?.({ ...route, arrival_date: '', arrival_time: '', arrival_datetime: '' });
+      return;
+    }
+    const [date, time] = val.split('T');
+    onChange?.({ ...route, arrival_date: date, arrival_time: time, arrival_datetime: val });
+  };
+
+  const handleFromChange = (e) => onChange?.({ ...route, route_from: e.target.value });
+  const handleToChange = (e) => onChange?.({ ...route, route_to: e.target.value });
+
+  return (
+    <div key={route.id} className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-3)]">
+      {/* الصف الأول: من / إلى */}
+      <div className="flex-1 flex border-l border-[var(--border)]">
+        <label className="text-[var(--muted-2)] text-xs px-3 self-center shrink-0 whitespace-nowrap">من</label>
+        <input
+          id={`r_from_${prefix}_${index}`}
+          type="text"
+          value={route.route_from || ''}
+          onChange={handleFromChange}
+          placeholder="من (نقطة الانطلاق)..."
+          className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2"
+        />
+        <span className="text-[var(--faint)] self-center px-1">⇠</span>
+        <label className="text-[var(--muted-2)] text-xs px-3 self-center shrink-0 whitespace-nowrap">إلى</label>
+        <input
+          id={`r_to_${prefix}_${index}`}
+          type="text"
+          value={route.route_to || ''}
+          onChange={handleToChange}
+          placeholder="إلى (الوجهة)..."
+          className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2"
+        />
+      </div>
+      {/* الصف الثاني: التحرك + الوصول (datetime-local مدمج) */}
+      <div className="w-full md:w-auto flex flex-wrap border-l border-[var(--border)] bg-[var(--surface-4)] p-2 gap-2 md:gap-4">
+        <div className="flex items-center gap-1.5 flex-1 min-w-[260px]">
+          <span className="text-[var(--muted-2)] text-xs whitespace-nowrap">🚀 التحرك:</span>
+          <input
+            id={`r_dep_${prefix}_${index}`}
+            type="datetime-local"
+            value={depDateTime}
+            onChange={handleDepChange}
+            className="bg-transparent text-white px-3 w-full md:w-56 text-sm"
+            dir="ltr"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 flex-1 min-w-[260px]">
+          <span className="text-[var(--muted-2)] text-xs whitespace-nowrap">🏁 الوصول:</span>
+          <input
+            id={`r_arr_${prefix}_${index}`}
+            type="datetime-local"
+            value={arrDateTime}
+            onChange={handleArrChange}
+            className="bg-transparent text-white px-3 w-full md:w-56 text-sm"
+            dir="ltr"
+          />
+        </div>
+        {showRemove && (
+          <button onClick={() => onRemove?.(route.id)} className="px-3 text-[var(--faint)] hover:text-[var(--accent)] bg-[var(--surface-4)] border-r border-[var(--border)] self-center">
+            <TrashIcon />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // 💡 دالة زراير القائمة (مزودة بدعم النقطة الحمراء للإشعارات)
 function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = false }) {
