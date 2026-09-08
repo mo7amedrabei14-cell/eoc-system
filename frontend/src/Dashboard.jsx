@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, createPortal } from 'react';
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
@@ -4374,14 +4374,45 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
     if (onChange) onChange({ target: { value: iso || '' } });
   };
 
+  const GAP = 8; // مسافة صغيرة بين الحقل والنافذة (ليست إزاحة موضعية ثابتة)
+  const EDGE = 8; // هامش أمان من حواف الشاشة
+
+  // ✅ وضع ديناميكي: يُثبَّت أسفل الحقل تماماً، وينقلب للأعلى إن لم يكفِ الفراغ،
+  //    ويُزاح أفقياً ليُبقى داخل الشاشة (يسار/يمين) — بلا إزاحات موضعية ثابتة.
+  const positionPopup = () => {
+    const el = textRef.current, pop = popRef.current;
+    if (!el || !pop) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+
+    // عمودياً: أسفل الحقل أولاً، وإن لم يكفِ → أعلى الحقل
+    let top = r.bottom + GAP;
+    if (top + ph > vh - EDGE) top = r.top - GAP - ph;
+    if (top < EDGE) top = EDGE; // لا يوجد فراغ في الاتجاهين — ألصقها بأعلى الشاشة
+
+    // أفقياً: بمحاذاة يسار الحقل، ثم تُزاح لليمين/لليسار لتبقى داخل الشاشة
+    let left = r.left;
+    if (left + pw > vw - EDGE) left = vw - pw - EDGE;
+    if (left < EDGE) left = EDGE;
+
+    setPos({ top, left });
+  };
+
   const openCalendar = () => {
     if (disabled) return;
     const el = textRef.current;
-    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + 6, left: r.left }); }
+    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + GAP, left: r.left }); }
     setOpen(true);
   };
 
-  // إغلاق النافذة عند النقر خارجها / Escape / التمرير
+  // بعد فتح النافذة نعرف أبعادها الفعلية فنضبط وضعها النهائي (قلب/إزاحة)
+  useLayoutEffect(() => {
+    if (open) positionPopup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // إغلاق النافذة عند النقر خارجها / Escape، وإعادة تموضعها عند التمرير أو تغيّر الحجم
   useEffect(() => {
     if (!open) return;
     const onDown = (e) => {
@@ -4390,15 +4421,19 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
       setOpen(false);
     };
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    const onScroll = () => setOpen(false);
+    const onMove = () => positionPopup();
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
-    window.addEventListener('scroll', onScroll, true);
+    // capture=true يلتقط التمرير داخل أي حاوية (مثل المودال overflow-y-auto)
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
-      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const pickDay = (dIso) => {
@@ -4495,9 +4530,9 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
         disabled={disabled}
         style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
       />
-      {open && (
+      {open && createPortal(
         <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
-          style={{ top: pos.top, left: pos.left }}>
+          style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <button type="button" onClick={() => changeMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
             <div className="text-sm font-bold text-[var(--ink-2)]">{MONTHS[mo - 1]} {y}</div>
@@ -4518,7 +4553,8 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
             {selDate ? isoToDmy(type === 'datetime-local' ? `${selDate}T${clock || '00:00'}` : selDate, type)
               : (type === 'datetime-local' ? 'DD/MM/YYYY HH:MM' : 'DD/MM/YYYY')}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
