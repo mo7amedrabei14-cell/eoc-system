@@ -1223,6 +1223,31 @@ def create_mission(
                         WHERE participant_id = %s
                     """, (pid,))
 
+            # ── الإغلاق التلقائي عند الإنشاء المباشر كمهمة منتهية (حالة نادرة) ──
+            #    نفس قاعدة update_mission: أي segment مفتوح لمشاركي مهمة Completed يُغلق
+            #    في لحظة انتهاء المهمة (completion → arrival) — لا يبقى حضور مفتوح فيها.
+            if mission.status in ('Completed', 'مكتملة'):
+                comp_dt = mission_end_dt({
+                    'completion_date': mission.completion_date,
+                    'arrival_date': mission.arrival_date,
+                    'completion_time': mission.completion_time,
+                    'arrival_time': mission.arrival_time,
+                })
+                if not comp_dt and (mission.departure_date or mission.arrival_date):
+                    comp_dt = dt_from_parts(
+                        mission.departure_date or mission.arrival_date,
+                        mission.completion_time or mission.arrival_time or '00:00'
+                    )
+                if comp_dt:
+                    cursor.execute("""
+                        UPDATE mission_participant_sessions
+                        SET end_dt = %s, check_out_time = %s
+                        WHERE participant_id IN (
+                                SELECT participant_id FROM mission_participants WHERE mission_id = %s
+                            )
+                          AND end_dt IS NULL
+                    """, (comp_dt, comp_dt.strftime('%H:%M'), mission_id))
+
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
 
@@ -1469,6 +1494,38 @@ def update_mission(
                     INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
                     VALUES (%s, %s, %s)
                 """, day_rows)
+
+            # ── الإغلاق التلقائي للمشاركة عند انتهاء المهمة (متطلب حتمي، حل جذري) ──
+            #    عند تحويل المهمة إلى 'Completed' كان أي حضور مسجَّل عبر JOIN (segment
+            #    بلا end_dt) يبقى مفتوحاً في قاعدة البيانات — الحساب يُظهره مقصوراً على
+            #    نهاية المهمة، لكن الصف الفعلي يبقى مفتوحاً إلى الأبد، فيتناقض مع متطلب
+            #    "تنتهي المهمة وتنغلق المشاركة النشطة تلقائياً" ويترك سجلاً مفتوحاً داخل
+            #    مهمة منتهية. الحل: نُغلق فعلياً كل segment مفتوح لمشاركي هذه المهمة في
+            #    لحظة انتهاء المهمة (completion → arrival — نفس نافذة mission_end_dt).
+            #    الحارس `end_dt IS NULL` يجعله آمناً/idempotent: لا يمس عودة مسجَّلة مسبقاً.
+            #    (لو لم يصل الـ _completion_fields بسبب وضع قديم، نتراجع لـ departure_date —
+            #    نفس قاعدة COALESCE في تقرير الـ HR.)
+            if mission.status in ('Completed', 'مكتملة'):
+                comp_dt = mission_end_dt({
+                    'completion_date': mission.completion_date,
+                    'arrival_date': mission.arrival_date,
+                    'completion_time': mission.completion_time,
+                    'arrival_time': mission.arrival_time,
+                })
+                if not comp_dt and (mission.departure_date or mission.arrival_date):
+                    comp_dt = dt_from_parts(
+                        mission.departure_date or mission.arrival_date,
+                        mission.completion_time or mission.arrival_time or '00:00'
+                    )
+                if comp_dt:
+                    cursor.execute("""
+                        UPDATE mission_participant_sessions
+                        SET end_dt = %s, check_out_time = %s
+                        WHERE participant_id IN (
+                                SELECT participant_id FROM mission_participants WHERE mission_id = %s
+                            )
+                          AND end_dt IS NULL
+                    """, (comp_dt, comp_dt.strftime('%H:%M'), mission_id))
 
             for ben in mission.beneficiaries:
                 cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))

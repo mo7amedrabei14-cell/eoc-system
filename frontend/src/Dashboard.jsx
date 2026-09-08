@@ -3213,7 +3213,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          const pStatus = 'بالمهمة';
          const pItin = getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي';
          // هوية المركّبة = رقم العضوية + الفرع (الرقم وحده ليس فريداً — يتكرر عبر الفروع)
-         const branchName = branchesList.find(b => String(b.id) === String(pBranch))?.name || pBranch;
+         // 🔧 حل جذري: MissionsView تعتمد فقط على prop الوارد إليها (branches) —
+         //    أبداً على branchesList (const يخص Dashboard فقط، وليس في نطاق هدف هذا المكوّن).
+         //    `(branches || [])` يمنع أي انهيار (ReferenceError/`cannot read find of undefined`)
+         //    إذا مرّر الأصل prop غير معرّف، فيبقى الإرسال آمناً في أيّ سيناريو.
+         const branchName = (branches || []).find(b => String(b.id) === String(pBranch))?.name || pBranch;
          const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
 
          if (pStatus === 'بالمهمة') {
@@ -3793,9 +3797,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   <FormGroup className="items-center text-center" label="تاريخ الوصول"><DateInput className="field text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
                   <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><DateInput className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
                   {/* أوقات */}
-                  <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" type="time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="ساعة الوصول"><StyledInput className="text-center" id="f_arrival_time" type="time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="ساعة الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_time')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_completion_time') ? 'field-invalid' : ''}`} id="f_completion_time" type="time" defaultValue={currentMissionData?.completion_time || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><TimeInput className={`field text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الوصول"><TimeInput className="field text-center" id="f_arrival_time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_time')}><TimeInput className={`field text-center ${requiredTouched && missingFields.includes('field_completion_time') ? 'field-invalid' : ''}`} id="f_completion_time" defaultValue={currentMissionData?.completion_time || ''} onChange={bumpValidation} /></FormGroup>
                   {/* حقول مخفية لضمان عدم تلف الحفظ وحساب الساعات */}
                   <input type="hidden" id="f_departure_date" defaultValue={currentMissionData?.departure_date || ''} />
                   <input type="hidden" id="f_start_time" defaultValue={currentMissionData?.start_time || ''} />
@@ -4014,7 +4018,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           </div>
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
-                            <input id="sd_time" type="time" defaultValue={nowTime} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
+                            <TimeInput id="sd_time" defaultValue={nowTime} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
                           </div>
                         </div>
                       </div>
@@ -4564,6 +4568,225 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
     </>
   );
 };
+
+// ⏰ منتقي الوقت المخصص — تصميم فاخر مطابق لمنتقي التاريخ (نافذة منبثقة بنفس
+// الهوية البصرية + عجلات لف ساعات/دقائق). يحل محل منتقي الوقت الأصلي للمتصفح
+// في كل حقول الوقت المستقلة بالنظام (إصلاح التصميم فقط — القيمة تبقى HH:MM
+// لنفس الـ id ومُعاملات الـ on/Change المعتادة).
+// المساعدات تُعرَّف على مستوى الوحدة (module-level) وفوق المكوّنات: المُهيّئات
+// الكسولة لـ useState تُنفَّذ أثناء أول render، فلا يمكنها الإشارة إلى `const`
+// معرَّف لاحقاً (TDZ ⇒ شاشة بيضاء) — الأمان مضمون هكذا.
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+
+function normTime(t) {
+  // أي صيغة وقت محتملة (12:5، 12:45:30، ...) → HH:MM موحّدة، أو '' إن لم تكن صالحة
+  if (!t) return '';
+  const m = String(t).match(/(\d{1,2}):(\d{1,2})/);
+  if (!m) return '';
+  const h = Math.min(Math.max(+m[1], 0), 23);
+  const mm = Math.min(Math.max(+m[2], 0), 59);
+  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+function nowTimeStr() {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+}
+
+// 🎡 عجلة لف رأسية (ساعات/دقائق) — قائمة قابلة للتمرير مع انطباق، العنصر المختار
+// يُبرز بخلفية accent (مطابق لخلايا التقويم)، ونقرة عليه تختاره.
+const TimeWheel = ({ items, value, onChange, heightClass = 'h-28' }) => {
+  const ref = useRef(null);
+  // عند تغيّر القيمة (أو أول تركيب) نمرّر العنصر المختار إلى منتصف العجلة
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const idx = items.indexOf(value);
+    if (idx >= 0) {
+      const ch = el.children[idx];
+      if (ch && ch.scrollIntoView) ch.scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
+  }, [value, items]);
+  return (
+    <div className="relative">
+      {/* تظليل تلاشي أعلى/أسفل لإحساس العجلة الفاخر */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-7 bg-gradient-to-b from-[var(--surface-2)] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-7 bg-gradient-to-t from-[var(--surface-2)] to-transparent" />
+      <div ref={ref} className={`${heightClass} overflow-y-auto snap-y snap-mandatory px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
+        {items.map((it) => {
+          const on = it === value;
+          return (
+            <button key={it} type="button" onClick={() => onChange(it)}
+              className={`block h-8 w-12 mx-auto text-sm rounded-lg flex items-center justify-center transition snap-center
+                ${on ? 'bg-[var(--accent)] text-white font-bold shadow-lg scale-[1.05]' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>
+              {it}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ⏱️ TimeInput — حقل وقت مخصص (مطابق لمعمارية DateInput):
+//  - العنصر المرئي <input type="text"> يعرض HH:MM، والنقر/التركيز يفتح المنتقي
+//    المنبثق؛ والكتابة اليدوية بصيغة HH:MM ما زالت تُقبل وتُثبَّت عند اكتمال قيمة صالحة.
+//  - <input> مخفي يحمل الـ id وقيمة الماكينة HH:MM (العقد الخلفي يبقى كما هو).
+//  - النافذة عبر createPortal(…, document.body) (تتجاوز حاوية transform للمودال)
+//    مع تموضع ديناميكي مطابق لمنتقي التاريخ (أسفل أولاً → قلب للأعلى → إزاحة أفقية).
+// يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled.
+const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
+  const initial = value !== undefined ? value : (defaultValue || '');
+  const [machine, setMachine] = useState(() => normTime(initial));          // HH:MM (يقرأه الباك عبر id)
+  const [display, setDisplay] = useState(() => normTime(initial));          // النص الظاهر
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [clock, setClock] = useState(() => normTime(initial) || nowTimeStr()); // قيمة العجلات
+  const textRef = useRef(null);
+  const popRef = useRef(null);
+
+  // مزامنة الحالة المتحكمة (عند تغيّر prop value من الخارج)
+  useEffect(() => {
+    if (value !== undefined) {
+      const n = normTime(value);
+      setMachine(n);
+      setDisplay(n);
+    }
+  }, [value]);
+
+  const apply = (t) => {
+    const n = normTime(t);
+    setMachine(n);
+    setDisplay(n);
+    if (onChange) onChange({ target: { value: n } });
+  };
+
+  const GAP = 8;   // مسافة صغيرة بين الحقل والنافذة (ليست إزاحة موضعية ثابتة)
+  const EDGE = 8;  // هامش أمان من حواف الشاشة
+
+  // ✅ تموضع ديناميكي: أسفل الحقل تماماً، ينقلب للأعلى إن لم يكفِ الفراغ،
+  //    ويُزاح أفقياً ليُبقى داخل الشاشة — بلا إزاحات موضعية ثابتة.
+  const positionPopup = () => {
+    const el = textRef.current, pop = popRef.current;
+    if (!el || !pop) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let top = r.bottom + GAP;
+    if (top + ph > vh - EDGE) top = r.top - GAP - ph;
+    if (top < EDGE) top = EDGE;
+    let left = r.left;
+    if (left + pw > vw - EDGE) left = vw - pw - EDGE;
+    if (left < EDGE) left = EDGE;
+    setPos({ top, left });
+  };
+
+  const openPicker = () => {
+    if (disabled) return;
+    const el = textRef.current;
+    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + GAP, left: r.left }); }
+    setOpen(true);
+  };
+
+  // بعد الفتح نعرف أبعاد النافذة الفعلية فنضبط وضعها النهائي (قلب/إزاحة)
+  useLayoutEffect(() => {
+    if (open) positionPopup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // إغلاق عند النقر خارجها / Escape، وإعادة التموضع عند التمرير أو تغيّر الحجم
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (popRef.current && popRef.current.contains(e.target)) return;
+      if (textRef.current && textRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onMove = () => positionPopup();
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    // capture=true يلتقط التمرير داخل أي حاوية (مثل المودال overflow-y-auto)
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // كتابة يدوية بصيغة HH:MM — تُثبَّت القيمة الآلية عند اكتمال وقت صالح
+  const handleText = (e) => {
+    const raw = e.target.value;
+    setDisplay(raw);
+    const n = normTime(raw);
+    if (n) {
+      setMachine(n);
+      if (onChange) onChange({ target: { value: n } });
+    }
+  };
+
+  const hh = (clock || '00').split(':')[0];
+  const mm = (clock || '00').split(':')[1] || '00';
+
+  return (
+    <>
+      <input
+        ref={textRef}
+        type="text"
+        value={display}
+        placeholder="HH:MM"
+        className={`${className} cursor-pointer`}
+        dir="ltr"
+        onFocus={openPicker}
+        onChange={handleText}
+        disabled={disabled}
+        autoComplete="off"
+        {...props}
+      />
+      {/* القيمة الآلية HH:MM (المصدر الحقيقي للباك) — مخفية تماماً لكن تحمل id */}
+      <input
+        id={id}
+        type="time"
+        value={machine || ''}
+        onChange={() => {}}
+        tabIndex={-1}
+        aria-hidden="true"
+        disabled={disabled}
+        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+      />
+      {open && createPortal(
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+          style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
+            <span className="text-lg font-bold text-[var(--ink-2)]" dir="ltr">{clock || '--:--'}</span>
+          </div>
+          <div className="flex items-start justify-center gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
+              <TimeWheel items={HOURS} value={hh} onChange={(h) => setClock(prev => `${h}:${(prev.split(':')[1] || '00')}`)} />
+            </div>
+            <span className="text-2xl font-bold text-[var(--accent)] mt-10 select-none">:</span>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-[var(--muted-2)] font-bold">دقائق</span>
+              <TimeWheel items={MINUTES} value={mm} onChange={(m) => setClock(prev => `${(prev.split(':')[0] || '00')}:${m}`)} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
+            <button type="button" onClick={() => { apply(clock); setOpen(false); }}
+              className="flex-1 px-2 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-bold hover:opacity-90">تم</button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
+
 const StyledSelect = (props) => <EocSelect variant="field" {...props} />;
 const SectionCard = ({ title, icon, actionBtn, children, className = "" }) => (<div className={`card-surface p-5 md:p-6 ${className}`}><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
 
@@ -5259,14 +5482,14 @@ const [nd, setNd] = useState({
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت الإرسال"><StyledInput type="time" disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={!nd.is_reported ? 'opacity-50' : 'border-[var(--accent)]/30'}/></FormGroup>
+                  <FormGroup label="توقيت الإرسال"><TimeInput disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={`field ${!nd.is_reported ? 'opacity-50' : 'border-[var(--accent)]/30'}`}/></FormGroup>
                   
                   <FormGroup label="تم الرد؟">
                     <StyledSelect disabled={!nd.is_reported} value={nd.is_responded ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_responded: e.target.value === 'نعم'})} className={!nd.is_reported ? 'opacity-50' : ''}>
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت الرد"><StyledInput type="time" disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'}/></FormGroup>
+                  <FormGroup label="توقيت الرد"><TimeInput disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={`field ${!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'}`}/></FormGroup>
                   
                   <div className="md:col-span-2"><FormGroup label="رد الفرع"><StyledInput disabled={!nd.is_responded} value={nd.branch_response_text} onChange={e => setNd({...nd, branch_response_text: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'} /></FormGroup></div>
                   <FormGroup label="زمن الرد (تلقائي)"><div className="bg-[var(--surface-2)] text-blue-400 font-bold p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_responded ? formatDuration(responseDiff) : '-'}</div></FormGroup>
@@ -5281,12 +5504,12 @@ const [nd, setNd] = useState({
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت التحرك"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'} /></FormGroup>
+                  <FormGroup label="توقيت التحرك"><TimeInput disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={`field ${!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'}`} /></FormGroup>
                   <FormGroup label="المدة (إبلاغ ➔ تحرك)"><div className="bg-[var(--surface-2)] text-blue-400 font-bold p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_field_response ? formatDuration(moveDiff) : '-'}</div></FormGroup>
                   <FormGroup label="نقاط التحرك"><div className="bg-[var(--surface-2)] text-orange-500 font-bold p-3 rounded-xl border border-[var(--border)] text-sm text-center">{nd.is_field_response ? `${movePoints} نقطة` : '-'}</div></FormGroup>
 
                   <FormGroup label="طول المسافة (كم)"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.distance_km} onChange={e => setNd({...nd, distance_km: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'} placeholder="مثال: 15" /></FormGroup>
-                  <FormGroup label="توقيت الوصول (أول متطوع)"><StyledInput type="time" disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'} /></FormGroup>
+                  <FormGroup label="توقيت الوصول (أول متطوع)"><TimeInput disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={`field ${!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'}`} /></FormGroup>
                   <FormGroup label="الزمن المتوقع (تلقائي)"><div className="bg-[var(--surface-2)] text-[var(--faint)] p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_field_response && expectedTravelMins !== null ? `${Math.floor(expectedTravelMins)} دقيقة` : '-'}</div></FormGroup>
                   <FormGroup label="نقاط الاستجابة للمسافة"><div className="bg-[var(--surface-2)] text-green-500 font-bold p-3 rounded-xl border border-[var(--border)] text-sm text-center">{nd.is_field_response ? `${fieldPoints} نقطة` : '-'}</div></FormGroup>
                 </div>
@@ -6153,7 +6376,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <FormGroup label="التاريخ"><DateInput type="date" value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
-              <FormGroup label="التوقيت"><StyledInput type="time" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
+              <FormGroup label="التوقيت"><TimeInput className="field" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
               <FormGroup label="الدولة">
                 <StyledSelect value={gForm.country} onChange={e => setGForm({...gForm, country: e.target.value})}>
                   <option value="" disabled>اختر الدولة...</option>
@@ -6180,7 +6403,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <FormGroup label="التاريخ"><DateInput type="date" value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
-              <FormGroup label="التوقيت"><StyledInput type="time" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
+              <FormGroup label="التوقيت"><TimeInput className="field" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
               <FormGroup label="المنطقة داخل مصر"><StyledInput value={eForm.region} onChange={e => setEForm({...eForm, region: e.target.value})} /></FormGroup>
               <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={eForm.magnitude} onChange={e => setEForm({...eForm, magnitude: e.target.value})} className="border-green-500/50" /></FormGroup>
               <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={eForm.depth_km} onChange={e => setEForm({...eForm, depth_km: e.target.value})} /></FormGroup>
