@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, createPortal } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
@@ -4333,6 +4334,18 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
   }
 
   const initial = (value !== undefined ? value : (defaultValue || ''));
+
+  // ⚠️ تُعرَّف المساعدات هنا قبل أي useState: المُهيّئات الكسولة (lazy) لـ useState
+  //    تُنفَّذ أثناء أول render، فلا يجوز أن تشير إلى دالة معرَّفة لاحقاً بـ const
+  //    (تُصبح في «المنطقة الميتة» TDZ وتُسقط الشاشة البيضاء). وظيفة الإعلان آمنة.
+  function parseISO(iso) {
+    const m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return { y: +m[1], mo: +m[2], d: +m[3] };
+    const now = new Date();
+    return { y: now.getFullYear(), mo: now.getMonth() + 1, d: now.getDate() };
+  }
+  function isoDate(y, mo, d) { return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }
+
   const [machine, setMachine] = useState(initial);           // القيمة الآلية ISO (يقرأها الباك عبر id)
   const [display, setDisplay] = useState(() => isoToDmy(initial, type)); // النص الظاهر DD/MM/YYYY
   const [open, setOpen] = useState(false);
@@ -4347,14 +4360,6 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
   });
   const textRef = useRef(null);
   const popRef = useRef(null);
-
-  function parseISO(iso) {
-    const m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (m) return { y: +m[1], mo: +m[2], d: +m[3] };
-    const now = new Date();
-    return { y: now.getFullYear(), mo: now.getMonth() + 1, d: now.getDate() };
-  }
-  const isoDate = (y, mo, d) => `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
   // مزامنة الحالة المتحكمة (عند تغيّر prop value من الخارج)
   useEffect(() => {
