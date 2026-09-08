@@ -998,11 +998,32 @@ function HoursCell({ person, maxHours, lang = 'ar' }) {
   }
   const avg = person.missions_count > 0 ? person.total_hours / person.missions_count : 0;
   return (
-    <div className="hm" title={ar ? `إجمالي ${person.missions_count} مهمة · متوسط ${avg.toFixed(1)} ساعة/مهمة` : `${person.missions_count} missions · avg ${avg.toFixed(1)} hrs/mission`}>
-      <div className="hm-main"><span className="hm-num">{animated.toFixed(1)}</span><span className="hm-unit">{ar ? 'ساعة' : 'hrs'}</span></div>
+    <div className="hm" title={ar ? `إجمالي ${person.missions_count} مهمة · متوسط ${fmtHours(avg, 'ar')}/مهمة` : `${person.missions_count} missions · avg ${fmtHours(avg, 'en')}/mission`}>
+      <div className="hm-main"><span className="hm-num">{fmtHours(animated, lang)}</span></div>
       <div className="hm-track"><div className="hm-fill" style={{ '--hm-scale': scale / 100 }} /></div>
     </div>
   );
+}
+
+// fix #3/#8: ساعة العميل المحلية "الآن" — الإطار المرجعي الذي تُخزَّن به أزمنة الجلسات (JOIN/LEAVE)
+// تُرسل إلى الخادم مع طلبات GET/POST حتى تُقارن أوقات الجلسة بساعة العميل لا بساعة الخادم.
+function clientNowLocal() {
+  const d = new Date();
+  return `${d.toLocaleDateString('sv')} ${d.toTimeString().slice(0, 5)}`;
+}
+
+// fix #5: عرض الساعات بالدقائق — الحساب يبقى دقيقًا (كسور داخلية)، والتحويل للدقائق عند العرض فقط.
+// أمثلة: 0.75 → "45 دقيقة"/"45 min" · 1.33 → "1س 20د"/"1h 20m" · 2.083 → "2س 05د"/"2h 05m"
+function fmtHours(hours, lang = 'ar') {
+  if (hours == null || isNaN(Number(hours))) return '—';
+  const totalMin = Math.round(Number(hours) * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const ar = lang !== 'en';
+  const mm = String(m).padStart(2, '0');
+  if (h === 0) return ar ? `${m} دقيقة` : `${m} min`;
+  if (m === 0) return ar ? `${h}س` : `${h}h`;
+  return ar ? `${h}س ${mm}د` : `${h}h ${mm}m`;
 }
 
 export default function Dashboard() {
@@ -2621,7 +2642,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (lastSyncedEventRef.current === ev.event_id) return;
     lastSyncedEventRef.current = ev.event_id;
     const token = localStorage.getItem('access_token');
-    fetch(`${BASE}/api/missions/${currentMissionData.mission_id}`, { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${BASE}/api/missions/${currentMissionData.mission_id}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         if (!data) return;
@@ -2692,7 +2713,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     };
     const tick = async () => {
       try {
-        const r = await fetch(`${BASE}/api/missions/${pid}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const r = await fetch(`${BASE}/api/missions/${pid}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!r.ok) return;
         applyLive(await r.json());
       } catch { /* انقطاع لحظي — نتجاهل ولا نكسر المودال */ }
@@ -2732,14 +2753,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const dateVal = document.getElementById('sd_date')?.value || '';
       const timeVal = document.getElementById('sd_time')?.value || '';
       if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
-      // itinerary_group now always optional - send if selected, otherwise null
-      const dayVal = document.getElementById('sd_day')?.value || null;
       const dt = `${dateVal} ${timeVal}`;
+      // fix #1: لا نرسل itinerary_group — المسارات تُضبط من جدول المشاركين فقط.
+      // fix #3: نرسل ساعة العميل المحلية كإطار زمني للتحقق من «المستقبل» (نفس إطار البيانات).
+      const nowD = new Date();
+      const clientNow = `${nowD.toLocaleDateString('sv')} ${nowD.toTimeString().slice(0, 5)}`;
       const token = localStorage.getItem('access_token');
       setIsSubmitting(true);
       const body = mode === 'join'
-        ? { participant_id: pid, itinerary_group: dayVal, join_datetime: dt }
-        : { participant_id: pid, itinerary_group: dayVal, leave_datetime: dt };
+        ? { participant_id: pid, join_datetime: dt, client_now: clientNow }
+        : { participant_id: pid, leave_datetime: dt, client_now: clientNow };
       const url = `${BASE}/api/missions/${currentMissionData.mission_id}/${mode === 'join' ? 'join' : 'leave'}`;
       const res = await fetch(url, {
         method: 'POST',
@@ -2750,8 +2773,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       if (!res.ok) { setCustomAlert(`🚫 ${data.detail || 'فشل العملية — حاول مرة أخرى.'}`); return; }
       setSegmentDialog(null);
       setCustomAlert(mode === 'join'
-        ? `✅ تم تسجيل انضمام ${target?.full_name || 'المشارك'}${dayVal ? ` على «${dayVal}»` : ''}\nالبداية: ${dt}`
-        : `✅ تم تسجيل انفصال ${target?.full_name || 'المشارك'}${dayVal ? ` عن «${dayVal}»` : ''}\nالنهاية: ${dt}`);
+        ? `✅ تم تسجيل انضمام ${target?.full_name || 'المشارك'}\nالبداية: ${dt}`
+        : `✅ تم تسجيل انفصال ${target?.full_name || 'المشارك'}\nالنهاية: ${dt}`);
       await handleViewMission(currentMissionData.mission_id); // تحديث الحالة والساعات من السيرفر
     } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); }
     finally { setIsSubmitting(false); segmentSubmitLockRef.current = false; }
@@ -2827,7 +2850,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setIsModalLoading(true);
     setIsModalOpen(true);
     try {
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionId}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (inFlightMissionRef.current !== missionId) return; // فُتحت مهمة/فورم أخرى في الأثناء — تجاهل القديم
       if (res.ok) {
         const data = await res.json();
@@ -3040,7 +3063,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         if (hasDayGroups) {
           const days = (participants[i]?.assigned_days || []).join(' + ') || '—';
           const st = participants[i]?.status || 'مازال بالمهمة';
-          const wh = participants[i]?.working_hours != null ? `${+Number(participants[i].working_hours).toFixed(1)}س` : '—';
+          const wh = participants[i]?.working_hours != null ? fmtHours(participants[i].working_hours, lang) : '—';
           csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(teamVal)},${escapeCSV(days)},${escapeCSV(st)},${escapeCSV(wh)},${escapeCSV(getSelectedOptionSourceText(branchSel))}\n`;
         } else {
           const itinSel = document.getElementById(`p_itin_${i}`);
@@ -3797,7 +3820,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <th className="p-3">الاسم</th>
                         <th className="p-3">رقم العضوية</th>
                         <th className="p-3 text-[var(--accent)]">صفة المشارك <span className="text-[var(--accent)]">*</span></th>
-                        <th className="p-3 text-amber-400">الفريق</th>
+                        <th className="p-3 text-[var(--ink)]">الفريق</th>
                         <th className="p-3 text-cyan-400">الساعات</th>
                         <th className="p-3 text-purple-400">خط السير المخصص</th>
                         <th className="p-3">الفرع</th>
@@ -3830,13 +3853,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
                           {/* الفريق — حقل يدوي فارغ by default، يُستخدم لتسمية الفرق الداخلي */}
                           <td className="p-2">
-                            <input id={`p_team_${index}`} type="text" value={p.team_name || ''} placeholder="اكتب الفريق..." onChange={(e) => { const newP = [...participants]; newP[index].team_name = e.target.value; setParticipants(newP); }} className="eoc-manual-field bg-transparent outline-none text-amber-300 w-full" />
+                            <input id={`p_team_${index}`} type="text" value={p.team_name || ''} placeholder="اكتب الفريق..." onChange={(e) => { const newP = [...participants]; newP[index].team_name = e.target.value; setParticipants(newP); }} className="eoc-manual-field bg-transparent outline-none text-[var(--ink)] w-full" />
                           </td>
 
                           {/* 🕒 الساعات — تُحسب من القطاعات (segments) أو الافتراضي من خطة السير */}
                           <td className="p-2 text-center">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-cyan-400/10 text-cyan-400' : 'text-[var(--faint)]'}`}>
-                              {p.working_hours != null ? `${+Number(p.working_hours).toFixed(1)}س` : '—'}
+                              {p.working_hours != null ? fmtHours(p.working_hours, lang) : '—'}
                             </span>
                           </td>
 
@@ -3891,8 +3914,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               {segmentDialog && (() => {
                 const isJoin = segmentDialog.mode === 'join';
                 const target = participants.find(pp => pp.id === segmentDialog.participantId) || {};
-                const targetDays = [...(target.assigned_days || [])];
-                const today = new Date().toISOString().slice(0, 10);
+                // fix #3: التاريخ/الوقت الافتراضيان بساعة العميل المحلية (نفس إطار الـ JOIN/LEAVE)
+                const today = new Date().toLocaleDateString('sv'); // YYYY-MM-DD محلي
                 const nowTime = new Date().toTimeString().slice(0, 5);
                 return (
                   <div className="fixed inset-0 z-[222] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -3910,18 +3933,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             ? 'تُسجَّل قطعة مشاركة جديدة تبدأ من التاريخ والوقت أدناه. الساعات السابقة (القيمة الافتراضية من خطة السير) تبقى كما هي.'
                             : 'يُسجَّل انفصال عن المهمة من التاريخ والوقت أدناه. إن لم يكن هناك انضمام مفتوح، تُحسب الفترة من بداية اليوم تلقائياً.'}
                         </p>
-                        {/* خط السير / المجموعة — اختياري، يعمل مع أي نوع مهمة */}
-                        <div className="mb-4">
-                          <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">خط السير / المجموعة (اختياري)</label>
-                          {targetDays.length === 0 ? (
-                            <p className="text-xs text-[var(--muted)] bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2">لا توجد خطوط سير مخصصة لهذا المشارك. اتركه فارغاً لاستخدام خط السير الأساسي، أو أضف خطوطاً مخصصة من الجدول.</p>
-                          ) : (
-                            <EocSelect id="sd_day" defaultValue={targetDays[0]} placeholder="اختر خط السير (اختياري)">
-                              <option value="">— خط السير الأساسي —</option>
-                              {targetDays.map(d => <option key={d} value={d} className="bg-[var(--surface-4)]">{d}</option>)}
-                            </EocSelect>
-                          )}
-                        </div>
+                        {/* fix #1: لا اختيار خط سير هنا — JOIN/LEAVE للتاريخ/الوقت الفعلي فقط.
+                            تخصيص المسارات يتم حصرياً من جدول المشاركين (محدد الأيام). */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
@@ -6613,8 +6626,8 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "النوع": p.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع',
       "حالة المشاركة": p.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا',
       "إجمالي المهام الميدانية": p.missions_count,
-      "عدد ساعات آخر مهمة": p.last_mission_hours,
-      "إجمالي الساعات (ساعة)": p.total_hours
+      "عدد ساعات آخر مهمة": fmtHours(p.last_mission_hours, lang),
+      "إجمالي الساعات": fmtHours(p.total_hours, lang)
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "القوة البشرية");
@@ -6739,8 +6752,8 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                   <td className="p-4 text-center">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</td>
                   <td className="p-4 text-center">{person.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا'}</td>
                   <td className="p-4 text-center">{person.missions_count}</td>
-                  <td className="p-4 text-center">{person.last_mission_hours}</td>
-                  <td className="p-4 text-center">{person.total_hours}</td>
+                  <td className="p-4 text-center">{fmtHours(person.last_mission_hours, lang)}</td>
+                  <td className="p-4 text-center">{fmtHours(person.total_hours, lang)}</td>
                 </tr>
               ))}
             </tbody>
