@@ -3029,22 +3029,23 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
     });
     csvContent += hasDayGroups
-      ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,خط السير المخصص,الحالة,الساعات,الفرع\n`
-      : `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,المرحلة,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
+      ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الفريق,خط السير المخصص,الحالة,الساعات,الفرع\n`
+      : `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الفريق,المرحلة,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
     participants.forEach((_, i) => {
       const name = document.getElementById(`p_name_${i}`)?.value;
       if (name) {
         const typeSel = document.getElementById(`p_type_${i}`);
         const branchSel = document.getElementById(`p_branch_${i}`);
+        const teamVal = document.getElementById(`p_team_${i}`)?.value || '';
         if (hasDayGroups) {
           const days = (participants[i]?.assigned_days || []).join(' + ') || '—';
           const st = participants[i]?.status || 'مازال بالمهمة';
           const wh = participants[i]?.working_hours != null ? `${+Number(participants[i].working_hours).toFixed(1)}س` : '—';
-          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(days)},${escapeCSV(st)},${escapeCSV(wh)},${escapeCSV(getSelectedOptionSourceText(branchSel))}\n`;
+          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(teamVal)},${escapeCSV(days)},${escapeCSV(st)},${escapeCSV(wh)},${escapeCSV(getSelectedOptionSourceText(branchSel))}\n`;
         } else {
           const itinSel = document.getElementById(`p_itin_${i}`);
           const phase = document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول';
-          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(phase)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
+          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(teamVal)},${escapeCSV(phase)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
         }
       }
     });
@@ -3230,6 +3231,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          participants: participants.map((_, i) => ({
            participant_type: document.getElementById(`p_type_${i}`)?.value || 'volunteer',
            full_name: document.getElementById(`p_name_${i}`)?.value || '',
+           team_name: document.getElementById(`p_team_${i}`)?.value || '',
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
            participant_position: document.getElementById(`p_position_${i}`)?.value || '',
            branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
@@ -3787,7 +3789,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <SectionCard title={<span>القوة البشرية والمشاركين <span className="text-[var(--accent)]">*</span></span>} icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
                 {requiredTouched && missingFields.includes('field_participants') && <p className="text-[var(--accent)] text-xs font-bold mb-2 flex items-center gap-1.5 px-1">⚠ يجب إضافة مشارك واحد على الأقل بالاسم لإتمام أي عملية على المهمة.</p>}
                 <div className={`overflow-x-auto bg-[var(--surface-4)] rounded-xl border ${requiredTouched && missingFields.includes('field_participants') ? 'border-[var(--accent)]/60' : 'border-[var(--border)]'}`}>
-                  <table className="w-full text-right text-sm min-w-[1000px]">
+                  <table className="w-full text-right text-sm min-w-[1120px]">
                     <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]">
                       <tr>
                         <th className="p-3">م</th>
@@ -3795,6 +3797,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <th className="p-3">الاسم</th>
                         <th className="p-3">رقم العضوية</th>
                         <th className="p-3 text-[var(--accent)]">صفة المشارك <span className="text-[var(--accent)]">*</span></th>
+                        <th className="p-3 text-amber-400">الفريق</th>
                         <th className="p-3 text-cyan-400">الساعات</th>
                         <th className="p-3 text-purple-400">خط السير المخصص</th>
                         <th className="p-3">الفرع</th>
@@ -3823,6 +3826,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           </td>
                           <td className="p-2">
                             <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
+                          </td>
+
+                          {/* الفريق — حقل يدوي فارغ by default، يُستخدم لتسمية الفرق الداخلي */}
+                          <td className="p-2">
+                            <input id={`p_team_${index}`} type="text" value={p.team_name || ''} placeholder="اكتب الفريق..." onChange={(e) => { const newP = [...participants]; newP[index].team_name = e.target.value; setParticipants(newP); }} className="eoc-manual-field bg-transparent outline-none text-amber-300 w-full" />
                           </td>
 
                           {/* 🕒 الساعات — تُحسب من القطاعات (segments) أو الافتراضي من خطة السير */}
@@ -4283,26 +4291,26 @@ const RouteCard = ({
         />
       </div>
       {/* الصف الثاني: التحرك + الوصول (datetime-local مدمج) */}
-      <div className="w-full md:w-auto flex flex-wrap border-l border-[var(--border)] bg-[var(--surface-4)] p-2 gap-2 md:gap-4">
-        <div className="flex items-center gap-1.5 flex-1 min-w-[260px]">
-          <span className="text-[var(--muted-2)] text-xs whitespace-nowrap">🚀 التحرك:</span>
+      <div className="w-full md:w-auto flex flex-wrap border-l border-[var(--border)] bg-[var(--surface-4)] p-2.5 gap-2 md:gap-4">
+        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+          <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🚀 التحرك:</span>
           <input
             id={`r_dep_${prefix}_${index}`}
             type="datetime-local"
             value={depDateTime}
             onChange={handleDepChange}
-            className="bg-transparent text-white px-3 w-full md:w-56 text-sm"
+            className="eoc-manual-field w-full md:w-56 text-white text-sm px-3 py-1.5"
             dir="ltr"
           />
         </div>
-        <div className="flex items-center gap-1.5 flex-1 min-w-[260px]">
-          <span className="text-[var(--muted-2)] text-xs whitespace-nowrap">🏁 الوصول:</span>
+        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+          <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🏁 الوصول:</span>
           <input
             id={`r_arr_${prefix}_${index}`}
             type="datetime-local"
             value={arrDateTime}
             onChange={handleArrChange}
-            className="bg-transparent text-white px-3 w-full md:w-56 text-sm"
+            className="eoc-manual-field w-full md:w-56 text-white text-sm px-3 py-1.5"
             dir="ltr"
           />
         </div>

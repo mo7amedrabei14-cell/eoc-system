@@ -958,6 +958,26 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         return round(sum(seg_dur(s) for s in segments), 2)
 
     # (3) افتراضي خطة المهمة — مباشر/مجمّد (غير مكتملة فقط)
+    #    منطق الخط الافتراضي (#3): مشارك بلا تخصيص صريح يرث الخط الافتراضي —
+    #    • يوجد خط أساسي ⇒ نافذة «خط السير الأساسي» (Both exist → Basic default)
+    #    • وإلا يوجد خط مخصص واحد على الأقل ⇒ نافذة أول مجموعة مخصصة (Custom-only)
+    #    • وإلا ⇒ بداية/نهاية المهمة نفسها (No itinerary → Mission Start/End)
+    basic_win = day_window('خط السير الأساسي') if 'خط السير الأساسي' in [g.get('group_title') for g in routes] else 0.0
+    if basic_win > 0:
+        return round(basic_win, 2)
+    custom_win = 0.0
+    if not assigned:
+        seen = set()
+        for g in routes:
+            t = g.get('group_title')
+            if t and t not in seen and t != 'خط السير الأساسي':
+                seen.add(t)
+                w = day_window(t)
+                if w > 0:
+                    custom_win = w
+                    break
+    if custom_win > 0:
+        return round(custom_win, 2)
     start = mission_start_dt(mission_data)
     if not start:
         return 0.0
@@ -1103,6 +1123,11 @@ def create_mission(
                 mission.team_code if mission.team_code is not None else ""
             ))
             mission_id = cursor.fetchone()[0]
+
+            # 🛡️ حماية FK: التأكد من أن المهمة فعلاً موجودة قبل إدخال خطوط السير
+            cursor.execute("SELECT 1 FROM missions WHERE mission_id = %s;", (mission_id,))
+            if not cursor.fetchone():
+                raise Exception(f"Mission creation failed: mission_id={mission_id} not found after INSERT. Aborting itinerary insert to prevent FK violation.")
 
             for route in mission.routes:
                 cursor.execute("""
@@ -1278,6 +1303,8 @@ def update_mission(
                 none_if_empty(mission.mission_code),
                 mission_id
             ))
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة أو تم حذفها")
 
             # 2. مسح التفاصيل القديمة (عشان منعملش تكرار) — مع حفظ استثنائي:
             #    المشاركون أُزيلوا من الاستمارة لكن لهم segments مسجلة (شاركوا فعلاً)
