@@ -4307,6 +4307,10 @@ const StyledInput = ({ className="", ...props }) => (<input className={`field ${
 // يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled، max، type (date|datetime-local).
 // =====================================================================
 const DateInput = ({ type = "date", value, onChange, defaultValue, id, className = "", disabled, max, ...props }) => {
+  // ✅ DD/MM/YYYY في كل النظام: منتقي تقويم مخصص (بدلاً من منتقي المتصفح الأصلي
+  //    الذي يتبع لغة المتصفح/نظام التشغيل ولا يمكن التحكم به) — يعرض دائماً
+  //    DD/MM/YYYY في الحقل وفي نافذة التقويم المنبثقة، بغضّ النظر عن إعدادات المتصفح.
+
   // ISO (YYYY-MM-DD أو YYYY-MM-DDTHH:MM) → DD/MM/YYYY (أو DD/MM/YYYY HH:MM)
   function isoToDmy(iso, t) {
     if (!iso) return '';
@@ -4328,44 +4332,159 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
     return d;
   }
 
-  const [machine, setMachine] = useState(() => (value !== undefined ? value : (defaultValue || '')));
-  const [display, setDisplay] = useState(() => isoToDmy(value !== undefined ? value : (defaultValue || ''), type));
-  const nativeRef = useRef(null);
+  const initial = (value !== undefined ? value : (defaultValue || ''));
+  const [machine, setMachine] = useState(initial);           // القيمة الآلية ISO (يقرأها الباك عبر id)
+  const [display, setDisplay] = useState(() => isoToDmy(initial, type)); // النص الظاهر DD/MM/YYYY
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [view, setView] = useState(() => { const p = parseISO(initial); return { y: p.y, mo: p.mo }; });
+  const [selDate, setSelDate] = useState(() => { const p = parseISO(initial); return p.d ? isoDate(p.y, p.mo, p.d) : ''; });
+  const [clock, setClock] = useState(() => {
+    const m = String(initial || '').match(/T(\d{2}):(\d{2})/);
+    if (m) return `${m[1]}:${m[2]}`;
+    const n = new Date();
+    return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  });
+  const textRef = useRef(null);
+  const popRef = useRef(null);
+
+  function parseISO(iso) {
+    const m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return { y: +m[1], mo: +m[2], d: +m[3] };
+    const now = new Date();
+    return { y: now.getFullYear(), mo: now.getMonth() + 1, d: now.getDate() };
+  }
+  const isoDate = (y, mo, d) => `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
   // مزامنة الحالة المتحكمة (عند تغيّر prop value من الخارج)
   useEffect(() => {
-    if (value !== undefined) { setMachine(value || ''); setDisplay(isoToDmy(value, type)); }
+    if (value !== undefined) {
+      setMachine(value || '');
+      setDisplay(isoToDmy(value, type));
+      const p = parseISO(value);
+      if (p.d) setSelDate(isoDate(p.y, p.mo, p.d));
+    }
   }, [value]);
 
-  const openPicker = () => { try { nativeRef.current?.showPicker?.(); } catch {} };
-  const applyIso = (iso) => { setMachine(iso || ''); setDisplay(isoToDmy(iso, type)); };
-
-  // اختيار من المنتقي الأصلي (مخفي) — يمرر قيمة ISO للـ onChange
-  const handleNative = (e) => { applyIso(e.target.value); if (onChange) onChange(e); };
-
-  // كتابة يدوية بصيغة DD/MM/YYYY
-  const handleText = (e) => {
-    setDisplay(e.target.value);
-    if (onChange) onChange({ ...e, target: { ...e.target, value: dmyToIso(e.target.value, type) } });
+  const apply = (iso) => {
+    setMachine(iso || '');
+    setDisplay(isoToDmy(iso, type));
+    const p = parseISO(iso);
+    if (p.d) setSelDate(isoDate(p.y, p.mo, p.d));
+    if (onChange) onChange({ target: { value: iso || '' } });
   };
+
+  const openCalendar = () => {
+    if (disabled) return;
+    const el = textRef.current;
+    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + 6, left: r.left }); }
+    setOpen(true);
+  };
+
+  // إغلاق النافذة عند النقر خارجها / Escape / التمرير
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (popRef.current && popRef.current.contains(e.target)) return;
+      if (textRef.current && textRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onScroll = () => setOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [open]);
+
+  const pickDay = (dIso) => {
+    setSelDate(dIso);
+    const p = parseISO(dIso);
+    setView({ y: p.y, mo: p.mo });
+    if (type === 'datetime-local') {
+      // تبقى مفتوحة ليحدد المستخدم الوقت ثم يضغط «تطبيق»
+      return;
+    }
+    apply(dIso);
+    setOpen(false);
+  };
+
+  const applyDatetime = () => {
+    if (!selDate) return;
+    const t = clock || '00:00';
+    apply(`${selDate}T${t}`);
+    setOpen(false);
+  };
+
+  const handleNative = (e) => { apply(e.target.value); };
+
+  // كتابة يدوية بصيغة DD/MM/YYYY — تُحدّث القيمة الآلية عند اكتمال تاريخ صالح
+  const handleText = (e) => {
+    const raw = e.target.value;
+    setDisplay(raw);
+    const iso = dmyToIso(raw, type);
+    if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(iso)) {
+      setMachine(iso);
+      const p = parseISO(iso);
+      setSelDate(isoDate(p.y, p.mo, p.d));
+      if (onChange) onChange({ target: { value: iso } });
+    }
+  };
+
+  const changeMonth = (delta) => setView(v => {
+    let mo = v.mo + delta, y = v.y;
+    if (mo < 1) { mo = 12; y--; }
+    if (mo > 12) { mo = 1; y++; }
+    return { y, mo };
+  });
+
+  const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const WEEK = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س']; // الأحد ← السبت
+  const { y, mo } = view;
+  const start = new Date(y, mo - 1, 1).getDay();
+  const dim = new Date(y, mo, 0).getDate();
+  const todayISO = isoDate(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+
+  const cells = [];
+  for (let i = 0; i < start; i++) cells.push(<span key={'e' + i} className="h-9" />);
+  for (let d = 1; d <= dim; d++) {
+    const iso = isoDate(y, mo, d);
+    const overMax = max && iso > max;
+    const isSel = iso === selDate;
+    const isToday = iso === todayISO;
+    cells.push(
+      <button key={d} type="button" disabled={overMax} onClick={() => pickDay(iso)}
+        className={`h-9 w-9 text-xs rounded-lg transition flex items-center justify-center
+          ${overMax ? 'opacity-25 cursor-not-allowed' : 'hover:bg-[var(--surface-hover)]'}
+          ${isSel ? 'bg-[var(--accent)] text-white font-bold' : 'text-[var(--ink-2)]'}
+          ${isToday && !isSel ? 'ring-1 ring-[var(--accent)]' : ''}`}>
+        {d}
+      </button>
+    );
+  }
 
   return (
     <>
       <input
+        ref={textRef}
         type="text"
         value={display}
         placeholder={type === 'datetime-local' ? 'DD/MM/YYYY HH:MM' : 'DD/MM/YYYY'}
-        className={`${className} relative`}
+        className={`${className} relative cursor-pointer`}
         dir="ltr"
-        onFocus={openPicker}
+        onFocus={openCalendar}
         onChange={handleText}
         disabled={disabled}
         max={max}
         autoComplete="off"
         {...props}
       />
+      {/* القيمة الآلية ISO (المصدر الحقيقي للباك) — مخفية تماماً لكن تحمل id */}
       <input
-        ref={nativeRef}
         id={id}
         type={type}
         value={machine || ''}
@@ -4374,8 +4493,33 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
         aria-hidden="true"
         max={max}
         disabled={disabled}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, pointerEvents: 'none' }}
+        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
       />
+      {open && (
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+          style={{ top: pos.top, left: pos.left }}>
+          <div className="flex items-center justify-between mb-2">
+            <button type="button" onClick={() => changeMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
+            <div className="text-sm font-bold text-[var(--ink-2)]">{MONTHS[mo - 1]} {y}</div>
+            <button type="button" onClick={() => changeMonth(1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">›</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {WEEK.map((w, i) => <div key={i} className="h-6 text-[10px] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">{cells}</div>
+          {type === 'datetime-local' && (
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
+              <span className="text-xs text-[var(--muted-2)]">الوقت:</span>
+              <input type="time" value={clock} onChange={(e) => setClock(e.target.value)} className="field !py-1 !px-2 text-xs w-full bg-[var(--surface-3)] text-white rounded-lg" />
+              <button type="button" onClick={applyDatetime} className="px-2 py-1 text-xs rounded bg-[var(--accent)] text-white font-bold shrink-0">تطبيق</button>
+            </div>
+          )}
+          <div className="mt-2 pt-2 border-t border-[var(--border)] text-center text-xs text-[var(--muted-2)]" dir="ltr">
+            {selDate ? isoToDmy(type === 'datetime-local' ? `${selDate}T${clock || '00:00'}` : selDate, type)
+              : (type === 'datetime-local' ? 'DD/MM/YYYY HH:MM' : 'DD/MM/YYYY')}
+          </div>
+        </div>
+      )}
     </>
   );
 };
