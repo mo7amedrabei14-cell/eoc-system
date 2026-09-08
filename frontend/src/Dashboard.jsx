@@ -2223,7 +2223,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
         <div className="flex flex-wrap items-center gap-3">
           <div className="segmented">
             <span className="px-3 text-xs font-bold text-[var(--muted)] whitespace-nowrap">إحصائيات يوم:</span>
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer px-1" />
+            <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer px-1" />
             {filterDate && (
               <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">
                 عرض الكل
@@ -3349,11 +3349,22 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          const rd = await res.json().catch(() => ({}));
          return { ok: true, mission_id: rd.mission_id };
        } else {
-         // Error: keep the idempotency key for retry
-         const errorData = await res.json();
-         setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errorData.detail}`);
+         // Error: keep the idempotency key for retry (idempotent if server actually committed)
+         // ✅ Fix: res.json() throws when server returns non-JSON (504 HTML, Vercel error page).
+         //    Parse safely; fall back to text so the user always sees a meaningful message.
+         const errBody = await res.json().catch(async () => {
+           try { return { detail: await res.text() }; } catch { return {}; }
+         });
+         const detail = errBody?.detail || `(status ${res.status})`;
+         setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${detail}`);
        }
-     } catch (error) { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
+     } catch (error) {
+       // ✅ Fix: distinguish network failure from JS error for debugging
+       const msg = error instanceof TypeError && error.message === 'Failed to fetch'
+         ? '⚠️ فشل الاتصال بالسيرفر — تحقق من اتصال الإنترنت وحاول مرة أخرى.\n(قد يكون السيرفر يأخذ وقتاً أطول من المعتاد بسبب البرد البارد)'
+         : `⚠️ خطأ غير متوقع:\n${error?.message || error}`;
+       setCustomAlert(msg);
+     }
      finally { setIsSubmitting(false); submitLockRef.current = false; }
   };
 
@@ -3485,7 +3496,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             <div className="hidden md:block w-px h-6 bg-[var(--border)]"></div>
 
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="field !py-1.5 !px-3 w-auto" />
+              <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="field !py-1.5 !px-3 w-auto" />
               {filterDate && <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">إلغاء التاريخ</button>}
             </div>
           </div>
@@ -3758,13 +3769,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   </FormGroup>
                   <FormGroup label="مسؤول المهمة"><StyledInput id="f_responsible_person" defaultValue={currentMissionData?.responsible_person || ''} /></FormGroup>
                   <FormGroup label="تاريخ الإنشاء (يسجل آلياً)">
-                    <StyledInput 
-                      id="f_creation_date" 
-                      type="date" 
+                    <DateInput
+                      id="f_creation_date"
+                      type="date"
                       max="2030-12-31"
-                      defaultValue={getCreationDate()} 
+                      defaultValue={getCreationDate()}
                       disabled={!isOwner}
-                      className={!isOwner ? 'opacity-50 cursor-not-allowed text-[var(--faint)] bg-[var(--surface-2)]' : 'text-white border border-[var(--border)]'}
+                      className={`field ${!isOwner ? 'opacity-50 cursor-not-allowed text-[var(--faint)] bg-[var(--surface-2)]' : 'text-white border border-[var(--border)]'}`}
                       title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''}
                     />
                   </FormGroup>
@@ -3777,9 +3788,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* تواريخ */}
-                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><StyledInput className="text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><DateInput className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><DateInput className="field text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><DateInput className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
                   {/* أوقات */}
                   <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><StyledInput className={`text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" type="time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
                   <FormGroup className="items-center text-center" label="ساعة الوصول"><StyledInput className="text-center" id="f_arrival_time" type="time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
@@ -3998,7 +4009,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
-                            <input id="sd_date" type="date" defaultValue={today} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
+                            <DateInput id="sd_date" type="date" defaultValue={today} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
                           </div>
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
@@ -4286,6 +4297,88 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
 const FormGroup = ({ label, className = "", required = false, invalid = false, children }) => (<div className={`flex flex-col gap-1.5 w-full ${className}`}><div className={`flex items-center gap-1 px-1 text-xs font-bold ${invalid ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}><span>{label}</span>{required && <span className="text-[var(--accent)] text-sm leading-none">*</span>}{invalid && <span className="text-[10px] font-bold text-[var(--accent)]">إلزامي</span>}</div>{children}</div>);
 const StyledInput = ({ className="", ...props }) => (<input className={`field ${className}`} {...props} />);
+
+// =====================================================================
+// 🗓️ DateInput — حقل تاريخ/وقت إلزامي العرض DD/MM/YYYY (لا يعتمد على لغة المتصفح/النظام،
+// فلا يظهر تنسيق MM/DD/YYYY أبداً مهما كانت لغة نظام المستخدم).
+// الحقل الأصلي المخفي (المُعرَّف بالـ id) يحمل قيمة الخادم ISO (YYYY-MM-DD أو YYYY-MM-DDTHH:MM)،
+// بينما العنصر المرئي يعرض DD/MM/YYYY دائماً. النقر يفتح منتقي التاريخ الأصلي،
+// ويمكن أيضاً الكتابة اليدوية بصيغة DD/MM/YYYY.
+// يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled، max، type (date|datetime-local).
+// =====================================================================
+const DateInput = ({ type = "date", value, onChange, defaultValue, id, className = "", disabled, max, ...props }) => {
+  // ISO (YYYY-MM-DD أو YYYY-MM-DDTHH:MM) → DD/MM/YYYY (أو DD/MM/YYYY HH:MM)
+  function isoToDmy(iso, t) {
+    if (!iso) return '';
+    const s = String(iso).trim();
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2}))?/);
+    if (!m) return s;
+    const [, yy, mo, dd, hh, mm] = m;
+    const datePart = `${dd.padStart(2, '0')}/${mo.padStart(2, '0')}/${yy}`;
+    return hh !== undefined ? `${datePart} ${hh.padStart(2, '0')}:${mm}` : datePart;
+  }
+  // DD/MM/YYYY (أو + HH:MM) → ISO
+  function dmyToIso(dmy, t) {
+    const s = String(dmy).trim();
+    const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+    if (!m) return s;
+    const [, dd, mo, yy, hh, mm] = m;
+    const d = `${yy}-${mo.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    if (hh !== undefined) return t === 'datetime-local' ? `${d}T${hh.padStart(2, '0')}:${mm}` : `${d} ${hh.padStart(2, '0')}:${mm}`;
+    return d;
+  }
+
+  const [machine, setMachine] = useState(() => (value !== undefined ? value : (defaultValue || '')));
+  const [display, setDisplay] = useState(() => isoToDmy(value !== undefined ? value : (defaultValue || ''), type));
+  const nativeRef = useRef(null);
+
+  // مزامنة الحالة المتحكمة (عند تغيّر prop value من الخارج)
+  useEffect(() => {
+    if (value !== undefined) { setMachine(value || ''); setDisplay(isoToDmy(value, type)); }
+  }, [value]);
+
+  const openPicker = () => { try { nativeRef.current?.showPicker?.(); } catch {} };
+  const applyIso = (iso) => { setMachine(iso || ''); setDisplay(isoToDmy(iso, type)); };
+
+  // اختيار من المنتقي الأصلي (مخفي) — يمرر قيمة ISO للـ onChange
+  const handleNative = (e) => { applyIso(e.target.value); if (onChange) onChange(e); };
+
+  // كتابة يدوية بصيغة DD/MM/YYYY
+  const handleText = (e) => {
+    setDisplay(e.target.value);
+    if (onChange) onChange({ ...e, target: { ...e.target, value: dmyToIso(e.target.value, type) } });
+  };
+
+  return (
+    <>
+      <input
+        type="text"
+        value={display}
+        placeholder={type === 'datetime-local' ? 'DD/MM/YYYY HH:MM' : 'DD/MM/YYYY'}
+        className={`${className} relative`}
+        dir="ltr"
+        onFocus={openPicker}
+        onChange={handleText}
+        disabled={disabled}
+        max={max}
+        autoComplete="off"
+        {...props}
+      />
+      <input
+        ref={nativeRef}
+        id={id}
+        type={type}
+        value={machine || ''}
+        onChange={handleNative}
+        tabIndex={-1}
+        aria-hidden="true"
+        max={max}
+        disabled={disabled}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, pointerEvents: 'none' }}
+      />
+    </>
+  );
+};
 const StyledSelect = (props) => <EocSelect variant="field" {...props} />;
 const SectionCard = ({ title, icon, actionBtn, children, className = "" }) => (<div className={`card-surface p-5 md:p-6 ${className}`}><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
 
@@ -4367,7 +4460,7 @@ const RouteCard = ({
       <div className="w-full md:w-auto flex flex-wrap border-l border-[var(--border)] bg-[var(--surface-4)] p-2.5 gap-2 md:gap-4">
         <div className="flex items-center gap-2 flex-1 min-w-[260px]">
           <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🚀 التحرك:</span>
-          <input
+          <DateInput
             id={`r_dep_${prefix}_${index}`}
             type="datetime-local"
             value={depDateTime}
@@ -4378,7 +4471,7 @@ const RouteCard = ({
         </div>
         <div className="flex items-center gap-2 flex-1 min-w-[260px]">
           <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🏁 الوصول:</span>
-          <input
+          <DateInput
             id={`r_arr_${prefix}_${index}`}
             type="datetime-local"
             value={arrDateTime}
@@ -4856,7 +4949,7 @@ const [nd, setNd] = useState({
                 {newsTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </EocSelect>
               <div className="flex items-center gap-2">
-                <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+                <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
                 {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-2 py-2 rounded-lg">الكل</button>}
               </div>
             </div>
@@ -4953,7 +5046,7 @@ const [nd, setNd] = useState({
               
               <SectionCard title="1. بيانات الخبر الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="التاريخ (مطلوب)"><StyledInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="border-[var(--accent)]/30" /></FormGroup>
+                  <FormGroup label="التاريخ (مطلوب)"><DateInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="field border-[var(--accent)]/30" /></FormGroup>
                   <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(nd.incident_date)} className="bg-[var(--surface-2)] text-[var(--faint)]" /></FormGroup>
                   <FormGroup label="نوع الخبر (مطلوب)">
                     <StyledSelect value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})} className="border-[var(--accent)]/30">
@@ -5284,7 +5377,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             
             {/* 💡 فلتر التاريخ الجديد في الهيدر */}
             <div className="flex items-center gap-2">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-3 py-1.5 rounded-lg transition-colors">إلغاء التاريخ</button>}
             </div>
           </div>
@@ -5383,7 +5476,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
               <SectionCard title="بيانات الكارثة الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="التاريخ"><StyledInput type="date" value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} /></FormGroup>
+                  <FormGroup label="التاريخ"><DateInput type="date" value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} className="field" /></FormGroup>
                   <FormGroup label="الدولة (مطلوب)">
                     <StyledSelect value={gd.country} onChange={e => setGd({...gd, country: e.target.value})} className="border-orange-500/50 text-orange-400 font-bold">
                       <option value="" disabled className="text-[var(--faint)]">اختر المكان...</option>
@@ -5730,7 +5823,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
             </div>
             <div className="flex items-center gap-2 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
-              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+              <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-3 py-1.5 rounded-lg font-bold">إلغاء</button>}
             </div>
           </div>
@@ -5874,7 +5967,7 @@ const [clearAllCode, setClearAllCode] = useState('');
           <div className="bg-[var(--surface)] border border-red-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <FormGroup label="التاريخ"><StyledInput type="date" value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} /></FormGroup>
+              <FormGroup label="التاريخ"><DateInput type="date" value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
               <FormGroup label="التوقيت"><StyledInput type="time" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
               <FormGroup label="الدولة">
                 <StyledSelect value={gForm.country} onChange={e => setGForm({...gForm, country: e.target.value})}>
@@ -5901,7 +5994,7 @@ const [clearAllCode, setClearAllCode] = useState('');
           <div className="bg-[var(--surface)] border border-[var(--ok)]/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <FormGroup label="التاريخ"><StyledInput type="date" value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} /></FormGroup>
+              <FormGroup label="التاريخ"><DateInput type="date" value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
               <FormGroup label="التوقيت"><StyledInput type="time" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
               <FormGroup label="المنطقة داخل مصر"><StyledInput value={eForm.region} onChange={e => setEForm({...eForm, region: e.target.value})} /></FormGroup>
               <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={eForm.magnitude} onChange={e => setEForm({...eForm, magnitude: e.target.value})} className="border-green-500/50" /></FormGroup>
@@ -6346,7 +6439,7 @@ const totalAiCountries = new Set(
       <div id="ai-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
         <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           <div className="flex items-center gap-2">
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]" />
+            <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
             {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-purple-400 hover:text-white bg-purple-500/10 px-2 py-2 rounded-lg">الكل</button>}
           </div>
           <div className="flex flex-wrap gap-3">

@@ -1247,11 +1247,12 @@ def create_mission(
             
     except Exception as e:
         connection.rollback()
-        if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
-            raise HTTPException(status_code=400, detail=str(e))
-        if ikey and "idempotency_key" in str(e) and ("unique" in str(e).lower() or "duplicate" in str(e).lower()):
-            # 🛡️ حصل تصادم نادر: طلبين بنفس المفتاح وصلوا في نفس اللحظة تقريباً.
-            # التاني اتمنع من الداتابيز، فبنرجّع المهمة اللي اتسجلت فعلاً بدل ما نطلع خطأ.
+        # ✅ Fix: throw says "مسجّل" but old catch looked for "متواجد" — different word.
+        #    Now catches both forms so the intended 400 isn't lost to 500.
+        err = str(e)
+        if "مسجّل حالياً في مهمة نشطة أخرى" in err or "متواجد حالياً في مهمة نشطة أخرى" in err:
+            raise HTTPException(status_code=400, detail=err)
+        if ikey and "idempotency_key" in err and ("unique" in err.lower() or "duplicate" in err.lower()):
             try:
                 with connection.cursor() as cursor2:
                     cursor2.execute("SELECT mission_id, mission_code FROM missions WHERE idempotency_key = %s;", (ikey,))
@@ -1260,7 +1261,7 @@ def create_mission(
                         return {"message": "تم حفظ المهمة بنجاح", "mission_code": existing[1], "mission_id": existing[0]}
             except Exception:
                 pass
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=err)
     finally:
         connection.close()
 
@@ -1502,9 +1503,11 @@ def update_mission(
             
     except Exception as e:
         connection.rollback()
-        if "متواجد حالياً في مهمة نشطة أخرى" in str(e):
-            raise HTTPException(status_code=400, detail=str(e))
-        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء التحديث: {str(e)}")
+        # ✅ Same radar-exception mismatch fix as create_mission: "مسجّل" vs "متواجد"
+        err = str(e)
+        if "مسجّل حالياً في مهمة نشطة أخرى" in err or "متواجد حالياً في مهمة نشطة أخرى" in err:
+            raise HTTPException(status_code=400, detail=err)
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء التحديث: {err}")
     finally:
         connection.close()
 

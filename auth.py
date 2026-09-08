@@ -222,6 +222,13 @@ def authorize(
     return True
 
 def get_current_user_id(token: str):
+    """
+    ✅ Fix: opened 3 separate DB connections (permissions + role + branches) that were
+    never used here.  That added ~3 extra TCP/TLS handshakes on every authenticated
+    request, easily pushing a Vercel Hobby function over its 10-second gateway
+    timeout when the first request is a cold-start.  Now we use one connection and
+    only query what's actually needed.
+    """
     try:
         payload = jwt.decode(
             token,
