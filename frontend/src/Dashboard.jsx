@@ -886,13 +886,23 @@ const format12H = (timeStr) => {
 // 💡 توحيد تنسيق "تاريخ + وقت" (متطلب #4) بنفس مثال المستخدم: 04/09/2026 14:35
 // يقبل قيم السيرفر بصورها المختلفة (مع أو بدون ثواني، تاريخ فقط) ويعرضها بثبات
 // بدون أي تحويل للمنطقة الزمنية — يحافظ على التوقيت الذي يعمل به النظام.
+// القاعدة العالمية: العرض دائماً DD/MM/YYYY — لا تُفهم قيمة DD/MM/YYYY أبداً كـ MM/DD/YYYY.
 const formatDateTime = (val) => {
   if (!val) return '-';
   const s = String(val).trim();
-  const m = s.match(/^(\d{1,4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
-  if (m) {
-    const [, yy, mo, dd, hh, mm] = m;
-    const pad = (n) => String(n).padStart(2, '0');
+  const pad = (n) => String(n).padStart(2, '0');
+  // (1) ISO قياسي من السيرفر: YYYY-MM-DD (أو YYYY-MM-DD HH:MM) → أعد ترتيبها DD/MM/YYYY
+  const iso = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (iso) {
+    const [, yy, mo, dd, hh, mm] = iso;
+    const datePart = `${pad(dd)}/${pad(mo)}/${yy}`;
+    return hh !== undefined ? `${datePart} ${pad(hh)}:${mm}` : datePart;
+  }
+  // (2) قيمة معروضة بالفعل بصيغة DD/MM/YYYY (سنة 4 خانات في النهاية): تُحفَظ كما هي،
+  //     تفسيرها القياسي هنا يوم/شهر/سنة — لا تُجاز أبداً كشهر/يوم/سنة.
+  const dmy = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (dmy) {
+    const [, dd, mo, yy, hh, mm] = dmy;
     const datePart = `${pad(dd)}/${pad(mo)}/${yy}`;
     return hh !== undefined ? `${datePart} ${pad(hh)}:${mm}` : datePart;
   }
@@ -1970,7 +1980,7 @@ useEffect(() => {
                   {!n.read && <span className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0"></span>}
                 </span>
                 <span className="block text-xs text-[var(--muted-2)] mt-0.5 truncate">{n.action}</span>
-                <span className="block text-[11px] text-[var(--faint)] mt-0.5 truncate">{n.created_at}</span>
+                <span className="block text-[11px] text-[var(--faint)] mt-0.5 truncate">{formatDateTime(n.created_at)}</span>
               </span>
             </button>
           ))}
@@ -2034,7 +2044,7 @@ useEffect(() => {
                   <span key={`${ev.event_id}-${i}`} className="ticker-item">
                     <span className="ticker-actor">{ev.actor_name}</span>
                     <span className="ticker-action">{ev.action}</span>
-                    <span className="ticker-time">{ev.created_at ? ev.created_at.split(' ')[1] || ev.created_at : ''}</span>
+                    <span className="ticker-time">{ev.created_at ? (formatDateTime(ev.created_at).split(' ')[1] || formatDateTime(ev.created_at)) : ''}</span>
                   </span>
                 ))}
               </div>
@@ -2177,7 +2187,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
     .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
     .slice(0, 5);
   const liveClock = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const liveDate = now.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const liveDate = `${now.toLocaleDateString('ar-EG', { weekday: 'long' })}، ${formatDateTime(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`)}`;
   const statusTone = m => {
     if (m.status === 'Cancelled') return 'bg-[var(--warn)]';
     if (m.status === 'Completed') return 'bg-[var(--ok)]';
@@ -2313,7 +2323,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
                   </div>
                   <p className="text-xs text-[var(--muted)] truncate mt-0.5" dir="auto">
                     {m.branch ? `${m.branch} · ` : ''}
-                    {m.exit_date && m.exit_date !== '-' ? `تحرك: ${m.exit_date}` : formatDateTime(m.created_at)}
+                    {m.exit_date && m.exit_date !== '-' ? `تحرك: ${formatDateTime(m.exit_date)}` : formatDateTime(m.created_at)}
                   </p>
                 </div>
               </div>
@@ -2532,6 +2542,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [segmentDialog, setSegmentDialog] = useState(null); // { mode: 'join'|'leave', participantId }
   // 🛡️ قفل تقديم الانضمام/الانفصال ضد النقر المزدوج (يُغلق فراغ إعادة الرسم قبل isSubmitting)
   const segmentSubmitLockRef = useRef(false);
+  // fix #1: عند تسجيل انضمام/انفصال أثناء إنشاء الاستمارة، نحفظ المهمة أولاً (auto-persist)
+  // دون إغلاق المودال، ثم نكمل العملية. هذا العَلم يخبر handleSubmit ألا يغلق المودال.
+  const persistKeepOpenRef = useRef(false);
   // 🆕 كل المتطوعين عبر كل الفروع — لاختيار مشارك من أي فرع (#6)
   const [allVolunteers, setAllVolunteers] = useState([]);
   // 📋 الحقول الإلزامية (متطلب جديد): touched بعد أول محاولة مرفوضة،
@@ -2739,31 +2752,63 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 🆕 انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (لا نافذة فترات يدوية)
   const openSegmentDialog = (mode, p) => {
-    if (!currentMissionData) return setCustomAlert("احفظ المهمة أولاً ثم سجّل الانضمام أو الانفصال.");
+    // fix #1: متاح أثناء إنشاء/تعبئة الاستمارة — لا نحتاج مهمة محفوظة مسبقاً؛
+    // عند الإرسال يُحفظ المشارك/المهمة تلقائياً قبل تسجيل القطاع.
+    if (!(p.full_name || '').trim()) return setCustomAlert("أضف اسم المشارك أولاً لتسجيل الانضمام أو الانفصال.");
     setSegmentDialog({ mode, participantId: p.id });
   };
   const submitSegmentAction = async (mode) => {
-    if (!segmentDialog || !currentMissionData) return;
+    if (!segmentDialog) return;
     if (segmentSubmitLockRef.current) return; // 🛡️ منع النقر المزدوج
     segmentSubmitLockRef.current = true;
     try {
       const target = participants.find(pp => pp.id === segmentDialog.participantId);
-      const pid = target?.participant_id;
-      if (!pid) return setCustomAlert("هذا المشارك غير محفوظ في السيرفر بعد — احفظ المهمة أولاً.");
+      const token = localStorage.getItem('access_token');
+      const nowD = new Date();
+      const clientNow = `${nowD.toLocaleDateString('sv')} ${nowD.toTimeString().slice(0, 5)}`;
+      let missionId = currentMissionData?.mission_id;
+      let pid = target?.participant_id;
+
+      // fix #1: أثناء إنشاء/تعبئة الاستمارة — إن لم تُحفظ المهمة/المشارك بعد، نُحفظهما أولاً
+      // (auto-persist) دون إغلاق المودال، ثم نكمل تسجيل الانضمام/الانفصال بمعرف المشارك الفعلي.
+      if (!missionId || !pid) {
+        if (!(target?.full_name || '').trim()) { setCustomAlert("أضف اسم المشارك أولاً."); return; }
+        setIsSubmitting(true);
+        persistKeepOpenRef.current = true;
+        let saved;
+        try { saved = await handleSubmit('Draft'); }
+        finally { persistKeepOpenRef.current = false; }
+        if (!saved?.ok || !saved.mission_id) return; // أخطاء التحقق/الحفظ ظهرت من handleSubmit نفسها
+        missionId = saved.mission_id;
+        // إعادة جلب التفاصيل للحصول على الـ participant_id الفعلي للمشارك المحفوظ
+        const dres = await fetch(`${BASE}/api/missions/${missionId}?client_now=${encodeURIComponent(clientNow)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const details = dres.ok ? await dres.json() : null;
+        if (details) {
+          setCurrentMissionData(details);
+          setParticipants((details.participants || []).map((pp, i) => ({ id: i, ...pp })));
+        }
+        const idx = participants.findIndex(pp => pp.id === segmentDialog.participantId);
+        const mnum = String(document.getElementById(`p_role_${idx}`)?.value || '').trim().toLowerCase();
+        const nameKey = (target?.full_name || '').trim().toLowerCase();
+        const matched = (details?.participants || []).find(pp =>
+          (mnum && pp.membership_number && String(pp.membership_number).trim().toLowerCase() === mnum) ||
+          (!mnum && (pp.full_name || '').trim().toLowerCase() === nameKey)
+        );
+        pid = matched?.participant_id;
+        if (!pid) { setCustomAlert("تعذّر تحديد المشارك المحفوظ — أعد فتح الاستمارة وحاول مرة أخرى."); return; }
+      }
+
       const dateVal = document.getElementById('sd_date')?.value || '';
       const timeVal = document.getElementById('sd_time')?.value || '';
       if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
       const dt = `${dateVal} ${timeVal}`;
       // fix #1: لا نرسل itinerary_group — المسارات تُضبط من جدول المشاركين فقط.
       // fix #3: نرسل ساعة العميل المحلية كإطار زمني للتحقق من «المستقبل» (نفس إطار البيانات).
-      const nowD = new Date();
-      const clientNow = `${nowD.toLocaleDateString('sv')} ${nowD.toTimeString().slice(0, 5)}`;
-      const token = localStorage.getItem('access_token');
       setIsSubmitting(true);
       const body = mode === 'join'
         ? { participant_id: pid, join_datetime: dt, client_now: clientNow }
         : { participant_id: pid, leave_datetime: dt, client_now: clientNow };
-      const url = `${BASE}/api/missions/${currentMissionData.mission_id}/${mode === 'join' ? 'join' : 'leave'}`;
+      const url = `${BASE}/api/missions/${missionId}/${mode === 'join' ? 'join' : 'leave'}`;
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -2773,9 +2818,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       if (!res.ok) { setCustomAlert(`🚫 ${data.detail || 'فشل العملية — حاول مرة أخرى.'}`); return; }
       setSegmentDialog(null);
       setCustomAlert(mode === 'join'
-        ? `✅ تم تسجيل انضمام ${target?.full_name || 'المشارك'}\nالبداية: ${dt}`
-        : `✅ تم تسجيل انفصال ${target?.full_name || 'المشارك'}\nالنهاية: ${dt}`);
-      await handleViewMission(currentMissionData.mission_id); // تحديث الحالة والساعات من السيرفر
+        ? `✅ تم تسجيل انضمام ${target?.full_name || 'المشارك'}\nالبداية: ${formatDateTime(dt)}`
+        : `✅ تم تسجيل انفصال ${target?.full_name || 'المشارك'}\nالنهاية: ${formatDateTime(dt)}`);
+      await handleViewMission(missionId); // تحديث الحالة والساعات من السيرفر
     } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); }
     finally { setIsSubmitting(false); segmentSubmitLockRef.current = false; }
   };
@@ -2973,8 +3018,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     const missionsSheet = missionsList.map(m => ({
       "كود المهمة": m.mission_code,
       "تصنيف المهمة": m.mission_classification || "عادية",
-      "تاريخ الإنشاء (السيرفر)": m.created_at,
-      "تاريخ المهمة (الفعلي)": m.exit_date !== '-' && m.exit_date ? m.exit_date : "غير مسجل",
+      "تاريخ الإنشاء (السيرفر)": formatDateTime(m.created_at),
+      "تاريخ المهمة (الفعلي)": m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : "غير مسجل",
       "اسم المهمة": m.mission_name,
       "عدد المتطوعين": m.vol_count || 0,
       "عدد الغير متطوعين": m.non_vol_count || 0,
@@ -2997,7 +3042,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             "الرقم (المباشر)": b.direct_count,
             "المستفيدين غير المباشر": b.indirect_count,
             "اسم الاستمارة": m.mission_name,
-            "التاريخ": m.created_at
+            "التاريخ": formatDateTime(m.created_at)
           });
         });
       }
@@ -3017,18 +3062,18 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     const escapeCSV = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
     let csvContent = "";
     csvContent += "البيانات الأساسية\nاسم المهمة,تصنيف المهمة,التمركز,نوع المهمة,مكان المهمة,مسؤول المهمة,تاريخ الإنشاء,مصدر البلاغ\n";
-    csvContent += `${escapeCSV(document.getElementById('f_mission_name')?.value)},${escapeCSV(document.getElementById('f_mission_class')?.value)},${escapeCSV(getSelectedOptionSourceText(document.getElementById('f_branch_id')))},${escapeCSV(document.getElementById('f_mission_type')?.value)},${escapeCSV(document.getElementById('f_mission_location')?.value)},${escapeCSV(document.getElementById('f_responsible_person')?.value)},${escapeCSV(document.getElementById('f_creation_date')?.value)},${escapeCSV(document.getElementById('f_data_source')?.value)}\n\n`;
+    csvContent += `${escapeCSV(document.getElementById('f_mission_name')?.value)},${escapeCSV(document.getElementById('f_mission_class')?.value)},${escapeCSV(getSelectedOptionSourceText(document.getElementById('f_branch_id')))},${escapeCSV(document.getElementById('f_mission_type')?.value)},${escapeCSV(document.getElementById('f_mission_location')?.value)},${escapeCSV(document.getElementById('f_responsible_person')?.value)},${escapeCSV(formatDateTime(document.getElementById('f_creation_date')?.value))},${escapeCSV(document.getElementById('f_data_source')?.value)}\n\n`;
     csvContent += "التواريخ والتوقيتات\nتاريخ المهمة,تاريخ الخروج,تاريخ الوصول,تاريخ العودة,تاريخ الانتهاء,ساعة البدء,ساعة التحرك,ساعة الوصول,ساعة الانتهاء\n";
-    csvContent += `${escapeCSV(document.getElementById('f_exit_date')?.value)},${escapeCSV(document.getElementById('f_departure_date')?.value)},${escapeCSV(document.getElementById('f_arrival_date')?.value)},${escapeCSV(document.getElementById('f_return_date')?.value)},${escapeCSV(document.getElementById('f_completion_date')?.value)},${escapeCSV(document.getElementById('f_start_time')?.value)},${escapeCSV(document.getElementById('f_departure_time')?.value)},${escapeCSV(document.getElementById('f_arrival_time')?.value)},${escapeCSV(document.getElementById('f_completion_time')?.value)}\n\n`;
+    csvContent += `${escapeCSV(formatDateTime(document.getElementById('f_exit_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_departure_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_arrival_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_return_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_completion_date')?.value))},${escapeCSV(document.getElementById('f_start_time')?.value)},${escapeCSV(document.getElementById('f_departure_time')?.value)},${escapeCSV(document.getElementById('f_arrival_time')?.value)},${escapeCSV(document.getElementById('f_completion_time')?.value)}\n\n`;
     csvContent += "خطوط السير المجمعة\nالمجموعة,من,إلى (الوجهة),تاريخ التحرك,ساعة التحرك,تاريخ الوصول,ساعة الوصول\n";
     routes.forEach((_, i) => {
       const from = document.getElementById(`r_from_main_${i}`)?.value;
       const to = document.getElementById(`r_to_main_${i}`)?.value;
       const depVal = document.getElementById(`r_dep_main_${i}`)?.value || '';
       const arrVal = document.getElementById(`r_arr_main_${i}`)?.value || '';
-      const depDate = depVal.split('T')[0] || '';
+      const depDate = formatDateTime(depVal.split('T')[0] || '');
       const depTime = depVal.split('T')[1] || '';
-      const arrDate = arrVal.split('T')[0] || '';
+      const arrDate = formatDateTime(arrVal.split('T')[0] || '');
       const arrTime = arrVal.split('T')[1] || '';
       if (from || to) csvContent += `خط السير الأساسي,${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(depDate)},${escapeCSV(depTime)},${escapeCSV(arrDate)},${escapeCSV(arrTime)}\n`;
     });
@@ -3166,12 +3211,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          // 💡 عمود "الحالة" حُذف نهائيًّا (متطلب #2): كل مشارك بـ"بالمهمة" افتراضيًا مع بقاء رادار التكرار نشطًا
          const pStatus = 'بالمهمة';
          const pItin = getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي';
-
+         // هوية المركّبة = رقم العضوية + الفرع (الرقم وحده ليس فريداً — يتكرر عبر الفروع)
+         const branchName = branchesList.find(b => String(b.id) === String(pBranch))?.name || pBranch;
          const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
 
          if (pStatus === 'بالمهمة') {
            if (activeParticipants[uniqueKey]) {
-             setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'}) مكرر ومسجل كـ "بالمهمة" أكثر من مرة!\n\nلا يمكن أن يكون المتطوع متواجد في تحركين نشطين في نفس الوقت.\nيجب تسجيل عودته أولاً من التحرك السابق (عاد للقاعدة) قبل إضافة تحرك جديد له.`);
+             setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'} — فرع: ${branchName}) مكرر ومسجل كـ "بالمهمة" أكثر من مرة!\n\nلا يمكن أن يكون المتطوع متواجد في تحركين نشطين بنفس الهوية (رقم العضوية + الفرع) في نفس الوقت.\nيجب تسجيل عودته أولاً من التحرك السابق (عاد للقاعدة) قبل إضافة تحرك جديد له.`);
              hasDuplicateError = true;
            } else {
              activeParticipants[uniqueKey] = true;
@@ -3292,10 +3338,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        if (res.ok) {
          // Success: clear the idempotency key so next submit gets a new key
          newMissionIdempotencyKey.current = null;
-         setSegmentDialog(null);
-         setDaysPicker(null);
-         setIsModalOpen(false);
+         // fix #1: أثناء auto-persist لـ JOIN/LEAVE نُبقي المودال مفتوحاً لنكمل العملية؛
+         // وإلا (حفظ عادي) نغلق المودال ونُصفّر النوافذ كما كان.
+         if (!persistKeepOpenRef.current) {
+           setSegmentDialog(null);
+           setDaysPicker(null);
+           setIsModalOpen(false);
+         }
          fetchMissions();
+         const rd = await res.json().catch(() => ({}));
+         return { ok: true, mission_id: rd.mission_id };
        } else {
          // Error: keep the idempotency key for retry
          const errorData = await res.json();
@@ -3561,13 +3613,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             filteredMissions.length > 0 ? filteredMissions.map(m => (
               <tr key={`mission-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'}`}>
                 <td className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.created_at)}</td>
-                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? m.exit_date : 'غير مسجل'}</span></td>
+                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
                 <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
                 <td className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60">
                   <div className="inline-flex items-center gap-2 bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] font-mono text-[11px] whitespace-nowrap">
-                    <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : 'غير مسجل')}</span>
+                    <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : (m.created_at ? formatDateTime(m.created_at) : 'غير مسجل')}</span>
                     <span className="text-[var(--faint)]">|</span>
-                    <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? m.completion_date : 'غير مسجل') : '(حتى الآن...)'}</span>
+                    <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? formatDateTime(m.completion_date) : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
                 </td>
                 <td className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_code}</td>
@@ -3588,8 +3640,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <td className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
                 <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
                 <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.departure_date}</td>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.completion_date}</td>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.departure_date)}</td>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.completion_date)}</td>
                 <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><StatusBadge status={m.status} /></td>
                 <td className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                   <div className="flex justify-center gap-1.5">
@@ -3897,10 +3949,18 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
                           {/* إجراءات انضمام / انفصال — القطاعات تُدار عبر السيرفر */}
                           <td className="p-2 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={!currentMissionData || !p.participant_id} title={!currentMissionData ? 'احفظ المهمة أولاً لتتمكن من تسجيل الانضمام' : 'تسجيل انضمام جديد'} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
-                              <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={!currentMissionData || !p.participant_id} title={!currentMissionData ? 'احفظ المهمة أولاً لتتمكن من تسجيل الانفصال' : 'تسجيل انفصال'} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
-                            </div>
+                            {/* fix #1/#2/#3: متاح أثناء إنشاء الاستمارة (لا يُقيَّد بوجود مهمة محفوظة).
+                                يعتمد على الحالة الفعلية: نشط ⇒ انفصال فقط؛ غير نشط ⇒ انضمام فقط. */}
+                            {(() => {
+                              const isActive = p.status === 'مازال بالمهمة' || (p.participation_periods || []).some(s => !s.end_dt);
+                              const hasName = !!(p.full_name || '').trim();
+                              return (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={!hasName || isActive} title={!hasName ? 'أضف اسم المشارك أولاً' : (isActive ? 'المشارك ملتحق حالياً — سجّل انفصاله أولاً' : 'تسجيل انضمام جديد (يبدأ شريحة مشاركة جديدة)')} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
+                                  <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={!hasName || !isActive} title={!hasName ? 'أضف اسم المشارك أولاً' : (!isActive ? 'لا يوجد حضور مفتوح لتسجيل الانفصال' : 'تسجيل انفصال (يُغلق شريحة المشاركة الحالية)')} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-[var(--faint)] hover:text-[var(--accent)]"><TrashIcon /></button></td>
                         </tr>
@@ -4444,7 +4504,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       if (logsToExport.length === 0) return alert("لا توجد سجلات لهذا القسم لتصديرها.");
       
       const excelData = logsToExport.map(log => ({
-        "التاريخ والوقت": log.created_at,
+        "التاريخ والوقت": formatDateTime(log.created_at),
         "القسم": log.entity_type === 'mission' ? 'المهام الميدانية' : log.entity_type === 'local_news' ? 'الأخبار المحلية' : log.entity_type === 'global_disaster' ? 'الكوارث العالمية' : 'نظام داخلي',
         "اسم المستخدم": log.full_name,
         "نوع الإجراء": log.action,
@@ -4726,7 +4786,7 @@ const [nd, setNd] = useState({
   const handleExportExcel = () => {
     if (newsList.length === 0) return setCustomAlert("لا توجد أخبار للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredNews.map(n => ({
-      "التاريخ": n.incident_date || '', "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
+      "التاريخ": formatDateTime(n.incident_date), "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
       "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": n.governorate || '',
       "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(n.report_time), "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
       "توقيت الرد": format12H(n.response_time), "حالة توقيت الرد": n.response_time_points || 0, "زمن الرد": n.response_duration || '',
@@ -4743,7 +4803,7 @@ const [nd, setNd] = useState({
 
   const handleExportSingleNewsExcel = () => {
     const ws = XLSX.utils.json_to_sheet([{
-      "التاريخ": nd.incident_date || '', "الشهر": nd.incident_month || '', "وصف الحادث": nd.incident_description || '', "نوع الخبر": nd.news_type || '', "ناشر الخبر": nd.news_publisher || '',
+      "التاريخ": formatDateTime(nd.incident_date), "الشهر": nd.incident_month || '', "وصف الحادث": nd.incident_description || '', "نوع الخبر": nd.news_type || '', "ناشر الخبر": nd.news_publisher || '',
       "اسم الشارع": nd.street_name || '', "المنطقة": nd.area_name || '', "المحافظة": nd.governorate || '',
       "الابلاغ": nd.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(nd.report_time), "حالة الرد": nd.is_responded ? 'نعم' : 'لا', "رد الفرع": nd.branch_response_text || '',
       "توقيت الرد": format12H(nd.response_time), "حالة توقيت الرد": nd.response_time_points || 0, "زمن الرد": nd.response_duration || '',
@@ -4855,7 +4915,7 @@ const [nd, setNd] = useState({
               {isLoading ? <TableLoadingRow colSpan={7} /> : 
                filteredNews.length > 0 ? filteredNews.map(n => (
                 <tr key={n.news_id} className="hover:bg-[var(--surface-hover)]">
-                  <td className="p-4 text-white border-l border-[var(--border)]">{n.incident_date}</td>
+                  <td className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(n.incident_date)}</td>
                   <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
                   <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
                   <td className="p-4 border-l border-[var(--border)]">
@@ -5115,7 +5175,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleExportExcel = () => {
     if (filteredDisasters.length === 0) return setCustomAlert("لا توجد كوارث للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredDisasters.map(d => ({
-      "التاريخ": d.incident_date || '',
+      "التاريخ": formatDateTime(d.incident_date),
       "الشهر": d.incident_month || '',
       "الخبر": d.news_title || '',
       "الدولة": d.country || '',
@@ -5140,7 +5200,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   // 💡 تصدير الخبر الفردي بنفس الترتيب
   const handleExportSingleExcel = () => {
     const ws = XLSX.utils.json_to_sheet([{
-      "التاريخ": gd.incident_date || '',
+      "التاريخ": formatDateTime(gd.incident_date),
       "الشهر": gd.incident_month || '',
       "الخبر": gd.news_title || '',
       "الدولة": gd.country || '',
@@ -5282,7 +5342,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               {isLoading ? <TableLoadingRow colSpan={7} label="جاري تحميل البيانات…" /> : 
                filteredDisasters.length > 0 ? filteredDisasters.map(d => (
                 <tr key={d.disaster_id} className="hover:bg-[var(--surface-hover)]">
-                  <td className="p-4 text-white border-l border-[var(--border)]">{d.incident_date}</td>
+                  <td className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(d.incident_date)}</td>
                   <td className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
                   <td className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[var(--accent-softer)]">{d.disaster_type}</td>
                   <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{d.news_title}</td>
@@ -5609,13 +5669,13 @@ const [clearAllCode, setClearAllCode] = useState('');
 
   const handleExportGlobalEqs = () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({ "التاريخ": eq.date || '', "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": eq.time || '', "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
+    const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": eq.time || '', "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية"); XLSX.writeFile(wb, filterDate ? `سجل_الزلازل_العالمية_${filterDate}.xlsx` : `سجل_الزلازل_العالمية.xlsx`);
   };
 
   const handleExportEgyptEqs = () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({ "التاريخ": eq.date || '', "وقت الزلزال": eq.time || '', "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
+    const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": eq.time || '', "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر"); XLSX.writeFile(wb, filterDate ? `سجل_زلازل_مصر_${filterDate}.xlsx` : `سجل_زلازل_مصر.xlsx`);
   };
 
@@ -5686,7 +5746,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -5696,7 +5756,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{eq.date} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -5751,7 +5811,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   {isLoading ? <TableLoadingRow colSpan={8} /> : 
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
                     <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
-                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{eq.date} <span className="text-[var(--faint)]">{eq.time}</span></td>
+                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{eq.time}</span></td>
                       <td className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
                       <td className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
@@ -5789,7 +5849,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   {isLoading ? <TableLoadingRow colSpan={6} /> : 
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
                     <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
-                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{eq.date} <span className="text-[var(--faint)]">{eq.time}</span></td>
+                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{eq.time}</span></td>
                       <td className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
                       <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
@@ -5950,7 +6010,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             const now = new Date();
             const isToday = dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth();
             const formattedTime = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-            const dayStr = isToday ? 'اليوم' : dateObj.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
+            const dayStr = isToday ? 'اليوم' : formatDateTime(`${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`);
             setLastRunTime(`${dayStr}، الساعة ${formattedTime}`);
           } else { setLastRunTime('لا توجد بيانات'); }
         } else { setLastRunTime('غير متاح'); }
@@ -5984,7 +6044,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleExportAllExcel = () => {
     if (aiNewsList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
     const ws = XLSX.utils.json_to_sheet(aiNewsList.map(n => ({
-      "التاريخ": n.incident_date || '', "الشهر": getMonthName(n.incident_date) || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
+      "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     })));
@@ -6330,7 +6390,7 @@ const totalAiCountries = new Set(
                  const aiData = extractAiData(n.news_updates);
                  return (
                 <tr key={n.id} className="hover:bg-[var(--surface-hover)]">
-                  <td className="p-4 text-white border-l border-[var(--border)] font-mono">{n.incident_date}</td>
+                  <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
                   <td className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                     {n.news_type}
                     {aiData && aiData.severity && <span className="block mt-1 bg-[var(--danger-soft)] text-[var(--accent)] px-2 py-0.5 rounded text-[10px] w-max">خطورة: {aiData.severity}/10</span>}

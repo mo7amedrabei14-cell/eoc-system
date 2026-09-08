@@ -646,19 +646,22 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
     volunteer_id = None
     user_id = None
     owner_mission_id = None
+    owner_mission_branch = None
     excl_sql = " AND p.mission_id <> %s" if exclude_mission_id is not None else ""
 
     if part.participant_type == "volunteer" and membership:
-        # 1. الربط بسجل المتطوع بالرقم الموحّد (نفس الفرع أولاً)
+        # 1. الربط بسجل المتطوع بالرقم الموحّد والفرع معاً (هوية = رقم العضوية + الفرع).
+        #    رقم العضوية وحده ليس فريداً — قد يتكرر عبر الفروع — فلا يُربط إلا بمطابقة الفرع.
         cursor.execute(
             """
             SELECT v.volunteer_id, v.membership_number
             FROM volunteers v
             WHERE LOWER(TRIM(v.membership_number)) = LOWER(%s)
-            ORDER BY (v.branch_id IS NULL OR %s IS NULL OR v.branch_id = %s) DESC, v.volunteer_id ASC
+              AND v.branch_id IS NOT DISTINCT FROM %s
+            ORDER BY v.volunteer_id ASC
             LIMIT 1;
             """,
-            (membership, part.branch_id, part.branch_id),
+            (membership, part.branch_id),
         )
         row = cursor.fetchone()
         if row:
@@ -680,43 +683,35 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
             if ur:
                 user_id = ur[0]
 
-    # 3. رادار المنع: هل ما زال ملتحقاً بمهمة نشطة أخرى؟ (بالهوية الفعلية، لا بالنصوص)
+    # 3. رادار المنع: هل ما زال ملتحقاً بمهمة نشطة أخرى؟ بالهوية المركّبة
+    #    (رقم العضوية + الفرع) — لا برقم العضوية وحده ولا بصف المتطوع: الرقم قد
+    #    يتكرر عبر الفروع، فنفس الرقم في فرع مختلف هوية مختلفة ولا يُمنع.
     #    تعريف "النشطة" مطابق تماماً لتعريف القوة البشرية (same source of truth):
     #    المسوّدة ليست تحركاً فعلياً، فمن كان مدرجاً في مسودة فقط لا يمنع تكليفه.
     if part.return_status == "مازال بالمهمة" and membership:
         # excl_sql يُستثنى منه صف المهمة الحالية عند التحديث (fix #7): الرادار يجب ألا
         # يعتبر مشاركاً "في مهمة أخرى" وهو فعلاً ملتحق بنفس المهمة الجاري تعديلها.
-        if volunteer_id is not None:
-            cursor.execute(
-                """
-                SELECT m.mission_name
-                FROM mission_participants p
-                JOIN missions m ON p.mission_id = m.mission_id
-                WHERE p.volunteer_id = %s AND p.return_status = 'مازال بالمهمة'
-                  AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
-                """ + excl_sql + """
-                LIMIT 1;
-                """,
-                ((volunteer_id,) + ((exclude_mission_id,) if exclude_mission_id is not None else ())),
-            )
-        else:
-            cursor.execute(
-                """
-                SELECT m.mission_name
-                FROM mission_participants p
-                JOIN missions m ON p.mission_id = m.mission_id
-                WHERE p.membership_number = %s AND p.return_status = 'مازال بالمهمة'
-                  AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
-                """ + excl_sql + """
-                LIMIT 1;
-                """,
-                ((membership,) + ((exclude_mission_id,) if exclude_mission_id is not None else ())),
-            )
+        cursor.execute(
+            """
+            SELECT m.mission_name, COALESCE(b.branch_name, 'غير محدد')
+            FROM mission_participants p
+            JOIN missions m ON p.mission_id = m.mission_id
+            LEFT JOIN branches b ON b.branch_id = p.branch_id
+            WHERE LOWER(TRIM(p.membership_number)) = LOWER(%s)
+              AND p.branch_id IS NOT DISTINCT FROM %s
+              AND p.return_status = 'مازال بالمهمة'
+              AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
+            """ + excl_sql + """
+            LIMIT 1;
+            """,
+            (membership, part.branch_id) + ((exclude_mission_id,) if exclude_mission_id is not None else ()),
+        )
         row = cursor.fetchone()
         if row:
             owner_mission_id = row[0]
+            owner_mission_branch = row[1]
 
-    return volunteer_id, user_id, membership, owner_mission_id
+    return volunteer_id, user_id, membership, owner_mission_id, owner_mission_branch
 
 
 def dedupe_participants(participants):
@@ -893,6 +888,34 @@ def mission_end_dt(mission_data):
     return None
 
 
+def assigned_span(assigned_groups, routes):
+    """نافذة الجدول للخطوط المسندة (خطة افتراضية) = لكل يوم (departure_date) مدى
+    «أول انطلاق → آخر وصول» عبر كل المسارات المسندة لذلك اليوم، ثم الجمع عبر الأيام.
+    مثال: مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (مدى واحد، لا جمع).
+    المسارات بلا تواريخ (قديم) تُدمج في يوم واحد 'day' — تُعامل معاملة نفس اليوم.
+    """
+    by_day = {}
+    groups = set(assigned_groups or [])
+    for g in routes:
+        if g.get('group_title') not in groups:
+            continue
+        sd = dt_from_parts(g.get('departure_date'), g.get('departure_time'))
+        ed = dt_from_parts(g.get('arrival_date'), g.get('arrival_time'))
+        if sd and ed:
+            key = str(g.get('departure_date')) or str(g.get('arrival_date')) or 'day'
+            if key not in by_day:
+                by_day[key] = [sd, ed]
+            else:
+                by_day[key][0] = min(by_day[key][0], sd)
+                by_day[key][1] = max(by_day[key][1], ed)
+    total = 0.0
+    for lo, hi in by_day.values():
+        secs = (hi - lo).total_seconds()
+        if secs > 0:
+            total += secs / 3600.0
+    return total
+
+
 def compute_working_hours(mission_data, mission_status, segments, assigned_days, routes, now=None):
     """
     ساعات عمل المشارك — محرك واحد موحّد (لا فرق Normal/Open — التصنيف للعرض فقط):
@@ -938,7 +961,14 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
 
     assigned = assigned_days or []
 
-    # (مهم) المكتملة تتجمّد دائماً — لا تُحسب قواعد اليوم/القطاعات عليها
+    # ⭐ الحضور الفعلي هو مصدر الحقيقة دائماً — أي قطاعات (انضمام/انفصال/عودة) ⇒
+    #    مجموعها هو الحساب الوحيد، حتى لو اكتملت المهمة (الخطة لا تحلّ محل المشاركة
+    #    الفعلية أبداً). الـ segment المفتوح في مهمة مكتملة يُغلق عند نهاية المهمة (end_cap).
+    if segments:
+        return round(sum(seg_dur(s) for s in segments), 2)
+
+    # (مهم) المكتملة بلا قطاعات فعليّة تتجمّد لمدى المهمة (الخطة الافتراضية) —
+    #    لا تُحسب قواعد اليوم/القطاعات عليها (لا يملك حضوراً فعلياً ليُحتسب).
     if completed:
         start = mission_start_dt(mission_data)
         if not start:
@@ -948,15 +978,12 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
             return round((end - start).total_seconds() / 3600.0, 2)
         return 0.0
 
-    # ⭐ fix #6: أي قطاعات فعلية (انضمام/انفصال/عودة) ⇒ مجموعها هو الحساب الوحيد.
-    #    يقع هذا قبل منطق التخصيص عمداً — فالحضور الفعلي يغلب الخطة الافتراضية دائماً.
-    if segments:
-        return round(sum(seg_dur(s) for s in segments), 2)
-
     # (1) بلا قطاعات + تخصيص صريح ⇒ الافتراضي من المسارات المُسندة إليه (واحد أو أكثر)
     #     أي: خط السير هو الخطة الافتراضية فقط، ولا يُحتسب إلا بغياب الحضور الفعلي.
+    #     fix #4: عدة مسارات مسندة ⇒ المدى (أول انطلاق → آخر وصول) لكل يوم، لا الجمع —
+    #     مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (8 ساعات) لا 9.
     if assigned:
-        return round(sum(day_window(day) for day in assigned), 2)
+        return round(assigned_span(assigned, routes), 2)
 
     # (2) بلا قطاعات وبلا تخصيص ⇒ افتراضي خطة المهمة (مباشر):
     #     • يوجد خط أساسي ⇒ نافذة «خط السير الأساسي» (Both exist → Basic default)
@@ -1146,13 +1173,13 @@ def create_mission(
                     part.return_status = 'تم انتهاء مهمتة'
 
                 # 2. الهوية الفعلية (الـ DB هي مصدر الحقيقة): ربط المتطوع + حساب دخوله + رادار المنع
-                volunteer_id, participant_user_id, membership, active_in_other = resolve_participant_identity(cursor, part)
+                volunteer_id, participant_user_id, membership, active_in_other, active_in_other_branch = resolve_participant_identity(cursor, part)
                 if participant_user_id:
                     participant_user_ids.append(participant_user_id)
 
-                # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية لا بالنصوص)
+                # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية المركّبة لا بالنصوص)
                 if active_in_other is not None:
-                    raise Exception(f"المشارك '{part.full_name}' (رقم {membership}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً.")
+                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: رقم العضوية + الفرع مسجَّل حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً (عاد للقاعدة).")
 
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
@@ -1359,10 +1386,10 @@ def update_mission(
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
 
-                # الهوية الفعلية (الـ DB هي مصدر الحقيقة) + رادار المنع بالهوية لا بالنصوص.
-                # نستثني المهمة الحالية من الرادار: الـ PUT يحدّث المشارك في مكانه
-                # (لا يحذفه قبلاً كما في السابق) فيجب ألا يصرّعه الرادار بنفسه.
-                volunteer_id, participant_user_id, membership, active_in_other = resolve_participant_identity(cursor, part, exclude_mission_id=mission_id)
+                # الهوية الفعلية (الـ DB هي مصدر الحقيقة) + رادار المنع بالهوية المركّبة
+                # (رقم العضوية + الفرع). نستثني المهمة الحالية من الرادار: الـ PUT يحدّث
+                # المشارك في مكانه (لا يحذفه قبلاً كما في السابق) فيجب ألا يصرّعه الرادار بنفسه.
+                volunteer_id, participant_user_id, membership, active_in_other, active_in_other_branch = resolve_participant_identity(cursor, part, exclude_mission_id=mission_id)
                 if participant_user_id:
                     participant_user_ids.append(participant_user_id)
 
@@ -1372,7 +1399,7 @@ def update_mission(
                     reinserted_idents.add(ident)
 
                 if active_in_other is not None:
-                    raise Exception(f"المشارك '{part.full_name}' (رقم {membership}) متواجد حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته أو تحديث بياناته حتى يتم تسجيل عودته أولاً.")
+                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة أو التحديث: رقم العضوية + الفرع مسجَّل حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nيجب تسجيل عودته في تلك المهمة أولاً (عاد للقاعدة).")
 
                 # ── استعادة الحقول التي لا تعرضها/لا تُدارُ من الاستمارة (مصدر الحقيقة):
                 #    لو نفس الشخص موجود قبل التعديل بنفس الهوية، نحافظ على بياناته القائمة
@@ -1484,6 +1511,7 @@ def update_mission(
 class EndParticipationRequest(BaseModel):
     """إنهاء مشاركة واحد أو أكثر (bulk) — مهمات مفتوحة/نشطة."""
     participant_ids: List[int] = []
+    client_now: Optional[str] = None  # ساعة العميل المحلية — إطار زمني لإنهاء المشاركة
 
 @app.post("/api/missions/{mission_id}/end-participation")
 def end_participation(
@@ -1504,6 +1532,7 @@ def end_participation(
     ids = list(dict.fromkeys(data.participant_ids or []))  # إزالة التكرار مع حفظ الترتيب
     if not ids:
         raise HTTPException(status_code=400, detail="لم يتم اختيار أي مشارك")
+    now_ref = parse_dt_input(data.client_now) if data.client_now else datetime.now()
 
     connection = get_connection()
     try:
@@ -1529,10 +1558,12 @@ def end_participation(
                     "UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة' WHERE participant_id = %s",
                     (pid,),
                 )
-                # 2. غلق أي فترة مفتوحة بلا check_out
+                # 2. غلق أي فترة مفتوحة (بلا end_dt) عند زمن الإنهاء — يُغلق end_dt أيضاً
+                #    (وليس check_out_time فقط) حتى تتوقف ساعات «المباشر» عن النمو بعد الإنهاء،
+                #    وهو ما تطبقه حسابات الساعات (start_dt..end_dt) في الواجهة والقوة البشرية.
                 cursor.execute(
-                    "UPDATE mission_participant_sessions SET check_out_time = CURRENT_TIME WHERE participant_id = %s AND check_out_time IS NULL",
-                    (pid,),
+                    "UPDATE mission_participant_sessions SET check_out_time = %s::time, end_dt = %s::timestamp WHERE participant_id = %s AND end_dt IS NULL",
+                    (now_ref.time(), now_ref, pid),
                 )
                 # 3. لو بلا فترات: سطر توثيق للإنهاء (تسجيل معلومة الحضور/الخروج)
                 cursor.execute(
@@ -1772,7 +1803,16 @@ def mission_leave(
                     (leave_dt, leave_dt.time(), open_seg[0]),
                 )
             else:
-                # 2. بلا segment مفتوح ⇒ segment من بداية المشاركة المرجعية حتى الانفصال
+                # 2. بلا segment مفتوح. fix #2/#3/#5: لا نعيد كتابة/توسيع سجل مغلق.
+                #    لو للمشارك أي segments سابقة (غادر فعلاً) ⇒ لا حضور نشط لتسجيل انفصال
+                #    ثانٍ — العودة للعمل تتطلب انضماماً جديداً (segment جديد). أما لو لم يُسجَّل
+                #    له أي حضور أصلاً (legacy) ⇒ نُنشئ من بداية المشاركة المرجعية حتى الانفصال.
+                cursor.execute(
+                    "SELECT 1 FROM mission_participant_sessions WHERE participant_id = %s LIMIT 1",
+                    (data.participant_id,),
+                )
+                if cursor.fetchone():
+                    raise HTTPException(status_code=400, detail="لا يوجد حضور مفتوح لتسجيل الانفصال — المشارك غير نشط حالياً")
                 ref_start = reference_segment_start(cursor, mission_row, itinerary_group)
                 if ref_start:
                     cursor.execute(
@@ -3238,14 +3278,12 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
         with connection.cursor() as cursor:
             # =========================================================================
             # حساب القوة البشرية من الهوية الفعلية لا من النصوص (#4)
-            # - كل سطر مشاركة له مفتاح هوية جذري (identity key):
-            #     vid:volunteer_id             (المتطوع المرتبط — عبر كل الفروع)
-            #     rid:membership_number        (غير مرتبط + عنده رقم عضوية/صفة — عبر كل الفروع)
-            #     nm:branch:full_name          (بدون رقم وصلاً — يظل مقيداً بالفرع، فالأسماء تتكرر)
-            #   🔧 الإصلاح: الهوية بلا فرع للمتطوع/رقم العضوية حتى يُدمج كل
-            #   مهام نفس الشخص (ولو في فروع مختلفة) في صف واحد ويُجمع ساعاته
-            #   جمعاً حقيقياً (M1=3h + M2=4h ⇒ 7h) بدل انقسامه على أكثر من صف.
-            # - عدد المهام = عدد المهمات الفعلية المتميزة للنفس الهوية
+            # - كل سطر مشاركة له مفتاح هوية جذري مركّب (identity key):
+            #     rid:branch:membership_number   (عنده رقم عضوية/صفة — مقيد بالفرع)
+            #     nm:branch:full_name            (بدون رقم — يظل مقيداً بالفرع، فالأسماء تتكرر)
+            #   🔧 الهوية = رقم العضوية + الفرع (رقم العضوية وحده ليس فريداً — قد يتكرر
+            #   عبر الفروع، فنفس الرقم في فرع مختلف هوية مختلفة وتُحسب منفصلة تماماً).
+            # - عدد المهام = عدد المهمات الفعلية المتميزة للنفس الهوية (لا تُعد المهمة مرتين)
             # - الساعات تُحسب من التواريخ الحقيقية للمهمة المكتملة (لا 0 ساعة بديلة)
             # - المهمة الحالية تُرجع ببيانها (id/كود/اسم) حتى نعرف في أي مهمة هو الآن
             # =========================================================================
@@ -3263,9 +3301,11 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                         mp.participant_position,
                         mp.volunteer_id,
                         mp.return_status,
+                        -- هوية المركّبة: رقم العضوية + الفرع (رقم العضوية وحده ليس فريداً —
+                        --   قد يتكرر عبر الفروع، فنفس الرقم في فرع مختلف هوية مختلفة).
                         CASE
-                            WHEN mp.volunteer_id IS NOT NULL THEN 'vid:' || mp.volunteer_id
-                            WHEN TRIM(COALESCE(mp.membership_number, '')) <> '' THEN 'rid:' || TRIM(mp.membership_number)
+                            WHEN TRIM(COALESCE(mp.membership_number, '')) <> ''
+                                 THEN 'rid:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.membership_number)
                             ELSE 'nm:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.full_name)
                         END AS k
                     FROM mission_participants mp
@@ -3310,54 +3350,29 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                         SUM(
                             GREATEST(
                                 EXTRACT(EPOCH FROM (
-                                    COALESCE(mps.end_dt, COALESCE(%s::timestamp, LOCALTIMESTAMP)) - mps.start_dt
+                                    (
+                                        COALESCE(
+                                            mps.end_dt,
+                                            -- الـ segment المفتوح (بلا end_dt): في مهمة مكتملة يُغلق عند
+                                            -- نهاية المهمة (لا يستمر حتى الآن)؛ في النشطة حتى الآن (إطار العميل).
+                                            CASE
+                                                WHEN m.status IN ('Completed', 'مكتملة')
+                                                THEN (COALESCE(m.completion_date, m.arrival_date, m.departure_date)
+                                                      + COALESCE(m.completion_time, m.arrival_time, '00:00'::time))
+                                                ELSE COALESCE(%s::timestamp, LOCALTIMESTAMP)
+                                            END
+                                        ) - mps.start_dt
+                                    )
                                 )) / 3600.0,
                                 0
                             )
                         ) AS hours
                     FROM mission_participant_sessions mps
                     JOIN mission_participants mp ON mp.participant_id = mps.participant_id
+                    JOIN missions m ON m.mission_id = mp.mission_id
                     JOIN ident i ON i.participant_id = mp.participant_id
                     WHERE mps.start_dt IS NOT NULL
                     GROUP BY i.k, mp.mission_id, mp.participant_id, mps.itinerary_group
-                ),
-                -- 🆕 ساعات اليوم الموروثة (مهمات مفتوحة بلا segments):
-                -- المشارك يخصَّص لأيام (mission_participant_itineraries)، ويرث زمن اليوم
-                -- المخصص = نافذة (آخر وصول − أول تحرك) لكل يوم ضمن خطوط سير المهمة.
-                -- مع التواريخ الكاملة (departure_date/arrival_date) يدعم المبيت overnight؛
-                -- وإذا لم تُسجَّل تواريخ بعد (قديم) يعود لحساب الأوقات فقط إن كانت موجودة.
-                inherited_hours AS (
-                    SELECT
-                        i.k,
-                        mpi.mission_id,
-                        mpi.itinerary_group,
-                        SUM(
-                            GREATEST(
-                                EXTRACT(EPOCH FROM (dw.window)) / 3600.0,
-                                0
-                            )
-                        ) AS hours
-                    FROM mission_participant_itineraries mpi
-                    JOIN mission_participants mp ON mp.participant_id = mpi.participant_id
-                    JOIN ident i ON i.participant_id = mp.participant_id
-                    JOIN (
-                        SELECT
-                            mission_id,
-                            group_title,
-                            CASE
-                                WHEN COUNT(departure_date) = COUNT(*) THEN
-                                    (MAX(arrival_date::timestamp + arrival_time) - MIN(departure_date::timestamp + departure_time))
-                                WHEN COUNT(*) > 0 AND COUNT(departure_date) = 0 THEN
-                                    (MAX(arrival_time) - MIN(departure_time))
-                                ELSE
-                                    (MAX(COALESCE(arrival_date, departure_date)::timestamp + arrival_time)
-                                     - MIN(COALESCE(departure_date, arrival_date)::timestamp + departure_time))
-                            END AS window
-                        FROM mission_itineraries
-                        WHERE arrival_time IS NOT NULL AND departure_time IS NOT NULL
-                        GROUP BY mission_id, group_title
-                    ) dw ON dw.mission_id = mpi.mission_id AND dw.group_title = mpi.itinerary_group
-                    GROUP BY i.k, mpi.mission_id, mpi.itinerary_group
                 ),
                 -- ⭐ fix #6: الحضور الفعلي يغلب الخطة — لو للهوية أي قطاعات في المهمة
                 --    (تحت أي مجموعة أو بلا مجموعة) فمجموعها هو الوحيد، بلا خليط مع نوافذ افتراضية.
@@ -3369,17 +3384,36 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     FROM explicit_hours eh
                     GROUP BY eh.k, eh.mission_id
                 ),
-                -- بلا قطاعات + تخصيص صريح ⇒ وراثة نوافذ المسارات المُسندة (خطة افتراضية)
+                -- بلا قطاعات + تخصيص صريح ⇒ الخطة الافتراضية من المسارات المُسندة.
+                -- fix #4: لكل يوم (departure_date) مدى «أول انطلاق → آخر وصول» عبر كل
+                -- المسارات المُسندة لذلك اليوم (لا الجمع بينها) ثم الجمع عبر الأيام:
+                -- مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (8س لا 9س).
+                -- NULL تواريخ (قديم) تُدمج في يوم واحد (bucket واحد) — معاملة نفس اليوم.
                 default_mix AS (
                     SELECT
-                        i.k,
-                        mpi.mission_id,
-                        SUM(COALESCE(ih.hours, 0)) AS hours
-                    FROM mission_participant_itineraries mpi
-                    JOIN mission_participants mp ON mp.participant_id = mpi.participant_id
-                    JOIN ident i ON i.participant_id = mp.participant_id
-                    LEFT JOIN inherited_hours ih ON ih.mission_id = mpi.mission_id AND ih.k = i.k AND ih.itinerary_group = mpi.itinerary_group
-                    GROUP BY i.k, mpi.mission_id
+                        k,
+                        mission_id,
+                        SUM(GREATEST(EXTRACT(EPOCH FROM win)/3600.0, 0)) AS hours
+                    FROM (
+                        SELECT
+                            i.k,
+                            i.mission_id,
+                            CASE
+                                WHEN COUNT(departure_date) = COUNT(*) THEN
+                                    (MAX(arrival_date::timestamp + arrival_time) - MIN(departure_date::timestamp + departure_time))
+                                WHEN COUNT(*) > 0 AND COUNT(departure_date) = 0 THEN
+                                    (MAX(arrival_time) - MIN(departure_time))
+                                ELSE
+                                    (MAX(COALESCE(arrival_date, departure_date)::timestamp + arrival_time)
+                                     - MIN(COALESCE(departure_date, arrival_date)::timestamp + departure_time))
+                            END AS win
+                        FROM ident i
+                        JOIN mission_participant_itineraries mpi ON mpi.participant_id = i.participant_id AND mpi.mission_id = i.mission_id
+                        JOIN mission_itineraries d ON d.mission_id = mpi.mission_id AND d.group_title = mpi.itinerary_group
+                        WHERE d.departure_time IS NOT NULL AND d.arrival_time IS NOT NULL
+                        GROUP BY i.k, i.mission_id, d.departure_date
+                    ) spans
+                    GROUP BY k, mission_id
                 ),
                 -- 🔧 المحرك الموحد: حساب ساعات كل مهمة بهوية البيانات لا بالتصنيف — المهمة
                 --    تُحسب مرة واحدة لكل هوية مهما تكرر تسجيل مشاركته فيها (#4):
@@ -3396,7 +3430,11 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                         MAX(CASE
                             WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
                             THEN CASE
-                                -- Completed missions always freeze (byte-identical with Python rule 3)
+                                -- ⭐ الحضور الفعلي مصدر الحقيقة — أي قطاعات (Join/Leave) ⇒ مجموعها،
+                                --    حتى لو اكتملت المهمة (الخطة لا تحلّ محل المشاركة الفعلية).
+                                --    (مطابق لـ compute_working_hours: الـ segments قبل التجميد)
+                                WHEN at.hours IS NOT NULL THEN at.hours
+                                -- Completed missions without actual segments freeze (byte-identical with Python)
                                 WHEN m.completion_date IS NOT NULL THEN GREATEST(
                                     EXTRACT(EPOCH FROM (
                                         (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
@@ -3404,8 +3442,7 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                                     )) / 3600.0,
                                     0
                                 )
-                                -- Active missions: actual segments → assigned-day defaults → live mission window
-                                WHEN at.hours IS NOT NULL THEN at.hours
+                                -- Active missions: assigned-day defaults → live mission window
                                 WHEN dm.hours IS NOT NULL THEN dm.hours
                                 ELSE GREATEST(
                                     EXTRACT(EPOCH FROM (
