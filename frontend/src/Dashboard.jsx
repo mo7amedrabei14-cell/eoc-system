@@ -2149,7 +2149,8 @@ function HomeView({ branches = [], theme = 'dark' }) {
   const filteredNews = selectedBranchName ? news.filter(n => n.governorate === filterNewsGov) : news;
 
   const dailyMissions = filterDate ? filteredMissions.filter(m => {
-    const mDate = m.exit_date && m.exit_date !== '-' ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : '');
+    // 🆕 التاريخ المعياري لتجميع/تصفية يومية المهمة هو «تاريخ إنشاء المهمة» (creation_datetime)
+    const mDate = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
     return mDate === filterDate;
   }) : filteredMissions;
   const dailyNews = filterDate ? filteredNews.filter(n => n.incident_date === filterDate) : filteredNews;
@@ -2176,7 +2177,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
   const liveActive = missions.filter(m => !['Completed', 'Cancelled'].includes(m.status)).length;
   const liveOpen = missions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
   const latestMissions = [...missions]
-    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+    .sort((a, b) => String(b.creation_datetime || b.created_at || '').localeCompare(String(a.creation_datetime || a.created_at || '')))
     .slice(0, 5);
   const liveClock = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
   const liveDate = `${now.toLocaleDateString('ar-EG', { weekday: 'long' })}، ${formatDateTime(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`)}`;
@@ -2535,6 +2536,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [beneficiaries, setBeneficiaries] = useState([{ id: 1 }]);
   // 🆕 نافذة انضمام / تسجيل انفصال (segment dialog) — قطاعات الدخول/الخروج (#3)
   const [segmentDialog, setSegmentDialog] = useState(null); // { mode: 'join'|'leave', participantId }
+  // 🆕 حالة المشاركة المسودة (Draft): انضمام/انفصال قبل إرسال المهمة يُخزَّن محلياً
+  //    فقط (بلا auto-save — لا POST ولا إنشاء مهمة)، ويُدفع للسيرفر عند الحفظ/الإنشاء
+  //    الصريح عبر `flushPendingSegments`. «مسودة المهمة = مسودة المشاركة وقابلة للتعديل».
+  const [pendingSegments, setPendingSegments] = useState([]); // [{ key, role, branch, action: 'join'|'leave', dt }]
   // 🛡️ قفل تقديم الانضمام/الانفصال ضد النقر المزدوج (يُغلق فراغ إعادة الرسم قبل isSubmitting)
   const segmentSubmitLockRef = useRef(false);
   // fix #1: عند تسجيل انضمام/انفصال أثناء إنشاء الاستمارة، نحفظ المهمة أولاً (auto-persist)
@@ -2746,11 +2751,25 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const removeBeneficiary = (id) => setBeneficiaries(beneficiaries.filter(b => b.id !== id));
 
   // 🆕 انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (لا نافذة فترات يدوية)
+  // ⚖️ دورة الحياة: «مسودة المهمة = مسودة المشاركة». الانضمام/الانفصال أثناء المسودة
+  //    قابل للتعديل، ولا يُقفل إلا بالانتقال العام للمهمة خارج المسودة (إرسال/مراجعة).
+  //    قبل إنشاء المهمة: حالة محلية فقط (بلا auto-save وبلا POST) تُدفع عند الحفظ الصريح.
   const openSegmentDialog = (mode, p) => {
-    // fix #1: متاح أثناء إنشاء/تعبئة الاستمارة — لا نحتاج مهمة محفوظة مسبقاً؛
-    // عند الإرسال يُحفظ المشارك/المهمة تلقائياً قبل تسجيل القطاع.
+    // fix #1: متاح أثناء إنشاء/تعبئة الاستمارة — لا نحتاج مهمة محفوظة مسبقاً.
     if (!(p.full_name || '').trim()) return setCustomAlert("أضف اسم المشارك أولاً لتسجيل الانضمام أو الانفصال.");
     setSegmentDialog({ mode, participantId: p.id });
+  };
+  // فقط «الوقت» من قيمة YYYY-MM-DD HH:MM(:SS) — للعرض تحت الزر بصيغة 12 ساعة
+  const timePartOf = (v) => { const s = String(v || '').trim(); const parts = s.split(' '); return (parts.length > 1 ? parts[parts.length - 1] : s).slice(0, 5); };
+  // مؤخرة زمن الانضمام/الانفصال المسجَّل لمشارك (محلي مسودة أولاً ثم السيرفر)
+  const recordedTimeOf = (p, action) => {
+    const recs = p?.participation_periods || [];
+    if (action === 'join') {
+      const src = p?._draftJoin || [...recs].reverse().find(s => s.start_dt)?.start_dt;
+      return src ? { date: String(src).split(' ')[0], time: timePartOf(src) } : null;
+    }
+    const src = p?._draftLeave || [...recs].reverse().find(s => s.end_dt)?.end_dt;
+    return src ? { date: String(src).split(' ')[0], time: timePartOf(src) } : null;
   };
   const submitSegmentAction = async (mode) => {
     if (!segmentDialog) return;
@@ -2761,56 +2780,95 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const token = localStorage.getItem('access_token');
       const nowD = new Date();
       const clientNow = `${nowD.toLocaleDateString('sv')} ${nowD.toTimeString().slice(0, 5)}`;
-      let missionId = currentMissionData?.mission_id;
-      let pid = target?.participant_id;
-
-      // fix #1: أثناء إنشاء/تعبئة الاستمارة — إن لم تُحفظ المهمة/المشارك بعد، نُحفظهما أولاً
-      // (auto-persist) دون إغلاق المودال، ثم نكمل تسجيل الانضمام/الانفصال بمعرف المشارك الفعلي.
-      if (!missionId || !pid) {
-        if (!(target?.full_name || '').trim()) { setCustomAlert("أضف اسم المشارك أولاً."); return; }
-        setIsSubmitting(true);
-        persistKeepOpenRef.current = true;
-        let saved;
-        try { saved = await handleSubmit('Draft'); }
-        finally { persistKeepOpenRef.current = false; }
-        if (!saved?.ok || !saved.mission_id) return; // أخطاء التحقق/الحفظ ظهرت من handleSubmit نفسها
-        missionId = saved.mission_id;
-        // إعادة جلب التفاصيل للحصول على الـ participant_id الفعلي للمشارك المحفوظ
-        const dres = await fetch(`${BASE}/api/missions/${missionId}?client_now=${encodeURIComponent(clientNow)}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        const details = dres.ok ? await dres.json() : null;
-        if (details) {
-          setCurrentMissionData(details);
-          setParticipants((details.participants || []).map((pp, i) => ({ id: i, ...pp })));
-        }
-        const idx = participants.findIndex(pp => pp.id === segmentDialog.participantId);
-        const mnum = String(document.getElementById(`p_role_${idx}`)?.value || '').trim().toLowerCase();
-        const nameKey = (target?.full_name || '').trim().toLowerCase();
-        const matched = (details?.participants || []).find(pp =>
-          (mnum && pp.membership_number && String(pp.membership_number).trim().toLowerCase() === mnum) ||
-          (!mnum && (pp.full_name || '').trim().toLowerCase() === nameKey)
-        );
-        pid = matched?.participant_id;
-        if (!pid) { setCustomAlert("تعذّر تحديد المشارك المحفوظ — أعد فتح الاستمارة وحاول مرة أخرى."); return; }
-      }
+      const missionId = currentMissionData?.mission_id;
+      const pid = target?.participant_id;
 
       const dateVal = document.getElementById('sd_date')?.value || '';
       const timeVal = document.getElementById('sd_time')?.value || '';
       if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
       const dt = `${dateVal} ${timeVal}`;
-      // fix #1: لا نرسل itinerary_group — المسارات تُضبط من جدول المشاركين فقط.
-      // fix #3: نرسل ساعة العميل المحلية كإطار زمني للتحقق من «المستقبل» (نفس إطار البيانات).
+
+      // ── مسودة بلا مهمة محفوظة: حالة محلية فقط — بلا auto-save وبلا POST وبلا إنشاء ──
+      if (!missionId || !pid) {
+        if (!(target?.full_name || '').trim()) { setCustomAlert("أضف اسم المشارك أولاً."); return; }
+        const idx = participants.findIndex(pp => pp.id === segmentDialog.participantId);
+        const role = String(document.getElementById(`p_role_${idx}`)?.value || '').trim().toLowerCase();
+        const branch = document.getElementById(`p_branch_${idx}`)?.value || '19';
+        const key = `${role}|${branch}`;
+        // عرض فوري تحت الزر (المسودة — قابل للتعديل ولا يُقفل)
+        setParticipants(list => list.map((pp, i) =>
+          i === idx ? { ...pp, [mode === 'join' ? '_draftJoin' : '_draftLeave']: dt } : pp));
+        // تخزين الحالة المسودة (بلا إرسال) — تُدفع للسيرفر عند الحفظ/الإنشاء الصريح فقط
+        setPendingSegments(prev => [
+          ...prev.filter(s => !(s.key === key && s.action === mode)),
+          { key, role, branch, action: mode, dt }
+        ]);
+        setSegmentDialog(null);
+        setCustomAlert(mode === 'join'
+          ? `✅ سُجّل انضمام مسودة لـ ${target?.full_name || 'المشارك'} — الزمن: ${formatDateTime(dt)}\n(يُحفظ مع المهمة عند إنشائها/حفظها)`
+          : `✅ سُجّل انفصال مسودة لـ ${target?.full_name || 'المشارك'} — الزمن: ${formatDateTime(dt)}\n(يُحفظ مع المهمة عند إنشائها/حفظها)`);
+        return;
+      }
+
+      // ── مهمة مُحفوظة: نُرسل/نعدّل عبر السيرفر (المسودة فقط قابلة للتعديل) ──
+      const periods = target?.participation_periods || [];
+      const missionStatus = currentMissionData?.status;
+      const isDraft = !missionStatus || missionStatus === 'Draft';
+      const openSeg = periods.find(s => !s.end_dt);
       setIsSubmitting(true);
-      const body = mode === 'join'
-        ? { participant_id: pid, join_datetime: dt, client_now: clientNow }
-        : { participant_id: pid, leave_datetime: dt, client_now: clientNow };
-      const url = `${BASE}/api/missions/${missionId}/${mode === 'join' ? 'join' : 'leave'}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setCustomAlert(`🚫 ${data.detail || 'فشل العملية — حاول مرة أخرى.'}`); return; }
+      try {
+        const patchSession = async (sessionId, action) => {
+          const r = await fetch(`${BASE}/api/missions/${missionId}/sessions/${sessionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action, dt, client_now: clientNow })
+          });
+          if (!r.ok) { const d = await r.json().catch(() => ({})); setCustomAlert(`🚫 ${d.detail || 'فشل تعديل المشاركة'}`); return false; }
+          return true;
+        };
+        const postAction = async (action) => {
+          const body = action === 'join'
+            ? { participant_id: pid, join_datetime: dt, client_now: clientNow }
+            : { participant_id: pid, leave_datetime: dt, client_now: clientNow };
+          const r = await fetch(`${BASE}/api/missions/${missionId}/${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(body)
+          });
+          if (!r.ok) { const d = await r.json().catch(() => ({})); setCustomAlert(`🚫 ${d.detail || 'فشل العملية — حاول مرة أخرى.'}`); return false; }
+          return true;
+        };
+        if (mode === 'join') {
+          if (openSeg && isDraft) {
+            // تعديل زمن انضمام مسجّل — تُحدَّث الشريحة نفسها في مكانها (لا حذف+إنشاء)
+            if (!(await patchSession(openSeg.session_id, 'join'))) return;
+          } else if (openSeg) {
+            setCustomAlert("المهمة خرجت من المسودة — لا يمكن تعديل الانضمام."); return;
+          } else if (isDraft) {
+            // انضمام جديد (أو بعد انفصال — دورة مشاركة جديدة مستقلة)
+            if (!(await postAction('join'))) return;
+          } else {
+            setCustomAlert("المهمة خرجت من المسودة — لا يمكن إضافة انضمام جديد."); return;
+          }
+        } else {
+          // mode === 'leave'
+          const lastClosed = [...periods].reverse().find(s => s.end_dt);
+          if (openSeg) {
+            // إغلاق الحضور المفتوح الحالي بزمن الانفصال (يُغلق الشريحة المفتوحة نفسها)
+            if (!(await postAction('leave'))) return;
+          } else if (lastClosed && isDraft) {
+            // تعديل زمن انفصال مسجّل — تُحدَّث end_dt في مكانها (مطابقة نفس الشريحة)
+            if (!(await patchSession(lastClosed.session_id, 'leave'))) return;
+          } else if (lastClosed) {
+            setCustomAlert("المهمة خرجت من المسودة — لا يمكن تعديل الانفصال."); return;
+          } else if (isDraft) {
+            // لا حضور مفتوح ولا سجل سابق — انفصال من بداية المشاركة (مسار الإرث)
+            if (!(await postAction('leave'))) return;
+          } else {
+            setCustomAlert("المهمة خرجت من المسودة — لا يمكن تسجيل انفصال."); return;
+          }
+        }
+      } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); return; }
       setSegmentDialog(null);
       setCustomAlert(mode === 'join'
         ? `✅ تم تسجيل انضمام ${target?.full_name || 'المشارك'}\nالبداية: ${formatDateTime(dt)}`
@@ -2818,6 +2876,34 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       await handleViewMission(missionId); // تحديث الحالة والساعات من السيرفر
     } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); }
     finally { setIsSubmitting(false); segmentSubmitLockRef.current = false; }
+  };
+  // 🆕 دفع المشاركات المسودة للسيرفر بعد إنشاء/حفظ المهمة الصريح — بأزمنتها الدقيقة،
+  //    مرتبطة بهوية المشارك (رقم العضوية + الفرع)، بلا تكرار/فقدان، وبلا إعادة التقسيم.
+  const flushPendingSegments = async (missionId, token) => {
+    if (!missionId || pendingSegments.length === 0) return { ok: true };
+    const url = `${BASE}/api/missions/${missionId}?client_now=${encodeURIComponent(clientNowLocal())}`;
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = res.ok ? await res.json() : null;
+    if (!data) return { ok: false };
+    // تُعاد بترتيبها الزمني الفعلي (فقط انضمامات ثم انفصالات لكل مشارك — بلا خلط)
+    const ordered = [...pendingSegments].sort((a, b) => String(a.dt).localeCompare(String(b.dt)));
+    let ok = true;
+    for (const seg of ordered) {
+      const matched = (data.participants || []).find(pp =>
+        (seg.role ? String(pp.membership_number || '').trim().toLowerCase() === seg.role : false) &&
+        String(pp.branch_id ?? '') === String(seg.branch));
+      if (!matched) { ok = false; continue; }
+      const body = seg.action === 'join'
+        ? { participant_id: matched.participant_id, join_datetime: seg.dt, client_now: clientNowLocal() }
+        : { participant_id: matched.participant_id, leave_datetime: seg.dt, client_now: clientNowLocal() };
+      const r = await fetch(`${BASE}/api/missions/${missionId}/${seg.action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) ok = false;
+    }
+    return { ok };
   };
 
   // 🔧 اختيار أيام/خطوط متعددة — أي مهمة لها مجموعات
@@ -3062,7 +3148,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     csvContent += "البيانات الأساسية\nاسم المهمة,تصنيف المهمة,التمركز,نوع المهمة,مكان المهمة,مسؤول المهمة,تاريخ الإنشاء,مصدر البلاغ\n";
     csvContent += `${escapeCSV(document.getElementById('f_mission_name')?.value)},${escapeCSV(document.getElementById('f_mission_class')?.value)},${escapeCSV(getSelectedOptionSourceText(document.getElementById('f_branch_id')))},${escapeCSV(document.getElementById('f_mission_type')?.value)},${escapeCSV(document.getElementById('f_mission_location')?.value)},${escapeCSV(document.getElementById('f_responsible_person')?.value)},${escapeCSV(formatDateTime(document.getElementById('f_creation_date')?.value))},${escapeCSV(document.getElementById('f_data_source')?.value)}\n\n`;
     csvContent += "التواريخ والتوقيتات\nتاريخ المهمة,تاريخ الخروج,تاريخ الوصول,تاريخ العودة,تاريخ الانتهاء,ساعة البدء,ساعة التحرك,ساعة الوصول,ساعة الانتهاء\n";
-    csvContent += `${escapeCSV(formatDateTime(document.getElementById('f_exit_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_departure_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_arrival_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_return_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_completion_date')?.value))},${escapeCSV(document.getElementById('f_start_time')?.value)},${escapeCSV(document.getElementById('f_departure_time')?.value)},${escapeCSV(document.getElementById('f_arrival_time')?.value)},${escapeCSV(document.getElementById('f_completion_time')?.value)}\n\n`;
+    csvContent += `${escapeCSV(formatDateTime(document.getElementById('f_exit_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_departure_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_arrival_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_return_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_completion_date')?.value))},${escapeCSV(formatTime12(document.getElementById('f_start_time')?.value))},${escapeCSV(formatTime12(document.getElementById('f_departure_time')?.value))},${escapeCSV(formatTime12(document.getElementById('f_arrival_time')?.value))},${escapeCSV(formatTime12(document.getElementById('f_completion_time')?.value))}\n\n`;
     csvContent += "خطوط السير المجمعة\nالمجموعة,من,إلى (الوجهة),تاريخ التحرك,ساعة التحرك,تاريخ الوصول,ساعة الوصول\n";
     routes.forEach((_, i) => {
       const from = document.getElementById(`r_from_main_${i}`)?.value;
@@ -3070,9 +3156,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const depVal = document.getElementById(`r_dep_main_${i}`)?.value || '';
       const arrVal = document.getElementById(`r_arr_main_${i}`)?.value || '';
       const depDate = formatDateTime(depVal.split('T')[0] || '');
-      const depTime = depVal.split('T')[1] || '';
+      const depTime = formatTime12(depVal.split('T')[1] || '');
       const arrDate = formatDateTime(arrVal.split('T')[0] || '');
-      const arrTime = arrVal.split('T')[1] || '';
+      const arrTime = formatTime12(arrVal.split('T')[1] || '');
       if (from || to) csvContent += `خط السير الأساسي,${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(depDate)},${escapeCSV(depTime)},${escapeCSV(arrDate)},${escapeCSV(arrTime)}\n`;
     });
     customItineraries.forEach((ci, ciIndex) => {
@@ -3082,9 +3168,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         const depVal = document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || '';
         const arrVal = document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || '';
         const depDate = formatDateTime(depVal.split('T')[0] || '');
-        const depTime = depVal.split('T')[1] || '';
+        const depTime = formatTime12(depVal.split('T')[1] || '');
         const arrDate = formatDateTime(arrVal.split('T')[0] || '');
-        const arrTime = arrVal.split('T')[1] || '';
+        const arrTime = formatTime12(arrVal.split('T')[1] || '');
         if (from || to) csvContent += `${escapeCSV(ci.title)},${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(depDate)},${escapeCSV(depTime)},${escapeCSV(arrDate)},${escapeCSV(arrTime)}\n`;
       });
     });
@@ -3352,6 +3438,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          }
          fetchMissions();
          const rd = await res.json().catch(() => ({}));
+         // 🆕 دعم المشاركات المسودة المحلية: بعد الحفظ/الإنشاء الصريح — تُدفع انضمامات/
+         //    انفصالات المسودة للسيرفر بأزمنتها الدقيقة، وترتبط بالمهمة الجديدة. إن فشل
+         //    الإرسال نفسه نُبقيها (لا تُمسح أبداً — متاحة لإعادة المحاولة).
+         const savedId = rd.mission_id || currentMissionData?.mission_id;
+         if (savedId && pendingSegments.length > 0) {
+           const flushRes = await flushPendingSegments(savedId, token);
+           if (flushRes.ok) setPendingSegments([]);
+           else setCustomAlert('⚠️ أُنهيت مسودة المهمة لكن بعض الانضمام/الانفصال المسودة لم يُدفع للسيرفر — أعد فتح المهمة وحاول حفظها مرة أخرى (لن تُفقد البيانات).');
+         }
          return { ok: true, mission_id: rd.mission_id };
        } else {
          // Error: keep the idempotency key for retry (idempotent if server actually committed)
@@ -3405,10 +3500,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     if (filterDate) {
        baseMissions = baseMissions.filter(m => {
-          const missionDate = m.exit_date !== '-' && m.exit_date ? m.exit_date : (m.created_at ? String(m.created_at).split(' ')[0] : '');
+          // 🆕 التاريخ المعياري لتجميع/تصفية سجل المهام هو «تاريخ/وقت إنشاء المهمة» (creation_datetime)
+          //    وليس تاريخ المهمة التشغيلي (exit_date). fallback: created_at (قديم بلا تاريخ إنشاء).
+          const creationDate = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
           const isOpenActive = m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status);
           if (isOpenActive) return true;
-          return missionDate === filterDate;
+          return creationDate === filterDate;
        });
     }
 
@@ -3984,18 +4081,30 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </EocSelect>
                           </td>
 
-                          {/* إجراءات انضمام / انفصال — القطاعات تُدار عبر السيرفر */}
+                          {/* إجراءات انضمام / انفصال — القطاعات تُدار عبر السيرفر.
+                              ⚖️ «مسودة المهمة = مسودة المشاركة»: الانضمام/الانفصال قابل للتعديل
+                              (الزمن يظهر تحت الزر مباشرة بصيغة 12 ساعة) ولا يُقفل إلا بخروج
+                              المهمة من المسودة (إرسال/مراجعة عام) — ثم 🔒 لا يُمس. */}
                           <td className="p-2 text-center">
-                            {/* fix #1/#2/#3: متاح أثناء إنشاء الاستمارة (لا يُقيَّد بوجود مهمة محفوظة).
-                                يعتمد على الحالة الفعلية: نشط ⇒ انفصال فقط؛ غير نشط ⇒ انضمام فقط. */}
                             {(() => {
-                              const isActive = p.status === 'مازال بالمهمة' || (p.participation_periods || []).some(s => !s.end_dt);
+                              const periods = p.participation_periods || [];
+                              const isDraft = !currentMissionData || currentMissionData.status === 'Draft';
+                              const isLocked = !isDraft;
                               const hasName = !!(p.full_name || '').trim();
+                              const joinT = p._draftJoin || [...periods].reverse().find(s => s.start_dt)?.start_dt || null;
+                              const leaveT = p._draftLeave || [...periods].filter(s => s.end_dt).pop()?.end_dt || null;
                               return (
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={!hasName || isActive} title={!hasName ? 'أضف اسم المشارك أولاً' : (isActive ? 'المشارك ملتحق حالياً — سجّل انفصاله أولاً' : 'تسجيل انضمام جديد (يبدأ شريحة مشاركة جديدة)')} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
-                                  <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={!hasName || !isActive} title={!hasName ? 'أضف اسم المشارك أولاً' : (!isActive ? 'لا يوجد حضور مفتوح لتسجيل الانفصال' : 'تسجيل انفصال (يُغلق شريحة المشاركة الحالية)')} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
-                                </div>
+                                <>
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={!hasName || isLocked} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (joinT ? 'تعديل زمن الانضمام المسجّل (مسودة)' : 'تسجيل انضمام جديد (يبدأ شريحة مشاركة)'))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
+                                    <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={!hasName || isLocked} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (leaveT ? 'تعديل زمن الانفصال المسجّل (مسودة)' : 'تسجيل انفصال'))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
+                                  </div>
+                                  {/* الزمن المسجَّل تحت الزر مباشرة — 12 ساعة؛ قابل للنقر للتعديل في المسودة */}
+                                  <div className="flex flex-col items-center gap-0.5 mt-1 min-h-[26px] justify-center">
+                                    {joinT && <button type="button" onClick={() => !isLocked && openSegmentDialog('join', p)} disabled={isLocked} title={isLocked ? 'زمن الانضمام المجمّد' : 'تعديل زمن الانضمام'} className="text-[10px] font-bold text-green-400 hover:underline disabled:opacity-100 disabled:cursor-default">{formatTime12(timePartOf(joinT))}{isLocked ? ' 🔒' : ''}</button>}
+                                    {leaveT && <button type="button" onClick={() => !isLocked && openSegmentDialog('leave', p)} disabled={isLocked} title={isLocked ? 'زمن الانفصال المجمّد' : 'تعديل زمن الانفصال'} className="text-[10px] font-bold text-[var(--accent)] hover:underline disabled:opacity-100 disabled:cursor-default">{formatTime12(timePartOf(leaveT))}{isLocked ? ' 🔒' : ''}</button>}
+                                  </div>
+                                </>
                               );
                             })()}
                           </td>
@@ -4007,28 +4116,36 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              {/* ✅ نافذة انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (#3) */}
+              {/* ✅ نافذة انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (#3).
+                  مسودة المهمة = مسودة المشاركة: عند وجود زمن مسجّل يُفتح المودال مُعبأً
+                  مسبقاً به (تعديل في مكانه — لا حذف+إنشاء)، وزر التأكيد يتحول إلى «تعديل». */}
               {segmentDialog && (() => {
                 const isJoin = segmentDialog.mode === 'join';
                 const target = participants.find(pp => pp.id === segmentDialog.participantId) || {};
                 // fix #3: التاريخ/الوقت الافتراضيان بساعة العميل المحلية (نفس إطار الـ JOIN/LEAVE)
-                const today = new Date().toLocaleDateString('sv'); // YYYY-MM-DD محلي
-                const nowTime = new Date().toTimeString().slice(0, 5);
+                const existing = recordedTimeOf(target, isJoin ? 'join' : 'leave'); // {date,time} أو null
+                const today = existing ? existing.date : new Date().toLocaleDateString('sv'); // YYYY-MM-DD محلي
+                const nowTime = existing ? existing.time : new Date().toTimeString().slice(0, 5);
+                const isEdit = !!existing;
                 return (
                   <div className="fixed inset-0 z-[222] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
                     <div className="w-full max-w-md card-surface rounded-2xl shadow-2xl border border-[var(--border-strong)] overflow-hidden animate-fade-in-up">
                       <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-3)]">
                         <h3 className="font-bold text-white flex items-center gap-2">
                           <span className={isJoin ? 'text-green-400' : 'text-[var(--accent)]'}>{isJoin ? '📥' : '📤'}</span>
-                          {isJoin ? 'انضمام' : 'تسجيل الانفصال'} — {target.full_name || 'مشارك'}
+                          {isJoin ? (isEdit ? 'تعديل الانضمام' : 'تسجيل انضمام') : (isEdit ? 'تعديل الانفصال' : 'تسجيل الانفصال')} — {target.full_name || 'مشارك'}
                         </h3>
                         <button onClick={() => setSegmentDialog(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
                       </div>
                       <div className="p-5">
                         <p className="text-xs text-[var(--faint)] mb-4 leading-relaxed">
-                          {isJoin
-                            ? 'تُسجَّل قطعة مشاركة جديدة تبدأ من التاريخ والوقت أدناه. الساعات السابقة (القيمة الافتراضية من خطة السير) تبقى كما هي.'
-                            : 'يُسجَّل انفصال عن المهمة من التاريخ والوقت أدناه. إن لم يكن هناك انضمام مفتوح، تُحسب الفترة من بداية اليوم تلقائياً.'}
+                          {isEdit
+                            ? (isJoin
+                              ? 'سينعكس الزمن الجديد فوراً في السجل المسجّل (عبر تحديث الشريحة نفسها — لا يتفرّع قطاع مكرر).'
+                              : 'سينعكس الزمن الجديد فوراً في سجل الانفصال (تحديث الشريحة نفسها في مكانها).')
+                            : (isJoin
+                              ? 'تُسجَّل قطعة مشاركة جديدة تبدأ من التاريخ والوقت أدناه.'
+                              : 'يُسجَّل انفصال عن المهمة من التاريخ والوقت أدناه.')}
                         </p>
                         {/* fix #1: لا اختيار خط سير هنا — JOIN/LEAVE للتاريخ/الوقت الفعلي فقط.
                             تخصيص المسارات يتم حصرياً من جدول المشاركين (محدد الأيام). */}
@@ -4046,7 +4163,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--border)] bg-[var(--surface-3)]">
                         <button onClick={() => setSegmentDialog(null)} className="text-xs text-[var(--muted-2)] hover:text-white underline">إلغاء</button>
                         <button onClick={() => submitSegmentAction(segmentDialog.mode)} className={`text-white font-bold px-6 py-2 rounded-xl text-xs hover:opacity-90 ${isJoin ? 'bg-green-500 hover:bg-green-600' : 'bg-[var(--accent)] hover:bg-[var(--accent-soft)]'}`}>
-                          {isSubmitting ? 'جاري الحفظ...' : (isJoin ? 'تسجيل الانضمام' : 'تسجيل الانفصال')}
+                          {isSubmitting ? 'جاري الحفظ...' : (isEdit ? 'تعديل' : (isJoin ? 'تسجيل الانضمام' : 'تسجيل الانفصال'))}
                         </button>
                       </div>
                     </div>
@@ -4337,7 +4454,7 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
   //    الذي يتبع لغة المتصفح/نظام التشغيل ولا يمكن التحكم به) — يعرض دائماً
   //    DD/MM/YYYY في الحقل وفي نافذة التقويم المنبثقة، بغضّ النظر عن إعدادات المتصفح.
 
-  // ISO (YYYY-MM-DD أو YYYY-MM-DDTHH:MM) → DD/MM/YYYY (أو DD/MM/YYYY HH:MM)
+  // ISO (YYYY-MM-DD أو YYYY-MM-DDTHH:MM) → DD/MM/YYYY (أو DD/MM/YYYY HH:MM AM/PM)
   function isoToDmy(iso, t) {
     if (!iso) return '';
     const s = String(iso).trim();
@@ -4345,7 +4462,8 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
     if (!m) return s;
     const [, yy, mo, dd, hh, mm] = m;
     const datePart = `${dd.padStart(2, '0')}/${mo.padStart(2, '0')}/${yy}`;
-    return hh !== undefined ? `${datePart} ${hh.padStart(2, '0')}:${mm}` : datePart;
+    // 12 ساعة إلزامياً في العرض: HH:MM AM/PM — لا تسرّب 24 ساعة في أي حقل تاريخ+وقت
+    return hh !== undefined ? `${datePart} ${formatTime12(`${hh.padStart(2, '0')}:${mm}`)}` : datePart;
   }
   // DD/MM/YYYY (أو + HH:MM) → ISO
   function dmyToIso(dmy, t) {
@@ -4815,7 +4933,9 @@ const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled
             <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
             <span className="text-lg font-bold text-[var(--ink-2)]" dir="ltr">{clock ? to12Display(clock) : '--:--'}</span>
           </div>
-          <div className="flex items-start justify-center gap-2">
+          <div className="flex items-start justify-center gap-2" dir="ltr">
+            {/* dir="ltr" داخلي فقط داخل منتقي الوقت: يثبّت ترتيب الأعمدة
+                [ساعات] : [دقائق] [الفترة] دائماً من اليسار لليمين بلا تأثير على RTL العام */}
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
               <TimeWheel items={HOURS} value={hh12}

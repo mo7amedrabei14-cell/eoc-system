@@ -545,6 +545,13 @@ class LeaveRequest(BaseModel):
     leave_datetime: str                     # "YYYY-MM-DD HH:MM" كاملة
     client_now: Optional[str] = None        # ساعة العميل المحلية — الإطار المرجعي لزمن التسجيل
 
+class SessionEditRequest(BaseModel):
+    """تعديل زمن انضمام/انفصال مسجَّل داخل مهمة مسودة (Draft) — يُحدَّث في مكانه:
+    لا حذف + إعادة إنشاء (تجنّب فقد البيانات لو فشل الاستبدال)."""
+    action: str                             # "join" → يحدّث start_dt؛ "leave" → يحدّث end_dt
+    dt: str                                 # "YYYY-MM-DD HH:MM" كاملة (الزمن الجديد الدقيق)
+    client_now: Optional[str] = None        # ساعة العميل المحلية — إطار التحقق من «المستقبل»
+
 class BeneficiaryModel(BaseModel):
     category_name: str
     direct_count: int
@@ -1150,14 +1157,16 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
             """
             
             if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"]:
-                query = base_query + " ORDER BY m.created_at DESC;"
+                # 🆕 التاريخ المعياري لترتيب سجل المهام هو «تاريخ/وقت إنشاء المهمة» (creation_datetime)
+                #    — لا «تاريخ المهمة» (exit_date) ولا created_at. fallback: created_at (قديم بلا تاريخ إنشاء)
+                query = base_query + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
                 cursor.execute(query)
             else:
                 user_branches = get_user_branches(user_id)
                 branch_ids = [b["branch_id"] for b in user_branches]
                 if not branch_ids: return []
                 # 💡 الإصلاح الأول: استخدام = ANY(%s) بدل IN %s
-                query = base_query + " WHERE m.branch_id = ANY(%s) ORDER BY m.created_at DESC;"
+                query = base_query + " WHERE m.branch_id = ANY(%s) ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
                 cursor.execute(query, (branch_ids,))
                 
             rows = cursor.fetchall()
@@ -2091,6 +2100,137 @@ def mission_leave(
         connection.close()
 
 
+@app.patch("/api/missions/{mission_id}/sessions/{session_id}")
+def edit_draft_session(
+    mission_id: int,
+    session_id: int,
+    data: SessionEditRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """تعديل زمن انضمام/انفصال مسجَّل (Draft فقط) — يُحدَّث الشريحة نفسها في مكانها.
+    متاح فقط ما دامت المهمة مسودة (Draft): «مسودة المهمة = مسودة المشاركة».
+    بمجرد خروج المهمة من المسودة (إرسال عام/مراجعة) يُرفض التعديل — لا يُمس
+    التاريخ المُجرى نهائياً. لا حذف + إعادة إنشاء: يُحافَظ على نفس session_id."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+
+    if data.action not in ("join", "leave"):
+        raise HTTPException(status_code=400, detail="action يجب أن يكون 'join' أو 'leave'")
+    new_dt = parse_dt_input(data.dt)
+    if not new_dt:
+        raise HTTPException(status_code=400, detail="الزمن الجديد غير صالح (الصيغة المتوقعة: YYYY-MM-DD HH:MM)")
+    now_ref = parse_dt_input(data.client_now) or datetime.now()
+    validate_segment_datetime(new_dt, now=now_ref)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # المهمة يجب أن تكون مسودة — القفل مُعلَّق على الانتقال العام لا على الزر
+            cursor.execute("SELECT status FROM missions WHERE mission_id = %s", (mission_id,))
+            mrow = cursor.fetchone()
+            if not mrow:
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+            if mrow[0] not in ('Draft',):
+                raise HTTPException(status_code=403, detail="لا يمكن تعديل المشاركة بعد خروج المهمة من المسودة — السجل المجرى نهائي")
+
+            # الشريحة تنتمي فعلاً لهذه المهمة/مشارك نشط
+            cursor.execute(
+                "SELECT s.session_id, s.start_dt, s.end_dt, mp.full_name, s.itinerary_group "
+                "FROM mission_participant_sessions s "
+                "JOIN mission_participants mp ON mp.participant_id = s.participant_id AND s.mission_id = %s "
+                "WHERE s.session_id = %s AND s.mission_id = %s AND mp.roster_active = true",
+                (mission_id, session_id, mission_id),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="الشريحة غير موجودة ضمن هذه المهمة")
+            _sid, _cur_start, _cur_end, participant_name, itinerary_group = row
+
+            if data.action == "join":
+                # تحديث زمن الانضمام: start_dt + session_date + check_in_time معاً
+                cursor.execute(
+                    "UPDATE mission_participant_sessions SET start_dt = %s, session_date = %s, check_in_time = %s WHERE session_id = %s",
+                    (new_dt, new_dt.date(), new_dt.time(), session_id),
+                )
+            else:
+                # تحديث زمن الانفصال: end_dt + check_out_time
+                cursor.execute(
+                    "UPDATE mission_participant_sessions SET end_dt = %s, check_out_time = %s WHERE session_id = %s",
+                    (new_dt, new_dt.time(), session_id),
+                )
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "تعديل مشاركة", mission_id=mission_id,
+                    entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"تعديل {('انضمام' if data.action == 'join' else 'انفصال')} {participant_name or ''} في مهمة مسودة إلى {data.dt}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم تحديث المشاركة في مكانها", "session_id": session_id, "action": data.action}
+    except HTTPException:
+        connection.rollback()
+        raise  # 400/403/404 تُمرَّر كما هي (لا تُغلَّف إلى 500)
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء تعديل المشاركة: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.delete("/api/missions/{mission_id}/sessions/{session_id}")
+def remove_draft_session(
+    mission_id: int,
+    session_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """حذف شريحة انضمام/انفصال مسجَّلة (Draft فقط) — يُستخدم عندما يلغي المستخدم أحد
+    السجلات المسودة (مثلاً يلغي انضماماً قبل إرسال المهمة). بمجرد خروج المهمة من
+    المسودة يُرفض الحذف — السجل المجرى نهائي (immunable)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status FROM missions WHERE mission_id = %s", (mission_id,))
+            mrow = cursor.fetchone()
+            if not mrow:
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+            if mrow[0] not in ('Draft',):
+                raise HTTPException(status_code=403, detail="لا يمكن حذف المشاركة بعد خروج المهمة من المسودة — السجل المجرى نهائي")
+
+            cursor.execute("SELECT 1 FROM mission_participant_sessions WHERE session_id = %s AND mission_id = %s", (session_id, mission_id))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail="الشريحة غير موجودة ضمن هذه المهمة")
+
+            cursor.execute("DELETE FROM mission_participant_sessions WHERE session_id = %s AND mission_id = %s", (session_id, mission_id))
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "حذف مشاركة مسودة", mission_id=mission_id,
+                    entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"حذف شريحة مشاركة مسودة (session {session_id}) من مهمة {mission_id}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم حذف المشاركة المسودة", "session_id": session_id}
+    except HTTPException:
+        connection.rollback()
+        raise  # 400/403/404 تُمرَّر كما هي (لا تُغلَّف إلى 500)
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء حذف المشاركة: {str(e)}")
+    finally:
+        connection.close()
+
+
 @app.get("/api/missions/{mission_id}")
 def get_mission_details(mission_id: int, client_now: Optional[str] = None, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """client_now = ساعة العميل المحلية (اختياري) — تُستخدم كإطار زمني للساعات الحية."""
@@ -2123,17 +2263,18 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
             mission_data["participants"] = []
             for r in participant_rows:
                 pid = r[0]
-                cursor.execute("SELECT session_date, check_in_time, check_out_time, notes, start_dt, end_dt, itinerary_group FROM mission_participant_sessions WHERE participant_id = %s ORDER BY COALESCE(start_dt, session_date), start_dt", (pid,))
+                cursor.execute("SELECT session_id, session_date, check_in_time, check_out_time, notes, start_dt, end_dt, itinerary_group FROM mission_participant_sessions WHERE participant_id = %s ORDER BY COALESCE(start_dt, session_date), start_dt", (pid,))
                 segments = []
                 for s in cursor.fetchall():
                     segments.append({
-                        "session_date": str(s[0]) if s[0] else "",
-                        "check_in_time": str(s[1]) if s[1] else "",
-                        "check_out_time": str(s[2]) if s[2] else "",
-                        "notes": s[3],
-                        "start_dt": fmt_dt(s[4]),
-                        "end_dt": fmt_dt(s[5]),
-                        "itinerary_group": s[6],
+                        "session_id": s[0],
+                        "session_date": str(s[1]) if s[1] else "",
+                        "check_in_time": str(s[2]) if s[2] else "",
+                        "check_out_time": str(s[3]) if s[3] else "",
+                        "notes": s[4],
+                        "start_dt": fmt_dt(s[5]),
+                        "end_dt": fmt_dt(s[6]),
+                        "itinerary_group": s[7],
                     })
                 cursor.execute("SELECT itinerary_group FROM mission_participant_itineraries WHERE participant_id = %s ORDER BY itinerary_group", (pid,))
                 assigned_days = [d[0] for d in cursor.fetchall()]

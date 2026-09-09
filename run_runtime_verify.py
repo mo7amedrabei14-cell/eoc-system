@@ -239,7 +239,9 @@ def main_r():
     check("A8 إعادة الانضمام أنشأت قطاعاً تلقائياً (2 قطع)", len(segs), 2)
     check("A9 القطاع الجديد مفتوح end_dt=None", segs[1]["end_dt"], None)
     whR0 = find_part(get_mission(midA), Apname)["working_hours"]
-    time.sleep(13)
+    # نفس سبب A5: إعادة الانضمام قبل دقيقة فقط ⇒ النصيب الحي ≈ 1د؛ tick 13ث ≈ 0.0036س
+    # يقع غالباً في نفس خلية تقريب 0.01س (36ث) فلا يعبر الحد — 60ث تُظهر الزيادة حتماً.
+    time.sleep(60)
     whR1 = find_part(get_mission(midA), Apname)["working_hours"]
     check("A10 ساعات إعادة الانضمام مباشرة تتزايد", whR1 > whR0, True)
 
