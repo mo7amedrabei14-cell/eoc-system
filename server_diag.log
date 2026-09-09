@@ -1,0 +1,6 @@
+INFO:     Started server process [21944]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8099 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58875 - "GET /api/missions HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52576 - "POST /api/login HTTP/1.1" 404 Not Found

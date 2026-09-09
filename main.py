@@ -737,21 +737,13 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
               AND p.branch_id IS NOT DISTINCT FROM %s
               AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
               -- تعريف «النشطة» مطابق لتعريف القوة البشرية (same source of truth):
-              -- حضور مفتوح فعلياً (end_dt IS NULL)، أو مشارك بلا أي segments يُرث بداية المهمة
-              -- ووضعه «مازال بالمهمة». بمجرد وجود segments تُحسم النشطة من شريحةٍ مفتوحة حصراً —
-              -- لا return_status قديم/مُستعاد.
-              AND (
-                  EXISTS (
-                      SELECT 1 FROM mission_participant_sessions s
-                      WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
-                  )
-                  OR (
-                      p.return_status = 'مازال بالمهمة'
-                      AND NOT EXISTS (
-                          SELECT 1 FROM mission_participant_sessions s
-                          WHERE s.participant_id = p.participant_id
-                      )
-                  )
+              -- حضور مفتوح فعلياً (end_dt IS NULL) فقط — شريحة جارية فعلاً.
+              -- الشريحة B القديمة (return_status + صفر segments) أُزيلت لأنها:
+              --   1) تمنع مشاركاً لم يُنضمّ فعلياً (نُقِل للاستمارة فقط) من الانضمام لأي مهمة.
+              --   2) لا يمكن إصلاحه بالـ LEAVE لأن لا segment مفتوح لإغلاقه.
+              AND EXISTS (
+                  SELECT 1 FROM mission_participant_sessions s
+                  WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
               )
             """ + excl_sql + """
             LIMIT 1;
@@ -1606,11 +1598,13 @@ def update_mission(
                             part.stay_type = prev.get("stay_type") or part.stay_type
                     part.team_name = part.team_name or prev.get("team_name") or ''
                     part.team_code = part.team_code or prev.get("team_code") or ''
-                    # الحالة الفعلية مصدرها الـ segments المسجلة — النموذج لا يتجاوزها.
+                    # الحالة الفعلية مصدرها قاعدة البيانات — النموذج لا يتجاوزها أبداً.
                     # عند إنهاء المهمة: «تم انتهاء مهمتة» تبقى الفائزة — لا نعيد إرث
-                    # 'مازال بالمهمة' القديم (الشرائح أُغلقت تلقائياً في لقطة الإنهاء أدناه)
-                    # وإلا ظل المشارك «في مهمة حاليًا» ظلماً في HR بعد إتمام المهمة.
-                    if prev.get("has_segments") and mission.status not in ('Completed', 'مكتملة'):
+                    # 'مازال بالمهمة' القديم (الشرائح أُغلقت تلقائياً في لقطة الإنهاء أدناه).
+                    # كان الشرط السابق يطلب has_segments فحسب: لو لا segments (مشارك نُقل
+                    # للاستمارة فقط دون انضمام فعلي) كانت return_status تُستعاد من الـ
+                    # Pydantic default ≠ الـ DB → يصبح Participant عالقاً بـ 'مازال بالمهمة'.
+                    if mission.status not in ('Completed', 'مكتملة'):
                         part.return_status = prev.get("return_status") or part.return_status
 
                 if prev:
