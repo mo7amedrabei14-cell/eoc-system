@@ -97,6 +97,27 @@ def owner_user_id():
     return row[0] if row else None
 
 
+def non_owner_user_id():
+    """مستخدم فعّال له دور غير OWNER/المالك وليس مالكاً — لاختبار بوابة تاريخ الإنشاء."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT u.user_id FROM users u
+                   LEFT JOIN user_roles ur ON ur.user_id = u.user_id
+                   LEFT JOIN roles r ON r.role_id = ur.role_id
+                   WHERE u.is_active = true
+                   GROUP BY u.user_id
+                   HAVING COUNT(*) FILTER (WHERE UPPER(COALESCE(r.role_name,'')) IN ('OWNER','المالك')) = 0
+                      AND COUNT(*) FILTER (WHERE UPPER(COALESCE(r.role_name,'')) NOT IN ('OWNER','المالك','')) > 0
+                   ORDER BY u.user_id LIMIT 1"""
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    return row[0] if row else None
+
+
 EOC_STAFF = [
     {"role_name": "مسؤول المتابعة", "staff_name": "متابعة"},
     {"role_name": "المشرف", "staff_name": "مشرف"},
@@ -105,13 +126,16 @@ EOC_STAFF = [
 ]
 
 
-def participant(full_name, assigned_days=None, pos="ميداني"):
+def participant(full_name, assigned_days=None, pos="ميداني", start_from_mission=True):
     return {
         "participant_type": "non_volunteer", "full_name": full_name,
         "participation_role": "", "participant_position": pos,
         "branch_id": BRANCH, "assigned_itinerary": "",
         "return_status": "مازال بالمهمة", "phase_name": "اليوم الأول", "stay_type": "ذهاب وعودة",
         "assigned_days": assigned_days or [],
+        # checkbox «يُحسب من بداية المهمة»: TRUE ⇒ البداية المخططة = بداية المهمة (الافتراضي)؛
+        # FALSE ⇒ بداية المسار المُسند — سيناريوهات «نافذة المسار» تمرر FALSE صراحةً.
+        "start_from_mission": start_from_mission,
     }
 
 
@@ -141,6 +165,16 @@ def api(method, path, **kw):
     if r.status_code >= 400:
         raise RuntimeError(f"{method} {path} -> HTTP {r.status_code}: {json.dumps(body, ensure_ascii=False)}")
     return body
+
+
+def raw_api(method, path, **kw):
+    """مثل api() لكن يعيد (status, body) دون رفع RuntimeError على 4xx — لاختبار 403."""
+    r = requests.request(method, API + path, timeout=40, **kw)
+    try:
+        body = r.json()
+    except Exception:
+        body = r.text
+    return r.status_code, body
 
 
 def get_mission(mid):
@@ -227,7 +261,8 @@ def main_r():
     s2 = "TEST_E2E_S2"
     mid2 = api("POST", "/api/missions", headers=H, json=mission_base(
         s2, dep2, status="Active", routes=route1,
-        participants=[participant("E2E_S2_P", [day1])]))["mission_id"]
+        # FALSE ⇒ نافذة المسار 10:00→18:00 = 8س (TRUE ينقل البداية لبداية المهمة فيغيّرها)
+        participants=[participant("E2E_S2_P", [day1], start_from_mission=False)]))["mission_id"]
     m2 = get_mission(mid2)
     check("S2a one route persisted", len(m2["routes"]), 1)
     p2 = find_part(m2, "E2E_S2_P")
@@ -252,8 +287,9 @@ def main_r():
     s3 = "TEST_E2E_S3"
     mid3 = api("POST", "/api/missions", headers=H, json=mission_base(
         s3, dep3, status="Under Review", routes=routes3,
-        participants=[participant("E2E_S3_V1", [day1]),
-                      participant("E2E_S3_V2", [day1, day2])]))["mission_id"]
+        # FALSE: نوافذ المسار الأصلية (V1=8، V2=16) كما كانت تختبر — checkbox لا يحرّك البداية
+        participants=[participant("E2E_S3_V1", [day1], start_from_mission=False),
+                      participant("E2E_S3_V2", [day1, day2], start_from_mission=False)]))["mission_id"]
     m3 = get_mission(mid3)
     check("S3a multi-route mission created", len(m3["routes"]), 3)
     v1 = find_part(m3, "E2E_S3_V1"); v2 = find_part(m3, "E2E_S3_V2")
@@ -390,6 +426,47 @@ def main_r():
           find_part(m10d, "E2E_S10_W1")["status"] == "تم انتهاء مهمتة"
           and find_part(m10d, "E2E_S10_W2")["status"] == "تم انتهاء مهمتة", True)
     print()
+
+    # ── سيناريو 11: بوابة تاريخ الإنشاء (لقطة ثابتة — المالك فقط يعدّلها) ──────
+    noid = non_owner_user_id()
+    if noid:
+        H_N = {"Authorization": f"Bearer {create_access_token(noid)}", "Content-Type": "application/json"}
+        dep11 = now_naive() - datetime.timedelta(hours=2)
+        s11 = "TEST_E2E_S11"
+        body11 = mission_base(s11, dep11, status="Active", participants=[participant("E2E_S11_P")])
+        body11["creation_datetime"] = "2026-09-09 10:00:00"
+        mid11 = api("POST", "/api/missions", headers=H, json=body11)["mission_id"]
+        check("C11a POST خزّن تاريخ الإنشاء (2026-09-09 10:00:00)",
+              get_mission(mid11).get("creation_datetime"), "2026-09-09 10:00:00")
+        # غير المالك يعيد إرسال نفس القيمة ⇒ ليست تغييراً ⇒ 200
+        echo_body = mission_base(s11, dep11, status="Active", participants=[participant("E2E_S11_P")])
+        echo_body["creation_datetime"] = "2026-09-09 10:00:00"
+        st_e, _ = raw_api("PUT", f"/api/missions/{mid11}", headers=H_N, json=echo_body)
+        check("C11b غير المالك يعيد نفس القيمة ⇒ 200 (نفس القيمة ليست تعديلاً)", st_e, 200, exact=True)
+        # غير المالك يغيّر القيمة ⇒ 403
+        chg_body = mission_base(s11, dep11, status="Active", participants=[participant("E2E_S11_P")])
+        chg_body["creation_datetime"] = "2026-09-09 11:00:00"
+        st_c, body_c = raw_api("PUT", f"/api/missions/{mid11}", headers=H_N, json=chg_body)
+        check("C11c غير المالك يغيّر القيمة ⇒ 403", st_c, 403, exact=True)
+        # المالك يغيّر القيمة ⇒ 200 + القيمة الجديدة + سجل تدقيق
+        own_body = mission_base(s11, dep11, status="Active", participants=[participant("E2E_S11_P")])
+        own_body["creation_datetime"] = "2026-09-10 09:30:00"
+        st_o, _ = raw_api("PUT", f"/api/missions/{mid11}", headers=H, json=own_body)
+        check("C11d المالك يغيّر القيمة ⇒ 200", st_o, 200, exact=True)
+        check("C11e القيمة الجديدة محفوظة بعد تعديل المالك",
+              get_mission(mid11).get("creation_datetime"), "2026-09-10 09:30:00")
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM audit_logs WHERE mission_id=%s AND action='تعديل تاريخ الإنشاء'", (mid11,))
+                n_log = cur.fetchone()[0]
+        finally:
+            conn.close()
+        check("C11f سجل تدقيق «تعديل تاريخ الإنشاء» أُشئ", n_log >= 1, True)
+        print()
+    else:
+        print("  (skip: لا يوجد مستخدم غير مالك لاختبار بوابة تاريخ الإنشاء)")
+        print()
 
     return 0 if not failures else 3
 

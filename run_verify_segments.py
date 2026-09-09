@@ -80,8 +80,8 @@ check("3 انضمام متأخر = 5س", compute_working_hours(open_m, 'نشطة
 # ── 4) خليط اليوم: Day1 قطاعات + Day2 بلا قطع (يرث 4س مبيت) ──
 seg_d1 = [{'start_dt': datetime.datetime(2026,9,8,9,0), 'end_dt': datetime.datetime(2026,9,8,14,0), 'itinerary_group': 'اليوم الأول'},
           {'start_dt': datetime.datetime(2026,9,8,17,0), 'end_dt': datetime.datetime(2026,9,8,20,0), 'itinerary_group': 'اليوم الأول'}]
-check("4 خليط Day1 قطعتان (5+3) + Day2 وراثة 4س = 12س",
-      compute_working_hours(open_m, 'نشطة', seg_d1, ['اليوم الأول', 'اليوم الثاني'], routes_open), 12.0)
+check("4 خليط Day1 قطعتان = 8س (القطاعات تسود — لا وراثة تُضاف فوقها)",
+      compute_working_hours(open_m, 'نشطة', seg_d1, ['اليوم الأول', 'اليوم الثاني'], routes_open), 8.0)
 
 # ── وراثة كاملة بلا قطاعات: Day1 6س + Day2 مبيت 4س = 10 ──
 check("5 وراثة كاملة = 10س", compute_working_hours(open_m, 'نشطة', [], ['اليوم الأول', 'اليوم الثاني'], routes_open), 10.0)
@@ -109,8 +109,8 @@ check("7 قطاع مفتوح على مكتملة → حتى 18:00 = 2س", comput
 
 # ── قطاع بلا يوم في مفتوحة (نادرة) يُضاف مستقلاً مع وراثة باقي الأيام ──
 seg_stray = [{'start_dt': datetime.datetime(2026,9,8,15,0), 'end_dt': datetime.datetime(2026,9,8,16,0)}]  # بلا group
-check("7b قطاع بلا يوم (1س) + Day1 وراثة 6س = 7س",
-      compute_working_hours(open_m, 'نشطة', seg_stray, ['اليوم الأول'], routes_open), 7.0)
+check("7b قطاع بلا يوم = 1س (يوجد قطاع ⇒ مجموع القطاعات فقط، لا وراثة)",
+      compute_working_hours(open_m, 'نشطة', seg_stray, ['اليوم الأول'], routes_open), 1.0)
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  الجزء A.2 — المحرك الموحد: ساعات حية (now مُثبَّت) + لا انحياز للتصنيف
@@ -242,11 +242,14 @@ try:
     idx = src.index("WITH ident AS (")
     open_tri = src.rfind('cursor.execute("""', 0, idx)
     hr_start = open_tri + len('cursor.execute("""')
-    m = re.search(r'\n\s+"""\)', src[hr_start:])
+    m = re.search(r'\n\s+"""(?=[,\)]|,\(now_ref)', src[hr_start:])
     if not m:
         raise SystemExit("HR closing not found")
     hr = src[hr_start:hr_start + m.start() + 1]
     hr = hr[hr.index('WITH ident AS'):]
+    # The live-hours 'now' placeholders are bound as params at run time; run them
+    # standalone here as NULL → LOCALTIMESTAMP (same values the query would bind).
+    hr = hr.replace('%s::timestamp', 'NULL::timestamp')
     cur.execute(hr)
     rows = cur.fetchall()
     cols = [d[0] for d in cur.description]
@@ -267,9 +270,12 @@ try:
         if r[ci['full_name']] and ('TEST_SEG_' in r[ci['full_name']] or 'TEST_SEG_N' in r[ci['full_name']]):
             print(f"  HR {r[ci['full_name']]}: hours={r[ci['total_hours']]} active={r[ci['active_mission']]}")
 
-    check("HR-P1 خليط (Day1 قطع 5س + Day2 وراثة 4س) = 9", hval('TEST_SEG_P1'), 9.0)
-    check("HR-P2 وراثة Day1 = 6", hval('TEST_SEG_P2'), 6.0)
-    check("HR-P3 انفصال+عودة (8س) + Day2 وراثة (4س) = 12", hval('TEST_SEG_P3'), 12.0)
+    # fix#6: القطاعات تسود — Day1 قطاع (5س) فقط، لا وراثة فوقه ⇒ 5 (مهمة حية، لاها لا)
+    check("HR-P1 خليط (قطاعات فقط = 5س — لا وراثة فوق القطع)", hval('TEST_SEG_P1'), 5.0)
+    # fix#6 + checkbox: بلا قطع → وراثة نافذة Day1 لكن مع بداية المهمة (00:01) ⇒ حية ≈ 14 (زمن-الآن)
+    check("HR-P2 وراثة Day1 حية (now−بداية المهمة 00:01) ≈ 14", hval('TEST_SEG_P2'), 14.0)
+    # fix#6: قطعتا Day1 فقط (8س) — لا وراثة فوق القطع ⇒ 8
+    check("HR-P3 انفصال+عودة فقط = 8س (مهمة حية)", hval('TEST_SEG_P3'), 8.0)
     check("HR-R1 محفوظ رغم إزالته (roster_active=false) = 3", hval('TEST_SEG_R1'), 3.0)
     check("HR-N1 مهمة عادية مبيت = 4", hval('TEST_SEG_N1'), 4.0)
     check("HR-N1 عدد مهام 1", hrow('TEST_SEG_N1')[ci['missions_count']], 1)
@@ -280,11 +286,11 @@ try:
     conn.commit()
     cur.execute(hr); rows = cur.fetchall(); cols = [d[0] for d in cur.description]; ci = {c:i for i,c in enumerate(cols)}
     check("7 تعديل أوقات اليوم لا يغيّر قطاعات R1 (تبقى 3س)", hval('TEST_SEG_R1'), 3.0)
-    check("7 P2 وراثة تغيّرت مع خطة السير (10→20 = 10س)", hval('TEST_SEG_P2'), 10.0)
+    check("7 P2 وراثة حية بعد تعديل الخطة (now−بداية المهمة) ≈ 20", hval('TEST_SEG_P2'), 20.0)
 
     # ── عدد ساعات آخر مهمة (العمود الجديد قبل إجمالي الساعات) ──
-    check("HR-P1 آخر مهمة = 9س", hcol('TEST_SEG_P1', 'last_mission_hours'), 9.0)
-    check("HR-P2 آخر مهمة = 10س", hcol('TEST_SEG_P2', 'last_mission_hours'), 10.0)
+    check("HR-P1 آخر مهمة = 5س (قطاعات فقط)", hcol('TEST_SEG_P1', 'last_mission_hours'), 5.0)
+    check("HR-P2 آخر مهمة = 20س", hcol('TEST_SEG_P2', 'last_mission_hours'), 20.0)
     check("HR-R1 آخر مهمة = 3س (محفوظ رغم الإزالة)", hcol('TEST_SEG_R1', 'last_mission_hours'), 3.0)
     check("HR-N1 آخر مهمة = 4س", hcol('TEST_SEG_N1', 'last_mission_hours'), 4.0)
     check("HR-P1 آخر مهمة == إجمالي الساعات (مهمة واحدة)", hcol('TEST_SEG_P1', 'last_mission_hours'), hval('TEST_SEG_P1'))
@@ -302,7 +308,7 @@ try:
             if v is not None and not isinstance(v, (str, int, float, bool)): m[k] = str(v)
         cur.execute("SELECT group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date FROM mission_itineraries WHERE mission_id = %s", (mid,))
         m['routes'] = [{"group_title": r[0], "route_from": r[1] or "", "route_to": r[2], "departure_time": str(r[3]) if r[3] else "", "arrival_time": str(r[4]) if r[4] else "", "departure_date": str(r[5]) if r[5] else "", "arrival_date": str(r[6]) if r[6] else ""} for r in cur.fetchall()]
-        cur.execute("SELECT participant_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s AND roster_active = true ORDER BY participant_id", (mid,))
+        cur.execute("SELECT participant_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, start_from_mission FROM mission_participants WHERE mission_id = %s AND roster_active = true ORDER BY participant_id", (mid,))
         found = None
         for r in cur.fetchall():
             if r[0] != pid: continue
@@ -313,7 +319,7 @@ try:
             found = {
                 "participant_id": r[0], "classification": m.get("mission_classification"),
                 "status": compute_participant_status(m.get("status"), r[12], segments),
-                "working_hours": compute_working_hours(m, m.get("status"), segments, days, m["routes"]),
+                "working_hours": compute_working_hours(m, m.get("status"), segments, days, m["routes"], start_from_mission=(r[15] is not False)),
                 "segments": segments, "seg_count": len(segments), "assigned_days": days,
             }
         return found
@@ -354,11 +360,11 @@ try:
     cur.execute("INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group) VALUES (%s,%s,'اليوم الميداني')", (g1, gid))
     conn.commit()
     assigned = get_like(gid, g1)
-    check("G8 مع التخصيص → 12س (نافذة 'اليوم الميداني')", assigned['working_hours'], 12.0)
+    check("G8 مع التخصيص + مكتملة ⇒ تجمّد عند مدى المهمة 09:00→13:00 = 4س (لا نافذة المسار)", assigned['working_hours'], 4.0)
 
     cur.execute(hr); rows = cur.fetchall(); cols = [d[0] for d in cur.description]; ci = {c:i for i,c in enumerate(cols)}
-    check("G9 HR-G1 آخر مهمة = 12س", hcol('TEST_SEG_G1', 'last_mission_hours'), 12.0)
-    check("G9b HR-G1 الإجمالي = 12س (مجموع حقيقي)", hcol('TEST_SEG_G1', 'total_hours'), 12.0)
+    check("G9 HR-G1 آخر مهمة = 4س (تجمّد المكتملة)", hcol('TEST_SEG_G1', 'last_mission_hours'), 4.0)
+    check("G9b HR-G1 الإجمالي = 4س (مجموع حقيقي)", hcol('TEST_SEG_G1', 'total_hours'), 4.0)
 
     # ═══════════════════════════════════════════════════════════════════════
     #  الإصلاح الجذري لـ HTTP 500: تسجيل انفصال بلا segment مفتوح

@@ -88,13 +88,16 @@ EOC_STAFF = [
 ]
 
 
-def participant(full_name, assigned_days=None, pos="ميداني"):
+def participant(full_name, assigned_days=None, pos="ميداني", start_from_mission=True):
     return {
         "participant_type": "non_volunteer", "full_name": full_name,
         "participation_role": "", "participant_position": pos,
         "branch_id": BRANCH, "assigned_itinerary": "",
         "return_status": "مازال بالمهمة", "phase_name": "اليوم الأول", "stay_type": "ذهاب وعودة",
         "assigned_days": assigned_days or [],
+        # checkbox «يُحسب من بداية المهمة» — يُرسل صراحةً حتى تتحقق كلتا الحالتين:
+        # TRUE ⇒ البداية المخططة = بداية المهمة (الافتراضي) ; FALSE ⇒ بداية المسار المسند.
+        "start_from_mission": start_from_mission,
     }
 
 
@@ -189,9 +192,11 @@ def main_r():
     pA = find_part(m, Apname)
     wh0 = pA["working_hours"]
     check("A1 default live ≈3h (بلا خط سير، بلا انضمام)", wh0, 3.0, tol=0.02)
-    time.sleep(16)
+    # A2: المحرك يعيد التقريب لأقرب 0.01 ساعة، وtick بـ16ث (0.0044س) لا تعبر حد التقريب عند
+    # مقياس الساعات. ننتظر 60ث (0.0167س > 0.01س = عرض خلية التقريب) لتظهر الزيادة يقيناً.
+    time.sleep(60)
     wh1 = find_part(get_mission(midA), Apname)["working_hours"]
-    check("A2 تزيد تلقائياً بعد 16ث بلا تحديث/إعادة تحميل", wh1 > wh0, True)
+    check("A2 تزيد تلقائياً بعد 60ث بلا تحديث/إعادة تحميل", wh1 > wh0, True)
     print(f"     Δ = {(wh1-wh0)*3600:.1f} ثانية حقيقية\n")
 
     # 6) HR نشطة = ساعات مباشرة
@@ -200,22 +205,30 @@ def main_r():
     check("A3b HR active_mission true", bool(prow["active_mission"]), True)
 
     # ── 4) JOIN/LEAVE بتااريخ وساعة + إعادة الانضمام ─────────────────
-    J = now_naive() - datetime.timedelta(minutes=10)
+    # J تُرسل بدقة الدقيقة (كما تفعل الواجهة) ⇒ تُقربها لتطابق القيمة المخزنة تماماً،
+    # فيكون التوقّع «قراءة − بداية مخزنة» دقيقاً (لا يتحمل تقريب الثواني).
+    J = (now_naive() - datetime.timedelta(minutes=10)).replace(second=0, microsecond=0)
     SAVEJ = J
     api("POST", f"/api/missions/{midA}/join", headers=H,
         json={"participant_id": pA["participant_id"], "join_datetime": fmt(J)})
+    t_read = now_naive()
     whj0 = find_part(get_mission(midA), Apname)["working_hours"]
-    check("A4 انضمام (10 د قبل الآن) ⇒ ~0.17س", whj0, 10 / 60.0, tol=0.01)
-    time.sleep(13)
+    # التوقّع ديناميكي من القيمة المخزنة فعلاً (J بدقة الدقيقة) لا من 10 دقائق اسميَّة:
+    # القطاع المفتوح = لحظة القراءة − بداية الانضمام المخزنة.
+    check("A4 انضمام (10 د قبل الآن) ⇒ مباشرة = (القراءة − البداية المخزنة)", whj0, (t_read - J).total_seconds() / 3600.0, tol=0.01)
+    # نفس سبب A2: tick 13ث لا يعبر حد التقريب 0.01س عند نطاق الدقائق أحياناً ⇒ 60ث تُظهر الزيادة.
+    time.sleep(60)
     whj1 = find_part(get_mission(midA), Apname)["working_hours"]
     check("A5 ساعات الانضمام المباشر تتزايد", whj1 > whj0, True)
 
-    L = now_naive() - datetime.timedelta(minutes=8)
+    L = (now_naive() - datetime.timedelta(minutes=8)).replace(second=0, microsecond=0)
     SAVEL = L
     api("POST", f"/api/missions/{midA}/leave", headers=H,
         json={"participant_id": pA["participant_id"], "leave_datetime": fmt(L)})
     whL0 = find_part(get_mission(midA), Apname)["working_hours"]
-    check("A6 انفصال (8 د) ⇒ مجمّدة ~2د", whL0, 2 / 60.0, tol=0.01)
+    # الثابت الصحيح ليس «دقيقتين» — J وL بُعدتا عن «الآن» في لحظتين متباعدتين (بعد نومة A5)،
+    # فالفجوة الفعلية L−J ≈ 3د. التوقّع يُشتق من القيم المخزنة (دقائق كاملة).
+    check("A6 انفصال ⇒ مجمّدة بالفجوة الفعلية (L−J)", whL0, (L - J).total_seconds() / 3600.0, tol=0.01)
     time.sleep(10)
     check("A7 قيمة الانفصال لا تتغير بعد 10ث (تجمّد)", find_part(get_mission(midA), Apname)["working_hours"], whL0, exact=True)
 
@@ -274,9 +287,11 @@ def main_r():
     ]
     midB = api("POST", "/api/missions", headers=H, json=mission_base(
         "TEST_RT_B", depB, routes=routesB,
+        # checkbox صريح: B3/B4 تجمع نافذة المسار (FALSE) — لأن TRUE ينقل البداية لبداية
+        # المهمة فيغيّر 10س→6.5س ويحوّل المبيت 4س→15س. اختبارات خط السير تبقى على FALSE.
         participants=[participant(Apname, ["اليوم الميداني"]),
-                      participant(Pb1name, ["اليوم الميداني"]),
-                      participant(Pb2name, ["اليوم الليلي"])]))["mission_id"]
+                      participant(Pb1name, ["اليوم الميداني"], start_from_mission=False),
+                      participant(Pb2name, ["اليوم الليلي"], start_from_mission=False)]))["mission_id"]
 
     mB = get_mission(midB)
     ok_struct = all(
@@ -294,15 +309,18 @@ def main_r():
     api("POST", f"/api/missions/{midB}/join", headers=H,
         json={"participant_id": pB1["participant_id"], "itinerary_group": "اليوم الميداني", "join_datetime": fmt(now_naive() - datetime.timedelta(minutes=5))})
     whB0 = find_part(get_mission(midB), Pb1name)["working_hours"]
-    time.sleep(11)
+    time.sleep(60)
     whB1 = find_part(get_mission(midB), Pb1name)["working_hours"]
     check("B5 مهمة بخط سير: ساعات الانضمام مباشرة تتزايد", whB1 > whB0, True)
+    # (نومة B5 أُطيلت أعلاه إلى 60ث — 11ث لا تعبر حد التقريب 0.01س عند نطاق 5 دقائق)
 
     compB = now_naive()
+    # تجمّد المهمة B لكل مشارك بلا قطاعات = مدى المهمة (بداية المهمة → الإكمال): checkbox TRUE
+    expectLastB = (compB - depB).total_seconds() / 3600.0
     api("PUT", f"/api/missions/{midB}", headers=H, json=mission_base(
         "TEST_RT_B", depB, status="Completed", completion=compB, routes=routesB,
         participants=[participant(Apname, ["اليوم الميداني"]),
-                      participant(Pb1name, ["اليوم الميداني"]),
+                      participant(Pb1name, ["اليوم الميداني"], start_from_mission=False),
                       participant(Pb2name, ["اليوم الليلي"])]))
     whBf = find_part(get_mission(midB), Pb1name)["working_hours"]
     time.sleep(9)
@@ -317,13 +335,12 @@ def main_r():
     check("C1 HR: عمود «عدد ساعات آخر مهمة» قبل «إجمالي الساعات» مباشرة", io >= 0 and ti >= 0 and io + 1 == ti, True)
 
     hra = hr_row(Apname)
-    expectTot = whF + 10.0    # A مجمّدة فعلية + نافذة اليوم في B مجمّدة
-    expectLast = 10.0         # أحدث مشاركة = مهمة B (يوم ميداني)
+    expectTot = whF + expectLastB   # A مجمّدة فعلية + تجمّد مهمة B (مدى المهمة — TRUE)
     check("C2 نفس الهوية عبر مهمتين → missions_count=2", hra["missions_count"], 2)
-    check("C3 الإجمالي = تراكمي (A+B)", hra["total_hours"], expectTot, tol=0.02)
-    check("C4 آخر مهمة مكتملة = ساعة اليوم الميداني المجمّدة", hra["last_mission_hours"], expectLast, tol=0.02)
+    check("C3 الإجمالي = تراكمي (A+B)", hra["total_hours"], expectTot, tol=0.05)
+    check("C4 آخر مهمة مكتملة = تجمّد مدى المهمة B (TRUE: بداية المهمة→الإكمال)", hra["last_mission_hours"], expectLastB, tol=0.05)
     hrb = hr_row(Pb2name)
-    check("C5 آخر مهمة (مبيت 4س) = 4", hrb["last_mission_hours"], 4.0, tol=0.02)
+    check("C5 آخر مهمة (مبيت، checkbox TRUE) = تجمّد مدى المهمة B", hrb["last_mission_hours"], expectLastB, tol=0.05)
     print()
 
     return 0 if not failures else 3

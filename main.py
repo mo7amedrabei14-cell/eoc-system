@@ -124,6 +124,28 @@ def ensure_schema():
             cursor.execute("ALTER TABLE mission_participant_sessions ADD COLUMN IF NOT EXISTS end_dt TIMESTAMP;")
             # الإصلاح الجذري لـ 500: session_date لم يعد إلزامياً (آمن للإعادة)
             cursor.execute("ALTER TABLE mission_participant_sessions ALTER COLUMN session_date DROP NOT NULL;")
+
+            # ── 5) بداية المهمة (checkbox) + تاريخ/وقت إنشاء المهمة
+            #    (مطابق لـ migrations/20260909_mission_start_creation_datetime.sql —
+            #    idempotent، يلتئم أي worker جديد تلقائياً)
+            cursor.execute("""
+                ALTER TABLE mission_participants
+                    ADD COLUMN IF NOT EXISTS start_from_mission boolean NOT NULL DEFAULT true;
+            """)
+            cursor.execute("""
+                ALTER TABLE missions
+                    ADD COLUMN IF NOT EXISTS creation_datetime timestamp without time zone;
+            """)
+            # backfill لمرة واحدة (حارس IS NULL يحمي تعديلات المالك من الكتابة فوقها)
+            cursor.execute("""
+                UPDATE missions m
+                SET creation_datetime = COALESCE(
+                    (SELECT MIN(al.created_at) FROM audit_logs al
+                      WHERE al.action = 'إنشاء مهمة' AND al.entity_type = 'mission'
+                        AND al.entity_id::bigint = m.mission_id::bigint),
+                    m.created_at)
+                WHERE m.creation_datetime IS NULL;
+            """)
         connection.commit()
     except Exception as e:
         print(f"ensure_schema error (will retry on next boot): {e}")
@@ -505,6 +527,9 @@ class ParticipantModel(BaseModel):
     participation_periods: List[PeriodModel] = []
     # 🆕 الأيام المخصصة للمشارك (متعدد) — مهمات مفتوحة فقط: يرث المشارك ساعات اليوم افتراضياً
     assigned_days: List[str] = []
+    # 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر بداية المشاركة المخططة
+    #    (TRUE = بداية المهمة، FALSE = بداية المسار المسند). الافتراضي في القاعدة TRUE.
+    start_from_mission: bool = True
 
 class JoinRequest(BaseModel):
     """طلب انضمام مشارك (استثناء). المهمة مفتوحة: itinerary_group = اليوم/المسار."""
@@ -556,7 +581,11 @@ class MissionCreate(BaseModel):
     internal_notes: Optional[str] = None
 
     mission_code: Optional[str] = None
-    created_at: Optional[str] = None
+    created_at: Optional[str] = None  # توافق خلفي فقط — يُتجاهل (انظر creation_datetime)
+
+    # 🆕 تاريخ/وقت إنشاء المهمة (لقطة المستخدم) — يُكتب مرة واحدة عند الإنشاء،
+    #    والمالك فقط يقدر يعدّله لاحقاً (403 لغير المالك). يُنسخ فقط لا يتجدد.
+    creation_datetime: Optional[str] = None
 
     # كود الفريق/الإدارة على مستوى المهمة (حقل مستقل عن المشاركين)
     team_code: Optional[str] = None
@@ -797,14 +826,23 @@ def fmt_dt(dt):
     return dt.strftime("%Y-%m-%d %H:%M") if dt else None
 
 
-def reference_segment_start(cursor, mission_row, itinerary_group=None):
+def reference_segment_start(cursor, mission_row, itinerary_group=None, start_from_mission=False, assigned_groups=None):
     """
     بداية المشاركة المرجعية عند تسجيل انفصال بلا segment مفتوح:
-    - المهمة المفتوحة: أقرب انطلاق (تاريخ+وقت) لليوم المختار — يدعم المبيت.
-    - غير ذلك: بداية المهمة (departure_date+departure_time)، ثم start_time، ثم created_at.
+    - start_from_mission (checkbox «يُحسب من بداية المهمة») ⇒ بداية المهمة — مفتاح نقي
+      (القاعدة 3)، أياً كان اليوم/المجموعة.
+    - المهمة المفتوحة (itinerary_group): أقرب انطلاق (تاريخ+وقت) لليوم المختار — يدعم المبيت.
+    - بلا مجموعة وبتخصيصات (assigned_groups): أقرب انطلاق عبر كل تخصيصات المشارك.
+    - غير ذلك: بداية المهمة (exit_date ثم بدائل + departure_time ثم start_time — القاعدة 1).
     """
     if not isinstance(mission_row, dict):
         mission_row = dict(mission_row)
+
+    if start_from_mission:
+        s = mission_start_dt(mission_row)
+        if s:
+            return s
+
     if itinerary_group:
         cursor.execute(
             "SELECT MIN(departure_date + departure_time) FROM mission_itineraries "
@@ -826,8 +864,20 @@ def reference_segment_start(cursor, mission_row, itinerary_group=None):
             s = dt_from_parts(dep_date, row[0])
             if s:
                 return s
-    # بداية المهمة
-    d = mission_row.get('departure_date') or str(mission_row.get('created_at') or '')[:10]
+    elif assigned_groups:
+        cursor.execute(
+            "SELECT MIN(departure_date + departure_time) FROM mission_itineraries "
+            "WHERE mission_id = %s AND group_title = ANY(%s) AND departure_date IS NOT NULL AND departure_time IS NOT NULL",
+            (mission_row.get('mission_id'), list(assigned_groups)),
+        )
+        row = cursor.fetchone()
+        if row and row[0]:
+            return row[0]
+    # بداية المهمة — نفس ترتيب القاعدة 1 بلا استخدام created_at ما دام exit_date موجوداً
+    d = (mission_row.get('exit_date')
+         or mission_row.get('departure_date')
+         or mission_row.get('arrival_date')
+         or str(mission_row.get('created_at') or '')[:10])
     for tcol in ('departure_time', 'start_time'):
         t = mission_row.get(tcol)
         if t:
@@ -865,8 +915,13 @@ def validate_segment_datetime(dt_value, now=None):
 
 
 def mission_start_dt(mission_data):
-    """بداية المهمة (قيمها كلها نصوص بعد تحويل GET) — departure ثم start_time ثم created_at."""
-    d = mission_data.get('departure_date') or str(mission_data.get('created_at') or '')[:10]
+    """بداية المهمة = «تاريخ المهمة» (exit_date) + «ساعة التحرك/البدء» (departure_time) ثم
+    start_time. بدائل التاريخ فقط عند غياب exit_date: departure_date→arrival_date→(created_at).
+    ⚠️ لا تُستخدم created_at أبداً كبداية المهمة ما دام exit_date موجوداً (القاعدة 1)."""
+    d = (mission_data.get('exit_date')
+         or mission_data.get('departure_date')
+         or mission_data.get('arrival_date')
+         or str(mission_data.get('created_at') or '')[:10])
     for tcol in ('departure_time', 'start_time'):
         t = mission_data.get(tcol)
         if t:
@@ -874,6 +929,27 @@ def mission_start_dt(mission_data):
             if s:
                 return s
     return None
+
+
+def planned_start_dt(mission_data, assigned_days, routes, start_from_mission=False):
+    """مصدر بداية المشاركة المخططة — مفتاح نقي (بلا أي شروط تواريخ):
+    - start_from_mission (checkbox) ⇒ بداية المهمة.
+    - وإلا ⇒ أقرب انطلاق عبر مسارات المشارك المسندة (مجموعاته المخصصة).
+    - بلا مسارات مسندة ⇒ بداية المهمة.
+    أي مسار لا يحمل تاريخ انطلاق كامل يُتخطى (الدعم القديم بلا تواريخ يفشل بصمت إلى بداية المهمة)."""
+    if start_from_mission:
+        return mission_start_dt(mission_data)
+    groups = set(assigned_days or [])
+    earliest = None
+    for g in routes:
+        if g.get('group_title') not in groups:
+            continue
+        sd = dt_from_parts(g.get('departure_date'), g.get('departure_time'))
+        if sd and (earliest is None or sd < earliest):
+            earliest = sd
+    if earliest:
+        return earliest
+    return mission_start_dt(mission_data)
 
 
 def mission_end_dt(mission_data):
@@ -888,11 +964,15 @@ def mission_end_dt(mission_data):
     return None
 
 
-def assigned_span(assigned_groups, routes):
+def assigned_span(assigned_groups, routes, mission_start=None, start_from_mission=False, end_cap=None):
     """نافذة الجدول للخطوط المسندة (خطة افتراضية) = لكل يوم (departure_date) مدى
     «أول انطلاق → آخر وصول» عبر كل المسارات المسندة لذلك اليوم، ثم الجمع عبر الأيام.
     مثال: مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (مدى واحد، لا جمع).
     المسارات بلا تواريخ (قديم) تُدمج في يوم واحد 'day' — تُعامل معاملة نفس اليوم.
+    - start_from_mission و mission_start ⇒ استبدال بداية أول أيام المشارك ببداية المهمة
+      (مفتاح مصدر واحد، بلا أي شرط تواريخ — القاعدة 3).
+    - end_cap ⇒ أي نهاية تتجاوز سقف نهاية المهمة تُقصَّ إلى السقف (fix D1: نافذة
+      الخطة القديمة غير المقصوصة). end_cap=None أثناء النشاط ⇒ غير فعّال.
     """
     by_day = {}
     groups = set(assigned_groups or [])
@@ -909,14 +989,20 @@ def assigned_span(assigned_groups, routes):
                 by_day[key][0] = min(by_day[key][0], sd)
                 by_day[key][1] = max(by_day[key][1], ed)
     total = 0.0
+    if start_from_mission and mission_start and by_day:
+        # «أول أيام» المشارك = اليوم الذي يبدأ فيه مداه أولاً — نستبدل بدايته ببداية المهمة.
+        earliest_key = min(by_day, key=lambda k: by_day[k][0])
+        by_day[earliest_key][0] = mission_start
     for lo, hi in by_day.values():
+        if end_cap and hi > end_cap:
+            hi = end_cap
         secs = (hi - lo).total_seconds()
         if secs > 0:
             total += secs / 3600.0
     return total
 
 
-def compute_working_hours(mission_data, mission_status, segments, assigned_days, routes, now=None):
+def compute_working_hours(mission_data, mission_status, segments, assigned_days, routes, now=None, start_from_mission=False):
     """
     ساعات عمل المشارك — محرك واحد موحّد (لا فرق Normal/Open — التصنيف للعرض فقط):
     ⭐ المبدأ (fix #6): الساعات الفعلية تأتي من JOIN/LEAVE حصراً.
@@ -926,10 +1012,15 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         • لا قطاعات ولا تخصيص ⇒ افتراضي خطة المهمة: خط أساسي ⇒ نافذته، وإلا أول
           مجموعة مخصصة، وإلا ⇒ بداية/نهاية المهمة نفسها.
     الـ segment المفتوح يُحسب حتى الآن (إطار العميل) — أو حتى نهاية المهمة إن اكتملت.
+    start_from_mission (checkbox «يُحسب من بداية المهمة») = مفتاح نقي على مصدر بداية
+    المشاركة المخططة: TRUE ⇒ بداية المهمة؛ FALSE ⇒ بداية المسار المسند. الافتراضي
+    هنا False ليبقى معنى اختبارات المحرك النقية؛ عمود القاعدة افتراضه TRUE، ومواقع
+    الإنتاج تمرر دائماً القيمة المخزنة.
     """
     now = now or datetime.now()
     completed = mission_status in ('Completed', 'مكتملة')
     end_cap = mission_end_dt(mission_data) if completed else None
+    planned_start = planned_start_dt(mission_data, assigned_days, routes, start_from_mission)
 
     def seg_dur(s):
         start = s.get('start_dt')
@@ -940,11 +1031,16 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         end = s.get('end_dt')
         if isinstance(end, str):
             end = parse_dt_input(end)
-        end = end or (end_cap or now)
+        if end:
+            # مغلق — يُقصّ إلى سقف نهاية المهمة إن تجاوزه (fix D1: القديم غير المقصوص)
+            if end_cap and end > end_cap:
+                end = end_cap
+        else:
+            end = end_cap or now  # مفتوح — حتى الآن، أو حتى نهاية المهمة إن اكتملت
         secs = (end - start).total_seconds()
         return (secs / 3600.0) if secs > 0 else 0.0
 
-    def day_window(title):
+    def day_window(title, cap=None):
         # نافذة اليوم = (أواخر وصول − أول انطلاق) بين كل مسارات ذلك اليوم (بالتواريخ للمبيت)
         spans = []
         for g in routes:
@@ -956,7 +1052,10 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
                 spans.append((sd, ed))
         if not spans:
             return 0.0
-        w = (max(s[1] for s in spans) - min(s[0] for s in spans)).total_seconds()
+        hi = max(s[1] for s in spans)
+        if cap and hi > cap:
+            hi = cap
+        w = (hi - min(s[0] for s in spans)).total_seconds()
         return (w / 3600.0) if w > 0 else 0.0
 
     assigned = assigned_days or []
@@ -967,10 +1066,11 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
     if segments:
         return round(sum(seg_dur(s) for s in segments), 2)
 
-    # (مهم) المكتملة بلا قطاعات فعليّة تتجمّد لمدى المهمة (الخطة الافتراضية) —
-    #    لا تُحسب قواعد اليوم/القطاعات عليها (لا يملك حضوراً فعلياً ليُحتسب).
+    # (مهم) المكتملة بلا قطاعات فعليّة تتجمّد لمدى المشاركة المخططة (الخطة الافتراضية):
+    #    بدايتها من planned_start (مفتاح checkbox: TRUE = بداية المهمة، FALSE = بداية
+    #    المسار المسند) ونهايتها سقف نهاية المهمة (end_cap) — القاعدة 3، بلا شروط تواريخ.
     if completed:
-        start = mission_start_dt(mission_data)
+        start = planned_start
         if not start:
             return 0.0
         end = end_cap
@@ -982,14 +1082,20 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
     #     أي: خط السير هو الخطة الافتراضية فقط، ولا يُحتسب إلا بغياب الحضور الفعلي.
     #     fix #4: عدة مسارات مسندة ⇒ المدى (أول انطلاق → آخر وصول) لكل يوم، لا الجمع —
     #     مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (8 ساعات) لا 9.
+    #     start_from_mission ⇒ استبدال بداية أول أيام المشارك ببداية المهمة (القاعدة 3).
     if assigned:
-        return round(assigned_span(assigned, routes), 2)
+        return round(assigned_span(
+            assigned, routes,
+            mission_start=(mission_start_dt(mission_data) if start_from_mission else None),
+            start_from_mission=start_from_mission,
+            end_cap=end_cap,
+        ), 2)
 
     # (2) بلا قطاعات وبلا تخصيص ⇒ افتراضي خطة المهمة (مباشر):
     #     • يوجد خط أساسي ⇒ نافذة «خط السير الأساسي» (Both exist → Basic default)
     #     • وإلا أول مجموعة مخصصة (Custom-only)
     #     • وإلا ⇒ بداية/نهاية المهمة نفسها (No itinerary → Mission Start/End)
-    basic_win = day_window('خط السير الأساسي') if 'خط السير الأساسي' in [g.get('group_title') for g in routes] else 0.0
+    basic_win = day_window('خط السير الأساسي', cap=end_cap) if 'خط السير الأساسي' in [g.get('group_title') for g in routes] else 0.0
     if basic_win > 0:
         return round(basic_win, 2)
     custom_win = 0.0
@@ -998,13 +1104,13 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         t = g.get('group_title')
         if t and t not in seen and t != 'خط السير الأساسي':
             seen.add(t)
-            w = day_window(t)
+            w = day_window(t, cap=end_cap)
             if w > 0:
                 custom_win = w
                 break
     if custom_win > 0:
         return round(custom_win, 2)
-    start = mission_start_dt(mission_data)
+    start = planned_start
     if not start:
         return 0.0
     end = mission_end_dt(mission_data) or now
@@ -1038,7 +1144,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
                     (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
                     m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date,
-                    m.team_code
+                    m.team_code, m.creation_datetime
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
@@ -1080,6 +1186,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     "notes": r[18] or "-",
                     "exit_date": str(r[19]) if len(r) > 19 and r[19] else "-",
                     "team_code": (r[20] or "") if len(r) > 20 else "",
+                    "creation_datetime": str(r[21]) if len(r) > 21 and r[21] else "-",
                     "beneficiaries": beneficiaries_dict.get(m_id, []),
                     "vehicles_info": f"{r[9] or ''} ({r[10] or ''})" if r[9] else "لا توجد سيارات" 
                 })
@@ -1128,14 +1235,17 @@ def create_mission(
             mission_code = f"#MSN-{datetime.now().strftime('%y%m%d-%H%M%S')}"
             def none_if_empty(val): return val if val != "" else None
 
+            # 🆕 لقطة تاريخ/وقت الإنشاء (إصدار المستخدم) — تُكتب مرة واحدة ولا تُعاد توليدها
+            creation_dt_val = parse_dt_input(mission.creation_datetime) if mission.creation_datetime else None
+
             cursor.execute("""
                 INSERT INTO missions (
                     mission_code, mission_name, mission_classification, branch_id, mission_type, mission_location, responsible_person,
                     data_source, status, exit_date, departure_date, arrival_date, return_date, completion_date,
                     start_time, departure_time, arrival_time, completion_time, injured_count,
-                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key, team_code
+                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key, team_code, creation_datetime
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 ) RETURNING mission_id;
             """, (
                 mission_code, mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
@@ -1146,7 +1256,8 @@ def create_mission(
                 none_if_empty(mission.completion_time),
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
                 ikey,
-                mission.team_code if mission.team_code is not None else ""
+                mission.team_code if mission.team_code is not None else "",
+                creation_dt_val
             ))
             mission_id = cursor.fetchone()[0]
 
@@ -1182,10 +1293,10 @@ def create_mission(
                     raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: رقم العضوية + الفرع مسجَّل حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً (عاد للقاعدة).")
 
                 cursor.execute("""
-                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, start_from_mission)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING participant_id;
-                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.participant_position or '', volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type))
+                """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.participant_position or '', volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type, (part.start_from_mission is not False)))
                 pid = cursor.fetchone()[0]
                 inserted_participants.append((pid, part))
 
@@ -1300,6 +1411,9 @@ def update_mission(
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    # 🆕 بوابة المالك — تعديل «تاريخ/وقت إنشاء المهمة» متاح لهم فقط (403 لغيرهم)
+    role = get_user_role(user_id)
+    is_owner = bool(role) and role["role_name"].upper() in ["OWNER", "المالك"]
     # مفتاح الحماية من الإرسال المكرر — يُقرأ من الترويسة أولاً (الواجهة ترسله في الـ header)؛
     # يعمل جنباً إلى جنب مع مفتاح المهمة المخزَّن في قاعدة البيانات (DB هو مصدر الحقيقة).
     ikey = mission.idempotency_key or idempotency_key_header or None
@@ -1307,7 +1421,7 @@ def update_mission(
     # 🛡️ الحقول الإلزامية + قاعدة الإنهاء — تُفرض في السيرفر قبل أي PROCESS للطلب
     missing_required = validate_mission_required_fields(mission)
     if missing_required:
-        raise HTTPException(status_code=400, detail="الحقول الإلزامية التالية مطلوبة: " + "، ".join(missing_required))
+        raise HTTPException(status_code=400, detail="الحقول الإلزامية التالية مطلوبة: " + "،".join(missing_required))
     completion_error = validate_mission_completion(mission)
     if completion_error:
         raise HTTPException(status_code=400, detail=completion_error)
@@ -1328,6 +1442,20 @@ def update_mission(
                 if cursor.fetchone():
                     return {"message": "تم تحديث المهمة بنجاح"}
 
+            # 🆕 تاريخ/وقت الإنشاء: لقطة ثابتة لا تتجدد أبداً — «تغيير القيمة» فعل مالك
+            #    فقط (403 لغير المالك). إعادة إرسال نفس القيمة من غير المالك = ليس تغييراً.
+            cur_db_cd = None
+            cd_row = cursor.execute("SELECT creation_datetime FROM missions WHERE mission_id = %s", (mission_id,)).fetchone()
+            if cd_row:
+                cur_db_cd = cd_row[0]
+            req_cd = parse_dt_input(mission.creation_datetime) if mission.creation_datetime else None
+            cd_change = bool(req_cd) and (cur_db_cd is None or req_cd != cur_db_cd)
+            cd_value = None  # COALESCE يحافظ على القديم لو لم يُطلب تغيير
+            if cd_change:
+                if not is_owner:
+                    raise HTTPException(status_code=403, detail="تعديل تاريخ إنشاء المهمة متاح للمالك فقط")
+                cd_value = req_cd
+
             # 1. تحديث البيانات الأساسية (بدون تغيير كود المهمة غير المُدخل)
             cursor.execute("""
                 UPDATE missions SET
@@ -1338,9 +1466,11 @@ def update_mission(
                     notes=%s, internal_notes=%s,
                     team_code=%s,
                     idempotency_key = COALESCE(%s, idempotency_key),
-                    mission_code = COALESCE(%s, mission_code)
+                    mission_code = COALESCE(%s, mission_code),
+                    creation_datetime = COALESCE(%s, creation_datetime)
                     -- 💡 (متطلب #4) لم نعد نكتب فوق created_at: يبقى التاريخ الفعلي للتسجيل في السيرفر
                     -- (كان بيتحصّل لوقت منتصف الليل 00:00 عند أي تعديل فيفتقد الوقت الحقيقي)
+                    -- 🆕 creation_datetime = لقطة إنشاء ثابتة؛ تُستبدل فقط بتغيير مالك (cd_value)
                 WHERE mission_id=%s;
             """, (
                 mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
@@ -1353,10 +1483,22 @@ def update_mission(
                 mission.team_code if mission.team_code is not None else "",
                 ikey,
                 none_if_empty(mission.mission_code),
+                cd_value,
                 mission_id
             ))
             if cursor.rowcount == 0:
                 raise HTTPException(status_code=404, detail="المهمة غير موجودة أو تم حذفها")
+
+            # 🆕 سجل أمني عند تعديل المالك لتاريخ الإنشاء (لا يُسجَّل لأي إعادة إرسال مطابقة)
+            if cd_change and is_owner:
+                try:
+                    create_audit_log(
+                        cursor, user_id, "تعديل تاريخ الإنشاء", mission_id=mission_id,
+                        entity_type="mission", entity_id=mission_id,
+                        details={"action_text": f"تعديل تاريخ إنشاء المهمة من {fmt_dt(cur_db_cd) if cur_db_cd else '—'} إلى {fmt_dt(cd_value)}"},
+                    )
+                except Exception as e:
+                    print(f"Audit Error: {e}")
 
             # 2. مسح التفاصيل القديمة (عشان منعملش تكرار) — مع حفظ استثنائي:
             #    المشاركون أُزيلوا من الاستمارة لكن لهم segments مسجلة (شاركوا فعلاً)
@@ -1450,22 +1592,23 @@ def update_mission(
                             participant_type=%s, full_name=%s, team_name=%s, team_code=%s,
                             participation_role=%s, participant_position=%s, volunteer_id=%s, user_id=%s,
                             membership_number=%s, branch_id=%s, assigned_itinerary=%s, return_status=%s,
-                            phase_name=%s, stay_type=%s, roster_active=true
+                            phase_name=%s, stay_type=%s, start_from_mission=%s, roster_active=true
                         WHERE participant_id=%s;
                     """, (part.participant_type, part.full_name, part.team_name or '', part.team_code or '',
                           part.participation_role, part.participant_position or '', volunteer_id, participant_user_id,
                           membership, part.branch_id, part.assigned_itinerary, part.return_status,
-                          part.phase_name, part.stay_type, prev["participant_id"]))
+                          part.phase_name, part.stay_type, (part.start_from_mission is not False),
+                          prev["participant_id"]))
                     pid = prev["participant_id"]
                 else:
                     cursor.execute("""
-                        INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, roster_active)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
+                        INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, roster_active, start_from_mission)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true, %s)
                         RETURNING participant_id;
                     """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '',
                           part.participation_role, part.participant_position or '', volunteer_id, participant_user_id,
                           membership, part.branch_id, part.assigned_itinerary, part.return_status,
-                          part.phase_name, part.stay_type))
+                          part.phase_name, part.stay_type, (part.start_from_mission is not False)))
                     pid = cursor.fetchone()[0]
                 kept_pids.append(pid)
                 new_participants.append((pid, part))
@@ -1558,6 +1701,11 @@ def update_mission(
             connection.commit()
             return {"message": "تم تحديث المهمة بنجاح"}
             
+    except HTTPException:
+        # 🚨 بوابة المالك وأي HTTPException مقصودة (400/403/404) تُمرَّر كما هي —
+        #    لا تُبتلع في فخ `except Exception` (كانت تحوّل 403 إلى 500).
+        connection.rollback()
+        raise
     except Exception as e:
         connection.rollback()
         # ✅ Same radar-exception mismatch fix as create_mission: "مسجّل" vs "متواجد"
@@ -1811,13 +1959,14 @@ def mission_leave(
             mission_name, classification = mission_row.get('mission_name'), mission_row.get('mission_classification') or 'عادية'
 
             cursor.execute(
-                "SELECT participant_id, full_name FROM mission_participants WHERE mission_id = %s AND participant_id = %s AND roster_active = true",
+                "SELECT participant_id, full_name, start_from_mission FROM mission_participants WHERE mission_id = %s AND participant_id = %s AND roster_active = true",
                 (mission_id, data.participant_id),
             )
             prow = cursor.fetchone()
             if not prow:
                 raise HTTPException(status_code=404, detail="المشارك غير موجود ضمن مهمة نشطة")
             participant_name = prow[1]
+            start_from_mission_flag = (prow[2] is not False)
 
             leave_dt = parse_dt_input(data.leave_datetime)
             if not leave_dt:
@@ -1873,7 +2022,14 @@ def mission_leave(
                 )
                 if cursor.fetchone():
                     raise HTTPException(status_code=400, detail="لا يوجد حضور مفتوح لتسجيل الانفصال — المشارك غير نشط حالياً")
-                ref_start = reference_segment_start(cursor, mission_row, itinerary_group)
+                cursor.execute(
+                    "SELECT itinerary_group FROM mission_participant_itineraries WHERE participant_id = %s AND mission_id = %s",
+                    (data.participant_id, mission_id),
+                )
+                assigned_groups = [r[0] for r in cursor.fetchall()]
+                ref_start = reference_segment_start(cursor, mission_row, itinerary_group,
+                                                    start_from_mission=start_from_mission_flag,
+                                                    assigned_groups=assigned_groups)
                 if ref_start:
                     cursor.execute(
                         """INSERT INTO mission_participant_sessions
@@ -1961,7 +2117,7 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
 
             # الرستر = المشاركون الظاهرون في الاستمارة فقط (roster_active=true)؛
             # من أُزيليا وله segments يُحفَظ سجله للرادار/HR ولا يظهر هنا.
-            cursor.execute("SELECT participant_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type FROM mission_participants WHERE mission_id = %s AND roster_active = true ORDER BY participant_id", (mission_id,))
+            cursor.execute("SELECT participant_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, start_from_mission FROM mission_participants WHERE mission_id = %s AND roster_active = true ORDER BY participant_id", (mission_id,))
             participant_rows = cursor.fetchall()
             mission_status = mission_data.get("status")
             mission_data["participants"] = []
@@ -1982,11 +2138,14 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
                 cursor.execute("SELECT itinerary_group FROM mission_participant_itineraries WHERE participant_id = %s ORDER BY itinerary_group", (pid,))
                 assigned_days = [d[0] for d in cursor.fetchall()]
                 status = compute_participant_status(mission_status, r[12], segments)
+                # 🆕 «يُحسب من بداية المهمة» — القيمة المخزنة (NULL قديم = TRUE افتراضياً)
+                start_from_mission = (r[15] is not False)
                 # fix #3/#8: الساعات الحية تُحسب مقابل ساعة العميل (نفس إطار start_dt/end_dt)
                 now_ref = parse_dt_input(client_now) if client_now is not None else None
                 working_hours = compute_working_hours(
                     mission_data, mission_status,
-                    segments, assigned_days, mission_data["routes"], now=now_ref
+                    segments, assigned_days, mission_data["routes"],
+                    now=now_ref, start_from_mission=start_from_mission
                 )
                 mission_data["participants"].append({
                     "participant_id": pid, "participant_type": r[1], "full_name": r[2], "team_name": r[3], "team_code": r[4],
@@ -1994,6 +2153,7 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
                     "membership_number": r[9], "branch_id": r[10], "assigned_itinerary": r[11], "return_status": r[12],
                     "phase_name": r[13], "stay_type": r[14], "participation_periods": segments,
                     "assigned_days": assigned_days,
+                    "start_from_mission": start_from_mission,
                     "status": status,
                     "working_hours": working_hours
                 })
@@ -3356,7 +3516,7 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
             # - المهمة الحالية تُرجع ببيانها (id/كود/اسم) حتى نعرف في أي مهمة هو الآن
             # =========================================================================
             # fix #3/#8: إطار الساعات الحية = ساعة العميل المحلية (المقدَّمة) أو ساعة السيرفر.
-            now_ref = client_now or None  # يُمرَّر كمعامل إلى COALESCE(%s::timestamp, LOCALTIMESTAMP)
+            now_ref = client_now or None  # يُمرَّر كمعامل إلى COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo'))
             cursor.execute("""
                 WITH ident AS (
                     SELECT
@@ -3369,6 +3529,8 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                         mp.participant_position,
                         mp.volunteer_id,
                         mp.return_status,
+                        -- 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر بداية المشاركة المخططة
+                        mp.start_from_mission AS sfm,
                         -- هوية المركّبة: رقم العضوية + الفرع (رقم العضوية وحده ليس فريداً —
                         --   قد يتكرر عبر الفروع، فنفس الرقم في فرع مختلف هوية مختلفة).
                         CASE
@@ -3379,6 +3541,27 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     FROM mission_participants mp
                     WHERE mp.full_name IS NOT NULL AND TRIM(mp.full_name) <> ''
                       AND mp.participant_type IN ('volunteer', 'non_volunteer')
+                ),
+                -- 🆕 الزوجان الكاملان (مطابقان لـ mission_start_dt / mission_end_dt):
+                --   mission_start_ts = exit_date ثم بدائل + departure_time ثم start_time
+                --   (بلا created_at::time مهما كان — NULL بدون زوج تاريخ+وقت كامل).
+                --   mission_end_ts   = pair completion، وإلا pair arrival — NULL بدون زوج كامل.
+                mission_pair AS (
+                    SELECT
+                        m.mission_id,
+                        (CASE
+                            WHEN m.exit_date IS NOT NULL THEN m.exit_date
+                            WHEN m.departure_date IS NOT NULL THEN m.departure_date
+                            WHEN m.arrival_date IS NOT NULL THEN m.arrival_date
+                            ELSE m.created_at::date
+                        END + COALESCE(m.departure_time, m.start_time)) AS mission_start_ts,
+                        (CASE
+                            WHEN m.completion_date IS NOT NULL AND m.completion_time IS NOT NULL
+                                THEN m.completion_date + m.completion_time
+                            WHEN m.arrival_date IS NOT NULL AND m.arrival_time IS NOT NULL
+                                THEN m.arrival_date + m.arrival_time
+                        END) AS mission_end_ts
+                    FROM missions m
                 ),
                 person AS (
                     SELECT DISTINCT ON (k)
@@ -3419,17 +3602,17 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                             GREATEST(
                                 EXTRACT(EPOCH FROM (
                                     (
-                                        COALESCE(
-                                            mps.end_dt,
-                                            -- الـ segment المفتوح (بلا end_dt): في مهمة مكتملة يُغلق عند
-                                            -- نهاية المهمة (لا يستمر حتى الآن)؛ في النشطة حتى الآن (إطار العميل).
-                                            CASE
-                                                WHEN m.status IN ('Completed', 'مكتملة')
-                                                THEN (COALESCE(m.completion_date, m.arrival_date, m.departure_date)
-                                                      + COALESCE(m.completion_time, m.arrival_time, '00:00'::time))
-                                                ELSE COALESCE(%s::timestamp, LOCALTIMESTAMP)
-                                            END
-                                        ) - mps.start_dt
+                                        CASE
+                                            -- المغلق في مهمة مكتملة يُقصّ إلى سقف نهاية المهمة (fix D1)؛
+                                            -- والمفتوح فيها يُغلق عند السقف (LEAST[COALESCE] = seg_dur في Python:
+                                            --  مغلق ⇒ end_dt مقصوصاً بالسقف، مفتوح ⇒ السقف).
+                                            WHEN m.status IN ('Completed', 'مكتملة')
+                                                 AND mpair.mission_end_ts IS NOT NULL
+                                            THEN LEAST(COALESCE(mps.end_dt, mpair.mission_end_ts), mpair.mission_end_ts)
+                                            -- بلا سقف (غير مكتملة، أو مكتملة بلا زوج كامل):
+                                            --  المغلق بنهايته المسجلة، والمفتوح حتى الآن (إطار العميل).
+                                            ELSE COALESCE(mps.end_dt, COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))
+                                        END - mps.start_dt
                                     )
                                 )) / 3600.0,
                                 0
@@ -3438,6 +3621,7 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     FROM mission_participant_sessions mps
                     JOIN mission_participants mp ON mp.participant_id = mps.participant_id
                     JOIN missions m ON m.mission_id = mp.mission_id
+                    JOIN mission_pair mpair ON mpair.mission_id = mp.mission_id
                     JOIN ident i ON i.participant_id = mp.participant_id
                     WHERE mps.start_dt IS NOT NULL
                     GROUP BY i.k, mp.mission_id, mp.participant_id, mps.itinerary_group
@@ -3452,6 +3636,21 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     FROM explicit_hours eh
                     GROUP BY eh.k, eh.mission_id
                 ),
+                -- 🆕 أقرب انطلاق عبر كل تخصيصات المشارك (مطابق لأفرع planned_start_dt عند
+                --   start_from_mission=FALSE): أقل (تاريخ+وقت) انطلاق في مساراته المسندة.
+                assigned_departure AS (
+                    SELECT
+                        i.participant_id,
+                        i.mission_id,
+                        MIN(d.departure_date + d.departure_time) AS dep
+                    FROM ident i
+                    JOIN mission_participant_itineraries mpi
+                      ON mpi.participant_id = i.participant_id AND mpi.mission_id = i.mission_id
+                    JOIN mission_itineraries d
+                      ON d.mission_id = mpi.mission_id AND d.group_title = mpi.itinerary_group
+                    WHERE d.departure_date IS NOT NULL AND d.departure_time IS NOT NULL
+                    GROUP BY i.participant_id, i.mission_id
+                ),
                 -- بلا قطاعات + تخصيص صريح ⇒ الخطة الافتراضية من المسارات المُسندة.
                 -- fix #4: لكل يوم (departure_date) مدى «أول انطلاق → آخر وصول» عبر كل
                 -- المسارات المُسندة لذلك اليوم (لا الجمع بينها) ثم الجمع عبر الأيام:
@@ -3461,26 +3660,57 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     SELECT
                         k,
                         mission_id,
-                        SUM(GREATEST(EXTRACT(EPOCH FROM win)/3600.0, 0)) AS hours
+                        SUM(GREATEST(EXTRACT(EPOCH FROM (hi - lo)) / 3600.0, 0)) AS hours
                     FROM (
                         SELECT
-                            i.k,
-                            i.mission_id,
+                            l.k,
+                            l.mission_id,
+                            l.sfm,
+                            l.mission_start_ts,
+                            -- 🆕 القاعدة 3 (مطابق لـ assigned_span): بداية «أول أيام» المشارك
+                            --    تُستبدل ببداية المهمة — «أول يوم» = يوم أقرب بداية مدى (lo_ts)
+                            --    في تخصيصاته، بلا أي شرط تواريخ. الفرع القديم بلا تواريخ لا يُبدَّل.
                             CASE
-                                WHEN COUNT(departure_date) = COUNT(*) THEN
-                                    (MAX(arrival_date::timestamp + arrival_time) - MIN(departure_date::timestamp + departure_time))
-                                WHEN COUNT(*) > 0 AND COUNT(departure_date) = 0 THEN
-                                    (MAX(arrival_time) - MIN(departure_time))
-                                ELSE
-                                    (MAX(COALESCE(arrival_date, departure_date)::timestamp + arrival_time)
-                                     - MIN(COALESCE(departure_date, arrival_date)::timestamp + departure_time))
-                            END AS win
-                        FROM ident i
-                        JOIN mission_participant_itineraries mpi ON mpi.participant_id = i.participant_id AND mpi.mission_id = i.mission_id
-                        JOIN mission_itineraries d ON d.mission_id = mpi.mission_id AND d.group_title = mpi.itinerary_group
-                        WHERE d.departure_time IS NOT NULL AND d.arrival_time IS NOT NULL
-                        GROUP BY i.k, i.mission_id, d.departure_date
-                    ) spans
+                                WHEN l.sfm AND l.mission_start_ts IS NOT NULL
+                                     AND (l.lo_ts = MIN(l.lo_ts) OVER (PARTITION BY l.k, l.mission_id))
+                                THEN l.mission_start_ts
+                                ELSE l.lo
+                            END AS lo,
+                            l.hi AS hi
+                        FROM (
+                            SELECT
+                                i.k,
+                                i.mission_id,
+                                i.sfm,
+                                i.participant_id,
+                                mpair.mission_start_ts,
+                                COALESCE(d.departure_date::text, 'day') AS day_bucket,
+                                -- مدى اليوم بالفرع الثلاثي القديم نفسه (بلا تغيير):
+                                (CASE
+                                    WHEN COUNT(d.departure_date) = COUNT(*) THEN MIN(d.departure_date::timestamp + d.departure_time)
+                                    WHEN COUNT(*) > 0 AND COUNT(d.departure_date) = 0 THEN date '2000-01-01' + MIN(d.departure_time)
+                                    ELSE MIN(COALESCE(d.departure_date, d.arrival_date)::timestamp + d.departure_time)
+                                END) AS lo,
+                                (CASE
+                                    WHEN COUNT(d.departure_date) = COUNT(*) THEN MAX(d.arrival_date::timestamp + d.arrival_time)
+                                    WHEN COUNT(*) > 0 AND COUNT(d.departure_date) = 0 THEN date '2000-01-01' + MAX(d.arrival_time)
+                                    ELSE MAX(COALESCE(d.arrival_date, d.departure_date)::timestamp + d.arrival_time)
+                                END) AS hi,
+                                -- بداية اليوم كـ timestamp كامل (لتحديد «أول يوم» بأقرب بداية —
+                                --   الفرع القديم بلا تواريخ لا يشارك هنا)
+                                (CASE
+                                    WHEN COUNT(d.departure_date) = COUNT(*) THEN MIN(d.departure_date::timestamp + d.departure_time)
+                                    ELSE MIN(COALESCE(d.departure_date, d.arrival_date)::timestamp + d.departure_time)
+                                END) AS lo_ts
+                            FROM ident i
+                            JOIN mission_participant_itineraries mpi ON mpi.participant_id = i.participant_id AND mpi.mission_id = i.mission_id
+                            JOIN mission_itineraries d ON d.mission_id = mpi.mission_id AND d.group_title = mpi.itinerary_group
+                            JOIN missions m ON m.mission_id = i.mission_id
+                            LEFT JOIN mission_pair mpair ON mpair.mission_id = m.mission_id
+                            WHERE d.departure_time IS NOT NULL AND d.arrival_time IS NOT NULL
+                            GROUP BY i.k, i.mission_id, i.sfm, i.participant_id, mpair.mission_start_ts, d.departure_date
+                        ) l
+                    ) sw
                     GROUP BY k, mission_id
                 ),
                 -- 🔧 المحرك الموحد: حساب ساعات كل مهمة بهوية البيانات لا بالتصنيف — المهمة
@@ -3502,31 +3732,29 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                                 --    حتى لو اكتملت المهمة (الخطة لا تحلّ محل المشاركة الفعلية).
                                 --    (مطابق لـ compute_working_hours: الـ segments قبل التجميد)
                                 WHEN at.hours IS NOT NULL THEN at.hours
-                                -- Completed missions without actual segments freeze (byte-identical with Python)
-                                WHEN m.completion_date IS NOT NULL THEN GREATEST(
-                                    EXTRACT(EPOCH FROM (
-                                        (m.completion_date + COALESCE(m.completion_time, '00:00'::time)) -
-                                        (COALESCE(m.departure_date, m.created_at::date) + COALESCE(m.departure_time, m.start_time, '00:00'::time))
-                                    )) / 3600.0,
-                                    0
-                                )
+                                -- ⭐ التجميد يفتح بمفتاح الحالة (مطابق لـ Python) — بلا قطاعات فعلية:
+                                --    planned_start (checkbox-aware) .. نهاية المهمة (سقف الزوج الكامل فقط).
+                                WHEN m.status IN ('Completed', 'مكتملة') THEN
+                                    CASE
+                                        WHEN ps.ts IS NOT NULL AND mpair.mission_end_ts IS NOT NULL
+                                             AND mpair.mission_end_ts > ps.ts
+                                        THEN GREATEST(EXTRACT(EPOCH FROM (mpair.mission_end_ts - ps.ts)) / 3600.0, 0)
+                                        ELSE 0
+                                    END
                                 -- Active missions: assigned-day defaults → live mission window
                                 WHEN dm.hours IS NOT NULL THEN dm.hours
-                                ELSE GREATEST(
-                                    EXTRACT(EPOCH FROM (
-                                        LEAST(
-                                            COALESCE(%s::timestamp, LOCALTIMESTAMP),
-                                            COALESCE(
-                                                (COALESCE(m.arrival_date, m.completion_date)::timestamp
-                                                 + COALESCE(m.arrival_time, m.completion_time, '00:00'::time)),
-                                                COALESCE(%s::timestamp, LOCALTIMESTAMP)
-                                            )
-                                        ) -
-                                        (COALESCE(m.departure_date, m.created_at::date)
-                                         + COALESCE(m.departure_time, m.start_time, m.created_at::time))
-                                    )) / 3600.0,
-                                    0
-                                )
+                                ELSE CASE WHEN ps.ts IS NOT NULL
+                                     THEN GREATEST(
+                                        EXTRACT(EPOCH FROM (
+                                            LEAST(
+                                                COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')),
+                                                COALESCE(mpair.mission_end_ts, COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))
+                                            ) - ps.ts
+                                        )) / 3600.0,
+                                        0
+                                     )
+                                     ELSE 0
+                                     END
                             END
                             ELSE 0
                         END) AS hours
@@ -3534,6 +3762,17 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     JOIN missions m ON m.mission_id = i.mission_id
                     LEFT JOIN actual_total at ON at.mission_id = i.mission_id AND at.k = i.k
                     LEFT JOIN default_mix dm ON dm.mission_id = i.mission_id AND dm.k = i.k
+                    LEFT JOIN mission_pair mpair ON mpair.mission_id = i.mission_id
+                    LEFT JOIN assigned_departure ad ON ad.participant_id = i.participant_id AND ad.mission_id = i.mission_id
+                    -- 🆕 planned_start — مطابق لـ planned_start_dt: sfm ⇒ بداية المهمة؛
+                    --    وإلا أقرب انطلاق عبر تخصيصاته (deadline fallback بداية المهمة).
+                    CROSS JOIN LATERAL (
+                        SELECT CASE
+                            WHEN i.sfm THEN mpair.mission_start_ts
+                            WHEN ad.dep IS NOT NULL THEN ad.dep
+                            ELSE mpair.mission_start_ts
+                        END AS ts
+                    ) ps
                     GROUP BY i.k, i.mission_id
                 ),
                 -- 🆕 «عدد ساعات آخر مهمة» — أحدث مهمة فعلية (غير ملغاة/مسودة) للهوية،

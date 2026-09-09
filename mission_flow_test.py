@@ -114,12 +114,32 @@ try:
     mdata = {"departure_date": "2026-09-09", "departure_time": "08:00", "arrival_date": "2026-09-09", "arrival_time": "18:00",
              "completion_date": None, "created_at": created}
 
-    # Segments-first: no segments → assigned_span per participant (no crash, distinct windows)
-    hA = M.compute_working_hours(mdata, "Active", [], da, routes)
-    hB = M.compute_working_hours(mdata, "Active", [], db, routes)
-    ok("V1 default hours from its 1 assigned group (8h)", hA == 8.0, f"hA={hA}")
-    ok("V2 default hours from its 2 assigned groups (16h) — mixed counts OK", hB == 16.0, f"hB={hB}")
+    # Segments-first: no segments → assigned_span per participant (no crash, distinct windows).
+    # المشارك يحمل مخزّن checkbox الافتراضي TRUE ⇒ البداية المخططة = بداية المهمة (القاعدة 3):
+    # V1: يومه 10:00→18:00 ⇐ تُستبدل بدايته بـ08:00 ⇒ 10س ; V2: يوم1 10س + يوم2 8س = 18س
+    hA = M.compute_working_hours(mdata, "Active", [], da, routes, start_from_mission=True)
+    hB = M.compute_working_hours(mdata, "Active", [], db, routes, start_from_mission=True)
+    ok("V1 TRUE: planned start = Mission Start 08:00 → 08:00–18:00 = 10h", hA == 10.0, f"hA={hA}")
+    ok("V2 TRUE: Day1 10h + Day2 8h = 18h — mixed counts OK", hB == 18.0, f"hB={hB}")
     ok("different route counts produce different hours (no assumption of uniformity)", hB > hA)
+
+    # ── NEW (plan a — تصحيح إشارة المستخدم): h(TRUE) − h(FALSE) = بداية المسار − بداية المهمة ──
+    # Mission Start = 08:00 ; Assigned Route Start = 10:00 ; Mission End = 16:00
+    # TRUE (يُحسب من بداية المهمة) → 08:00–16:00 = 8 ساعات
+    # FALSE (بداية المسار المسند)   → 10:00–16:00 = 6 ساعات
+    # h(TRUE) − h(FALSE) = 8 − 6 = **+2 ساعة** (بداية المهمة تسبق المسار ثم تُطرح الـ FALSE)
+    md_delta = {"mission_classification": "عادية", "departure_date": "2026-09-11", "departure_time": "08:00",
+                "arrival_date": "2026-09-11", "arrival_time": "16:00",
+                "completion_date": "2026-09-11", "completion_time": "16:00",
+                "created_at": "2026-09-11 08:00:00"}
+    route_one = [{"group_title": "اليوم الأول", "route_from": "ميدان", "route_to": "الجامعة",
+                  "departure_date": "2026-09-11", "departure_time": "10:00",
+                  "arrival_date": "2026-09-11", "arrival_time": "16:00"}]
+    hT = M.compute_working_hours(md_delta, "Completed", [], ["اليوم الأول"], route_one, start_from_mission=True)
+    hF = M.compute_working_hours(md_delta, "Completed", [], ["اليوم الأول"], route_one, start_from_mission=False)
+    ok("TRUE: بداية المهمة 08:00 → نهاية المهمة 16:00 = 8س", hT == 8.0, f"h(TRUE)={hT}")
+    ok("FALSE: بداية المسار 10:00 → نهاية المهمة 16:00 = 6س", hF == 6.0, f"h(FALSE)={hF}")
+    ok("h(TRUE) − h(FALSE) = +2س (الإشارة موجبة، وليست سالبة)", abs((hT - hF) - 2.0) < 1e-9, f"Δ={hT-hF}")
 
     # ── 3) JOIN recorded, then natural mission end auto-closes the open segment ──
     # V1 JOIN at 09:00 (open segment, end_dt NULL)

@@ -502,7 +502,7 @@ export default function Login() {
                   <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em]">LIVE</span>
                 </span>
                 <span className="rounded-lg bg-black/25 backdrop-blur-sm border border-white/15 px-3 py-1.5 font-mono text-[11px] sm:text-xs tabular-nums tracking-widest">
-                  {opsNow.toLocaleTimeString('en-GB', { hour12: false })}
+                  {opsNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                 </span>
                 <span className="hidden md:inline-flex items-center gap-3 text-white/60 text-[10px] font-mono tracking-widest">
                   <span>EOC · OPS</span>

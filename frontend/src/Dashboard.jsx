@@ -6,6 +6,8 @@ import EocSelect from './components/EocSelect';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+// ⏰ وحدة الزمن الموحّدة — العرض 12 ساعة فقط، الآلة 24 ساعة (راجع timeutils.js)
+import { normTime, formatTime12, formatDateTime12 } from './timeutils';
 
 // 🔧 Module-level API base. Must be declared here (module scope), NOT inside a
 // component's effect: MissionsView's live modal-sync effect fetches
@@ -884,31 +886,12 @@ const format12H = (timeStr) => {
   return `${h}:${m} ${ampm}`;
 };
 
-// 💡 توحيد تنسيق "تاريخ + وقت" (متطلب #4) بنفس مثال المستخدم: 04/09/2026 14:35
-// يقبل قيم السيرفر بصورها المختلفة (مع أو بدون ثواني، تاريخ فقط) ويعرضها بثبات
-// بدون أي تحويل للمنطقة الزمنية — يحافظ على التوقيت الذي يعمل به النظام.
-// القاعدة العالمية: العرض دائماً DD/MM/YYYY — لا تُفهم قيمة DD/MM/YYYY أبداً كـ MM/DD/YYYY.
-const formatDateTime = (val) => {
-  if (!val) return '-';
-  const s = String(val).trim();
-  const pad = (n) => String(n).padStart(2, '0');
-  // (1) ISO قياسي من السيرفر: YYYY-MM-DD (أو YYYY-MM-DD HH:MM) → أعد ترتيبها DD/MM/YYYY
-  const iso = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
-  if (iso) {
-    const [, yy, mo, dd, hh, mm] = iso;
-    const datePart = `${pad(dd)}/${pad(mo)}/${yy}`;
-    return hh !== undefined ? `${datePart} ${pad(hh)}:${mm}` : datePart;
-  }
-  // (2) قيمة معروضة بالفعل بصيغة DD/MM/YYYY (سنة 4 خانات في النهاية): تُحفَظ كما هي،
-  //     تفسيرها القياسي هنا يوم/شهر/سنة — لا تُجاز أبداً كشهر/يوم/سنة.
-  const dmy = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/);
-  if (dmy) {
-    const [, dd, mo, yy, hh, mm] = dmy;
-    const datePart = `${pad(dd)}/${pad(mo)}/${yy}`;
-    return hh !== undefined ? `${datePart} ${pad(hh)}:${mm}` : datePart;
-  }
-  return s;
-};
+// 💡 توحيد تنسيق "تاريخ + وقت" (متطلب #4/#8): العرض دائماً DD/MM/YYYY والوقت 12 ساعة
+// AM/PM. يقبل قيم السيرفر بصورها المختلفة (مع أو بدون ثواني، تاريخ فقط) ويعرضها
+// بثبات بدون أي تحويل للمنطقة الزمنية — يحافظ على التوقيت الذي يعمل به النظام.
+// القاعدة العالمية: العرض 12 ساعة و DD/MM/YYYY — لا تُفهم DD/MM/YYYY أبداً كـ MM/DD/YYYY.
+// التفويض لوحدة timeutils.js — نقاط العرض كلها تمر من هنا (تعديل واحد يغيّر الكل).
+const formatDateTime = (val) => formatDateTime12(val);
 
 /* ════════════════════════════════════════════════════════════════
    خريطة أساس حسب الثيم — World_Light_Gray في الفاتح / World_Dark_Gray في الداكن
@@ -1021,6 +1004,14 @@ function HoursCell({ person, maxHours, lang = 'ar' }) {
 function clientNowLocal() {
   const d = new Date();
   return `${d.toLocaleDateString('sv')} ${d.toTimeString().slice(0, 5)}`;
+}
+
+// 🆕 تاريخ/وقت إنشاء المهمة (إصدار المستخدم) — مكوّنات محلية صافية YYYY-MM-DD HH:MM:SS
+// تُلتقط مرة واحدة عند أول إنشاء الاستمارة (لا toISOString أبداً — قيمة بدون منطقة
+// زمنية تُعرض كما هي، وإلا ستُنقل بياناتها لتتحرك مع منطقة السيرفر).
+function isoLocal(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
 // fix #5: عرض الساعات بالدقائق — الحساب يبقى دقيقًا (كسور داخلية)، والتحويل للدقائق عند العرض فقط.
@@ -2045,7 +2036,7 @@ useEffect(() => {
                   <span key={`${ev.event_id}-${i}`} className="ticker-item">
                     <span className="ticker-actor">{ev.actor_name}</span>
                     <span className="ticker-action">{ev.action}</span>
-                    <span className="ticker-time">{ev.created_at ? (formatDateTime(ev.created_at).split(' ')[1] || formatDateTime(ev.created_at)) : ''}</span>
+                    <span className="ticker-time">{ev.created_at ? formatTime12(ev.created_at) : ''}</span>
                   </span>
                 ))}
               </div>
@@ -2187,7 +2178,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
   const latestMissions = [...missions]
     .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
     .slice(0, 5);
-  const liveClock = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const liveClock = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
   const liveDate = `${now.toLocaleDateString('ar-EG', { weekday: 'long' })}، ${formatDateTime(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`)}`;
   const statusTone = m => {
     if (m.status === 'Cancelled') return 'bg-[var(--warn)]';
@@ -2529,7 +2520,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const liveMissionStatusRef = useRef(null);
   liveMissionStatusRef.current = currentMissionData?.status ?? null;
   const [isTableExpanded, setIsTableExpanded] = useState(false);
-  
+  // 🆕 تاريخ/وقت إنشاء المهمة — يُلتقط مرة واحدة عند أول إنشاء الاستمارة، ثابت على
+  // إعادة الفتح/الحفظ؛ يُعدَّله المالك فقط (backend يمنع غيره بـ 403).
+  const [creationDateTime, setCreationDateTime] = useState('');
+
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [returnText, setReturnText] = useState('');
   const [returnError, setReturnError] = useState('');
@@ -2870,6 +2864,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     currentMissionIdRef.current = null;
     setModalError(null);
     setCurrentMissionData(null);
+    setCreationDateTime(isoLocal(new Date())); // 🆕 لحظة أول إنشاء الاستمارة (قيمة المستخدم)
     newMissionIdempotencyKey.current = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
     setMissionName('');
     setMainRouteTitle('خط السير الأساسي');
@@ -2904,6 +2899,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         setCurrentMissionData(data);
         setMissionName(data.mission_name || '');
         setMissionClass(data.mission_classification || 'عادية');
+        // 🆕 تاريخ الإنشاء يبقى كما هو على إعادة الفتح (لا يُلتقط من جديد أبداً)
+        setCreationDateTime(data.creation_datetime || data.created_at || '');
         
         // 🔧 المحرك الموحد: خط سير أساسي + أيام/مجموعات مخصصة معاً —
         //    تبقى المهمة نفسها مهما نما خط سيرها (بلا تصنيف). 'خط السير الأساسي'
@@ -3278,7 +3275,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
        const missionData = {
          mission_code: document.getElementById('f_mission_code')?.value || null,
-         created_at: document.getElementById('f_creation_date')?.value || null,
+         // 🆕 تاريخ إنشاء المهمة (إصدار المستخدم) — يُرسل كما هو، المالك فقط يعدّله
+         creation_datetime: creationDateTime || null,
          mission_name: document.getElementById('f_mission_name')?.value || 'مهمة بدون اسم',
          mission_classification: document.getElementById('f_mission_class')?.value || 'عادية', 
          branch_id: parseInt(document.getElementById('f_branch_id')?.value || 19),
@@ -3314,7 +3312,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
            phase_name: document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول',
            stay_type: document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة',
            // 🔧 أيام/مجموعات متعددة — أي مهمة لها مجموعات فعلية (القطاعات تُدار عبر انضمام/انفصال)
-           ...(hasDayGroups ? { assigned_days: participants[i]?.assigned_days || [] } : {})
+           ...(hasDayGroups ? { assigned_days: participants[i]?.assigned_days || [] } : {}),
+           // 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر البداية المخططة (افتراضي TRUE)
+           start_from_mission: participants[i]?.start_from_mission !== false
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
          eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== '')
@@ -3628,7 +3628,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             ) :
             filteredMissions.length > 0 ? filteredMissions.map(m => (
               <tr key={`mission-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'}`}>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.created_at)}</td>
+                <td className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
                 <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
                 <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
                 <td className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60">
@@ -3773,16 +3773,23 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     </StyledSelect>
                   </FormGroup>
                   <FormGroup label="مسؤول المهمة"><StyledInput id="f_responsible_person" defaultValue={currentMissionData?.responsible_person || ''} /></FormGroup>
-                  <FormGroup label="تاريخ الإنشاء (يسجل آلياً)">
-                    <DateInput
-                      id="f_creation_date"
-                      type="date"
-                      max="2030-12-31"
-                      defaultValue={getCreationDate()}
-                      disabled={!isOwner}
-                      className={`field ${!isOwner ? 'opacity-50 cursor-not-allowed text-[var(--faint)] bg-[var(--surface-2)]' : 'text-white border border-[var(--border)]'}`}
-                      title={!isOwner ? 'لا يمكن تعديله (للمالك فقط)' : ''}
-                    />
+                  <FormGroup label="تاريخ إنشاء المهمة (يُسجل آلياً)">
+                    {isOwner ? (
+                      <input
+                        type="datetime-local"
+                        value={creationDateTime ? creationDateTime.slice(0, 16).replace(' ', 'T') : ''}
+                        onChange={(e) => setCreationDateTime(e.target.value ? e.target.value.replace('T', ' ') + ':00' : '')}
+                        className="field text-white border border-[var(--border)]"
+                        title="للمالك فقط"
+                      />
+                    ) : (
+                      <span
+                        className="field inline-flex items-center px-3 text-white opacity-80 cursor-not-allowed bg-[var(--surface-2)] font-mono text-xs"
+                        title="لا يمكن تعديله (للمالك فقط)"
+                      >
+                        {creationDateTime ? formatDateTime12(creationDateTime) : '—'}
+                      </span>
+                    )}
                   </FormGroup>
                   <FormGroup label="مصدر البلاغ"><StyledSelect id="f_data_source" defaultValue={currentMissionData?.data_source || 'واتساب'}><option>واتساب</option><option>هاتفياً</option></StyledSelect></FormGroup>
                 </div>
@@ -3925,10 +3932,24 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           </td>
 
                           {/* 🕒 الساعات — تُحسب من القطاعات (segments) أو الافتراضي من خطة السير */}
-                          <td className="p-2 text-center">
+                          <td className="p-2 text-center space-y-1">
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-cyan-400/10 text-cyan-400' : 'text-[var(--faint)]'}`}>
                               {p.working_hours != null ? fmtHours(p.working_hours, lang) : '—'}
                             </span>
+                            {/* 🆕 «يُحسب من بداية المهمة» — مفتاح نقي: TRUE (افتراضي) ⇒ البداية المخططة
+                                من بداية المهمة؛ FALSE ⇒ بداية مساره المحدد. لا شروط تواريخ إطلاقاً. */}
+                            <label
+                              className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap cursor-pointer select-none ${p.start_from_mission !== false ? 'text-cyan-400' : 'text-[var(--muted-2)]'}`}
+                              title="يُحسب من بداية المهمة (بدل بداية مساره المحدد) — للمالك/المشرف"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={p.start_from_mission !== false}
+                                onChange={(e) => { const newP = [...participants]; newP[index].start_from_mission = e.target.checked; setParticipants(newP); bumpValidation(); }}
+                                className="accent-[var(--accent)]"
+                              />
+                              من بداية المهمة
+                            </label>
                           </td>
 
                           {/* خط السير المخصص — موحد لكل أنواع المهام (يعرض الأيام/المجموعات المخصصة للمشارك) */}
@@ -4576,18 +4597,36 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
 // المساعدات تُعرَّف على مستوى الوحدة (module-level) وفوق المكوّنات: المُهيّئات
 // الكسولة لـ useState تُنفَّذ أثناء أول render، فلا يمكنها الإشارة إلى `const`
 // معرَّف لاحقاً (TDZ ⇒ شاشة بيضاء) — الأمان مضمون هكذا.
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+// 🆕 العجلة تعرض 12 ساعة فقط (ص/م) — قيمة الآلة تبقى HH:MM 24 ساعة (يقرأها الباك بالـ id).
+const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
-function normTime(t) {
-  // أي صيغة وقت محتملة (12:5، 12:45:30، ...) → HH:MM موحّدة، أو '' إن لم تكن صالحة
-  if (!t) return '';
-  const m = String(t).match(/(\d{1,2}):(\d{1,2})/);
-  if (!m) return '';
-  const h = Math.min(Math.max(+m[1], 0), 23);
-  const mm = Math.min(Math.max(+m[2], 0), 59);
-  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
+// 🆕 تحويلات عرض 12 ساعة فوق الآلة 24 ساعة — normTime (الممدّد بصيغتي ص/م) يُستورد
+// من وحدة timeutils.js. كل دوال العرض هنا حسابات فقط — بلا تحويل منطقة زمنية.
+const hour12 = (hh24) => { const h = Math.min(Math.max(parseInt(hh24, 10) || 0, 0), 23); return h % 12 || 12; };
+const meridian = (hh24) => (Math.min(Math.max(parseInt(hh24, 10) || 0, 0), 23) < 12 ? 'AM' : 'PM');
+const to12Display = (clock) => {
+  const [H, M] = (clock || '00:00').split(':');
+  return `${String(hour12(H)).padStart(2, '0')}:${(M || '00')} ${meridian(H)}`;
+};
+// من قيمة عجلة 1-12 + مؤشر ص/م → ساعة آلة 24 ساعة (0..23):
+//   12 ص ⇒ 0، 12 م ⇒ 12، 1 م ⇒ 13 ...
+const from12Wheel = (h12, mer) => {
+  let h = Math.min(Math.max(parseInt(h12, 10) || 0, 1), 12) % 12;
+  if (mer === 'PM' || mer === 'م') h += 12;
+  return String(h).padStart(2, '0');
+};
+// ساعة آلة 24 تبقى بنفس الساعة المعروضة لكن بقلب المؤشر المطلوب (14:35 ⇄ 02:35)
+const flipMeridian = (clock, desiredMer) => {
+  const [H, M] = (clock || '00:00').split(':');
+  const h = Math.min(Math.max(parseInt(H, 10) || 0, 0), 23);
+  const curMer = h < 12 ? 'AM' : 'PM';
+  if (curMer === desiredMer) return clock;
+  let h24 = desiredMer === 'PM' ? h + 12 : h - 12;
+  if (h24 < 0) h24 += 24;
+  if (h24 > 23) h24 -= 24;
+  return `${String(h24).padStart(2, '0')}:${(M || '00')}`;
+};
 function nowTimeStr() {
   const n = new Date();
   return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
@@ -4637,27 +4676,32 @@ const TimeWheel = ({ items, value, onChange, heightClass = 'h-28' }) => {
 // يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled.
 const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
   const initial = value !== undefined ? value : (defaultValue || '');
-  const [machine, setMachine] = useState(() => normTime(initial));          // HH:MM (يقرأه الباك عبر id)
-  const [display, setDisplay] = useState(() => normTime(initial));          // النص الظاهر
+  // القيمة الآلية (machine) والعجلات (clock) تبقى 24 ساعة — العرض (display) 12 ساعة فقط.
+  const [machine, setMachine] = useState(() => normTime(initial));          // HH:MM 24س (يقرأه الباك عبر id)
+  const [display, setDisplay] = useState(() => { const n = normTime(initial); return n ? to12Display(n) : ''; });
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
-  const [clock, setClock] = useState(() => normTime(initial) || nowTimeStr()); // قيمة العجلات
+  const initClock = () => normTime(initial) || nowTimeStr();
+  const [clock, setClock] = useState(initClock);                            // HH:MM 24س للعجلات
+  const [ampm, setAmpm] = useState(() => meridian(initClock()));            // مؤشر الفترة (عرض 12س)
   const textRef = useRef(null);
   const popRef = useRef(null);
 
   // مزامنة الحالة المتحكمة (عند تغيّر prop value من الخارج)
   useEffect(() => {
     if (value !== undefined) {
-      const n = normTime(value);
+      const n = normTime(value) || nowTimeStr();
       setMachine(n);
-      setDisplay(n);
+      setDisplay(to12Display(n));
+      setClock(n);
+      setAmpm(meridian(n));
     }
   }, [value]);
 
   const apply = (t) => {
     const n = normTime(t);
     setMachine(n);
-    setDisplay(n);
+    setDisplay(n ? to12Display(n) : '');
     if (onChange) onChange({ target: { value: n } });
   };
 
@@ -4718,19 +4762,24 @@ const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // كتابة يدوية بصيغة HH:MM — تُثبَّت القيمة الآلية عند اكتمال وقت صالح
+  // كتابة يدوية بأي صيغة (02:35 PM / 14:35 / ...) — تُثبَّت القيمة الآلية عند اكتمال
+  // وقت صالح، وعند مغادرة الحقل يُعاد التنسيق المعروض إلى 12 ساعة.
   const handleText = (e) => {
     const raw = e.target.value;
     setDisplay(raw);
     const n = normTime(raw);
     if (n) {
       setMachine(n);
+      setClock(n);
+      setAmpm(meridian(n));
       if (onChange) onChange({ target: { value: n } });
     }
   };
+  const blurNormalize = () => setDisplay(machine ? to12Display(machine) : '');
 
   const hh = (clock || '00').split(':')[0];
   const mm = (clock || '00').split(':')[1] || '00';
+  const hh12 = String(hour12(hh)).padStart(2, '0'); // قيمة عجلة الساعات معروضة 1-12
 
   return (
     <>
@@ -4738,11 +4787,12 @@ const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled
         ref={textRef}
         type="text"
         value={display}
-        placeholder="HH:MM"
+        placeholder="hh:mm"
         className={`${className} cursor-pointer`}
         dir="ltr"
         onFocus={openPicker}
         onChange={handleText}
+        onBlur={blurNormalize}
         disabled={disabled}
         autoComplete="off"
         {...props}
@@ -4763,17 +4813,27 @@ const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
-            <span className="text-lg font-bold text-[var(--ink-2)]" dir="ltr">{clock || '--:--'}</span>
+            <span className="text-lg font-bold text-[var(--ink-2)]" dir="ltr">{clock ? to12Display(clock) : '--:--'}</span>
           </div>
           <div className="flex items-start justify-center gap-2">
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
-              <TimeWheel items={HOURS} value={hh} onChange={(h) => setClock(prev => `${h}:${(prev.split(':')[1] || '00')}`)} />
+              <TimeWheel items={HOURS} value={hh12}
+                onChange={(h) => setClock(prev => `${from12Wheel(h, ampm)}:${(prev.split(':')[1] || '00')}`)} />
             </div>
             <span className="text-2xl font-bold text-[var(--accent)] mt-10 select-none">:</span>
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] text-[var(--muted-2)] font-bold">دقائق</span>
               <TimeWheel items={MINUTES} value={mm} onChange={(m) => setClock(prev => `${(prev.split(':')[0] || '00')}:${m}`)} />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-[var(--muted-2)] font-bold">الفترة</span>
+              <div className="flex flex-col gap-1 mt-2">
+                <button type="button" onClick={() => { setAmpm('AM'); setClock(flipMeridian(clock, 'AM')); }}
+                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
+                <button type="button" onClick={() => { setAmpm('PM'); setClock(flipMeridian(clock, 'PM')); }}
+                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
@@ -6170,13 +6230,13 @@ const [clearAllCode, setClearAllCode] = useState('');
 
   const handleExportGlobalEqs = () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": eq.time || '', "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
+    const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية"); XLSX.writeFile(wb, filterDate ? `سجل_الزلازل_العالمية_${filterDate}.xlsx` : `سجل_الزلازل_العالمية.xlsx`);
   };
 
   const handleExportEgyptEqs = () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": eq.time || '', "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
+    const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر"); XLSX.writeFile(wb, filterDate ? `سجل_زلازل_مصر_${filterDate}.xlsx` : `سجل_زلازل_مصر.xlsx`);
   };
 
@@ -6247,7 +6307,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {formatTime12(eq.time)}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -6257,7 +6317,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {eq.time}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {formatTime12(eq.time)}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -6312,7 +6372,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   {isLoading ? <TableLoadingRow colSpan={8} /> : 
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
                     <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
-                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{eq.time}</span></td>
+                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
                       <td className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
@@ -6350,7 +6410,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   {isLoading ? <TableLoadingRow colSpan={6} /> : 
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
                     <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
-                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{eq.time}</span></td>
+                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
                       <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
@@ -6510,7 +6570,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             const dateObj = new Date(lastRun.updated_at);
             const now = new Date();
             const isToday = dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth();
-            const formattedTime = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
             const dayStr = isToday ? 'اليوم' : formatDateTime(`${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`);
             setLastRunTime(`${dayStr}، الساعة ${formattedTime}`);
           } else { setLastRunTime('لا توجد بيانات'); }
@@ -7121,7 +7181,10 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
     if (silent) setIsRefreshing(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-b12f.vercel.app/api/human-resources', { headers: { 'Authorization': `Bearer ${token}` } });
+      // fix #10 (live-HR): نفس إطار ساعات كل استعلام حي — ساعة العميل المحلية (مصر).
+      // غيابها يجعل خلفية HR تُحسب بـLOCALTIMESTAMP (GMT على خادم Neon) فينقلب الفرق
+      // مع التواريخ المحلية المخزنة (naive مصر) ويعرض ساعات مهمة نشطة ≈ 0.
+      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/human-resources?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         // حسب #13: الفلتر يعتمد على حقيقة الـ Backend (active_mission مش محسوبة في الـ UI)
         setHrList(await res.json());
