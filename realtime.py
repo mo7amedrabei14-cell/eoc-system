@@ -97,12 +97,14 @@ def create_realtime_event(
         if creator is not None and creator != actor_user_id:
             target_user_id = creator
 
+    # fix #8: created_at صرّيحاً بتوقيت القاهرة (Africa/Cairo) — نفس إصلاح audit.py:
+    #    العمود timestamp بدون منطقة، والتخزين المحلي هو ما يعرضه التيكر/الإشعارات كما هو.
     cursor.execute(
         """
         INSERT INTO realtime_events (
-            event_type, action, actor_user_id, mission_id, target_user_id, details
+            event_type, action, actor_user_id, mission_id, target_user_id, details, created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
         RETURNING event_id, created_at;
         """,
         (

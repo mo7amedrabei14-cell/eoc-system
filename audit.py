@@ -38,6 +38,10 @@ def create_audit_log(
             for key, value in details.items()
         }
 
+    # fix #8: created_at صرّيحاً بتوقيت القاهرة (Africa/Cairo) بدل default السيرفر (UTC).
+    #    العمود timestamp بدون منطقة — تخزين التوقيت المحلي يجعله يُعرض كما هو على الواجهة
+    #    (الـ frontend لا يحوِّل مناطق). سابقاً كان يُسجَّل UTC فيظهر «ساعة متأخر» في مصر
+    #    (مثال: حذف 10:35م محلياً يُسجَّل 07:35م). نفس نمط main.py: now() AT TIME ZONE 'Africa/Cairo'.
     cursor.execute(
         """
         INSERT INTO audit_logs (
@@ -46,9 +50,10 @@ def create_audit_log(
             action,
             entity_type,
             entity_id,
-            details
+            details,
+            created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
         RETURNING audit_id, created_at;
         """,
         (
