@@ -735,8 +735,24 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
             LEFT JOIN branches b ON b.branch_id = p.branch_id
             WHERE LOWER(TRIM(p.membership_number)) = LOWER(%s)
               AND p.branch_id IS NOT DISTINCT FROM %s
-              AND p.return_status = 'مازال بالمهمة'
               AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
+              -- تعريف «النشطة» مطابق لتعريف القوة البشرية (same source of truth):
+              -- حضور مفتوح فعلياً (end_dt IS NULL)، أو مشارك بلا أي segments يُرث بداية المهمة
+              -- ووضعه «مازال بالمهمة». بمجرد وجود segments تُحسم النشطة من شريحةٍ مفتوحة حصراً —
+              -- لا return_status قديم/مُستعاد.
+              AND (
+                  EXISTS (
+                      SELECT 1 FROM mission_participant_sessions s
+                      WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
+                  )
+                  OR (
+                      p.return_status = 'مازال بالمهمة'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM mission_participant_sessions s
+                          WHERE s.participant_id = p.participant_id
+                      )
+                  )
+              )
             """ + excl_sql + """
             LIMIT 1;
             """,
@@ -1590,8 +1606,11 @@ def update_mission(
                             part.stay_type = prev.get("stay_type") or part.stay_type
                     part.team_name = part.team_name or prev.get("team_name") or ''
                     part.team_code = part.team_code or prev.get("team_code") or ''
-                    # الحالة الفعلية مصدرها الـ segments المسجلة — النموذج لا يتجاوزها
-                    if prev.get("has_segments"):
+                    # الحالة الفعلية مصدرها الـ segments المسجلة — النموذج لا يتجاوزها.
+                    # عند إنهاء المهمة: «تم انتهاء مهمتة» تبقى الفائزة — لا نعيد إرث
+                    # 'مازال بالمهمة' القديم (الشرائح أُغلقت تلقائياً في لقطة الإنهاء أدناه)
+                    # وإلا ظل المشارك «في مهمة حاليًا» ظلماً في HR بعد إتمام المهمة.
+                    if prev.get("has_segments") and mission.status not in ('Completed', 'مكتملة'):
                         part.return_status = prev.get("return_status") or part.return_status
 
                 if prev:
@@ -3725,8 +3744,29 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                         m.mission_name
                     FROM ident i
                     JOIN missions m ON m.mission_id = i.mission_id
-                    WHERE i.return_status = 'مازال بالمهمة'
-                      AND m.status NOT IN ('Draft', 'Cancelled', 'Returned')
+                    -- «في مهمة حاليًا»: إمّا شريحة مشاركة مفتوحة فعلياً (end_dt IS NULL) في هذه المهمة
+                    -- بعينها (انضمام صريح غير مُغلق)، وإمّا مشاركٌ بلا أي segments أصلاً (وضع الإرث —
+                    -- لم يُسجَّل له انضمام/انفصال صريح) وما يزال مدرجاً «مازال بالمهمة» في مهمة غير
+                    -- منتهية (سلوك قائم يُحافظ على تشغيليته، ولا ينطبق إلا على من لا سجلَ له؛ فبمجرد
+                    -- وجود أي segment تُحسم النشطة من شريحةٍ مفتوحة حصراً — لا return_status قديم/مُستعاد).
+                    -- الشريحة المغلقة في مهمة منتهية لا تجعل المشارك نشطاً أبداً، والشريحة المفتوحة
+                    -- في مهمة أخرى لا تُنسب لهذه المهمة (نُلزم s.mission_id = i.mission_id).
+                    WHERE m.status NOT IN ('Draft', 'Cancelled', 'Returned')
+                      AND (
+                          EXISTS (
+                              SELECT 1 FROM mission_participant_sessions s
+                              WHERE s.participant_id = i.participant_id
+                                AND s.mission_id     = i.mission_id
+                                AND s.end_dt IS NULL
+                          )
+                          OR (
+                              i.return_status = 'مازال بالمهمة'
+                              AND NOT EXISTS (
+                                  SELECT 1 FROM mission_participant_sessions s
+                                  WHERE s.participant_id = i.participant_id
+                              )
+                          )
+                      )
                     ORDER BY i.k, m.created_at DESC, m.mission_id DESC
                 ),
                 -- 🆕 ساعات المشاركة الفعلية = مجموع مدد كل الـ Segments (Join/Leave) الحقيقية لكل شخص

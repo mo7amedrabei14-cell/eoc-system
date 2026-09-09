@@ -1,0 +1,30 @@
+✔ Server up on http://127.0.0.1:8098 (Neon live)
+
+✔ Draft mission created: 225 status=None
+[OK] A0 mission status is Draft: got='Draft' expected='Draft'
+[OK] A0b participant present: got=True expected=True
+[OK] A0c participant_id is an int: got=True expected=True
+[OK] A1 JOIN created one open segment: got=1 expected=1
+[OK] A2 join start_dt == requested 09:15: got='2026-09-08 09:15' expected='2026-09-08 09:15'
+[OK] A3 open segment (end_dt None): got=True expected=True
+[OK] A4 session_id present in payload: got=True expected=True
+[OK] B1 PATCH join edits start_dt in place (10:05): got='2026-09-08 10:05' expected='2026-09-08 10:05'
+[OK] B2 same session_id preserved (no delete+recreate): got=183 expected=183
+[OK] C1 LEAVE closed the segment: got='2026-09-08 14:20' expected='2026-09-08 14:20'
+[OK] C2 PATCH leave edits end_dt in place (15:45): got='2026-09-08 15:45' expected='2026-09-08 15:45'
+[OK] D1 two cycles → 2 independent segments: got=2 expected=2
+[OK] D2 second segment distinct session_id: got=True expected=True
+[OK] D3 second segment start 16:00: got='2026-09-08 16:00' expected='2026-09-08 16:00'
+[OK] D4 second segment end 17:00: got='2026-09-08 17:00' expected='2026-09-08 17:00'
+[OK] E1 DELETE removed the Draft segment: got=1 expected=1
+[OK] F1 mission left Draft (Under Review): got='Under Review' expected='Under Review'
+[OK] F2 PATCH rejected 403 after finalization (immutability): got=403 expected=403
+[OK] F3 DELETE rejected 403 after finalization (immutability): got=403 expected=403
+[OK] G1 frozen segment start still 10:05 (not clobbered): got='2026-09-08 10:05' expected='2026-09-08 10:05'
+[OK] H1 re-add after finalization → new independent segment: got=2 expected=2
+[OK] H2 new segment start 18:10: got='2026-09-08 18:10' expected='2026-09-08 18:10'
+[OK] H3 earlier frozen segment preserved (start 10:05): got='2026-09-08 10:05' expected='2026-09-08 10:05'
+
+Cleanup done (TEST_DL_*).
+
+SUMMARY — كل اختبارات دورة حياة المسودة نجحت ✅

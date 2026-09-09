@@ -1,0 +1,29 @@
+✔ Server up on http://127.0.0.1:8099 (Neon live)
+
+[OK] S3 A غادر ⇒ شريحته مغلقة: got=True expected=True
+[OK] S3 B ما زال نشطاً (شريحة مفتوحة) بعد انفصال A: got=True expected=True
+[OK] S3 B return_status لم يتغير بفعل A: got='مازال بالمهمة' expected='مازال بالمهمة'
+[OK] S3 انفصال A ⇐ أزرار/حالة B لا تُقفل (B يملك قطاعاً واحداً مفتوحاً): got=1 expected=1
+[OK] S4 C انضم بنجاح (شريحة مفتوحة): got=True expected=True
+[OK] S4 C return_status 'مازال بالمهمة': got='مازال بالمهمة' expected='مازال بالمهمة'
+[OK] S1 المهمة Completed: got='Completed' expected='Completed'
+[OK] S1 A قطاعاته مغلقة عند الإتمام: got=True expected=True
+[OK] S1 A return_status = تم انتهاء مهمتة: got='تم انتهاء مهمتة' expected='تم انتهاء مهمتة'
+[OK] S2 B قطاعه أُغلق تلقائياً عند نهاية المهمة: got=True expected=True
+[OK] S2 B return_status = تم انتهاء مهمتة (لا يُستعاد القديم): got='تم انتهاء مهمتة' expected='تم انتهاء مهمتة'
+[OK] S5 HR: A ليس نشطاً بعد الإتمام (Bug 2): got=False expected=False
+[OK] S5 HR: B ليس نشطاً بعد الإتمام (Bug 2): got=False expected=False
+[OK] S5 HR: C ليس نشطاً بعد الإتمام: got=False expected=False
+[OK] S6 انضمام B لمهمة جديدة نجح (الرادار لم يصرّعه): got=1 expected=1
+[OK] S7 المهمة ما زالت Draft بعد انضمام/انفصال: got='Draft' expected='Draft'
+[OK] S7 AJ مغلق (غادر) في المسودة: got=True expected=True
+[OK] S7 BJ ما زال مفتوحاً (تعديله متاح) رغم سحب AJ: got=True expected=True
+[OK] S7 تعديل BJ في المسودة نجح (قطاع واحد لا يتكرر): got=1 expected=1
+[OK] S7 المسودة تسمح بتعديل AJ أيضاً (له شريحة مغلقة): got=1 expected=1
+[OK] S8 المهمة غادرت المسودة (Under Review): got='Under Review' expected='Under Review'
+[OK] S8 PATCH مُرفوض 403 بعد الإرسال العام (AJ): got=403 expected=403
+[OK] S8 PATCH مُرفوض 403 بعد الإرسال العام (BJ): got=403 expected=403
+
+Cleanup done (TEST_JL_*).
+
+SUMMARY — كل السيناريوهات الثمانية نجحت ✅

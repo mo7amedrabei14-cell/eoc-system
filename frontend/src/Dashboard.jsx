@@ -4088,16 +4088,29 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           <td className="p-2 text-center">
                             {(() => {
                               const periods = p.participation_periods || [];
+                              // ⚖️ القفل الوحيد على مستوى المهمة: «مسودة المهمة = مسودة المشاركة».
+                              // يُقفل فقط عند الإرسال العام (المهمة تخرج من المسودة) — ولا يُشتق أبداً
+                              // من حالة أي مشارك: انفصال مشارك (A) لا يؤثر إطلاقاً على أزرار مشارك آخر (B/C).
                               const isDraft = !currentMissionData || currentMissionData.status === 'Draft';
-                              const isLocked = !isDraft;
+                              const isLocked = !isDraft; // قفل الإرسال العام فحسب
                               const hasName = !!(p.full_name || '').trim();
-                              const joinT = p._draftJoin || [...periods].reverse().find(s => s.start_dt)?.start_dt || null;
-                              const leaveT = p._draftLeave || [...periods].filter(s => s.end_dt).pop()?.end_dt || null;
+                              // ── حالة هذا المشارك وحده — مصدرها قطاعاته هو لا غير ──
+                              const openSeg = periods.find(s => !s.end_dt);                 // شريحة مفتوحة = ملتحق حالياً
+                              const myLastLeave = [...periods].filter(s => s.end_dt).pop(); // آخر انفصال مسجَّل له
+                              const joinT = p._draftJoin || (openSeg?.start_dt || [...periods].filter(s => s.start_dt).pop()?.start_dt) || null;
+                              const leaveT = p._draftLeave || myLastLeave?.end_dt || null;
+                              // الانضمام ممكن لهذا المشارك: بلا حضور مفتوح → انضمام جديد؛ أو حضور مفتوح
+                              // والمسودة قائمة → تعديل زمنه. الانفصال ممكن: حضور مفتوح → إغلاقه؛ أو مسودة →
+                              // تعديل سجل سابق/انفصال من بداية المشاركة. — الحكم دائماً على حالة A/B/C ذاته.
+                              const myCanJoin = !openSeg || isDraft;
+                              const myCanLeave = !!openSeg || isDraft;
+                              const joinDisabled = !hasName || isLocked || !myCanJoin;    // هذا المشارك لا غيره
+                              const leaveDisabled = !hasName || isLocked || !myCanLeave;  // هذا المشارك لا غيره
                               return (
                                 <>
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={!hasName || isLocked} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (joinT ? 'تعديل زمن الانضمام المسجّل (مسودة)' : 'تسجيل انضمام جديد (يبدأ شريحة مشاركة)'))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
-                                    <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={!hasName || isLocked} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (leaveT ? 'تعديل زمن الانفصال المسجّل (مسودة)' : 'تسجيل انفصال'))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
+                                    <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={joinDisabled} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (openSeg ? 'تعديل زمن الانضمام المسجّل (مسودة)' : 'تسجيل انضمام جديد (يبدأ شريحة مشاركة)'))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
+                                    <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={leaveDisabled} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (openSeg ? 'تسجيل انفصال (إغلاق الحضور المفتوح)' : (myLastLeave ? 'تعديل زمن الانفصال المسجّل (مسودة)' : 'تسجيل انفصال من بداية المشاركة')))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
                                   </div>
                                   {/* الزمن المسجَّل تحت الزر مباشرة — 12 ساعة؛ قابل للنقر للتعديل في المسودة */}
                                   <div className="flex flex-col items-center gap-0.5 mt-1 min-h-[26px] justify-center">
