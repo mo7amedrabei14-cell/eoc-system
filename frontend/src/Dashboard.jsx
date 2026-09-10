@@ -4149,7 +4149,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              {/* 🆕 نافذة إنشاء/تعديل سجل انضمام أو انفصال — SmartDateField + SmartTimeField فقط */}
+              {/* 🆕 نافذة إنشاء/تعديل سجل انضمام أو انفصال — SmartDateField + TimeInput */}
               {entryDialog && (() => {
                 const isJoin = entryDialog.mode === 'join';
                 const isEdit = !!entryDialog.editId;
@@ -4192,7 +4192,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           </div>
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
-                            <SmartTimeField
+                            <TimeInput
                               id={timeId}
                               defaultValue={entryDialog.dt ? String(entryDialog.dt).slice(11, 16) : ''}
                               className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm"
@@ -4865,216 +4865,34 @@ const TimeWheel = ({ items, value, onChange, heightClass = 'h-28' }) => {
   );
 };
 
-// ⏱️ TimeInput — حقل وقت مخصص (مطابق لمعمارية DateInput):
-//  - العنصر المرئي <input type="text"> يعرض HH:MM، والنقر/التركيز يفتح المنتقي
-//    المنبثق؛ والكتابة اليدوية بصيغة HH:MM ما زالت تُقبل وتُثبَّت عند اكتمال قيمة صالحة.
-//  - <input> مخفي يحمل الـ id وقيمة الماكينة HH:MM (العقد الخلفي يبقى كما هو).
-//  - النافذة عبر createPortal(…, document.body) (تتجاوز حاوية transform للمودال)
-//    مع تموضع ديناميكي مطابق لمنتقي التاريخ (أسفل أولاً → قلب للأعلى → إزاحة أفقية).
-// يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled.
+// ⏱️ TimeInput — حقل وقت ذكي موحد (كل حقول الوقت المستقلة):
+//  - نقرة على الحقل → الساعة (تحديد المقطع)؛ كتابة الساعة → الدقائق → AM/PM تتحرك تلقائياً.
+//  - ↑↓ تزيد/تنقص المقطع الحالي بحرية؛ ←→ تنقل بين المقاطع؛ Backspace يمحو المقطع عند حدوده.
+//  - العجلة تُفتح من زر 🕐 فقط (لا تلتقطها النقرة).
+//  - <input> مخفي يحمل الـ id وقيمة الماكينة HH:MM 24س (عقد الباك كما هو).
+//  - يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled.
 const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
-  const initial = value !== undefined ? value : (defaultValue || '');
-  // القيمة الآلية (machine) والعجلات (clock) تبقى 24 ساعة — العرض (display) 12 ساعة فقط.
-  const [machine, setMachine] = useState(() => normTime(initial));          // HH:MM 24س (يقرأه الباك عبر id)
-  const [display, setDisplay] = useState(() => { const n = normTime(initial); return n ? to12Display(n) : ''; });
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const initClock = () => normTime(initial) || nowTimeStr();
-  const [clock, setClock] = useState(initClock);                            // HH:MM 24س للعجلات
-  const [ampm, setAmpm] = useState(() => meridian(initClock()));            // مؤشر الفترة (عرض 12س)
-  const textRef = useRef(null);
-  const popRef = useRef(null);
-
-  // مزامنة الحالة المتحكمة (عند تغيّر prop value من الخارج)
-  useEffect(() => {
-    if (value !== undefined) {
-      const n = normTime(value) || nowTimeStr();
-      setMachine(n);
-      setDisplay(to12Display(n));
-      setClock(n);
-      setAmpm(meridian(n));
-    }
-  }, [value]);
-
-  const apply = (t) => {
-    const n = normTime(t);
-    setMachine(n);
-    setDisplay(n ? to12Display(n) : '');
-    if (onChange) onChange({ target: { value: n } });
-  };
-
-  const GAP = 8;   // مسافة صغيرة بين الحقل والنافذة (ليست إزاحة موضعية ثابتة)
-  const EDGE = 8;  // هامش أمان من حواف الشاشة
-
-  // ✅ تموضع ديناميكي: أسفل الحقل تماماً، ينقلب للأعلى إن لم يكفِ الفراغ،
-  //    ويُزاح أفقياً ليُبقى داخل الشاشة — بلا إزاحات موضعية ثابتة.
-  const positionPopup = () => {
-    const el = textRef.current, pop = popRef.current;
-    if (!el || !pop) return;
-    const r = el.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const pw = pop.offsetWidth, ph = pop.offsetHeight;
-    let top = r.bottom + GAP;
-    if (top + ph > vh - EDGE) top = r.top - GAP - ph;
-    if (top < EDGE) top = EDGE;
-    let left = r.left;
-    if (left + pw > vw - EDGE) left = vw - pw - EDGE;
-    if (left < EDGE) left = EDGE;
-    setPos({ top, left });
-  };
-
-  const openPicker = () => {
-    if (disabled) return;
-    const el = textRef.current;
-    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + GAP, left: r.left }); }
-    setOpen(true);
-  };
-
-  // بعد الفتح نعرف أبعاد النافذة الفعلية فنضبط وضعها النهائي (قلب/إزاحة)
-  useLayoutEffect(() => {
-    if (open) positionPopup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // إغلاق عند النقر خارجها / Escape، وإعادة التموضع عند التمرير أو تغيّر الحجم
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => {
-      if (popRef.current && popRef.current.contains(e.target)) return;
-      if (textRef.current && textRef.current.contains(e.target)) return;
-      setOpen(false);
-    };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    const onMove = () => positionPopup();
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    // capture=true يلتقط التمرير داخل أي حاوية (مثل المودال overflow-y-auto)
-    window.addEventListener('scroll', onMove, true);
-    window.addEventListener('resize', onMove);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-      window.removeEventListener('scroll', onMove, true);
-      window.removeEventListener('resize', onMove);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // كتابة يدوية بأي صيغة (02:35 PM / 14:35 / ...) — تُثبَّت القيمة الآلية عند اكتمال
-  // وقت صالح، وعند مغادرة الحقل يُعاد التنسيق المعروض إلى 12 ساعة.
-  const handleText = (e) => {
-    const raw = e.target.value;
-    setDisplay(raw);
-    const n = normTime(raw);
-    if (n) {
-      setMachine(n);
-      setClock(n);
-      setAmpm(meridian(n));
-      if (onChange) onChange({ target: { value: n } });
-    }
-  };
-  const blurNormalize = () => setDisplay(machine ? to12Display(machine) : '');
-
-  const hh = (clock || '00').split(':')[0];
-  const mm = (clock || '00').split(':')[1] || '00';
-  const hh12 = String(hour12(hh)).padStart(2, '0'); // قيمة عجلة الساعات معروضة 1-12
-
-  return (
-    <>
-      <input
-        ref={textRef}
-        type="text"
-        value={display}
-        placeholder="hh:mm"
-        className={`${className} cursor-pointer`}
-        dir="ltr"
-        onFocus={openPicker}
-        onChange={handleText}
-        onBlur={blurNormalize}
-        disabled={disabled}
-        autoComplete="off"
-        {...props}
-      />
-      {/* القيمة الآلية HH:MM (المصدر الحقيقي للباك) — مخفية تماماً لكن تحمل id */}
-      <input
-        id={id}
-        type="time"
-        value={machine || ''}
-        onChange={() => {}}
-        tabIndex={-1}
-        aria-hidden="true"
-        disabled={disabled}
-        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-      />
-      {open && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
-          style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
-            <span className="text-lg font-bold text-[var(--ink-2)]" dir="ltr">{clock ? to12Display(clock) : '--:--'}</span>
-          </div>
-          <div className="flex items-start justify-center gap-2" dir="ltr">
-            {/* dir="ltr" داخلي فقط داخل منتقي الوقت: يثبّت ترتيب الأعمدة
-                [ساعات] : [دقائق] [الفترة] دائماً من اليسار لليمين بلا تأثير على RTL العام */}
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
-              <TimeWheel items={HOURS} value={hh12}
-                onChange={(h) => setClock(prev => `${from12Wheel(h, ampm)}:${(prev.split(':')[1] || '00')}`)} />
-            </div>
-            <span className="text-2xl font-bold text-[var(--accent)] mt-10 select-none">:</span>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">دقائق</span>
-              <TimeWheel items={MINUTES} value={mm} onChange={(m) => setClock(prev => `${(prev.split(':')[0] || '00')}:${m}`)} />
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">الفترة</span>
-              <div className="flex flex-col gap-1 mt-2">
-                <button type="button" onClick={() => { setAmpm('AM'); setClock(flipMeridian(clock, 'AM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
-                <button type="button" onClick={() => { setAmpm('PM'); setClock(flipMeridian(clock, 'PM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
-            <button type="button" onClick={() => { apply(clock); setOpen(false); }}
-              className="flex-1 px-2 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-bold hover:opacity-90">تم</button>
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-};
-
-// ⚡ SmartTimeField — حقل وقت سريع الكتابة (ماسك مقسّم «HH:MM AM/PM») — حصرياً لنافذتي
-//    إنشاء/تعديل سجلي الانضمام والانفصال (فقط الـ ids: jl_join_time / jl_leave_time).
-//    لا تُلمس بقية حقول الوقت (TimeInput). الكتابة: رقما الساعة ← رقما الدقائق ← A/P (أو ص/م).
-//    Backspace يمسح المقطع كاملاً عند حدوده ولا يعبر «:». القيمة الآلية HH:MM 24س في
-//    <input id> مخفي — نفس عقد الباك مثل TimeInput؛ العجلة نسخة مطابقة لمنتقي TimeInput.
-const SmartTimeField = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
-  // إعادة بناء المقاطع من قيمة آلة 24س «HH:MM» (يُستخدم للعرض 12س وللعجلات)
+  // بناء المقاطع من قيمة آلة 24س «HH:MM» (تُعرض 12س) — مقاطع فارغة إن لم يُمرَّر وقت
+  // (كانت التعبئة المسبقة بوقت الحاضر تقفل الكتابة المباشرة: المقاطع ممتلئة منذ البداية)
   const segFromMachine = (mm) => {
     if (!mm || !/^\d{2}:\d{2}$/.test(mm)) return { h: '', m: '', mer: '' };
     const [HH, MI] = mm.split(':');
     return { h: String(hour12(HH)).padStart(2, '0'), m: MI, mer: meridian(HH) };
   };
-  const initial = value !== undefined ? value : (defaultValue || '');
-  // الحقل يبدأ من مقاطع فارغة إن لم يُمرَّر وقت — كانت التعبئة المسبقة بوقت الحاضر
-  //    تقفل الكتابة المباشرة (المقاطع ممتلئة منذ البداية). العجلة وحدها تحتفظ
-  //    بافتراض «الآن» عبر clock/ampm المستقلين عن مقاطع الكتابة.
+  const initial = value !== undefined && value !== null ? value : (defaultValue || '');
   const initMachine = normTime(initial) || '';
   const [seg, setSeg] = useState(() => ({ ...segFromMachine(initMachine), mer: segFromMachine(initMachine).mer || '' }));
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
-  const [clock, setClock] = useState(initMachine || nowTimeStr());   // HH:MM 24س للعجلات (افتراض الآن عند فتحها)
+  const [clock, setClock] = useState(initMachine || nowTimeStr());   // HH:MM 24س للعجلات (افتراض «الآن» عند فتحها)
   const [ampm, setAmpm] = useState(() => meridian(initMachine || nowTimeStr()));
   const textRef = useRef(null);
   const popRef = useRef(null);
+  const mountedRef = useRef(false);
 
-  // مقطع كامل (ساعة + دقيقة + فترة) → آلة HH:MM 24س (12AM→00، 12PM→12)
+  // مقاطع كاملة (ساعة + دقيقة + فترة) → آلة HH:MM 24س (12AM→00، 12PM→12)
+  // فترة ناقصة (مثل 'P' بعد مسح حرف) = قيمة غير مكتملة، لا آلة ← غير جاهزة للحفظ
   const segToMachine = (s) => {
-    // فترة ناقصة (مثل 'P' بعد مسح حرف) = قيمة غير مكتملة، لا آلة ← تبقى غير جاهزة للحفظ
     if (s.h.length !== 2 || s.m.length !== 2 || (s.mer !== 'AM' && s.mer !== 'PM')) return '';
     const hh12 = s.h === '00' ? '12' : s.h;
     return `${from12Wheel(hh12, s.mer)}:${s.m}`;
@@ -5083,79 +4901,110 @@ const SmartTimeField = ({ value, onChange, defaultValue, id, className = "", dis
   const machine = segToMachine(seg);
   const display = segToDisplay(seg);
 
-  // إشعار الحقل المخصص (onChange) عند تغيّر القيمة الآلية — للمعاينة الحية في النافذة
-  useEffect(() => { onChange?.({ target: { value: machine } }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [machine]);
-  // مزامنة الحالة المتحكمة (value prop) من الخارج
+  const SEG = { h: 0, m: 3, mer: 6 };
+  const segAt = (p) => (p < 3 ? 'h' : p < 6 ? 'm' : 'mer');
+  const placeCaret = (p) => requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(p, p); });
+  const selectSegment = (nm) => placeCaret(SEG[nm]);
+  // تحديد (إبراز) المقطع كاملاً — «النقرة تأخذني إلى الساعة» مثل المنتقي الأصلي
+  const highlightSegment = (nm) => requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(SEG[nm], SEG[nm] + 2); });
+
+  // إشعار الحقل المخصص (onChange) عند تغيّر القيمة الآلية — بعد أول تركيب فقط
+  // (بلا إشعار يُلوِّث عند الفتح؛ القيمة الناقصة لا تُرسَل إلا عند اكتمال آلة صالحة)
   useEffect(() => {
-    if (value !== undefined) {
-      const n = normTime(value) || nowTimeStr();
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    onChange?.({ target: { value: machine } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [machine]);
+  // مزامنة الحالة المتحكمة (value prop) من الخارج — تتجاهل إدخال المستخدم الجاري
+  useEffect(() => {
+    if (value !== undefined && value !== null) {
+      const n = normTime(value) || '';
       setSeg({ ...segFromMachine(n), mer: segFromMachine(n).mer || 'AM' });
-      setClock(n); setAmpm(meridian(n));
+      setClock(n || nowTimeStr()); setAmpm(meridian(n || nowTimeStr()));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // توجيه رقم إلى المقطع الصحيح (ساعة 12س 01-12، دقائق أول رقم 0-5)
-  const applyDigit = (s, d) => {
-    let { h, m } = s;
+  // توجيه رقم إلى المقطع عند المؤشر (ساعة 12س 01-12، دقائق أول رقم 0-5) — ثم المتابعة التلقائية
+  const applyDigit = (d) => {
+    let { h, m } = seg;
     if (h.length < 2) {
       if (h.length === 0) { if (d === '0' || d === '1') h = d; }
-      else if (h === '0') h += d;               // 00-09 (00 ⇒ 12)
+      else if (h === '0') h += d;                // 00-09 (00 ⇒ 12)
       else if (d === '0' || d === '1' || d === '2') h += d; // 10-12
     } else if (m.length < 2) {
       if (m.length === 0) { if ('012345'.includes(d)) m = d; }
       else m += d;
     }
-    return { ...s, h, m };
+    const ns = { ...seg, h, m };
+    setSeg(ns);
+    // موضع المؤشر بعد كل رقم: اكتملت الساعة → الدقائق → الفترة
+    placeCaret(ns.h.length !== 2 ? ns.h.length
+             : ns.m.length !== 2 ? 3 + ns.m.length
+             : 6);
   };
-  // موضع المؤشر بعد كل رقم (متابعة تلقائية للموقع التالي)
-  const caretAfter = (ns) => {
-    if (ns.h.length !== 2) return ns.h.length;          // ما زال في الساعة
-    if (ns.m.length !== 2) return 3 + ns.m.length;      // ما زال في الدقائق
-    return 6;                                           // اكتمل → بداية الفترة
+
+  // أسهم ↑↓ — زيادة/نقصان حرّة للمقطع الذي وقف المؤشر فوقه (مثل المنتقي الأصلي)
+  const stepSegment = (which, dir) => {
+    setSeg(prev => {
+      if (which === 'h') {
+        const cur = parseInt(prev.h, 10) || 12;
+        let v = cur + dir; if (v > 12) v = 1; if (v < 1) v = 12;
+        const ns = { ...prev, h: String(v).padStart(2, '0') };
+        const mc = segToMachine({ ...ns, m: ns.m || '00', mer: ns.mer || ampm });
+        if (mc) setClock(mc);
+        return ns;
+      }
+      if (which === 'm') {
+        const cur = parseInt(prev.m, 10) || 0;
+        const v = (cur + dir + 60) % 60;
+        const ns = { ...prev, m: String(v).padStart(2, '0') };
+        const mc = segToMachine(ns); if (mc) setClock(mc);
+        return ns;
+      }
+      const ns = { ...prev, mer: prev.mer === 'PM' ? 'AM' : 'PM' };
+      setAmpm(ns.mer); const mc = segToMachine(ns); if (mc) setClock(mc);
+      return ns;
+    });
+    placeCaret(SEG[which]);
   };
 
   const onKeyDown = (e) => {
     if (disabled) return;
-    const place = () => {
-      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(e.target.selectionStart ?? display.length, e.target.selectionStart ?? display.length); });
-    };
+    const cpos = e.target.selectionStart ?? 0;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); stepSegment(segAt(cpos), e.key === 'ArrowUp' ? 1 : -1); return; }
+    // تنقّل بين المقاطع — يسار/يمين تراجع وتقدم مقطعاً كاملاً (مثل الحقل الأصلي)
+    if (e.key === 'ArrowLeft') { e.preventDefault(); if (segAt(cpos) === 'm') selectSegment('h'); else if (segAt(cpos) === 'mer') selectSegment('m'); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (segAt(cpos) === 'h') selectSegment('m'); else if (segAt(cpos) === 'm') selectSegment('mer'); return; }
+    if (e.key === 'Home') { e.preventDefault(); selectSegment('h'); return; }
+    if (e.key === 'End') { e.preventDefault(); selectSegment('mer'); return; }
+    if (e.key === 'Delete') { e.preventDefault(); return; }
     if (e.key === 'Backspace') {
       e.preventDefault();
-      const cpos = e.target.selectionStart ?? 0;
-      const starts = [['h', 0], ['m', 3], ['mer', 6]];
       let which = 'h';
-      for (const [nm, st] of starts) if (cpos >= st) which = nm;
-      if (cpos === ({ h: 0, m: 3, mer: 6 })[which]) {
+      for (const [nm, st] of [['h', 0], ['m', 3], ['mer', 6]]) if (cpos >= st) which = nm;
+      if (cpos === SEG[which]) {
         // عند حد المقطع → امسح المقطع السابق (أو هذا إن كان الأول) وارجع مقطعاً للخلف
-        const order = ['h', 'm', 'mer'];
-        const clear = order[Math.max(0, order.indexOf(which) - 1)];
+        const clear = ['h', 'm', 'mer'][Math.max(0, ['h', 'm', 'mer'].indexOf(which) - 1)];
         setSeg(s => ({ ...s, [clear]: '' }));
-        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange({ h: 0, m: 3, mer: 6 }[clear], { h: 0, m: 3, mer: 6 }[clear]); });
+        placeCaret(SEG[clear]);
       } else {
         // داخل المقطع → احذف الرقم الأخير فقط
         setSeg(s => ({ ...s, [which]: String(s[which]).slice(0, -1) }));
-        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(cpos - 1, cpos - 1); });
+        placeCaret(cpos - 1);
       }
       return;
     }
-    if (/^\d$/.test(e.key)) {
-      e.preventDefault();
-      const ns = applyDigit(seg, e.key);
-      setSeg(ns);
-      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(caretAfter(ns), caretAfter(ns)); });
-      return;
-    }
+    if (/^\d$/.test(e.key)) { e.preventDefault(); applyDigit(e.key); return; }
     if (/^[AaPpصم]$/.test(e.key)) {
       e.preventDefault();
       const m = ['a', 'A', 'ص'].includes(e.key) ? 'AM' : 'PM';
       setSeg(s => ({ ...s, mer: m }));
-      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(8, 8); });
+      placeCaret(8);
       return;
     }
-    if (['Delete'].includes(e.key)) { e.preventDefault(); return; }
     // اسمح بالتنقل فقط — كل ما عداه (':', حروف، مسافة) ممنوع: الفواصل تُرسم وليست قابلة للكتابة
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab'].includes(e.key)) return;
+    if (['Tab'].includes(e.key)) return;
     e.preventDefault();
   };
 
@@ -5200,6 +5049,7 @@ const SmartTimeField = ({ value, onChange, defaultValue, id, className = "", dis
     const onMove = () => positionPopup();
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
+    // capture=true يلتقط التمرير داخل أي حاوية (مثل المودال overflow-y-auto)
     window.addEventListener('scroll', onMove, true);
     window.addEventListener('resize', onMove);
     return () => {
@@ -5223,8 +5073,10 @@ const SmartTimeField = ({ value, onChange, defaultValue, id, className = "", dis
           type="text"
           value={display}
           placeholder="hh:mm"
-          className={`${className} text-center pr-7 pl-7`}
+          className={`${className} cursor-pointer text-center pr-7 pl-7`}
           dir="ltr"
+          onFocus={() => highlightSegment('h')}
+          onMouseUp={(e) => { const p = e.target.selectionStart ?? 0; highlightSegment(segAt(p)); }}
           onKeyDown={onKeyDown}
           onChange={() => {}}
           disabled={disabled}
