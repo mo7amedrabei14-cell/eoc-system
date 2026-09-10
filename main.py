@@ -1340,7 +1340,10 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
     """
     now = now or datetime.now()
     completed = mission_status in ('Completed', 'مكتملة')
-    end_cap = mission_end_dt(mission_data) if completed else None
+    # ⭐ القاعدة الثابتة: نهاية المهمة هي النقطة النهائية الدائمة لحساب ساعات العمل.
+    #    LEAVE (إن وُجد) يُلغي هذا السقف وينهي المشاركة في زمنه؛ وإلا تبقى نهاية المهمة.
+    #    لا فرق بين Draft وCompleted — السقف دائم وموجود.
+    end_cap = mission_end_dt(mission_data)
     planned_start = planned_start_dt(mission_data, assigned_days, routes, start_from_mission)
 
     def seg_dur(s):
@@ -1357,7 +1360,8 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
             if end_cap and end > end_cap:
                 end = end_cap
         else:
-            end = end_cap or now  # مفتوح — حتى الآن، أو حتى نهاية المهمة إن اكتملت
+            # مفتوح — نهاية المهمة هي السقف الدائم (لا "الآن" — القاعدة: نهاية المهمة ثابتة)
+            end = end_cap or now
         secs = (end - start).total_seconds()
         return (secs / 3600.0) if secs > 0 else 0.0
 
@@ -4474,14 +4478,13 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                                 EXTRACT(EPOCH FROM (
                                     (
                                         CASE
-                                            -- المغلق في مهمة مكتملة يُقصّ إلى سقف نهاية المهمة (fix D1)؛
-                                            -- والمفتوح فيها يُغلق عند السقف (LEAST[COALESCE] = seg_dur في Python:
-                                            --  مغلق ⇒ end_dt مقصوصاً بالسقف، مفتوح ⇒ السقف).
-                                            WHEN m.status IN ('Completed', 'مكتملة')
-                                                 AND mpair.mission_end_ts IS NOT NULL
+                                            -- ⭐ القاعدة الثابتة: نهاية المهمة هي السقف الدائم لحساب ساعات العمل.
+                                            --    LEAST[COALESCE] = seg_dur في Python:
+                                            --    مغلق ⇒ end_dt مقصوصاً بالسقف، مفتوح ⇒ السقف.
+                                            --    لا فرق بين Draft وCompleted — السقف دائم (نهاية المهمة).
+                                            WHEN mpair.mission_end_ts IS NOT NULL
                                             THEN LEAST(COALESCE(mps.end_dt, mpair.mission_end_ts), mpair.mission_end_ts)
-                                            -- بلا سقف (غير مكتملة، أو مكتملة بلا زوج كامل):
-                                            --  المغلق بنهايته المسجلة، والمفتوح حتى الآن (إطار العميل).
+                                            -- بلا نهاية معرفة (نادر) ⇒ المغلق بنهايته، والمفتوح حتى الآن
                                             ELSE COALESCE(mps.end_dt, COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))
                                         END - mps.start_dt
                                     )

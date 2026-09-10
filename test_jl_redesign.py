@@ -216,6 +216,24 @@ def part_b():
                   compute_working_hours(mdata, "Draft", [{"start_dt": f"{d} 10:00", "end_dt": None}], [],
                                         [], now=now_ref, start_from_mission=False), 2.0)
 
+            # ⭐ JOIN 15:00 → LEAVE 16:00 must equal exactly 1.0 hour (60 minutes)
+            mdata_with_end = {"mission_name": "...", "departure_date": d, "departure_time": "08:00",
+                              "exit_date": d, "completion_date": d, "completion_time": "18:00"}
+            check("C3 JOIN 15:00→LEAVE 16:00 = 1.0 hour",
+                  compute_working_hours(mdata_with_end, "Draft",
+                                         [{"start_dt": f"{d} 15:00", "end_dt": f"{d} 16:00"}],
+                                         [], [], now=now_ref, start_from_mission=False), 1.0)
+            # open JOIN (no LEAVE) on a Draft mission with completion → capped at mission end (18:00)
+            check("C4 open JOIN 15:00, no LEAVE, mission ends 18:00 → 3.0 hours",
+                  compute_working_hours(mdata_with_end, "Draft",
+                                         [{"start_dt": f"{d} 15:00", "end_dt": None}],
+                                         [], [], now=now_ref, start_from_mission=False), 3.0)
+            # open JOIN 15:00, no LEAVE, NO mission end → falls back to now_ref (12:00) → 0 (now < start)
+            check("C5 open JOIN, no mission end, now before start → 0",
+                  compute_working_hours(mdata, "Draft",
+                                         [{"start_dt": f"{d} 15:00", "end_dt": None}],
+                                         [], [], now=now_ref, start_from_mission=False), 0.0)
+
             # cleanup (order-safe: sessions → itineraries → entries → participants → mission)
             cur.execute("DELETE FROM mission_participant_sessions WHERE mission_id=%s", (mid,))
             cur.execute("DELETE FROM mission_participant_itineraries WHERE mission_id=%s", (mid,))
