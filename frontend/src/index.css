@@ -866,6 +866,12 @@ textarea:not(.field):focus {
   opacity: 1;
   transform: translateX(calc(var(--tip-dir, 1) * -50%)) translateY(0) scale(1);
 }
+/* عند مرور المؤشر: ارفع زر الأيقونة فوق مجاميع DOM اللاحقة (مثل "إنشاء مهمة")
+   كي لا يظهر نص التلميح خلفها — الزر سياق تكديس (will-change: transform). */
+.action-btn[data-tip]:hover,
+.action-btn[data-tip]:focus-visible {
+  z-index: 60;
+}
 
 /* الزر الأساسي — Premium CTA */
 .btn-primary {
