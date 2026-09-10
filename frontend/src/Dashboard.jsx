@@ -4038,7 +4038,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               className={`text-xs font-bold px-2 py-1 rounded-lg border w-full text-right ${((p.assigned_days || []).length > 0) ? 'text-purple-400 bg-purple-400/10 border-purple-400/30' : 'text-[var(--muted-2)] bg-[var(--surface-3)] border-[var(--border)]'}`}
                             >
                               {((p.assigned_days || []).length > 0) ? (() => {
-                                const [routeDays] = splitAssignedDays(p.assigned_days);
+                                const { routes: routeDays } = splitAssignedDays(p.assigned_days);
                                 const jlDays = (p.assigned_days || []).filter(d => d && d.startsWith('JL:'));
                                 return (
                                   <span className="inline-flex flex-wrap items-center gap-1">
@@ -5060,18 +5060,22 @@ const SmartTimeField = ({ value, onChange, defaultValue, id, className = "", dis
     return { h: String(hour12(HH)).padStart(2, '0'), m: MI, mer: meridian(HH) };
   };
   const initial = value !== undefined ? value : (defaultValue || '');
-  const initMachine = normTime(initial) || nowTimeStr(); // مثل TimeInput: افتراض الآن
-  const [seg, setSeg] = useState(() => ({ ...segFromMachine(initMachine), mer: segFromMachine(initMachine).mer || 'AM' }));
+  // الحقل يبدأ من مقاطع فارغة إن لم يُمرَّر وقت — كانت التعبئة المسبقة بوقت الحاضر
+  //    تقفل الكتابة المباشرة (المقاطع ممتلئة منذ البداية). العجلة وحدها تحتفظ
+  //    بافتراض «الآن» عبر clock/ampm المستقلين عن مقاطع الكتابة.
+  const initMachine = normTime(initial) || '';
+  const [seg, setSeg] = useState(() => ({ ...segFromMachine(initMachine), mer: segFromMachine(initMachine).mer || '' }));
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
-  const [clock, setClock] = useState(initMachine);   // HH:MM 24س للعجلات
-  const [ampm, setAmpm] = useState(() => meridian(initMachine));
+  const [clock, setClock] = useState(initMachine || nowTimeStr());   // HH:MM 24س للعجلات (افتراض الآن عند فتحها)
+  const [ampm, setAmpm] = useState(() => meridian(initMachine || nowTimeStr()));
   const textRef = useRef(null);
   const popRef = useRef(null);
 
   // مقطع كامل (ساعة + دقيقة + فترة) → آلة HH:MM 24س (12AM→00، 12PM→12)
   const segToMachine = (s) => {
-    if (s.h.length !== 2 || s.m.length !== 2 || !s.mer) return '';
+    // فترة ناقصة (مثل 'P' بعد مسح حرف) = قيمة غير مكتملة، لا آلة ← تبقى غير جاهزة للحفظ
+    if (s.h.length !== 2 || s.m.length !== 2 || (s.mer !== 'AM' && s.mer !== 'PM')) return '';
     const hh12 = s.h === '00' ? '12' : s.h;
     return `${from12Wheel(hh12, s.mer)}:${s.m}`;
   };
@@ -5281,8 +5285,9 @@ const SmartDateField = ({ value, onChange, defaultValue, id, className = "", dis
   const segFromIso = (iso) => {
     const m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (m) return { dd: String(+m[3]).padStart(2, '0'), mm: String(+m[2]).padStart(2, '0'), yyyy: m[1] };
-    const n = new Date(); // افتراض: اليوم (مثل المودال القديم)
-    return { dd: String(n.getDate()).padStart(2, '0'), mm: String(n.getMonth() + 1).padStart(2, '0'), yyyy: String(n.getFullYear()) };
+    // مقاطع فارغة — الكتابة المباشرة تبدأ من الصفر (التعبئة المسبقة باليوم كانت تقفلها).
+    // التقويم المنبثق يحتفظ بافتراض «اليوم/الشهر الحالي» عبر view/selDate فقط، لا هنا.
+    return { dd: '', mm: '', yyyy: '' };
   };
   const initial = value !== undefined ? value : (defaultValue || '');
   const [seg, setSeg] = useState(() => segFromIso(initial));
