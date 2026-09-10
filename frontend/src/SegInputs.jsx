@@ -152,31 +152,38 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   });
   const textRef = useRef(null);
   const popRef = useRef(null);
-  const ownEmission = useRef(false);
+  const lastSyncedValue = useRef(initial || '');
 
   // Build display from segments
   const display = segs[0] || segs[1] || segs[2]
     ? `${segs[0] || '__'}/${segs[1] || '__'}/${segs[2] || '____'}`
     : '';
 
-  // Complete check & emission
+  // Complete check & emission — only emit when value actually changed
   useEffect(() => {
     const [dd, mm, yyyy] = segs;
     if (dd.length === 2 && mm.length === 2 && yyyy.length === 4) {
       const iso = `${yyyy}-${mm}-${dd}`;
       if (machine !== iso) {
         setMachine(iso);
-        ownEmission.current = true;
+      }
+      // Only emit if this is a user-initiated change (not controlled sync)
+      // The lastSyncedValue comparison is the single source of truth:
+      // - user types → completion effect fires → iso != lastSyncedValue → emit and update
+      // - parent changes value → controlled sync fires → iso === lastSyncedValue → skip
+      if (iso !== lastSyncedValue.current) {
+        lastSyncedValue.current = iso;
         if (onChange) onChange({ target: { value: iso } });
-        setTimeout(() => { ownEmission.current = false; }, 0);
       }
     }
   }, [segs]);
 
-  // Controlled value sync
+  // Controlled value sync — skip if value unchanged from last sync
   useEffect(() => {
-    if (value !== undefined && value !== null && !ownEmission.current) {
+    if (value !== undefined && value !== null) {
       const iso = String(value || '');
+      if (iso === lastSyncedValue.current) return; // already in sync
+      lastSyncedValue.current = iso;
       const m = iso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
       if (m) setSegs([pad(+m[2]), pad(+m[3]), m[1]]);
       else setSegs(['','','']);
@@ -387,13 +394,13 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   const [ampm, setAmpm] = useState(() => meridian(initMachine || nowTimeStr()));
   const textRef = useRef(null);
   const popRef = useRef(null);
-  const ownEmission = useRef(false);
+  const lastSyncedValue = useRef(initMachine || '');
 
   const display = segs[0] || segs[1]
     ? `${segs[0] || '__'}:${segs[1] || '__'} ${segs[2] || 'AM'}`
     : '';
 
-  // Complete check & emission
+  // Complete check & emission — only emit when value actually changed
   useEffect(() => {
     const [hh, mm, ap] = segs;
     if (hh.length === 2 && mm.length === 2 && (ap === 'AM' || ap === 'PM')) {
@@ -401,17 +408,24 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
       const iso = `${machineH}:${mm}`;
       if (machine !== iso) {
         setMachine(iso);
-        ownEmission.current = true;
+      }
+      // Only emit if this is a user-initiated change (not controlled sync)
+      // The lastSyncedValue comparison is the single source of truth:
+      // - user types → completion effect fires → iso != lastSyncedValue → emit and update
+      // - parent changes value → controlled sync fires → iso === lastSyncedValue → skip
+      if (iso !== lastSyncedValue.current) {
+        lastSyncedValue.current = iso;
         if (onChange) onChange({ target: { value: iso } });
-        setTimeout(() => { ownEmission.current = false; }, 0);
       }
     }
   }, [segs]);
 
-  // Controlled value sync
+  // Controlled value sync — skip if value unchanged from last sync
   useEffect(() => {
-    if (value !== undefined && value !== null && !ownEmission.current) {
+    if (value !== undefined && value !== null) {
       const n = normTime(value) || '';
+      if (n === lastSyncedValue.current) return; // already in sync
+      lastSyncedValue.current = n;
       if (n) {
         setSegs(parseTimeSegs(to12Display(n)));
         setClock(n);
@@ -633,10 +647,15 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const textRef = useRef(null);
   const popRef = useRef(null);
-  const ownEmission = useRef(false);
+  const initMachine = (() => {
+    const m = String(initial || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{2}))/);
+    return m ? `${m[1]}-${pad(+m[2])}-${pad(+m[3])}T${pad(+m[4])}:${m[5]}` : initial;
+  })();
+  const lastSyncedValue = useRef(initMachine || '');
 
   const display = `${segs[0] || '__'}/${segs[1] || '__'}/${segs[2] || '____'} ${segs[3] || '__'}:${segs[4] || '__'} ${segs[5] || 'AM'}`;
 
+  // Complete check & emission — only emit when value actually changed
   useEffect(() => {
     const [dd, mm, yyyy, hh, mm2, ap] = segs;
     if (dd.length === 2 && mm.length === 2 && yyyy.length === 4 && hh.length === 2 && mm2.length === 2 && (ap === 'AM' || ap === 'PM')) {
@@ -644,16 +663,24 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
       const iso = `${yyyy}-${mm}-${dd}T${machineH}:${mm2}`;
       if (machine !== iso) {
         setMachine(iso);
-        ownEmission.current = true;
+      }
+      // Only emit if this is a user-initiated change (not controlled sync)
+      // The lastSyncedValue comparison is the single source of truth:
+      // - user types → completion effect fires → iso != lastSyncedValue → emit and update
+      // - parent changes value → controlled sync fires → iso === lastSyncedValue → skip
+      if (iso !== lastSyncedValue.current) {
+        lastSyncedValue.current = iso;
         if (onChange) onChange({ target: { value: iso } });
-        setTimeout(() => { ownEmission.current = false; }, 0);
       }
     }
   }, [segs]);
 
+  // Controlled value sync — skip if value unchanged from last sync
   useEffect(() => {
-    if (value !== undefined && value !== null && !ownEmission.current) {
+    if (value !== undefined && value !== null) {
       const s = String(value || '');
+      if (s === lastSyncedValue.current) return; // already in sync
+      lastSyncedValue.current = s;
       const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{2}))/);
       if (m) {
         const h24 = +m[4], mm = pad(+m[5]);
