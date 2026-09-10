@@ -3110,79 +3110,187 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     XLSX.writeFile(wb, `السجل_الشامل_${filterDate}.xlsx`);
   };
 
+  // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
+  // (نفس الأقسام والترتيب والجداول)، واسم الملف هو الاسم المدخل في حقل «اسم الاستمارة».
   const handleExportSingleExcel = () => {
-    const escapeCSV = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
-    let csvContent = "";
-    csvContent += "البيانات الأساسية\nاسم المهمة,تصنيف المهمة,التمركز,نوع المهمة,مكان المهمة,مسؤول المهمة,تاريخ الإنشاء,مصدر البلاغ\n";
-    csvContent += `${escapeCSV(document.getElementById('f_mission_name')?.value)},${escapeCSV(document.getElementById('f_mission_class')?.value)},${escapeCSV(getSelectedOptionSourceText(document.getElementById('f_branch_id')))},${escapeCSV(document.getElementById('f_mission_type')?.value)},${escapeCSV(document.getElementById('f_mission_location')?.value)},${escapeCSV(document.getElementById('f_responsible_person')?.value)},${escapeCSV(formatDateTime(document.getElementById('f_creation_date')?.value))},${escapeCSV(document.getElementById('f_data_source')?.value)}\n\n`;
-    csvContent += "التواريخ والتوقيتات\nتاريخ المهمة,تاريخ الخروج,تاريخ الوصول,تاريخ العودة,تاريخ الانتهاء,ساعة البدء,ساعة التحرك,ساعة الوصول,ساعة الانتهاء\n";
-    csvContent += `${escapeCSV(formatDateTime(document.getElementById('f_exit_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_departure_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_arrival_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_return_date')?.value))},${escapeCSV(formatDateTime(document.getElementById('f_completion_date')?.value))},${escapeCSV(formatTime12(document.getElementById('f_start_time')?.value))},${escapeCSV(formatTime12(document.getElementById('f_departure_time')?.value))},${escapeCSV(formatTime12(document.getElementById('f_arrival_time')?.value))},${escapeCSV(formatTime12(document.getElementById('f_completion_time')?.value))}\n\n`;
-    csvContent += "خطوط السير المجمعة\nالمجموعة,من,إلى (الوجهة),تاريخ التحرك,ساعة التحرك,تاريخ الوصول,ساعة الوصول\n";
+    const text = (v) => (v === undefined || v === null ? '' : String(v));
+    const val = (v) => (v === undefined || v === null ? '' : v);
+    const gid = (id) => document.getElementById(id)?.value || '';
+    const optText = (id) => { const el = document.getElementById(id); return el ? getSelectedOptionSourceText(el) : ''; };
+    const dateT = (v) => (v ? formatDateTime(v) : '—');
+    const tm12 = (v) => (v ? formatTime12(v) : '—');
+
+    // ——— أنماط التنسيق (بثيم النظام: أحمر EOC على أسطح داكنة/فاتحة) ———
+    const thin = { style: 'thin', color: { rgb: 'D9D9DF' } };
+    const S = {
+      title:    { font: { bold: true, sz: 18, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'C70000' } }, alignment: { horizontal: 'center', vertical: 'center' } },
+      subtitle: { font: { sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '303238' } }, alignment: { horizontal: 'center', vertical: 'center' } },
+      section:  { font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'C70000' } }, alignment: { horizontal: 'right', vertical: 'center' } },
+      th:       { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '3A3C42' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: thin },
+      td:       { font: { sz: 10, color: { rgb: '202126' } }, alignment: { vertical: 'center', wrapText: true }, border: thin },
+      label:    { font: { bold: true, sz: 10, color: { rgb: '202126' } }, fill: { fgColor: { rgb: 'ECECEF' } }, alignment: { vertical: 'center', wrapText: true }, border: thin },
+    };
+
+    const aoa = [];
+    const styles = {};
+    const merges = [];
+    let row = 0;
+    const TOTAL = 12; // أعمدة A:L
+    const put = (c, v, s) => { if (!aoa[row]) aoa[row] = []; aoa[row][c] = v; if (s) styles[`R${row}C${c}`] = s; };
+    const span = (from, to) => { if (to > from) merges.push({ s: { r: row, c: from }, e: { r: row, c: to } }); };
+    const section = (title) => { put(0, title, S.section); span(0, TOTAL - 1); row++; };
+    const header = (cols) => { cols.forEach((v, i) => put(i, v, S.th)); row++; };
+    const data = (cells, s = S.td) => { cells.forEach((v, i) => put(i, val(v), s)); row++; };
+    const emptyRow = (msg) => { put(0, msg, S.td); span(0, TOTAL - 1); row++; };
+    const field = (label, value) => {
+      put(0, label, S.label); span(0, 2);
+      put(3, text(value), S.td); span(3, TOTAL - 1);
+      row++;
+    };
+
+    // ── العنوان: اسم الاستمارة + كود الاستمارة + تاريخ الإنشاء ──
+    const formName = text(missionName || gid('f_mission_name'));
+    const formCode = gid('f_mission_code');
+    put(0, formName || 'استمارة مهمة', S.title); span(0, TOTAL - 1); row++;
+    const created = creationDateTime ? formatDateTime(creationDateTime) : '';
+    put(0, `كود الاستمارة: ${formCode || '—'}${created ? `   |   تاريخ الإنشاء: ${created}` : ''}`, S.subtitle); span(0, TOTAL - 1); row++;
+
+    // 1) البيانات الأساسية للمهمة
+    section('البيانات الأساسية للمهمة');
+    field('تصنيف المهمة', gid('f_mission_class'));
+    field('التمركز / الفرع', optText('f_branch_id'));
+    field('نوع المهمة', gid('f_mission_type'));
+    field('مكان المهمة', gid('f_mission_location'));
+    field('حالة العملية الميدانية', gid('f_mission_field_status'));
+    field('مسؤول المهمة', gid('f_responsible_person'));
+    field('تاريخ إنشاء المهمة', created || '—');
+    field('مصدر البلاغ', gid('f_data_source'));
+
+    // 2) التواريخ والتوقيتات
+    section('التواريخ والتوقيتات');
+    header(['تاريخ المهمة', 'تاريخ الخروج', 'تاريخ الوصول', 'تاريخ العودة', 'تاريخ الانتهاء', 'ساعة البدء', 'ساعة التحرك', 'ساعة الوصول', 'ساعة الانتهاء']);
+    data([
+      dateT(gid('f_exit_date')), dateT(gid('f_departure_date')), dateT(gid('f_arrival_date')),
+      dateT(gid('f_return_date')), dateT(gid('f_completion_date')),
+      tm12(gid('f_start_time')), tm12(gid('f_departure_time')), tm12(gid('f_arrival_time')), tm12(gid('f_completion_time')),
+    ]);
+
+    // 3) تفاصيل خط السير الأساسي
+    section('تفاصيل خط السير الأساسي');
+    header(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
+    let routeCount = 0;
     routes.forEach((_, i) => {
-      const from = document.getElementById(`r_from_main_${i}`)?.value;
-      const to = document.getElementById(`r_to_main_${i}`)?.value;
-      const depVal = document.getElementById(`r_dep_main_${i}`)?.value || '';
-      const arrVal = document.getElementById(`r_arr_main_${i}`)?.value || '';
-      const depDate = formatDateTime(depVal.split('T')[0] || '');
-      const depTime = formatTime12(depVal.split('T')[1] || '');
-      const arrDate = formatDateTime(arrVal.split('T')[0] || '');
-      const arrTime = formatTime12(arrVal.split('T')[1] || '');
-      if (from || to) csvContent += `خط السير الأساسي,${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(depDate)},${escapeCSV(depTime)},${escapeCSV(arrDate)},${escapeCSV(arrTime)}\n`;
+      const from = gid(`r_from_main_${i}`), to = gid(`r_to_main_${i}`);
+      const depVal = gid(`r_dep_main_${i}`), arrVal = gid(`r_arr_main_${i}`);
+      if (!from && !to) return;
+      routeCount++;
+      data(['خط السير الأساسي', from, to,
+        depVal.split('T')[0] ? dateT(depVal.split('T')[0]) : '—',
+        depVal.split('T')[1] ? tm12(depVal.split('T')[1]) : '—',
+        arrVal.split('T')[0] ? dateT(arrVal.split('T')[0]) : '—',
+        arrVal.split('T')[1] ? tm12(arrVal.split('T')[1]) : '—']);
     });
+    if (!routeCount) emptyRow('لا توجد مسارات مسجلة');
+
+    // 4) الأيام / خطوط السير المخصصة
+    section('الأيام / خطوط السير المخصصة');
+    header(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
+    let custCount = 0;
     customItineraries.forEach((ci, ciIndex) => {
-      ci.routes.forEach((_, rIndex) => {
-        const from = document.getElementById(`r_from_cust_${ciIndex}_${rIndex}`)?.value;
-        const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
-        const depVal = document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || '';
-        const arrVal = document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || '';
-        const depDate = formatDateTime(depVal.split('T')[0] || '');
-        const depTime = formatTime12(depVal.split('T')[1] || '');
-        const arrDate = formatDateTime(arrVal.split('T')[0] || '');
-        const arrTime = formatTime12(arrVal.split('T')[1] || '');
-        if (from || to) csvContent += `${escapeCSV(ci.title)},${escapeCSV(from)},${escapeCSV(to)},${escapeCSV(depDate)},${escapeCSV(depTime)},${escapeCSV(arrDate)},${escapeCSV(arrTime)}\n`;
+      (ci.routes || []).forEach((_, rIndex) => {
+        const from = gid(`r_from_cust_${ciIndex}_${rIndex}`), to = gid(`r_to_cust_${ciIndex}_${rIndex}`);
+        const depVal = gid(`r_dep_cust_${ciIndex}_${rIndex}`), arrVal = gid(`r_arr_cust_${ciIndex}_${rIndex}`);
+        if (!from && !to) return;
+        custCount++;
+        data([ci.title || '—', from, to,
+          depVal.split('T')[0] ? dateT(depVal.split('T')[0]) : '—',
+          depVal.split('T')[1] ? tm12(depVal.split('T')[1]) : '—',
+          arrVal.split('T')[0] ? dateT(arrVal.split('T')[0]) : '—',
+          arrVal.split('T')[1] ? tm12(arrVal.split('T')[1]) : '—']);
       });
     });
-    csvContent += "\nالسيارات والسائقين\nاسم السائق,رقم السيارة\n";
+    if (!custCount) emptyRow('لا توجد أيام / خطوط سير مخصصة');
+
+    // 5) السيارات والسائقين (أسطول المهمة)
+    section('السيارات والسائقين (أسطول المهمة)');
+    header(['اسم السائق', 'رقم السيارة']);
+    let vCount = 0;
     vehicles.forEach((_, i) => {
-      const driver = document.getElementById(`v_driver_${i}`)?.value;
-      const plate = document.getElementById(`v_plate_${i}`)?.value;
-      if (driver || plate) csvContent += `${escapeCSV(driver)},${escapeCSV(plate)}\n`;
+      const driver = gid(`v_driver_${i}`), plate = gid(`v_plate_${i}`);
+      if (!driver && !plate) return;
+      vCount++;
+      data([driver, plate]);
     });
-    csvContent += hasDayGroups
-      ? `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الفريق,خط السير المخصص,الحالة,الساعات,الفرع\n`
-      : `\nالقوة البشرية والمشاركين (مفصل)\nنوع المشارك,الاسم,رقم العضوية,صفة المشارك,الفريق,المرحلة,الفرع,مجموعة التحرك المتبعة (خط السير)\n`;
-    participants.forEach((_, i) => {
-      const name = document.getElementById(`p_name_${i}`)?.value;
-      if (name) {
-        const typeSel = document.getElementById(`p_type_${i}`);
-        const branchSel = document.getElementById(`p_branch_${i}`);
-        const teamVal = document.getElementById(`p_team_${i}`)?.value || '';
-        if (hasDayGroups) {
-          const days = (participants[i]?.assigned_days || []).join(' + ') || '—';
-          const st = participants[i]?.status || 'مازال بالمهمة';
-          const wh = participants[i]?.working_hours != null ? fmtHours(participants[i].working_hours, lang) : '—';
-          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(teamVal)},${escapeCSV(days)},${escapeCSV(st)},${escapeCSV(wh)},${escapeCSV(getSelectedOptionSourceText(branchSel))}\n`;
-        } else {
-          const itinSel = document.getElementById(`p_itin_${i}`);
-          const phase = document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول';
-          csvContent += `${escapeCSV(getSelectedOptionSourceText(typeSel))},${escapeCSV(name)},${escapeCSV(document.getElementById(`p_role_${i}`)?.value)},${escapeCSV(document.getElementById(`p_position_${i}`)?.value)},${escapeCSV(teamVal)},${escapeCSV(phase)},${escapeCSV(getSelectedOptionSourceText(branchSel))},${escapeCSV(getSelectedOptionSourceText(itinSel) || 'خط السير الأساسي')}\n`;
-        }
-      }
+    if (!vCount) emptyRow('لا توجد سيارات');
+
+    // 6) القوة البشرية والمشاركين (نفس أعمدة جدول الاستمارة)
+    section('القوة البشرية والمشاركين');
+    header(['م', 'النوع', 'الاسم', 'رقم العضوية', 'صفة المشارك', 'الفريق', 'الساعات', 'خط السير المخصص', 'الفرع']);
+    let pCount = 0;
+    participants.forEach((p, i) => {
+      const name = gid(`p_name_${i}`);
+      if (!name) return;
+      pCount++;
+      const typeSel = document.getElementById(`p_type_${i}`);
+      const typeAr = typeSel ? getSelectedOptionSourceText(typeSel) : (p.participant_type === 'non_volunteer' ? 'غير متطوع' : 'متطوع');
+      const days = (p.assigned_days || []).join(' + ') || '—';
+      const wh = p.working_hours != null ? fmtHours(p.working_hours, lang) : '—';
+      data([i + 1, typeAr, name, gid(`p_role_${i}`), gid(`p_position_${i}`), gid(`p_team_${i}`), wh, days, optText(`p_branch_${i}`)]);
     });
-    csvContent += "\nإحصائيات المستفيدين\nالتصنيف,مباشر,غير مباشر\n";
+    if (!pCount) emptyRow('لا يوجد مشاركون');
+
+    // 7) كود الفريق/الإدارة
+    section('كود الفريق/الإدارة');
+    field('كود الفريق/الإدارة', gid('f_team_code'));
+
+    // 8) إحصائيات المستفيدين
+    section('إحصائيات المستفيدين');
+    header(['تصنيف المستفيدين', 'مستفيدين (مباشر)', 'مستفيدين (غير مباشر)']);
+    let bCount = 0;
     beneficiaries.forEach((_, i) => {
-      const cat = document.getElementById(`b_cat_${i}`)?.value;
-      if (cat) csvContent += `${escapeCSV(cat)},${escapeCSV(document.getElementById(`b_count_${i}`)?.value)},${escapeCSV(document.getElementById(`b_indirect_${i}`)?.value)}\n`;
+      const cat = gid(`b_cat_${i}`);
+      if (!cat) return;
+      bCount++;
+      data([cat, gid(`b_count_${i}`), gid(`b_indirect_${i}`)]);
     });
-    csvContent += "\nسجل التحديثات والملاحظات\n";
-    csvContent += `سجل الميدان,${escapeCSV(document.getElementById('f_notes')?.value)}\n`;
-    csvContent += `ملاحظات داخلية,${escapeCSV(document.getElementById('f_internal_notes')?.value)}\n`;
-    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", document.getElementById('f_mission_name')?.value ? `استمارة_${document.getElementById('f_mission_name').value.replace(/ /g, '_')}.csv` : 'استمارة_تفصيلية.csv');
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    if (!bCount) emptyRow('لا توجد إحصائيات مسجلة');
+
+    // 9) فريق إدارة الغرفة (الهيكل الإداري)
+    section('فريق إدارة الغرفة (الهيكل الإداري)');
+    header(['المسؤولية', 'الاسم']);
+    [
+      ['مسؤول المتابعة (قائد العملية)', 'eoc_leader'],
+      ['المشرف', 'eoc_supervisor'],
+      ['المشرف المراجع', 'eoc_reviewer'],
+      ['الجوكر', 'eoc_joker'],
+      ['معبئ الاستمارة', 'eoc_filler'],
+      ['مستكمل الاستمارة', 'eoc_completer'],
+      ['مراجع الاستمارة', 'eoc_final_reviewer'],
+    ].forEach(([label, id]) => data([label, gid(id)]));
+
+    // 10) الحالة والملاحظات العامة
+    section('الحالة والملاحظات العامة');
+    const statusAr = currentMissionData ? ({ Draft: 'مسودة', Active: 'نشطة', 'Under Review': 'قيد المراجعة', Approved: 'معتمدة وفي انتظار الانتهاء', Completed: 'مكتملة (تم انتهاء المهمة)', Returned: 'إرجاع للمتطوع (يوجد أخطاء)', Cancelled: 'ملغاة' }[currentMissionData.status] || 'جديدة') : 'جديدة';
+    field('موقف الاستمارة إدارياً', statusAr);
+    field('سجل الميدان / ملاحظات عامة', gid('f_notes'));
+    field('ملاحظات داخلية', gid('f_internal_notes'));
+
+    // ── تحويل شبكة القيم إلى ورقة عمل مصمّمة ──
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    Object.keys(styles).forEach((k) => {
+      const m = k.match(/^R(\d+)C(\d+)$/);
+      if (!m) return;
+      const addr = XLSX.utils.encode_cell({ r: +m[1], c: +m[2] });
+      if (ws[addr]) ws[addr].s = styles[k];
+    });
+    if (merges.length) ws['!merges'] = merges;
+    ws['!cols'] = Array.from({ length: TOTAL }, (_, i) => ({ wch: i === 0 ? 16 : 15 }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الاستمارة');
+    // اسم الملف = الاسم المدخل في حقل «اسم الاستمارة» بالضبط (مع إزالة محارف غير صالحة فقط)
+    const rawName = text(missionName || gid('f_mission_name')).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
+    XLSX.writeFile(wb, `${rawName}.xlsx`);
   };
 
   // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
