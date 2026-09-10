@@ -1015,6 +1015,11 @@ function isoLocal(d) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
+// 📅 تاريخ اليوم (YYYY-MM-DD) — يُلحق باسم كل ملف سجل يتم تنزيله (شامل وفردي على السواء)
+function todayFileDate() {
+  return isoLocal(new Date()).slice(0, 10);
+}
+
 // fix #5: عرض الساعات بالدقائق — الحساب يبقى دقيقًا (كسور داخلية)، والتحويل للدقائق عند العرض فقط.
 // أمثلة: 0.75 → "45 دقيقة"/"45 min" · 1.33 → "1س 20د"/"1h 20m" · 2.083 → "2س 05د"/"2h 05m"
 function fmtHours(hours, lang = 'ar') {
@@ -3107,7 +3112,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const ws2 = XLSX.utils.json_to_sheet(beneficiariesSheet);
       XLSX.utils.book_append_sheet(wb, ws2, "إحصائيات المستفيدين");
     }
-    XLSX.writeFile(wb, `السجل_الشامل_${filterDate}.xlsx`);
+    XLSX.writeFile(wb, `السجل_الشامل_${todayFileDate()}.xlsx`);
   };
 
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
@@ -3290,7 +3295,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     XLSX.utils.book_append_sheet(wb, ws, 'الاستمارة');
     // اسم الملف = الاسم المدخل في حقل «اسم الاستمارة» بالضبط (مع إزالة محارف غير صالحة فقط)
     const rawName = text(missionName || gid('f_mission_name')).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
-    XLSX.writeFile(wb, `${rawName}.xlsx`);
+    XLSX.writeFile(wb, `${rawName}_${todayFileDate()}.xlsx`);
   };
 
   // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
@@ -3746,7 +3751,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
       {isTableExpanded && <div className="fixed inset-0 bg-[var(--bg-deep)]/85 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
 
-      <div className={isTableExpanded ? `fixed inset-4 z-[150] card-surface rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-72 md:left-10' : 'md:right-20 md:left-10'}` : "flex-1 flex flex-col overflow-hidden relative"}>
+      <div className={isTableExpanded ? `fixed inset-4 z-[150] card-surface rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-20 md:left-10' : 'md:right-20 md:left-10'}` : "flex-1 flex flex-col overflow-hidden relative"}>
 
         {isTableExpanded && (
           <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
@@ -5142,7 +5147,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
       XLSX.utils.book_append_sheet(wb, ws, "الأرشيف");
-      XLSX.writeFile(wb, fileName);
+      XLSX.writeFile(wb, `${fileName.replace(/\.xlsx$/i, '')}_${todayFileDate()}.xlsx`);
     } catch (err) {
       alert("حدث خطأ في الاتصال بالسيرفر أثناء تحميل الأرشيف.");
     }
@@ -5419,7 +5424,7 @@ const [nd, setNd] = useState({
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "سجل الأخبار");
-    XLSX.writeFile(wb, `سجل_الأخبار_المحلية.xlsx`);
+    XLSX.writeFile(wb, `سجل_الأخبار_المحلية_${todayFileDate()}.xlsx`);
   };
 
   const handleExportSingleNewsExcel = () => {
@@ -5436,7 +5441,7 @@ const [nd, setNd] = useState({
     }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الخبر");
-    XLSX.writeFile(wb, `خبر_${nd.area_name || 'محلي'}.xlsx`);
+    XLSX.writeFile(wb, `خبر_${nd.area_name || 'محلي'}_${todayFileDate()}.xlsx`);
   };
 
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
@@ -5815,7 +5820,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "الكوارث العالمية");
-    XLSX.writeFile(wb, filterDate ? `سجل_الكوارث_العالمية_${filterDate}.xlsx` : `سجل_الكوارث_العالمية.xlsx`);
+    XLSX.writeFile(wb, `سجل_الكوارث_العالمية_${todayFileDate()}.xlsx`);
   };
 
   // 💡 تصدير الخبر الفردي بنفس الترتيب
@@ -5840,7 +5845,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     }]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الكارثة");
-    XLSX.writeFile(wb, `كارثة_${gd.country || 'عالمية'}.xlsx`);
+    XLSX.writeFile(wb, `كارثة_${gd.country || 'عالمية'}_${todayFileDate()}.xlsx`);
   };
 
   // 💡 الإحصائيات تتحدث مع الفلتر
@@ -6291,13 +6296,13 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleExportGlobalEqs = () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية"); XLSX.writeFile(wb, filterDate ? `سجل_الزلازل_العالمية_${filterDate}.xlsx` : `سجل_الزلازل_العالمية.xlsx`);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية"); XLSX.writeFile(wb, `سجل_الزلازل_العالمية_${todayFileDate()}.xlsx`);
   };
 
   const handleExportEgyptEqs = () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
     const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر"); XLSX.writeFile(wb, filterDate ? `سجل_زلازل_مصر_${filterDate}.xlsx` : `سجل_زلازل_مصر.xlsx`);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر"); XLSX.writeFile(wb, `سجل_زلازل_مصر_${todayFileDate()}.xlsx`);
   };
 
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
@@ -6669,7 +6674,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     })));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "سجل الرصد الآلي"); XLSX.writeFile(wb, `سجل_الذكاء_الاصطناعي.xlsx`);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "سجل الرصد الآلي"); XLSX.writeFile(wb, `سجل_الذكاء_الاصطناعي_${todayFileDate()}.xlsx`);
   };
 
   const handleDeleteAiNews = (id) => {
@@ -7315,7 +7320,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
     })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "القوة البشرية");
-    XLSX.writeFile(wb, `سجل_القوة_البشرية.xlsx`);
+    XLSX.writeFile(wb, `سجل_القوة_البشرية_${todayFileDate()}.xlsx`);
   };
 
   const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
