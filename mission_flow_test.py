@@ -114,13 +114,14 @@ try:
     mdata = {"departure_date": "2026-09-09", "departure_time": "08:00", "arrival_date": "2026-09-09", "arrival_time": "18:00",
              "completion_date": None, "created_at": created}
 
-    # Segments-first: no segments → assigned_span per participant (no crash, distinct windows).
+    # Segments-first: no segments → assigned_span per participant (continuous span).
     # المشارك يحمل مخزّن checkbox الافتراضي TRUE ⇒ البداية المخططة = بداية المهمة (القاعدة 3):
-    # V1: يومه 10:00→18:00 ⇐ تُستبدل بدايته بـ08:00 ⇒ 10س ; V2: يوم1 10س + يوم2 8س = 18س
+    # V1: يومه 10:00→18:00 ⇐ تُستبدل بدايته بـ08:00 ⇒ 10س
+    # V2: [أقرب انطلاق → أبعد وصول] = 09-09 08:00 → 09-10 18:00 = 34س (continuous span)
     hA = M.compute_working_hours(mdata, "Active", [], da, routes, start_from_mission=True)
     hB = M.compute_working_hours(mdata, "Active", [], db, routes, start_from_mission=True)
     ok("V1 TRUE: planned start = Mission Start 08:00 → 08:00–18:00 = 10h", hA == 10.0, f"hA={hA}")
-    ok("V2 TRUE: Day1 10h + Day2 8h = 18h — mixed counts OK", hB == 18.0, f"hB={hB}")
+    ok("V2 TRUE: continuous span 09-09 08:00→09-10 18:00 = 34h", hB == 34.0, f"hB={hB}")
     ok("different route counts produce different hours (no assumption of uniformity)", hB > hA)
 
     # ── NEW (plan a — تصحيح إشارة المستخدم): h(TRUE) − h(FALSE) = بداية المسار − بداية المهمة ──

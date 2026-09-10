@@ -58,11 +58,11 @@ check("assigned_span: same-day overlapping = 8h (not 9h)",
       abs(assigned_span(["أ", "ب"], routes2) - 8.0) < 0.001,
       f"got {assigned_span(['أ','ب'], routes2)}")
 
-# A2. different-day routes → summed per-day spans (8h + 6h = 14h)
+# A2. different-day routes → continuous span [earliest start → latest end] (29h, not 14h)
 routes3 = [route("د1", "2026-09-01", "10:00", "2026-09-01", "18:00"),
            route("د2", "2026-09-02", "09:00", "2026-09-02", "15:00")]
-check("assigned_span: different days summed (14h)",
-      abs(assigned_span(["د1", "د2"], routes3) - 14.0) < 0.001,
+check("assigned_span: different days continuous (29h = 09-01 10:00 → 09-02 15:00)",
+      abs(assigned_span(["د1", "د2"], routes3) - 29.0) < 0.001,
       f"got {assigned_span(['د1','د2'], routes3)}")
 
 # A3. compute_working_hours: explicit segments are the sole source of truth (even if completed)
@@ -79,24 +79,32 @@ check("hours: no segments + assigned → assigned_span (8h)",
       abs(compute_working_hours(md2, "Active", [], ["أ", "ب"], routes2) - 8.0) < 0.001,
       f"got {compute_working_hours(md2,'Active',[],['أ','ب'],routes2)}")
 
-# A5. completed + no segments → mission freeze (08:00→20:00 = 12h)
+# A5. completed + no segments → mission freeze (08:00→20:00 = 12h) عبر «من بداية المهمة».
+#     القاعدة C: بلا تخصيص وبلا checkbox (start_from_mission) ⇒ بلا بدء مشاركة ⇒ 0.
 mdc = mission_data(status="Completed", completion_date="2026-09-01", completion_time="20:00")
-check("hours: completed no-segment → mission span (12h)",
-      abs(compute_working_hours(mdc, "Completed", [], [], []) - 12.0) < 0.001,
+check("hours: completed no-segment + sfm → mission span (12h)",
+      abs(compute_working_hours(mdc, "Completed", [], [], [], start_from_mission=True) - 12.0) < 0.001,
+      f"got {compute_working_hours(mdc,'Completed',[],[],[],start_from_mission=True)}")
+check("hours: completed no-segment, no sfm → 0 (غير مشارك)",
+      abs(compute_working_hours(mdc, "Completed", [], [], []) - 0.0) < 0.001,
       f"got {compute_working_hours(mdc,'Completed',[],[],[])}")
 
-# A6. basic route default (no segments, no assigned) → 08:00→20:00 = 12h
+# A6. basic route default (no segments, no assigned) → 08:00→20:00 = 12h عبر checkbox؛
+#     بلا checkbox ⇒ غير مشارك ⇒ 0 (القاعدة C).
 routes_basic = [route("خط السير الأساسي", "2026-09-01", "08:00", "2026-09-01", "20:00")]
-check("hours: no segment/assigned + basic route → 12h",
-      abs(compute_working_hours(md2, "Active", [], [], routes_basic) - 12.0) < 0.001,
+check("hours: no segment/assigned + basic route + sfm → 12h",
+      abs(compute_working_hours(md2, "Active", [], [], routes_basic, start_from_mission=True) - 12.0) < 0.001,
+      f"got {compute_working_hours(md2,'Active',[],[],routes_basic,start_from_mission=True)}")
+check("hours: no assignment, no sfm → 0 (غير مشارك)",
+      abs(compute_working_hours(md2, "Active", [], [], routes_basic) - 0.0) < 0.001,
       f"got {compute_working_hours(md2,'Active',[],[],routes_basic)}")
 
-# A7. no itinerary at all → mission start/end, capped at now for active (now far past)
+# A7. no itinerary at all → mission start/end, capped at now for active (now far past); sfm checkbox.
 mdi = mission_data(status="Active", arrival_date="2026-09-05", arrival_time="20:00")
 now_far = datetime(2026, 9, 4, 12, 0)
-check("hours: no itinerary → window capped at now (from 09-01 08:00 to 09-04 12:00 = 76h)",
-      abs(compute_working_hours(mdi, "Active", [], [], [], now=now_far) - 76.0) < 0.001,
-      f"got {compute_working_hours(mdi,'Active',[],[],[],now=now_far)}")
+check("hours: no itinerary + sfm → window capped at now (from 09-01 08:00 to 09-04 12:00 = 76h)",
+      abs(compute_working_hours(mdi, "Active", [], [], [], now=now_far, start_from_mission=True) - 76.0) < 0.001,
+      f"got {compute_working_hours(mdi,'Active',[],[],[],now=now_far,start_from_mission=True)}")
 
 # A8. overnight segment via segment_span_from_parts (end <= start ⇒ +1 day)
 sd, ed = segment_span_from_parts("2026-09-01", "22:00", "02:00")

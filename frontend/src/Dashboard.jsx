@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 // ⏰ وحدة الزمن الموحّدة — العرض 12 ساعة فقط، الآلة 24 ساعة (راجع timeutils.js)
 import { normTime, formatTime12, formatDateTime12 } from './timeutils';
+import { SegDateField, SegTimeField } from './SegInputs';
 
 // 🔧 Module-level API base. Must be declared here (module scope), NOT inside a
 // component's effect: MissionsView's live modal-sync effect fetches
@@ -2216,7 +2217,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
         <div className="flex flex-wrap items-center gap-3">
           <div className="segmented">
             <span className="px-3 text-xs font-bold text-[var(--muted)] whitespace-nowrap">إحصائيات يوم:</span>
-            <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer px-1" />
+            <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm font-bold outline-none cursor-pointer px-1" />
             {filterDate && (
               <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">
                 عرض الكل
@@ -2741,7 +2742,20 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const removeCustomItinerary = (id) => setCustomItineraries(customItineraries.filter(c => c.id !== id));
   const addRouteToCustom = (customId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: [...c.routes, { id: Date.now() }] } : c));
   const removeRouteFromCustom = (customId, routeId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: c.routes.filter(r => r.id !== routeId) } : c));
-  const updateCustomTitle = (customId, newTitle) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, title: newTitle } : c));
+  const updateCustomTitle = (customId, newTitle) => {
+    // 🆕 إعادة تسمية يوم/خط سير مخصص — تُرحَّل القيمة القديمة في إسنادات المشاركين
+    //    (assigned_days) إلى الجديدة فوراً (نفس نمط renameEntry للكتالوج) كي يظل
+    //    الربط مع mission_itineraries.group_title سليماً والحساب لا ينكسر.
+    const prev = customItineraries.find(c => c.id === customId);
+    const oldTitle = prev && prev.title;
+    setCustomItineraries(list => list.map(c => c.id === customId ? { ...c, title: newTitle } : c));
+    if (oldTitle && oldTitle !== newTitle) {
+      setParticipants(list => list.map(p => ({
+        ...p,
+        assigned_days: (p.assigned_days || []).map(d => (d === oldTitle ? newTitle : d))
+      })));
+    }
+  };
   const addVehicle = () => setVehicles([...vehicles, { id: Date.now() }]);
   const addParticipant = () => setParticipants([...participants, { id: Date.now() }]);
   const addBeneficiary = () => setBeneficiaries([...beneficiaries, { id: Date.now() }]);
@@ -2763,18 +2777,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     return { routes, events };
   };
   const jlKey = (kind, title) => `JL:${kind === 'join' ? 'J' : 'L'}:${title}`;
-  // مرآة المشارك لمصدر بداية المشاركة (participation_start_dt): أقرب مسار مسند → بداية المهمة إن sfm
-  const participantHasStart = (p) => {
-    const { routes: rts } = splitAssignedDays(p.assigned_days || []);
-    if (rts.length > 0) return true; // مسار مسند بموعد انطلاق ⇒ بداية صالحة
-    return p.start_from_mission !== false; // «من بداية المهمة» (الافتراضي TRUE)
-  };
   // 🆕 إدارة كتالوج الانضمام/الانفصال (قائمة المهمة — تصبح مشاركة فعلاً عند الإسناد):
-  //    إنشاء/تعديل/حذف سجل — المسودة فقط قابلة للتعديل (403 خارجها عبر السيرفر).
+  //    إنشاء/تعديل/حذف سجل بأي حالة مهمة — يُعاد الاشتقاق عند الحفظ (مثل المسارات).
   const openEntryDialog = (mode, edit) => {
-    if (currentMissionData && currentMissionData.status !== 'Draft') {
-      return setCustomAlert("المهمة خرجت من المسودة — كتالوج الانضمام/الانفصال مجمّد.");
-    }
     setJlDraft(edit
       ? { date: String(edit.dt || '').slice(0, 10), time: String(edit.dt || '').slice(11, 16) }
       : { date: '', time: '' });
@@ -2816,9 +2821,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setJlDraft({ date: '', time: '' });
   };
   const deleteEntry = (eid) => {
-    if (currentMissionData && currentMissionData.status !== 'Draft') {
-      return setCustomAlert("المهمة خرجت من المسودة — كتالوج الانضمام/الانفصال مجمّد.");
-    }
     const e = joinLeaveEntries.find(x => x.id === eid);
     if (!e) return;
     // احذف دعائم الإسناد من كل المشاركين مع السجل (مثل الـ backend: key يُحذف أيضاً)
@@ -2851,11 +2853,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       })));
     }
   };
-  // تعيين/إلغاء تعيين سجل لفلتريك — مع حكم الانفصال بلا بدء مشاركة (مرآة §4.2)
+  // تعيين/إلغاء تعيين سجل — بأي حالة مهمة (مسامح: انفصال بلا بدء = صفر ساعات حتى يُسنَد أحد)
   const toggleJLAssignment = (pIdx, entry) => {
-    if (currentMissionData && currentMissionData.status !== 'Draft') {
-      return setCustomAlert("المهمة خرجت من المسودة — المشاركة مجمّدة.");
-    }
     const key = jlKey(entry.kind, entry.title);
     const p = participants[pIdx];
     if (!p) return;
@@ -2863,21 +2862,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (days.includes(key)) {
       setParticipants(list => list.map((pp, i) => i === pIdx ? { ...pp, assigned_days: (pp.assigned_days || []).filter(d => d !== key) } : pp));
       return;
-    }
-    if (entry.kind === 'leave') {
-      // شرط الإسناد (§4.2): انفصال قابل للإسناد فقط لو وُجد انضمام مسند بزمن ≤ زمن الانفصال،
-      // أو (بلا أي انضمام مسند + بداية مسار/بداية مهمة صالحة). بديل المسار/المهمة
-      // غير مؤهل أبداً عند وجود أي انضمام مسند — مطابقة تامة للـ backend.
-      const joined = splitAssignedDays(days).events.filter(ev => ev.kind === 'join');
-      const leaveTs = (entry.dt || '').replace('T', ' ');
-      const validJoin = joined.some(ev => {
-        const rec = joinLeaveEntries.find(e2 => e2.kind === 'join' && String(e2.title).trim().toLowerCase() === String(ev.title).trim().toLowerCase());
-        return rec && (!leaveTs || String(rec.dt || '').replace('T', ' ') <= leaveTs);
-      });
-      const okNoJoin = joined.length === 0 && participantHasStart(p);
-      if (!validJoin && !okNoJoin) {
-        return setCustomAlert("لا يمكن إضافة انفصال لهذا المشارك لأنه لا يوجد له موعد بدء للمشاركة. برجاء تحديد انضمام أو خط سير أو تفعيل «من بداية المهمة» أولًا.");
-      }
     }
     setParticipants(list => list.map((pp, i) => i === pIdx ? { ...pp, assigned_days: [...(pp.assigned_days || []), key] } : pp));
   };
@@ -3579,7 +3563,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             <div className="hidden md:block w-px h-6 bg-[var(--border)]"></div>
 
             <div className="flex items-center gap-2">
-              <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="field !py-1.5 !px-3 w-auto" />
+              <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="field !py-1.5 !px-3 w-auto" />
               {filterDate && <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">إلغاء التاريخ</button>}
             </div>
           </div>
@@ -3853,13 +3837,28 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   <FormGroup label="مسؤول المهمة"><StyledInput id="f_responsible_person" defaultValue={currentMissionData?.responsible_person || ''} /></FormGroup>
                   <FormGroup label="تاريخ إنشاء المهمة (يُسجل آلياً)">
                     {isOwner ? (
-                      <input
-                        type="datetime-local"
-                        value={creationDateTime ? creationDateTime.slice(0, 16).replace(' ', 'T') : ''}
-                        onChange={(e) => setCreationDateTime(e.target.value ? e.target.value.replace('T', ' ') + ':00' : '')}
-                        className="field text-white border border-[var(--border)]"
-                        title="للمالك فقط"
-                      />
+                      <div className="flex gap-2">
+                        <SegDateField
+                          value={creationDateTime ? creationDateTime.slice(0, 10) : ''}
+                          onChange={(e) => {
+                            const d = e.target.value;
+                            const t = creationDateTime ? creationDateTime.slice(11, 19) : '00:00:00';
+                            setCreationDateTime(d ? d + ' ' + t : '');
+                          }}
+                          className="field text-white border border-[var(--border)]"
+                          title="للمالك فقط"
+                        />
+                        <SegTimeField
+                          value={creationDateTime ? creationDateTime.slice(11, 16) : ''}
+                          onChange={(e) => {
+                            const d = creationDateTime ? creationDateTime.slice(0, 10) : new Date().toISOString().slice(0, 10);
+                            const t = e.target.value;
+                            setCreationDateTime(d ? d + ' ' + t + ':00' : '');
+                          }}
+                          className="field text-white border border-[var(--border)]"
+                          title="للمالك فقط"
+                        />
+                      </div>
                     ) : (
                       <span
                         className="field inline-flex items-center px-3 text-white opacity-80 cursor-not-allowed bg-[var(--surface-2)] font-mono text-xs"
@@ -3878,13 +3877,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* تواريخ */}
-                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><DateInput className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" type="date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><DateInput className="field text-center" id="f_arrival_date" type="date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><DateInput className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" type="date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
                   {/* أوقات */}
-                  <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><TimeInput className={`field text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="ساعة الوصول"><TimeInput className="field text-center" id="f_arrival_time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="ساعة الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_time')}><TimeInput className={`field text-center ${requiredTouched && missingFields.includes('field_completion_time') ? 'field-invalid' : ''}`} id="f_completion_time" defaultValue={currentMissionData?.completion_time || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الوصول"><SegTimeField className="field text-center" id="f_arrival_time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_time') ? 'field-invalid' : ''}`} id="f_completion_time" defaultValue={currentMissionData?.completion_time || ''} onChange={bumpValidation} /></FormGroup>
                   {/* حقول مخفية لضمان عدم تلف الحفظ وحساب الساعات */}
                   <input type="hidden" id="f_departure_date" defaultValue={currentMissionData?.departure_date || ''} />
                   <input type="hidden" id="f_start_time" defaultValue={currentMissionData?.start_time || ''} />
@@ -4183,8 +4182,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
-                            <DateInput
-                              type="date"
+                            <SegDateField
                               id={dateId}
                               defaultValue={entryDialog.dt ? String(entryDialog.dt).slice(0, 10) : ''}
                               className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm"
@@ -4193,7 +4191,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           </div>
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
-                            <TimeInput
+                            <SegTimeField
                               id={timeId}
                               defaultValue={entryDialog.dt ? String(entryDialog.dt).slice(11, 16) : ''}
                               className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm"
@@ -4800,233 +4798,6 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
 // المساعدات تُعرَّف على مستوى الوحدة (module-level) وفوق المكوّنات: المُهيّئات
 // الكسولة لـ useState تُنفَّذ أثناء أول render، فلا يمكنها الإشارة إلى `const`
 // معرَّف لاحقاً (TDZ ⇒ شاشة بيضاء) — الأمان مضمون هكذا.
-// 🆕 العجلة تعرض 12 ساعة فقط (ص/م) — قيمة الآلة تبقى HH:MM 24 ساعة (يقرأها الباك بالـ id).
-const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
-const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-
-// 🆕 تحويلات عرض 12 ساعة فوق الآلة 24 ساعة — normTime (الممدّد بصيغتي ص/م) يُستورد
-// من وحدة timeutils.js. كل دوال العرض هنا حسابات فقط — بلا تحويل منطقة زمنية.
-const hour12 = (hh24) => { const h = Math.min(Math.max(parseInt(hh24, 10) || 0, 0), 23); return h % 12 || 12; };
-const meridian = (hh24) => (Math.min(Math.max(parseInt(hh24, 10) || 0, 0), 23) < 12 ? 'AM' : 'PM');
-const to12Display = (clock) => {
-  const [H, M] = (clock || '00:00').split(':');
-  return `${String(hour12(H)).padStart(2, '0')}:${(M || '00')} ${meridian(H)}`;
-};
-// من قيمة عجلة 1-12 + مؤشر ص/م → ساعة آلة 24 ساعة (0..23):
-//   12 ص ⇒ 0، 12 م ⇒ 12، 1 م ⇒ 13 ...
-const from12Wheel = (h12, mer) => {
-  let h = Math.min(Math.max(parseInt(h12, 10) || 0, 1), 12) % 12;
-  if (mer === 'PM' || mer === 'م') h += 12;
-  return String(h).padStart(2, '0');
-};
-// ساعة آلة 24 تبقى بنفس الساعة المعروضة لكن بقلب المؤشر المطلوب (14:35 ⇄ 02:35)
-const flipMeridian = (clock, desiredMer) => {
-  const [H, M] = (clock || '00:00').split(':');
-  const h = Math.min(Math.max(parseInt(H, 10) || 0, 0), 23);
-  const curMer = h < 12 ? 'AM' : 'PM';
-  if (curMer === desiredMer) return clock;
-  let h24 = desiredMer === 'PM' ? h + 12 : h - 12;
-  if (h24 < 0) h24 += 24;
-  if (h24 > 23) h24 -= 24;
-  return `${String(h24).padStart(2, '0')}:${(M || '00')}`;
-};
-function nowTimeStr() {
-  const n = new Date();
-  return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
-}
-
-// 🎡 عجلة لف رأسية (ساعات/دقائق) — قائمة قابلة للتمرير مع انطباق، العنصر المختار
-// يُبرز بخلفية accent (مطابق لخلايا التقويم)، ونقرة عليه تختاره.
-const TimeWheel = ({ items, value, onChange, heightClass = 'h-28' }) => {
-  const ref = useRef(null);
-  // عند تغيّر القيمة (أو أول تركيب) نمرّر العنصر المختار إلى منتصف العجلة
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const idx = items.indexOf(value);
-    if (idx >= 0) {
-      const ch = el.children[idx];
-      if (ch && ch.scrollIntoView) ch.scrollIntoView({ block: 'center', inline: 'nearest' });
-    }
-  }, [value, items]);
-  return (
-    <div className="relative">
-      {/* تظليل تلاشي أعلى/أسفل لإحساس العجلة الفاخر */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-7 bg-gradient-to-b from-[var(--surface-2)] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-7 bg-gradient-to-t from-[var(--surface-2)] to-transparent" />
-      <div ref={ref} className={`${heightClass} overflow-y-auto snap-y snap-mandatory px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
-        {items.map((it) => {
-          const on = it === value;
-          return (
-            <button key={it} type="button" onClick={() => onChange(it)}
-              className={`block h-8 w-12 mx-auto text-sm rounded-lg flex items-center justify-center transition snap-center
-                ${on ? 'bg-[var(--accent)] text-white font-bold shadow-lg scale-[1.05]' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>
-              {it}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ⏱️ TimeInput — حقل وقت ذكي موحد (كل حقول الوقت المستقلة):
-//  - كتابة حرة بصيغة HH:MM AM/PM — يُحلّل تلقائياً بـ normTime إلى HH:MM 24س.
-//  - العجلة تُفتح من زر 🕐 فقط (لا تلتقطها النقرة).
-//  - <input> مخفي يحمل الـ id وقيمة الماكينة HH:MM 24س (عقد الباك كما هو).
-//  - يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled.
-const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
-  const initial = value !== undefined && value !== null ? value : (defaultValue || '');
-  const initMachine = normTime(initial) || '';
-  const [machine, setMachine] = useState(initMachine);
-  const [display, setDisplay] = useState(() => initMachine ? to12Display(initMachine) : '');
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const [clock, setClock] = useState(initMachine || nowTimeStr());   // HH:MM 24س للعجلات (افتراض «الآن» عند فتحها)
-  const [ampm, setAmpm] = useState(() => meridian(initMachine || nowTimeStr()));
-  const textRef = useRef(null);
-  const popRef = useRef(null);
-
-  // مزامنة الحالة المتحكمة (value prop) من الخارج — تتجاهل إدخال المستخدم الجاري
-  useEffect(() => {
-    if (value !== undefined && value !== null) {
-      const n = normTime(value) || '';
-      setMachine(n);
-      setDisplay(n ? to12Display(n) : '');
-      setClock(n || nowTimeStr()); setAmpm(meridian(n || nowTimeStr()));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
-
-  // كتابة يدوية بصيغة HH:MM AM/PM — تُحدّث القيمة الآلية عند اكتمال وقت صالح
-  const handleText = (e) => {
-    const raw = e.target.value;
-    setDisplay(raw);
-    const t24 = normTime(raw);
-    if (/^\d{2}:\d{2}$/.test(t24)) {
-      setMachine(t24);
-      setClock(t24);
-      setAmpm(meridian(t24));
-      if (onChange) onChange({ target: { value: t24 } });
-    }
-  };
-
-  const apply = (t) => {
-    const n = normTime(t);
-    if (!n) return;
-    setMachine(n);
-    setDisplay(to12Display(n));
-    setClock(n); setAmpm(meridian(n));
-    setOpen(false);
-  };
-
-  const GAP = 8, EDGE = 8;
-  const positionPopup = () => {
-    const el = textRef.current, pop = popRef.current;
-    if (!el || !pop) return;
-    const r = el.getBoundingClientRect();
-    const vw = window.innerWidth, vh = window.innerHeight;
-    const pw = pop.offsetWidth, ph = pop.offsetHeight;
-    let top = r.bottom + GAP;
-    if (top + ph > vh - EDGE) top = r.top - GAP - ph;
-    if (top < EDGE) top = EDGE;
-    let left = r.left;
-    if (left + pw > vw - EDGE) left = vw - pw - EDGE;
-    if (left < EDGE) left = EDGE;
-    setPos({ top, left });
-  };
-  const openPicker = () => {
-    if (disabled) return;
-    const el = textRef.current;
-    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + GAP, left: r.left }); }
-    setOpen(true);
-  };
-  useLayoutEffect(() => { if (open) positionPopup(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => {
-      if (popRef.current && popRef.current.contains(e.target)) return;
-      if (textRef.current && textRef.current.contains(e.target)) return;
-      setOpen(false);
-    };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    const onMove = () => positionPopup();
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    // capture=true يلتقط التمرير داخل أي حاوية (مثل المودال overflow-y-auto)
-    window.addEventListener('scroll', onMove, true);
-    window.addEventListener('resize', onMove);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-      window.removeEventListener('scroll', onMove, true);
-      window.removeEventListener('resize', onMove);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  const hh = (clock || '00').split(':')[0];
-  const mm = (clock || '00').split(':')[1] || '00';
-  const hh12 = String(hour12(hh)).padStart(2, '0');
-
-  return (
-    <>
-      <div className="relative">
-        <input
-          ref={textRef}
-          type="text"
-          value={display}
-          placeholder="hh:mm"
-          className={`${className} cursor-pointer text-center pr-7 pl-7`}
-          dir="ltr"
-          onChange={handleText}
-          disabled={disabled}
-          autoComplete="off"
-          {...props}
-        />
-        {/* القيمة الآلية HH:MM (المصدر الحقيقي للباك) — مخفي لكن يحمل id */}
-        <input id={id} type="time" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />
-        <button type="button" onClick={openPicker} className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">🕐</button>
-      </div>
-      {open && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
-          style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
-            <span className="text-lg font-bold text-[var(--ink-2)]" dir="ltr">{clock ? to12Display(clock) : '--:--'}</span>
-          </div>
-          <div className="flex items-start justify-center gap-2" dir="ltr">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
-              <TimeWheel items={HOURS} value={hh12}
-                onChange={(h) => setClock(prev => `${from12Wheel(h, ampm)}:${(prev.split(':')[1] || '00')}`)} />
-            </div>
-            <span className="text-2xl font-bold text-[var(--accent)] mt-10 select-none">:</span>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">دقائق</span>
-              <TimeWheel items={MINUTES} value={mm} onChange={(m) => setClock(prev => `${(prev.split(':')[0] || '00')}:${m}`)} />
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">الفترة</span>
-              <div className="flex flex-col gap-1 mt-2">
-                <button type="button" onClick={() => { setAmpm('AM'); setClock(flipMeridian(clock, 'AM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
-                <button type="button" onClick={() => { setAmpm('PM'); setClock(flipMeridian(clock, 'PM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
-            <button type="button" onClick={() => { apply(clock); }}
-              className="flex-1 px-2 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-bold hover:opacity-90">تم</button>
-          </div>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-};
 
 const StyledSelect = (props) => <EocSelect variant="field" {...props} />;
 const SectionCard = ({ title, icon, actionBtn, children, className = "" }) => (<div className={`card-surface p-5 md:p-6 ${className}`}><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
@@ -5598,7 +5369,7 @@ const [nd, setNd] = useState({
                 {newsTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </EocSelect>
               <div className="flex items-center gap-2">
-                <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
+                <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
                 {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-2 py-2 rounded-lg">الكل</button>}
               </div>
             </div>
@@ -5695,7 +5466,7 @@ const [nd, setNd] = useState({
               
               <SectionCard title="1. بيانات الخبر الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="التاريخ (مطلوب)"><DateInput type="date" value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="field border-[var(--accent)]/30" /></FormGroup>
+                  <FormGroup label="التاريخ (مطلوب)"><SegDateField value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="field border-[var(--accent)]/30" /></FormGroup>
                   <FormGroup label="الشهر (تلقائي)"><StyledInput disabled value={getMonthName(nd.incident_date)} className="bg-[var(--surface-2)] text-[var(--faint)]" /></FormGroup>
                   <FormGroup label="نوع الخبر (مطلوب)">
                     <StyledSelect value={nd.news_type} onChange={e => setNd({...nd, news_type: e.target.value})} className="border-[var(--accent)]/30">
@@ -5723,14 +5494,14 @@ const [nd, setNd] = useState({
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت الإرسال"><TimeInput disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={`field ${!nd.is_reported ? 'opacity-50' : 'border-[var(--accent)]/30'}`}/></FormGroup>
+                  <FormGroup label="توقيت الإرسال"><SegTimeField disabled={!nd.is_reported} value={nd.report_time} onChange={e => setNd({...nd, report_time: e.target.value})} className={`field ${!nd.is_reported ? 'opacity-50' : 'border-[var(--accent)]/30'}`}/></FormGroup>
                   
                   <FormGroup label="تم الرد؟">
                     <StyledSelect disabled={!nd.is_reported} value={nd.is_responded ? 'نعم' : 'لا'} onChange={e => setNd({...nd, is_responded: e.target.value === 'نعم'})} className={!nd.is_reported ? 'opacity-50' : ''}>
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت الرد"><TimeInput disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={`field ${!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'}`}/></FormGroup>
+                  <FormGroup label="توقيت الرد"><SegTimeField disabled={!nd.is_responded} value={nd.response_time} onChange={e => setNd({...nd, response_time: e.target.value})} className={`field ${!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'}`}/></FormGroup>
                   
                   <div className="md:col-span-2"><FormGroup label="رد الفرع"><StyledInput disabled={!nd.is_responded} value={nd.branch_response_text} onChange={e => setNd({...nd, branch_response_text: e.target.value})} className={!nd.is_responded ? 'opacity-50' : 'border-[var(--accent)]/30'} /></FormGroup></div>
                   <FormGroup label="زمن الرد (تلقائي)"><div className="bg-[var(--surface-2)] text-blue-400 font-bold p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_responded ? formatDuration(responseDiff) : '-'}</div></FormGroup>
@@ -5745,12 +5516,12 @@ const [nd, setNd] = useState({
                       <option value="لا">لا</option><option value="نعم">نعم</option>
                     </StyledSelect>
                   </FormGroup>
-                  <FormGroup label="توقيت التحرك"><TimeInput disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={`field ${!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'}`} /></FormGroup>
+                  <FormGroup label="توقيت التحرك"><SegTimeField disabled={!nd.is_field_response} value={nd.movement_time} onChange={e => setNd({...nd, movement_time: e.target.value})} className={`field ${!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'}`} /></FormGroup>
                   <FormGroup label="المدة (إبلاغ ➔ تحرك)"><div className="bg-[var(--surface-2)] text-blue-400 font-bold p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_field_response ? formatDuration(moveDiff) : '-'}</div></FormGroup>
                   <FormGroup label="نقاط التحرك"><div className="bg-[var(--surface-2)] text-orange-500 font-bold p-3 rounded-xl border border-[var(--border)] text-sm text-center">{nd.is_field_response ? `${movePoints} نقطة` : '-'}</div></FormGroup>
 
                   <FormGroup label="طول المسافة (كم)"><StyledInput type="number" disabled={!nd.is_field_response} value={nd.distance_km} onChange={e => setNd({...nd, distance_km: e.target.value})} className={!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'} placeholder="مثال: 15" /></FormGroup>
-                  <FormGroup label="توقيت الوصول (أول متطوع)"><TimeInput disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={`field ${!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'}`} /></FormGroup>
+                  <FormGroup label="توقيت الوصول (أول متطوع)"><SegTimeField disabled={!nd.is_field_response} value={nd.field_arrival_time} onChange={e => setNd({...nd, field_arrival_time: e.target.value})} className={`field ${!nd.is_field_response ? 'opacity-50' : 'border-[var(--accent)]/30'}`} /></FormGroup>
                   <FormGroup label="الزمن المتوقع (تلقائي)"><div className="bg-[var(--surface-2)] text-[var(--faint)] p-3 rounded-xl border border-[var(--border)] text-sm">{nd.is_field_response && expectedTravelMins !== null ? `${Math.floor(expectedTravelMins)} دقيقة` : '-'}</div></FormGroup>
                   <FormGroup label="نقاط الاستجابة للمسافة"><div className="bg-[var(--surface-2)] text-green-500 font-bold p-3 rounded-xl border border-[var(--border)] text-sm text-center">{nd.is_field_response ? `${fieldPoints} نقطة` : '-'}</div></FormGroup>
                 </div>
@@ -6026,7 +5797,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             
             {/* 💡 فلتر التاريخ الجديد في الهيدر */}
             <div className="flex items-center gap-2">
-              <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
+              <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-3 py-1.5 rounded-lg transition-colors">إلغاء التاريخ</button>}
             </div>
           </div>
@@ -6125,7 +5896,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
               <SectionCard title="بيانات الكارثة الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormGroup label="التاريخ"><DateInput type="date" value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} className="field" /></FormGroup>
+                  <FormGroup label="التاريخ"><SegDateField value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} className="field" /></FormGroup>
                   <FormGroup label="الدولة (مطلوب)">
                     <StyledSelect value={gd.country} onChange={e => setGd({...gd, country: e.target.value})} className="border-orange-500/50 text-orange-400 font-bold">
                       <option value="" disabled className="text-[var(--faint)]">اختر المكان...</option>
@@ -6472,7 +6243,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
             </div>
             <div className="flex items-center gap-2 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
-              <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
+              <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
               {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-3 py-1.5 rounded-lg font-bold">إلغاء</button>}
             </div>
           </div>
@@ -6616,8 +6387,8 @@ const [clearAllCode, setClearAllCode] = useState('');
           <div className="bg-[var(--surface)] border border-red-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <FormGroup label="التاريخ"><DateInput type="date" value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
-              <FormGroup label="التوقيت"><TimeInput className="field" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
+              <FormGroup label="التاريخ"><SegDateField value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
+              <FormGroup label="التوقيت"><SegTimeField className="field" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
               <FormGroup label="الدولة">
                 <StyledSelect value={gForm.country} onChange={e => setGForm({...gForm, country: e.target.value})}>
                   <option value="" disabled>اختر الدولة...</option>
@@ -6643,8 +6414,8 @@ const [clearAllCode, setClearAllCode] = useState('');
           <div className="bg-[var(--surface)] border border-[var(--ok)]/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <FormGroup label="التاريخ"><DateInput type="date" value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
-              <FormGroup label="التوقيت"><TimeInput className="field" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
+              <FormGroup label="التاريخ"><SegDateField value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
+              <FormGroup label="التوقيت"><SegTimeField className="field" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
               <FormGroup label="المنطقة داخل مصر"><StyledInput value={eForm.region} onChange={e => setEForm({...eForm, region: e.target.value})} /></FormGroup>
               <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={eForm.magnitude} onChange={e => setEForm({...eForm, magnitude: e.target.value})} className="border-green-500/50" /></FormGroup>
               <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={eForm.depth_km} onChange={e => setEForm({...eForm, depth_km: e.target.value})} /></FormGroup>
@@ -7088,7 +6859,7 @@ const totalAiCountries = new Set(
       <div id="ai-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
         <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           <div className="flex items-center gap-2">
-            <DateInput type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
+            <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
             {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-purple-400 hover:text-white bg-purple-500/10 px-2 py-2 rounded-lg">الكل</button>}
           </div>
           <div className="flex flex-wrap gap-3">

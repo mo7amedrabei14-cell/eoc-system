@@ -5,12 +5,11 @@ covers the redesign: participation is driven by the entry CATALOG
 (mission_join_leave_entries) + participant assignment (JL:J:<title>/JL:L:<title>),
 materialized into tagged mission_participant_sessions only while Draft.
 
-  MISSION DRAFT = PARTICIPATION DRAFT (editable via the catalog).
-  JOIN/LEAVE entries are created/edited/deleted while the Mission is Draft;
-  each edit re-derives the derived segments (update-in-place by provenance).
-  Lock happens ONLY on the general submission (Mission leaves Draft).
-  Once locked, the catalog is IMMUTABLE (entry PATCH/DELETE -> 403) and the
-  new per-participant /join /leave routes are legacy-only (405).
+  JOIN/LEAVE entries are created/edited/deleted at ANY mission status
+  (user decision: exactly like participants & routes); each edit re-derives
+  the derived segments (update-in-place by provenance). No freezing — the
+  catalog stays editable after the mission leaves Draft, and the legacy
+  per-participant /join /leave routes remain legacy-only (405).
 
 Scenarios:
   A  JOIN entry assigned on a Draft mission → one open derived segment
@@ -18,9 +17,9 @@ Scenarios:
   C  LEAVE entry assigned → closes the segment; LEAVE PATCH edit allowed
   D  Multiple cycles JOIN→LEAVE→JOIN→LEAVE → independent segments, no dupes
   E  Entry DELETE undoes a Draft segment (leave deleted before its opener)
-  F  Finalization (mission leaves Draft) → entry PATCH/DELETE rejected 403
-  G  Post-finalization immutability (frozen values not clobbered)
-  H  Re-add attempt after finalization → catalog is frozen (403, no new segment)
+  F  Finalization (mission leaves Draft) → entry PATCH still succeeds (200)
+  G  Entry DELETE after finalization → succeeds and re-derives (no freeze)
+  H  Re-add (create) attempt after finalization → accepted (200)
 
 Cleanup: deletes all TEST_DL_* missions. No business logic changed.
 """
@@ -270,9 +269,9 @@ def main_r():
     p = find_part(md, "مختبر المسودة")
     check("E1 DELETE entries removed the second Draft segment", len(p.get("participation_periods", [])), 1, exact=True)
 
-    # ── 8) FINALIZATION: المهمة تخرج من المسودة → تعديل/حذف الكتالوج مرفوض 403 ──
-    #    PUT الإنهاء يحمل الكتالوج الحالي بكل entry_id حتى يُبقيه الصف الفعلي
-    #    (الاشتقاق يتوقف عند الخروج من المسودة — الفترات تُجمَّد نهائياً).
+    # ── 8) FINALIZATION: المهمة تخرج من المسودة — الكتالوج يبقى قابلاً للتعديل/الحذف ──
+    #    (قرار المستخدم: انضمام/انفصال قابل للتعديل بأي حالة مثل المسارات —
+    #    لا تجميد، والاشتقاق يُعاد عند كل تعديل/حفظ.)
     mdata["join_leave_entries"] = [
         {"entry_id": JE["entry_id"], "kind": "join", "title": "بداية المشاركة", "dt": f"{dep} 10:05"},
         {"entry_id": LE["entry_id"], "kind": "leave", "title": "نهاية المشاركة", "dt": f"{dep} 15:45"},
@@ -282,24 +281,29 @@ def main_r():
     md = get_mission(MID)
     check("F1 mission left Draft (Under Review)", md.get("status"), "Under Review", exact=True)
 
+    # تعديل سجل بعد الخروج من المسودة → ينجح (200) ويُعاد اشتقاق الشريحة في مكانها
     r_patch = requests.patch(f"{API}/api/missions/{MID}/join-leave-entries/{JE['entry_id']}", headers=H,
                              json={"title": "بداية المشاركة", "kind": "join", "dt": f"{dep} 11:00"})
-    check("F2 entry PATCH rejected 403 after finalization (immutability)", r_patch.status_code, 403, exact=True)
-    r_del = requests.delete(f"{API}/api/missions/{MID}/join-leave-entries/{JE['entry_id']}", headers=H)
-    check("F3 entry DELETE rejected 403 after finalization (immutability)", r_del.status_code, 403, exact=True)
+    check("F2 entry PATCH succeeds after finalization (editable at any status)", r_patch.status_code, 200, exact=True)
+    md = get_mission(MID)
+    check("F2b re-derivation updates segment start to 11:00",
+          find_part(md, "مختبر المسودة").get("participation_periods", [])[0].get("start_dt", "")[:16],
+          f"{dep} 11:00", exact=True)
 
-    # المشاركة المغلقة تبقى ثابتة — قيمها لم تُبدَّل بالطلبات المرفوضة
+    # حذف سجل بعد الخروج من المسودة → ينجح (200) ويُعاد الاشتقاق: الانفصال المتبقي
+    # وحده + «من بداية المهمة» للمشارك ⇒ تُغلق من بداية المهمة 08:00 حتى 15:45.
+    r_del = requests.delete(f"{API}/api/missions/{MID}/join-leave-entries/{JE['entry_id']}", headers=H)
+    check("F3 entry DELETE succeeds after finalization (editable at any status)", r_del.status_code, 200, exact=True)
     md = get_mission(MID)
     p = find_part(md, "مختبر المسودة")
-    check("G1 frozen segment start still 10:05 (not clobbered)", p.get("participation_periods", [])[0].get("start_dt", "")[:16], f"{dep} 10:05", exact=True)
+    periods = p.get("participation_periods", [])
+    check("G1 leave-only participant re-derives via mission start (no freeze)", len(periods), 1, exact=True)
+    check("G2 closed at leave 15:45", periods[0].get("end_dt", "")[:16], f"{dep} 15:45", exact=True)
 
-    # ── 9) محاولة إضافة مشاركة جديدة بعد التجميد مرفوضة (الكتالوج مجمّد نهائياً) ──
+    # ── 9) إضافة سجل جديد بعد الخروج من المسودة → مقبولة (200 — لم يعد 403) ──
     r_add = requests.post(f"{API}/api/missions/{MID}/join-leave-entries", headers=H,
                           json={"kind": "join", "title": "محاولة متأخرة", "dt": f"{dep} 18:10"})
-    check("H1 re-add attempt after finalization → rejected 403", r_add.status_code, 403, exact=True)
-    periods = p.get("participation_periods", [])
-    check("H2 participation periods frozen (still 1)", len(periods), 1, exact=True)
-    check("H3 earlier frozen segment preserved (end 15:45)", periods[0].get("end_dt", "")[:16], f"{dep} 15:45", exact=True)
+    check("H1 re-add attempt after finalization → accepted (200)", r_add.status_code, 200, exact=True)
 
     # cleanup
     conn = get_connection()

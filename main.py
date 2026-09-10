@@ -1006,7 +1006,8 @@ def mission_start_dt(mission_data):
 def planned_start_dt(mission_data, assigned_days, routes, start_from_mission=False):
     """مصدر بداية المشاركة المخططة — مفتاح نقي (بلا أي شروط تواريخ):
     - أقرب انطلاق عبر مسارات المشارك المسندة (مجموعاته المخصصة) له الأولوية.
-    - start_from_mission (checkbox) ⇒ بداية المهمة.
+    - start_from_mission (checkbox) ⇒ بداية المهمة — تُسبق أقرب انطلاق مُسنَد لو كانت
+      أسبق (مطابق لـ assigned_span، القاعدة 3 متّسقة في Active وCompleted).
     - بلا مسارات مسندة ولا checkbox ⇒ None (لا بداية = غير مشارك — ساعات صفرية).
     يفوض إلى participation_start_dt (مصدر الحقيقة الواحد لمحرك الساعات، requirement C)."""
     return participation_start_dt(mission_data, assigned_days, routes, start_from_mission)
@@ -1021,9 +1022,6 @@ def planned_start_dt(mission_data, assigned_days, routes, start_from_mission=Fal
 # ═══════════════════════════════════════════════════════════════════════════
 
 JL_PREFIX_JOIN, JL_PREFIX_LEAVE = 'JL:J:', 'JL:L:'
-
-# رسالة رفض الانفصال بلا بدء مشاركة — مطابقة مطلقة بين الواجهة والـ backend (requirement E)
-JL_ERR_NO_START = "لا يمكن إضافة انفصال لهذا المشارك لأنه لا يوجد له موعد بدء للمشاركة. برجاء تحديد انضمام أو خط سير أو تفعيل «من بداية المهمة» أولًا."
 
 
 def split_assigned_days(assigned_days):
@@ -1050,6 +1048,9 @@ def jl_key(kind, title):
 def participation_start_dt(mission_data, route_groups, routes, start_from_mission=False):
     """بداية المشاركة (مصدر الحقيقة الواحد لمحرك الساعات):
     أقرب انطلاق لمجموعة مسار مخصصة → بداية المهمة (فقط لو «من بداية المهمة») → None.
+    «من بداية المهمة» يستبدل أقرب انطلاق مُسنَد ببداية المهمة — لكن فقط لو كانت أسبق
+    (تُسحب للوراء لا للأمام) — مطابق لمعاملة assigned_span في مسار النشاط، فالقاعدة 3
+    (checkbox ⇒ بداية المهمة) واحدة في Active وCompleted على حدٍّ سواء.
     None = لا بداية = «غير مشارك» (ساعات صفرية)."""
     groups = set(route_groups or [])
     earliest = None
@@ -1060,6 +1061,10 @@ def participation_start_dt(mission_data, route_groups, routes, start_from_missio
         if sd and (earliest is None or sd < earliest):
             earliest = sd
     if earliest:
+        if start_from_mission:
+            ms = mission_start_dt(mission_data)
+            if ms and ms < earliest:
+                return ms
         return earliest
     if start_from_mission:
         return mission_start_dt(mission_data)
@@ -1069,12 +1074,12 @@ def participation_start_dt(mission_data, route_groups, routes, start_from_missio
 def derive_jl_segments(assigned_days, entry_dt_map, mission_row, routes, start_from_mission=False):
     """يُشتق نطاقات المشاركة للمشارك من تخصيصاته (مسارات + أحداث كتالوج).
     entry_dt_map: {(kind, title): (dt, entry_id)} من كتالوج المهمة.
-    مسح زمني مفتوح/مغلق (requirement C/D + قاعدتا «انضمام = بداية مطلقة» و«لا تداخل»):
+    مسح زمني مفتوح/مغلق (requirement C/D + قاعدة «لا تداخل») — مسامح (itinerary-style):
     - في وجود أي انضمام ⇒ الانضمام هو البداية المطلقة؛ بديل المسار/بداية المهمة غير مؤهل أبداً.
     - المسح الزمني: انضمام يفتح فترة إذا لم تكن مفتوحة، انضمام داخل فترة حيّة يُبتلع (لا تداخل)،
-      انفصال يغلق الفترة المفتوحة، انفصال بلا فترة مفتوحة ⇒ 400 (يرجع أو انضمام جديد مطلوب).
-    - بلا أي انضمام ⇒ بديل (أقرب مسار → بداية المهمة حسب checkbox) يفتح فترة واحدة فقط.
-    يرفع 400 برسالة JL_ERR_NO_START لأي انفصال بلا بدء مشاركة صالح."""
+      انفصال يغلق الفترة المفتوحة. انفصال بلا فترة مفتوحة ⇒ يُتَجاهل بصمت (لا 400).
+    - بلا أي انضمام ⇒ بديل (أقرب مسار → بداية المهمة حسب checkbox) يفتح فترة واحدة فقط
+      تُغلقها أول انفصال صالح بعدها؛ بلا بديل صالح ⇒ صفر فترات (صفر ساعات — لا 400)."""
     route_titles, events = split_assigned_days(assigned_days)
     joins, leaves = [], []
     for kind, title in events:
@@ -1105,25 +1110,23 @@ def derive_jl_segments(assigned_days, entry_dt_map, mission_row, routes, start_f
                     periods.append({'start': open_start, 'end': t,
                                     'start_entry_id': open_entry, 'end_entry_id': ev['id']})
                     open_start, open_entry = None, None
-                else:
-                    raise HTTPException(status_code=400, detail=JL_ERR_NO_START)
+                # وإلا ⇒ انفصال بلا فترة مفتوحة (يرجع/مزدوج) يُتَجاهل بصمت — لا 400.
         if open_start is not None:
             periods.append({'start': open_start, 'end': None,
                             'start_entry_id': open_entry, 'end_entry_id': None})
     else:
-        start_used = False
+        # بلا انضمام: البديل (أقرب مسار → بداية المهمة) يفتح فترة واحدة تُغلقها أول
+        # انفصال صالح بعدها؛ أي انفصال آخر (بلا بديل أو قبل البديل) يُتَجاهل — صفر ساعات.
         for lev in leaves:
-            if not start_used and fallback is not None and fallback <= lev['dt']:
+            if fallback is not None and fallback <= lev['dt']:
                 periods.append({'start': fallback, 'end': lev['dt'],
                                 'start_entry_id': None, 'end_entry_id': lev['id']})
-                start_used = True
-            else:
-                raise HTTPException(status_code=400, detail=JL_ERR_NO_START)
+                break
     return periods
 
 
 def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_events=True):
-    """إعادة توليد شرائح المشاركة المشتقة من كتالوج الانضمام/الانفصال للمهمة (Draft فقط).
+    """إعادة توليد شرائح المشاركة المشتقة من كتالوج الانضمام/الانفصال للمهمة (كل الحالات).
     مصدر الحقيقة = مسارات/أحداث المشارك المُسنَدة. مبدأ عدم المساس:
       - الشرائح القديمة (start_entry_id NULL و end_entry_id NULL) لا تُلمس أبداً.
       - الشرائح الموسومة تُطابَق بـ (start_entry_id, end_entry_id): تحديث في مكانها،
@@ -1286,41 +1289,36 @@ def mission_end_dt(mission_data):
 
 
 def assigned_span(assigned_groups, routes, mission_start=None, start_from_mission=False, end_cap=None):
-    """نافذة الجدول للخطوط المسندة (خطة افتراضية) = لكل يوم (departure_date) مدى
-    «أول انطلاق → آخر وصول» عبر كل المسارات المسندة لذلك اليوم، ثم الجمع عبر الأيام.
+    """نافذة استمرارية للمشاركة المسندة = [أقرب انطلاق → أبعد وصول] عبر كل مسارات
+    المشاركة المسندة (لا تقسيم لأيام — التخصيص يعرّف بداية/نهاية المشاركة بذاته).
     مثال: مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (مدى واحد، لا جمع).
-    المسارات بلا تواريخ (قديم) تُدمج في يوم واحد 'day' — تُعامل معاملة نفس اليوم.
-    - start_from_mission و mission_start ⇒ استبدال بداية أول أيام المشارك ببداية المهمة
-      (مفتاح مصدر واحد، بلا أي شرط تواريخ — القاعدة 3).
+    مسارات عدة عبر أيام ⇒ نافذة واحدة متصلة 10:00→19:00 (قرار المستخدم: ساعات متصلة — لا جمع أيام).
+    - start_from_mission و mission_start ⇒ استبدال بداية النافذة ببداية المهمة — لكن
+      فقط لو كانت أسبق (تُسحب للوراء لا للأمام): مهمة تبدأ بعد أقرب انطلاق مُسنَد لا
+      تُقصّ بداية المشاركة (مطابق لمعاملة end_cap التناظرية على النهاية).
     - end_cap ⇒ أي نهاية تتجاوز سقف نهاية المهمة تُقصَّ إلى السقف (fix D1: نافذة
       الخطة القديمة غير المقصوصة). end_cap=None أثناء النشاط ⇒ غير فعّال.
     """
-    by_day = {}
     groups = set(assigned_groups or [])
+    starts, ends = [], []
     for g in routes:
         if g.get('group_title') not in groups:
             continue
         sd = dt_from_parts(g.get('departure_date'), g.get('departure_time'))
         ed = dt_from_parts(g.get('arrival_date'), g.get('arrival_time'))
         if sd and ed:
-            key = str(g.get('departure_date')) or str(g.get('arrival_date')) or 'day'
-            if key not in by_day:
-                by_day[key] = [sd, ed]
-            else:
-                by_day[key][0] = min(by_day[key][0], sd)
-                by_day[key][1] = max(by_day[key][1], ed)
-    total = 0.0
-    if start_from_mission and mission_start and by_day:
-        # «أول أيام» المشارك = اليوم الذي يبدأ فيه مداه أولاً — نستبدل بدايته ببداية المهمة.
-        earliest_key = min(by_day, key=lambda k: by_day[k][0])
-        by_day[earliest_key][0] = mission_start
-    for lo, hi in by_day.values():
-        if end_cap and hi > end_cap:
-            hi = end_cap
-        secs = (hi - lo).total_seconds()
-        if secs > 0:
-            total += secs / 3600.0
-    return total
+            starts.append(sd)
+            ends.append(ed)
+    if not starts:
+        return 0.0
+    lo = min(starts)
+    hi = max(ends)
+    if start_from_mission and mission_start and mission_start < lo:
+        lo = mission_start
+    if end_cap and hi > end_cap:
+        hi = end_cap
+    secs = (hi - lo).total_seconds()
+    return (secs / 3600.0) if secs > 0 else 0.0
 
 
 def compute_working_hours(mission_data, mission_status, segments, assigned_days, routes, now=None, start_from_mission=False):
@@ -1669,14 +1667,13 @@ def create_mission(
                         WHERE participant_id = %s
                     """, (pid,))
 
-            # 🆕 اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (Draft فقط —
-            #    عند الخروج من المسودة تُجمَّد الفترات ولا يُعاد حسابها). يُستدعى قبل
-            #    حظر الإغلاق التلقائي حتى يُغلق الأخير أي segment مفتوح لمهمة مكتملة.
-            if mission.status == 'Draft':
-                materialize_jl_segments(
-                    cursor, mission_id, {'mission_name': mission.mission_name},
-                    user_id=user_id,
-                )
+            # 🆕 اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (كل الحالات — يُعاد
+            #    حسابه عند الحفظ تماماً مثل المسارات). يُستدعى قبل حظر الإغلاق التلقائي
+            #    حتى يُغلق الأخير أي segment مفتوح لمهمة مكتملة.
+            materialize_jl_segments(
+                cursor, mission_id, {'mission_name': mission.mission_name},
+                user_id=user_id,
+            )
 
             # ── الإغلاق التلقائي عند الإنشاء المباشر كمهمة منتهية (حالة نادرة) ──
             #    نفس قاعدة update_mission: أي segment مفتوح لمشاركي مهمة Completed يُغلق
@@ -1991,14 +1988,13 @@ def update_mission(
                     VALUES (%s, %s, %s)
                 """, day_rows)
 
-            # 🆕 إعادة اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (Draft فقط —
-            #    عند الخروج من المسودة تُجمَّد الفترات ولا يُعاد حسابها). يُستدعى قبل
-            #    حظر الإغلاق التلقائي حتى يُغلق الأخير أي segment مشتقّ مفتوح لمهمة مكتملة.
-            if mission.status == 'Draft':
-                materialize_jl_segments(
-                    cursor, mission_id, _jl_mission_row(cursor, mission_id),
-                    user_id=user_id,
-                )
+            # 🆕 إعادة اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (كل الحالات — يُعاد
+            #    حسابه عند الحفظ تماماً مثل المسارات). يُستدعى قبل حظر الإغلاق التلقائي
+            #    حتى يُغلق الأخير أي segment مشتقّ مفتوح لمهمة مكتملة.
+            materialize_jl_segments(
+                cursor, mission_id, _jl_mission_row(cursor, mission_id),
+                user_id=user_id,
+            )
 
             # ── الإغلاق التلقائي للمشاركة عند انتهاء المهمة (متطلب حتمي، حل جذري) ──
             #    عند تحويل المهمة إلى 'Completed' كان أي حضور مسجَّل عبر JOIN (segment
@@ -2689,7 +2685,7 @@ def _sync_jl_catalog(cursor, mission_id, entries):
 
 
 def _jl_validate(cursor, mission_id, kind, dt_str, client_now):
-    """التحقق الموحّد لسجل كتالوج: نوع صالح + زمن غير مستقبلي وعمود Draft."""
+    """التحقق الموحّد لسجل كتالوج: نوع صالح + زمن غير مستقبلي (قابل للتعديل بأي حالة مهمة)."""
     if kind not in ('join', 'leave'):
         raise HTTPException(status_code=400, detail="kind يجب أن يكون 'join' أو 'leave'")
     dtv = parse_dt_input(dt_str)
@@ -2701,8 +2697,6 @@ def _jl_validate(cursor, mission_id, kind, dt_str, client_now):
     mrow = cursor.fetchone()
     if not mrow:
         raise HTTPException(status_code=404, detail="المهمة غير موجودة")
-    if mrow[0] not in ('Draft',):
-        raise HTTPException(status_code=403, detail="لا يمكن تعديل الانضمام/الانفصال بعد خروج المهمة من المسودة — السجل المجرى نهائي")
     return dtv
 
 
@@ -2862,7 +2856,7 @@ def delete_join_leave_entry(
     entry_id: int,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """حذف سجل كتالوج (Draft فقط) — تنظيف صريح بالترتيب لضمان حذف الشرائح المشتقة
+    """حذف سجل كتالوج (أي حالة) — تنظيف صريح بالترتيب لضمان حذف الشرائح المشتقة
     والوصلات فقط دون أي تحويل لشرائح موسومة إلى «قديمة»:
       1) حذف الشريحة المشتقة للسجل.
       2) حذف مفتاح الإسناد (JL:*) من خطوط المشاركين.
@@ -2880,8 +2874,6 @@ def delete_join_leave_entry(
             mrow = cursor.fetchone()
             if not mrow:
                 raise HTTPException(status_code=404, detail="المهمة غير موجودة")
-            if mrow[0] not in ('Draft',):
-                raise HTTPException(status_code=403, detail="لا يمكن حذف الانضمام/الانفصال بعد خروج المهمة من المسودة — السجل المجرى نهائي")
 
             cursor.execute(
                 "SELECT title, kind FROM mission_join_leave_entries WHERE entry_id = %s AND mission_id = %s",
@@ -4530,27 +4522,28 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     GROUP BY i.participant_id, i.mission_id
                 ),
                 -- بلا قطاعات + تخصيص صريح ⇒ الخطة الافتراضية من المسارات المُسندة.
-                -- fix #4: لكل يوم (departure_date) مدى «أول انطلاق → آخر وصول» عبر كل
-                -- المسارات المُسندة لذلك اليوم (لا الجمع بينها) ثم الجمع عبر الأيام:
-                -- مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (8س لا 9س).
-                -- NULL تواريخ (قديم) تُدمج في يوم واحد (bucket واحد) — معاملة نفس اليوم.
+                -- 🆕 نافذة استمرارية موحدة: [أقرب انطلاق → أبعد وصول] عبر كل مسارات
+                -- المشارك المُسنَّد (لا تقسيم لأيام — مطابق لـ assigned_span Python الجديد).
+                -- مثال: مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (8س).
+                -- مسارين عبر يومين 10:00→18:00 + 09:00→15:00 ⇒ 10:00→15:00 اليوم التالي (29س).
+                -- NULL تواريخ (قديم) تُدمج في نافذة واحدة — معاملة نفس اليوم.
                 default_mix AS (
                     SELECT
-                        k,
-                        mission_id,
-                        SUM(GREATEST(EXTRACT(EPOCH FROM (hi - lo)) / 3600.0, 0)) AS hours
+                        sw.k,
+                        sw.mission_id,
+                        GREATEST(EXTRACT(EPOCH FROM (sw.hi - sw.lo)) / 3600.0, 0) AS hours
                     FROM (
                         SELECT
                             l.k,
                             l.mission_id,
                             l.sfm,
                             l.mission_start_ts,
-                            -- 🆕 القاعدة 3 (مطابق لـ assigned_span): بداية «أول أيام» المشارك
-                            --    تُستبدل ببداية المهمة — «أول يوم» = يوم أقرب بداية مدى (lo_ts)
-                            --    في تخصيصاته، بلا أي شرط تواريخ. الفرع القديم بلا تواريخ لا يُبدَّل.
+                            -- 🆕 القاعدة 3 (مطابق لـ assigned_span): أقرب بداية عبر كل المسارات
+                            --    تُستبدل ببداية المهمة فقط لو «من بداية المهمة» وَكانت أسبق
+                            --    (تُسحب للوراء لا للأمام — مهمة تبدأ لاحقاً لا تُقصّ البداية).
                             CASE
                                 WHEN l.sfm AND l.mission_start_ts IS NOT NULL
-                                     AND (l.lo_ts = MIN(l.lo_ts) OVER (PARTITION BY l.k, l.mission_id))
+                                     AND l.mission_start_ts < l.lo
                                 THEN l.mission_start_ts
                                 ELSE l.lo
                             END AS lo,
@@ -4562,8 +4555,7 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                                 i.sfm,
                                 i.participant_id,
                                 mpair.mission_start_ts,
-                                COALESCE(d.departure_date::text, 'day') AS day_bucket,
-                                -- مدى اليوم بالفرع الثلاثي القديم نفسه (بلا تغيير):
+                                -- 🆕 نافذة واحدة متصلة: أقرب انطلاق + أبعد وصول عبر كل أيام المسارات
                                 (CASE
                                     WHEN COUNT(d.departure_date) = COUNT(*) THEN MIN(d.departure_date::timestamp + d.departure_time)
                                     WHEN COUNT(*) > 0 AND COUNT(d.departure_date) = 0 THEN date '2000-01-01' + MIN(d.departure_time)
@@ -4573,23 +4565,16 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                                     WHEN COUNT(d.departure_date) = COUNT(*) THEN MAX(d.arrival_date::timestamp + d.arrival_time)
                                     WHEN COUNT(*) > 0 AND COUNT(d.departure_date) = 0 THEN date '2000-01-01' + MAX(d.arrival_time)
                                     ELSE MAX(COALESCE(d.arrival_date, d.departure_date)::timestamp + d.arrival_time)
-                                END) AS hi,
-                                -- بداية اليوم كـ timestamp كامل (لتحديد «أول يوم» بأقرب بداية —
-                                --   الفرع القديم بلا تواريخ لا يشارك هنا)
-                                (CASE
-                                    WHEN COUNT(d.departure_date) = COUNT(*) THEN MIN(d.departure_date::timestamp + d.departure_time)
-                                    ELSE MIN(COALESCE(d.departure_date, d.arrival_date)::timestamp + d.departure_time)
-                                END) AS lo_ts
+                                END) AS hi
                             FROM ident i
                             JOIN mission_participant_itineraries mpi ON mpi.participant_id = i.participant_id AND mpi.mission_id = i.mission_id
                             JOIN mission_itineraries d ON d.mission_id = mpi.mission_id AND d.group_title = mpi.itinerary_group
                             JOIN missions m ON m.mission_id = i.mission_id
                             LEFT JOIN mission_pair mpair ON mpair.mission_id = m.mission_id
                             WHERE d.departure_time IS NOT NULL AND d.arrival_time IS NOT NULL
-                            GROUP BY i.k, i.mission_id, i.sfm, i.participant_id, mpair.mission_start_ts, d.departure_date
+                            GROUP BY i.k, i.mission_id, i.sfm, i.participant_id, mpair.mission_start_ts
                         ) l
                     ) sw
-                    GROUP BY k, mission_id
                 ),
                 -- 🔧 المحرك الموحد: حساب ساعات كل مهمة بهوية البيانات لا بالتصنيف — المهمة
                 --    تُحسب مرة واحدة لكل هوية مهما تكرر تسجيل مشاركته فيها (#4):

@@ -18,7 +18,6 @@ import datetime as dt
 
 sys.path.insert(0, r"C:\Users\mo7am\OneDrive\Work\EOC System")
 
-from fastapi import HTTPException
 from main import (
     get_connection,
     derive_jl_segments,
@@ -80,23 +79,20 @@ def part_a():
     check("A8 hours = 4.0 single period", h, 4.0)
 
     # (3) LEAVE 10:00 while participant HAS a JOIN 11:30 + assigned route 08:00
-    #     → 400: JOIN is the absolute start priority, the route/mission fallback
-    #       is never eligible for a participant with any JOIN.
+    #     → lenient: JOIN opens [11:30 → open] (absolute priority); the earlier LEAVE
+    #       is IGNORED (no 400).
     routes = [{"group_title": "خط السير الأساسي", "departure_date": "2026-08-20", "departure_time": "08:00"}]
     m = emit(("join", "متقدم", "11:30"), ("leave", "مبكر", "10:00"))
-    try:
-        derive_jl_segments(["خط السير الأساسي", J+"متقدم", L+"مبكر"], m, mission_row, routes, start_from_mission=False)
-        check("A9 400 on LEAVE before FIRST join (route ignored)", "no-400", "400")
-    except HTTPException as e:
-        check("A9 400 on LEAVE before FIRST join (route ignored)", e.status_code, 400, exact=True)
+    periods = derive_jl_segments(["خط السير الأساسي", J+"متقدم", L+"مبكر"], m, mission_row, routes, start_from_mission=False)
+    check("A9 leave-before-join → JOIN opens (no 400)", len(periods), 1, exact=True)
+    check("A9b opens at JOIN 11:30", _hh(periods[0]['start']), '11:30')
+    check("A9c stays open (end None — mission end caps)", periods[0]['end'] is None, True)
 
-    # (4) double LEAVE without a re-JOIN → 400 (must re-JOIN to re-enter)
+    # (4) double LEAVE without a re-JOIN → second LEAVE IGNORED → single [10-14] (no 400)
     m = emit(("join", "دخول", "10:00"), ("leave", "خروج", "14:00"), ("leave", "خروج2", "20:00"))
-    try:
-        derive_jl_segments([J+"دخول", L+"خروج", L+"خروج2"], m, mission_row, [])
-        check("A10 400 on double LEAVE without re-JOIN", "no-400", "400")
-    except HTTPException as e:
-        check("A10 400 on double LEAVE without re-JOIN", e.status_code, 400, exact=True)
+    periods = derive_jl_segments([J+"دخول", L+"خروج", L+"خروج2"], m, mission_row, [])
+    check("A10 double LEAVE → single period (no 400)", len(periods), 1, exact=True)
+    check("A10b closes 14:00 (early leave ignored)", _hh(periods[0]['end']), '14:00')
 
     # (5) LEAVE only + assigned route → [earliest route .. LEAVE] (route start, never route end)
     routes = [{"group_title": "المسار الأول", "departure_date": "2026-08-20", "departure_time": "10:00"}]
@@ -111,13 +107,10 @@ def part_a():
     periods = derive_jl_segments([L+"خروج"], m, mission_row, [], start_from_mission=True)
     check("A14 leave-only+sfm starts at mission 08:00", _hh(periods[0]['start']), '08:00')
 
-    # (7) LEAVE only, no start at all → 400
+    # (7) LEAVE only, no start at all → no period → 0 hours (no 400)
     m = emit(("leave", "خروج", "16:30"))
-    try:
-        derive_jl_segments([L+"خروج"], m, mission_row, [], start_from_mission=False)
-        check("A15 400 on leave-only without any start", "no-400", "400")
-    except HTTPException as e:
-        check("A15 400 on leave-only without any start", e.status_code, 400, exact=True)
+    periods = derive_jl_segments([L+"خروج"], m, mission_row, [], start_from_mission=False)
+    check("A15 leave-only without any start → no period (0 hours)", len(periods), 0, exact=True)
 
     # (8) JOIN only → open [10, None] (مازال بالمهمة)
     m = emit(("join", "دخول", "10:00"))
