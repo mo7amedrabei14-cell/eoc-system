@@ -1340,10 +1340,7 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
     """
     now = now or datetime.now()
     completed = mission_status in ('Completed', 'مكتملة')
-    # ⭐ القاعدة الثابتة: نهاية المهمة هي النقطة النهائية الدائمة لحساب ساعات العمل.
-    #    LEAVE (إن وُجد) يُلغي هذا السقف وينهي المشاركة في زمنه؛ وإلا تبقى نهاية المهمة.
-    #    لا فرق بين Draft وCompleted — السقف دائم وموجود.
-    end_cap = mission_end_dt(mission_data)
+    end_cap = mission_end_dt(mission_data) if completed else None
     planned_start = planned_start_dt(mission_data, assigned_days, routes, start_from_mission)
 
     def seg_dur(s):
@@ -1355,13 +1352,17 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         end = s.get('end_dt')
         if isinstance(end, str):
             end = parse_dt_input(end)
+        # ⭐ قاعدة منفصلة للانضمام/الانفصال: السقف دائم (نهاية المهمة) بغضّ النظر عن حالة
+        #    المهمة — حتى المسوّدة تُقصّ于 نهاية المهمة. باقي القطاعات (المسارات/الافتراضي)
+        #    تتبع القاعدة الأصلية: السقف فقط للمهمة المكتملة.
+        jl_cap = mission_end_dt(mission_data) if (s.get('start_entry_id') or s.get('end_entry_id')) else end_cap
         if end:
-            # مغلق — يُقصّ إلى سقف نهاية المهمة إن تجاوزه (fix D1: القديم غير المقصوص)
-            if end_cap and end > end_cap:
-                end = end_cap
+            # مغلق — يُقصّ إلى السقف إن تجاوزه
+            if jl_cap and end > jl_cap:
+                end = jl_cap
         else:
-            # مفتوح — نهاية المهمة هي السقف الدائم (لا "الآن" — القاعدة: نهاية المهمة ثابتة)
-            end = end_cap or now
+            # مفتوح — السقف الدائم (نهاية المهمة للـ JL؛ "الآن" للباقي)
+            end = jl_cap or now
         secs = (end - start).total_seconds()
         return (secs / 3600.0) if secs > 0 else 0.0
 
@@ -2963,7 +2964,7 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
             mission_data["participants"] = []
             for r in participant_rows:
                 pid = r[0]
-                cursor.execute("SELECT session_id, session_date, check_in_time, check_out_time, notes, start_dt, end_dt, itinerary_group FROM mission_participant_sessions WHERE participant_id = %s ORDER BY COALESCE(start_dt, session_date), start_dt", (pid,))
+                cursor.execute("SELECT session_id, session_date, check_in_time, check_out_time, notes, start_dt, end_dt, itinerary_group, start_entry_id, end_entry_id FROM mission_participant_sessions WHERE participant_id = %s ORDER BY COALESCE(start_dt, session_date), start_dt", (pid,))
                 segments = []
                 for s in cursor.fetchall():
                     segments.append({
@@ -2975,6 +2976,8 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
                         "start_dt": fmt_dt(s[5]),
                         "end_dt": fmt_dt(s[6]),
                         "itinerary_group": s[7],
+                        "start_entry_id": s[8],
+                        "end_entry_id": s[9],
                     })
                 cursor.execute("SELECT itinerary_group FROM mission_participant_itineraries WHERE participant_id = %s ORDER BY itinerary_group", (pid,))
                 assigned_days = [d[0] for d in cursor.fetchall()]
@@ -4478,11 +4481,12 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                                 EXTRACT(EPOCH FROM (
                                     (
                                         CASE
-                                            -- ⭐ القاعدة الثابتة: نهاية المهمة هي السقف الدائم لحساب ساعات العمل.
-                                            --    LEAST[COALESCE] = seg_dur في Python:
-                                            --    مغلق ⇒ end_dt مقصوصاً بالسقف، مفتوح ⇒ السقف.
-                                            --    لا فرق بين Draft وCompleted — السقف دائم (نهاية المهمة).
-                                            WHEN mpair.mission_end_ts IS NOT NULL
+                                            -- ⭐ قاعدة الانضمام/الانفصال: السقف دائم (نهاية المهمة) بغضّ النظر عن الحالة
+                                            WHEN (mps.start_entry_id IS NOT NULL OR mps.end_entry_id IS NOT NULL)
+                                                 AND mpair.mission_end_ts IS NOT NULL
+                                            THEN LEAST(COALESCE(mps.end_dt, mpair.mission_end_ts), mpair.mission_end_ts)
+                                            -- القاعدة الأصلية: السقف فقط للمهمة المكتملة
+                                            WHEN m.status IN ('Completed', 'مكتملة') AND mpair.mission_end_ts IS NOT NULL
                                             THEN LEAST(COALESCE(mps.end_dt, mpair.mission_end_ts), mpair.mission_end_ts)
                                             -- بلا نهاية معرفة (نادر) ⇒ المغلق بنهايته، والمفتوح حتى الآن
                                             ELSE COALESCE(mps.end_dt, COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))

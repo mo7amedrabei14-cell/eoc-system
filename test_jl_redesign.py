@@ -221,17 +221,20 @@ def part_b():
                               "exit_date": d, "completion_date": d, "completion_time": "18:00"}
             check("C3 JOIN 15:00→LEAVE 16:00 = 1.0 hour",
                   compute_working_hours(mdata_with_end, "Draft",
-                                         [{"start_dt": f"{d} 15:00", "end_dt": f"{d} 16:00"}],
+                                         [{"start_dt": f"{d} 15:00", "end_dt": f"{d} 16:00",
+                                           "start_entry_id": 1, "end_entry_id": 2}],
                                          [], [], now=now_ref, start_from_mission=False), 1.0)
             # open JOIN (no LEAVE) on a Draft mission with completion → capped at mission end (18:00)
             check("C4 open JOIN 15:00, no LEAVE, mission ends 18:00 → 3.0 hours",
                   compute_working_hours(mdata_with_end, "Draft",
-                                         [{"start_dt": f"{d} 15:00", "end_dt": None}],
+                                         [{"start_dt": f"{d} 15:00", "end_dt": None,
+                                           "start_entry_id": 1}],
                                          [], [], now=now_ref, start_from_mission=False), 3.0)
             # open JOIN 15:00, no LEAVE, NO mission end → falls back to now_ref (12:00) → 0 (now < start)
             check("C5 open JOIN, no mission end, now before start → 0",
                   compute_working_hours(mdata, "Draft",
-                                         [{"start_dt": f"{d} 15:00", "end_dt": None}],
+                                         [{"start_dt": f"{d} 15:00", "end_dt": None,
+                                           "start_entry_id": 1}],
                                          [], [], now=now_ref, start_from_mission=False), 0.0)
 
             # cleanup (order-safe: sessions → itineraries → entries → participants → mission)

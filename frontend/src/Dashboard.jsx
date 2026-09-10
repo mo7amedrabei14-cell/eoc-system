@@ -4534,10 +4534,8 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
   // ✅ DD/MM/YYYY في كل النظام: منتقي تقويم مخصص (بدلاً من منتقي المتصفح الأصلي
   //    الذي يتبع لغة المتصفح/نظام التشغيل ولا يمكن التحكم به) — يعرض دائماً
   //    DD/MM/YYYY في الحقل وفي نافذة التقويم المنبثقة.
-  // 🆕 أماكن التاريخ (type="date") تُكتب بذكاء مثل منتقي الوقت: ماسك مقسّم
-  //    «DD/MM/YYYY» — اكتب اليوم 06 → ينتقل تلقائياً إلى الشهر 09 → إلى السنة 2026،
-  //    الضغط يحدد المقطع، Backspace يمسح المقطع عند حدوده، 📅 يفتح التقويم.
-  //    (type="datetime-local" — خط السير الأساسي/المخصص — يبقى كما هو تماماً.)
+  // 🆕 كتابة يدوية حرة بصيغة DD/MM/YYYY (أو DD/MM/YYYY HH:MM للـ datetime-local).
+  //    📅 يفتح التقويم للـ type="date". (type="datetime-local" — خط السير الأساسي/المخصص — يبقى كما هو تماماً.)
 
   // ISO (YYYY-MM-DD أو YYYY-MM-DDTHH:MM) → DD/MM/YYYY (أو DD/MM/YYYY HH:MM AM/PM)
   function isoToDmy(iso, t) {
@@ -4563,9 +4561,6 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
 
   const initial = (value !== undefined ? value : (defaultValue || ''));
 
-  // ⚠️ تُعرَّف المساعدات هنا قبل أي useState: المُهيّئات الكسولة (lazy) لـ useState
-  //    تُنفَّذ أثناء أول render، فلا يجوز أن تشير إلى دالة معرَّفة لاحقاً بـ const
-  //    (تُصبح في «المنطقة الميتة» TDZ وتُسقط الشاشة البيضاء). وظيفة الإعلان آمنة.
   function parseISO(iso) {
     const m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (m) return { y: +m[1], mo: +m[2], d: +m[3] };
@@ -4573,48 +4568,10 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
     return { y: now.getFullYear(), mo: now.getMonth() + 1, d: now.getDate() };
   }
   function isoDate(y, mo, d) { return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`; }
-  // 🆕 مقاطع التاريخ للكتابة الذكية (type="date")
-  function segFromIso(iso) {
-    const m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (m) return { dd: String(+m[3]).padStart(2, '0'), mm: String(+m[2]).padStart(2, '0'), yyyy: m[1] };
-    return { dd: '', mm: '', yyyy: '' };
-  }
-  function isoFromSeg(s) {
-    if (s.dd.length !== 2 || s.mm.length !== 2 || s.yyyy.length !== 4) return '';
-    const d = +s.dd, mo = +s.mm, y = +s.yyyy;
-    const chk = new Date(y, mo - 1, d); // رفض التواريخ المستحيلة (31/02…)
-    if (chk.getFullYear() !== y || chk.getMonth() !== mo - 1 || chk.getDate() !== d) return '';
-    return `${s.yyyy}-${s.mm}-${s.dd}`;
-  }
-  function segToDisplay(s) { return `${String(s.dd).padEnd(2, '_')}/${String(s.mm).padEnd(2, '_')}/${String(s.yyyy).padEnd(4, '_')}`; }
-  // 🆕 كتابة اليوم/الشهر/السنة: أول رقم 0-3 لليوم و0-1 للشهر، 4 خانات سنة
-  function applyDigit(s, d) {
-    let { dd, mm, yyyy } = s;
-    if (dd.length < 2) {
-      if (dd.length === 0) { if ('0123'.includes(d)) dd = d; }
-      else if (dd === '0') { if (d !== '0') dd += d; }        // 01-09 (00 مرفوض)
-      else if (dd === '1' || dd === '2') dd += d;             // 10-29
-      else if (dd === '3') { if (d === '0' || d === '1') dd += d; } // 30-31
-    } else if (mm.length < 2) {
-      if (mm.length === 0) { if ('01'.includes(d)) mm = d; }
-      else if (mm === '0') { if (d !== '0') mm += d; }        // 01-09
-      else if (mm === '1') { if ('012'.includes(d)) mm += d; } // 10-12
-    } else if (yyyy.length < 4) {
-      yyyy += d;
-    }
-    return { ...s, dd, mm, yyyy };
-  }
-  function caretAfter(ns) {
-    if (ns.dd.length !== 2) return ns.dd.length;
-    if (ns.mm.length !== 2) return 3 + ns.mm.length;
-    if (ns.yyyy.length !== 4) return 6 + ns.yyyy.length;
-    return 10;
-  }
 
   const isDate = type === 'date';
-  const [machineState, setMachineState] = useState(initial);           // القيمة الآلية ISO (datetime-local)
-  const [displayState, setDisplayState] = useState(() => isoToDmy(initial, type)); // نص datetime-local
-  const [seg, setSeg] = useState(() => segFromIso(initial));             // مقاطع DD/MM/YYYY (type="date")
+  const [machine, setMachine] = useState(initial);
+  const [display, setDisplay] = useState(() => isoToDmy(initial, type));
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [view, setView] = useState(() => { const p = parseISO(initial); return { y: p.y, mo: p.mo }; });
@@ -4627,49 +4584,21 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
   });
   const textRef = useRef(null);
   const popRef = useRef(null);
-  const mountedRef = useRef(false);
-  const appliedRef = useRef(null); // آخر قيمة مرّت عبر apply — لا تُكرّر الإخطار في الـ notify effect
-
-  // القيم الفعّالة: التاريخ المكتوب ذكياً يُحسب من المقاطع؛ datetime-local من حالته
-  const machine = isDate ? isoFromSeg(seg) : machineState;
-  const display = isDate ? segToDisplay(seg) : displayState;
 
   // مزامنة الحالة المتحكمة (عند تغيّر prop value من الخارج)
   useEffect(() => {
     if (value !== undefined && value !== null) {
-      if (isDate) setSeg(segFromIso(value));
-      else { setMachineState(value || ''); setDisplayState(isoToDmy(value, type)); }
+      setMachine(value || '');
+      setDisplay(isoToDmy(value, type));
       const p = parseISO(value);
       if (p.d) setSelDate(isoDate(p.y, p.mo, p.d));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // 🆕 إخطار الـ onChange للكتابة الذكية للتاريخ (المسار date فقط). datetime-local
-  //    يُخطِر يدوياً (apply/handleText) كما كان سابقاً تماماً — لا تكرار ولا تغيّر توقيت.
-  //    يُتجاوز أول render (mount) والتغييرات المنبعثة من apply (مُبلَّغة بالفعل).
-  useEffect(() => {
-    if (!mountedRef.current) { mountedRef.current = true; return; }
-    if (!isDate) return;
-    if (machine === appliedRef.current) { appliedRef.current = null; return; }
-    onChange?.({ target: { value: machine } });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [machine]);
-
-  // 🆕 تظليل التقويم مع ما كُتب ذكياً (تاريخ صالح)
-  useEffect(() => {
-    if (!isDate) return;
-    if (machine && machine.length === 10) {
-      const m = machine.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (m) { setSelDate(machine); setView({ y: +m[1], mo: +m[2] }); }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [machine]);
-
   const apply = (iso) => {
-    appliedRef.current = (iso || '');
-    if (isDate) setSeg(segFromIso(iso));
-    else { setMachineState(iso || ''); setDisplayState(isoToDmy(iso, type)); }
+    setMachine(iso || '');
+    setDisplay(isoToDmy(iso, type));
     const p = parseISO(iso);
     if (p.d) { setSelDate(isoDate(p.y, p.mo, p.d)); setView({ y: p.y, mo: p.mo }); }
     if (onChange) onChange({ target: { value: iso || '' } });
@@ -4737,55 +4666,6 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // 🆕 التنقل بين مقاطع التاريخ (type="date"): مواضع «DD/MM/YYYY» = 0/3/6
-  const SEG = { dd: 0, mm: 3, yyyy: 6 };
-  const SEG_END = { dd: 2, mm: 5, yyyy: 10 };
-  const ORDER = ['dd', 'mm', 'yyyy'];
-  const segAt = (p) => (p < 3 ? 'dd' : (p < 6 ? 'mm' : 'yyyy'));
-  const highlightSegment = (nm) => {
-    const el = textRef.current;
-    if (!el) return;
-    el.focus();
-    el.setSelectionRange(SEG[nm], SEG_END[nm]);
-  };
-  const onKeyDown = (e) => {
-    if (disabled) return;
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      const cpos = e.target.selectionStart ?? 0;
-      const at = segAt(cpos);
-      if (cpos === SEG[at]) {
-        // عند حد المقطع نمسح المقطع السابق ونعود إليه
-        const clear = ORDER[Math.max(0, ORDER.indexOf(at) - 1)];
-        setSeg(s => ({ ...s, [clear]: '' }));
-        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(SEG[clear], SEG[clear]); });
-      } else {
-        setSeg(s => ({ ...s, [at]: String(s[at]).slice(0, -1) }));
-        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(cpos - 1, cpos - 1); });
-      }
-      return;
-    }
-    if (/^\d$/.test(e.key)) {
-      e.preventDefault();
-      const ns = applyDigit(seg, e.key);
-      setSeg(ns);
-      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(caretAfter(ns), caretAfter(ns)); });
-      return;
-    }
-    if (e.key === 'Delete') { e.preventDefault(); return; }
-    if (e.key === 'Home') { e.preventDefault(); highlightSegment('dd'); return; }
-    if (e.key === 'End') { e.preventDefault(); highlightSegment('yyyy'); return; }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); const i = Math.max(0, ORDER.indexOf(segAt(e.target.selectionStart ?? 0)) - 1); highlightSegment(ORDER[i]); return; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); const i = Math.min(2, ORDER.indexOf(segAt(e.target.selectionStart ?? 0)) + 1); highlightSegment(ORDER[i]); return; }
-    if (e.key === 'Tab') return;
-    e.preventDefault();
-  };
-  const onMouseUp = (e) => {
-    if (!isDate) return;
-    const p = e.target.selectionStart ?? 0;
-    requestAnimationFrame(() => highlightSegment(segAt(p)));
-  };
-
   const pickDay = (dIso) => {
     setSelDate(dIso);
     const p = parseISO(dIso);
@@ -4808,13 +4688,12 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
   const handleNative = (e) => { apply(e.target.value); };
 
   // كتابة يدوية بصيغة DD/MM/YYYY — تُحدّث القيمة الآلية عند اكتمال تاريخ صالح
-  // (مسار datetime-local فقط — خط السير يبقى كما هو)
   const handleText = (e) => {
     const raw = e.target.value;
-    setDisplayState(raw);
+    setDisplay(raw);
     const iso = dmyToIso(raw, type);
     if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(iso)) {
-      setMachineState(iso);
+      setMachine(iso);
       const p = parseISO(iso);
       setSelDate(isoDate(p.y, p.mo, p.d));
       if (onChange) onChange({ target: { value: iso } });
@@ -4855,70 +4734,35 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
 
   return (
     <>
-      {isDate ? (
-        // 🆕 التاريخ — حقل ماسك مقسّم بذكاء (اضغط على مقطع يحدده، اكتب الأرقام فينتقل
-        //    اليوم → الشهر → السنة تلقائياً) مع زر 📅 يفتح التقويم
-        <div className="relative">
-          <input
-            ref={textRef}
-            type="text"
-            value={display}
-            placeholder="DD/MM/YYYY"
-            className={`${className} text-center pr-7 pl-7`}
-            dir="ltr"
-            onFocus={() => highlightSegment('dd')}
-            onMouseUp={onMouseUp}
-            onKeyDown={onKeyDown}
-            onChange={() => {}}
-            disabled={disabled}
-            autoComplete="off"
-            {...props}
-          />
-          {/* القيمة الآلية ISO (المصدر الحقيقي للباك) — مخفية تماماً لكن تحمل id */}
-          <input
-            id={id}
-            type="date"
-            value={machine || ''}
-            onChange={() => {}}
-            tabIndex={-1}
-            aria-hidden="true"
-            max={max}
-            disabled={disabled}
-            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-          />
-          <button type="button" onClick={openCalendar} disabled={disabled} className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
-        </div>
-      ) : (
-        // datetime-local — خط السير (الأساسي/المخصص): الحقل الأصلي كامل كما هو تماماً
-        <>
-          <input
-            ref={textRef}
-            type="text"
-            value={display}
-            placeholder="DD/MM/YYYY HH:MM"
-            className={`${className} relative cursor-pointer`}
-            dir="ltr"
-            onFocus={openCalendar}
-            onChange={handleText}
-            disabled={disabled}
-            max={max}
-            autoComplete="off"
-            {...props}
-          />
-          {/* القيمة الآلية ISO (المصدر الحقيقي للباك) — مخفية تماماً لكن تحمل id */}
-          <input
-            id={id}
-            type={type}
-            value={machine || ''}
-            onChange={handleNative}
-            tabIndex={-1}
-            aria-hidden="true"
-            max={max}
-            disabled={disabled}
-            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-          />
-        </>
-      )}
+      <div className="relative">
+        <input
+          ref={textRef}
+          type="text"
+          value={display}
+          placeholder={isDate ? "DD/MM/YYYY" : "DD/MM/YYYY HH:MM"}
+          className={`${className} ${isDate ? 'text-center pr-7 pl-7' : 'relative cursor-pointer'}`}
+          dir="ltr"
+          onFocus={openCalendar}
+          onChange={handleText}
+          disabled={disabled}
+          max={max}
+          autoComplete="off"
+          {...props}
+        />
+        {/* القيمة الآلية ISO (المصدر الحقيقي للباك) — مخفية تماماً لكن تحمل id */}
+        <input
+          id={id}
+          type={type}
+          value={machine || ''}
+          onChange={handleNative}
+          tabIndex={-1}
+          aria-hidden="true"
+          max={max}
+          disabled={disabled}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+        />
+        {isDate && <button type="button" onClick={openCalendar} disabled={disabled} className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>}
+      </div>
       {open && createPortal(
         <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
@@ -5027,152 +4871,51 @@ const TimeWheel = ({ items, value, onChange, heightClass = 'h-28' }) => {
 };
 
 // ⏱️ TimeInput — حقل وقت ذكي موحد (كل حقول الوقت المستقلة):
-//  - نقرة على الحقل → الساعة (تحديد المقطع)؛ كتابة الساعة → الدقائق → AM/PM تتحرك تلقائياً.
-//  - ↑↓ تزيد/تنقص المقطع الحالي بحرية؛ ←→ تنقل بين المقاطع؛ Backspace يمحو المقطع عند حدوده.
+//  - كتابة حرة بصيغة HH:MM AM/PM — يُحلّل تلقائياً بـ normTime إلى HH:MM 24س.
 //  - العجلة تُفتح من زر 🕐 فقط (لا تلتقطها النقرة).
 //  - <input> مخفي يحمل الـ id وقيمة الماكينة HH:MM 24س (عقد الباك كما هو).
 //  - يدعم: value/onChange (متحكم) أو defaultValue (غير متحكم)، id، disabled.
 const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
-  // بناء المقاطع من قيمة آلة 24س «HH:MM» (تُعرض 12س) — مقاطع فارغة إن لم يُمرَّر وقت
-  // (كانت التعبئة المسبقة بوقت الحاضر تقفل الكتابة المباشرة: المقاطع ممتلئة منذ البداية)
-  const segFromMachine = (mm) => {
-    if (!mm || !/^\d{2}:\d{2}$/.test(mm)) return { h: '', m: '', mer: '' };
-    const [HH, MI] = mm.split(':');
-    return { h: String(hour12(HH)).padStart(2, '0'), m: MI, mer: meridian(HH) };
-  };
   const initial = value !== undefined && value !== null ? value : (defaultValue || '');
   const initMachine = normTime(initial) || '';
-  const [seg, setSeg] = useState(() => ({ ...segFromMachine(initMachine), mer: segFromMachine(initMachine).mer || '' }));
+  const [machine, setMachine] = useState(initMachine);
+  const [display, setDisplay] = useState(() => initMachine ? to12Display(initMachine) : '');
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [clock, setClock] = useState(initMachine || nowTimeStr());   // HH:MM 24س للعجلات (افتراض «الآن» عند فتحها)
   const [ampm, setAmpm] = useState(() => meridian(initMachine || nowTimeStr()));
   const textRef = useRef(null);
   const popRef = useRef(null);
-  const mountedRef = useRef(false);
 
-  // مقاطع كاملة (ساعة + دقيقة + فترة) → آلة HH:MM 24س (12AM→00، 12PM→12)
-  // فترة ناقصة (مثل 'P' بعد مسح حرف) = قيمة غير مكتملة، لا آلة ← غير جاهزة للحفظ
-  const segToMachine = (s) => {
-    if (s.h.length !== 2 || s.m.length !== 2 || (s.mer !== 'AM' && s.mer !== 'PM')) return '';
-    const hh12 = s.h === '00' ? '12' : s.h;
-    return `${from12Wheel(hh12, s.mer)}:${s.m}`;
-  };
-  const segToDisplay = (s) => `${String(s.h).padEnd(2, '_')}:${String(s.m).padEnd(2, '_')} ${s.mer || 'AM'}`;
-  const machine = segToMachine(seg);
-  const display = segToDisplay(seg);
-
-  const SEG = { h: 0, m: 3, mer: 6 };
-  const segAt = (p) => (p < 3 ? 'h' : p < 6 ? 'm' : 'mer');
-  const placeCaret = (p) => requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(p, p); });
-  const selectSegment = (nm) => placeCaret(SEG[nm]);
-  // تحديد (إبراز) المقطع كاملاً — «النقرة تأخذني إلى الساعة» مثل المنتقي الأصلي
-  const highlightSegment = (nm) => requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(SEG[nm], SEG[nm] + 2); });
-
-  // إشعار الحقل المخصص (onChange) عند تغيّر القيمة الآلية — بعد أول تركيب فقط
-  // (بلا إشعار يُلوِّث عند الفتح؛ القيمة الناقصة لا تُرسَل إلا عند اكتمال آلة صالحة)
-  useEffect(() => {
-    if (!mountedRef.current) { mountedRef.current = true; return; }
-    onChange?.({ target: { value: machine } });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [machine]);
   // مزامنة الحالة المتحكمة (value prop) من الخارج — تتجاهل إدخال المستخدم الجاري
   useEffect(() => {
     if (value !== undefined && value !== null) {
       const n = normTime(value) || '';
-      setSeg({ ...segFromMachine(n), mer: segFromMachine(n).mer || 'AM' });
+      setMachine(n);
+      setDisplay(n ? to12Display(n) : '');
       setClock(n || nowTimeStr()); setAmpm(meridian(n || nowTimeStr()));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // توجيه رقم إلى المقطع عند المؤشر (ساعة 12س 01-12، دقائق أول رقم 0-5) — ثم المتابعة التلقائية
-  const applyDigit = (d) => {
-    let { h, m } = seg;
-    if (h.length < 2) {
-      if (h.length === 0) { if (d === '0' || d === '1') h = d; }
-      else if (h === '0') h += d;                // 00-09 (00 ⇒ 12)
-      else if (d === '0' || d === '1' || d === '2') h += d; // 10-12
-    } else if (m.length < 2) {
-      if (m.length === 0) { if ('012345'.includes(d)) m = d; }
-      else m += d;
+  // كتابة يدوية بصيغة HH:MM AM/PM — تُحدّث القيمة الآلية عند اكتمال وقت صالح
+  const handleText = (e) => {
+    const raw = e.target.value;
+    setDisplay(raw);
+    const t24 = normTime(raw);
+    if (/^\d{2}:\d{2}$/.test(t24)) {
+      setMachine(t24);
+      setClock(t24);
+      setAmpm(meridian(t24));
+      if (onChange) onChange({ target: { value: t24 } });
     }
-    const ns = { ...seg, h, m };
-    setSeg(ns);
-    // موضع المؤشر بعد كل رقم: اكتملت الساعة → الدقائق → الفترة
-    placeCaret(ns.h.length !== 2 ? ns.h.length
-             : ns.m.length !== 2 ? 3 + ns.m.length
-             : 6);
-  };
-
-  // أسهم ↑↓ — زيادة/نقصان حرّة للمقطع الذي وقف المؤشر فوقه (مثل المنتقي الأصلي)
-  const stepSegment = (which, dir) => {
-    setSeg(prev => {
-      if (which === 'h') {
-        const cur = parseInt(prev.h, 10) || 12;
-        let v = cur + dir; if (v > 12) v = 1; if (v < 1) v = 12;
-        const ns = { ...prev, h: String(v).padStart(2, '0') };
-        const mc = segToMachine({ ...ns, m: ns.m || '00', mer: ns.mer || ampm });
-        if (mc) setClock(mc);
-        return ns;
-      }
-      if (which === 'm') {
-        const cur = parseInt(prev.m, 10) || 0;
-        const v = (cur + dir + 60) % 60;
-        const ns = { ...prev, m: String(v).padStart(2, '0') };
-        const mc = segToMachine(ns); if (mc) setClock(mc);
-        return ns;
-      }
-      const ns = { ...prev, mer: prev.mer === 'PM' ? 'AM' : 'PM' };
-      setAmpm(ns.mer); const mc = segToMachine(ns); if (mc) setClock(mc);
-      return ns;
-    });
-    placeCaret(SEG[which]);
-  };
-
-  const onKeyDown = (e) => {
-    if (disabled) return;
-    const cpos = e.target.selectionStart ?? 0;
-    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); stepSegment(segAt(cpos), e.key === 'ArrowUp' ? 1 : -1); return; }
-    // تنقّل بين المقاطع — يسار/يمين تراجع وتقدم مقطعاً كاملاً (مثل الحقل الأصلي)
-    if (e.key === 'ArrowLeft') { e.preventDefault(); if (segAt(cpos) === 'm') selectSegment('h'); else if (segAt(cpos) === 'mer') selectSegment('m'); return; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); if (segAt(cpos) === 'h') selectSegment('m'); else if (segAt(cpos) === 'm') selectSegment('mer'); return; }
-    if (e.key === 'Home') { e.preventDefault(); selectSegment('h'); return; }
-    if (e.key === 'End') { e.preventDefault(); selectSegment('mer'); return; }
-    if (e.key === 'Delete') { e.preventDefault(); return; }
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      let which = 'h';
-      for (const [nm, st] of [['h', 0], ['m', 3], ['mer', 6]]) if (cpos >= st) which = nm;
-      if (cpos === SEG[which]) {
-        // عند حد المقطع → امسح المقطع السابق (أو هذا إن كان الأول) وارجع مقطعاً للخلف
-        const clear = ['h', 'm', 'mer'][Math.max(0, ['h', 'm', 'mer'].indexOf(which) - 1)];
-        setSeg(s => ({ ...s, [clear]: '' }));
-        placeCaret(SEG[clear]);
-      } else {
-        // داخل المقطع → احذف الرقم الأخير فقط
-        setSeg(s => ({ ...s, [which]: String(s[which]).slice(0, -1) }));
-        placeCaret(cpos - 1);
-      }
-      return;
-    }
-    if (/^\d$/.test(e.key)) { e.preventDefault(); applyDigit(e.key); return; }
-    if (/^[AaPpصم]$/.test(e.key)) {
-      e.preventDefault();
-      const m = ['a', 'A', 'ص'].includes(e.key) ? 'AM' : 'PM';
-      setSeg(s => ({ ...s, mer: m }));
-      placeCaret(8);
-      return;
-    }
-    // اسمح بالتنقل فقط — كل ما عداه (':', حروف، مسافة) ممنوع: الفواصل تُرسم وليست قابلة للكتابة
-    if (['Tab'].includes(e.key)) return;
-    e.preventDefault();
   };
 
   const apply = (t) => {
     const n = normTime(t);
     if (!n) return;
-    setSeg({ ...segFromMachine(n), mer: segFromMachine(n).mer || 'AM' });
+    setMachine(n);
+    setDisplay(to12Display(n));
     setClock(n); setAmpm(meridian(n));
     setOpen(false);
   };
@@ -5236,10 +4979,7 @@ const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled
           placeholder="hh:mm"
           className={`${className} cursor-pointer text-center pr-7 pl-7`}
           dir="ltr"
-          onFocus={() => highlightSegment('h')}
-          onMouseUp={(e) => { const p = e.target.selectionStart ?? 0; highlightSegment(segAt(p)); }}
-          onKeyDown={onKeyDown}
-          onChange={() => {}}
+          onChange={handleText}
           disabled={disabled}
           autoComplete="off"
           {...props}
