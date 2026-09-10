@@ -823,11 +823,48 @@ CREATE TABLE public.mission_participant_sessions (
     mission_id integer NOT NULL,
     itinerary_group character varying(150),
     start_dt timestamp without time zone,
-    end_dt timestamp without time zone
+    end_dt timestamp without time zone,
+    start_entry_id bigint,
+    end_entry_id bigint
 );
 
 
 ALTER TABLE public.mission_participant_sessions OWNER TO neondb_owner;
+
+--
+-- Name: mission_join_leave_entries; Type: TABLE; Schema: public; Owner: neondb_owner
+--
+
+CREATE TABLE public.mission_join_leave_entries (
+    entry_id bigint NOT NULL,
+    mission_id integer NOT NULL,
+    title character varying(120) NOT NULL,
+    kind character varying(10) NOT NULL,
+    dt timestamp without time zone NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.mission_join_leave_entries OWNER TO neondb_owner;
+
+--
+-- Name: mission_join_leave_entries_entry_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
+--
+
+CREATE SEQUENCE public.mission_join_leave_entries_entry_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.mission_join_leave_entries_entry_id_seq OWNER TO neondb_owner;
+
+ALTER SEQUENCE public.mission_join_leave_entries_entry_id_seq OWNED BY public.mission_join_leave_entries.entry_id;
+
+ALTER TABLE ONLY public.mission_join_leave_entries ALTER COLUMN entry_id SET DEFAULT nextval('public.mission_join_leave_entries_entry_id_seq'::regclass);
+
+CREATE UNIQUE INDEX uq_jle_mission_title_kind ON public.mission_join_leave_entries USING btree (mission_id, lower(btrim(title)), kind);
 
 --
 -- Name: mission_participant_sessions_session_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
@@ -6469,6 +6506,38 @@ ALTER TABLE ONLY public.mission_participant_sessions
 
 ALTER TABLE ONLY public.mission_participant_sessions
     ADD CONSTRAINT fk_mps_participant FOREIGN KEY (participant_id) REFERENCES public.mission_participants(participant_id) ON DELETE CASCADE;
+
+
+--
+-- Name: mission_participant_sessions fk_mps_start_entry; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mission_participant_sessions
+    ADD CONSTRAINT fk_mps_start_entry FOREIGN KEY (start_entry_id) REFERENCES public.mission_join_leave_entries(entry_id) ON DELETE NO ACTION;
+
+
+--
+-- Name: mission_participant_sessions fk_mps_end_entry; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mission_participant_sessions
+    ADD CONSTRAINT fk_mps_end_entry FOREIGN KEY (end_entry_id) REFERENCES public.mission_join_leave_entries(entry_id) ON DELETE NO ACTION;
+
+
+--
+-- Name: mission_join_leave_entries fk_jle_mission; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.mission_join_leave_entries
+    ADD CONSTRAINT fk_jle_mission FOREIGN KEY (mission_id) REFERENCES public.missions(mission_id) ON DELETE CASCADE;
+
+
+--
+-- Name: mission_join_leave_entries mission_join_leave_entries_kind_check; Type: CHECK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE public.mission_join_leave_entries
+    ADD CONSTRAINT mission_join_leave_entries_kind_check CHECK (((kind)::text = ANY ((ARRAY['join'::text, 'leave'::text])::text[])));
 
 
 --

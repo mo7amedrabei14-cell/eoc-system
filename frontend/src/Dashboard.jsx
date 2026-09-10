@@ -2534,17 +2534,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [vehicles, setVehicles] = useState([{ id: 1 }]);
   const [participants, setParticipants] = useState([{ id: 1 }]);
   const [beneficiaries, setBeneficiaries] = useState([{ id: 1 }]);
-  // 🆕 نافذة انضمام / تسجيل انفصال (segment dialog) — قطاعات الدخول/الخروج (#3)
-  const [segmentDialog, setSegmentDialog] = useState(null); // { mode: 'join'|'leave', participantId }
-  // 🆕 حالة المشاركة المسودة (Draft): انضمام/انفصال قبل إرسال المهمة يُخزَّن محلياً
-  //    فقط (بلا auto-save — لا POST ولا إنشاء مهمة)، ويُدفع للسيرفر عند الحفظ/الإنشاء
-  //    الصريح عبر `flushPendingSegments`. «مسودة المهمة = مسودة المشاركة وقابلة للتعديل».
-  const [pendingSegments, setPendingSegments] = useState([]); // [{ key, role, branch, action: 'join'|'leave', dt }]
-  // 🛡️ قفل تقديم الانضمام/الانفصال ضد النقر المزدوج (يُغلق فراغ إعادة الرسم قبل isSubmitting)
-  const segmentSubmitLockRef = useRef(false);
-  // fix #1: عند تسجيل انضمام/انفصال أثناء إنشاء الاستمارة، نحفظ المهمة أولاً (auto-persist)
-  // دون إغلاق المودال، ثم نكمل العملية. هذا العَلم يخبر handleSubmit ألا يغلق المودال.
-  const persistKeepOpenRef = useRef(false);
+  // 🆕 كتالوج الانضمام/الانفصال — سجلات على مستوى المهمة (قابلة للاستخدام المتعدد)
+  //    { id, title, kind: 'join'|'leave', dt } تُسنَد للمشاركين عبر مفاتيح
+  //    «JL:J:<title>» / «JL:L:<title>» في خط السير المخصص (مصدر الحقيقة الوحيد للمشاركة).
+  const [joinLeaveEntries, setJoinLeaveEntries] = useState([]);
+  // 🆕 نافذة إنشاء/تعديل سجل انضمام أو انفصال (الكتالوج — لا زر لكل مشارك)
+  const [entryDialog, setEntryDialog] = useState(null); // { mode: 'join'|'leave', editId?, dt? }
+  // 🆕 معاينة حية داخل نافذة السجل — تُحدَّث من onChange للحقول الذكية (لا نقرأ DOM أثناء render)
+  const [jlDraft, setJlDraft] = useState({ date: '', time: '' });
   // 🆕 كل المتطوعين عبر كل الفروع — لاختيار مشارك من أي فرع (#6)
   const [allVolunteers, setAllVolunteers] = useState([]);
   // 📋 الحقول الإلزامية (متطلب جديد): touched بعد أول محاولة مرفوضة،
@@ -2709,6 +2706,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         if (data.working_hours !== undefined && prev.working_hours !== data.working_hours) merged.working_hours = data.working_hours;
         if (data.status !== undefined && prev.status !== data.status) merged.status = data.status;
         if (data.return_status !== undefined && prev.return_status !== data.return_status) merged.return_status = data.return_status;
+        // 🆕 دمج كتالوج الانضمام/الانفصال (يُحدَّث في الأحياء الحية — يُتجاهل إن غاب)
+        if (data.join_leave_entries !== undefined) merged.join_leave_entries = data.join_leave_entries;
         // دمج المشاركين: الساعات/الحالة/الأيام فقط — لا نلمس تعديلات جارية (names/roles/inputs)
         const srcMap = new Map((Array.isArray(data.participants) ? data.participants : []).map(pp => [String(pp.participant_id), pp]));
         merged.participants = (prev.participants || []).map(pp => {
@@ -2752,158 +2751,135 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 🆕 انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (لا نافذة فترات يدوية)
   // ⚖️ دورة الحياة: «مسودة المهمة = مسودة المشاركة». الانضمام/الانفصال أثناء المسودة
-  //    قابل للتعديل، ولا يُقفل إلا بالانتقال العام للمهمة خارج المسودة (إرسال/مراجعة).
-  //    قبل إنشاء المهمة: حالة محلية فقط (بلا auto-save وبلا POST) تُدفع عند الحفظ الصريح.
-  const openSegmentDialog = (mode, p) => {
-    // fix #1: متاح أثناء إنشاء/تعبئة الاستمارة — لا نحتاج مهمة محفوظة مسبقاً.
-    if (!(p.full_name || '').trim()) return setCustomAlert("أضف اسم المشارك أولاً لتسجيل الانضمام أو الانفصال.");
-    setSegmentDialog({ mode, participantId: p.id });
-  };
-  // فقط «الوقت» من قيمة YYYY-MM-DD HH:MM(:SS) — للعرض تحت الزر بصيغة 12 ساعة
-  const timePartOf = (v) => { const s = String(v || '').trim(); const parts = s.split(' '); return (parts.length > 1 ? parts[parts.length - 1] : s).slice(0, 5); };
-  // مؤخرة زمن الانضمام/الانفصال المسجَّل لمشارك (محلي مسودة أولاً ثم السيرفر)
-  const recordedTimeOf = (p, action) => {
-    const recs = p?.participation_periods || [];
-    if (action === 'join') {
-      const src = p?._draftJoin || [...recs].reverse().find(s => s.start_dt)?.start_dt;
-      return src ? { date: String(src).split(' ')[0], time: timePartOf(src) } : null;
+  // ⚖️ مفاتيح تخصيص الكتالوج المشفّرة — مطابقة تامة مع backend (split_assigned_days):
+  //    «JL:J:<title>» انضمام / «JL:L:<title>» انفصال؛ أي شيء آخر = مجموعة خط سير حرفية.
+  const splitAssignedDays = (arr) => {
+    const routes = [], events = [];
+    for (const a of arr || []) {
+      if (a && a.startsWith('JL:J:')) events.push({ kind: 'join', title: a.slice(5) });
+      else if (a && a.startsWith('JL:L:')) events.push({ kind: 'leave', title: a.slice(5) });
+      else routes.push(a);
     }
-    const src = p?._draftLeave || [...recs].reverse().find(s => s.end_dt)?.end_dt;
-    return src ? { date: String(src).split(' ')[0], time: timePartOf(src) } : null;
+    return { routes, events };
   };
-  const submitSegmentAction = async (mode) => {
-    if (!segmentDialog) return;
-    if (segmentSubmitLockRef.current) return; // 🛡️ منع النقر المزدوج
-    segmentSubmitLockRef.current = true;
-    try {
-      const target = participants.find(pp => pp.id === segmentDialog.participantId);
-      const token = localStorage.getItem('access_token');
-      const nowD = new Date();
-      const clientNow = `${nowD.toLocaleDateString('sv')} ${nowD.toTimeString().slice(0, 5)}`;
-      const missionId = currentMissionData?.mission_id;
-      const pid = target?.participant_id;
-
-      const dateVal = document.getElementById('sd_date')?.value || '';
-      const timeVal = document.getElementById('sd_time')?.value || '';
-      if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
-      const dt = `${dateVal} ${timeVal}`;
-
-      // ── مسودة بلا مهمة محفوظة: حالة محلية فقط — بلا auto-save وبلا POST وبلا إنشاء ──
-      if (!missionId || !pid) {
-        if (!(target?.full_name || '').trim()) { setCustomAlert("أضف اسم المشارك أولاً."); return; }
-        const idx = participants.findIndex(pp => pp.id === segmentDialog.participantId);
-        const role = String(document.getElementById(`p_role_${idx}`)?.value || '').trim().toLowerCase();
-        const branch = document.getElementById(`p_branch_${idx}`)?.value || '19';
-        const key = `${role}|${branch}`;
-        // عرض فوري تحت الزر (المسودة — قابل للتعديل ولا يُقفل)
-        setParticipants(list => list.map((pp, i) =>
-          i === idx ? { ...pp, [mode === 'join' ? '_draftJoin' : '_draftLeave']: dt } : pp));
-        // تخزين الحالة المسودة (بلا إرسال) — تُدفع للسيرفر عند الحفظ/الإنشاء الصريح فقط
-        setPendingSegments(prev => [
-          ...prev.filter(s => !(s.key === key && s.action === mode)),
-          { key, role, branch, action: mode, dt }
-        ]);
-        setSegmentDialog(null);
-        setCustomAlert(mode === 'join'
-          ? `✅ سُجّل انضمام مسودة لـ ${target?.full_name || 'المشارك'} — الزمن: ${formatDateTime(dt)}\n(يُحفظ مع المهمة عند إنشائها/حفظها)`
-          : `✅ سُجّل انفصال مسودة لـ ${target?.full_name || 'المشارك'} — الزمن: ${formatDateTime(dt)}\n(يُحفظ مع المهمة عند إنشائها/حفظها)`);
-        return;
-      }
-
-      // ── مهمة مُحفوظة: نُرسل/نعدّل عبر السيرفر (المسودة فقط قابلة للتعديل) ──
-      const periods = target?.participation_periods || [];
-      const missionStatus = currentMissionData?.status;
-      const isDraft = !missionStatus || missionStatus === 'Draft';
-      const openSeg = periods.find(s => !s.end_dt);
-      setIsSubmitting(true);
-      try {
-        const patchSession = async (sessionId, action) => {
-          const r = await fetch(`${BASE}/api/missions/${missionId}/sessions/${sessionId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ action, dt, client_now: clientNow })
-          });
-          if (!r.ok) { const d = await r.json().catch(() => ({})); setCustomAlert(`🚫 ${d.detail || 'فشل تعديل المشاركة'}`); return false; }
-          return true;
-        };
-        const postAction = async (action) => {
-          const body = action === 'join'
-            ? { participant_id: pid, join_datetime: dt, client_now: clientNow }
-            : { participant_id: pid, leave_datetime: dt, client_now: clientNow };
-          const r = await fetch(`${BASE}/api/missions/${missionId}/${action}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(body)
-          });
-          if (!r.ok) { const d = await r.json().catch(() => ({})); setCustomAlert(`🚫 ${d.detail || 'فشل العملية — حاول مرة أخرى.'}`); return false; }
-          return true;
-        };
-        if (mode === 'join') {
-          if (openSeg && isDraft) {
-            // تعديل زمن انضمام مسجّل — تُحدَّث الشريحة نفسها في مكانها (لا حذف+إنشاء)
-            if (!(await patchSession(openSeg.session_id, 'join'))) return;
-          } else if (openSeg) {
-            setCustomAlert("المهمة خرجت من المسودة — لا يمكن تعديل الانضمام."); return;
-          } else if (isDraft) {
-            // انضمام جديد (أو بعد انفصال — دورة مشاركة جديدة مستقلة)
-            if (!(await postAction('join'))) return;
-          } else {
-            setCustomAlert("المهمة خرجت من المسودة — لا يمكن إضافة انضمام جديد."); return;
-          }
-        } else {
-          // mode === 'leave'
-          const lastClosed = [...periods].reverse().find(s => s.end_dt);
-          if (openSeg) {
-            // إغلاق الحضور المفتوح الحالي بزمن الانفصال (يُغلق الشريحة المفتوحة نفسها)
-            if (!(await postAction('leave'))) return;
-          } else if (lastClosed && isDraft) {
-            // تعديل زمن انفصال مسجّل — تُحدَّث end_dt في مكانها (مطابقة نفس الشريحة)
-            if (!(await patchSession(lastClosed.session_id, 'leave'))) return;
-          } else if (lastClosed) {
-            setCustomAlert("المهمة خرجت من المسودة — لا يمكن تعديل الانفصال."); return;
-          } else if (isDraft) {
-            // لا حضور مفتوح ولا سجل سابق — انفصال من بداية المشاركة (مسار الإرث)
-            if (!(await postAction('leave'))) return;
-          } else {
-            setCustomAlert("المهمة خرجت من المسودة — لا يمكن تسجيل انفصال."); return;
-          }
+  const jlKey = (kind, title) => `JL:${kind === 'join' ? 'J' : 'L'}:${title}`;
+  // مرآة المشارك لمصدر بداية المشاركة (participation_start_dt): أقرب مسار مسند → بداية المهمة إن sfm
+  const participantHasStart = (p) => {
+    const { routes: rts } = splitAssignedDays(p.assigned_days || []);
+    if (rts.length > 0) return true; // مسار مسند بموعد انطلاق ⇒ بداية صالحة
+    return p.start_from_mission !== false; // «من بداية المهمة» (الافتراضي TRUE)
+  };
+  // 🆕 إدارة كتالوج الانضمام/الانفصال (قائمة المهمة — تصبح مشاركة فعلاً عند الإسناد):
+  //    إنشاء/تعديل/حذف سجل — المسودة فقط قابلة للتعديل (403 خارجها عبر السيرفر).
+  const openEntryDialog = (mode, edit) => {
+    if (currentMissionData && currentMissionData.status !== 'Draft') {
+      return setCustomAlert("المهمة خرجت من المسودة — كتالوج الانضمام/الانفصال مجمّد.");
+    }
+    setJlDraft(edit
+      ? { date: String(edit.dt || '').slice(0, 10), time: String(edit.dt || '').slice(11, 16) }
+      : { date: '', time: '' });
+    setEntryDialog(edit
+      ? { mode: edit.kind, editId: edit.id, title: edit.title, dt: edit.dt }
+      : { mode, title: '', dt: '' });
+  };
+  const saveEntry = () => {
+    if (!entryDialog) return;
+    const title = String(entryDialog.title || '').trim();
+    const dateVal = document.getElementById(entryDialog.mode === 'join' ? 'jl_join_date' : 'jl_leave_date')?.value || '';
+    const timeVal = document.getElementById(entryDialog.mode === 'join' ? 'jl_join_time' : 'jl_leave_time')?.value || '';
+    if (!title) return setCustomAlert("أدخل عنوان السجل أولاً.");
+    if (!dateVal || !timeVal) return setCustomAlert("أدخل التاريخ والوقت أولاً.");
+    const dt = `${dateVal} ${timeVal}`;
+    const dup = joinLeaveEntries.some(e =>
+      e.id !== entryDialog.editId &&
+      e.kind === entryDialog.mode &&
+      String(e.title || '').trim().toLowerCase() === title.toLowerCase());
+    if (dup) return setCustomAlert("يوجد بالفعل سجل بنفس العنوان — اختر عنواناً مختلفاً.");
+    if (entryDialog.editId) {
+      // إعادة تسمية/نقل كتالوج — نُرحّل مفاتيح JL:* في إسنادات المشاركين (مثل backend PATCH)
+      const prev = joinLeaveEntries.find(x => x.id === entryDialog.editId);
+      if (prev) {
+        const oldKey = jlKey(prev.kind, prev.title);
+        const newKey = jlKey(entryDialog.mode, title);
+        if (oldKey !== newKey) {
+          setParticipants(list => list.map(p => ({
+            ...p,
+            assigned_days: (p.assigned_days || []).map(d => (d === oldKey ? newKey : d))
+          })));
         }
-      } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); return; }
-      setSegmentDialog(null);
-      setCustomAlert(mode === 'join'
-        ? `✅ تم تسجيل انضمام ${target?.full_name || 'المشارك'}\nالبداية: ${formatDateTime(dt)}`
-        : `✅ تم تسجيل انفصال ${target?.full_name || 'المشارك'}\nالنهاية: ${formatDateTime(dt)}`);
-      await handleViewMission(missionId); // تحديث الحالة والساعات من السيرفر
-    } catch (err) { setCustomAlert("خطأ في الاتصال بالسيرفر."); }
-    finally { setIsSubmitting(false); segmentSubmitLockRef.current = false; }
-  };
-  // 🆕 دفع المشاركات المسودة للسيرفر بعد إنشاء/حفظ المهمة الصريح — بأزمنتها الدقيقة،
-  //    مرتبطة بهوية المشارك (رقم العضوية + الفرع)، بلا تكرار/فقدان، وبلا إعادة التقسيم.
-  const flushPendingSegments = async (missionId, token) => {
-    if (!missionId || pendingSegments.length === 0) return { ok: true };
-    const url = `${BASE}/api/missions/${missionId}?client_now=${encodeURIComponent(clientNowLocal())}`;
-    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-    const data = res.ok ? await res.json() : null;
-    if (!data) return { ok: false };
-    // تُعاد بترتيبها الزمني الفعلي (فقط انضمامات ثم انفصالات لكل مشارك — بلا خلط)
-    const ordered = [...pendingSegments].sort((a, b) => String(a.dt).localeCompare(String(b.dt)));
-    let ok = true;
-    for (const seg of ordered) {
-      const matched = (data.participants || []).find(pp =>
-        (seg.role ? String(pp.membership_number || '').trim().toLowerCase() === seg.role : false) &&
-        String(pp.branch_id ?? '') === String(seg.branch));
-      if (!matched) { ok = false; continue; }
-      const body = seg.action === 'join'
-        ? { participant_id: matched.participant_id, join_datetime: seg.dt, client_now: clientNowLocal() }
-        : { participant_id: matched.participant_id, leave_datetime: seg.dt, client_now: clientNowLocal() };
-      const r = await fetch(`${BASE}/api/missions/${missionId}/${seg.action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(body)
-      });
-      if (!r.ok) ok = false;
+      }
+      setJoinLeaveEntries(list => list.map(e => e.id === entryDialog.editId ? { ...e, title, dt, kind: entryDialog.mode } : e));
+    } else {
+      setJoinLeaveEntries(list => [...list, { id: Date.now(), server: false, title, dt, kind: entryDialog.mode }]);
     }
-    return { ok };
+    setEntryDialog(null);
+    setJlDraft({ date: '', time: '' });
+  };
+  const deleteEntry = (eid) => {
+    if (currentMissionData && currentMissionData.status !== 'Draft') {
+      return setCustomAlert("المهمة خرجت من المسودة — كتالوج الانضمام/الانفصال مجمّد.");
+    }
+    const e = joinLeaveEntries.find(x => x.id === eid);
+    if (!e) return;
+    // احذف دعائم الإسناد من كل المشاركين مع السجل (مثل الـ backend: key يُحذف أيضاً)
+    const key = jlKey(e.kind, e.title);
+    setParticipants(list => list.map(p => ({
+      ...p,
+      assigned_days: (p.assigned_days || []).filter(d => d !== key)
+    })));
+    setJoinLeaveEntries(list => list.filter(x => x.id !== eid));
+    setCustomAlert("حُذف سجل الانضمام/الانفصال (وفي أي إسناد له لدى المشاركين) — يُعاد الاشتقاق عند الحفظ.");
+  };
+  // إعادة تسمية سجل من بطاقته مباشرة — تُحدَّث مفاتيح الإسناد JL:* فوراً (مطابقة للـ backend
+  //    في PATCH endpoint: عند تغيّر العنوان يُرحَّل مفتاح الإسناد القديم إلى الجديد).
+  const renameEntry = (id, title) => {
+    const prev = joinLeaveEntries.find(x => x.id === id);
+    if (!prev) return;
+    const clean = String(title || '').trim();
+    // عنوان فارغ أو بدون تغيير فعلي → لا شيء (الحقل المتحكم يرتد في هذه الحالة)
+    if (!clean || clean.toLowerCase() === String(prev.title || '').trim().toLowerCase()) return;
+    const dup = joinLeaveEntries.some(x =>
+      x.id !== id && x.kind === prev.kind && String(x.title || '').trim().toLowerCase() === clean.toLowerCase());
+    if (dup) { setCustomAlert("يوجد بالفعل سجل بنفس العنوان — اختر عنواناً مختلفاً."); return; }
+    const oldKey = jlKey(prev.kind, prev.title);
+    const newKey = jlKey(prev.kind, clean);
+    setJoinLeaveEntries(list => list.map(x => x.id === id ? { ...x, title: clean } : x));
+    if (oldKey !== newKey && clean && clean.trim()) {
+      setParticipants(list => list.map(p => ({
+        ...p,
+        assigned_days: (p.assigned_days || []).map(d => (d === oldKey ? newKey : d))
+      })));
+    }
+  };
+  // تعيين/إلغاء تعيين سجل لفلتريك — مع حكم الانفصال بلا بدء مشاركة (مرآة §4.2)
+  const toggleJLAssignment = (pIdx, entry) => {
+    if (currentMissionData && currentMissionData.status !== 'Draft') {
+      return setCustomAlert("المهمة خرجت من المسودة — المشاركة مجمّدة.");
+    }
+    const key = jlKey(entry.kind, entry.title);
+    const p = participants[pIdx];
+    if (!p) return;
+    const days = p.assigned_days || [];
+    if (days.includes(key)) {
+      setParticipants(list => list.map((pp, i) => i === pIdx ? { ...pp, assigned_days: (pp.assigned_days || []).filter(d => d !== key) } : pp));
+      return;
+    }
+    if (entry.kind === 'leave') {
+      // شرط الإسناد (§4.2): انفصال قابل للإسناد فقط لو وُجد انضمام مسند بزمن ≤ زمن الانفصال،
+      // أو (بلا أي انضمام مسند + بداية مسار/بداية مهمة صالحة). بديل المسار/المهمة
+      // غير مؤهل أبداً عند وجود أي انضمام مسند — مطابقة تامة للـ backend.
+      const joined = splitAssignedDays(days).events.filter(ev => ev.kind === 'join');
+      const leaveTs = (entry.dt || '').replace('T', ' ');
+      const validJoin = joined.some(ev => {
+        const rec = joinLeaveEntries.find(e2 => e2.kind === 'join' && String(e2.title).trim().toLowerCase() === String(ev.title).trim().toLowerCase());
+        return rec && (!leaveTs || String(rec.dt || '').replace('T', ' ') <= leaveTs);
+      });
+      const okNoJoin = joined.length === 0 && participantHasStart(p);
+      if (!validJoin && !okNoJoin) {
+        return setCustomAlert("لا يمكن إضافة انفصال لهذا المشارك لأنه لا يوجد له موعد بدء للمشاركة. برجاء تحديد انضمام أو خط سير أو تفعيل «من بداية المهمة» أولًا.");
+      }
+    }
+    setParticipants(list => list.map((pp, i) => i === pIdx ? { ...pp, assigned_days: [...(pp.assigned_days || []), key] } : pp));
   };
 
   // 🔧 اختيار أيام/خطوط متعددة — أي مهمة لها مجموعات
@@ -2960,7 +2936,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setVehicles([{ id: Date.now() }]);
     setParticipants([{ id: Date.now() }]);
     setBeneficiaries([{ id: Date.now() }]);
-    setSegmentDialog(null);
+    setEntryDialog(null);
+    setJlDraft({ date: '', time: '' });
+    setJoinLeaveEntries([]);
     setDaysPicker(null);
     loadAllVolunteers(); // 🆕 كل الفروع (#6)
     setIsModalLoading(false);
@@ -3019,6 +2997,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
         setVehicles((data.vehicles && data.vehicles.length > 0) ? data.vehicles.map((v, i) => ({ id: i, ...v })) : [{ id: Date.now() }]);
         setParticipants((data.participants && data.participants.length > 0) ? data.participants.map((p, i) => ({ id: i, ...p })) : [{ id: Date.now() }]);
+        // 🆕 كتالوج الانضمام/الانفصال — سجلات المهمة (تُسنَد للمشاركين عبر مفاتيح JL:*)
+        //    `server` يميّز السجلات القادمة من الـ DB (تُرسل مع entry_id للإبقاء على الهوية)
+        //    من السجلات المحلية الجديدة (تُرسل بلا entry_id ⇒ تُدرج INSERT عند أول حفظ).
+        setJoinLeaveEntries((data.join_leave_entries && data.join_leave_entries.length > 0)
+          ? data.join_leave_entries.map((e, i) => ({ id: e.entry_id ?? i, server: e.entry_id != null, title: e.title, kind: e.kind, dt: e.dt }))
+          : []);
         setBeneficiaries((data.beneficiaries && data.beneficiaries.length > 0) ? data.beneficiaries.map((b, i) => ({ id: i, ...b })) : [{ id: Date.now() }]);
         inFlightMissionRef.current = null; // انتهى الطلب بنجاح — يسمح بإعادة الفتح لاحقاً
         setIsModalLoading(false);
@@ -3397,13 +3381,22 @@ const [isModalOpen, setIsModalOpen] = useState(false);
            return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة',
            phase_name: document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول',
            stay_type: document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة',
-           // 🔧 أيام/مجموعات متعددة — أي مهمة لها مجموعات فعلية (القطاعات تُدار عبر انضمام/انفصال)
-           ...(hasDayGroups ? { assigned_days: participants[i]?.assigned_days || [] } : {}),
+           // 🔧 أيام/مجموعات متعددة — أي مهمة لها مجموعات فعلية أو لها كتالوج انضمام/انفصال
+           //    (مفاتيح JL:* تُرسَل حرفياً — مصدر الحقيقة للمشاركة; تُفصل أمامياً عند العرض)
+           ...((hasDayGroups || joinLeaveEntries.length > 0) ? { assigned_days: participants[i]?.assigned_days || [] } : {}),
            // 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر البداية المخططة (افتراضي TRUE)
            start_from_mission: participants[i]?.start_from_mission !== false
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
-         eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== '')
+         eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== ''),
+         // 🆕 كتالوج الانضمام/الانفصال — سجلات المهمة (الإسناد عبر مفاتيح JL:* في assigned_days)
+         //    `server` = سجل من الـ DB ⇒ نرسل entry_id لإبقاء هويته (UPDATE)؛ محلي جديد ⇒ INSERT.
+         join_leave_entries: (joinLeaveEntries || []).map(e => ({
+           ...(e.server ? { entry_id: e.id } : {}),
+           title: e.title,
+           kind: e.kind,
+           dt: e.dt
+         }))
        };
 
        const token = localStorage.getItem('access_token');
@@ -3429,24 +3422,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        if (res.ok) {
          // Success: clear the idempotency key so next submit gets a new key
          newMissionIdempotencyKey.current = null;
-         // fix #1: أثناء auto-persist لـ JOIN/LEAVE نُبقي المودال مفتوحاً لنكمل العملية؛
-         // وإلا (حفظ عادي) نغلق المودال ونُصفّر النوافذ كما كان.
-         if (!persistKeepOpenRef.current) {
-           setSegmentDialog(null);
-           setDaysPicker(null);
-           setIsModalOpen(false);
-         }
+         // 💾 نجاح الحفظ — يُغلق مودال الاستبيان (تظهر القطاعات المشتقة عند إعادة فتح المهمة).
+         setEntryDialog(null);
+         setDaysPicker(null);
+         setIsModalOpen(false);
          fetchMissions();
          const rd = await res.json().catch(() => ({}));
-         // 🆕 دعم المشاركات المسودة المحلية: بعد الحفظ/الإنشاء الصريح — تُدفع انضمامات/
-         //    انفصالات المسودة للسيرفر بأزمنتها الدقيقة، وترتبط بالمهمة الجديدة. إن فشل
-         //    الإرسال نفسه نُبقيها (لا تُمسح أبداً — متاحة لإعادة المحاولة).
-         const savedId = rd.mission_id || currentMissionData?.mission_id;
-         if (savedId && pendingSegments.length > 0) {
-           const flushRes = await flushPendingSegments(savedId, token);
-           if (flushRes.ok) setPendingSegments([]);
-           else setCustomAlert('⚠️ أُنهيت مسودة المهمة لكن بعض الانضمام/الانفصال المسودة لم يُدفع للسيرفر — أعد فتح المهمة وحاول حفظها مرة أخرى (لن تُفقد البيانات).');
-         }
          return { ok: true, mission_id: rd.mission_id };
        } else {
          // Error: keep the idempotency key for retry (idempotent if server actually committed)
@@ -3996,7 +3977,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <th className="p-3 text-cyan-400">الساعات</th>
                         <th className="p-3 text-purple-400">خط السير المخصص</th>
                         <th className="p-3">الفرع</th>
-                        <th className="p-3 text-center">إجراءات</th>
                         <th className="p-3 text-center">حذف</th>
                       </tr>
                     </thead>
@@ -4057,16 +4037,26 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                               title="تحديد خطوط السير المخصصة للمشارك"
                               className={`text-xs font-bold px-2 py-1 rounded-lg border w-full text-right ${((p.assigned_days || []).length > 0) ? 'text-purple-400 bg-purple-400/10 border-purple-400/30' : 'text-[var(--muted-2)] bg-[var(--surface-3)] border-[var(--border)]'}`}
                             >
-                              {((p.assigned_days || []).length > 0) ? (
-                                <>
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="text-purple-400">📍</span>
-                                    {p.assigned_days.map((day, i) => (
-                                      <span key={day} className="inline-block bg-purple-400/20 text-purple-300 px-1.5 py-0.5 rounded text-[10px] mr-1">{day}</span>
+                              {((p.assigned_days || []).length > 0) ? (() => {
+                                const [routeDays] = splitAssignedDays(p.assigned_days);
+                                const jlDays = (p.assigned_days || []).filter(d => d && d.startsWith('JL:'));
+                                return (
+                                  <span className="inline-flex flex-wrap items-center gap-1">
+                                    {routeDays.length > 0 && <span className="text-purple-400">📍</span>}
+                                    {routeDays.map(day => (
+                                      <span key={'r:'+day} className="inline-block bg-purple-400/20 text-purple-300 px-1.5 py-0.5 rounded text-[10px]">{day}</span>
                                     ))}
+                                    {jlDays.map(day => {
+                                      const isJoin = day.startsWith('JL:J:');
+                                      return (
+                                        <span key={day} className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${isJoin ? 'bg-green-400/20 text-green-300' : 'bg-[var(--accent)]/20 text-[var(--accent)]'}`}>
+                                          {isJoin ? '📥' : '📤'} {day.slice(5)}
+                                        </span>
+                                      );
+                                    })}
                                   </span>
-                                </>
-                              ) : (
+                                );
+                              })() : (
                                 'خط السير المخصص'
                               )}
                             </button>
@@ -4081,46 +4071,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </EocSelect>
                           </td>
 
-                          {/* إجراءات انضمام / انفصال — القطاعات تُدار عبر السيرفر.
-                              ⚖️ «مسودة المهمة = مسودة المشاركة»: الانضمام/الانفصال قابل للتعديل
-                              (الزمن يظهر تحت الزر مباشرة بصيغة 12 ساعة) ولا يُقفل إلا بخروج
-                              المهمة من المسودة (إرسال/مراجعة عام) — ثم 🔒 لا يُمس. */}
-                          <td className="p-2 text-center">
-                            {(() => {
-                              const periods = p.participation_periods || [];
-                              // ⚖️ القفل الوحيد على مستوى المهمة: «مسودة المهمة = مسودة المشاركة».
-                              // يُقفل فقط عند الإرسال العام (المهمة تخرج من المسودة) — ولا يُشتق أبداً
-                              // من حالة أي مشارك: انفصال مشارك (A) لا يؤثر إطلاقاً على أزرار مشارك آخر (B/C).
-                              const isDraft = !currentMissionData || currentMissionData.status === 'Draft';
-                              const isLocked = !isDraft; // قفل الإرسال العام فحسب
-                              const hasName = !!(p.full_name || '').trim();
-                              // ── حالة هذا المشارك وحده — مصدرها قطاعاته هو لا غير ──
-                              const openSeg = periods.find(s => !s.end_dt);                 // شريحة مفتوحة = ملتحق حالياً
-                              const myLastLeave = [...periods].filter(s => s.end_dt).pop(); // آخر انفصال مسجَّل له
-                              const joinT = p._draftJoin || (openSeg?.start_dt || [...periods].filter(s => s.start_dt).pop()?.start_dt) || null;
-                              const leaveT = p._draftLeave || myLastLeave?.end_dt || null;
-                              // الانضمام ممكن لهذا المشارك: بلا حضور مفتوح → انضمام جديد؛ أو حضور مفتوح
-                              // والمسودة قائمة → تعديل زمنه. الانفصال ممكن: حضور مفتوح → إغلاقه؛ أو مسودة →
-                              // تعديل سجل سابق/انفصال من بداية المشاركة. — الحكم دائماً على حالة A/B/C ذاته.
-                              const myCanJoin = !openSeg || isDraft;
-                              const myCanLeave = !!openSeg || isDraft;
-                              const joinDisabled = !hasName || isLocked || !myCanJoin;    // هذا المشارك لا غيره
-                              const leaveDisabled = !hasName || isLocked || !myCanLeave;  // هذا المشارك لا غيره
-                              return (
-                                <>
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <button type="button" onClick={() => openSegmentDialog('join', p)} disabled={joinDisabled} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (openSeg ? 'تعديل زمن الانضمام المسجّل (مسودة)' : 'تسجيل انضمام جديد (يبدأ شريحة مشاركة)'))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-green-400 bg-green-400/10 border-green-400/30 hover:bg-green-400/20 disabled:opacity-40 disabled:cursor-not-allowed">↗ انضمام</button>
-                                    <button type="button" onClick={() => openSegmentDialog('leave', p)} disabled={leaveDisabled} title={!hasName ? 'أضف اسم المشارك أولاً' : (isLocked ? 'المهمة خرجت من المسودة — المشاركة مجمّدة' : (openSeg ? 'تسجيل انفصال (إغلاق الحضور المفتوح)' : (myLastLeave ? 'تعديل زمن الانفصال المسجّل (مسودة)' : 'تسجيل انفصال من بداية المشاركة')))} className="text-[10px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30 hover:bg-[var(--accent)]/20 disabled:opacity-40 disabled:cursor-not-allowed">↩ انفصال</button>
-                                  </div>
-                                  {/* الزمن المسجَّل تحت الزر مباشرة — 12 ساعة؛ قابل للنقر للتعديل في المسودة */}
-                                  <div className="flex flex-col items-center gap-0.5 mt-1 min-h-[26px] justify-center">
-                                    {joinT && <button type="button" onClick={() => !isLocked && openSegmentDialog('join', p)} disabled={isLocked} title={isLocked ? 'زمن الانضمام المجمّد' : 'تعديل زمن الانضمام'} className="text-[10px] font-bold text-green-400 hover:underline disabled:opacity-100 disabled:cursor-default">{formatTime12(timePartOf(joinT))}{isLocked ? ' 🔒' : ''}</button>}
-                                    {leaveT && <button type="button" onClick={() => !isLocked && openSegmentDialog('leave', p)} disabled={isLocked} title={isLocked ? 'زمن الانفصال المجمّد' : 'تعديل زمن الانفصال'} className="text-[10px] font-bold text-[var(--accent)] hover:underline disabled:opacity-100 disabled:cursor-default">{formatTime12(timePartOf(leaveT))}{isLocked ? ' 🔒' : ''}</button>}
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </td>
                           <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-[var(--faint)] hover:text-[var(--accent)]"><TrashIcon /></button></td>
                         </tr>
                       ))}
@@ -4129,54 +4079,137 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </div>
               </SectionCard>
 
-              {/* ✅ نافذة انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (#3).
-                  مسودة المهمة = مسودة المشاركة: عند وجود زمن مسجّل يُفتح المودال مُعبأً
-                  مسبقاً به (تعديل في مكانه — لا حذف+إنشاء)، وزر التأكيد يتحول إلى «تعديل». */}
-              {segmentDialog && (() => {
-                const isJoin = segmentDialog.mode === 'join';
-                const target = participants.find(pp => pp.id === segmentDialog.participantId) || {};
-                // fix #3: التاريخ/الوقت الافتراضيان بساعة العميل المحلية (نفس إطار الـ JOIN/LEAVE)
-                const existing = recordedTimeOf(target, isJoin ? 'join' : 'leave'); // {date,time} أو null
-                const today = existing ? existing.date : new Date().toLocaleDateString('sv'); // YYYY-MM-DD محلي
-                const nowTime = existing ? existing.time : new Date().toTimeString().slice(0, 5);
-                const isEdit = !!existing;
+              {/* 📥📤 كتالوج الانضمام / الانفصال — بطاقات على مستوى المهمة (لا زر لكل مشارك) */}
+              <SectionCard
+                title="انضمام / انفصال"
+                icon={<span className="text-lg">📥</span>}
+                actionBtn={
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => openEntryDialog('join')}
+                      className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors">
+                      + إضافة انضمام
+                    </button>
+                    <button type="button" onClick={() => openEntryDialog('leave')}
+                      className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30 transition-colors">
+                      + إضافة انفصال
+                    </button>
+                  </div>
+                }
+              >
+                <div className="space-y-3">
+                  {joinLeaveEntries.length === 0 && (
+                    <p className="text-center text-[var(--muted-2)] text-sm py-4">لا توجد سجلات انضمام/انفصال بعد</p>
+                  )}
+                  {joinLeaveEntries.map((e) => {
+                    const isJ = e.kind === 'join';
+                    const assignedTo = participants
+                      .filter(p => (p.assigned_days || []).includes(jlKey(e.kind, e.title)))
+                      .map(p => p.full_name || 'مشارك');
+                    return (
+                      <div key={e.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isJ ? 'border-green-500/20 bg-green-500/5' : 'border-[var(--accent)]/20 bg-[var(--accent)]/5'}`}>
+                        <span className={`text-xl shrink-0 ${isJ ? 'text-green-400' : 'text-[var(--accent)]'}`}>{isJ ? '📥' : '📤'}</span>
+                        <div className="flex-1 min-w-0">
+                          <input
+                            id={`jl_title_${e.id}`}
+                            type="text"
+                            value={e.title}
+                            onChange={(ev) => renameEntry(e.id, ev.target.value)}
+                            onBlur={(ev) => renameEntry(e.id, ev.target.value)}
+                            className="font-bold text-sm bg-transparent outline-none text-white border-b border-transparent hover:border-[var(--border)] focus:border-[var(--accent)] transition-colors w-full"
+                            title="أعد تسمية السجل — يُحدَّث مفتاح الإسناد فوراً"
+                          />
+                          <div className="text-[11px] text-[var(--muted-2)] mt-0.5">
+                            {(() => {
+                              try { return formatDateTime12(e.dt); } catch { return e.dt; }
+                            })()}
+                          </div>
+                          {assignedTo.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {assignedTo.map(name => (
+                                <span key={name} className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-purple-400/15 text-purple-300">{name}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button type="button" onClick={() => openEntryDialog(e.kind, e)}
+                            className="text-[10px] font-bold px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--muted-2)] hover:text-white hover:border-[var(--accent)] transition-colors"
+                            title="تعديل">
+                            تعديل
+                          </button>
+                          <button type="button" onClick={() => deleteEntry(e.id)}
+                            className="text-[10px] font-bold px-2 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                            title="حذف">
+                            حذف
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+
+              {/* 🆕 نافذة إنشاء/تعديل سجل انضمام أو انفصال — SmartDateField + SmartTimeField فقط */}
+              {entryDialog && (() => {
+                const isJoin = entryDialog.mode === 'join';
+                const isEdit = !!entryDialog.editId;
+                const dateId = isJoin ? 'jl_join_date' : 'jl_leave_date';
+                const timeId = isJoin ? 'jl_join_time' : 'jl_leave_time';
+                // معاينة حية تُحدَّث عبر onChange للحقول الذكية (تجنب قراءة DOM أثناء render)
+                const preview = (jlDraft.date && jlDraft.time) ? formatDateTime12(`${jlDraft.date} ${jlDraft.time}`) : '';
                 return (
                   <div className="fixed inset-0 z-[222] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
                     <div className="w-full max-w-md card-surface rounded-2xl shadow-2xl border border-[var(--border-strong)] overflow-hidden animate-fade-in-up">
                       <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-3)]">
                         <h3 className="font-bold text-white flex items-center gap-2">
                           <span className={isJoin ? 'text-green-400' : 'text-[var(--accent)]'}>{isJoin ? '📥' : '📤'}</span>
-                          {isJoin ? (isEdit ? 'تعديل الانضمام' : 'تسجيل انضمام') : (isEdit ? 'تعديل الانفصال' : 'تسجيل الانفصال')} — {target.full_name || 'مشارك'}
+                          {isJoin ? (isEdit ? 'تعديل انضمام' : 'إضافة انضمام') : (isEdit ? 'تعديل انفصال' : 'إضافة انفصال')}
                         </h3>
-                        <button onClick={() => setSegmentDialog(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
+                        <button onClick={() => setEntryDialog(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
                       </div>
-                      <div className="p-5">
-                        <p className="text-xs text-[var(--faint)] mb-4 leading-relaxed">
-                          {isEdit
-                            ? (isJoin
-                              ? 'سينعكس الزمن الجديد فوراً في السجل المسجّل (عبر تحديث الشريحة نفسها — لا يتفرّع قطاع مكرر).'
-                              : 'سينعكس الزمن الجديد فوراً في سجل الانفصال (تحديث الشريحة نفسها في مكانها).')
-                            : (isJoin
-                              ? 'تُسجَّل قطعة مشاركة جديدة تبدأ من التاريخ والوقت أدناه.'
-                              : 'يُسجَّل انفصال عن المهمة من التاريخ والوقت أدناه.')}
-                        </p>
-                        {/* fix #1: لا اختيار خط سير هنا — JOIN/LEAVE للتاريخ/الوقت الفعلي فقط.
-                            تخصيص المسارات يتم حصرياً من جدول المشاركين (محدد الأيام). */}
+                      <div className="p-5 space-y-4">
+                        <div>
+                          <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">العنوان</label>
+                          <input
+                            id="jl_entry_title"
+                            type="text"
+                            value={entryDialog.title || ''}
+                            onChange={(ev) => setEntryDialog(d => ({ ...d, title: ev.target.value }))}
+                            placeholder="مثال: بداية المشاركة"
+                            className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-3 py-2 rounded-lg text-sm border border-[var(--border)] focus:border-[var(--accent)] outline-none"
+                            autoFocus
+                          />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
-                            <DateInput id="sd_date" type="date" defaultValue={today} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
+                            <SmartDateField
+                              id={dateId}
+                              defaultValue={entryDialog.dt ? String(entryDialog.dt).slice(0, 10) : ''}
+                              className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm"
+                              onChange={(ev) => setJlDraft(d => ({ ...d, date: ev.target.value }))}
+                            />
                           </div>
                           <div>
                             <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
-                            <TimeInput id="sd_time" defaultValue={nowTime} className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm" />
+                            <SmartTimeField
+                              id={timeId}
+                              defaultValue={entryDialog.dt ? String(entryDialog.dt).slice(11, 16) : ''}
+                              className="eoc-manual-field w-full bg-[var(--surface-3)] text-white px-2 py-1.5 rounded-lg text-sm"
+                              onChange={(ev) => setJlDraft(d => ({ ...d, time: ev.target.value }))}
+                            />
                           </div>
                         </div>
+                        {preview && (
+                          <p className="text-xs text-center text-[var(--muted-2)] bg-[var(--surface-3)] rounded-lg py-2">
+                            🕐 {preview}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--border)] bg-[var(--surface-3)]">
-                        <button onClick={() => setSegmentDialog(null)} className="text-xs text-[var(--muted-2)] hover:text-white underline">إلغاء</button>
-                        <button onClick={() => submitSegmentAction(segmentDialog.mode)} className={`text-white font-bold px-6 py-2 rounded-xl text-xs hover:opacity-90 ${isJoin ? 'bg-green-500 hover:bg-green-600' : 'bg-[var(--accent)] hover:bg-[var(--accent-soft)]'}`}>
-                          {isSubmitting ? 'جاري الحفظ...' : (isEdit ? 'تعديل' : (isJoin ? 'تسجيل الانضمام' : 'تسجيل الانفصال'))}
+                        <button onClick={() => setEntryDialog(null)} className="text-xs text-[var(--muted-2)] hover:text-white underline">إلغاء</button>
+                        <button onClick={saveEntry} className={`text-white font-bold px-6 py-2 rounded-xl text-xs hover:opacity-90 ${isJoin ? 'bg-green-500 hover:bg-green-600' : 'bg-[var(--accent)] hover:bg-[var(--accent-soft)]'}`}>
+                          {isEdit ? 'تعديل' : (isJoin ? 'إضافة انضمام' : 'إضافة انفصال')}
                         </button>
                       </div>
                     </div>
@@ -4184,7 +4217,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 );
               })()}
 
-              {/* 🔴 محدد الأيام/الخطوط المتعددة — يعمل مع أي نوع مهمة (خط السير الأساسي + المخصص) */}
+              {/* 🔴 محدد الأيام/الخطوط المتعددة — ثلاث مجموعات: خطوط السير + انضمام + انفصال */}
               {daysPicker !== null && (() => {
                 const dp = participants[daysPicker];
                 if (!dp) return null;
@@ -4202,19 +4235,53 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-3)]">
                         <h3 className="font-bold text-white flex items-center gap-2">
                           <span className="text-purple-400">📍</span>
-                          خطوط السير المخصصة — {dp.full_name || 'مشارك'}
+                          المشاركة — {dp.full_name || 'مشارك'}
                         </h3>
                         <button onClick={() => setDaysPicker(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
                       </div>
-                      <div className="p-5 max-h-[50vh] overflow-y-auto">
-                        {allOptions.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm py-4">لا توجد خطوط سير متاحة. أضف مسارات في قسم "تفاصيل خط السير الأساسي" أو "الأيام / خطوط السير المخصصة".</p>}
-                        {allOptions.map((opt, idx) => {
+                      <div className="p-5 max-h-[55vh] overflow-y-auto">
+                        {/* ١) خطوط السير (روتين) — خروج بدون أي JL:* */}
+                        <p className="text-[10px] text-purple-400 font-bold mb-1.5 flex items-center gap-1">🛣️ خطوط السير</p>
+                        {allOptions.length === 0 && <p className="text-center text-[var(--muted-2)] text-xs py-2 mb-2">لا توجد خطوط سير متاحة. أضفها من قسم خطوط السير.</p>}
+                        {allOptions.map((opt) => {
                           const checked = (dp.assigned_days || []).includes(opt);
                           const isBasic = opt === 'خط السير الأساسي';
                           return (
-                            <label key={opt} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-purple-400/10 border border-purple-400/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
+                            <label key={'opt:'+opt} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-purple-400/10 border border-purple-400/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
                               <input type="checkbox" checked={checked} onChange={() => toggleAssignedDay(daysPicker, opt)} className="accent-purple-400 w-4 h-4" />
                               <span className={`text-sm font-bold ${checked ? 'text-purple-400' : 'text-[var(--muted-2)]'}`}>{isBasic ? '🛣️' : '📅'} {opt}</span>
+                            </label>
+                          );
+                        })}
+                        {/* ٢) انضمام — JL:J:<title> */}
+                        <p className="text-[10px] text-green-400 font-bold mb-1.5 mt-4 flex items-center gap-1">📥 انضمام</p>
+                        {joinLeaveEntries.filter(e => e.kind === 'join').length === 0 && (
+                          <p className="text-center text-[var(--muted-2)] text-xs py-2 mb-2">لا توجد سجلات انضمام بعد — أضفها من قسم «انضمام / انفصال».</p>
+                        )}
+                        {joinLeaveEntries.filter(e => e.kind === 'join').map((e) => {
+                          const key = jlKey('join', e.title);
+                          const checked = (dp.assigned_days || []).includes(key);
+                          return (
+                            <label key={key} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-green-400/10 border border-green-400/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleJLAssignment(daysPicker, e)} className="accent-green-400 w-4 h-4" />
+                              <span className={`text-sm font-bold ${checked ? 'text-green-400' : 'text-[var(--muted-2)]'}`}>📥 {e.title}</span>
+                              <span className="text-[10px] text-[var(--faint)] mr-auto">{(() => { try { return formatDateTime12(e.dt); } catch { return e.dt; } })()}</span>
+                            </label>
+                          );
+                        })}
+                        {/* ٣) انفصال — JL:L:<title> */}
+                        <p className="text-[10px] text-[var(--accent)] font-bold mb-1.5 mt-4 flex items-center gap-1">📤 انفصال</p>
+                        {joinLeaveEntries.filter(e => e.kind === 'leave').length === 0 && (
+                          <p className="text-center text-[var(--muted-2)] text-xs py-2 mb-2">لا توجد سجلات انفصال بعد — أضفها من قسم «انضمام / انفصال».</p>
+                        )}
+                        {joinLeaveEntries.filter(e => e.kind === 'leave').map((e) => {
+                          const key = jlKey('leave', e.title);
+                          const checked = (dp.assigned_days || []).includes(key);
+                          return (
+                            <label key={key} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-[var(--accent)]/10 border border-[var(--accent)]/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleJLAssignment(daysPicker, e)} className="accent-[var(--accent)] w-4 h-4" />
+                              <span className={`text-sm font-bold ${checked ? 'text-[var(--accent)]' : 'text-[var(--muted-2)]'}`}>📤 {e.title}</span>
+                              <span className="text-[10px] text-[var(--faint)] mr-auto">{(() => { try { return formatDateTime12(e.dt); } catch { return e.dt; } })()}</span>
                             </label>
                           );
                         })}
@@ -4972,6 +5039,460 @@ const TimeInput = ({ value, onChange, defaultValue, id, className = "", disabled
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
             <button type="button" onClick={() => { apply(clock); setOpen(false); }}
               className="flex-1 px-2 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-bold hover:opacity-90">تم</button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
+
+// ⚡ SmartTimeField — حقل وقت سريع الكتابة (ماسك مقسّم «HH:MM AM/PM») — حصرياً لنافذتي
+//    إنشاء/تعديل سجلي الانضمام والانفصال (فقط الـ ids: jl_join_time / jl_leave_time).
+//    لا تُلمس بقية حقول الوقت (TimeInput). الكتابة: رقما الساعة ← رقما الدقائق ← A/P (أو ص/م).
+//    Backspace يمسح المقطع كاملاً عند حدوده ولا يعبر «:». القيمة الآلية HH:MM 24س في
+//    <input id> مخفي — نفس عقد الباك مثل TimeInput؛ العجلة نسخة مطابقة لمنتقي TimeInput.
+const SmartTimeField = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
+  // إعادة بناء المقاطع من قيمة آلة 24س «HH:MM» (يُستخدم للعرض 12س وللعجلات)
+  const segFromMachine = (mm) => {
+    if (!mm || !/^\d{2}:\d{2}$/.test(mm)) return { h: '', m: '', mer: '' };
+    const [HH, MI] = mm.split(':');
+    return { h: String(hour12(HH)).padStart(2, '0'), m: MI, mer: meridian(HH) };
+  };
+  const initial = value !== undefined ? value : (defaultValue || '');
+  const initMachine = normTime(initial) || nowTimeStr(); // مثل TimeInput: افتراض الآن
+  const [seg, setSeg] = useState(() => ({ ...segFromMachine(initMachine), mer: segFromMachine(initMachine).mer || 'AM' }));
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [clock, setClock] = useState(initMachine);   // HH:MM 24س للعجلات
+  const [ampm, setAmpm] = useState(() => meridian(initMachine));
+  const textRef = useRef(null);
+  const popRef = useRef(null);
+
+  // مقطع كامل (ساعة + دقيقة + فترة) → آلة HH:MM 24س (12AM→00، 12PM→12)
+  const segToMachine = (s) => {
+    if (s.h.length !== 2 || s.m.length !== 2 || !s.mer) return '';
+    const hh12 = s.h === '00' ? '12' : s.h;
+    return `${from12Wheel(hh12, s.mer)}:${s.m}`;
+  };
+  const segToDisplay = (s) => `${String(s.h).padEnd(2, '_')}:${String(s.m).padEnd(2, '_')} ${s.mer || 'AM'}`;
+  const machine = segToMachine(seg);
+  const display = segToDisplay(seg);
+
+  // إشعار الحقل المخصص (onChange) عند تغيّر القيمة الآلية — للمعاينة الحية في النافذة
+  useEffect(() => { onChange?.({ target: { value: machine } }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [machine]);
+  // مزامنة الحالة المتحكمة (value prop) من الخارج
+  useEffect(() => {
+    if (value !== undefined) {
+      const n = normTime(value) || nowTimeStr();
+      setSeg({ ...segFromMachine(n), mer: segFromMachine(n).mer || 'AM' });
+      setClock(n); setAmpm(meridian(n));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  // توجيه رقم إلى المقطع الصحيح (ساعة 12س 01-12، دقائق أول رقم 0-5)
+  const applyDigit = (s, d) => {
+    let { h, m } = s;
+    if (h.length < 2) {
+      if (h.length === 0) { if (d === '0' || d === '1') h = d; }
+      else if (h === '0') h += d;               // 00-09 (00 ⇒ 12)
+      else if (d === '0' || d === '1' || d === '2') h += d; // 10-12
+    } else if (m.length < 2) {
+      if (m.length === 0) { if ('012345'.includes(d)) m = d; }
+      else m += d;
+    }
+    return { ...s, h, m };
+  };
+  // موضع المؤشر بعد كل رقم (متابعة تلقائية للموقع التالي)
+  const caretAfter = (ns) => {
+    if (ns.h.length !== 2) return ns.h.length;          // ما زال في الساعة
+    if (ns.m.length !== 2) return 3 + ns.m.length;      // ما زال في الدقائق
+    return 6;                                           // اكتمل → بداية الفترة
+  };
+
+  const onKeyDown = (e) => {
+    if (disabled) return;
+    const place = () => {
+      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(e.target.selectionStart ?? display.length, e.target.selectionStart ?? display.length); });
+    };
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      const cpos = e.target.selectionStart ?? 0;
+      const starts = [['h', 0], ['m', 3], ['mer', 6]];
+      let which = 'h';
+      for (const [nm, st] of starts) if (cpos >= st) which = nm;
+      if (cpos === ({ h: 0, m: 3, mer: 6 })[which]) {
+        // عند حد المقطع → امسح المقطع السابق (أو هذا إن كان الأول) وارجع مقطعاً للخلف
+        const order = ['h', 'm', 'mer'];
+        const clear = order[Math.max(0, order.indexOf(which) - 1)];
+        setSeg(s => ({ ...s, [clear]: '' }));
+        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange({ h: 0, m: 3, mer: 6 }[clear], { h: 0, m: 3, mer: 6 }[clear]); });
+      } else {
+        // داخل المقطع → احذف الرقم الأخير فقط
+        setSeg(s => ({ ...s, [which]: String(s[which]).slice(0, -1) }));
+        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(cpos - 1, cpos - 1); });
+      }
+      return;
+    }
+    if (/^\d$/.test(e.key)) {
+      e.preventDefault();
+      const ns = applyDigit(seg, e.key);
+      setSeg(ns);
+      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(caretAfter(ns), caretAfter(ns)); });
+      return;
+    }
+    if (/^[AaPpصم]$/.test(e.key)) {
+      e.preventDefault();
+      const m = ['a', 'A', 'ص'].includes(e.key) ? 'AM' : 'PM';
+      setSeg(s => ({ ...s, mer: m }));
+      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(8, 8); });
+      return;
+    }
+    if (['Delete'].includes(e.key)) { e.preventDefault(); return; }
+    // اسمح بالتنقل فقط — كل ما عداه (':', حروف، مسافة) ممنوع: الفواصل تُرسم وليست قابلة للكتابة
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab'].includes(e.key)) return;
+    e.preventDefault();
+  };
+
+  const apply = (t) => {
+    const n = normTime(t);
+    if (!n) return;
+    setSeg({ ...segFromMachine(n), mer: segFromMachine(n).mer || 'AM' });
+    setClock(n); setAmpm(meridian(n));
+    setOpen(false);
+  };
+
+  const GAP = 8, EDGE = 8;
+  const positionPopup = () => {
+    const el = textRef.current, pop = popRef.current;
+    if (!el || !pop) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let top = r.bottom + GAP;
+    if (top + ph > vh - EDGE) top = r.top - GAP - ph;
+    if (top < EDGE) top = EDGE;
+    let left = r.left;
+    if (left + pw > vw - EDGE) left = vw - pw - EDGE;
+    if (left < EDGE) left = EDGE;
+    setPos({ top, left });
+  };
+  const openPicker = () => {
+    if (disabled) return;
+    const el = textRef.current;
+    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + GAP, left: r.left }); }
+    setOpen(true);
+  };
+  useLayoutEffect(() => { if (open) positionPopup(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (popRef.current && popRef.current.contains(e.target)) return;
+      if (textRef.current && textRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onMove = () => positionPopup();
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const hh = (clock || '00').split(':')[0];
+  const mm = (clock || '00').split(':')[1] || '00';
+  const hh12 = String(hour12(hh)).padStart(2, '0');
+
+  return (
+    <>
+      <div className="relative">
+        <input
+          ref={textRef}
+          type="text"
+          value={display}
+          placeholder="hh:mm"
+          className={`${className} text-center pr-7 pl-7`}
+          dir="ltr"
+          onKeyDown={onKeyDown}
+          onChange={() => {}}
+          disabled={disabled}
+          autoComplete="off"
+          {...props}
+        />
+        {/* القيمة الآلية HH:MM (المصدر الحقيقي للباك) — مخفي لكن يحمل id */}
+        <input id={id} type="time" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />
+        <button type="button" onClick={openPicker} className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">🕐</button>
+      </div>
+      {open && createPortal(
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+          style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
+            <span className="text-lg font-bold text-[var(--ink-2)]" dir="ltr">{clock ? to12Display(clock) : '--:--'}</span>
+          </div>
+          <div className="flex items-start justify-center gap-2" dir="ltr">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
+              <TimeWheel items={HOURS} value={hh12}
+                onChange={(h) => setClock(prev => `${from12Wheel(h, ampm)}:${(prev.split(':')[1] || '00')}`)} />
+            </div>
+            <span className="text-2xl font-bold text-[var(--accent)] mt-10 select-none">:</span>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-[var(--muted-2)] font-bold">دقائق</span>
+              <TimeWheel items={MINUTES} value={mm} onChange={(m) => setClock(prev => `${(prev.split(':')[0] || '00')}:${m}`)} />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-[var(--muted-2)] font-bold">الفترة</span>
+              <div className="flex flex-col gap-1 mt-2">
+                <button type="button" onClick={() => { setAmpm('AM'); setClock(flipMeridian(clock, 'AM')); }}
+                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
+                <button type="button" onClick={() => { setAmpm('PM'); setClock(flipMeridian(clock, 'PM')); }}
+                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--border)]">
+            <button type="button" onClick={() => { apply(clock); }}
+              className="flex-1 px-2 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-bold hover:opacity-90">تم</button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
+
+// ⚡ SmartDateField — حقل تاريخ سريع الكتابة (ماسك مقسّم «DD/MM/YYYY») — حصرياً لنافذتي
+//    إنشاء/تعديل سجلي الانضمام والانفصال (فقط الـ ids: jl_join_date / jl_leave_date).
+//    الكتابة 06 → 09 → 2026؛ اليوم أول رقم 0-3 (صالح 01-31) والشهر 0-1 (01-12) ثم 4 خانات سنة —
+//    مقاطع مكتملة تُلقَّم تلقائياً. الفاصلة «/» تُرسم وليست قابلة للكتابة. Backspace يمسح
+//    المقطع عند حدوده. القيمة الآلية YYYY-MM-DD في <input id> مخفي (نفس عقد الباك مثل
+//    DateInput)؛ أيقونة 📅 تفتح نسخة مطابقة من تقويم DateInput.
+const SmartDateField = ({ value, onChange, defaultValue, id, className = "", disabled, ...props }) => {
+  const segFromIso = (iso) => {
+    const m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return { dd: String(+m[3]).padStart(2, '0'), mm: String(+m[2]).padStart(2, '0'), yyyy: m[1] };
+    const n = new Date(); // افتراض: اليوم (مثل المودال القديم)
+    return { dd: String(n.getDate()).padStart(2, '0'), mm: String(n.getMonth() + 1).padStart(2, '0'), yyyy: String(n.getFullYear()) };
+  };
+  const initial = value !== undefined ? value : (defaultValue || '');
+  const [seg, setSeg] = useState(() => segFromIso(initial));
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [view, setView] = useState(() => {
+    const m = String(initial).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    return m ? { y: +m[1], mo: +m[2] } : { y: new Date().getFullYear(), mo: new Date().getMonth() + 1 };
+  });
+  const [selDate, setSelDate] = useState(() => {
+    const m = String(initial).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    return m ? `${m[1]}-${String(+m[2]).padStart(2, '0')}-${String(+m[3]).padStart(2, '0')}` : '';
+  });
+  const textRef = useRef(null);
+  const popRef = useRef(null);
+
+  const isoFromSeg = (s) => {
+    if (s.dd.length !== 2 || s.mm.length !== 2 || s.yyyy.length !== 4) return '';
+    const d = +s.dd, mo = +s.mm, y = +s.yyyy;
+    const chk = new Date(y, mo - 1, d); // رفض التواريخ المستحيلة (31/02…)
+    if (chk.getFullYear() !== y || chk.getMonth() !== mo - 1 || chk.getDate() !== d) return '';
+    return `${s.yyyy}-${s.mm}-${s.dd}`;
+  };
+  const segToDisplay = (s) => `${String(s.dd).padEnd(2, '_')}/${String(s.mm).padEnd(2, '_')}/${String(s.yyyy).padEnd(4, '_')}`;
+  const machine = isoFromSeg(seg);
+  const display = segToDisplay(seg);
+
+  useEffect(() => { onChange?.({ target: { value: machine } }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [machine]);
+  useEffect(() => {
+    if (value !== undefined) setSeg(segFromIso(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  // مزامنة تظليل التقويم مع ما كُتب يدوياً (تاريخ صالح)
+  useEffect(() => {
+    if (machine && machine.length === 10) {
+      const m = machine.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) { setSelDate(machine); setView({ y: +m[1], mo: +m[2] }); }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [machine]);
+
+  const applyDigit = (s, d) => {
+    let { dd, mm, yyyy } = s;
+    if (dd.length < 2) {
+      if (dd.length === 0) { if ('0123'.includes(d)) dd = d; }
+      else if (dd === '0') { if (d !== '0') dd += d; }        // 01-09 (00 مرفوض)
+      else if (dd === '1' || dd === '2') dd += d;             // 10-29
+      else if (dd === '3') { if (d === '0' || d === '1') dd += d; } // 30-31
+    } else if (mm.length < 2) {
+      if (mm.length === 0) { if ('01'.includes(d)) mm = d; }
+      else if (mm === '0') { if (d !== '0') mm += d; }        // 01-09
+      else if (mm === '1') { if ('012'.includes(d)) mm += d; } // 10-12
+    } else if (yyyy.length < 4) {
+      yyyy += d;
+    }
+    return { ...s, dd, mm, yyyy };
+  };
+  const caretAfter = (ns) => {
+    if (ns.dd.length !== 2) return ns.dd.length;
+    if (ns.mm.length !== 2) return 3 + ns.mm.length;
+    if (ns.yyyy.length !== 4) return 6 + ns.yyyy.length;
+    return 10;
+  };
+
+  const onKeyDown = (e) => {
+    if (disabled) return;
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      const cpos = e.target.selectionStart ?? 0;
+      const starts = [['dd', 0], ['mm', 3], ['yyyy', 6]];
+      let which = 'dd';
+      for (const [nm, st] of starts) if (cpos >= st) which = nm;
+      if (cpos === ({ dd: 0, mm: 3, yyyy: 6 })[which]) {
+        const order = ['dd', 'mm', 'yyyy'];
+        const clear = order[Math.max(0, order.indexOf(which) - 1)];
+        setSeg(s => ({ ...s, [clear]: '' }));
+        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange({ dd: 0, mm: 3, yyyy: 6 }[clear], { dd: 0, mm: 3, yyyy: 6 }[clear]); });
+      } else {
+        setSeg(s => ({ ...s, [which]: String(s[which]).slice(0, -1) }));
+        requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(cpos - 1, cpos - 1); });
+      }
+      return;
+    }
+    if (/^\d$/.test(e.key)) {
+      e.preventDefault();
+      const ns = applyDigit(seg, e.key);
+      setSeg(ns);
+      requestAnimationFrame(() => { const el = textRef.current; if (el) el.setSelectionRange(caretAfter(ns), caretAfter(ns)); });
+      return;
+    }
+    if (['Delete'].includes(e.key)) { e.preventDefault(); return; }
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab'].includes(e.key)) return;
+    e.preventDefault();
+  };
+
+  const pickDay = (iso) => {
+    setSelDate(iso);
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) { setView({ y: +m[1], mo: +m[2] }); setSeg({ dd: m[3], mm: m[2], yyyy: m[1] }); }
+    setOpen(false);
+  };
+  const changeMonth = (delta) => setView(v => {
+    let mo = v.mo + delta, y = v.y;
+    if (mo < 1) { mo = 12; y--; }
+    if (mo > 12) { mo = 1; y++; }
+    return { y, mo };
+  });
+
+  const GAP = 8, EDGE = 8;
+  const positionPopup = () => {
+    const el = textRef.current, pop = popRef.current;
+    if (!el || !pop) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let top = r.bottom + GAP;
+    if (top + ph > vh - EDGE) top = r.top - GAP - ph;
+    if (top < EDGE) top = EDGE;
+    let left = r.left;
+    if (left + pw > vw - EDGE) left = vw - pw - EDGE;
+    if (left < EDGE) left = EDGE;
+    setPos({ top, left });
+  };
+  const openCalendar = () => {
+    if (disabled) return;
+    const el = textRef.current;
+    if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + GAP, left: r.left }); }
+    setOpen(true);
+  };
+  useLayoutEffect(() => { if (open) positionPopup(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (popRef.current && popRef.current.contains(e.target)) return;
+      if (textRef.current && textRef.current.contains(e.target)) return;
+      if (e.target.closest && e.target.closest('button')) return;
+      setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onMove = () => positionPopup();
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const WEEK = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'];
+  const { y, mo } = view;
+  const start = new Date(y, mo - 1, 1).getDay();
+  const dim = new Date(y, mo, 0).getDate();
+  const todayISO = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; })();
+  const cells = [];
+  for (let i = 0; i < start; i++) cells.push(<span key={'e' + i} className="h-9" />);
+  for (let d = 1; d <= dim; d++) {
+    const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isSel = iso === selDate;
+    const isToday = iso === todayISO;
+    cells.push(
+      <button key={d} type="button" onClick={() => pickDay(iso)}
+        className={`h-9 w-9 text-xs rounded-lg transition flex items-center justify-center hover:bg-[var(--surface-hover)]
+          ${isSel ? 'bg-[var(--accent)] text-white font-bold' : 'text-[var(--ink-2)]'}
+          ${isToday && !isSel ? 'ring-1 ring-[var(--accent)]' : ''}`}>
+        {d}
+      </button>
+    );
+  }
+
+  return (
+    <>
+      <div className="relative">
+        <input
+          ref={textRef}
+          type="text"
+          value={display}
+          placeholder="DD/MM/YYYY"
+          className={`${className} text-center pr-7 pl-7`}
+          dir="ltr"
+          onKeyDown={onKeyDown}
+          onChange={() => {}}
+          disabled={disabled}
+          autoComplete="off"
+          {...props}
+        />
+        {/* القيمة الآلية YYYY-MM-DD (المصدر الحقيقي للباك) — مخفي لكن يحمل id */}
+        <input id={id} type="date" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
+          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />
+        <button type="button" onClick={openCalendar} className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
+      </div>
+      {open && createPortal(
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+          style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
+          <div className="flex items-center justify-between mb-2">
+            <button type="button" onClick={() => changeMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
+            <div className="text-sm font-bold text-[var(--ink-2)]">{MONTHS[mo - 1]} {y}</div>
+            <button type="button" onClick={() => changeMonth(1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">›</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {WEEK.map((w, i) => <div key={i} className="h-6 text-[10px] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">{cells}</div>
+          <div className="mt-2 pt-2 border-t border-[var(--border)] text-center text-xs text-[var(--muted-2)]" dir="ltr">
+            {selDate ? (() => { const m = selDate.split('-'); return m.length === 3 ? `${m[2]}/${m[1]}/${m[0]}` : selDate; })() : 'DD/MM/YYYY'}
           </div>
         </div>,
         document.body

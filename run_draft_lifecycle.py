@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
 """
 Draft JOIN/LEAVE lifecycle — end-to-end against a real uvicorn (live, Neon).
-Verifies the new PATCH (edit-in-place) + DELETE session endpoints and the
-Draft lock/unlock lifecycle defined by the four-issue fix:
+covers the redesign: participation is driven by the entry CATALOG
+(mission_join_leave_entries) + participant assignment (JL:J:<title>/JL:L:<title>),
+materialized into tagged mission_participant_sessions only while Draft.
 
-  MISSION DRAFT = PARTICIPATION DRAFT (editable).
-  JOIN and LEAVE are both editable while the Mission is Draft.
-  Lock happens ONLY on the general submission (Mission leaves Draft), NOT on
-  JOIN/LEAVE press, NOT on Mission creation.
-  Once locked, closed participation is IMMUTABLE (PATCH/DELETE -> 403).
+  MISSION DRAFT = PARTICIPATION DRAFT (editable via the catalog).
+  JOIN/LEAVE entries are created/edited/deleted while the Mission is Draft;
+  each edit re-derives the derived segments (update-in-place by provenance).
+  Lock happens ONLY on the general submission (Mission leaves Draft).
+  Once locked, the catalog is IMMUTABLE (entry PATCH/DELETE -> 403) and the
+  new per-participant /join /leave routes are legacy-only (405).
 
 Scenarios:
-  A  Draft JOIN recorded on a Draft mission → PATCH edit allowed
-  B  Draft LEAVE recorded → PATCH edit allowed
-  C  Draft session DELETE allowed (undo a Draft segment)
-  D  Create/Save: flush JOIN+LEAVE → 2 segments persisted under one mission
-  E  Create/Save failure: pending survives (frontend — verified by absence of
-     auto-save; backend has no data to lose)
-  F  Finalization (mission leaves Draft) → PATCH/DELETE rejected 403
-  G  Post-finalization rejection (immutability of closed participation)
-  H  Multiple cycles JOIN→LEAVE→JOIN→LEAVE → independent segments, no dupes
-  I  Re-add same identity after finalized LEAVE → new independent segment
+  A  JOIN entry assigned on a Draft mission → one open derived segment
+  B  Entry PATCH edit allowed (stable entry_id provenance)
+  C  LEAVE entry assigned → closes the segment; LEAVE PATCH edit allowed
+  D  Multiple cycles JOIN→LEAVE→JOIN→LEAVE → independent segments, no dupes
+  E  Entry DELETE undoes a Draft segment (leave deleted before its opener)
+  F  Finalization (mission leaves Draft) → entry PATCH/DELETE rejected 403
+  G  Post-finalization immutability (frozen values not clobbered)
+  H  Re-add attempt after finalization → catalog is frozen (403, no new segment)
 
 Cleanup: deletes all TEST_DL_* missions. No business logic changed.
 """
@@ -101,6 +101,13 @@ def find_part(mdata, name):
         if p["full_name"] == name:
             return p
     raise KeyError(name)
+
+
+def find_entry(mdata, kind, title):
+    for e in mdata.get("join_leave_entries", []):
+        if e.get("kind") == kind and e.get("title") == title:
+            return e
+    raise KeyError((kind, title))
 
 
 def server_loop(server):
@@ -184,50 +191,67 @@ def main_r():
     check("A0b participant present", PID is not None, True)
     check("A0c participant_id is an int", isinstance(PID, int), True)
 
-    # ── 2) POST /join with exact timestamp (Draft) ──
+    # ── 2) مشاركة عبر كتالوج الانضمام/الانفصال (Draft): إدراج مدخل JOIN + إسناده ──
+    #    المسار القديم /join لم يعد متاحاً (405) — الكتالوج + الإسناد + الاشتقاق
+    #    هو نظام التصميم الجديد الوحيد. إعادة الحفظ أثناء المسودة تُعيد الاشتقاق.
     join_dt = f"{dep} 09:15"
-    api("POST", f"/api/missions/{MID}/join", headers=H, json={
-        "participant_id": PID, "join_datetime": join_dt})
+    mdata["join_leave_entries"] = [{"kind": "join", "title": "بداية المشاركة", "dt": join_dt}]
+    mdata["participants"] = [{**mdata["participants"][0], "assigned_days": ["JL:J:بداية المشاركة"]}]
+    api("PUT", f"/api/missions/{MID}", headers=H, json={**mdata, "status": "Draft"})
     md = get_mission(MID)
     p = find_part(md, "مختبر المسودة")
     periods = p.get("participation_periods", [])
-    check("A1 JOIN created one open segment", len(periods), 1, exact=True)
+    check("A1 JOIN entry assigned → one open segment", len(periods), 1, exact=True)
     s0 = periods[0]
     check("A2 join start_dt == requested 09:15", s0.get("start_dt", "")[:16], join_dt, exact=True)
     check("A3 open segment (end_dt None)", s0.get("end_dt") is None, True)
     SID0 = s0.get("session_id")
     check("A4 session_id present in payload", SID0 is not None, True)
+    JE = find_entry(md, "join", "بداية المشاركة")
+    check("A5 catalog entry persisted with entry_id", JE.get("entry_id") is not None, True)
 
-    # ── 3) Draft edit JOIN via PATCH (edit-in-place, same session_id) ──
-    api("PATCH", f"/api/missions/{MID}/sessions/{SID0}", headers=H, json={
-        "action": "join", "dt": f"{dep} 10:05"})
+    # ── 3) تعديل مدخل JOIN عبر PATCH (تعديل في مكانه — نفس entry_id = provenance ثابت) ──
+    api("PATCH", f"/api/missions/{MID}/join-leave-entries/{JE['entry_id']}", headers=H, json={
+        "title": "بداية المشاركة", "kind": "join", "dt": f"{dep} 10:05"})
     md = get_mission(MID)
-    p = find_part(md, "مختبر المسودة")
-    s0b = p.get("participation_periods", [])[0]
-    check("B1 PATCH join edits start_dt in place (10:05)", s0b.get("start_dt", "")[:16], f"{dep} 10:05", exact=True)
-    check("B2 same session_id preserved (no delete+recreate)", s0b.get("session_id"), SID0, exact=True)
+    JE2 = find_entry(md, "join", "بداية المشاركة")
+    check("B1 PATCH entry edits start_dt in place (10:05)",
+          find_part(md, "مختبر المسودة").get("participation_periods", [])[0].get("start_dt", "")[:16],
+          f"{dep} 10:05", exact=True)
+    check("B2 same entry_id preserved (stable provenance, no delete+recreate)",
+          JE2.get("entry_id"), JE["entry_id"], exact=True)
 
-    # ── 4) POST /leave with exact timestamp (Draft) → closes the segment ──
+    # ── 4) إنشاء مدخل LEAVE + إسناده (Draft) → يُغلق القطاع عند زمنه ──
     leave_dt = f"{dep} 14:20"
-    api("POST", f"/api/missions/{MID}/leave", headers=H, json={
-        "participant_id": PID, "leave_datetime": leave_dt})
+    mdata["join_leave_entries"] = [
+        {"entry_id": JE["entry_id"], "kind": "join", "title": "بداية المشاركة", "dt": f"{dep} 10:05"},
+        {"kind": "leave", "title": "نهاية المشاركة", "dt": leave_dt},
+    ]
+    mdata["participants"] = [{**mdata["participants"][0], "assigned_days": ["JL:J:بداية المشاركة", "JL:L:نهاية المشاركة"]}]
+    api("PUT", f"/api/missions/{MID}", headers=H, json={**mdata, "status": "Draft"})
     md = get_mission(MID)
-    p = find_part(md, "مختبر المسودة")
-    periods = p.get("participation_periods", [])
-    check("C1 LEAVE closed the segment", periods[0].get("end_dt", "")[:16], leave_dt, exact=True)
+    check("C1 LEAVE entry assigned → segment closed at 14:20",
+          find_part(md, "مختبر المسودة").get("participation_periods", [])[0].get("end_dt", "")[:16],
+          leave_dt, exact=True)
+    LE = find_entry(md, "leave", "نهاية المشاركة")
 
-    # ── 5) Draft edit LEAVE via PATCH ──
-    api("PATCH", f"/api/missions/{MID}/sessions/{SID0}", headers=H, json={
-        "action": "leave", "dt": f"{dep} 15:45"})
+    # ── 5) تعديل مدخل LEAVE عبر PATCH ──
+    api("PATCH", f"/api/missions/{MID}/join-leave-entries/{LE['entry_id']}", headers=H, json={
+        "title": "نهاية المشاركة", "kind": "leave", "dt": f"{dep} 15:45"})
     md = get_mission(MID)
-    p = find_part(md, "مختبر المسودة")
-    check("C2 PATCH leave edits end_dt in place (15:45)", p.get("participation_periods", [])[0].get("end_dt", "")[:16], f"{dep} 15:45", exact=True)
+    check("C2 PATCH leave edits end_dt in place (15:45)",
+          find_part(md, "مختبر المسودة").get("participation_periods", [])[0].get("end_dt", "")[:16],
+          f"{dep} 15:45", exact=True)
 
-    # ── 6) Multiple cycles: JOIN→LEAVE→JOIN→LEAVE → 2 independent segments ──
-    api("POST", f"/api/missions/{MID}/join", headers=H, json={
-        "participant_id": PID, "join_datetime": f"{dep} 16:00"})
-    api("POST", f"/api/missions/{MID}/leave", headers=H, json={
-        "participant_id": PID, "leave_datetime": f"{dep} 17:00"})
+    # ── 6) دورات متعددة: JOIN→LEAVE→JOIN→LEAVE ⇒ قطاعان مستقلان ──
+    mdata["join_leave_entries"] = [
+        {"entry_id": JE["entry_id"], "kind": "join", "title": "بداية المشاركة", "dt": f"{dep} 10:05"},
+        {"entry_id": LE["entry_id"], "kind": "leave", "title": "نهاية المشاركة", "dt": f"{dep} 15:45"},
+        {"kind": "join", "title": "عودة", "dt": f"{dep} 16:00"},
+        {"kind": "leave", "title": "خروج نهائي", "dt": f"{dep} 17:00"},
+    ]
+    mdata["participants"] = [{**mdata["participants"][0], "assigned_days": ["JL:J:بداية المشاركة", "JL:L:نهاية المشاركة", "JL:J:عودة", "JL:L:خروج نهائي"]}]
+    api("PUT", f"/api/missions/{MID}", headers=H, json={**mdata, "status": "Draft"})
     md = get_mission(MID)
     p = find_part(md, "مختبر المسودة")
     periods = p.get("participation_periods", [])
@@ -237,39 +261,45 @@ def main_r():
     check("D3 second segment start 16:00", seg2.get("start_dt", "")[:16], f"{dep} 16:00", exact=True)
     check("D4 second segment end 17:00", seg2.get("end_dt", "")[:16], f"{dep} 17:00", exact=True)
 
-    # ── 7) Draft session DELETE (undo a Draft segment) ──
-    SID2 = seg2.get("session_id")
-    api("DELETE", f"/api/missions/{MID}/sessions/{SID2}", headers=H)
+    # ── 7) حذف مدخلي الدورة الثانية (undo قطاع مسود) — نغلق أولاً ثم نزيل الفاتح ──
+    L2 = find_entry(md, "leave", "خروج نهائي")
+    J2 = find_entry(md, "join", "عودة")
+    api("DELETE", f"/api/missions/{MID}/join-leave-entries/{L2['entry_id']}", headers=H)
+    api("DELETE", f"/api/missions/{MID}/join-leave-entries/{J2['entry_id']}", headers=H)
     md = get_mission(MID)
     p = find_part(md, "مختبر المسودة")
-    check("E1 DELETE removed the Draft segment", len(p.get("participation_periods", [])), 1, exact=True)
+    check("E1 DELETE entries removed the second Draft segment", len(p.get("participation_periods", [])), 1, exact=True)
 
-    # ── 8) FINALIZATION: mission leaves Draft → PATCH/DELETE must be REJECTED ──
+    # ── 8) FINALIZATION: المهمة تخرج من المسودة → تعديل/حذف الكتالوج مرفوض 403 ──
+    #    PUT الإنهاء يحمل الكتالوج الحالي بكل entry_id حتى يُبقيه الصف الفعلي
+    #    (الاشتقاق يتوقف عند الخروج من المسودة — الفترات تُجمَّد نهائياً).
+    mdata["join_leave_entries"] = [
+        {"entry_id": JE["entry_id"], "kind": "join", "title": "بداية المشاركة", "dt": f"{dep} 10:05"},
+        {"entry_id": LE["entry_id"], "kind": "leave", "title": "نهاية المشاركة", "dt": f"{dep} 15:45"},
+    ]
+    mdata["participants"] = [{**mdata["participants"][0], "assigned_days": ["JL:J:بداية المشاركة", "JL:L:نهاية المشاركة"]}]
     api("PUT", f"/api/missions/{MID}", headers=H, json={**mdata, "status": "Under Review"})
     md = get_mission(MID)
     check("F1 mission left Draft (Under Review)", md.get("status"), "Under Review", exact=True)
 
-    r_patch = requests.patch(f"{API}/api/missions/{MID}/sessions/{SID0}", headers=H,
-                             json={"action": "join", "dt": f"{dep} 11:00"})
-    check("F2 PATCH rejected 403 after finalization (immutability)", r_patch.status_code, 403, exact=True)
-    r_del = requests.delete(f"{API}/api/missions/{MID}/sessions/{SID0}", headers=H)
-    check("F3 DELETE rejected 403 after finalization (immutability)", r_del.status_code, 403, exact=True)
+    r_patch = requests.patch(f"{API}/api/missions/{MID}/join-leave-entries/{JE['entry_id']}", headers=H,
+                             json={"title": "بداية المشاركة", "kind": "join", "dt": f"{dep} 11:00"})
+    check("F2 entry PATCH rejected 403 after finalization (immutability)", r_patch.status_code, 403, exact=True)
+    r_del = requests.delete(f"{API}/api/missions/{MID}/join-leave-entries/{JE['entry_id']}", headers=H)
+    check("F3 entry DELETE rejected 403 after finalization (immutability)", r_del.status_code, 403, exact=True)
 
-    # closed participation stays immutable: values unchanged after rejected edits
+    # المشاركة المغلقة تبقى ثابتة — قيمها لم تُبدَّل بالطلبات المرفوضة
     md = get_mission(MID)
     p = find_part(md, "مختبر المسودة")
     check("G1 frozen segment start still 10:05 (not clobbered)", p.get("participation_periods", [])[0].get("start_dt", "")[:16], f"{dep} 10:05", exact=True)
 
-    # ── 9) Re-add same identity after finalized LEAVE → NEW independent segment ──
-    api("POST", f"/api/missions/{MID}/join", headers=H, json={
-        "participant_id": PID, "join_datetime": f"{dep} 18:10"})
-    md = get_mission(MID)
-    p = find_part(md, "مختبر المسودة")
+    # ── 9) محاولة إضافة مشاركة جديدة بعد التجميد مرفوضة (الكتالوج مجمّد نهائياً) ──
+    r_add = requests.post(f"{API}/api/missions/{MID}/join-leave-entries", headers=H,
+                          json={"kind": "join", "title": "محاولة متأخرة", "dt": f"{dep} 18:10"})
+    check("H1 re-add attempt after finalization → rejected 403", r_add.status_code, 403, exact=True)
     periods = p.get("participation_periods", [])
-    check("H1 re-add after finalization → new independent segment", len(periods), 2, exact=True)
-    newest = periods[-1]
-    check("H2 new segment start 18:10", newest.get("start_dt", "")[:16], f"{dep} 18:10", exact=True)
-    check("H3 earlier frozen segment preserved (start 10:05)", periods[0].get("start_dt", "")[:16], f"{dep} 10:05", exact=True)
+    check("H2 participation periods frozen (still 1)", len(periods), 1, exact=True)
+    check("H3 earlier frozen segment preserved (end 15:45)", periods[0].get("end_dt", "")[:16], f"{dep} 15:45", exact=True)
 
     # cleanup
     conn = get_connection()

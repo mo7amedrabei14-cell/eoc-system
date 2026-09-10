@@ -146,6 +146,46 @@ def ensure_schema():
                     m.created_at)
                 WHERE m.creation_datetime IS NULL;
             """)
+
+            # ── 6) كتالوج الانضمام/الانفصال (فئة مستقلة — ليس خط سير، لا يُخزَّن في mission_itineraries)
+            #    عمود الأمان: العنوان ≤ 120 حرفاً ليظل «JL:J:<title>»/«JL:L:<title>» داخل varchar(150)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mission_join_leave_entries (
+                    entry_id    BIGSERIAL PRIMARY KEY,
+                    mission_id  INTEGER NOT NULL REFERENCES missions(mission_id) ON DELETE CASCADE,
+                    title       VARCHAR(120) NOT NULL,
+                    kind        VARCHAR(10) NOT NULL CHECK (kind IN ('join','leave')),
+                    dt          TIMESTAMP NOT NULL,
+                    created_at  TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_jle_mission_title_kind
+                    ON mission_join_leave_entries (mission_id, LOWER(TRIM(title)), kind);
+            """)
+
+            # ── 7) وسوم المصدر على جلسات المشاركة (NULL = سطر قديم من أزرار الانضمام/الانفصال السابقة)
+            #    ON DELETE NO ACTION: حذف سجل كتالوج مع «مشتقاته» ما زال موجودة مرفوض — يفرض
+            #    الحذف الصريح بالترتيب (المشتقات ← مفاتيح الإسناد ← سجل الكتالوج) ولا يسمح أبداً
+            #    بتحويل سطر موسوم إلى سطر قديم عبر SET NULL.
+            cursor.execute("""
+                ALTER TABLE mission_participant_sessions
+                    ADD COLUMN IF NOT EXISTS start_entry_id BIGINT
+                    REFERENCES mission_join_leave_entries(entry_id) ON DELETE NO ACTION;
+            """)
+            cursor.execute("""
+                ALTER TABLE mission_participant_sessions
+                    ADD COLUMN IF NOT EXISTS end_entry_id BIGINT
+                    REFERENCES mission_join_leave_entries(entry_id) ON DELETE NO ACTION;
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_mps_start_entry
+                    ON mission_participant_sessions (start_entry_id);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_mps_end_entry
+                    ON mission_participant_sessions (end_entry_id);
+            """)
         connection.commit()
     except Exception as e:
         print(f"ensure_schema error (will retry on next boot): {e}")
@@ -552,6 +592,21 @@ class SessionEditRequest(BaseModel):
     dt: str                                 # "YYYY-MM-DD HH:MM" كاملة (الزمن الجديد الدقيق)
     client_now: Optional[str] = None        # ساعة العميل المحلية — إطار التحقق من «المستقبل»
 
+class JoinLeaveEntryModel(BaseModel):
+    """سجل انضمام/انفصال (فئة مستقلة عن الخطوط) يُحمل في نموذج المهمة نفسها.
+    entry_id: موجود عند التعديل (تحديث في مكانه — لا حذف+إعادة إدراج)؛ غائب = إدراج جديد."""
+    entry_id: Optional[int] = None
+    title: str
+    kind: str                               # 'join' أو 'leave'
+    dt: Optional[str] = None                # "YYYY-MM-DD HH:MM" كاملة
+
+class JoinLeaveEntryRequest(BaseModel):
+    """إنشاء/تعديل سجل كتالوج انضمام/انفصال (Draft فقط)."""
+    title: str
+    kind: str                               # 'join' أو 'leave'
+    dt: str                                 # "YYYY-MM-DD HH:MM" كاملة
+    client_now: Optional[str] = None        # ساعة العميل المحلية — إطار التحقق من «المستقبل»
+
 class BeneficiaryModel(BaseModel):
     category_name: str
     direct_count: int
@@ -607,6 +662,8 @@ class MissionCreate(BaseModel):
     participants: List[ParticipantModel] = []
     beneficiaries: List[BeneficiaryModel] = []
     eoc_staff: List[EOCStaffModel] = []
+    # 🆕 سجلات الانضمام/الانفصال (فئة مستقلة) — تُسنَد للمشاركين عبر picker الأيام
+    join_leave_entries: List[JoinLeaveEntryModel] = []
 
 
 # =============================================================================
@@ -948,13 +1005,53 @@ def mission_start_dt(mission_data):
 
 def planned_start_dt(mission_data, assigned_days, routes, start_from_mission=False):
     """مصدر بداية المشاركة المخططة — مفتاح نقي (بلا أي شروط تواريخ):
+    - أقرب انطلاق عبر مسارات المشارك المسندة (مجموعاته المخصصة) له الأولوية.
     - start_from_mission (checkbox) ⇒ بداية المهمة.
-    - وإلا ⇒ أقرب انطلاق عبر مسارات المشارك المسندة (مجموعاته المخصصة).
-    - بلا مسارات مسندة ⇒ بداية المهمة.
-    أي مسار لا يحمل تاريخ انطلاق كامل يُتخطى (الدعم القديم بلا تواريخ يفشل بصمت إلى بداية المهمة)."""
-    if start_from_mission:
-        return mission_start_dt(mission_data)
-    groups = set(assigned_days or [])
+    - بلا مسارات مسندة ولا checkbox ⇒ None (لا بداية = غير مشارك — ساعات صفرية).
+    يفوض إلى participation_start_dt (مصدر الحقيقة الواحد لمحرك الساعات، requirement C)."""
+    return participation_start_dt(mission_data, assigned_days, routes, start_from_mission)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# انضمام/انفصال الكتالوج — فئة مستقلة (ليست خط سير)
+# القاعدة الجوهرية: سجل الانضمام/الانفصال (mission_join_leave_entries) يُسنَد إلى
+# المشاركين عبر mission_participant_itineraries بمفتاح مشفّر «JL:J:<title>» / «JL:L:<title>».
+# أي مستهلك مسارات يفلتر بمطابقة group_title حرفياً ⇒ مفاتيح JL:* تُتجاهل ضمنياً
+# من كل حساب مسارات — صفر تغيير على نظام الخطوط.
+# ═══════════════════════════════════════════════════════════════════════════
+
+JL_PREFIX_JOIN, JL_PREFIX_LEAVE = 'JL:J:', 'JL:L:'
+
+# رسالة رفض الانفصال بلا بدء مشاركة — مطابقة مطلقة بين الواجهة والـ backend (requirement E)
+JL_ERR_NO_START = "لا يمكن إضافة انفصال لهذا المشارك لأنه لا يوجد له موعد بدء للمشاركة. برجاء تحديد انضمام أو خط سير أو تفعيل «من بداية المهمة» أولًا."
+
+
+def split_assigned_days(assigned_days):
+    """فصل التخصيصات المختلطة: مسارات (أسماء مجموعات عادية) مقابل أحداث انضمام/انفصال.
+    events = قائمة (kind, title) مثل ('join', 'الدفعة الأولى')."""
+    routes, events = [], []
+    for a in assigned_days or []:
+        if not a:
+            continue
+        if a.startswith(JL_PREFIX_JOIN):
+            events.append(('join', a[len(JL_PREFIX_JOIN):]))
+        elif a.startswith(JL_PREFIX_LEAVE):
+            events.append(('leave', a[len(JL_PREFIX_LEAVE):]))
+        else:
+            routes.append(a)
+    return routes, events
+
+
+def jl_key(kind, title):
+    """مفتاح الإسناد المشفّر لسجل كتالوج واحد — يُخزَّن في itinerary_group."""
+    return (JL_PREFIX_JOIN if kind == 'join' else JL_PREFIX_LEAVE) + title
+
+
+def participation_start_dt(mission_data, route_groups, routes, start_from_mission=False):
+    """بداية المشاركة (مصدر الحقيقة الواحد لمحرك الساعات):
+    أقرب انطلاق لمجموعة مسار مخصصة → بداية المهمة (فقط لو «من بداية المهمة») → None.
+    None = لا بداية = «غير مشارك» (ساعات صفرية)."""
+    groups = set(route_groups or [])
     earliest = None
     for g in routes:
         if g.get('group_title') not in groups:
@@ -964,7 +1061,216 @@ def planned_start_dt(mission_data, assigned_days, routes, start_from_mission=Fal
             earliest = sd
     if earliest:
         return earliest
-    return mission_start_dt(mission_data)
+    if start_from_mission:
+        return mission_start_dt(mission_data)
+    return None
+
+
+def derive_jl_segments(assigned_days, entry_dt_map, mission_row, routes, start_from_mission=False):
+    """يُشتق نطاقات المشاركة للمشارك من تخصيصاته (مسارات + أحداث كتالوج).
+    entry_dt_map: {(kind, title): (dt, entry_id)} من كتالوج المهمة.
+    مسح زمني مفتوح/مغلق (requirement C/D + قاعدتا «انضمام = بداية مطلقة» و«لا تداخل»):
+    - في وجود أي انضمام ⇒ الانضمام هو البداية المطلقة؛ بديل المسار/بداية المهمة غير مؤهل أبداً.
+    - المسح الزمني: انضمام يفتح فترة إذا لم تكن مفتوحة، انضمام داخل فترة حيّة يُبتلع (لا تداخل)،
+      انفصال يغلق الفترة المفتوحة، انفصال بلا فترة مفتوحة ⇒ 400 (يرجع أو انضمام جديد مطلوب).
+    - بلا أي انضمام ⇒ بديل (أقرب مسار → بداية المهمة حسب checkbox) يفتح فترة واحدة فقط.
+    يرفع 400 برسالة JL_ERR_NO_START لأي انفصال بلا بدء مشاركة صالح."""
+    route_titles, events = split_assigned_days(assigned_days)
+    joins, leaves = [], []
+    for kind, title in events:
+        rec = entry_dt_map.get((kind, title))
+        if not rec:
+            continue  # سجل محذوف/غير معروف ⇒ إسناد قديم يُتجاهل (يُعاد الاشتقاق نظيفاً)
+        dt, entry_id = rec
+        target = joins if kind == 'join' else leaves
+        target.append({'dt': dt, 'id': entry_id})
+    joins.sort(key=lambda x: x['dt'])
+    leaves.sort(key=lambda x: x['dt'])
+    fallback = participation_start_dt(mission_row, route_titles, routes, start_from_mission)
+
+    periods = []
+    if joins:
+        merged = sorted(
+            [(j['dt'], 'join', j) for j in joins] + [(l['dt'], 'leave', l) for l in leaves],
+            key=lambda x: x[0],
+        )
+        open_start, open_entry = None, None
+        for t, ev_kind, ev in merged:
+            if ev_kind == 'join':
+                if open_start is None:
+                    open_start, open_entry = t, ev['id']
+                # وإلا ⇒ انضمام داخل فترة حيّة يُبتلع (لا تداخل).
+            else:  # leave
+                if open_start is not None:
+                    periods.append({'start': open_start, 'end': t,
+                                    'start_entry_id': open_entry, 'end_entry_id': ev['id']})
+                    open_start, open_entry = None, None
+                else:
+                    raise HTTPException(status_code=400, detail=JL_ERR_NO_START)
+        if open_start is not None:
+            periods.append({'start': open_start, 'end': None,
+                            'start_entry_id': open_entry, 'end_entry_id': None})
+    else:
+        start_used = False
+        for lev in leaves:
+            if not start_used and fallback is not None and fallback <= lev['dt']:
+                periods.append({'start': fallback, 'end': lev['dt'],
+                                'start_entry_id': None, 'end_entry_id': lev['id']})
+                start_used = True
+            else:
+                raise HTTPException(status_code=400, detail=JL_ERR_NO_START)
+    return periods
+
+
+def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_events=True):
+    """إعادة توليد شرائح المشاركة المشتقة من كتالوج الانضمام/الانفصال للمهمة (Draft فقط).
+    مصدر الحقيقة = مسارات/أحداث المشارك المُسنَدة. مبدأ عدم المساس:
+      - الشرائح القديمة (start_entry_id NULL و end_entry_id NULL) لا تُلمس أبداً.
+      - الشرائح الموسومة تُطابَق بـ (start_entry_id, end_entry_id): تحديث في مكانها،
+        حذف ما لم يعد موجوداً، إدراج الجديد — نفس صيغة إدراج /join.
+    - يزامن return_status: شريحة مفتوحة ⇒ «مازال بالمهمة»، أي شريحة مغلقة ⇒ «تم انتهاء مهمتة».
+    - fire_events ⇒ سجل Audit + حدث لحظي لكل شريحة مستحدثة (polite try/except)."""
+    cursor.execute(
+        "SELECT p.participant_id, p.full_name, p.start_from_mission FROM mission_participants p "
+        "WHERE p.mission_id = %s AND p.roster_active = true",
+        (mission_id,),
+    )
+    participants = [{'id': r[0], 'name': r[1], 'sfm': (r[2] is not False)} for r in cursor.fetchall()]
+    if not participants:
+        return
+
+    cursor.execute(
+        "SELECT group_title, departure_date, departure_time FROM mission_itineraries "
+        "WHERE mission_id = %s AND group_title IS NOT NULL",
+        (mission_id,),
+    )
+    routes = [
+        {'group_title': r[0], 'departure_date': r[1], 'departure_time': r[2]}
+        for r in cursor.fetchall()
+    ]
+
+    cursor.execute(
+        "SELECT entry_id, title, kind, dt FROM mission_join_leave_entries WHERE mission_id = %s",
+        (mission_id,),
+    )
+    entry_dt_map = {}
+    for r in cursor.fetchall():
+        entry_dt_map[(r[2], r[1])] = (r[3], r[0])
+
+    mission_name = mission_row.get('mission_name') or ''
+    for p in participants:
+        cursor.execute(
+            "SELECT itinerary_group FROM mission_participant_itineraries "
+            "WHERE participant_id = %s AND mission_id = %s",
+            (p['id'], mission_id),
+        )
+        assigned_days = [r[0] for r in cursor.fetchall()]
+
+        try:
+            periods = derive_jl_segments(assigned_days, entry_dt_map, mission_row, routes, p['sfm'])
+        except HTTPException:
+            raise  # 400 بلا بدء مشاركة — يوقف الحفظ برسالة واضحة (لا حفظ نصف مكتمل)
+
+        # ── التطابق/المواءمة (reconcile) مع شرائح المشاركة الموسومة فقط ──
+        #    ترتيب آمن ضد قيد الفريدة (mission_id, participant_id, session_date,
+        #    check_in_time): تحديث في مكانه ← حذف غير المُطالب ← إدراج الجديد.
+        #    مطابقة بالهوية الكاملة (start,end) أولاً، ثم بإعادة استخدام نفس
+        #    بداية الانضمام عند تبدل الانفصال (مفتوحة→مغلقة أو العكس — الانضمام
+        #    يفتح فترة واحدة لكل مشارك)، ثم بالبدء الاحتياطي (start_entry NULL =
+        #    صف اشتقاق واحد كحد أقصى لكل مشارك). القديم (بلا وسوم) لا يُلمس أبداً.
+        cursor.execute(
+            "SELECT session_id, start_dt, end_dt, session_date, check_in_time, check_out_time, "
+            "       start_entry_id, end_entry_id, notes "
+            "FROM mission_participant_sessions WHERE participant_id = %s",
+            (p['id'],),
+        )
+        existing = cursor.fetchall()
+        tagged_rows = [r for r in existing if r[6] is not None or r[7] is not None]
+        claimed = set()  # session_ids المُحدَّثة في مكانها (لا حذف ولا إدراج جديد)
+
+        inserts = []
+        for pd in periods:
+            sd = pd['start']
+            ed = pd['end']
+            want = (pd['start_entry_id'], pd['end_entry_id'])
+            # (أ) المفتاح الكامل مطابق
+            row = next((r for r in tagged_rows
+                        if r[0] not in claimed and (r[6], r[7]) == want), None)
+            if row is None and pd['start_entry_id'] is not None:
+                # (ب) إعادة استخدام نفس بداية الانضمام عند تبدل الانفصال
+                row = next((r for r in tagged_rows
+                            if r[0] not in claimed and r[6] == pd['start_entry_id']), None)
+            if row is None and pd['start_entry_id'] is None:
+                # (ج) البدء الاحتياطي — صف اشتقاق واحد ببداية NULL
+                row = next((r for r in tagged_rows
+                            if r[0] not in claimed and r[6] is None and r[7] is not None), None)
+            if row:
+                cursor.execute(
+                    "UPDATE mission_participant_sessions SET start_dt = %s, end_dt = %s, "
+                    "session_date = %s, check_in_time = %s, check_out_time = %s, "
+                    "end_entry_id = %s WHERE session_id = %s",
+                    (sd, ed, sd.date() if sd else None, sd.time() if sd else None,
+                     ed.time() if ed else None, pd['end_entry_id'], row[0]),
+                )
+                claimed.add(row[0])
+            else:
+                inserts.append(pd)
+
+        # حذف شرائحنا التي لم تُطالَب (موسومة فقط — القديمة محفوظة) — قبل الإدراج
+        # حتى لا يصطدم الجديد بقيد الفريدة على (participant, session_date, check_in).
+        for r in tagged_rows:
+            if r[0] not in claimed:
+                cursor.execute(
+                    "DELETE FROM mission_participant_sessions WHERE session_id = %s", (r[0],)
+                )
+
+        # إدراج الجديد (فترات جديدة بدون صف مُطابَق)
+        for pd in inserts:
+            sd = pd['start']
+            ed = pd['end']
+            cursor.execute(
+                """INSERT INTO mission_participant_sessions
+                   (participant_id, mission_id, session_date, check_in_time, start_dt, end_dt,
+                    start_entry_id, end_entry_id, notes)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'انضمام')""",
+                (p['id'], mission_id, sd.date() if sd else None, sd.time() if sd else None,
+                 sd, ed, pd['start_entry_id'], pd['end_entry_id']),
+            )
+            if fire_events:
+                created_pd = dict(pd)
+                created_pd['mission_name'] = mission_name
+                created_pd['participant_name'] = p['name']
+                _emit_jl_event(cursor, mission_id, user_id, created_pd)
+
+        # ── مزامنة الحالة: مفتوح ⇒ «مازال بالمهمة»؛ وإلا أغلق كل شيء ⇒ «تم انتهاء مهمتة»
+        cursor.execute(
+            "SELECT status FROM missions WHERE mission_id = %s", (mission_id,)
+        )
+        m_status = cursor.fetchone()[0]
+        new_status = ('مازال بالمهمة'
+                      if any(pd['end'] is None for pd in periods)
+                      else ('تم انتهاء مهمتة' if periods else None))
+        if new_status and m_status not in ('Completed', 'مكتملة'):
+            cursor.execute(
+                "UPDATE mission_participants SET return_status = %s WHERE participant_id = %s",
+                (new_status, p['id']),
+            )
+
+
+def _emit_jl_event(cursor, mission_id, user_id, pd):
+    """Audit + حدث لحظي لشريحة مشاركة مستحدثة من كتالوج الانضمام/الانفصال.
+    لا تُفسد الحفظ أبداً (polite — أي خطأ يُطبع ويُتجاوز)."""
+    try:
+        create_audit_log(
+            cursor, user_id, "انضمام" if pd['end_entry_id'] is None else "انفصال",
+            mission_id=mission_id, entity_type="mission", entity_id=mission_id,
+            details={
+                "action_text": (f"تسجيل انضمام {pd['participant_name']} في {pd['mission_name']} "
+                                f"عند {fmt_dt(pd['start'])}"),
+            },
+        )
+    except Exception as e:
+        print(f"Audit Error (JL): {e}")
 
 
 def mission_end_dt(mission_data):
@@ -1110,6 +1416,10 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
     #     • يوجد خط أساسي ⇒ نافذة «خط السير الأساسي» (Both exist → Basic default)
     #     • وإلا أول مجموعة مخصصة (Custom-only)
     #     • وإلا ⇒ بداية/نهاية المهمة نفسها (No itinerary → Mission Start/End)
+    # 🆕 requirement C: بلا تخصيص وبلا «من بداية المهمة» لا يوجد بدء مشاركة مطلقاً
+    #    ⇒ «غير مشارك» وساعاته صفرية؛ النافذة الافتراضية لا تُمنح لمن بلا بداية.
+    if not participation_start_dt(mission_data, assigned_days, routes, start_from_mission):
+        return 0.0
     basic_win = day_window('خط السير الأساسي', cap=end_cap) if 'خط السير الأساسي' in [g.get('group_title') for g in routes] else 0.0
     if basic_win > 0:
         return round(basic_win, 2)
@@ -1292,6 +1602,9 @@ def create_mission(
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
 
+            # 🆕 كتالوج الانضمام/الانفصال (فئة مستقلة عن الخطوط) — إدراج سجلات النموذج
+            _sync_jl_catalog(cursor, mission_id, mission.join_leave_entries)
+
             # منع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الرادار والإدخال)
             participant_user_ids = []
             inserted_participants = []  # (participant_id, participant_model) for session linking
@@ -1350,6 +1663,15 @@ def create_mission(
                         UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة'
                         WHERE participant_id = %s
                     """, (pid,))
+
+            # 🆕 اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (Draft فقط —
+            #    عند الخروج من المسودة تُجمَّد الفترات ولا يُعاد حسابها). يُستدعى قبل
+            #    حظر الإغلاق التلقائي حتى يُغلق الأخير أي segment مفتوح لمهمة مكتملة.
+            if mission.status == 'Draft':
+                materialize_jl_segments(
+                    cursor, mission_id, {'mission_name': mission.mission_name},
+                    user_id=user_id,
+                )
 
             # ── الإغلاق التلقائي عند الإنشاء المباشر كمهمة منتهية (حالة نادرة) ──
             #    نفس قاعدة update_mission: أي segment مفتوح لمشاركي مهمة Completed يُغلق
@@ -1561,6 +1883,10 @@ def update_mission(
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
 
+            # 🆕 كتالوج الانضمام/الانفصال: upsert في مكانه (يُحافَظ على entry_id =
+            #    provenance ثابت للشرائح المشتقة)، وحذف ما لم يُرسَل بتنظيف صريح.
+            _sync_jl_catalog(cursor, mission_id, mission.join_leave_entries)
+
             # المشاركون: UPsert بالهوية — من بقي يُحدَّث في مكانه (تبقى segments المسجلة كما هي)،
             #   ومن أُزيل بلا segments يُحذف نهائياً، ومن أُزيل وله segments يُخفى (roster_active=false).
             participant_user_ids = []
@@ -1659,6 +1985,15 @@ def update_mission(
                     INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
                     VALUES (%s, %s, %s)
                 """, day_rows)
+
+            # 🆕 إعادة اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (Draft فقط —
+            #    عند الخروج من المسودة تُجمَّد الفترات ولا يُعاد حسابها). يُستدعى قبل
+            #    حظر الإغلاق التلقائي حتى يُغلق الأخير أي segment مشتقّ مفتوح لمهمة مكتملة.
+            if mission.status == 'Draft':
+                materialize_jl_segments(
+                    cursor, mission_id, _jl_mission_row(cursor, mission_id),
+                    user_id=user_id,
+                )
 
             # ── الإغلاق التلقائي للمشاركة عند انتهاء المهمة (متطلب حتمي، حل جذري) ──
             #    عند تحويل المهمة إلى 'Completed' كان أي حضور مسجَّل عبر JOIN (segment
@@ -1832,13 +2167,16 @@ def mission_join(
     data: JoinRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """
-    انضمام مشارك (استثناء — الافتراضي ميراث اليوم/المهمة):
-    - يفتح segment جديد start_dt = زمن الانضمام (end_dt = NULL ⇒ جارٍ/مازال بالمهمة).
-    - المهمة المفتوحة: اليوم المختار (itinerary_group) — يؤثر على ذلك اليوم فقط.
-    - Idempotent: لو سبق وُجد segment مفتوح للمشارك/اليوم → نُعيد نفس النتيجة بلا تكرار.
-    - الحالة → 'مازال بالمهمة' (يُفعّل رادار المنع من مهمتين معاً).
-    """
+    """🔒 legacy-only (بعد إعادة تصميم الانضمام/الانفصال): المسار القديم للأزرار
+    الفردية لم يعد يُستخدم للتسجيل الجديد. المشاركة تُدار الآن حصراً من قسم
+    «انضمام / انفصال» عبر كتالوج mission_join_leave_entries + الإسناد للخطوط
+    (يُشتق في المسودة ويُجمّد بعدها). السجلات القديمة بلا وسوم تاريخ للقراءة فقط.
+    يُحافَظ بجسم هذه الدالة التاريخي أدناه كمرجع — غير قابل للوصول."""
+    raise HTTPException(
+        status_code=405,
+        detail="زر الانضمام القديم لم يعد متاحاً — تُدار المشاركة من قسم «انضمام / انفصال» الجديد.",
+    )
+    # ---- (محتوى تاريخي غير قابل للوصول — محفوظ كمرجع) ----
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
@@ -1955,14 +2293,16 @@ def mission_leave(
     data: LeaveRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """
-    تسجيل انفصال مشارك (استثناء):
-    - لو له segment مفتوح (join سابق) → يُغلق بزمن الانفصال.
-    - وإلا → يُسجَّل segment من بداية المشاركة المرجعية (أبكر انطلاق لليوم/المهمة)
-      إلى زمن الانفصال (مثال: مهمة 08:00 وخرج 14:00 ⇒ [08:00→14:00]).
-    - المهمة المفتوحة: اليوم المختار (itinerary_group) — يؤثر على ذلك اليوم فقط.
-    - الحالة → 'تم انتهاء مهمتة' (يحرر من رادار المنع).
-    """
+    """🔒 legacy-only (بعد إعادة تصميم الانضمام/الانفصال): المسار القديم للأزرار
+    الفردية لم يعد يُستخدم للتسجيل الجديد. المشاركة تُدار الآن حصراً من قسم
+    «انضمام / انفصال» عبر كتالوج + الإسناد (يُشتق في المسودة ويُجمّد بعدها).
+    السجلات القديمة بلا وسوم تاريخ للقراءة فقط.
+    يُحافَظ بجسم هذه الدالة التاريخي أدناه كمرجع — غير قابل للوصول."""
+    raise HTTPException(
+        status_code=405,
+        detail="زر الانفصال القديم لم يعد متاحاً — تُدار المشاركة من قسم «انضمام / انفصال» الجديد.",
+    )
+    # ---- (محتوى تاريخي غير قابل للوصول — محفوظ كمرجع) ----
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
@@ -2244,6 +2584,349 @@ def remove_draft_session(
         connection.close()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# سجلات الانضمام/الانفصال (كتالوج) — قسم «انضمام / انفصال» الجديد
+# جميعها Draft فقط («مسودة المهمة = مسودة المشاركة»)، والتحقق من المستقبل مقابل
+# ساعة العميل، ورفض العنوان المكرر لكل نوع برسالة عربية.
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _jl_mission_row(cursor, mission_id):
+    """dict المهمة (كل الأعمدة) — لاستخدام mission_row في الاشتقاق/الساعات."""
+    cursor.execute("SELECT * FROM missions WHERE mission_id = %s", (mission_id,))
+    mrow = cursor.fetchone()
+    if not mrow:
+        raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+    cols = [d[0] for d in cursor.description]
+    r = dict(zip(cols, mrow))
+    for k, v in r.items():
+        if v is not None and not isinstance(v, (str, int, float, bool)):
+            r[k] = str(v)
+    return r
+
+
+def _sync_jl_catalog(cursor, mission_id, entries):
+    """مزامنة كتالوج الانضمام/الانفصال من نموذج المهمة (create: إدراج الكل؛
+    update: upsert مع حذف غير المُرسَل). فحص التكرار شامِل على *المجموعة النهائية*
+    (كل ما سيتبقى بعد المزامنة) — إدراجاً وتحديثاً — برسالة عربية واضحة.
+    السجلات غير المُرسَلة تُحذف بتنظيف صريح (شرائح مشتقة ← مفتاح إسناد ← سجل الكتالوج)
+    بنفس ترتيب DELETE endpoint؛ حارس FK NO ACTION شبكة أمان ضد أي خطأ ترتيب."""
+    labels = {'join': 'انضمام', 'leave': 'انفصال'}
+    submitted = []
+    for ent in entries or []:
+        kind = ent.kind
+        if kind not in ('join', 'leave'):
+            raise HTTPException(status_code=400, detail="kind يجب أن يكون 'join' أو 'leave'")
+        title = (ent.title or '').strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="أدخل عنواناً لسجل الانضمام/الانفصال")
+        dtv = parse_dt_input(ent.dt) if ent.dt else None
+        if dtv is None:
+            raise HTTPException(status_code=400, detail="زمن الانضمام/الانفصال غير صالح (الصيغة المتوقعة: YYYY-MM-DD HH:MM)")
+        submitted.append({'entry_id': ent.entry_id, 'title': title, 'kind': kind, 'dt': dtv})
+
+    if not submitted:
+        # لا شيء مُرسَل — يبقى (الكتالوج الفارغ) ويُحذف له غيرُه أسفل
+        submitted = []
+
+    # قراءة الكتالوج الحالي للمهمة
+    cursor.execute(
+        "SELECT entry_id, title, kind FROM mission_join_leave_entries WHERE mission_id = %s",
+        (mission_id,),
+    )
+    existing = {r[0]: {'title': r[1], 'kind': r[2]} for r in cursor.fetchall()}
+
+    sub_ids = {s['entry_id'] for s in submitted if s['entry_id'] is not None}
+
+    # رفض أي entry_id في الحمولة لا ينتمي لهذه المهمة (لا تُنشئ حقائق مخفية)
+    for s in submitted:
+        if s['entry_id'] is not None and s['entry_id'] not in existing:
+            raise HTTPException(status_code=400, detail=f"سجل الانضمام/الانفصال رقم {s['entry_id']} غير موجود ضمن هذه المهمة")
+
+    # فحص التكرار على المجموعة النهائية (كل ما سيتبقى بعد المزامنة) — يغطي
+    # التكرار داخل الحمولة والتكرار ضد السجلات المُبقاة وتعارض إعادة العنوان.
+    seen = {}
+    dup_entry = None
+    for s in submitted:
+        k = (s['kind'], s['title'].strip().lower())
+        if k in seen:
+            dup_entry = s
+            break
+        seen[k] = True
+    if dup_entry is not None:
+        raise HTTPException(status_code=400, detail=f"يوجد بالفعل سجل {labels[dup_entry['kind']]} بنفس العنوان «{dup_entry['title']}» — اختر عنواناً مختلفاً")
+
+    # حذف غير المُرسَل: شرائح مشتقة ← مفتاح الإسناد ← صف الكتالوج (ترتيب FK الآمن)
+    for eid, e in existing.items():
+        if eid in sub_ids:
+            continue
+        cursor.execute(
+            "DELETE FROM mission_participant_sessions WHERE start_entry_id = %s OR end_entry_id = %s",
+            (eid, eid),
+        )
+        cursor.execute(
+            "DELETE FROM mission_participant_itineraries WHERE itinerary_group = %s",
+            (jl_key(e['kind'], e['title']),),
+        )
+        cursor.execute("DELETE FROM mission_join_leave_entries WHERE entry_id = %s", (eid,))
+
+    # upsert: تحديث في مكانه (يُحافَظ على entry_id = provenance stable) أو إدراج جديد
+    for s in submitted:
+        if s['entry_id'] is not None:
+            cursor.execute(
+                "UPDATE mission_join_leave_entries SET title = %s, kind = %s, dt = %s WHERE entry_id = %s",
+                (s['title'], s['kind'], s['dt'], s['entry_id']),
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO mission_join_leave_entries (mission_id, title, kind, dt) VALUES (%s, %s, %s, %s)",
+                (mission_id, s['title'], s['kind'], s['dt']),
+            )
+
+
+def _jl_validate(cursor, mission_id, kind, dt_str, client_now):
+    """التحقق الموحّد لسجل كتالوج: نوع صالح + زمن غير مستقبلي وعمود Draft."""
+    if kind not in ('join', 'leave'):
+        raise HTTPException(status_code=400, detail="kind يجب أن يكون 'join' أو 'leave'")
+    dtv = parse_dt_input(dt_str)
+    if not dtv:
+        raise HTTPException(status_code=400, detail="زمن الانضمام/الانفصال غير صالح (الصيغة المتوقعة: YYYY-MM-DD HH:MM)")
+    now_ref = parse_dt_input(client_now) or datetime.now()
+    validate_segment_datetime(dtv, now=now_ref)
+    cursor.execute("SELECT status FROM missions WHERE mission_id = %s", (mission_id,))
+    mrow = cursor.fetchone()
+    if not mrow:
+        raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+    if mrow[0] not in ('Draft',):
+        raise HTTPException(status_code=403, detail="لا يمكن تعديل الانضمام/الانفصال بعد خروج المهمة من المسودة — السجل المجرى نهائي")
+    return dtv
+
+
+def _jl_dup_guard(cursor, mission_id, title, kind, exclude_id=None):
+    """رفض عنوان مكرر لنفس النوع داخل المهمة (رسالة عربية واضحة)."""
+    if not title or not str(title).strip():
+        raise HTTPException(status_code=400, detail="أدخل عنواناً لسجل الانضمام/الانفصال")
+    if exclude_id is not None:
+        cursor.execute(
+            "SELECT 1 FROM mission_join_leave_entries "
+            "WHERE mission_id = %s AND LOWER(TRIM(title)) = LOWER(%s) AND kind = %s "
+            "AND entry_id <> %s",
+            (mission_id, title.strip(), kind, exclude_id),
+        )
+    else:
+        cursor.execute(
+            "SELECT 1 FROM mission_join_leave_entries "
+            "WHERE mission_id = %s AND LOWER(TRIM(title)) = LOWER(%s) AND kind = %s",
+            (mission_id, title.strip(), kind),
+        )
+    if cursor.fetchone():
+        label = "انضمام" if kind == 'join' else 'انفصال'
+        raise HTTPException(status_code=400, detail=f"يوجد بالفعل سجل {label} بنفس العنوان — اختر عنواناً مختلفاً")
+
+
+@app.post("/api/missions/{mission_id}/join-leave-entries")
+def create_join_leave_entry(
+    mission_id: int,
+    data: JoinLeaveEntryRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """إنشاء سجل كتالوج انضمام/انفصال (Draft فقط). الأزرار دائماً مفتوحة —
+    يُمنع فقط إسناد انفصال بلا بدء مشاركة عند الحفظ (requirement E)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            dtv = _jl_validate(cursor, mission_id, data.kind, data.dt, data.client_now)
+            _jl_dup_guard(cursor, mission_id, data.title, data.kind)
+            cursor.execute(
+                "INSERT INTO mission_join_leave_entries (mission_id, title, kind, dt) "
+                "VALUES (%s, %s, %s, %s) RETURNING entry_id, title, kind, dt",
+                (mission_id, data.title.strip(), data.kind, dtv),
+            )
+            r = cursor.fetchone()
+            try:
+                create_audit_log(
+                    cursor, user_id, "إنشاء سجل انضمام/انفصال",
+                    mission_id=mission_id, entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"إنشاء سجل {'انضمام' if data.kind == 'join' else 'انفصال'} «{data.title.strip()}» في مهمة {mission_id}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+            connection.commit()
+            return {"entry_id": r[0], "title": r[1], "kind": r[2], "dt": fmt_dt(r[3])}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء إنشاء سجل الانضمام/الانفصال: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.patch("/api/missions/{mission_id}/join-leave-entries/{entry_id}")
+def update_join_leave_entry(
+    mission_id: int,
+    entry_id: int,
+    data: JoinLeaveEntryRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """تعديل سجل كتالوج في مكانه (Draft فقط) مع إعادة توليد الشرائح المشتقة.
+    ترتيب المعاملة (حارس ON DELETE NO ACTION):
+      1) حذف الشريحة المشتقة لهذا السجل (لو بقي صف يشير إليه فسيرفض FK الحذف).
+      2) إعادة تسمية مفاتيح الإسناد إن تغيّر العنوان.
+      3) تحديث سجل الكتالوج نفسه.
+      4) إعادة الاشتقاق للنُسق الجديد."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            dtv = _jl_validate(cursor, mission_id, data.kind, data.dt, data.client_now)
+            _jl_dup_guard(cursor, mission_id, data.title, data.kind, exclude_id=entry_id)
+
+            cursor.execute(
+                "SELECT title, kind FROM mission_join_leave_entries WHERE entry_id = %s AND mission_id = %s",
+                (entry_id, mission_id),
+            )
+            old = cursor.fetchone()
+            if not old:
+                raise HTTPException(status_code=404, detail="السجل غير موجود ضمن هذه المهمة")
+            old_title, old_kind = old[0], old[1]
+
+            # 1) شريحة مشتقة تُحذف أولاً — يسمح بالحذف الآمن لسجل الكتالوج بعدها
+            cursor.execute(
+                "DELETE FROM mission_participant_sessions WHERE start_entry_id = %s OR end_entry_id = %s",
+                (entry_id, entry_id),
+            )
+
+            # 2) إعادة تسمية مفتاح الإسناد (إن تغيّر العنوان)
+            new_title = data.title.strip()
+            if new_title != old_title:
+                cursor.execute(
+                    "UPDATE mission_participant_itineraries SET itinerary_group = %s WHERE itinerary_group = %s",
+                    (jl_key(old_kind, new_title), jl_key(old_kind, old_title)),
+                )
+
+            # 3) تحديث الكتالوج
+            cursor.execute(
+                "UPDATE mission_join_leave_entries SET title = %s, kind = %s, dt = %s WHERE entry_id = %s",
+                (new_title, data.kind, dtv, entry_id),
+            )
+
+            # 4) إعادة الاشتقاق (Draft confirmed في _jl_validate)
+            if old_kind != data.kind:
+                # النوع تغيّر ⇒ مفتاح الإسناد يختلف تماماً: أزل مفتاح النوع القديم
+                cursor.execute(
+                    "DELETE FROM mission_participant_itineraries WHERE itinerary_group = %s",
+                    (jl_key(old_kind, old_title),),
+                )
+            mission_row = _jl_mission_row(cursor, mission_id)
+            materialize_jl_segments(cursor, mission_id, mission_row, user_id=user_id)
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "تعديل سجل انضمام/انفصال",
+                    mission_id=mission_id, entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"تعديل سجل {'انضمام' if data.kind == 'join' else 'انفصال'} «{new_title}» في مهمة {mission_id}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"entry_id": entry_id, "title": new_title, "kind": data.kind, "dt": fmt_dt(dtv)}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء تعديل سجل الانضمام/الانفصال: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.delete("/api/missions/{mission_id}/join-leave-entries/{entry_id}")
+def delete_join_leave_entry(
+    mission_id: int,
+    entry_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """حذف سجل كتالوج (Draft فقط) — تنظيف صريح بالترتيب لضمان حذف الشرائح المشتقة
+    والوصلات فقط دون أي تحويل لشرائح موسومة إلى «قديمة»:
+      1) حذف الشريحة المشتقة للسجل.
+      2) حذف مفتاح الإسناد (JL:*) من خطوط المشاركين.
+      3) حذف سجل الكتالوج (FK NO ACTION يحرس الترتيب: لو بقيت شريحة ↦ أُرفض).
+      4) إعادة الاشتقاق للمشاركين المتأثرين (تنظيف الحالة المعلّقة)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status FROM missions WHERE mission_id = %s", (mission_id,))
+            mrow = cursor.fetchone()
+            if not mrow:
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+            if mrow[0] not in ('Draft',):
+                raise HTTPException(status_code=403, detail="لا يمكن حذف الانضمام/الانفصال بعد خروج المهمة من المسودة — السجل المجرى نهائي")
+
+            cursor.execute(
+                "SELECT title, kind FROM mission_join_leave_entries WHERE entry_id = %s AND mission_id = %s",
+                (entry_id, mission_id),
+            )
+            old = cursor.fetchone()
+            if not old:
+                raise HTTPException(status_code=404, detail="السجل غير موجود ضمن هذه المهمة")
+            title, kind = old[0], old[1]
+
+            # 1) الشرائح المشتقة أولاً (يستحيل أن يتبقى صف يشير إليه)
+            cursor.execute(
+                "DELETE FROM mission_participant_sessions WHERE start_entry_id = %s OR end_entry_id = %s",
+                (entry_id, entry_id),
+            )
+            # 2) مفاتيح الإسناد
+            cursor.execute(
+                "DELETE FROM mission_participant_itineraries WHERE itinerary_group = %s",
+                (jl_key(kind, title),),
+            )
+            # 3) سجل الكتالوج — FK NO ACTION يشكّل شبكة أمان ترتيب
+            cursor.execute(
+                "DELETE FROM mission_join_leave_entries WHERE entry_id = %s AND mission_id = %s",
+                (entry_id, mission_id),
+            )
+            # 4) إعادة الاشتقاق للمشاركين المتأثرين (تنظيف حالة العودة المعلّقة)
+            mission_row = _jl_mission_row(cursor, mission_id)
+            materialize_jl_segments(cursor, mission_id, mission_row, user_id=user_id)
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "حذف سجل انضمام/انفصال",
+                    mission_id=mission_id, entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"حذف سجل {'انضمام' if kind == 'join' else 'انفصال'} «{title}» من مهمة {mission_id}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم حذف سجل الانضمام/الانفصال", "entry_id": entry_id}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء حذف سجل الانضمام/الانفصال: {str(e)}")
+    finally:
+        connection.close()
+
+
 @app.get("/api/missions/{mission_id}")
 def get_mission_details(mission_id: int, client_now: Optional[str] = None, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """client_now = ساعة العميل المحلية (اختياري) — تُستخدم كإطار زمني للساعات الحية."""
@@ -2317,7 +3000,18 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
             
             cursor.execute("SELECT role_name, staff_name FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
             mission_data["eoc_staff"] = [{"role_name": r[0], "staff_name": r[1]} for r in cursor.fetchall()]
-            
+
+            # 🆕 سجل الانضمام/الانفصال: كتالوج المهمة (ترتيب تعريض: حسب النوع ثم الزمن)
+            cursor.execute(
+                "SELECT entry_id, title, kind, dt FROM mission_join_leave_entries "
+                "WHERE mission_id = %s ORDER BY kind, dt",
+                (mission_id,),
+            )
+            mission_data["join_leave_entries"] = [
+                {"entry_id": r[0], "title": r[1], "kind": r[2], "dt": fmt_dt(r[3])}
+                for r in cursor.fetchall()
+            ]
+
             return mission_data
     except Exception as e:
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء جلب التفاصيل")
@@ -2352,6 +3046,7 @@ def clear_all_missions(
             cursor.execute("DELETE FROM mission_participants")
             cursor.execute("DELETE FROM mission_beneficiaries")
             cursor.execute("DELETE FROM mission_eoc_staff")
+            cursor.execute("DELETE FROM mission_join_leave_entries")
 
             # حذف المهام نفسها
             cursor.execute("DELETE FROM missions")
@@ -2406,6 +3101,7 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
             cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
+            cursor.execute("DELETE FROM mission_join_leave_entries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM missions WHERE mission_id = %s", (mission_id,))
 
             # 💡 تسجيل اللوج — نفس نمط بقية endpoints الحذف: نمرّر
@@ -3939,13 +4635,16 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     LEFT JOIN default_mix dm ON dm.mission_id = i.mission_id AND dm.k = i.k
                     LEFT JOIN mission_pair mpair ON mpair.mission_id = i.mission_id
                     LEFT JOIN assigned_departure ad ON ad.participant_id = i.participant_id AND ad.mission_id = i.mission_id
-                    -- 🆕 planned_start — مطابق لـ planned_start_dt: sfm ⇒ بداية المهمة؛
-                    --    وإلا أقرب انطلاق عبر تخصيصاته (deadline fallback بداية المهمة).
+                    -- 🆕 planned_start — مطابق لـ participation_start_dt (requirement C):
+                    --    أقرب انطلاق عبر التخصيصات له الأولوية، ثم بداية المهمة فقط لو
+                    --    «من بداية المهمة»، وإلا NULL (لا بداية = غير مشارك = ساعات صفرية).
+                    --    (الفرع السابق كان يطابق planned_start_dt لكن بتفضيل sfm أعمى — أصبح
+                    --    المُسار يعلو على sfm، والمُخصَّص بلا مسار وبلا sfm ⇒ 0 ساعات.)
                     CROSS JOIN LATERAL (
                         SELECT CASE
-                            WHEN i.sfm THEN mpair.mission_start_ts
                             WHEN ad.dep IS NOT NULL THEN ad.dep
-                            ELSE mpair.mission_start_ts
+                            WHEN i.sfm AND mpair.mission_start_ts IS NOT NULL THEN mpair.mission_start_ts
+                            ELSE NULL
                         END AS ts
                     ) ps
                     GROUP BY i.k, i.mission_id
