@@ -2497,10 +2497,13 @@ select.field {
    - النقر يُحدَّد هندسياً (الـ pill الذي وقع فيه النقر) لا من مؤشر النص،
      فيبقى التطابق دقيقاً مهما اختلفت حواشي الحقل.  RTL/LTR → dir:ltr على الـ pills.
    ════════════════════════════════════════════════════════════════ */
-.seg-ghost { color: transparent; caret-color: transparent; }
-.seg-ghost::placeholder { color: transparent; }
-.seg-ghost::selection { background: transparent; }
-.seg-ghost.field:focus { caret-color: transparent; } /* تغلب .field:focus (أعلى خصوصية) */
+/* 🚨 !important يضمن عدم ظهور نص الإدخال المخفي مهما أضاف المُستدعون من فئات لونية
+   (مثل text-white أو text-[ink]) — لأن !important داخل @layer يتفوق على CSS غير مُعرَّف بـ layer. */
+.seg-ghost { color: transparent !important; caret-color: transparent !important;
+             -webkit-text-fill-color: transparent !important; }
+.seg-ghost::placeholder { color: transparent !important; }
+.seg-ghost::selection { background: transparent !important; }
+.seg-ghost.field:focus { caret-color: transparent !important; }
 .seg-ghost:disabled { cursor: not-allowed; }
 
 .seg-pills {
@@ -2510,7 +2513,7 @@ select.field {
   align-items: center;
   justify-content: center;
   gap: 0.12rem;
-  padding-inline: 2rem 0.5rem;   /* يسار: مساحة زر الأيقونة 📅/🕐 */
+  padding: 0 1.5rem;              /* متناظر: يُركّز المحتوى عند منتصف العرض (width/2) */
   overflow: hidden;               /* حقل ضيق (فلاتر) → قصّ بدل تدفّق فوق الجيران */
   pointer-events: none;           /* النقرات تمر كلها لمحرّك الإدخال */
   user-select: none;

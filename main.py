@@ -4365,342 +4365,204 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
             # - المهمة الحالية تُرجع ببيانها (id/كود/اسم) حتى نعرف في أي مهمة هو الآن
             # =========================================================================
             # fix #3/#8: إطار الساعات الحية = ساعة العميل المحلية (المقدَّمة) أو ساعة السيرفر.
-            now_ref = client_now or None  # يُمرَّر كمعامل إلى COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo'))
+            now_ref = parse_dt_input(client_now) if client_now else datetime.now()
+
+            # ════════════════════════════════════════════════════════════════════════
+            # 🎯 المحرك الموحد: نستخدم compute_working_hours مباشرة (نفس الدالة
+            #    التي تُستخدم في نموذج المهمة) لضمان تطابق 100% بين صفحة المهمة
+            #    وسجل القوة البشرية. لا حساب SQL منفصل — الدالة واحدة لكل مكان.
+            # ════════════════════════════════════════════════════════════════════════
+
+            # ① جلب جميع المهمات الفعلية (غير ملغاة/مسودة/مرتجعة)
             cursor.execute("""
-                WITH ident AS (
-                    SELECT
-                        mp.participant_id,
-                        mp.mission_id,
-                        mp.branch_id,
-                        mp.full_name,
-                        mp.membership_number,
-                        mp.participant_type,
-                        mp.participant_position,
-                        mp.volunteer_id,
-                        mp.return_status,
-                        -- 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر بداية المشاركة المخططة
-                        mp.start_from_mission AS sfm,
-                        -- هوية المركّبة: رقم العضوية + الفرع (رقم العضوية وحده ليس فريداً —
-                        --   قد يتكرر عبر الفروع، فنفس الرقم في فرع مختلف هوية مختلفة).
-                        CASE
-                            WHEN TRIM(COALESCE(mp.membership_number, '')) <> ''
-                                 THEN 'rid:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.membership_number)
-                            ELSE 'nm:' || COALESCE(mp.branch_id, 0) || ':' || TRIM(mp.full_name)
-                        END AS k
-                    FROM mission_participants mp
-                    WHERE mp.full_name IS NOT NULL AND TRIM(mp.full_name) <> ''
-                      AND mp.participant_type IN ('volunteer', 'non_volunteer')
-                ),
-                -- 🆕 الزوجان الكاملان (مطابقان لـ mission_start_dt / mission_end_dt):
-                --   mission_start_ts = exit_date ثم بدائل + departure_time ثم start_time
-                --   (بلا created_at::time مهما كان — NULL بدون زوج تاريخ+وقت كامل).
-                --   mission_end_ts   = pair completion، وإلا pair arrival — NULL بدون زوج كامل.
-                mission_pair AS (
-                    SELECT
-                        m.mission_id,
-                        (CASE
-                            WHEN m.exit_date IS NOT NULL THEN m.exit_date
-                            WHEN m.departure_date IS NOT NULL THEN m.departure_date
-                            WHEN m.arrival_date IS NOT NULL THEN m.arrival_date
-                            ELSE m.created_at::date
-                        END + COALESCE(m.departure_time, m.start_time)) AS mission_start_ts,
-                        (CASE
-                            WHEN m.completion_date IS NOT NULL AND m.completion_time IS NOT NULL
-                                THEN m.completion_date + m.completion_time
-                            WHEN m.arrival_date IS NOT NULL AND m.arrival_time IS NOT NULL
-                                THEN m.arrival_date + m.arrival_time
-                        END) AS mission_end_ts
-                    FROM missions m
-                ),
-                person AS (
-                    SELECT DISTINCT ON (k)
-                        k,
-                        full_name,
-                        membership_number,
-                        participant_type,
-                        participant_position,
-                        branch_id,
-                        volunteer_id
-                    FROM ident
-                    ORDER BY k, participant_id DESC
-                ),
-                -- المهمة الحالية الفعلية: مشارك "مازال بالمهمة" في مهمة غير منتهية، بالنسبة لكل هوية
-                active AS (
-                    SELECT DISTINCT ON (i.k)
-                        i.k,
-                        m.mission_id,
-                        m.mission_code,
-                        m.mission_name
-                    FROM ident i
-                    JOIN missions m ON m.mission_id = i.mission_id
-                    -- «في مهمة حاليًا»: إمّا شريحة مشاركة مفتوحة فعلياً (end_dt IS NULL) في هذه المهمة
-                    -- بعينها (انضمام صريح غير مُغلق)، وإمّا مشاركٌ بلا أي segments أصلاً (وضع الإرث —
-                    -- لم يُسجَّل له انضمام/انفصال صريح) وما يزال مدرجاً «مازال بالمهمة» في مهمة غير
-                    -- منتهية (سلوك قائم يُحافظ على تشغيليته، ولا ينطبق إلا على من لا سجلَ له؛ فبمجرد
-                    -- وجود أي segment تُحسم النشطة من شريحةٍ مفتوحة حصراً — لا return_status قديم/مُستعاد).
-                    -- الشريحة المغلقة في مهمة منتهية لا تجعل المشارك نشطاً أبداً، والشريحة المفتوحة
-                    -- في مهمة أخرى لا تُنسب لهذه المهمة (نُلزم s.mission_id = i.mission_id).
-                    WHERE m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                      AND (
-                          EXISTS (
-                              SELECT 1 FROM mission_participant_sessions s
-                              WHERE s.participant_id = i.participant_id
-                                AND s.mission_id     = i.mission_id
-                                AND s.end_dt IS NULL
-                          )
-                          OR (
-                              i.return_status = 'مازال بالمهمة'
-                              AND NOT EXISTS (
-                                  SELECT 1 FROM mission_participant_sessions s
-                                  WHERE s.participant_id = i.participant_id
-                              )
-                          )
-                      )
-                    ORDER BY i.k, m.created_at DESC, m.mission_id DESC
-                ),
-                -- 🆕 ساعات المشاركة الفعلية = مجموع مدد كل الـ Segments (Join/Leave) الحقيقية لكل شخص
-                -- لكل مهمة. زمن كامل timestamp (start_dt..end_dt) بدعم المبيت overnight —
-                -- الـ segment المفتوح (بلا end_dt) يُحتسب حتى الآن. الجمع حقيقي عبر كل
-                -- الشرائح (انضمام/انفصال/عودة) — ليس أول/آخر سجل فقط (#3-7).
-                explicit_hours AS (
-                    SELECT
-                        i.k,
-                        mp.mission_id,
-                        mp.participant_id,
-                        mps.itinerary_group,
-                        SUM(
-                            GREATEST(
-                                EXTRACT(EPOCH FROM (
-                                    (
-                                        CASE
-                                            -- ⭐ قاعدة الانضمام/الانفصال: السقف دائم (نهاية المهمة) بغضّ النظر عن الحالة
-                                            WHEN (mps.start_entry_id IS NOT NULL OR mps.end_entry_id IS NOT NULL)
-                                                 AND mpair.mission_end_ts IS NOT NULL
-                                            THEN LEAST(COALESCE(mps.end_dt, mpair.mission_end_ts), mpair.mission_end_ts)
-                                            -- القاعدة الأصلية: السقف فقط للمهمة المكتملة
-                                            WHEN m.status IN ('Completed', 'مكتملة') AND mpair.mission_end_ts IS NOT NULL
-                                            THEN LEAST(COALESCE(mps.end_dt, mpair.mission_end_ts), mpair.mission_end_ts)
-                                            -- بلا نهاية معرفة (نادر) ⇒ المغلق بنهايته، والمفتوح حتى الآن
-                                            ELSE COALESCE(mps.end_dt, COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))
-                                        END - mps.start_dt
-                                    )
-                                )) / 3600.0,
-                                0
-                            )
-                        ) AS hours
-                    FROM mission_participant_sessions mps
-                    JOIN mission_participants mp ON mp.participant_id = mps.participant_id
-                    JOIN missions m ON m.mission_id = mp.mission_id
-                    JOIN mission_pair mpair ON mpair.mission_id = mp.mission_id
-                    JOIN ident i ON i.participant_id = mp.participant_id
-                    WHERE mps.start_dt IS NOT NULL
-                    GROUP BY i.k, mp.mission_id, mp.participant_id, mps.itinerary_group
-                ),
-                -- ⭐ fix #6: الحضور الفعلي يغلب الخطة — لو للهوية أي قطاعات في المهمة
-                --    (تحت أي مجموعة أو بلا مجموعة) فمجموعها هو الوحيد، بلا خليط مع نوافذ افتراضية.
-                actual_total AS (
-                    SELECT
-                        eh.k,
-                        eh.mission_id,
-                        SUM(eh.hours) AS hours
-                    FROM explicit_hours eh
-                    GROUP BY eh.k, eh.mission_id
-                ),
-                -- 🆕 أقرب انطلاق عبر كل تخصيصات المشارك (مطابق لأفرع planned_start_dt عند
-                --   start_from_mission=FALSE): أقل (تاريخ+وقت) انطلاق في مساراته المسندة.
-                assigned_departure AS (
-                    SELECT
-                        i.participant_id,
-                        i.mission_id,
-                        MIN(d.departure_date + d.departure_time) AS dep
-                    FROM ident i
-                    JOIN mission_participant_itineraries mpi
-                      ON mpi.participant_id = i.participant_id AND mpi.mission_id = i.mission_id
-                    JOIN mission_itineraries d
-                      ON d.mission_id = mpi.mission_id AND d.group_title = mpi.itinerary_group
-                    WHERE d.departure_date IS NOT NULL AND d.departure_time IS NOT NULL
-                    GROUP BY i.participant_id, i.mission_id
-                ),
-                -- بلا قطاعات + تخصيص صريح ⇒ الخطة الافتراضية من المسارات المُسندة.
-                -- 🆕 نافذة استمرارية موحدة: [أقرب انطلاق → أبعد وصول] عبر كل مسارات
-                -- المشارك المُسنَّد (لا تقسيم لأيام — مطابق لـ assigned_span Python الجديد).
-                -- مثال: مسار 10:00→14:00 + مسار 13:00→18:00 لنفس اليوم ⇒ 10:00→18:00 (8س).
-                -- مسارين عبر يومين 10:00→18:00 + 09:00→15:00 ⇒ 10:00→15:00 اليوم التالي (29س).
-                -- NULL تواريخ (قديم) تُدمج في نافذة واحدة — معاملة نفس اليوم.
-                default_mix AS (
-                    SELECT
-                        sw.k,
-                        sw.mission_id,
-                        GREATEST(EXTRACT(EPOCH FROM (sw.hi - sw.lo)) / 3600.0, 0) AS hours
-                    FROM (
-                        SELECT
-                            l.k,
-                            l.mission_id,
-                            l.sfm,
-                            l.mission_start_ts,
-                            -- 🆕 القاعدة 3 (مطابق لـ assigned_span): أقرب بداية عبر كل المسارات
-                            --    تُستبدل ببداية المهمة فقط لو «من بداية المهمة» وَكانت أسبق
-                            --    (تُسحب للوراء لا للأمام — مهمة تبدأ لاحقاً لا تُقصّ البداية).
-                            CASE
-                                WHEN l.sfm AND l.mission_start_ts IS NOT NULL
-                                     AND l.mission_start_ts < l.lo
-                                THEN l.mission_start_ts
-                                ELSE l.lo
-                            END AS lo,
-                            l.hi AS hi
-                        FROM (
-                            SELECT
-                                i.k,
-                                i.mission_id,
-                                i.sfm,
-                                i.participant_id,
-                                mpair.mission_start_ts,
-                                -- 🆕 نافذة واحدة متصلة: أقرب انطلاق + أبعد وصول عبر كل أيام المسارات
-                                (CASE
-                                    WHEN COUNT(d.departure_date) = COUNT(*) THEN MIN(d.departure_date::timestamp + d.departure_time)
-                                    WHEN COUNT(*) > 0 AND COUNT(d.departure_date) = 0 THEN date '2000-01-01' + MIN(d.departure_time)
-                                    ELSE MIN(COALESCE(d.departure_date, d.arrival_date)::timestamp + d.departure_time)
-                                END) AS lo,
-                                (CASE
-                                    WHEN COUNT(d.departure_date) = COUNT(*) THEN MAX(d.arrival_date::timestamp + d.arrival_time)
-                                    WHEN COUNT(*) > 0 AND COUNT(d.departure_date) = 0 THEN date '2000-01-01' + MAX(d.arrival_time)
-                                    ELSE MAX(COALESCE(d.arrival_date, d.departure_date)::timestamp + d.arrival_time)
-                                END) AS hi
-                            FROM ident i
-                            JOIN mission_participant_itineraries mpi ON mpi.participant_id = i.participant_id AND mpi.mission_id = i.mission_id
-                            JOIN mission_itineraries d ON d.mission_id = mpi.mission_id AND d.group_title = mpi.itinerary_group
-                            JOIN missions m ON m.mission_id = i.mission_id
-                            LEFT JOIN mission_pair mpair ON mpair.mission_id = m.mission_id
-                            WHERE d.departure_time IS NOT NULL AND d.arrival_time IS NOT NULL
-                            GROUP BY i.k, i.mission_id, i.sfm, i.participant_id, mpair.mission_start_ts
-                        ) l
-                    ) sw
-                ),
-                -- 🔧 المحرك الموحد: حساب ساعات كل مهمة بهوية البيانات لا بالتصنيف — المهمة
-                --    تُحسب مرة واحدة لكل هوية مهما تكرر تسجيل مشاركته فيها (#4):
-                --   ⭐ (1) له أي قطاعات ⇒ مجموعها الفعلي كله (JOIN/LEAVE هو مصدر الحقيقة)
-                --   (2) وإلا له أيام مخصصة ⇒ وراثة نوافذها (خطة افتراضية)
-                --   (3) وإلا ⇒ افتراضي خطة المهمة: مكتملة ⇒ مدة المهمة (مجمّدة دون تغيير)؛
-                --       نشطة ⇒ min(الآن, نهاية الخطة) − الانطلاق (ساعات مباشرة).
-                mission_hours AS (
-                    SELECT
-                        i.k,
-                        i.mission_id,
-                        MAX(m.created_at) AS created_at,
-                        MAX((m.status NOT IN ('Draft', 'Cancelled', 'Returned'))::int)::boolean AS is_valid,
-                        MAX(CASE
-                            WHEN m.status NOT IN ('Draft', 'Cancelled', 'Returned')
-                            THEN CASE
-                                -- ⭐ الحضور الفعلي مصدر الحقيقة — أي قطاعات (Join/Leave) ⇒ مجموعها،
-                                --    حتى لو اكتملت المهمة (الخطة لا تحلّ محل المشاركة الفعلية).
-                                --    (مطابق لـ compute_working_hours: الـ segments قبل التجميد)
-                                WHEN at.hours IS NOT NULL THEN at.hours
-                                -- ⭐ التجميد يفتح بمفتاح الحالة (مطابق لـ Python) — بلا قطاعات فعلية:
-                                --    planned_start (checkbox-aware) .. نهاية المهمة (سقف الزوج الكامل فقط).
-                                WHEN m.status IN ('Completed', 'مكتملة') THEN
-                                    CASE
-                                        WHEN ps.ts IS NOT NULL AND mpair.mission_end_ts IS NOT NULL
-                                             AND mpair.mission_end_ts > ps.ts
-                                        THEN GREATEST(EXTRACT(EPOCH FROM (mpair.mission_end_ts - ps.ts)) / 3600.0, 0)
-                                        ELSE 0
-                                    END
-                                -- Active missions: assigned-day defaults → live mission window
-                                WHEN dm.hours IS NOT NULL THEN dm.hours
-                                ELSE CASE WHEN ps.ts IS NOT NULL
-                                     THEN GREATEST(
-                                        EXTRACT(EPOCH FROM (
-                                            LEAST(
-                                                COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')),
-                                                COALESCE(mpair.mission_end_ts, COALESCE(%s::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))
-                                            ) - ps.ts
-                                        )) / 3600.0,
-                                        0
-                                     )
-                                     ELSE 0
-                                     END
-                            END
-                            ELSE 0
-                        END) AS hours
-                    FROM ident i
-                    JOIN missions m ON m.mission_id = i.mission_id
-                    LEFT JOIN actual_total at ON at.mission_id = i.mission_id AND at.k = i.k
-                    LEFT JOIN default_mix dm ON dm.mission_id = i.mission_id AND dm.k = i.k
-                    LEFT JOIN mission_pair mpair ON mpair.mission_id = i.mission_id
-                    LEFT JOIN assigned_departure ad ON ad.participant_id = i.participant_id AND ad.mission_id = i.mission_id
-                    -- 🆕 planned_start — مطابق لـ participation_start_dt (requirement C):
-                    --    أقرب انطلاق عبر التخصيصات له الأولوية، ثم بداية المهمة فقط لو
-                    --    «من بداية المهمة»، وإلا NULL (لا بداية = غير مشارك = ساعات صفرية).
-                    --    (الفرع السابق كان يطابق planned_start_dt لكن بتفضيل sfm أعمى — أصبح
-                    --    المُسار يعلو على sfm، والمُخصَّص بلا مسار وبلا sfm ⇒ 0 ساعات.)
-                    CROSS JOIN LATERAL (
-                        SELECT CASE
-                            WHEN ad.dep IS NOT NULL THEN ad.dep
-                            WHEN i.sfm AND mpair.mission_start_ts IS NOT NULL THEN mpair.mission_start_ts
-                            ELSE NULL
-                        END AS ts
-                    ) ps
-                    GROUP BY i.k, i.mission_id
-                ),
-                -- 🆕 «عدد ساعات آخر مهمة» — أحدث مهمة فعلية (غير ملغاة/مسودة) للهوية،
-                --    بنفس حساب الساعات الموحد؛ نشطة ⇒ مباشر حتى اللحظة، مكتملة ⇒ مجمّدة.
-                --    الترتيب بـ created_at ثم mission_id (مطرد) يجعل الاختيار حتمياً عند التساوي.
-                last_mission AS (
-                    SELECT DISTINCT ON (k)
-                        k,
-                        mission_hours.hours AS last_mission_hours
-                    FROM mission_hours
-                    WHERE is_valid
-                    ORDER BY k, created_at DESC, mission_id DESC
-                ),
-                stats AS (
-                    SELECT
-                        k,
-                        COUNT(*) FILTER (WHERE is_valid) AS missions_count,
-                        ROUND(COALESCE(SUM(CASE WHEN is_valid THEN hours ELSE 0 END), 0)::numeric, 1) AS total_hours
-                    FROM mission_hours
-                    GROUP BY k
+                SELECT mission_id, mission_code, mission_name, status,
+                       exit_date, departure_date, arrival_date, completion_date,
+                       departure_time, arrival_time, completion_time, start_time, created_at
+                FROM missions
+                WHERE status NOT IN ('Cancelled', 'Draft', 'Returned')
+            """)
+            mission_cols = [d[0] for d in cursor.description]
+            missions = {}
+            for row in cursor.fetchall():
+                md = dict(zip(mission_cols, row))
+                for k, v in md.items():
+                    if v is not None and not isinstance(v, (str, int, float, bool)):
+                        md[k] = str(v)
+                missions[md['mission_id']] = md
+
+            if not missions:
+                return []
+
+            # ② جلب خطوط السير لكل مهمة
+            cursor.execute("""
+                SELECT mission_id, group_title, route_from, route_to,
+                       departure_time, arrival_time, departure_date, arrival_date
+                FROM mission_itineraries
+                WHERE mission_id = ANY(%s)
+            """, (list(missions.keys()),))
+            for row in cursor.fetchall():
+                mid = row[0]
+                if mid in missions:
+                    missions[mid].setdefault('routes', []).append({
+                        "group_title": row[1], "route_from": row[2] or "",
+                        "route_to": row[3], "departure_time": str(row[4]) if row[4] else "",
+                        "arrival_time": str(row[5]) if row[5] else "",
+                        "departure_date": str(row[6]) if row[6] else "",
+                        "arrival_date": str(row[7]) if row[7] else "",
+                    })
+
+            # ③ جلب جميع المشاركين (المتطوعين وغير المتطوعين)
+            cursor.execute("""
+                SELECT participant_id, mission_id, full_name, membership_number,
+                       branch_id, participant_type, participant_position,
+                       volunteer_id, return_status, start_from_mission, roster_active
+                FROM mission_participants
+                WHERE full_name IS NOT NULL AND TRIM(full_name) <> ''
+                  AND participant_type IN ('volunteer', 'non_volunteer')
+            """)
+            part_cols = [d[0] for d in cursor.description]
+            participants = [dict(zip(part_cols, r)) for r in cursor.fetchall()]
+
+            if not participants:
+                return []
+
+            pids = list({p['participant_id'] for p in participants})
+            mids = list(missions.keys())
+
+            # ④ جلب جميع فترات المشاركة (sessions) لكل المشاركين
+            cursor.execute("""
+                SELECT participant_id, mission_id, session_id, session_date,
+                       check_in_time, check_out_time, notes, start_dt, end_dt,
+                       itinerary_group, start_entry_id, end_entry_id
+                FROM mission_participant_sessions
+                WHERE participant_id = ANY(%s) AND start_dt IS NOT NULL
+            """, (pids,))
+            sess_cols = [d[0] for d in cursor.description]
+            sessions_by_pid = {}
+            for row in cursor.fetchall():
+                s = dict(zip(sess_cols, row))
+                for sk, sv in s.items():
+                    if sv is not None and not isinstance(sv, (str, int, float, bool)):
+                        s[sk] = fmt_dt(sv) if sk in ('start_dt', 'end_dt') else str(sv)
+                sessions_by_pid.setdefault(s['participant_id'], []).append(s)
+
+            # ⑤ جلب التخصيصات (assigned itineraries)
+            cursor.execute("""
+                SELECT participant_id, mission_id, itinerary_group
+                FROM mission_participant_itineraries
+                WHERE participant_id = ANY(%s) AND mission_id = ANY(%s)
+            """, (pids, mids))
+            assigned_by_key = {}
+            for row in cursor.fetchall():
+                assigned_by_key.setdefault((row[0], row[1]), []).append(row[2])
+
+            # ⑥ جلب أسماء الفروع
+            cursor.execute("SELECT branch_id, branch_name FROM branches")
+            branches = {r[0]: r[1] for r in cursor.fetchall()}
+
+            # ════════════════════════════════════════════════════════════════════════
+            # ⑦ حساب الساعات لكل مشارك-مهمة باستخدام compute_working_hours
+            #    (نفس الدالة بالضبط المستخدمة في GET /api/missions/{id})
+            # ════════════════════════════════════════════════════════════════════════
+
+            # كيان لكل هوية: info + ساعات المهمات + المهمة النشطة
+            person_info = {}       # k -> {full_name, membership_number, ...}
+            hours_by_key = {}      # k -> {mission_id: (created_at, hours)}
+            active_missions = {}   # k -> {mission_id, mission_code, mission_name}
+            active_seen = set()    # لا نتجاوز مهمة واحدة نشطة لكل هوية
+
+            for p in participants:
+                pid = p['participant_id']
+                mid = p['mission_id']
+
+                if mid not in missions:
+                    continue
+
+                md = missions[mid]
+                mission_status = md.get('status', '')
+                segments = sessions_by_pid.get(pid, [])
+                assigned_days = assigned_by_key.get((pid, mid), [])
+                routes = md.get('routes', [])
+
+                # start_from_mission: NULL = True (الافتراضي)، False = False، غير ذلك = True
+                raw_sfm = p.get('start_from_mission')
+                sfm = raw_sfm is not False  # مطابق لـ (r[15] is not False) في GET
+
+                wh = compute_working_hours(
+                    md, mission_status, segments, assigned_days, routes,
+                    now=now_ref, start_from_mission=sfm
                 )
-                SELECT
-                    p.full_name,
-                    COALESCE(NULLIF(TRIM(p.membership_number), ''), 'بدون رقم/صفة') AS membership_number,
-                    p.participant_type,
-                    COALESCE(p.participant_position, '') AS participant_position,
-                    COALESCE(b.branch_name, 'غير محدد') AS branch_name,
-                    p.branch_id,
-                    p.volunteer_id,
-                    COALESCE(s.missions_count, 0) AS missions_count,
-                    COALESCE(ROUND(lm.last_mission_hours::numeric, 1), 0) AS last_mission_hours,
-                    COALESCE(s.total_hours, 0) AS total_hours,
-                    (a.mission_id IS NOT NULL) AS active_mission,
-                    a.mission_id AS active_mission_id,
-                    a.mission_code AS active_mission_code,
-                    a.mission_name AS active_mission_name
-                FROM person p
-                LEFT JOIN stats s  ON s.k = p.k
-                LEFT JOIN active a ON a.k = p.k
-                LEFT JOIN branches b ON b.branch_id = p.branch_id
-                LEFT JOIN last_mission lm ON lm.k = p.k
-                ORDER BY p.branch_id, p.k;
-            """, (now_ref, now_ref, now_ref))
-            rows = cursor.fetchall()
+
+                # مفتاح الهوية (مطابق للـ SQL الأصلي)
+                mem = str(p.get('membership_number') or '').strip()
+                br = p.get('branch_id') or 0
+                k = f"rid:{br}:{mem}" if mem else f"nm:{br}:{p.get('full_name', '')}"
+
+                if k not in person_info:
+                    person_info[k] = {
+                        'full_name': p.get('full_name', ''),
+                        'membership_number': mem or 'بدون رقم/صفة',
+                        'participant_type': p.get('participant_type', ''),
+                        'participant_position': p.get('participant_position', '') or '',
+                        'branch_id': br,
+                        'volunteer_id': p.get('volunteer_id'),
+                    }
+
+                # حفظ أفضل نتيجة لكل مهمة (MAX لا يتجاوز الحساب)
+                bk = hours_by_key.setdefault(k, {})
+                if mid not in bk or wh > bk[mid][1]:
+                    bk[mid] = (md.get('created_at', ''), wh)
+
+                # المهمة النشطة: شريحة مفتوحة (end_dt IS NULL) أو return_status='مازال بالمهمة'
+                if k not in active_seen:
+                    is_active = any(
+                        not seg.get('end_dt')
+                        for seg in segments
+                    )
+                    if not is_active and p.get('return_status') == 'مازال بالمهمة' and not segments:
+                        is_active = True
+                    if is_active and mission_status not in ('Cancelled', 'Draft', 'Returned'):
+                        active_missions[k] = {
+                            'mission_id': mid,
+                            'mission_code': md.get('mission_code', ''),
+                            'mission_name': md.get('mission_name', ''),
+                        }
+                        active_seen.add(k)
+
+            # ════════════════════════════════════════════════════════════════════════
+            # ⑧ تجميع النتائج لكل هوية
+            # ════════════════════════════════════════════════════════════════════════
             result = []
-            for row in rows:
+            for k, info in person_info.items():
+                mission_data_map = hours_by_key.get(k, {})
+                total_h = sum(h for _, h in mission_data_map.values())
+                missions_count = len(mission_data_map)
+
+                # آخر مهمة = الأحدث حسب created_at
+                last_h = 0
+                if mission_data_map:
+                    last_m = max(mission_data_map.items(), key=lambda x: (str(x[1][0] or ''), str(x[0] or '')))
+                    last_h = last_m[1][1]
+
+                active = active_missions.get(k)
                 result.append({
-                    "full_name": row[0],
-                    "membership_number": row[1],
-                    "participant_type": row[2],
-                    "participant_position": row[3],
-                    "branch_name": row[4],
-                    "branch_id": row[5],
-                    "volunteer_id": row[6],
-                    "missions_count": row[7],
-                    "last_mission_hours": float(row[8] or 0),   # 🆕 ساعات آخر مهمة (مباشر/مجمّدة)
-                    "total_hours": float(row[9] or 0),          # إجمالي الساعات (تراكمي)
-                    "active_mission": bool(row[10]),
-                    "active_mission_id": row[11],
-                    "active_mission_code": row[12],
-                    "active_mission_name": row[13],
+                    "full_name": info['full_name'],
+                    "membership_number": info['membership_number'],
+                    "participant_type": info['participant_type'],
+                    "participant_position": info['participant_position'],
+                    "branch_name": branches.get(info['branch_id'], 'غير محدد'),
+                    "branch_id": info['branch_id'],
+                    "volunteer_id": info['volunteer_id'],
+                    "missions_count": missions_count,
+                    "last_mission_hours": round(last_h, 1),
+                    "total_hours": round(total_h, 1),
+                    "active_mission": active is not None,
+                    "active_mission_id": active['mission_id'] if active else None,
+                    "active_mission_code": active['mission_code'] if active else None,
+                    "active_mission_name": active['mission_name'] if active else None,
                 })
+
+            result.sort(key=lambda x: (x['branch_id'] or 0, x['full_name']))
             return result
     except Exception as e:
         print(f"Error fetching HR: {e}")

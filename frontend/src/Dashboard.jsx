@@ -2129,7 +2129,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
   const [selectedBranchName, setSelectedBranchName] = useState(null);
 
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(getLocalDate());
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -2608,7 +2608,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(getLocalDate());
   const [missionViewType, setMissionViewType] = useState('all_types'); 
   const [missionClass, setMissionClass] = useState('عادية');
 
@@ -5236,7 +5236,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   // حالات الفلاتر والتنبيهات
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(getLocalDate());
   const [filterGov, setFilterGov] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [customAlert, setCustomAlert] = useState(null);
@@ -5740,7 +5740,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [customAlert, setCustomAlert] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(getLocalDate());
 
   // 💡 3. القوائم
   const COUNTRIES_LIST = ['أفغانستان','ألبانيا','الجزائر','أندورا','أنغولا','أنتيغوا وبربودا','الأرجنتين','أرمينيا','أستراليا','النمسا','أذربيجان','جزر البهاما','البحرين','بنغلاديش','باربادوس','بيلاروسيا','بلجيكا','بليز','بنين','بوتان','بوليفيا','البوسنة والهرسك','بوتسوانا','البرازيل','بروناي','بلغاريا','بوركينا فاسو','بوروندي','الرأس الأخضر','كمبوديا','الكاميرون','كندا','جمهورية إفريقيا الوسطى','تشاد','تشيلي','الصين','كولومبيا','جزر القمر','جمهورية الكونغو الديمقراطية','كوستاريكا','كرواتيا','كوبا','قبرص','التشيك','الدنمارك','جيبوتي','دومينيكا','جمهورية الدومينيكان','الإكوادور','مصر','السلفادور','غينيا الاستوائية','إريتريا','إستونيا','إسواتيني','إثيوبيا','فيجي','فنلندا','فرنسا','الغابون','غامبيا','جورجيا','ألمانيا','غانا','اليونان','غرينادا','غواتيمالا','غينيا','غينيا بيساو','غيانا','هايتي','هندوراس','المجر','آيسلندا','الهند','إندونيسيا','إيران','العراق','أيرلندا','إسرائيل','إيطاليا','ساحل العاج','جامايكا','اليابان','الأردن','كازاخستان','كينيا','كيريباتي','الكويت','قيرغيزستان','لاوس','لاتفيا','لبنان','ليسوتو','ليبيريا','ليبيا','ليختنشتاين','ليتوانيا','لوكسمبورغ','مدغشقر','ملاوي','ماليزيا','جزر المالديف','مالي','مالطا','جزر مارشال','موريتانيا','موريشيوس','المكسيك','ميكرونيزيا','مولدوفا','موناكو','منغوليا','الجبل الأسود','المغرب','موزمبيق','ميانمار','ناميبيا','ناورو','نيبال','هولندا','نيوزيلندا','نيكاراغوا','النيجر','نيجيريا','كوريا الشمالية','مقدونيا الشمالية','النرويج','عمان','باكستان','بالاو','فلسطين','بنما','بابوا غينيا الجديدة','باراغواي','بيرو','الفلبين','بولندا','البرتغال','قطر','رومانيا','روسيا','رواندا','سانت كيتس ونيفيس','سانت لوسيا','سانت فنسنت وجزر غرينادين','ساموا','سان مارينو','ساو تومي وبرينسيب','السعودية','السنغال','صربيا','سيشيل','سيراليون','سنغافورة','سلوفاكيا','سلوفينيا','جزر سليمان','الصومال','جنوب إفريقيا','كوريا الجنوبية','جنوب السودان','إسبانيا','سريلانكا','السودان','سورينام','السويد','سويسرا','سوريا','طاجيكستان','تنزانيا','تايلاند','تيمور الشرقية','توغو','تونغا','ترينيداد وتوباغو','تونس','تركيا','تركمانستان','توفالو','أوغندا','أوكرانيا','الإمارات العربية المتحدة','المملكة المتحدة البريطانية','الولايات المتحدة الأمريكية','أوروغواي','أوزبكستان','فانواتو','فنزويلا','فيتنام','اليمن','زامبيا','زيمبابوي','تايوان','المحيط الهادي','المحيط الاطلسي','المحيط الهندي','القطب الجنوبي','جزيرة','البحر الكاريبي','البحر الابيض المتوسط','جبال الهند','جزيرة جوام','جزيرة سايمن','مونتيجرو','ولايات مايكرونزيا المتحدة','غرينلاند','جزر كايمان','جبل طارق','بورتوريكو','غوادلوب','جزر المارتينيك','أنغويلا','البحر الاحمر','مضيق بحري','القطب الشمالي','مايوت','شبه جزيرة بوثيا','البحر الأيوني','جزيرة بوفيه','الخليج الفارسي','البحر الأدرياتيكي','بحر الشمال','البحر الميت','خليج البنغال','بحر آرافورا','بحر قزوين','بحر العرب','بحر إيجة','البحر التيراني','جبال البرانس','جزر مارياس','بحر سكوشيا','جبال لومونوسوف','البحر الأسود','المحيط المتجمد الشمالي','بحر سولو','بحر لاكاديفي','ولاية وايومنغ','بحيرة تنجانيقا','مضيق هرمز','أنتاركتيكا','بربادوس','كاليدونيا الجديدة','جزر بيتكيرن','برمودا','هنغاريا','جيرسي','جواتيمالا'];
@@ -6121,7 +6121,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     return months[new Date(dateStr).getMonth()] || '';
   };
 
-  const [filterDate, setFilterDate] = useState(''); 
+  const [filterDate, setFilterDate] = useState(getLocalDate()); 
   const [selectedEqId, setSelectedEqId] = useState(null); // 💡 فلتر الخريطة الجديد
 
   const [isGlobalModalOpen, setIsGlobalModalOpen] = useState(false);
@@ -6605,7 +6605,7 @@ function AINewsMonitorView({ branches, isOwner, lang = 'ar', theme = 'dark' }) {
 
   const [aiNewsList, setAiNewsList] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(getLocalDate());
   const [customAlert, setCustomAlert] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة

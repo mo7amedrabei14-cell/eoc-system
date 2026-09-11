@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>seg probe</title>
+<link rel="stylesheet" href="./frontend/dist/assets/index-CBXF-Cgl.css">
+<link rel="stylesheet" href="./dist/assets/map-vendor-CcXJxNtP.css">
+<style>
+  body { background: #0b0c0e; padding: 40px; font-family: system-ui, sans-serif; }
+  .row { display: flex; gap: 30px; margin-bottom: 40px; align-items: flex-start; }
+  .label { color: #8a8f9c; font-size: 12px; margin-bottom: 8px; }
+  .box { width: 220px; }
+  .tall { margin-top: 30px; text-align: center; color: #8a8f9c; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="row">
+  <div class="box">
+    <div class="label">SegDateField (className="field text-center")</div>
+    <div class="relative">
+      <input required type="text" value="11/09/2026" placeholder="DD/MM/YYYY" class="seg-ghost field text-center pr-7 pl-7" dir="ltr" autocomplete="off">
+      <div class="seg-pills" dir="ltr" aria-hidden="true">
+        <span class="seg-pill is-active">11</span><span class="seg-sep">/</span><span class="seg-pill">09</span><span class="seg-sep">/</span><span class="seg-pill seg-pill--wide">2026</span>
+      </div>
+      <button type="button" class="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
+    </div>
+    <div class="tall">.field input — pills visible via .seg-pills absolute overlay</div>
+  </div>
+
+  <div class="box">
+    <div class="label">SegTimeField (className="field text-white border …")</div>
+    <div class="relative">
+      <input type="text" value="02:30 PM" placeholder="hh:mm AM" class="seg-ghost field text-white text-center pr-7 pl-7" dir="ltr" autocomplete="off">
+      <div class="seg-pills" dir="ltr" aria-hidden="true">
+        <span class="seg-pill is-active">02</span><span class="seg-sep">:</span><span class="seg-pill">30</span><span class="seg-sep">&nbsp;</span><span class="seg-pill">PM</span>
+      </div>
+      <button type="button" class="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">🕐</button>
+    </div>
+    <div class="tall">text-white caller class + field</div>
+  </div>
+
+  <div class="box">
+    <div class="label">SegDateField (filter bar: bg-transparent …)</div>
+    <div class="relative">
+      <input type="text" value="11/09/2026" placeholder="DD/MM/YYYY" class="seg-ghost bg-transparent text-sm font-bold outline-none cursor-pointer px-1 text-center pr-7 pl-7" dir="ltr" autocomplete="off">
+      <div class="seg-pills" dir="ltr" aria-hidden="true">
+        <span class="seg-pill is-active">11</span><span class="seg-sep">/</span><span class="seg-pill">09</span><span class="seg-sep">/</span><span class="seg-pill seg-pill--wide">2026</span>
+      </div>
+      <button type="button" class="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
+    </div>
+    <div class="tall">filter-bar (no .field) — px-1 padding</div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="box">
+    <div class="label">SegDateField focused (class="field text-center")</div>
+    <div class="relative">
+      <input required type="text" value="11/09/2026" placeholder="DD/MM/YYYY" class="seg-ghost field text-center pr-7 pl-7" dir="ltr" autocomplete="off">
+      <div class="seg-pills" dir="ltr" aria-hidden="true">
+        <span class="seg-pill">11</span><span class="seg-sep">/</span><span class="seg-pill is-active">09</span><span class="seg-sep">/</span><span class="seg-pill seg-pill--wide">2026</span>
+      </div>
+      <button type="button" class="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
+    </div>
+    <div class="tall">focus→ accent comet border; second segment active</div>
+  </div>
+
+  <div class="box">
+    <div class="label">Empty SegDateField (value='')</div>
+    <div class="relative">
+      <input type="text" value="" placeholder="DD/MM/YYYY" class="seg-ghost field text-center pr-7 pl-7" dir="ltr" autocomplete="off">
+      <div class="seg-pills" dir="ltr" aria-hidden="true">
+        <span class="seg-pill">__</span><span class="seg-sep">/</span><span class="seg-pill">__</span><span class="seg-sep">/</span><span class="seg-pill seg-pill--wide">____</span>
+      </div>
+      <button type="button" class="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
+    </div>
+    <div class="tall">placeholders</div>
+  </div>
+
+  <div class="box">
+    <div class="label">SegDateField with caller text stacking (old DateInput style)</div>
+    <div class="relative">
+      <input type="text" value="11/09/2026" placeholder="DD/MM/YYYY" class="seg-ghost field text-white border border-[var(--border)] text-center pr-7 pl-7" dir="ltr" autocomplete="off">
+      <div class="seg-pills" dir="ltr" aria-hidden="true">
+        <span class="seg-pill">11</span><span class="seg-sep">/</span><span class="seg-pill is-active">09</span><span class="seg-sep">/</span><span class="seg-pill seg-pill--wide">2026</span>
+      </div>
+      <button type="button" class="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
+    </div>
+    <div class="tall">field text-white border border-[var(--border)]</div>
+  </div>
+</div>
+
+<script>
+  // focus the 4th box's input to reveal focus behavior
+  window.addEventListener('load', () => {
+    const inputs = document.querySelectorAll('input[type="text"]');
+    inputs[3].focus();
+    const caret = document.caretRangeFromPoint;
+    // also log computed styles of each ghost input for the debug caption
+    const info = [];
+    document.querySelectorAll('input[type="text"]').forEach((inp) => {
+      const cs = getComputedStyle(inp);
+      info.push({ color: cs.color, webkitFill: cs.webkitTextFillColor, caret: cs.caretColor, pos: inp.getBoundingClientRect().top });
+    });
+    const c = document.createElement('div');
+    c.id = 'computed';
+    c.textContent = JSON.stringify(info);
+    c.style.cssText = 'font-size:10px;color:#667;margin:20px 0;white-space:pre-wrap;';
+    document.body.appendChild(c);
+  });
+</script>
+</body>
+</html>

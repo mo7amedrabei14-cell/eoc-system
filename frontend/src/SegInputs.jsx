@@ -103,8 +103,8 @@ function parseTimeSegs(display) {
 /* ─── Keyboard: clamp helper ─── */
 function clampSegInput(currentVal, digit, segIdx, segDefs) {
   const def = segDefs[segIdx];
-  // 🚨 حدّ أقصى صلب: مهما كُتب من أرقام إضافية لا يتجاوز الجزء طوله (02 + 3 → 02).
-  if (currentVal.length >= def.len) return { val: currentVal, full: false };
+  // 🚨 الجزء ممتلئ → حرف جديد يحل محل القيمة كاملة (لا إلحاق ولا حظر) — يسمح بالكتابة فوقها مباشرة.
+  if (currentVal.length >= def.len) return { val: digit, full: false };
   const isFirst = currentVal.length === 0;
   let next;
   if (isFirst) {
