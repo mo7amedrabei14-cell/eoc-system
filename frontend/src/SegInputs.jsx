@@ -103,6 +103,8 @@ function parseTimeSegs(display) {
 /* ─── Keyboard: clamp helper ─── */
 function clampSegInput(currentVal, digit, segIdx, segDefs) {
   const def = segDefs[segIdx];
+  // 🚨 حدّ أقصى صلب: مهما كُتب من أرقام إضافية لا يتجاوز الجزء طوله (02 + 3 → 02).
+  if (currentVal.length >= def.len) return { val: currentVal, full: false };
   const isFirst = currentVal.length === 0;
   let next;
   if (isFirst) {
@@ -184,6 +186,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   const textRef = useRef(null);
   const popRef = useRef(null);
   const pillsRef = useRef(null);
+  const armedSeg = useRef(-1);            // جزء وُضع عليه المؤشر: أول رقم يكتب يستبدل قيمته
   const lastSyncedValue = useRef(initial || '');
 
   // Build display from segments
@@ -194,6 +197,15 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   // Complete check & emission — only emit when value actually changed
   useEffect(() => {
     const [dd, mm, yyyy] = segs;
+    // 🚨 مسح كامل → أفرغ القيمة الآلة أيضاً (لا نُبقي قيمة قديمة) حتى لا يُحفظ تاريخ قديم عند الإرسال
+    if (!dd && !mm && !yyyy) {
+      if (machine !== '') setMachine('');
+      if ('' !== lastSyncedValue.current) {
+        lastSyncedValue.current = '';
+        if (onChange) onChange({ target: { value: '' } });
+      }
+      return;
+    }
     if (dd.length === 2 && mm.length === 2 && yyyy.length === 4) {
       const iso = `${yyyy}-${mm}-${dd}`;
       if (machine !== iso) {
@@ -263,7 +275,9 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
 
     if (isDigit(k)) {
       e.preventDefault();
-      const { val, full } = clampSegInput(segs[si], k, si, segDefs);
+      const fresh = armedSeg.current === si;   // نُقر عليه سابقاً → استبدال
+      if (fresh) armedSeg.current = -1;
+      const { val, full } = clampSegInput(fresh ? '' : segs[si], k, si, segDefs);
       setSeg(si, val);
       if (full) advanceSeg(si);
       return;
@@ -274,6 +288,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
     // Map click position to the segment pill it landed on — geometry-based, so
     // the highlighted pill always matches the click whatever the field's padding.
     const si = segIndexFromClick(e, pillsRef.current);
+    armedSeg.current = si;   // أول رقم يكتب على هذا الجزء يستبدل قيمته الحالية
     setActiveSeg(si);
   };
 
@@ -426,6 +441,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   const textRef = useRef(null);
   const popRef = useRef(null);
   const pillsRef = useRef(null);
+  const armedSeg = useRef(-1);            // جزء وُضع عليه المؤشر: أول رقم يكتب يستبدل قيمته
   const lastSyncedValue = useRef(initMachine || '');
 
   const display = segs[0] || segs[1]
@@ -435,6 +451,15 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   // Complete check & emission — only emit when value actually changed
   useEffect(() => {
     const [hh, mm, ap] = segs;
+    // 🚨 مسح كامل → أفرغ القيمة الآلة (ap يحتفظ دائماً بـ AM/PM، لذا الفحص على الساعتين والدقائق فقط)
+    if (!hh && !mm) {
+      if (machine !== '') setMachine('');
+      if ('' !== lastSyncedValue.current) {
+        lastSyncedValue.current = '';
+        if (onChange) onChange({ target: { value: '' } });
+      }
+      return;
+    }
     if (hh.length === 2 && mm.length === 2 && (ap === 'AM' || ap === 'PM')) {
       const machineH = from12Wheel(hh, ap);
       const iso = `${machineH}:${mm}`;
@@ -511,7 +536,9 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
 
     if (isDigit(k)) {
       e.preventDefault();
-      const { val, full } = clampSegInput(segs[si], k, si, segDefs);
+      const fresh = armedSeg.current === si;   // نُقر عليه سابقاً → استبدال
+      if (fresh) armedSeg.current = -1;
+      const { val, full } = clampSegInput(fresh ? '' : segs[si], k, si, segDefs);
       setSeg(si, val);
       if (full && si < segDefs.length - 1) setActiveSeg(si + 1);
       return;
@@ -521,6 +548,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   const handleInputClick = (e) => {
     // Map click position to the segment pill it landed on — geometry-based.
     const si = segIndexFromClick(e, pillsRef.current);
+    armedSeg.current = si;   // أول رقم يكتب على هذا الجزء يستبدل قيمته الحالية
     setActiveSeg(si);
   };
 
@@ -681,6 +709,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   const textRef = useRef(null);
   const popRef = useRef(null);
   const pillsRef = useRef(null);
+  const armedSeg = useRef(-1);            // جزء وُضع عليه المؤشر: أول رقم يكتب يستبدل قيمته
   const initMachine = (() => {
     const m = String(initial || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{2}))/);
     return m ? `${m[1]}-${pad(+m[2])}-${pad(+m[3])}T${pad(+m[4])}:${m[5]}` : initial;
@@ -692,6 +721,15 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   // Complete check & emission — only emit when value actually changed
   useEffect(() => {
     const [dd, mm, yyyy, hh, mm2, ap] = segs;
+    // 🚨 مسح كامل → أفرغ القيمة الآلة (ap يحتفظ دائماً بـ AM/PM، لذا الفحص على باقي الأجزاء فقط)
+    if (!dd && !mm && !yyyy && !hh && !mm2) {
+      if (machine !== '') setMachine('');
+      if ('' !== lastSyncedValue.current) {
+        lastSyncedValue.current = '';
+        if (onChange) onChange({ target: { value: '' } });
+      }
+      return;
+    }
     if (dd.length === 2 && mm.length === 2 && yyyy.length === 4 && hh.length === 2 && mm2.length === 2 && (ap === 'AM' || ap === 'PM')) {
       const machineH = from12Wheel(hh, ap);
       const iso = `${yyyy}-${mm}-${dd}T${machineH}:${mm2}`;
@@ -764,7 +802,9 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
 
     if (isDigit(k)) {
       e.preventDefault();
-      const { val, full } = clampSegInput(segs[si], k, si, segDefs);
+      const fresh = armedSeg.current === si;   // نُقر عليه سابقاً → استبدال
+      if (fresh) armedSeg.current = -1;
+      const { val, full } = clampSegInput(fresh ? '' : segs[si], k, si, segDefs);
       setSeg(si, val);
       if (full && si < segDefs.length - 1) setActiveSeg(si + 1);
       return;
@@ -774,6 +814,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   const handleInputClick = (e) => {
     // Map click position to the segment pill it landed on — geometry-based.
     const si = segIndexFromClick(e, pillsRef.current);
+    armedSeg.current = si;   // أول رقم يكتب على هذا الجزء يستبدل قيمته الحالية
     setActiveSeg(si);
   };
 
