@@ -2562,6 +2562,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionsList, setMissionsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
+  // 🆕 فلتر الفروع — بجانب فلتر الأقاليم؛ الافتراضي «كل الفروع» مثل «كل الأقاليم»
+  const [filterBranch, setFilterBranch] = useState('all');
 
   // 1. الدالة السحرية بأمان تام (لمنع أي شاشة بيضاء)
   const normalizeName = (name) => {
@@ -2603,6 +2605,27 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   else if (username.includes('upper') || username.includes('saeed')) userRegion = 'saeed';
   else if (branchIdToRegion[userBranchId]) userRegion = branchIdToRegion[userBranchId];
   else userRegion = regionMap[normalizeName(userBranchName)] || 'hq';
+
+  // 🆕 فروع كل إقليم (محتسبة من regionMap وجدول الفروع) — لأي مستوى صلاحية
+  const regionBranches = useMemo(() => {
+    const byRegion = { hq: [], canal: [], delta: [], saeed: [] };
+    (branches || []).forEach(b => {
+      const region = regionMap[normalizeName(b.name)] || 'hq';
+      if (!byRegion[region].some(x => x.id === b.id)) byRegion[region].push(b);
+    });
+    return byRegion;
+  }, [branches]);
+
+  // 🆕 خيارات فلتر الفروع: متطوع ⇒ فروع إقليمه فقط | إداري ⇒ cascade حسب الإقليم المختار
+  const branchFilterOptions = useMemo(() => {
+    if (isVolunteer) return regionBranches[userRegion] || [];          // قفل أمني: إقليم المتطوع فقط
+    if (activeRegionTab === 'all') {
+      const all = [];
+      Object.values(regionBranches).forEach(arr => arr.forEach(b => { if (!all.some(x => x.id === b.id)) all.push(b); }));
+      return all;
+    }
+    return regionBranches[activeRegionTab] || [];
+  }, [isVolunteer, userRegion, activeRegionTab, regionBranches]);
 
   const getLocalDate = () => {
     const d = new Date();
@@ -3601,6 +3624,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === activeRegionTab) : baseMissions;
 
+    // 🆕 فلتر الفروع — بعد فلتر الإقليم، نفس معادلة «القاهرة ↔ المركز العام» في HomeView
+    const selectedBranch = filterBranch === 'all' ? null : filterBranch;
+    if (selectedBranch) {
+      filteredMissions = filteredMissions.filter(m => {
+        const mb = String(m.branch || '').trim();
+        return mb === selectedBranch
+          || (selectedBranch === 'المركز العام' && mb === 'القاهرة')
+          || (selectedBranch === 'القاهرة' && mb === 'المركز العام');
+      });
+    }
+
     if (searchTerm.trim() !== '') {
       const term = searchTerm.toLowerCase();
       filteredMissions = filteredMissions.filter(m =>
@@ -3612,7 +3646,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     }
 
     return { filteredMissions, regionStats };
-  }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, searchTerm]);
+  }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, filterBranch, searchTerm]);
 
   const getCreationDate = () => {
     if (currentMissionData && currentMissionData.created_at) { return String(currentMissionData.created_at).split(' ')[0]; }
@@ -3663,7 +3697,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
               {!isVolunteer && (<>
                 <div className="w-px h-6 bg-[var(--border)] mx-0.5"></div>
-                <EocSelect variant="toolbar" className="px-2" value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)}>
+                <EocSelect variant="toolbar" className="px-2" value={activeRegionTab} onChange={(e) => { setActiveRegionTab(e.target.value); setFilterBranch('all'); }}>
                   <option value="all">كل الأقاليم</option>
                   <option value="hq">إقليم المركز العام</option>
                   <option value="canal">إقليم القنال</option>
@@ -3671,6 +3705,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   <option value="saeed">إقليم الصعيد</option>
                 </EocSelect>
               </>)}
+
+              {/* 🆕 فلتر الفروع — يظهر للجميع؛ المتطوع يرى فروع إقليمه فقط، والإداري كل الفروع (يتتابع حسب الإقليم) */}
+              <div className="w-px h-6 bg-[var(--border)] mx-0.5"></div>
+              <EocSelect variant="toolbar" className="px-2" value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
+                <option value="all">كل الفروع</option>
+                {branchFilterOptions.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+              </EocSelect>
             </div>
 
             <div className="hidden md:block w-px h-6 bg-[var(--border)]"></div>
