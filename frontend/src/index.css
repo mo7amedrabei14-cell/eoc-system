@@ -231,6 +231,22 @@
     background: var(--surface-3);
     border: 1px solid var(--border);
     color: var(--ink);
+    /* 🆕 جذر قطع النص: الغلاف كان width:100% داخل صندوق inline-flex لا يقبل
+       التمدد، فكان .__label يُقتطع إلى «…». الآن يتمدد بعرض أطول خيار كاملاً. */
+    width: max-content;
+    max-width: 100%;
+    flex: 0 0 auto;
+  }
+  /* 🆕 فلتر الأقاليم/الفروع (toolbar): النص المحدد يُعرض كاملاً بلا قطع (…)،
+     دون إخفاء الفائض أو تصغير الخط — إلغاء ellipsis في هذا المتغيّر فقط،
+     أما field/cell فتبقى بقواعدها الأصلية. */
+  .eoc-select--toolbar .eoc-select__value { flex: none; overflow: visible; }
+  .eoc-select--toolbar .eoc-select__label {
+    flex: none;
+    min-width: 0;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
   }
   .eoc-select--cell {
     --eoc-frame-fill: linear-gradient(var(--surface-3), var(--surface-3));
@@ -2488,6 +2504,11 @@ select.field {
 
   /* 4) حقل الوقت: تقليص أيقونة الساعة لمساحة أكبر للنص */
   .time-field::-webkit-calendar-picker-indicator { width: 18px; }
+
+  /* 5) فلاتر المهام (إقليم/فرع) على الموبايل: العناصر تلتف داخل الصندوق بدل
+     تجاوز الشاشة، وكل اختيار يبقى بعرض محتواه الكامل (لا قطع). */
+  .filters-seg { flex-wrap: wrap; }
+  .filters-seg > .eoc-select--toolbar { max-width: 100%; }
 }
 
 /* ════════════════════════════════════════════════════════════════

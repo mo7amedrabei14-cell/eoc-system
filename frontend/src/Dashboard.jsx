@@ -3690,7 +3690,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
             <div className="hidden md:block w-px h-6 bg-[var(--border)]"></div>
 
-            <div className="segmented">
+            <div className="segmented filters-seg">
               <button onClick={() => setStatusFilter('all')} className={`segmented-btn ${statusFilter === 'all' ? 'is-active' : ''}`}>الكل</button>
               <button onClick={() => setStatusFilter('active')} className={`segmented-btn ${statusFilter === 'active' ? 'is-active-accent' : ''}`}>نشطة</button>
               <button onClick={() => setStatusFilter('completed')} className={`segmented-btn ${statusFilter === 'completed' ? 'is-active-accent' : ''}`}>مكتملة</button>
