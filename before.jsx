@@ -46,7 +46,7 @@ const ENGLISH_UI = {
   'الرؤية الشاملة للوضع الميداني والزلزالي (على مستوى الجمهورية)': 'National overview of field operations and seismic activity',
   'المؤشرات الحية لفرع/محافظة:': 'Live indicators for branch/governorate:',
   'المركز العام (القاهرة)': 'Headquarters (Cairo)',
-  'المركز العام (وملحقاته)': 'Headquarters (and affiliated branches)',
+  'إقليم المركز العام': 'Headquarters (and affiliated branches)',
   'المركز العام': 'Headquarters',
   'القاهرة': 'Cairo',
   'إحصائيات يوم:': 'Statistics for:',
@@ -2128,7 +2128,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               {!isVolunteer && (
                 <select value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)} className="bg-transparent text-sm text-white font-bold outline-none cursor-pointer pl-2">
                   <option value="all" className="bg-[#111]">كل الأقاليم</option>
-                  <option value="hq" className="bg-[#111]">المركز العام (وملحقاته)</option>
+                  <option value="hq" className="bg-[#111]">إقليم المركز العام</option>
                   <option value="canal" className="bg-[#111]">إقليم القنال</option>
                   <option value="delta" className="bg-[#111]">إقليم الدلتا</option>
                   <option value="saeed" className="bg-[#111]">إقليم الصعيد</option>

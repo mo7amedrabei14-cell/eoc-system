@@ -58,7 +58,7 @@ const ENGLISH_UI = {
   'الرؤية الشاملة للوضع الميداني والزلزالي (على مستوى الجمهورية)': 'National overview of field operations and seismic activity',
   'المؤشرات الحية لفرع/محافظة:': 'Live indicators for branch/governorate:',
   'المركز العام (القاهرة)': 'Headquarters (Cairo)',
-  'المركز العام (وملحقاته)': 'Headquarters (and affiliated branches)',
+  'إقليم المركز العام': 'Headquarters (and affiliated branches)',
   'المركز العام': 'Headquarters',
   'القاهرة': 'Cairo',
   'إحصائيات يوم:': 'Statistics for:',
@@ -3665,7 +3665,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <div className="w-px h-6 bg-[var(--border)] mx-0.5"></div>
                 <EocSelect variant="toolbar" className="px-2" value={activeRegionTab} onChange={(e) => setActiveRegionTab(e.target.value)}>
                   <option value="all">كل الأقاليم</option>
-                  <option value="hq">المركز العام (وملحقاته)</option>
+                  <option value="hq">إقليم المركز العام</option>
                   <option value="canal">إقليم القنال</option>
                   <option value="delta">إقليم الدلتا</option>
                   <option value="saeed">إقليم الصعيد</option>
