@@ -117,8 +117,8 @@ function clampSegInput(currentVal, digit, segIdx, segDefs) {
   // Validate: first char of hours segment (12h)
   if (segDefs === TIME_SEGS && segIdx === 0) {
     if (next.length === 1 && parseInt(next, 10) > 1 && parseInt(next, 10) < 10) {
-      // Single digit 2-9 → auto-advance (implicitly 02-09)
-      return { val: next, full: true };
+      // Single digit 2-9 → auto-advance as 02-09 (مبطن بأصفار حتى يكتمل البث للمتغيّر)
+      return { val: pad(next), full: true };
     }
   }
   return { val: next, full: next.length >= def.len };

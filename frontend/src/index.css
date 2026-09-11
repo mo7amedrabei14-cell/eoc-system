@@ -2510,7 +2510,8 @@ select.field {
   align-items: center;
   justify-content: center;
   gap: 0.12rem;
-  padding-inline: 2.2rem 1rem;   /* يسار: مساحة زر الأيقونة 📅/🕐 */
+  padding-inline: 2rem 0.5rem;   /* يسار: مساحة زر الأيقونة 📅/🕐 */
+  overflow: hidden;               /* حقل ضيق (فلاتر) → قصّ بدل تدفّق فوق الجيران */
   pointer-events: none;           /* النقرات تمر كلها لمحرّك الإدخال */
   user-select: none;
   white-space: nowrap;
@@ -2548,5 +2549,6 @@ select.field {
   color: #fff;
   box-shadow: 0 3px 12px -6px var(--accent-glow);
 }
-/* حقل معطّل: خفوت الـ pills تزامناً مع .field:disabled */
+/* حقل معطّل: خفوت الـ pills وأزرار التقويم/الساعة تزامناً مع .field:disabled */
 .seg-ghost:disabled ~ .seg-pills { opacity: 0.55; }
+.seg-ghost:disabled ~ button { opacity: 0.55; cursor: not-allowed; }
