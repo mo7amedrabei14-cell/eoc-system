@@ -127,6 +127,37 @@ function clampSegInput(currentVal, digit, segIdx, segDefs) {
 /* ─── Keyboard: char → digit/ampm check ─── */
 function isDigit(ch) { return ch >= '0' && ch <= '9'; }
 
+/* ─── Click → segment index (هندسي) ─── */
+// يحدد الجزء الذي وقع عنده النقر من الإحداثي الأفقي للفأرة ومواضع الـ pills الفعلية،
+// لا من مؤشر النص — فيبقى التطابق دقيقاً مهما اختلفت حواشي الحقل (pr-7 / !px-3 ...).
+function segIndexFromClick(e, container) {
+  const pills = container ? container.querySelectorAll('.seg-pill') : [];
+  if (!pills.length) return 0;
+  const cx = e.clientX;
+  let si = 0;
+  for (let i = 0; i < pills.length; i++) {
+    if (cx < pills[i].getBoundingClientRect().right) { si = i; break; }
+    si = i;
+  }
+  return si;
+}
+
+/* ─── SegPills — عرض أجزاء التاريخ/الوقت كـ "صرف" احترافية ─── */
+function SegPills({ segs, placeholders, separators, active }) {
+  return (
+    <>
+      {segs.map((seg, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span className="seg-sep">{separators[i - 1] === ' ' ? ' ' : separators[i - 1]}</span>}
+          <span className={`seg-pill ${i === active ? 'is-active' : ''} ${placeholders[i].length > 2 ? 'seg-pill--wide' : ''}`}>
+            {seg || placeholders[i]}
+          </span>
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    SEG DATE FIELD
    ═══════════════════════════════════════════════════════════ */
@@ -152,6 +183,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   });
   const textRef = useRef(null);
   const popRef = useRef(null);
+  const pillsRef = useRef(null);
   const lastSyncedValue = useRef(initial || '');
 
   // Build display from segments
@@ -239,14 +271,10 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   };
 
   const handleInputClick = (e) => {
-    // Map caret position to segment — select-and-replace
-    const raw = e.target.value;
-    const pos = e.target.selectionStart || 0;
-    if (pos <= 2) setActiveSeg(0);
-    else if (pos <= 5) setActiveSeg(1);
-    else setActiveSeg(2);
-    // Select all text for replace-on-type behavior
-    e.target.select();
+    // Map click position to the segment pill it landed on — geometry-based, so
+    // the highlighted pill always matches the click whatever the field's padding.
+    const si = segIndexFromClick(e, pillsRef.current);
+    setActiveSeg(si);
   };
 
   // ─── Calendar popup ───
@@ -344,7 +372,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
           type="text"
           value={display}
           placeholder="DD/MM/YYYY"
-          className={`${className} text-center pr-7 pl-7`}
+          className={`seg-ghost ${className} text-center pr-7 pl-7`}
           dir="ltr"
           onChange={() => {}} // no-op: segments manage display
           onKeyDown={handleKeyDown}
@@ -353,6 +381,9 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
           autoComplete="off"
           {...props}
         />
+        <div ref={pillsRef} className="seg-pills" dir="ltr" aria-hidden="true">
+          <SegPills segs={segs} placeholders={['__', '__', '____']} separators={['/', '/']} active={activeSeg} />
+        </div>
         {id && <input id={id} type="date" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />}
         <button type="button" onClick={openCalendar} disabled={disabled}
@@ -394,6 +425,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   const [ampm, setAmpm] = useState(() => meridian(initMachine || nowTimeStr()));
   const textRef = useRef(null);
   const popRef = useRef(null);
+  const pillsRef = useRef(null);
   const lastSyncedValue = useRef(initMachine || '');
 
   const display = segs[0] || segs[1]
@@ -487,11 +519,9 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   };
 
   const handleInputClick = (e) => {
-    const pos = e.target.selectionStart || 0;
-    if (pos <= 2) setActiveSeg(0);
-    else if (pos <= 5) setActiveSeg(1);
-    else setActiveSeg(2);
-    e.target.select();
+    // Map click position to the segment pill it landed on — geometry-based.
+    const si = segIndexFromClick(e, pillsRef.current);
+    setActiveSeg(si);
   };
 
   // ─── Time wheel popup ───
@@ -560,7 +590,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
           type="text"
           value={display}
           placeholder="hh:mm AM"
-          className={`${className} cursor-pointer text-center pr-7 pl-7`}
+          className={`seg-ghost ${className} cursor-pointer text-center pr-7 pl-7`}
           dir="ltr"
           onChange={() => {}}
           onKeyDown={handleKeyDown}
@@ -569,6 +599,9 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
           autoComplete="off"
           {...props}
         />
+        <div ref={pillsRef} className="seg-pills" dir="ltr" aria-hidden="true">
+          <SegPills segs={segs} placeholders={['__', '__', 'AM']} separators={[':', ' ']} active={activeSeg} />
+        </div>
         {id && <input id={id} type="time" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />}
         <button type="button" onClick={openPicker} disabled={disabled}
@@ -647,6 +680,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const textRef = useRef(null);
   const popRef = useRef(null);
+  const pillsRef = useRef(null);
   const initMachine = (() => {
     const m = String(initial || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{2}))/);
     return m ? `${m[1]}-${pad(+m[2])}-${pad(+m[3])}T${pad(+m[4])}:${m[5]}` : initial;
@@ -738,14 +772,9 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   };
 
   const handleInputClick = (e) => {
-    const pos = e.target.selectionStart || 0;
-    if (pos <= 2) setActiveSeg(0);
-    else if (pos <= 5) setActiveSeg(1);
-    else if (pos <= 10) setActiveSeg(2);
-    else if (pos <= 13) setActiveSeg(3);
-    else if (pos <= 16) setActiveSeg(4);
-    else setActiveSeg(5);
-    e.target.select();
+    // Map click position to the segment pill it landed on — geometry-based.
+    const si = segIndexFromClick(e, pillsRef.current);
+    setActiveSeg(si);
   };
 
   const GAP = 8, EDGE = 8;
@@ -833,7 +862,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           type="text"
           value={display}
           placeholder="DD/MM/YYYY HH:MM AM"
-          className={`${className} cursor-pointer pr-7 pl-7`}
+          className={`seg-ghost ${className} cursor-pointer pr-7 pl-7`}
           dir="ltr"
           onChange={() => {}}
           onKeyDown={handleKeyDown}
@@ -842,6 +871,9 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           autoComplete="off"
           {...props}
         />
+        <div ref={pillsRef} className="seg-pills" dir="ltr" aria-hidden="true">
+          <SegPills segs={segs} placeholders={['__', '__', '____', '__', '__', 'AM']} separators={['/', '/', ' ', ':', ' ']} active={activeSeg} />
+        </div>
         {id && <input id={id} type="datetime-local" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />}
         <button type="button" onClick={openPicker} disabled={disabled}

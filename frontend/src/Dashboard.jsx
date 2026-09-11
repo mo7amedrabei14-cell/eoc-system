@@ -3776,7 +3776,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مكان المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مسؤول المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مصدر البلاغ</th>
-              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ التحرك</th>
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ الانتهاء</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">الحالة</th>
               <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">الإجراءات</th>
@@ -3785,7 +3784,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="16" className="p-6">
+                <td colSpan="15" className="p-6">
                   <div className="space-y-3 animate-fade-in">
                     {[0,1,2,3,4].map(i => (
                       <div key={i} className="flex items-center gap-3 px-2">
@@ -3831,7 +3830,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <td className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
                 <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
                 <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.departure_date)}</td>
                 <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.completion_date)}</td>
                 <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><StatusBadge status={m.status} /></td>
                 <td className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
@@ -3842,7 +3840,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 </td>
               </tr>
             )) : (
-              <tr><td colSpan="16"><div className="empty-state"><div className="empty-state-icon">📋</div><p className="text-sm font-semibold text-[var(--muted)]">لا توجد مهام مطابقة</p></div></td></tr>
+              <tr><td colSpan="15"><div className="empty-state"><div className="empty-state-icon">📋</div><p className="text-sm font-semibold text-[var(--muted)]">لا توجد مهام مطابقة</p></div></td></tr>
             )}
           </tbody>
         </table>

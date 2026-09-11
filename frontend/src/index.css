@@ -2489,3 +2489,64 @@ select.field {
   /* 4) حقل الوقت: تقليص أيقونة الساعة لمساحة أكبر للنص */
   .time-field::-webkit-calendar-picker-indicator { width: 18px; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   حقول التاريخ/الوقت المقسّمة — مظهر "صرف/أجزاء" احترافي (Segmented pills)
+   - ghost input (شفاف النص) هو محرّك الإدخال/الفأرة كما كان، والـ pills
+     طبقة عرضية فوقه (pointer-events: none) تعكس الجزء النشط فقط.
+   - النقر يُحدَّد هندسياً (الـ pill الذي وقع فيه النقر) لا من مؤشر النص،
+     فيبقى التطابق دقيقاً مهما اختلفت حواشي الحقل.  RTL/LTR → dir:ltr على الـ pills.
+   ════════════════════════════════════════════════════════════════ */
+.seg-ghost { color: transparent; caret-color: transparent; }
+.seg-ghost::placeholder { color: transparent; }
+.seg-ghost::selection { background: transparent; }
+.seg-ghost.field:focus { caret-color: transparent; } /* تغلب .field:focus (أعلى خصوصية) */
+.seg-ghost:disabled { cursor: not-allowed; }
+
+.seg-pills {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  padding-inline: 2.2rem 1rem;   /* يسار: مساحة زر الأيقونة 📅/🕐 */
+  pointer-events: none;           /* النقرات تمر كلها لمحرّك الإدخال */
+  user-select: none;
+  white-space: nowrap;
+}
+
+.seg-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2ch;
+  padding: 0.12rem 0.35rem;
+  border-radius: 0.42rem;
+  border: 1px solid transparent;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: var(--ink);
+  letter-spacing: 0.015em;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.seg-pill--wide { min-width: 4ch; }
+.seg-sep {
+  color: var(--faint);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 0.04rem;
+}
+
+/* الجزء النشط = تعبئة بلون التمييز (accent) — مؤشر التحرير الحالي */
+.seg-pill.is-active {
+  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: #fff;
+  box-shadow: 0 3px 12px -6px var(--accent-glow);
+}
+/* حقل معطّل: خفوت الـ pills تزامناً مع .field:disabled */
+.seg-ghost:disabled ~ .seg-pills { opacity: 0.55; }
