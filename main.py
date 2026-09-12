@@ -730,10 +730,11 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
     - المتطوع: يُربط بسجل volunteers عبر رقم العضوية (participation_role = رقم العضوية).
       ومنه نشتق user_id لو للمتطوع حساب دخول (username = رقم العضوية).
     - غير المتطوع: نحتفظ برقم/صفة العرض كما هو (سلوك قائم).
-    - owner_mission_id: إن كان المشارك ما زال ملتحقاً بمهمة نشطة أخرى → رقمها
-      (يستخدمه رادار التتبع لمنع خروج المتطوع في مهمتين معاً)، وإلا None.
-      exclude_mission_id = المهمة الحالية (عند التحديث) حتى لا يتعارض الرادار مع
-      صف المشارك الموجود فعلاً في نفس المهمة (الـ PUT لم يعد يحذف المشاركين قبلاً).
+    - owner_mission_id: إن كانت لنفس الهوية جلسة مفتوحة (انضمام بلا انفصال ⇒
+      end_dt IS NULL) في مهمة أخرى → رقمها (رادار التوافر: بلا LEAVE ليس متاحاً
+      لمهمة أخرى مهما كانت حالة المهمة). وإلا None.
+      exclude_mission_id = المهمة الحالية (عند التحديث في مكانه) حتى لا يتعارض
+      الرادار مع صف المشارك الموجود فعلاً في نفس المهمة (الـ PUT لا يحذف المشاركين).
     """
     membership = (part.participation_role or "").strip()
     volunteer_id = None
@@ -776,14 +777,15 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
             if ur:
                 user_id = ur[0]
 
-    # 3. رادار المنع: هل ما زال ملتحقاً بمهمة نشطة أخرى؟ بالهوية المركّبة
-    #    (رقم العضوية + الفرع) — لا برقم العضوية وحده ولا بصف المتطوع: الرقم قد
-    #    يتكرر عبر الفروع، فنفس الرقم في فرع مختلف هوية مختلفة ولا يُمنع.
-    #    تعريف "النشطة" مطابق تماماً لتعريف القوة البشرية (same source of truth):
-    #    المسوّدة ليست تحركاً فعلياً، فمن كان مدرجاً في مسودة فقط لا يمنع تكليفه.
-    if part.return_status == "مازال بالمهمة" and membership:
-        # excl_sql يُستثنى منه صف المهمة الحالية عند التحديث (fix #7): الرادار يجب ألا
-        # يعتبر مشاركاً "في مهمة أخرى" وهو فعلاً ملتحق بنفس المهمة الجاري تعديلها.
+    # 3. رادار المنع — القاعدة الأساسية: التوافر مصدره *حالة الجلسة الفعلية*، لا
+    #    return_status ولا حالة المهمة. بمجرد تسجيل LEAVE (انفصال ⇒ end_dt محدد)
+    #    يكون المتطوع متاحاً من جديد ولو كانت المهمة لم تكتمل؛ وتبقّي شريحة مفتوحة
+    #    (end_dt IS NULL) تعني أنه ما زال داخلاً ⇒ غير متاح — في أي مهمة كانت.
+    #    هوية مركّبة (رقم العضوية + الفرع) — الرقم وحده قد يتكرر عبر الفروع.
+    if membership:
+        # excl_sql يُستثنى منه المهمة الحالية عند التحديث فقط لحالة التحديث في
+        # مكانه (fix #7): صفُّ المشارك الموجود لا يعارض تحديث نفسه. الإدراج الجديد
+        # لفترة مستقلة يمرر exclude_mission_id=None ليشمل المهمة الحالية أيضاً.
         cursor.execute(
             """
             SELECT m.mission_name, COALESCE(b.branch_name, 'غير محدد')
@@ -792,12 +794,7 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
             LEFT JOIN branches b ON b.branch_id = p.branch_id
             WHERE LOWER(TRIM(p.membership_number)) = LOWER(%s)
               AND p.branch_id IS NOT DISTINCT FROM %s
-              AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
-              -- تعريف «النشطة» مطابق لتعريف القوة البشرية (same source of truth):
-              -- حضور مفتوح فعلياً (end_dt IS NULL) فقط — شريحة جارية فعلاً.
-              -- الشريحة B القديمة (return_status + صفر segments) أُزيلت لأنها:
-              --   1) تمنع مشاركاً لم يُنضمّ فعلياً (نُقِل للاستمارة فقط) من الانضمام لأي مهمة.
-              --   2) لا يمكن إصلاحه بالـ LEAVE لأن لا segment مفتوح لإغلاقه.
+              -- التوافر = جلسة مفتوحة فعلاً (end_dt IS NULL): بلا LEAVE ⇒ غير متاح
               AND EXISTS (
                   SELECT 1 FROM mission_participant_sessions s
                   WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
@@ -816,12 +813,18 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
 
 
 def dedupe_participants(participants):
-    """يمنع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الإدخال) — يحتفظ بآخر إدخال."""
+    """يمنع التكرار الحرفي فقط داخل نفس الاستمارة (قبل الإدخال) — يحتفظ بآخر إدخال.
+    🔑 القاعدة الأساسية (JOIN/LEAVE فقط): بعد تسجيل LEAVE يصبح المتطوع متاحاً من
+    جديد، فنفس الهوية بفترة إسناد مختلفة (assigned_days) تُعتبر فترة مشاركة
+    مستقلة وتُحتفظ بها؛ التكرار الحرفي (نفس الهوية + نفس الأيام/الجلسات) هو
+    الوحيد الممنوع."""
     seen = set()
     result = []
     for part in reversed(participants):
         if part.participant_type == "volunteer":
-            key = (part.branch_id, (part.participation_role or "").strip().lower())
+            identity = (part.branch_id, (part.participation_role or "").strip().lower())
+            days = tuple(sorted(str(d) for d in (part.assigned_days or [])))
+            key = (identity, days) if days else identity
             if key in seen:
                 continue
             seen.add(key)
@@ -1355,8 +1358,11 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         #    تتبع القاعدة الأصلية: السقف فقط للمهمة المكتملة.
         jl_cap = mission_end_dt(mission_data) if (s.get('start_entry_id') or s.get('end_entry_id')) else end_cap
         if end:
-            # مغلق — يُقصّ إلى السقف إن تجاوزه
-            if jl_cap and end > jl_cap:
+            # مغلق (انفصال مسجّل) — أثناء النشاط يُحسب بمدّاه الخاص. السقف (نهاية
+            # المهمة) يقصّ فقط عند الاكتمال (لقطة مجمّدة): انضمام 10:00 + انفصال
+            # 11:00 = ساعة كاملة حتى والمهمة مسودة/نشطة — إصلاح «0 دقيقة» بعد الإسناد.
+            # (غير الـ JL: jl_cap == end_cap وهما ليسا إلا عند الاكتمال ⇒ لا تغيير.)
+            if completed and jl_cap and end > jl_cap:
                 end = jl_cap
         else:
             # مفتوح — السقف الدائم (نهاية المهمة للـ JL؛ "الآن" للباقي)
@@ -1623,7 +1629,7 @@ def create_mission(
 
                 # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية المركّبة لا بالنصوص)
                 if active_in_other is not None:
-                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: رقم العضوية + الفرع مسجَّل حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يتم تسجيل عودته في تلك المهمة أولاً (عاد للقاعدة).")
+                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) في مهمة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
 
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, start_from_mission)
@@ -1671,7 +1677,7 @@ def create_mission(
             #    حسابه عند الحفظ تماماً مثل المسارات). يُستدعى قبل حظر الإغلاق التلقائي
             #    حتى يُغلق الأخير أي segment مفتوح لمهمة مكتملة.
             materialize_jl_segments(
-                cursor, mission_id, {'mission_name': mission.mission_name},
+                cursor, mission_id, _jl_mission_row(cursor, mission_id),
                 user_id=user_id,
             )
 
@@ -1727,7 +1733,7 @@ def create_mission(
         # ✅ Fix: throw says "مسجّل" but old catch looked for "متواجد" — different word.
         #    Now catches both forms so the intended 400 isn't lost to 500.
         err = str(e)
-        if "مسجّل حالياً في مهمة نشطة أخرى" in err or "متواجد حالياً في مهمة نشطة أخرى" in err:
+        if "جلسة مفتوحة" in err:
             raise HTTPException(status_code=400, detail=err)
         if ikey and "idempotency_key" in err and ("unique" in err.lower() or "duplicate" in err.lower()):
             try:
@@ -1846,30 +1852,36 @@ def update_mission(
             #    لا يُحذفون نهائياً: يبقى سجلهم للرادار والـ HR، ويُخفَون من الاستمارة
             #    عبر roster_active=false. الـ segments نفسها (mission_participant_sessions)
             #    لا تُمسح هنا أبداً — التاريخ المُسجَّل ملك /join و/leave وحدهما.
-            # ── snapshot المشاركين الحاليين: المشارك + هويته + هل له segments ──
-            existing_participants = {}
+            # ── snapshot المشاركين الحاليين: الصفوف (ممكن عدة صفوف لنفس الهوية =
+            #    فترات مشاركة مختلفة) + هوية كل صف + أيامه/جلساته + هل له segments ──
+            #    existing_by_ident: ident → [صفوف...] — لا يُدمَج صفان لنفس الهوية:
+            #    كل فترة مشاركة مستقلة (بعد LEAVE يجوز فترة ثانية لنفس العضوية).
+            existing_by_ident = {}
             cursor.execute("""
                 SELECT p.participant_id, p.participant_type, p.full_name, p.participation_role,
                        p.membership_number, p.branch_id, p.assigned_itinerary, p.return_status,
                        p.phase_name, p.stay_type, p.team_name, p.team_code, p.user_id,
                        EXISTS(SELECT 1 FROM mission_participant_sessions s
-                              WHERE s.participant_id = p.participant_id) AS has_segments
+                              WHERE s.participant_id = p.participant_id) AS has_segments,
+                       (SELECT COALESCE(array_agg(mpi.itinerary_group ORDER BY mpi.itinerary_group), '{}')
+                        FROM mission_participant_itineraries mpi
+                        WHERE mpi.participant_id = p.participant_id) AS days
                 FROM mission_participants p
                 WHERE p.mission_id = %s
                 ORDER BY p.participant_id DESC;
             """, (mission_id,))
-            for (pid, ptype, fname, prole, mnum, bid, itin, rstatus, phase, stay, tname, tcode, puser_id, has_seg) in cursor.fetchall():
+            for (pid, ptype, fname, prole, mnum, bid, itin, rstatus, phase, stay, tname, tcode, puser_id, has_seg, days) in cursor.fetchall():
                 mkey = (mnum or '').strip().lower() if (mnum or '').strip() else (fname or '').strip().lower()
                 if not mkey:
                     continue
                 ident = (str(bid or ''), mkey)
-                if ident in existing_participants:
-                    continue  # أقدم صف لنفس الهوية داخل نفس المهمة — نأخذ أحدثه كمصدر
-                existing_participants[ident] = {
+                existing_by_ident.setdefault(ident, []).append({
                     "participant_id": pid, "has_segments": bool(has_seg),
                     "phase_name": phase, "stay_type": stay, "team_name": tname or '', "team_code": tcode or '',
                     "user_id": puser_id, "return_status": rstatus,
-                }
+                    "days": tuple(sorted(str(d) for d in (days or []))),
+                    "claimed": False,
+                })
 
             # مسح التفاصيل غير المسجلة (يعاد إدخالها تالياً) — لا تُمسح الـ segments
             cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
@@ -1889,19 +1901,33 @@ def update_mission(
             #    provenance ثابت للشرائح المشتقة)، وحذف ما لم يُرسَل بتنظيف صريح.
             _sync_jl_catalog(cursor, mission_id, mission.join_leave_entries)
 
-            # المشاركون: UPsert بالهوية — من بقي يُحدَّث في مكانه (تبقى segments المسجلة كما هي)،
-            #   ومن أُزيل بلا segments يُحذف نهائياً، ومن أُزيل وله segments يُخفى (roster_active=false).
+            # المشاركون: UPsert بالصف (هوية + فترة الإسناد) — الصف المتبقي بفترته
+            #   يُحدَّث في مكانه (تبقى segments المسجلة كما هي)، وفترة جديدة لنفس
+            #   الهوية (بعد تسجيل LEAVE) تُدرَج كصفٍّ مستقل؛ من أُزيل بلا segments
+            #   يُحذف نهائياً، ومن أُزيل وله segments يُخفى (roster_active=false).
+            def jl_period(days):
+                """مفتاح تجميع فترة الانضمام/الانفصال: (مفاتيح JOIN، مفاتيح LEAVE).
+                نفس مجموعة JOIN بين صف مُرسَل وصف قائم ⇒ نفس الفترة (تحديث في مكانه —
+                يغطي إغلاق فترة مفتوحة: [J:A] ← [J:A,L:B])؛ مجموعة JOIN مختلفة ⇒ فترة
+                جديدة مستقلة (تُدرَج صفّاً جديداً)."""
+                days = [str(d) for d in (days or [])]
+                joins = tuple(sorted(d for d in days if d.startswith('JL:J:')))
+                leaves = tuple(sorted(d for d in days if d.startswith('JL:L:')))
+                return (joins, leaves)
+
             participant_user_ids = []
             reinserted_idents = set()
             kept_pids = []
+            pending_open = set()  # idents أُدرج لها صف فترة مفتوحة (JOIN بلا LEAVE) في هذه الحفظة
             new_participants = []  # (participant_id, part) for day linking
             for part in dedupe_participants(mission.participants):
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
 
-                # الهوية الفعلية (الـ DB هي مصدر الحقيقة) + رادار المنع بالهوية المركّبة
-                # (رقم العضوية + الفرع). نستثني المهمة الحالية من الرادار: الـ PUT يحدّث
-                # المشارك في مكانه (لا يحذفه قبلاً كما في السابق) فيجب ألا يصرّعه الرادار بنفسه.
+                # الهوية الفعلية (الـ DB هي مصدر الحقيقة) + رادار التوافر بالهوية
+                # المركّبة (رقم العضوية + الفرع). نستثني المهمة الحالية من رادار
+                # "مهمة أخرى" كي لا يصرّع صفاً يُحدَّث في مكانه بنفسه (fix #7) —
+                # أما الفترة الجديدة فتتولى بوّابتها أدناه.
                 volunteer_id, participant_user_id, membership, active_in_other, active_in_other_branch = resolve_participant_identity(cursor, part, exclude_mission_id=mission_id)
                 if participant_user_id:
                     participant_user_ids.append(participant_user_id)
@@ -1911,13 +1937,50 @@ def update_mission(
                 if ident:
                     reinserted_idents.add(ident)
 
+                # رادار التوافر: جلسة مفتوحة (انضمام بلا انفصال) لنفس الهوية في مهمة
+                # أخرى ⇒ غير متاح — أيًّا كانت حالة تلك المهمة (لا return_status ولا اكتمال)
                 if active_in_other is not None:
-                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة أو التحديث: رقم العضوية + الفرع مسجَّل حالياً في مهمة نشطة أخرى ({active_in_other}).\n\nيجب تسجيل عودته في تلك المهمة أولاً (عاد للقاعدة).")
+                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة أو التحديث: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) في مهمة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
+
+                # ── مطابقة بالصف (هوية + فترة الإسناد):
+                #    • صف JL: نفس مجموعة JOIN ← نفس الفترة ⇒ تحديث في مكانه (يُحافَظ
+                #      على participant_id وsegments؛ يغطي إغلاق فترة مفتوحة بإضافة LEAVE).
+                #    • صف بلا JL: مطابقة بالهوية فقط (السلوك السابق — أيام بلا جلسات).
+                #    • بلا تطابق (فترة جديدة بعد LEAVE) ⇒ بوابة التوافر ثم إدراج جديد.
+                prev = None
+                if ident:
+                    candidates = [r for r in existing_by_ident.get(ident, []) if not r["claimed"]]
+                    if any(str(d).startswith('JL:') for d in (part.assigned_days or [])):
+                        sub_joins = jl_period(part.assigned_days)[0]
+                        prev = next((r for r in candidates if jl_period(r["days"])[0] == sub_joins), None)
+                    else:
+                        prev = candidates[0] if candidates else None
+                if prev:
+                    prev["claimed"] = True
+                else:
+                    # بوابة التوافر للفترة الجديدة: تُنفَّذ ضد *حالة الجلسة الفعلية* —
+                    # لا جلسة مفتوحة لنفس الهوية في هذه المهمة (المهمة الحالية مستثناة
+                    # من رادار "أخرى" أعلاه) ولا فترة مفتوحة أُدرجت للتو في هذه الحفظة
+                    # (انضمام بلا انفصال) — أما الجلسات المغلقة بالـ LEAVE فلا تمنع
+                    # (المتطوع أصبح متاحاً، وهذا جوهر القاعدة الأساسية).
+                    if ident:
+                        if ident in pending_open:
+                            raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {part.branch_id or 'غير محدد'}) غير قابل للإضافة: أُدرجت له فترة مفتوحة (انضمام بلا انفصال) في هذه الحفظة نفسها.\n\nيجب تسجيل انفصاله (LEAVE) أولاً حتى تنغلق الجلسة ويصبح متاحاً.")
+                        cursor.execute("""
+                            SELECT 1 FROM mission_participants p
+                            WHERE LOWER(TRIM(p.membership_number)) = LOWER(%s)
+                              AND p.branch_id IS NOT DISTINCT FROM %s
+                              AND p.mission_id = %s
+                              AND EXISTS (SELECT 1 FROM mission_participant_sessions s
+                                          WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL)
+                            LIMIT 1;
+                        """, (membership, part.branch_id, mission_id))
+                        if cursor.fetchone():
+                            raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {part.branch_id or 'غير محدد'}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال) في هذه المهمة فعلاً.\n\nلا يمكن فترتان متداخلتان لنفس الهوية — سجّل انفصاله (LEAVE) أولاً.")
 
                 # ── استعادة الحقول التي لا تعرضها/لا تُدارُ من الاستمارة (مصدر الحقيقة):
-                #    لو نفس الشخص موجود قبل التعديل بنفس الهوية، نحافظ على بياناته القائمة
+                #    لو نفس الفترة موجودة قبل التعديل، نحافظ على بيانات الصف القائم
                 #    إلا إذا غيّر المدخل القيمة فعلاً (القيمة غير الفارغة/الافتراضية تفوز).
-                prev = existing_participants.get(ident) if ident else None
                 if prev:
                     if (mission.mission_classification or '') != 'مفتوحة':
                         if part.phase_name in (None, '', 'اليوم الأول'):
@@ -1928,10 +1991,7 @@ def update_mission(
                     part.team_code = part.team_code or prev.get("team_code") or ''
                     # الحالة الفعلية مصدرها قاعدة البيانات — النموذج لا يتجاوزها أبداً.
                     # عند إنهاء المهمة: «تم انتهاء مهمتة» تبقى الفائزة — لا نعيد إرث
-                    # 'مازال بالمهمة' القديم (الشرائح أُغلقت تلقائياً في لقطة الإنهاء أدناه).
-                    # كان الشرط السابق يطلب has_segments فحسب: لو لا segments (مشارك نُقل
-                    # للاستمارة فقط دون انضمام فعلي) كانت return_status تُستعاد من الـ
-                    # Pydantic default ≠ الـ DB → يصبح Participant عالقاً بـ 'مازال بالمهمة'.
+                    # 'مازال بالمهمة' القديم.
                     if mission.status not in ('Completed', 'مكتملة'):
                         part.return_status = prev.get("return_status") or part.return_status
 
@@ -1960,13 +2020,19 @@ def update_mission(
                           membership, part.branch_id, part.assigned_itinerary, part.return_status,
                           part.phase_name, part.stay_type, (part.start_from_mission is not False)))
                     pid = cursor.fetchone()[0]
+                    # فترة مفتوحة (JOIN بلا LEAVE) أُدرجت للتو ⇒ تُقيّد بوابة هذه الحفظة
+                    if ident and any(str(d).startswith('JL:J:') for d in (part.assigned_days or [])) \
+                            and not any(str(d).startswith('JL:L:') for d in (part.assigned_days or [])):
+                        pending_open.add(ident)
                 kept_pids.append(pid)
                 new_participants.append((pid, part))
 
-            # ── من أُزيلوا من الاستمارة:
+            # ── من أُزيلوا من الاستمارة (كل الصفوف عبر الهويات — صف بلا مطابقة بفترته):
             #    بلا segments ⇒ حذف نهائي؛ وله segments ⇒ يُخفى ويبقى سجله للرادار والـ HR
-            stale_ids = [v["participant_id"] for v in existing_participants.values()
-                         if v["participant_id"] not in kept_pids and not v.get("has_segments")]
+            stale_ids = [r["participant_id"]
+                         for rows in existing_by_ident.values()
+                         for r in rows
+                         if r["participant_id"] not in kept_pids and not r.get("has_segments")]
             if stale_ids:
                 cursor.execute("DELETE FROM mission_participants WHERE participant_id = ANY(%s)", (stale_ids,))
             if kept_pids:
@@ -2049,8 +2115,10 @@ def update_mission(
                 # و"أُزيلت") لنفس التحديث.
                 kept_user_ids = set(participant_user_ids)
                 removed_user_ids = [
-                    (v.get("user_id") or 0) for ident, v in existing_participants.items()
-                    if ident not in reinserted_idents and v.get("user_id") and v.get("user_id") not in kept_user_ids
+                    (r.get("user_id") or 0) for ident, rows in existing_by_ident.items()
+                    for r in rows
+                    if r.get("user_id") and ident not in reinserted_idents
+                    and r["participant_id"] not in kept_pids and r.get("user_id") not in kept_user_ids
                 ]
                 notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, removed_user_ids)
             except Exception as e:
@@ -2066,9 +2134,9 @@ def update_mission(
         raise
     except Exception as e:
         connection.rollback()
-        # ✅ Same radar-exception mismatch fix as create_mission: "مسجّل" vs "متواجد"
+        # رادار التوافر (جلسة مفتوحة) وكل رسائل «غير متاح» — 400 وليست 500
         err = str(e)
-        if "مسجّل حالياً في مهمة نشطة أخرى" in err or "متواجد حالياً في مهمة نشطة أخرى" in err:
+        if "جلسة مفتوحة" in err:
             raise HTTPException(status_code=400, detail=err)
         raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء التحديث: {err}")
     finally:

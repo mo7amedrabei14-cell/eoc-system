@@ -3390,30 +3390,26 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        const activeParticipants = {}; 
        let hasDuplicateError = false;
 
-       participants.forEach((_, i) => {
+       participants.forEach((p, i) => {
          const pName = document.getElementById(`p_name_${i}`)?.value;
          if (!pName) return;
 
          const pRole = document.getElementById(`p_role_${i}`)?.value?.trim() || '';
          const pBranch = document.getElementById(`p_branch_${i}`)?.value || '19';
-         // 💡 عمود "الحالة" حُذف نهائيًّا (متطلب #2): كل مشارك بـ"بالمهمة" افتراضيًا مع بقاء رادار التكرار نشطًا
-         const pStatus = 'بالمهمة';
-         const pItin = getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي';
          // هوية المركّبة = رقم العضوية + الفرع (الرقم وحده ليس فريداً — يتكرر عبر الفروع)
-         // 🔧 حل جذري: MissionsView تعتمد فقط على prop الوارد إليها (branches) —
-         //    أبداً على branchesList (const يخص Dashboard فقط، وليس في نطاق هدف هذا المكوّن).
-         //    `(branches || [])` يمنع أي انهيار (ReferenceError/`cannot read find of undefined`)
-         //    إذا مرّر الأصل prop غير معرّف، فيبقى الإرسال آمناً في أيّ سيناريو.
          const branchName = (branches || []).find(b => String(b.id) === String(pBranch))?.name || pBranch;
-         const uniqueKey = pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`;
+         // 🔑 فترة الإسناد (assigned_days: أيام الخطوط + مفاتيح الانضمام/الانفصال JL:*) —
+         //    مفتاح التكرار هو (الهوية + الفترة): نفس الهوية بنفس الفترة = تكرار حرفي
+         //    يُمنع، ونفس الهوية بفترة مختلفة = فترة مشاركة مستقلة تُسمح (بعد LEAVE —
+         //    القاعدة الأساسية: بمجرد تسجيل الانفصال يصبح المتطوع متاحاً من جديد).
+         const iKey = (p?.assigned_days || []).slice().sort().join('|');
+         const uniqueKey = `${pRole !== '' ? `${pRole}-${pBranch}` : `${pName}-${pBranch}`}::${iKey}`;
 
-         if (pStatus === 'بالمهمة') {
-           if (activeParticipants[uniqueKey]) {
-             setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'} — فرع: ${branchName}) مكرر ومسجل كـ "بالمهمة" أكثر من مرة!\n\nلا يمكن أن يكون المتطوع متواجد في تحركين نشطين بنفس الهوية (رقم العضوية + الفرع) في نفس الوقت.\nيجب تسجيل عودته أولاً من التحرك السابق (عاد للقاعدة) قبل إضافة تحرك جديد له.`);
-             hasDuplicateError = true;
-           } else {
-             activeParticipants[uniqueKey] = true;
-           }
+         if (activeParticipants[uniqueKey]) {
+           setCustomAlert(`خطأ إداري: المشارك "${pName}" (رقم العضوية: ${pRole || 'بدون'} — فرع: ${branchName}) مكرر بنفس فترة الإسناد!\n\nالفترة نفسها (أيام/الانضمام-الانفصال) أُدخلت أكثر من مرة في الاستمارة. اختر فترة إسناد مختلفة — بعد تسجيل LEAVE يمكن إضافة فترة جديدة لنفس الهوية في نفس المهمة.`);
+           hasDuplicateError = true;
+         } else {
+           activeParticipants[uniqueKey] = true;
          }
        });
        if (hasDuplicateError) return;
