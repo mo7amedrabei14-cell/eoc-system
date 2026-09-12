@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 // ⏰ وحدة الزمن الموحّدة — العرض 12 ساعة فقط، الآلة 24 ساعة (راجع timeutils.js)
 import { normTime, formatTime12, formatDateTime12 } from './timeutils';
-import { SegDateField, SegTimeField } from './SegInputs';
+import { SegDateField, SegTimeField, SegDateTimeField } from './SegInputs';
 
 // 🔧 Module-level API base. Must be declared here (module scope), NOT inside a
 // component's effect: MissionsView's live modal-sync effect fetches
@@ -4025,9 +4025,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* تواريخ */}
-                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || getLocalDate()} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || getLocalDate()} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" defaultValue={currentMissionData?.completion_date || getLocalDate()} onChange={bumpValidation} /></FormGroup>
                   {/* أوقات */}
                   <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
                   <FormGroup className="items-center text-center" label="ساعة الوصول"><SegTimeField className="field text-center" id="f_arrival_time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
@@ -5028,24 +5028,20 @@ const RouteCard = ({
       <div className="w-full md:w-auto flex flex-wrap border-l border-[var(--border)] bg-[var(--surface-4)] p-2.5 gap-2 md:gap-4">
         <div className="flex items-center gap-2 flex-1 min-w-[260px]">
           <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🚀 التحرك:</span>
-          <DateInput
+          <SegDateTimeField
             id={`r_dep_${prefix}_${index}`}
-            type="datetime-local"
             value={depDateTime}
             onChange={handleDepChange}
-            className="eoc-manual-field w-full md:w-56 text-white text-sm px-3 py-1.5"
-            dir="ltr"
+            className="field text-center w-full md:w-56"
           />
         </div>
         <div className="flex items-center gap-2 flex-1 min-w-[260px]">
           <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🏁 الوصول:</span>
-          <DateInput
+          <SegDateTimeField
             id={`r_arr_${prefix}_${index}`}
-            type="datetime-local"
             value={arrDateTime}
             onChange={handleArrChange}
-            className="eoc-manual-field w-full md:w-56 text-white text-sm px-3 py-1.5"
-            dir="ltr"
+            className="field text-center w-full md:w-56"
           />
         </div>
         {showRemove && (

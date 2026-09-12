@@ -27,6 +27,7 @@ CRED = types.SimpleNamespace(credentials=TOKEN)
 
 DB = "TEST-JL-DB"
 created_mission_ids = []
+created_volunteer_ids = []   # صفوف volunteers أنشأناها لسيناريوهات الرادار (تُحذف في التنظيف)
 
 
 def make_mission(name, status="Draft", participants=None, jl=None, prefix="TEST-JL"):
@@ -123,10 +124,47 @@ def hours_for(conn, mission_id, pid, status):
 def check(cond, label, extra=""):
     if not cond:
         raise AssertionError(f"FAIL {label} {extra}")
-    print(f"  ✓ {label}")
+    print(f"  + {label}")
+
+
+def cleanup_test_data():
+    """Delete ALL TEST-JL-DB-% missions — including leftovers from a prior/crashed
+    run (an open session in an orphaned TEST mission would otherwise poison the
+    radar checks for the shared synthetic member). Dependency order: children first."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as c:
+            c.execute("SELECT mission_id FROM missions WHERE mission_name LIKE %s", (f"{DB}-%",))
+            mids = [r[0] for r in c.fetchall()]
+            for t, key in [
+                ("mission_participant_sessions", "mission_id"),
+                ("mission_participant_itineraries", "mission_id"),
+                ("mission_participants", "mission_id"),
+                ("mission_join_leave_entries", "mission_id"),
+                ("mission_itineraries", "mission_id"),
+                ("mission_vehicles", "mission_id"),
+                ("mission_beneficiaries", "mission_id"),
+                ("mission_eoc_staff", "mission_id"),
+            ]:
+                if mids:
+                    c.execute(f"DELETE FROM {t} WHERE {key} = ANY(%s)", (mids,))
+            if mids:
+                c.execute("DELETE FROM missions WHERE mission_id = ANY(%s)", (mids,))
+            # المتطوعون المختبرون (بعد المهام التي تشير إليهم)
+            if created_volunteer_ids:
+                c.execute("DELETE FROM volunteers WHERE volunteer_id = ANY(%s)",
+                          (created_volunteer_ids,))
+            conn.commit()
+        print(f"  + cleaned test missions: {len(mids)}, volunteers: {len(created_volunteer_ids)}")
+    except Exception as exc:
+        conn.rollback()
+        print(f"  - cleanup failed: {exc}")
+    finally:
+        conn.close()
 
 
 def main_test():
+    cleanup_test_data()   # start clean — prior crashed runs may have orphaned open sessions
     # S1: closed session from LEAVE in Draft, hours computed live
     m1 = make_mission(f"{DB}-S1", status="Draft",
                       participants=[{**VOL, "assigned_days": ["JL:J:A", "JL:L:B"]}],
@@ -221,36 +259,144 @@ def main_test():
         except main.HTTPException as e:
             check(e.status_code == 400 and "جلسة مفتوحة" in str(e.detail),
                   "S3b: OPEN (no LEAVE) session blocks re-add — radar", str(e.detail)[:90])
+
+        # ── Fix 1 (HR): two periods in SAME mission must SUM (was MAX ⇒ 1) ──────
+        # HR report excludes Draft/Cancelled/Returned ⇒ use Completed status.
+        # Each H-scenario uses its OWN identity: VOL was left with an OPEN session
+        # by S3b — re-adding it anywhere is (correctly) blocked by the radar — and
+        # an identity shared across two Completed missions would make the HR record
+        # global (total 2+2) which H2's "total stays 2.0" contradicts.
+        def volH(tag, mem):
+            return {**VOL, "full_name": f"متدرب اختبار JL-HT{tag}",
+                    "participation_role": mem}
+
+        def hr_for(mem):
+            return [r for r in main.get_human_resources(credentials=CRED)
+                    if str(r.get('membership_number', '')) == mem]
+
+        h1 = volH("1", "JL-TEST-MEM-H1")
+        mH1 = make_mission(f"{DB}-H1", status="Completed",
+                           participants=[
+                               {**h1, "assigned_days": ["JL:J:A", "JL:L:B"]},
+                               {**h1, "assigned_days": ["JL:J:C", "JL:L:D"]},
+                           ], jl=jl_entries())
+        midH1 = create(mH1)
+        hr1 = hr_for("JL-TEST-MEM-H1")
+        check(len(hr1) == 1, "H1: two same-identity rows collapse into one HR record", f"found {len(hr1)}")
+        check(abs((hr1[0].get('total_hours') or 0) - 2.0) < 1e-9,
+              "H1: HR total = 2h in one mission (was 1h via MAX)", f"{hr1[0].get('total_hours')}")
+        check(hr1[0].get('missions_count') == 1
+              and abs((hr1[0].get('last_mission_hours') or 0) - 2.0) < 1e-9,
+              "H1: missions_count=1, last_mission_hours=2.0", str(hr1[0]))
+
+        # H2 — roster(-plan) row + JL rows in same mission ⇒ actual dominates plan
+        h2 = volH("2", "JL-TEST-MEM-H2")
+        mH2 = make_mission(f"{DB}-H2", status="Completed",
+                           participants=[
+                               {**h2, "assigned_days": ["JL:J:A", "JL:L:B"]},
+                               {**h2, "assigned_days": ["JL:J:C", "JL:L:D"]},
+                               {**h2, "assigned_days": ["خط السير الأساسي"]},
+                           ], jl=jl_entries())
+        midH2 = create(mH2)
+        hr2 = hr_for("JL-TEST-MEM-H2")
+        check(len(hr2) == 1, "H2: identity resolves to one HR record", f"found {len(hr2)}")
+        check(abs((hr2[0].get('total_hours') or 0) - 2.0) < 1e-9,
+              "H2: roster plan hours do NOT add on top of actual (total stays 2.0)",
+              f"{hr2[0].get('total_hours')}")
+
+        # ── Fix 2 (radar): roster-only blocks; LEAVE / end_participation frees ──
+        # الفرع الموسّع للرادار يعمل فقط لمن يُحلّ volunteer_id (ربط الرقم+الفرع).
+        # جدول volunteers فارغ فعلياً في بيئة التطوير ⇒ نُنشئ متطوعاً حقيقياً لكل
+        # سيناريو N (رقم عضوية فريد) ويُحذف في التنظيف؛ كل استدعاء = هوية نظيفة.
+        def fresh_volunteer(tag):
+            mem = f"JL-N-{tag}"
+            with conn.cursor() as c:
+                c.execute("""INSERT INTO volunteers
+                             (full_name, phone, branch_id, is_active, membership_number, status_mode)
+                             VALUES (%s, NULL, %s, TRUE, %s, 'auto')
+                             RETURNING volunteer_id""",
+                          (f"متدرب اختبار JL {tag}", 6, mem))
+                vid = c.fetchone()[0]
+                created_volunteer_ids.append(vid)
+                conn.commit()
+            return {**VOL, "full_name": f"{DB}_{tag}",
+                    "participation_role": mem, "branch_id": 6}
+
+        # N1 — roster-only (zero sessions) in an UNFINISHED mission ⇒ blocked elsewhere
+        rv1 = fresh_volunteer("V1")
+        mN1 = make_mission(f"{DB}-N1", status="Draft",
+                           participants=[{**rv1, "assigned_days": ["خط السير الأساسي"]}])
+        midN1 = create(mN1)
+        with conn.cursor() as c:
+            nses = q(c, """SELECT COUNT(*) FROM mission_participant_sessions s
+                        JOIN mission_participants p ON p.participant_id = s.participant_id
+                        WHERE p.mission_id = %s""", (midN1,))[0][0]
+        check(nses == 0, "N1: roster-only participant has ZERO sessions", f"{nses}")
+        try:
+            create(make_mission(f"{DB}-N2", status="Draft",
+                                participants=[{**rv1, "assigned_days": ["خط السير الأساسي"]}]))
+            raise AssertionError("FAIL N1: adding roster-only person to a 2nd unfinished mission must block")
+        except main.HTTPException as e:
+            check(e.status_code == 400, "N1: roster-only in unfinished mission BLOCKS re-add (400)",
+                  str(e.detail)[:60])
+
+        # N2 — closed (LEAVE) in an active mission ⇒ same volunteer is FREE (volunteer branch)
+        rv2 = fresh_volunteer("V2")
+        mN3 = make_mission(f"{DB}-N3", status="Draft",
+                           participants=[{**rv2, "assigned_days": ["JL:J:A", "JL:L:B"]}],
+                           jl=jl_entries())
+        midN3 = create(mN3)
+        create(make_mission(f"{DB}-N4", status="Draft",
+                            participants=[{**rv2, "assigned_days": ["JL:J:C", "JL:L:D"]}],
+                            jl=jl_entries()))
+        check(True, "N2: closed (LEAVE) in active M1 ⇒ re-addable — no block")
+
+        # N3 — one row holding CLOSED then LATER OPEN ⇒ still blocked (open wins)
+        rv3 = fresh_volunteer("V3")
+        mN5 = make_mission(f"{DB}-N5", status="Draft",
+                           participants=[{**rv3, "assigned_days": ["JL:J:A", "JL:L:B", "JL:J:C"]}],
+                           jl=jl_entries())
+        midN5 = create(mN5)
+        try:
+            create(make_mission(f"{DB}-N6", status="Draft",
+                                participants=[{**rv3, "assigned_days": ["JL:J:C", "JL:L:D"]}],
+                                jl=jl_entries()))
+            raise AssertionError("FAIL N3: mixed closed+open row must still block (open session)")
+        except main.HTTPException as e:
+            check(e.status_code == 400, "N3: closed+open in one row ⇒ blocked (EXISTS open)", str(e.detail)[:60])
+
+        # N4 — roster-only in a COMPLETED mission ⇒ does NOT block new mission
+        rv4 = fresh_volunteer("V4")
+        mN7 = make_mission(f"{DB}-N7", status="Completed",
+                           participants=[{**rv4, "assigned_days": ["خط السير الأساسي"]}])
+        midN7 = create(mN7)
+        create(make_mission(f"{DB}-N8", status="Draft",
+                            participants=[{**rv4, "assigned_days": ["خط السير الأساسي"]}]))
+        check(True, "N4: roster-only in COMPLETED mission does not block a new mission")
+
+        # N5 — "إنهاء المشاركة الآن" on a roster-only volunteer writes a CLOSED doc row ⇒ freed
+        rv5 = fresh_volunteer("V5")
+        mN9 = make_mission(f"{DB}-N9", status="Draft",
+                           participants=[{**rv5, "assigned_days": ["خط السير الأساسي"]}])
+        midN9 = create(mN9)
+        with conn.cursor() as c:
+            pids9 = [r[0] for r in q(c, "SELECT participant_id FROM mission_participants WHERE mission_id = %s",
+                                     (midN9,))]
+        check(len(pids9) == 1, "N5: one roster-only participant to end", str(pids9))
+        main.end_participation(midN9, main.EndParticipationRequest(participant_ids=pids9, client_now=None), CRED)
+        with conn.cursor() as c:
+            drow = q(c, "SELECT start_dt, end_dt FROM mission_participant_sessions WHERE participant_id = %s",
+                     (pids9[0],))
+        check(len(drow) == 1 and drow[0][1] is not None,
+              "N5: documentary session written with end_dt set (start_dt NULL)", str(drow))
+        create(make_mission(f"{DB}-N10", status="Draft",
+                            participants=[{**rv5, "assigned_days": ["خط السير الأساسي"]}]))
+        check(True, "N5: after ending participation, same volunteer addable again")
     finally:
         conn.close()
 
-    # ── Cleanup: delete created TEST-JL data (explicit, dependency order) ──
-    conn = get_connection()
-    try:
-        with conn.cursor() as c:
-            c.execute("SELECT mission_id FROM missions WHERE mission_name LIKE %s", (f"{DB}-%",))
-            mids = [r[0] for r in c.fetchall()]
-            for t, key in [
-                ("mission_participant_sessions", "mission_id"),
-                ("mission_participant_itineraries", "mission_id"),
-                ("mission_participants", "mission_id"),
-                ("mission_join_leave_entries", "mission_id"),
-                ("mission_itineraries", "mission_id"),
-                ("mission_vehicles", "mission_id"),
-                ("mission_beneficiaries", "mission_id"),
-                ("mission_eoc_staff", "mission_id"),
-            ]:
-                if mids:
-                    c.execute(f"DELETE FROM {t} WHERE {key} = ANY(%s)", (mids,))
-            if mids:
-                c.execute("DELETE FROM missions WHERE mission_id = ANY(%s)", (mids,))
-            conn.commit()
-        print(f"  ✓ cleaned test missions: {len(mids)}")
-    except Exception as exc:
-        conn.rollback()
-        print(f"  ⚠ cleanup failed: {exc}")
-    finally:
-        conn.close()
+    # ── Cleanup: delete created TEST-JL data ──
+    cleanup_test_data()
     print("\nALL INTEGRATION TESTS PASSED")
 
 

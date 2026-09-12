@@ -730,9 +730,11 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
     - المتطوع: يُربط بسجل volunteers عبر رقم العضوية (participation_role = رقم العضوية).
       ومنه نشتق user_id لو للمتطوع حساب دخول (username = رقم العضوية).
     - غير المتطوع: نحتفظ برقم/صفة العرض كما هو (سلوك قائم).
-    - owner_mission_id: إن كانت لنفس الهوية جلسة مفتوحة (انضمام بلا انفصال ⇒
-      end_dt IS NULL) في مهمة أخرى → رقمها (رادار التوافر: بلا LEAVE ليس متاحاً
-      لمهمة أخرى مهما كانت حالة المهمة). وإلا None.
+    - owner_mission_id: إن كانت لنفس الهوية مهمة أخرى بلا انفصال مُسجَّل —
+      شريحة مفتوحة (انضمام بلا انفصال ⇒ end_dt IS NULL) أو صفّ رستر بلا شرائح
+      أصلاً (لم يُسجَّل له LEAVE) في مهمة غير مكتملة → رقمها (رادار التوافر:
+      بلا LEAVE ليس متاحاً لمهمة أخرى). وإلا None (كل صفوفه فيها انفصال مسجّل
+      ⇒ متاح ولو كانت المهمة الأولى لم تُكتمل بعد).
       exclude_mission_id = المهمة الحالية (عند التحديث في مكانه) حتى لا يتعارض
       الرادار مع صف المشارك الموجود فعلاً في نفس المهمة (الـ PUT لا يحذف المشاركين).
     """
@@ -786,24 +788,66 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
         # excl_sql يُستثنى منه المهمة الحالية عند التحديث فقط لحالة التحديث في
         # مكانه (fix #7): صفُّ المشارك الموجود لا يعارض تحديث نفسه. الإدراج الجديد
         # لفترة مستقلة يمرر exclude_mission_id=None ليشمل المهمة الحالية أيضاً.
-        cursor.execute(
-            """
-            SELECT m.mission_name, COALESCE(b.branch_name, 'غير محدد')
-            FROM mission_participants p
-            JOIN missions m ON p.mission_id = m.mission_id
-            LEFT JOIN branches b ON b.branch_id = p.branch_id
-            WHERE LOWER(TRIM(p.membership_number)) = LOWER(%s)
-              AND p.branch_id IS NOT DISTINCT FROM %s
-              -- التوافر = جلسة مفتوحة فعلاً (end_dt IS NULL): بلا LEAVE ⇒ غير متاح
-              AND EXISTS (
-                  SELECT 1 FROM mission_participant_sessions s
-                  WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
-              )
-            """ + excl_sql + """
-            LIMIT 1;
-            """,
-            (membership, part.branch_id) + ((exclude_mission_id,) if exclude_mission_id is not None else ()),
-        )
+        if volunteer_id is not None:
+            # قاعدة موسّعة للمتطوع المرتبط (هوية رسمية بالـ volunteer_id): المنع مصدره
+            # «بلا انفصال مسجّل» — شريحة مفتوحة (انضمام بلا LEAVE) أو صفّ رستر بلا
+            # شرائح أصلاً ⇒ ما زال داخل مهمة أخرى ⇒ منع. ووجود انفصال مُسجَّل
+            # (شريحة مغلقة) في كل صفوفه ⇒ متاح حتى لو كانت المهمة نشطة. المهام
+            # المكتملة لا يمنع رصيدُها (لا أحد يبقى فيها؛ صفوفها بلا شرائح أثرُ
+            # خطة فقط) — وبعد اكتمال المهمة تُغلق جلساتها المفتوحة عند الحفظ.
+            cursor.execute(
+                """
+                SELECT m.mission_name, COALESCE(b.branch_name, 'غير محدد')
+                FROM mission_participants p
+                JOIN missions m ON p.mission_id = m.mission_id
+                LEFT JOIN branches b ON b.branch_id = p.branch_id
+                WHERE (
+                        p.volunteer_id = %s
+                        OR (
+                            LOWER(TRIM(p.membership_number)) = LOWER(%s)
+                            AND p.branch_id IS NOT DISTINCT FROM %s
+                        )
+                      )
+                  AND (
+                          EXISTS (
+                              SELECT 1 FROM mission_participant_sessions s
+                              WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
+                          )
+                          OR (
+                              NOT EXISTS (
+                                  SELECT 1 FROM mission_participant_sessions s
+                                  WHERE s.participant_id = p.participant_id AND s.end_dt IS NOT NULL
+                              )
+                              AND m.status NOT IN ('Completed', 'مكتملة')
+                          )
+                      )
+                """ + excl_sql + """
+                LIMIT 1;
+                """,
+                [volunteer_id, membership, part.branch_id]
+                + ([exclude_mission_id] if exclude_mission_id is not None else []),
+            )
+        else:
+            # غير مرتبط/غير متطوع — القاعدة القديمة حصراً (جلسة مفتوحة فعلاً)؛ لا
+            # نوسّع «بلا انفصال» على هوية نصية غير موثوقة (participation_role).
+            cursor.execute(
+                """
+                SELECT m.mission_name, COALESCE(b.branch_name, 'غير محدد')
+                FROM mission_participants p
+                JOIN missions m ON p.mission_id = m.mission_id
+                LEFT JOIN branches b ON b.branch_id = p.branch_id
+                WHERE LOWER(TRIM(p.membership_number)) = LOWER(%s)
+                  AND p.branch_id IS NOT DISTINCT FROM %s
+                  AND EXISTS (
+                      SELECT 1 FROM mission_participant_sessions s
+                      WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
+                  )
+                """ + excl_sql + """
+                LIMIT 1;
+                """,
+                [membership, part.branch_id]
+                + ([exclude_mission_id] if exclude_mission_id is not None else []),
+            )
         row = cursor.fetchone()
         if row:
             owner_mission_id = row[0]
@@ -1629,7 +1673,7 @@ def create_mission(
 
                 # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية المركّبة لا بالنصوص)
                 if active_in_other is not None:
-                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) في مهمة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
+                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) أو لا يزال مُدرجاً في مهمة أخرى بلا تسجيل انفصال ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
 
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, start_from_mission)
@@ -1733,7 +1777,7 @@ def create_mission(
         # ✅ Fix: throw says "مسجّل" but old catch looked for "متواجد" — different word.
         #    Now catches both forms so the intended 400 isn't lost to 500.
         err = str(e)
-        if "جلسة مفتوحة" in err:
+        if "جلسة مفتوحة" in err or "غير قابل للإضافة" in err:
             raise HTTPException(status_code=400, detail=err)
         if ikey and "idempotency_key" in err and ("unique" in err.lower() or "duplicate" in err.lower()):
             try:
@@ -1940,7 +1984,7 @@ def update_mission(
                 # رادار التوافر: جلسة مفتوحة (انضمام بلا انفصال) لنفس الهوية في مهمة
                 # أخرى ⇒ غير متاح — أيًّا كانت حالة تلك المهمة (لا return_status ولا اكتمال)
                 if active_in_other is not None:
-                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة أو التحديث: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) في مهمة أخرى ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
+                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة أو التحديث: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) أو لا يزال مُدرجاً في مهمة أخرى بلا تسجيل انفصال ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
 
                 # ── مطابقة بالصف (هوية + فترة الإسناد):
                 #    • صف JL: نفس مجموعة JOIN ← نفس الفترة ⇒ تحديث في مكانه (يُحافَظ
@@ -2136,7 +2180,7 @@ def update_mission(
         connection.rollback()
         # رادار التوافر (جلسة مفتوحة) وكل رسائل «غير متاح» — 400 وليست 500
         err = str(e)
-        if "جلسة مفتوحة" in err:
+        if "جلسة مفتوحة" in err or "غير قابل للإضافة" in err:
             raise HTTPException(status_code=400, detail=err)
         raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء التحديث: {err}")
     finally:
@@ -2207,8 +2251,8 @@ def end_participation(
                 if not cursor.fetchone():
                     cursor.execute(
                         """INSERT INTO mission_participant_sessions
-                           (participant_id, mission_id, session_date, check_in_time, check_out_time, notes)
-                           VALUES (%s, %s, CURRENT_DATE, %s, CURRENT_TIME, 'إنهاء المشاركة')""",
+                           (participant_id, mission_id, session_date, check_in_time, check_out_time, end_dt, notes)
+                           VALUES (%s, %s, CURRENT_DATE, %s, CURRENT_TIME, CURRENT_TIMESTAMP, 'إنهاء المشاركة')""",
                         (pid, mission_id, departure_time),
                     )
 
@@ -4561,10 +4605,13 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     now=now_ref, start_from_mission=sfm
                 )
 
-                # مفتاح الهوية (مطابق للـ SQL الأصلي)
+                # مفتاح الهوية: volunteer_id يجمع الصفوف حتى لو انجراف رقم العضوية؛
+                # وإلا رقم العضوية+الفرع، وإلا الاسم+الفرع (غير المتطوع).
                 mem = str(p.get('membership_number') or '').strip()
                 br = p.get('branch_id') or 0
-                k = f"rid:{br}:{mem}" if mem else f"nm:{br}:{p.get('full_name', '')}"
+                vid = p.get('volunteer_id')
+                k = (f"vid:{vid}" if vid
+                     else (f"rid:{br}:{mem}" if mem else f"nm:{br}:{p.get('full_name', '')}"))
 
                 if k not in person_info:
                     person_info[k] = {
@@ -4576,10 +4623,19 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                         'volunteer_id': p.get('volunteer_id'),
                     }
 
-                # حفظ أفضل نتيجة لكل مهمة (MAX لا يتجاوز الحساب)
+                # تجميع لكل (هوية, مهمة) بدلاً من MAX — صف الفترة يجمع مقاطعه داخلياً
+                # (compute_working_hours تُجمع كل segments للصف)، فيجب جمع الصفوف أيضاً:
+                #   seg  = ساعات الشرائح الفعلية (صفّ له segments جرى حسابها فعلياً)
+                #   plan = ساعات الخطة لصفّ بلا segments (تخصيص/خطة المهمة)
+                #   مبدأ «فعلي يهيمن على الخطة»: لو للمهمة أي شريحة فعلية ⇒ seg فقط
+                #   (لا يُعدّ حضورٌ فعليّ مع نافذة خطة لنفس الحضور مرتين).
                 bk = hours_by_key.setdefault(k, {})
-                if mid not in bk or wh > bk[mid][1]:
-                    bk[mid] = (md.get('created_at', ''), wh)
+                entry = bk.setdefault(mid, {'created_at': md.get('created_at', ''), 'seg': 0.0, 'plan': 0.0, 'has_seg': False})
+                if segments:
+                    entry['seg'] += wh
+                    entry['has_seg'] = True
+                else:
+                    entry['plan'] += wh
 
                 # المهمة النشطة: شريحة مفتوحة (end_dt IS NULL) أو return_status='مازال بالمهمة'
                 if k not in active_seen:
@@ -4603,14 +4659,18 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
             result = []
             for k, info in person_info.items():
                 mission_data_map = hours_by_key.get(k, {})
-                total_h = sum(h for _, h in mission_data_map.values())
+
+                def mission_hours(_mid, e):
+                    return e['seg'] if e['has_seg'] else e['plan']
+
+                total_h = sum(mission_hours(mid, e) for mid, e in mission_data_map.items())
                 missions_count = len(mission_data_map)
 
                 # آخر مهمة = الأحدث حسب created_at
                 last_h = 0
                 if mission_data_map:
-                    last_m = max(mission_data_map.items(), key=lambda x: (str(x[1][0] or ''), str(x[0] or '')))
-                    last_h = last_m[1][1]
+                    last_m = max(mission_data_map.items(), key=lambda x: (str(x[1]['created_at'] or ''), str(x[0] or '')))
+                    last_h = mission_hours(last_m[0], last_m[1])
 
                 active = active_missions.get(k)
                 result.append({
