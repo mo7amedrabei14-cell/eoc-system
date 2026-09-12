@@ -3371,6 +3371,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
      // ممنوع ما دام حقل إلزامي ناقص — ما عدا "الإرجاع" (قرار رافض للسوبرفايزر يعمل دائماً).
      // الفحص قبل القفل المتزامن حتى لا يعلق القفل عند العودة المبكرة.
      if (submitStatus !== 'Returned') {
+       // 📌 العنوان الإلزامي للأيام/خطوط السير المخصصة: أي يوم مخصص بلا عنوان يمنع
+       //    الحفظ/الإرسال/الاعتماد/الإنهاء — العنوان يُحرَّر الحقول فيه. بدون أي يوم
+       //    مخصص لا يوجد شرط (خط السير الأساسي لا يتطلب عنواناً). استثناء "الإرجاع"
+       //    من نفس قاعدة استثناء الحقول الإلزامية أعلاه.
+       const untitledCustom = customItineraries.filter(ci => String(ci.title || '').trim() === '');
+       if (untitledCustom.length) {
+         setRequiredTouched(true);
+         setAttemptStatus(submitStatus);
+         return setCustomAlert('يجب إدخال عنوان للمسار المخصص أولاً.');
+       }
        const missing = readMissingFields(submitStatus);
        if (missing.length) {
          setRequiredTouched(true);
@@ -4025,9 +4035,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* تواريخ */}
-                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || getLocalDate()} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || getLocalDate()} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" defaultValue={currentMissionData?.completion_date || getLocalDate()} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
                   {/* أوقات */}
                   <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
                   <FormGroup className="items-center text-center" label="ساعة الوصول"><SegTimeField className="field text-center" id="f_arrival_time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
@@ -4066,15 +4076,21 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <SectionCard title="الأيام / خطوط السير المخصصة (لفرق أو أفراد محددين)" icon={<MapIcon />} actionBtn={<button onClick={addCustomItinerary} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة يوم / مسار جديد</button>}>
                 <div className="space-y-4">
                   {customItineraries.length === 0 && <p className="text-center text-[var(--muted-2)] text-sm">لا توجد أيام أو خطوط سير مخصصة بعد.</p>}
-                  {customItineraries.map((ci, ciIndex) => (
+                  {customItineraries.map((ci, ciIndex) => {
+                    const untitled = String(ci.title || '').trim() === '';
+                    return (
                     <div key={ci.id} className="bg-[var(--surface-4)] border border-[var(--border)] p-4 rounded-xl">
                       <div className="flex justify-between items-center mb-3 border-b border-[var(--border)] pb-2">
                         <input id={`r_title_${ci.id}`} type="text" defaultValue={ci.title} onChange={(e) => updateCustomTitle(ci.id, e.target.value)} placeholder="اكتب اسم اليوم أو خط السير المخصص (مثال: تحركات اليوم الأول)..." className="eoc-manual-field bg-transparent text-[var(--accent)] font-bold outline-none w-full md:w-1/2" />
                         <div className="flex gap-2">
-                          <button onClick={() => addRouteToCustom(ci.id)} className="text-xs text-green-500 hover:bg-[var(--surface-hover)] px-2 py-1 rounded">+ مسار</button>
+                          <button onClick={() => addRouteToCustom(ci.id)} disabled={untitled}
+                            className={`text-xs text-green-500 hover:bg-[var(--surface-hover)] px-2 py-1 rounded ${untitled ? 'opacity-40 cursor-not-allowed' : ''}`}>+ مسار</button>
                           <button onClick={() => removeCustomItinerary(ci.id)} className="text-xs text-[var(--accent)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded">حذف المخصص</button>
                         </div>
                       </div>
+                      {untitled && (
+                        <p className="text-[var(--accent)] text-xs font-bold mb-2 flex items-center gap-1.5 px-1">⚠ يجب إدخال عنوان للمسار المخصص أولاً.</p>
+                      )}
                       {ci.routes.map((cr, rIndex) => (
                         <RouteCard
                           key={cr.id}
@@ -4091,10 +4107,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           onRemove={() => removeRouteFromCustom(ci.id, cr.id)}
                           showRemove={ci.routes.length > 1}
                           isBasic={false}
+                          disabled={untitled}
                         />
                       ))}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               </SectionCard>
 
@@ -5010,8 +5028,9 @@ const RouteCard = ({
           type="text"
           value={route.route_from || ''}
           onChange={handleFromChange}
+          disabled={disabled}
           placeholder="من (نقطة الانطلاق)..."
-          className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2"
+          className={`eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2 ${disabled ? 'opacity-40' : ''}`}
         />
         <span className="text-[var(--faint)] self-center px-1">⇠</span>
         <label className="text-[var(--muted-2)] text-xs px-3 self-center shrink-0 whitespace-nowrap">إلى</label>
@@ -5020,8 +5039,9 @@ const RouteCard = ({
           type="text"
           value={route.route_to || ''}
           onChange={handleToChange}
+          disabled={disabled}
           placeholder="إلى (الوجهة)..."
-          className="eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2"
+          className={`eoc-manual-field w-full bg-transparent outline-none text-white text-sm px-4 py-2 ${disabled ? 'opacity-40' : ''}`}
         />
       </div>
       {/* الصف الثاني: التحرك + الوصول (datetime-local مدمج) */}
@@ -5032,7 +5052,9 @@ const RouteCard = ({
             id={`r_dep_${prefix}_${index}`}
             value={depDateTime}
             onChange={handleDepChange}
-            className="field text-center w-full md:w-56"
+            twoIcons
+            disabled={disabled}
+            className="field text-center w-full md:w-[330px]"
           />
         </div>
         <div className="flex items-center gap-2 flex-1 min-w-[260px]">
@@ -5041,7 +5063,9 @@ const RouteCard = ({
             id={`r_arr_${prefix}_${index}`}
             value={arrDateTime}
             onChange={handleArrChange}
-            className="field text-center w-full md:w-56"
+            twoIcons
+            disabled={disabled}
+            className="field text-center w-full md:w-[330px]"
           />
         </div>
         {showRemove && (

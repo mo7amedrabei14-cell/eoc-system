@@ -678,7 +678,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
 /* ═══════════════════════════════════════════════════════════
    SEG DATE-TIME FIELD
    ═══════════════════════════════════════════════════════════ */
-export const SegDateTimeField = ({ value, onChange, defaultValue, id, className = '', disabled, max, ...props }) => {
+export const SegDateTimeField = ({ value, onChange, defaultValue, id, className = '', disabled, max, twoIcons, ...props }) => {
   const initial = (value !== undefined && value !== null) ? value : (defaultValue || '');
   const initDisplay = initial ? formatDateTime12(initial) : '';
   // Parse "DD/MM/YYYY HH:MM AM" → 5 segments
@@ -704,8 +704,19 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
     return m ? `${m[1]}-${pad(+m[2])}-${pad(+m[3])}T${pad(+m[4])}:${m[5]}` : initial;
   });
   const [activeSeg, setActiveSeg] = useState(0);
-  const [open, setOpen] = useState(false);
+  const [picker, setPicker] = useState(null);   // null | 'date' | 'time' — نافذة واحدة في كل مرة
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  // ── حالة تقويم التاريخ (تُقرأ فقط عند twoIcons=true) ──
+  const [calView, setCalView] = useState(() => {
+    const m = String(initial || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return { y: +m[1], mo: +m[2] };
+    const now = new Date(); return { y: now.getFullYear(), mo: now.getMonth() + 1 };
+  });
+  const [selDate, setSelDate] = useState(() => {
+    const m = String(initial || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+    return '';
+  });
   const textRef = useRef(null);
   const popRef = useRef(null);
   const pillsRef = useRef(null);
@@ -835,23 +846,23 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
     setPos({ top, left });
   };
 
-  const openPicker = () => {
+  const openPicker = (which) => {
     if (disabled) return;
     const el = textRef.current;
     if (el) { const r = el.getBoundingClientRect(); setPos({ top: r.bottom + GAP, left: r.left }); }
-    setOpen(true);
+    setPicker(which);
   };
 
-  useLayoutEffect(() => { if (open) positionPopup(); }, [open]);
+  useLayoutEffect(() => { if (picker) positionPopup(); }, [picker]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!picker) return;
     const onDown = (e) => {
       if (popRef.current && popRef.current.contains(e.target)) return;
       if (textRef.current && textRef.current.contains(e.target)) return;
-      setOpen(false);
+      setPicker(null);
     };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setPicker(null); };
     const onMove = () => positionPopup();
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
@@ -863,14 +874,14 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
       window.removeEventListener('scroll', onMove, true);
       window.removeEventListener('resize', onMove);
     };
-  }, [open]);
+  }, [picker]);
 
   const applyWheel = () => {
     // Read clock → set HH, MM, AM/PM segments
     const hh = hour12((clock || '00').split(':')[0]);
     const mm = (clock || '00').split(':')[1] || '00';
     setSegs(prev => [...prev.slice(0, 3), pad(hh), mm, ampm]);
-    setOpen(false);
+    setPicker(null);
   };
 
   const [clock, setClock] = useState(() => {
@@ -895,6 +906,50 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   const hh12 = String(hour12((clock || '00').split(':')[0])).padStart(2, '0');
   const mmWheel = (clock || '00').split(':')[1] || '00';
 
+  // ── تقويم التاريخ (مستخدَم فقط عند twoIcons — منسوخ من SegDateField 358-379) ──
+  const changeCalMonth = (delta) => setCalView(v => {
+    let mo = v.mo + delta, y = v.y;
+    if (mo < 1) { mo = 12; y--; }
+    if (mo > 12) { mo = 1; y++; }
+    return { y, mo };
+  });
+
+  const pickCalendarDay = (dISO) => {
+    const m = dISO.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) {
+      const y = m[1], mo = pad(+m[2]), d = pad(+m[3]);
+      // تحديث أجزاء التاريخ فقط (dd,mm,yyyy) — الحفاظ على الوقت الحالي كما هو
+      setSegs(prev => [d, mo, y, prev[3] || '', prev[4] || '', prev[5] || 'AM']);
+      setSelDate(`${y}-${mo}-${d}`);
+      setCalView({ y: +y, mo: +mo });
+    }
+    setPicker(null);   // إغلاق التقويم بعد الاختيار
+  };
+
+  const calMONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const calWEEK = ['ح','ن','ث','ر','خ','ج','س'];
+  const { y: calY, mo: calMo } = calView;
+  const calStart = new Date(calY, calMo - 1, 1).getDay();
+  const calDim = new Date(calY, calMo, 0).getDate();
+  const calTodayISO = `${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}-${pad(new Date().getDate())}`;
+  const calCells = [];
+  for (let i = 0; i < calStart; i++) calCells.push(<span key={'e' + i} className="h-9" />);
+  for (let d = 1; d <= calDim; d++) {
+    const iso = `${calY}-${pad(calMo)}-${pad(d)}`;
+    const overMax = max && iso > max;
+    const isSel = iso === selDate;
+    const isToday = iso === calTodayISO;
+    calCells.push(
+      <button key={d} type="button" disabled={overMax} onClick={() => pickCalendarDay(iso)}
+        className={`h-9 w-9 text-xs rounded-lg transition flex items-center justify-center
+          ${overMax ? 'opacity-25 cursor-not-allowed' : 'hover:bg-[var(--surface-hover)]'}
+          ${isSel ? 'bg-[var(--accent)] text-white font-bold' : 'text-[var(--ink-2)]'}
+          ${isToday && !isSel ? 'ring-1 ring-[var(--accent)]' : ''}`}>
+        {d}
+      </button>
+    );
+  }
+
   return (
     <>
       <div className="relative">
@@ -903,7 +958,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           type="text"
           value={display}
           placeholder="DD/MM/YYYY HH:MM AM"
-          className={`seg-ghost ${className} cursor-pointer pr-7 pl-7`}
+          className={`seg-ghost ${className} cursor-pointer ${twoIcons ? 'pl-14 pr-7' : 'pr-7 pl-7'}`}
           dir="ltr"
           onChange={() => {}}
           onKeyDown={handleKeyDown}
@@ -912,15 +967,24 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           autoComplete="off"
           {...props}
         />
-        <div ref={pillsRef} className="seg-pills" dir="ltr" aria-hidden="true">
+        <div ref={pillsRef} className={`seg-pills ${twoIcons ? 'pl-14 pr-7' : ''}`} dir="ltr" aria-hidden="true">
           <SegPills segs={segs} placeholders={['__', '__', '____', '__', '__', 'AM']} separators={['/', '/', ' ', ':', ' ']} active={activeSeg} />
         </div>
         {id && <input id={id} type="datetime-local" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />}
-        <button type="button" onClick={openPicker} disabled={disabled}
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">📅</button>
+        {twoIcons ? (
+          <>
+            <button type="button" onClick={() => openPicker('date')} disabled={disabled}
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
+            <button type="button" onClick={() => openPicker('time')} disabled={disabled}
+              className="absolute left-6 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">🕐</button>
+          </>
+        ) : (
+          <button type="button" onClick={() => openPicker('time')} disabled={disabled}
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">📅</button>
+        )}
       </div>
-      {open && createPortal(
+      {picker === 'time' && createPortal(
         <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
@@ -953,6 +1017,21 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
             <button type="button" onClick={applyWheel}
               className="flex-1 px-2 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-white font-bold hover:opacity-90">تم</button>
           </div>
+        </div>,
+        document.body
+      )}
+      {picker === 'date' && createPortal(
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+          style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
+          <div className="flex items-center justify-between mb-2">
+            <button type="button" onClick={() => changeCalMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
+            <div className="text-sm font-bold text-[var(--ink-2)]">{calMONTHS[calMo - 1]} {calY}</div>
+            <button type="button" onClick={() => changeCalMonth(1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">›</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {calWEEK.map((w, i) => <div key={i} className="h-6 text-[10px] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">{calCells}</div>
         </div>,
         document.body
       )}
