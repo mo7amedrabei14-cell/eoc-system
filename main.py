@@ -4,6 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2Pas
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
+from psycopg.types.json import Jsonb
 from datetime import date, time, datetime, timedelta
 from psycopg.errors import UniqueViolation
 import json
@@ -185,6 +186,35 @@ def ensure_schema():
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_mps_end_entry
                     ON mission_participant_sessions (end_entry_id);
+            """)
+
+            # ── 8) تسليم وتسلم المشرفين (سجل يومي — سجل واحد لكل تاريخ)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS handover_log (
+                    handover_id         BIGSERIAL PRIMARY KEY,
+                    handover_date       DATE NOT NULL,
+                    local_news_count    INTEGER NOT NULL DEFAULT 0,
+                    global_news_count   INTEGER NOT NULL DEFAULT 0,
+                    forms_count         INTEGER NOT NULL DEFAULT 0,
+                    issues_text         TEXT NOT NULL DEFAULT '',
+                    tetra_count         INTEGER NOT NULL DEFAULT 0,
+                    huawei_count        INTEGER NOT NULL DEFAULT 0,
+                    new_equipment_count INTEGER NOT NULL DEFAULT 0,
+                    shift_matrix        JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    follow_ups_text     TEXT NOT NULL DEFAULT '',
+                    created_by          INTEGER NOT NULL REFERENCES users(user_id),
+                    created_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo'),
+                    updated_by          INTEGER REFERENCES users(user_id),
+                    updated_at          TIMESTAMP WITHOUT TIME ZONE
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_handover_log_date
+                    ON handover_log (handover_date);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_handover_log_created_by
+                    ON handover_log (created_by);
             """)
         connection.commit()
     except Exception as e:
@@ -3771,9 +3801,290 @@ def delete_local_news(news_id: int, credentials: HTTPAuthorizationCredentials = 
 
             connection.commit()
             return {"message": "تم حذف الخبر بنجاح"}
-            
+
     except Exception as e:
         connection.rollback()
+        raise HTTPException(status_code=500)
+    finally:
+        connection.close()
+
+# =====================================================================
+# =====================================================================
+# قطاع تسليم وتسلم المشرفين - Supervisors Handover Module
+# =====================================================================
+# =====================================================================
+
+class HandoverModel(BaseModel):
+    handover_date: Optional[str] = None          # ISO YYYY-MM-DD
+    local_news_count: int = 0                    # أخبار محلية
+    global_news_count: int = 0                   # أخبار عالمية
+    forms_count: int = 0                         # استمارات منشأة
+    issues_text: Optional[str] = None            # مشاكل / ملاحظات
+    tetra_count: int = 0                         # أجهزة تيترا
+    huawei_count: int = 0                        # أجهزة هواوي
+    new_equipment_count: int = 0                 # معدات مستلمة حديثاً
+    shift_matrix: Optional[dict] = None          # 12 خلية {shift}_{dept}
+    follow_ups_text: Optional[str] = None        # متابعات عامة
+
+
+HANDOVER_ROLES = {"OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "المالك", "مدير", "أدمن", "مشرف"}
+HANDOVER_OWNER_ROLES = {"OWNER", "المالك"}
+
+
+def is_handover_privileged(role):
+    return bool(role) and str(role.get("role_name", "")).strip().upper() in HANDOVER_ROLES
+
+
+def is_handover_owner(role):
+    return bool(role) and str(role.get("role_name", "")).strip().upper() in HANDOVER_OWNER_ROLES
+
+
+def require_handover_privileged(role):
+    if not is_handover_privileged(role):
+        raise HTTPException(status_code=403, detail="هذه الصفحة متاحة للمالك والمشرفين فقط")
+
+
+def require_handover_owner(role):
+    if not is_handover_owner(role):
+        raise HTTPException(status_code=403, detail="المالك فقط يمكنه تنفيذ هذا الإجراء")
+
+
+@app.get("/api/handovers")
+def get_handovers(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_handover_privileged(role)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT h.*, u.full_name AS created_by_name, uu.full_name AS updated_by_name
+                FROM handover_log h
+                LEFT JOIN users u ON u.user_id = h.created_by
+                LEFT JOIN users uu ON uu.user_id = h.updated_by
+                ORDER BY h.handover_date DESC;
+            """)
+            rows = cursor.fetchall()
+            col_names = [desc[0] for desc in cursor.description]
+            result = []
+            for row in rows:
+                data = dict(zip(col_names, row))
+                for k, v in data.items():
+                    if v is not None and not isinstance(v, (str, int, float, bool)):
+                        data[k] = str(v)
+                result.append(data)
+            return result
+    except Exception as e:
+        print(f"Error fetching handovers: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء جلب التسليمات")
+    finally:
+        connection.close()
+
+
+@app.get("/api/handovers/by-date/{handover_date}")
+def get_handover_by_date(handover_date: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_handover_privileged(role)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT h.*, u.full_name AS created_by_name, uu.full_name AS updated_by_name
+                FROM handover_log h
+                LEFT JOIN users u ON u.user_id = h.created_by
+                LEFT JOIN users uu ON uu.user_id = h.updated_by
+                WHERE h.handover_date = %s;
+            """, (handover_date,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="لا يوجد تسليم لهذا التاريخ")
+            col_names = [desc[0] for desc in cursor.description]
+            data = dict(zip(col_names, row))
+            for k, v in data.items():
+                if v is not None and not isinstance(v, (str, int, float, bool)):
+                    data[k] = str(v)
+            return data
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        print(f"Error fetching handover by date: {e}")
+        raise HTTPException(status_code=500)
+    finally:
+        connection.close()
+
+
+@app.post("/api/handovers")
+def create_handover(rec: HandoverModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_handover_privileged(role)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO handover_log (
+                    handover_date, local_news_count, global_news_count, forms_count,
+                    issues_text, tetra_count, huawei_count, new_equipment_count,
+                    shift_matrix, follow_ups_text, created_by
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING handover_id;
+            """, (
+                rec.handover_date, rec.local_news_count, rec.global_news_count, rec.forms_count,
+                rec.issues_text or "", rec.tetra_count, rec.huawei_count, rec.new_equipment_count,
+                Jsonb(rec.shift_matrix or {}), rec.follow_ups_text or "", user_id
+            ))
+            hid = cursor.fetchone()[0]
+            try:
+                create_audit_log(cursor, user_id, "إنشاء تسليم", mission_id=None, entity_type="handover", entity_id=hid,
+                                 details={"action_text": f"قام بإنشاء تسليم يومي بتاريخ {rec.handover_date}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+            connection.commit()
+            return {"handover_id": hid, "message": "تم إنشاء التسليم بنجاح"}
+    except UniqueViolation:
+        connection.rollback()
+        raise HTTPException(status_code=409, detail="يوجد سجل تسليم مسجل بالفعل لهذا التاريخ")
+    except Exception as e:
+        connection.rollback()
+        print(f"Error creating handover: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء إنشاء التسليم")
+    finally:
+        connection.close()
+
+
+@app.put("/api/handovers/{handover_id}")
+def update_handover(handover_id: int, rec: HandoverModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_handover_privileged(role)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE handover_log SET
+                    handover_date = %s,
+                    local_news_count = %s,
+                    global_news_count = %s,
+                    forms_count = %s,
+                    issues_text = %s,
+                    tetra_count = %s,
+                    huawei_count = %s,
+                    new_equipment_count = %s,
+                    shift_matrix = %s,
+                    follow_ups_text = %s,
+                    updated_by = %s,
+                    updated_at = (now() AT TIME ZONE 'Africa/Cairo')
+                WHERE handover_id = %s
+                RETURNING handover_id;
+            """, (
+                rec.handover_date, rec.local_news_count, rec.global_news_count, rec.forms_count,
+                rec.issues_text or "", rec.tetra_count, rec.huawei_count, rec.new_equipment_count,
+                Jsonb(rec.shift_matrix or {}), rec.follow_ups_text or "", user_id, handover_id
+            ))
+            hid = cursor.fetchone()
+            if not hid:
+                raise HTTPException(status_code=404, detail="التسليم غير موجود")
+            try:
+                create_audit_log(cursor, user_id, "تعديل تسليم", mission_id=None, entity_type="handover", entity_id=handover_id,
+                                 details={"action_text": f"قام بتعديل تسليم يومي بتاريخ {rec.handover_date}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+            connection.commit()
+            return {"message": "تم تعديل التسليم بنجاح"}
+    except UniqueViolation:
+        connection.rollback()
+        raise HTTPException(status_code=409, detail="يوجد سجل تسليم مسجل بالفعل لهذا التاريخ")
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error updating handover: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء تعديل التسليم")
+    finally:
+        connection.close()
+
+
+@app.delete("/api/handovers/{handover_id}")
+def delete_handover(handover_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_handover_owner(role)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT handover_date FROM handover_log WHERE handover_id = %s", (handover_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="التسليم غير موجود")
+            cursor.execute("DELETE FROM handover_log WHERE handover_id = %s", (handover_id,))
+            try:
+                create_audit_log(cursor, user_id, "حذف تسليم", mission_id=None, entity_type="handover", entity_id=handover_id,
+                                 details={"action_text": f"قام بحذف تسليم يومي بتاريخ {row[0]}"})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+            connection.commit()
+            return {"message": "تم حذف التسليم بنجاح"}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error deleting handover: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء حذف التسليم")
+    finally:
+        connection.close()
+
+
+class HandoverExportModel(BaseModel):
+    scope: str = "single"   # 'single' | 'all'
+    scope_id: Optional[int] = None
+
+
+@app.post("/api/handovers/export-log")
+def handover_export_log(payload: HandoverExportModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_handover_privileged(role)
+    if payload.scope == "all":
+        require_handover_owner(role)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if payload.scope == "all":
+                cursor.execute("SELECT handover_id FROM handover_log ORDER BY handover_date DESC")
+                rows = cursor.fetchall()
+                hid = rows[0][0] if rows else None
+                action = "تنزيل السجل الشامل"
+                detail = "قام بتنزيل السجل الشامل لتسليمات المشرفين"
+            else:
+                hid = payload.scope_id
+                action = "تنزيل سجل تسليم"
+                detail = f"قام بتنزيل سجل تسليم يومي رقم {payload.scope_id or 0}"
+            try:
+                create_audit_log(cursor, user_id, action, mission_id=None, entity_type="handover", entity_id=hid,
+                                 details={"action_text": detail})
+            except Exception as e:
+                print(f"Audit Error: {e}")
+            connection.commit()
+            return {"message": "تم تسجيل عملية التنزيل"}
+    except Exception as e:
+        connection.rollback()
+        print(f"Error logging handover export: {e}")
         raise HTTPException(status_code=500)
     finally:
         connection.close()

@@ -34,6 +34,14 @@ const ENGLISH_UI = {
   'مركز رصد الزلازل': 'Earthquake monitoring center',
   'الفروع والمخزون الاستراتيجي': 'Branches & strategic inventory',
   'سجل النظام': 'System log',
+  'تسليم وتسلم مشرفين': 'Supervisors handover',
+  'سجل التسليمات': 'Handover log',
+  'إنشاء تسليم يومي': 'Create daily handover',
+  'تنزيل السجل الشامل': 'Download comprehensive log',
+  'تنزيل سجل تسليم': 'Download handover record',
+  'إنشاء تسليم': 'Create handover',
+  'تعديل تسليم': 'Update handover',
+  'حذف تسليم': 'Delete handover',
   'إنهاء الجلسة الآمنة': 'End secure session',
   'خروج': 'Log out',
   'سيتم حذف جميع بيانات المهام نهائياً. هذا الإجراء لا يمكن التراجع عنه.': 'All mission data will be permanently deleted. This action cannot be undone.',
@@ -801,6 +809,11 @@ function localizeActionSuffix(value) {
     [' بقوة ', ' of magnitude '],
     [' في: ', ' in: '],
     [') في: ', ') in: '],
+    ['قام بإنشاء تسليم يومي بتاريخ ', 'Created a daily handover for date '],
+    ['قام بتعديل تسليم يومي بتاريخ ', 'Updated a daily handover for date '],
+    ['قام بحذف تسليم يومي بتاريخ ', 'Deleted a daily handover for date '],
+    ['قام بتنزيل سجل تسليم يومي رقم ', 'Downloaded daily handover record #'],
+    ['قام بتنزيل السجل الشامل لتسليمات المشرفين', 'Downloaded the comprehensive supervisors handover log'],
   ];
   let out = value;
   PAIRS.forEach(([ar, en]) => { out = out.split(ar).join(en); });
@@ -1215,10 +1228,10 @@ useEffect(() => {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toasts.length]);
-  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false });
+  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false, handover: false });
   // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
-  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0 });
+  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0 });
 
   const userRole = userData?.role?.toUpperCase() || 'VOLUNTEER';
   const isOwner = userData?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
@@ -1373,6 +1386,7 @@ useEffect(() => {
         earthquakes: prev.earthquakes + (e.event_type === 'earthquake' ? 1 : 0),
         ai_news: prev.ai_news + (isAi ? 1 : 0),
         audit: prev.audit + 1,
+        handover: prev.handover + (e.event_type === 'handover' ? 1 : 0),
       }));
 
       // تنوير النقطة الحمراء في القائمة الجانبية
@@ -1384,6 +1398,7 @@ useEffect(() => {
         earthquakes: prev.earthquakes || e.event_type === 'earthquake',
         ai_news: prev.ai_news || isAi,
         audit: true,
+        handover: prev.handover || e.event_type === 'handover',
       }));
 
       // وميض صف المهمة المتغيّرة + تغذية أحداث المهام لفصل الـ modal
@@ -1572,6 +1587,9 @@ useEffect(() => {
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} theme={theme} />;
       case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} theme={theme} />;
+      case 'handover': return (isOwner || isSupervisor)
+        ? <HandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} />
+        : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
       case 'audit': return <AuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
       default: return <HomeView branches={branchesList} theme={theme} />;
@@ -1591,6 +1609,7 @@ useEffect(() => {
         { id: 'global_disasters', icon: <GlobalWorldIcon />, ar: 'رصد الكوارث العالمية', en: 'Global Disasters', update: newUpdates.global_disasters },
         { id: 'earthquakes', icon: <EarthquakeIcon />, ar: 'مركز رصد الزلازل', en: 'Earthquake Center', update: newUpdates.earthquakes },
         ...((isOwner || isSupervisor) ? [{ id: 'branches_inventory', icon: <MapIcon />, ar: 'الفروع والمخزون الاستراتيجي', en: 'Branches & Inventory' }] : []),
+        ...((isOwner || isSupervisor) ? [{ id: 'handover', icon: <HandoverIcon />, ar: 'تسليم وتسلم مشرفين', en: 'Supervisors Handover', update: newUpdates.handover }] : []),
         ...((isOwner || isSupervisor || isJoker) ? [{ id: 'audit', icon: <ShieldIcon />, ar: 'سجل النظام', en: 'System Audit', update: newUpdates.audit }] : []),
       ],
     },
@@ -1817,6 +1836,7 @@ useEffect(() => {
             <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => handleNavigation('global_disasters')} isOpen={isSidebarOpen} hasUpdate={newUpdates.global_disasters} />
             <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} hasUpdate={newUpdates.earthquakes} />
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => handleNavigation('branches_inventory')} isOpen={isSidebarOpen} />}
+            {(isOwner || isSupervisor) && <NavItem icon={<HandoverIcon />} label="تسليم وتسلم مشرفين" isActive={activeTab === 'handover'} onClick={() => handleNavigation('handover')} isOpen={isSidebarOpen} hasUpdate={newUpdates.handover} />}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
@@ -1846,6 +1866,7 @@ useEffect(() => {
                   {activeTab === 'global_disasters' && 'رصد الكوارث العالمية'}
                   {activeTab === 'earthquakes' && 'مركز رصد الزلازل'}
                   {activeTab === 'branches_inventory' && 'الانتشار الجغرافي والمخزون'}
+                  {activeTab === 'handover' && 'تسليم وتسلم مشرفين'}
                   {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
                 </h1>
                 <span className={`hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${realtimeConnected ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--warn-soft)] text-[var(--warn)]'}`}>
@@ -5125,6 +5146,9 @@ const UsersIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24"
 const MapIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>;
 const LogoutIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>;
 const InventoryIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>;
+const HandoverIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 7h12M8 7l4-4M8 7l4 4"/><path d="M16 17H4M16 17l-4-4m4 4-4 4"/></svg>;
+const EditIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>;
+const DownloadIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>;
 const CheckIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const PendingIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ExcelIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9L13 3z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 3v6h6"/><path strokeLinecap="round" strokeWidth={2} d="M9 13.5h6M9 16.5h6M9 19h4"/></svg>;
@@ -5765,6 +5789,375 @@ const [nd, setNd] = useState({
             <div className="mt-8 flex justify-end">
               <button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-[0_0_22px_var(--accent-glow)]">
                 علم، جاري التعديل
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// تسليم وتسلم المشرفين (Supervisors Handover)
+// ==========================================
+const HANDOVER_SHIFTS = [
+  { key: 'night', ar: 'وردية الليل', en: 'Night Shift' },
+  { key: 'morning', ar: 'وردية الصباح', en: 'Morning Shift' },
+  { key: 'evening', ar: 'وردية المساء', en: 'Evening Shift' },
+];
+const HANDOVER_DEPTS = [
+  { key: 'relief', ar: 'الإغاثة', en: 'Relief' },
+  { key: 'youth', ar: 'إدارة الشباب والمتطوعين', en: 'Youth & Volunteer Mgmt' },
+  { key: 'resources', ar: 'تنمية الموارد', en: 'Resource Development' },
+  { key: 'case', ar: 'إدارة الحالات', en: 'Case Management' },
+];
+const EMPTY_SHIFT_MATRIX = () => {
+  const m = {};
+  HANDOVER_SHIFTS.forEach(s => HANDOVER_DEPTS.forEach(d => { m[`${s.key}_${d.key}`] = 0; }));
+  return m;
+};
+const HANDOVER_SHIFT_AR = { night: 'وردة الليل', morning: 'وردة الصباح', evening: 'وردة المساء' };
+const HANDOVER_DEPT_AR = { relief: 'الإغاثة', youth: 'الشباب والمتطوعين', resources: 'تنمية الموارد', case: 'إدارة الحالات' };
+
+function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 0 }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
+  const canAccess = isOwner || isSupervisor;
+
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const emptyForm = (date) => ({
+    handover_date: date || todayStr(),
+    local_news_count: 0, global_news_count: 0, forms_count: 0,
+    issues_text: '',
+    tetra_count: 0, huawei_count: 0, new_equipment_count: 0,
+    shift_matrix: EMPTY_SHIFT_MATRIX(),
+    follow_ups_text: '',
+  });
+
+  const [handovers, setHandovers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [form, setForm] = useState(() => emptyForm(todayStr()));
+
+  const fetchHandovers = useCallback(() => {
+    setIsLoading(true);
+    fetch(`${BASE}/api/handovers`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } })
+      .then(res => (res.ok ? res.json() : []))
+      .then(data => { setHandovers(data || []); setIsLoading(false); })
+      .catch(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => { if (canAccess) fetchHandovers(); }, [canAccess, fetchHandovers]);
+  useEffect(() => { if (canAccess && liveUpdateVersion > 0) fetchHandovers(); }, [liveUpdateVersion, canAccess, fetchHandovers]);
+
+  const loadIntoForm = (rec) => {
+    setForm({
+      handover_date: rec.handover_date || todayStr(),
+      local_news_count: rec.local_news_count || 0,
+      global_news_count: rec.global_news_count || 0,
+      forms_count: rec.forms_count || 0,
+      issues_text: rec.issues_text || '',
+      tetra_count: rec.tetra_count || 0,
+      huawei_count: rec.huawei_count || 0,
+      new_equipment_count: rec.new_equipment_count || 0,
+      shift_matrix: { ...EMPTY_SHIFT_MATRIX(), ...(rec.shift_matrix || {}) },
+      follow_ups_text: rec.follow_ups_text || '',
+    });
+  };
+
+  const openCreate = async () => {
+    setNotice(null);
+    setForm(emptyForm(todayStr()));
+    try {
+      const res = await fetch(`${BASE}/api/handovers/by-date/${todayStr()}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } });
+      if (res.ok) {
+        const rec = await res.json();
+        setEditingId(rec.handover_id);
+        loadIntoForm(rec);
+        setNotice(T('يوجد سجل تسليم مسجل بالفعل لهذا اليوم — سيتم فتحه للتعديل', 'A handover already exists for today — opening it for editing'));
+      } else {
+        setEditingId(null);
+      }
+    } catch { setEditingId(null); }
+    setModalOpen(true);
+  };
+
+  const openEdit = (rec) => {
+    setNotice(null);
+    setEditingId(rec.handover_id);
+    loadIntoForm(rec);
+    setModalOpen(true);
+  };
+
+  const handleDateChange = (dateStr) => {
+    setForm(prev => ({ ...prev, handover_date: dateStr }));
+    setNotice(null);
+  };
+
+  const onMatrixChange = (s, d, val) => {
+    setForm(prev => ({ ...prev, shift_matrix: { ...prev.shift_matrix, [`${s}_${d}`]: Number(val) || 0 } }));
+  };
+
+  const resetMatrix = () => setForm(prev => ({ ...prev, shift_matrix: EMPTY_SHIFT_MATRIX() }));
+
+  const sumMatrix = (m) => { const mm = { ...EMPTY_SHIFT_MATRIX(), ...(m || {}) }; return Object.values(mm).reduce((a, b) => a + (Number(b) || 0), 0); };
+  const shiftTotal = (sk) => HANDOVER_DEPTS.reduce((a, d) => a + (Number(form.shift_matrix[`${sk}_${d.key}`]) || 0), 0);
+  const deptTotal = (dk) => HANDOVER_SHIFTS.reduce((a, s) => a + (Number(form.shift_matrix[`${s.key}_${dk}`]) || 0), 0);
+  const matrixTotal = HANDOVER_SHIFTS.reduce((a, s) => a + shiftTotal(s.key), 0);
+  const fmtDate = (d) => { if (!d) return '—'; const p = String(d).split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; };
+
+  const handleSave = async () => {
+    if (!form.handover_date) { setNotice(T('يرجى اختيار التاريخ', 'Please choose a date')); return; }
+    setSaving(true);
+    const token = localStorage.getItem('access_token') || '';
+    const payload = { ...form, issues_text: form.issues_text || '', follow_ups_text: form.follow_ups_text || '', shift_matrix: form.shift_matrix || {} };
+    const url = editingId ? `${BASE}/api/handovers/${editingId}` : `${BASE}/api/handovers`;
+    const method = editingId ? 'PUT' : 'POST';
+    try {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      if (res.status === 409) {
+        const byDate = await fetch(`${BASE}/api/handovers/by-date/${form.handover_date}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const rec = byDate.ok ? await byDate.json() : null;
+        setEditingId(rec ? rec.handover_id : null);
+        setNotice(T('يوجد سجل تسليم لهذا التاريخ — تم فتحه للتعديل مع الحفاظ على مدخلاتك', 'A handover exists for this date — opened for editing with your input preserved'));
+        setSaving(false);
+        return;
+      }
+      if (!res.ok) { setNotice(T('فشل الحفظ', 'Save failed')); setSaving(false); return; }
+      setModalOpen(false);
+      setNotice(null);
+      fetchHandovers();
+    } catch { setNotice(T('فشل الاتصال بالخادم', 'Connection failed')); }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm(T('هل أنت متأكد من حذف هذا التسليم؟ لا يمكن التراجع.', 'Delete this handover record? This cannot be undone.'))) return;
+    try {
+      const res = await fetch(`${BASE}/api/handovers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } });
+      if (res.ok) fetchHandovers();
+      else setNotice(T('تعذر الحذف', 'Delete failed'));
+    } catch { setNotice(T('تعذر الحذف', 'Delete failed')); }
+  };
+
+  const auditDownload = async (scope, scope_id) => {
+    try {
+      await fetch(`${BASE}/api/handovers/export-log`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` }, body: JSON.stringify({ scope, scope_id }) });
+    } catch { /* التسجيل في اللوج لا يمنع التنزيل */ }
+  };
+
+  const matrixToExportRow = (rec) => {
+    const m = { ...EMPTY_SHIFT_MATRIX(), ...(rec.shift_matrix || {}) };
+    const row = {
+      [T('التاريخ', 'Date')]: rec.handover_date,
+      [T('الأخبار المحلية', 'Local news')]: rec.local_news_count || 0,
+      [T('الأخبار العالمية', 'Global news')]: rec.global_news_count || 0,
+      [T('الاستمارات المنشأة', 'Forms created')]: rec.forms_count || 0,
+      [T('أجهزة تيترا', 'Tetra devices')]: rec.tetra_count || 0,
+      [T('أجهزة هواوي', 'Huawei devices')]: rec.huawei_count || 0,
+      [T('معدات جديدة', 'New equipment')]: rec.new_equipment_count || 0,
+    };
+    HANDOVER_SHIFTS.forEach(s => HANDOVER_DEPTS.forEach(d => { row[`${HANDOVER_SHIFT_AR[s.key]} - ${HANDOVER_DEPT_AR[d.key]}`] = m[`${s.key}_${d.key}`] || 0; }));
+    row[T('المشاكل والملاحظات', 'Issues')] = rec.issues_text || '';
+    row[T('المتابعات العامة', 'Follow-ups')] = rec.follow_ups_text || '';
+    return row;
+  };
+
+  const downloadSingle = async (rec) => {
+    await auditDownload('single', rec.handover_id);
+    const ws = XLSX.utils.json_to_sheet([matrixToExportRow(rec)]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, T('تسليم', 'Handover'));
+    XLSX.writeFile(wb, `تسليم_تسلم_مشرفين_${rec.handover_date}_${todayFileDate()}.xlsx`);
+  };
+
+  const downloadAll = async () => {
+    await auditDownload('all', null);
+    const rows = handovers.map(r => matrixToExportRow(r));
+    const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{}]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, T('سجل التسليمات', 'Handover Log'));
+    XLSX.writeFile(wb, `السجل_الشامل_تسليمات_${todayFileDate()}.xlsx`);
+  };
+
+  if (!canAccess) {
+    return (
+      <div className="card-surface p-8 text-center">
+        <h3 className="text-xl font-bold text-white mb-2">{T('غير مصرح بالوصول', 'Access denied')}</h3>
+        <p className="text-[var(--muted)]">{T('هذه الصفحة متاحة للمالك والمشرفين فقط', 'This page is open to the owner and supervisors only')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-10 animate-fade-in-up">
+      {notice && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
+        <StatCard title={T('إجمالي التسليمات', 'Total Handovers')} value={handovers.length} color="text-white" borderHighlight />
+        <StatCard title={T('آخر تسليم', 'Latest Handover')} value={handovers[0] ? fmtDate(handovers[0].handover_date) : '—'} color="text-[var(--accent)]" />
+        <StatCard title={T('إجمالي أفراد الورديات', 'Total Shift Personnel')} value={handovers.reduce((a, r) => a + sumMatrix(r.shift_matrix), 0)} color="text-[var(--ok)]" />
+        <StatCard title={T('إجمالي الأجهزة', 'Total Devices')} value={handovers.reduce((a, r) => a + (r.tetra_count || 0) + (r.huawei_count || 0) + (r.new_equipment_count || 0), 0)} color="text-purple-400" />
+      </div>
+
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col">
+        <div className="p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2.5"><HandoverIcon /> {T('سجل التسليمات', 'Handover Log')}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            {isOwner && (
+              <button onClick={downloadAll} title={T('تنزيل السجل الشامل', 'Download Comprehensive Log')} className="action-btn action-btn--ok">
+                <ExcelIcon /> {T('تنزيل السجل الشامل', 'Download Comprehensive Log')}
+              </button>
+            )}
+            <button onClick={openCreate} className="btn-accent flex items-center gap-2">+ {T('إنشاء تسليم يومي', 'Create Daily Handover')}</button>
+          </div>
+        </div>
+
+        <div className="table-shell overflow-x-auto">
+          <table className="w-full min-w-[720px]">
+            <thead>
+              <tr>
+                <th>{T('التاريخ', 'Date')}</th>
+                <th>{T('المحلية/العالمية', 'Local / Global')}</th>
+                <th>{T('استمارات', 'Forms')}</th>
+                <th>{T('معدات (ت/هـ/ج)', 'Equipment (T/H/N)')}</th>
+                <th>{T('أفراد الورديات', 'Shift Staff')}</th>
+                <th>{T('المنشئ', 'Created by')}</th>
+                <th>{T('آخر تعديل', 'Last updated')}</th>
+                <th>{T('إجراءات', 'Actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('جاري التحميل...', 'Loading...')}</td></tr>
+              ) : handovers.length === 0 ? (
+                <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')}</td></tr>
+              ) : handovers.map(r => (
+                <tr key={r.handover_id}>
+                  <td className="font-bold text-[var(--accent)]" dir="ltr">{r.handover_date}</td>
+                  <td>{r.local_news_count || 0} / {r.global_news_count || 0}</td>
+                  <td>{r.forms_count || 0}</td>
+                  <td>{r.tetra_count || 0} / {r.huawei_count || 0} / {r.new_equipment_count || 0}</td>
+                  <td>{sumMatrix(r.shift_matrix)}</td>
+                  <td>{r.created_by_name || '—'}</td>
+                  <td>{r.updated_at ? (r.updated_by_name || '—') : '—'}</td>
+                  <td>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button title={T('تعديل', 'Edit')} onClick={() => openEdit(r)} className="action-btn action-btn--info"><EditIcon /></button>
+                      <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => downloadSingle(r)} className="action-btn"><DownloadIcon /></button>
+                      {isOwner && <button title={T('حذف', 'Delete')} onClick={() => handleDelete(r.handover_id)} className="action-btn action-btn--danger"><TrashIcon /></button>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {modalOpen && (
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[210] p-4">
+          <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-[var(--border)] sticky top-0 bg-[var(--surface-2)] z-10">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2.5"><HandoverIcon /> {editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h3>
+              <button onClick={() => setModalOpen(false)} className="icon-btn" title={T('إغلاق', 'Close')}>✕</button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {notice && modalOpen && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
+
+              <SectionCard title={T('التاريخ', 'Date')} icon={<HandoverIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormGroup label={T('تاريخ التسليم', 'Handover date')} invalid={!form.handover_date}>
+                    <SegDateField value={form.handover_date} onChange={e => handleDateChange(e.target.value)} className="field" />
+                  </FormGroup>
+                  <div className="flex flex-col justify-center text-xs text-[var(--muted)]">
+                    <span>{T('سجل واحد لكل يوم — عند وجود سجل سابق يتم فتحه للتعديل', 'One record per day — an existing record opens for editing')}</span>
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title={T('عدّاد الأخبار والاستمارات', 'News & Forms Count')} icon={<NewsIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormGroup label={T('الأخبار المحلية', 'Local news count')}>
+                    <StyledInput type="number" min="0" value={form.local_news_count} onChange={e => setForm(prev => ({ ...prev, local_news_count: Number(e.target.value) || 0 }))} />
+                  </FormGroup>
+                  <FormGroup label={T('الأخبار العالمية', 'Global news count')}>
+                    <StyledInput type="number" min="0" value={form.global_news_count} onChange={e => setForm(prev => ({ ...prev, global_news_count: Number(e.target.value) || 0 }))} />
+                  </FormGroup>
+                  <FormGroup label={T('عدد الاستمارات المنشأة', 'Number of forms created')}>
+                    <StyledInput type="number" min="0" value={form.forms_count} onChange={e => setForm(prev => ({ ...prev, forms_count: Number(e.target.value) || 0 }))} />
+                  </FormGroup>
+                </div>
+              </SectionCard>
+
+              <SectionCard title={T('المشاكل والملاحظات', 'Issues & Observations')} icon={<AlertIcon />}>
+                <textarea rows="3" value={form.issues_text} onChange={e => setForm(prev => ({ ...prev, issues_text: e.target.value }))}
+                  className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm text-white outline-none focus:border-[var(--accent)]" />
+              </SectionCard>
+
+              <SectionCard title={T('حالة المعدات', 'Equipment Status')} icon={<InventoryIcon />}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormGroup label={T('أجهزة تيترا', 'Tetra devices')}>
+                    <StyledInput type="number" min="0" value={form.tetra_count} onChange={e => setForm(prev => ({ ...prev, tetra_count: Number(e.target.value) || 0 }))} />
+                  </FormGroup>
+                  <FormGroup label={T('أجهزة هواوي', 'Huawei devices')}>
+                    <StyledInput type="number" min="0" value={form.huawei_count} onChange={e => setForm(prev => ({ ...prev, huawei_count: Number(e.target.value) || 0 }))} />
+                  </FormGroup>
+                  <FormGroup label={T('معدات مستلمة حديثاً', 'Newly received equipment')}>
+                    <StyledInput type="number" min="0" value={form.new_equipment_count} onChange={e => setForm(prev => ({ ...prev, new_equipment_count: Number(e.target.value) || 0 }))} />
+                  </FormGroup>
+                </div>
+              </SectionCard>
+
+              <SectionCard title={T('مصفوفة الورديات', 'Shift Personnel Matrix')}
+                icon={<UsersIcon />}
+                actionBtn={<button onClick={resetMatrix} className="action-btn action-btn--danger">{T('تصفير الكل', 'Reset All')}</button>}>
+                <div className="table-shell overflow-x-auto">
+                  <table className="w-full min-w-[560px]">
+                    <thead>
+                      <tr>
+                        <th className="p-3 text-start">{T('الوردية', 'Shift')}</th>
+                        {HANDOVER_DEPTS.map(d => <th key={d.key} className="p-3 text-center">{lang === 'ar' ? d.ar : d.en}</th>)}
+                        <th className="p-3 text-center">{T('الإجمالي', 'Total')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {HANDOVER_SHIFTS.map(s => (
+                        <tr key={s.key}>
+                          <td className="p-2 font-bold">{lang === 'ar' ? s.ar : s.en}</td>
+                          {HANDOVER_DEPTS.map(d => (
+                            <td key={d.key} className="p-2">
+                              <StyledInput type="number" min="0" value={form.shift_matrix[`${s.key}_${d.key}`] ?? 0}
+                                onChange={e => onMatrixChange(s.key, d.key, e.target.value)} className="!py-1.5 !px-2 text-center w-24 mx-auto" />
+                            </td>
+                          ))}
+                          <td className="p-2 text-center font-bold text-[var(--accent)]">{shiftTotal(s.key)}</td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <td className="p-2 font-bold">{T('الإجمالي', 'Total')}</td>
+                        {HANDOVER_DEPTS.map(d => <td key={d.key} className="p-2 text-center font-bold text-[var(--accent)]">{deptTotal(d.key)}</td>)}
+                        <td className="p-2 text-center font-bold text-[var(--accent)]">{matrixTotal}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </SectionCard>
+
+              <SectionCard title={T('المتابعات العامة', 'General Follow-ups')} icon={<MapIcon />}>
+                <textarea rows="3" value={form.follow_ups_text} onChange={e => setForm(prev => ({ ...prev, follow_ups_text: e.target.value }))}
+                  className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm text-white outline-none focus:border-[var(--accent)]" />
+              </SectionCard>
+            </div>
+
+            <div className="p-5 border-t border-[var(--border)] flex flex-wrap items-center justify-end gap-2 sticky bottom-0 bg-[var(--surface-2)]">
+              <button onClick={() => setModalOpen(false)} className="btn-ghost">{T('إلغاء', 'Cancel')}</button>
+              <button onClick={handleSave} disabled={saving} className="btn-accent">
+                {saving ? T('جاري الحفظ...', 'Saving...') : (editingId ? T('حفظ التعديلات', 'Save Changes') : T('حفظ التسليم', 'Save Handover'))}
               </button>
             </div>
           </div>
