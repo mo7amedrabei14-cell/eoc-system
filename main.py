@@ -1450,6 +1450,18 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
         end = end_cap
         if end and end > start:
             return round((end - start).total_seconds() / 3600.0, 2)
+        # ⚠️ إصلاح: نافذة التجميد غير صالحة إذا وقعت بداية المشاركة بعد نهاية المهمة
+        #    (مثل مسارٍ مُدخل بتاريخ لاحق لتاريخ انتهاء المهمة) أو غابت نهاية المهمة —
+        #    كان الحساب يعيد 0.0 رغم وجود تخصيص صريح، بينما الحساب الحي كان يعرض نافذة
+        #    المسارات المُسندة. نعيد نفس النافذة (أول انطلاق → آخر وصول) بلا قصّ نهاية
+        #    المهمة كي لا تنهار الساعات المكتملة إلى صفر لمشارك مُسنَد.
+        if assigned:
+            return round(assigned_span(
+                assigned, routes,
+                mission_start=(mission_start_dt(mission_data) if start_from_mission else None),
+                start_from_mission=start_from_mission,
+                end_cap=None,
+            ), 2)
         return 0.0
 
     # (1) بلا قطاعات + تخصيص صريح ⇒ الافتراضي من المسارات المُسندة إليه (واحد أو أكثر)
