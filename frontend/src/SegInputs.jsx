@@ -379,6 +379,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
     );
   }
 
+  const fieldPad = { paddingLeft: '1.75rem', paddingRight: '1.75rem' }; // 28px: icon-safe left + symmetric right
   return (
     <>
       <div className="relative">
@@ -387,7 +388,8 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
           type="text"
           value={display}
           placeholder="DD/MM/YYYY"
-          className={`seg-ghost ${className} text-center pr-7 pl-7`}
+          className={`seg-ghost ${className} text-center`}
+          style={fieldPad}
           dir="ltr"
           onChange={() => {}} // no-op: segments manage display
           onKeyDown={handleKeyDown}
@@ -396,7 +398,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
           autoComplete="off"
           {...props}
         />
-        <div ref={pillsRef} className="seg-pills" dir="ltr" aria-hidden="true">
+        <div ref={pillsRef} className="seg-pills" style={fieldPad} dir="ltr" aria-hidden="true">
           <SegPills segs={segs} placeholders={['__', '__', '____']} separators={['/', '/']} active={activeSeg} />
         </div>
         {id && <input id={id} type="date" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
@@ -610,6 +612,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   const hh12 = String(hour12((clock || '00').split(':')[0])).padStart(2, '0');
   const mmWheel = (clock || '00').split(':')[1] || '00';
 
+  const fieldPad = { paddingLeft: '1.75rem', paddingRight: '1.75rem' }; // 28px: icon-safe left + symmetric right
   return (
     <>
       <div className="relative">
@@ -618,7 +621,8 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
           type="text"
           value={display}
           placeholder="hh:mm AM"
-          className={`seg-ghost ${className} cursor-pointer text-center pr-7 pl-7`}
+          className={`seg-ghost ${className} cursor-pointer text-center`}
+          style={fieldPad}
           dir="ltr"
           onChange={() => {}}
           onKeyDown={handleKeyDown}
@@ -627,7 +631,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
           autoComplete="off"
           {...props}
         />
-        <div ref={pillsRef} className="seg-pills" dir="ltr" aria-hidden="true">
+        <div ref={pillsRef} className="seg-pills" style={fieldPad} dir="ltr" aria-hidden="true">
           <SegPills segs={segs} placeholders={['__', '__', 'AM']} separators={[':', ' ']} active={activeSeg} />
         </div>
         {id && <input id={id} type="time" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
@@ -950,6 +954,14 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
     );
   }
 
+  // Inline padding overrides .field (unlayered) and .seg-pills (unlayered) —
+  // Tailwind v4 utilities lose to unlayered CSS, so we use inline styles which
+  // override everything except !important declarations.
+  // twoIcons: 📅 [0-24px] + 🕐 [28-52px] → paddingLeft ≥ 3.5rem (56px)
+  // single icon: 📅/🕐 [0-24px] → paddingLeft ≥ 1.75rem (28px)
+  const twoIconsPad = { paddingLeft: '3.5rem', paddingRight: '1.75rem' };
+  const singleIconPad = { paddingLeft: '1.75rem', paddingRight: '1.75rem' };
+  const fieldPad = twoIcons ? twoIconsPad : singleIconPad;
   return (
     <>
       <div className="relative">
@@ -958,7 +970,8 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           type="text"
           value={display}
           placeholder="DD/MM/YYYY HH:MM AM"
-          className={`seg-ghost ${className} cursor-pointer ${twoIcons ? 'pl-14 pr-7' : 'pr-7 pl-7'}`}
+          className={`seg-ghost ${className} cursor-pointer`}
+          style={fieldPad}
           dir="ltr"
           onChange={() => {}}
           onKeyDown={handleKeyDown}
@@ -967,7 +980,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           autoComplete="off"
           {...props}
         />
-        <div ref={pillsRef} className={`seg-pills ${twoIcons ? 'pl-14 pr-7' : ''}`} dir="ltr" aria-hidden="true">
+        <div ref={pillsRef} className="seg-pills" style={fieldPad} dir="ltr" aria-hidden="true">
           <SegPills segs={segs} placeholders={['__', '__', '____', '__', '__', 'AM']} separators={['/', '/', ' ', ':', ' ']} active={activeSeg} />
         </div>
         {id && <input id={id} type="datetime-local" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
@@ -977,7 +990,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
             <button type="button" onClick={() => openPicker('date')} disabled={disabled}
               className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
             <button type="button" onClick={() => openPicker('time')} disabled={disabled}
-              className="absolute left-6 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">🕐</button>
+              className="absolute left-7 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">🕐</button>
           </>
         ) : (
           <button type="button" onClick={() => openPicker('time')} disabled={disabled}
