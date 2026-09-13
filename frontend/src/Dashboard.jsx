@@ -4985,7 +4985,8 @@ const RouteCard = ({
   onChange,
   onRemove,
   showRemove,
-  isBasic
+  isBasic,
+  disabled = false
 }) => {
   // Use pre-computed datetime-local from handleViewMission, or fall back to combining date/time
   const depDateTime = route.departure_datetime || (route.departure_date && route.departure_time
