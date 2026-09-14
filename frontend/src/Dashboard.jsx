@@ -6079,11 +6079,11 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
       {modalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[210] p-4">
-          <div className="modal-card w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
               <div className="flex items-center gap-3">
                 <span className="w-1.5 h-8 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]"></span>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2"><HandoverIcon /> {editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
+                <h2 className="text-lg font-bold">{editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
               </div>
               <button onClick={() => setModalOpen(false)} className="icon-btn icon-btn-danger" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
@@ -6092,7 +6092,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               {notice && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
 
               <SectionCard title={T('التاريخ', 'Date')} icon={<HandoverIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormGroup label={T('تاريخ التسليم', 'Handover date')} invalid={!form.handover_date}>
                     <SegDateField value={form.handover_date} onChange={e => handleDateChange(e.target.value)} className="field" />
                   </FormGroup>
@@ -6103,7 +6103,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               </SectionCard>
 
               <SectionCard title={T('عدّاد الأخبار والاستمارات', 'News & Forms Count')} icon={<NewsIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormGroup label={T('الأخبار المحلية', 'Local news count')}>
                     <StyledInput type="number" min="0" value={form.local_news_count} onChange={e => setForm(prev => ({ ...prev, local_news_count: Number(e.target.value) || 0 }))} />
                   </FormGroup>
@@ -6138,7 +6138,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               </SectionCard>
 
               <SectionCard title={T('حالة المعدات', 'Equipment Status')} icon={<InventoryIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormGroup label={T('أجهزة تيترا', 'Tetra devices')}>
                     <StyledInput type="number" min="0" value={form.tetra_count} onChange={e => setForm(prev => ({ ...prev, tetra_count: Number(e.target.value) || 0 }))} />
                   </FormGroup>
@@ -6192,9 +6192,9 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               </SectionCard>
             </div>
 
-            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={() => setModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">{T('إلغاء', 'Cancel')}</button>
-              <button onClick={handleSave} disabled={saving} className="btn-accent px-8 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed">
+            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              <button onClick={() => setModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">{T('إلغاء', 'Cancel')}</button>
+              <button onClick={handleSave} disabled={saving} className="btn-accent px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">
                 {saving ? T('جاري الحفظ...', 'Saving...') : (editingId ? T('حفظ التعديلات', 'Save Changes') : T('حفظ التسليم', 'Save Handover'))}
               </button>
             </div>
