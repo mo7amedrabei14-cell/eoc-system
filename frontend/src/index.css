@@ -1418,7 +1418,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* ───────────────────── 16) الحركات ───────────────────── */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes fade-in {
   from { opacity: 0; }
@@ -1430,11 +1430,11 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 @keyframes modal-in {
   0%   { opacity: 0; transform: translateY(26px) scale(0.97); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 1; transform: none; }
 }
 @keyframes dropdown-in {
   from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes shimmer {
   to { transform: translateX(100%); }
@@ -1450,7 +1450,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 @keyframes scale-pop {
   from { opacity: 0; transform: scale(0.92); }
-  to   { opacity: 1; transform: scale(1); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes slide-sheen {
   from { transform: translateX(-220%); }
@@ -1466,7 +1466,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 @keyframes slide-in-logical {
   from { opacity: 0; transform: translateX(calc(var(--slide-dir, 1) * 14px)); }
-  to   { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: none; }
 }
 
 .animate-fade-in-up { animation: fade-in-up 0.5s var(--ease-out) both; }
@@ -1684,7 +1684,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 @keyframes nav-in {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* لمعة ذكية: خط ضوئي يمسح العنصر عند التمرير (GPU-friendly، transform فقط) */
@@ -1736,7 +1736,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 @keyframes conn-slide-in {
   from { opacity: 0; transform: translateY(-100%); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes conn-pulse-bg {
   0%, 100% { opacity: 1; }
@@ -1754,7 +1754,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 .palette-scrim { animation: palette-scrim-in 0.2s var(--ease-out); }
 @keyframes palette-in {
   from { opacity: 0; transform: translateY(-14px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes palette-scrim-in { from { opacity: 0; } to { opacity: 1; } }
 

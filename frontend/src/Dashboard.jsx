@@ -5833,7 +5833,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     issuesList: [''],
     tetra_count: 0, huawei_count: 0,
     shift_matrix: EMPTY_SHIFT_MATRIX(),
-    follow_ups_text: '',
+    followUpsList: [''],
   });
 
   const [handovers, setHandovers] = useState([]);
@@ -5865,7 +5865,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       tetra_count: rec.tetra_count || 0,
       huawei_count: rec.huawei_count || 0,
       shift_matrix: { ...EMPTY_SHIFT_MATRIX(), ...(rec.shift_matrix || {}) },
-      follow_ups_text: rec.follow_ups_text || '',
+      followUpsList: splitIssuesText(rec.follow_ups_text),
     });
   };
 
@@ -5915,7 +5915,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     if (!form.handover_date) { setNotice(T('يرجى اختيار التاريخ', 'Please choose a date')); return; }
     setSaving(true);
     const token = localStorage.getItem('access_token') || '';
-    const { issuesList, ...formRest } = form;
+    const { issuesList, followUpsList, ...formRest } = form;
     const normalize = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
     const payload = {
       ...formRest,
@@ -5925,7 +5925,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       tetra_count: normalize(form.tetra_count),
       huawei_count: normalize(form.huawei_count),
       issues_text: joinIssuesList(issuesList),
-      follow_ups_text: form.follow_ups_text || '',
+      follow_ups_text: joinIssuesList(followUpsList),
       shift_matrix: Object.fromEntries(Object.entries(form.shift_matrix || {}).map(([k, v]) => [k, normalize(v)])),
     };
     const url = editingId ? `${BASE}/api/handovers/${editingId}` : `${BASE}/api/handovers`;
@@ -6200,8 +6200,24 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               </SectionCard>
 
               <SectionCard title={T('المتابعات العامة', 'General Follow-ups')} icon={<MapIcon />}>
-                <textarea rows="3" value={form.follow_ups_text} onChange={e => setForm(prev => ({ ...prev, follow_ups_text: e.target.value }))}
-                  className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm text-white outline-none focus:border-[var(--accent)]" />
+                <div className="space-y-2.5">
+                  {form.followUpsList.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <span className="w-7 h-7 shrink-0 rounded-lg bg-[var(--surface-3)] border border-[var(--border)] flex items-center justify-center text-xs font-bold text-[var(--accent)]">{i + 1}</span>
+                      <StyledInput value={item}
+                        onChange={e => { const next = [...form.followUpsList]; next[i] = e.target.value; setForm(prev => ({ ...prev, followUpsList: next })); }}
+                        placeholder={T(`متابعة رقم ${i + 1}...`, `Follow-up #${i + 1}...`)} />
+                      <button type="button" title={T('حذف', 'Remove')}
+                        onClick={() => { const next = form.followUpsList.filter((_, idx) => idx !== i); setForm(prev => ({ ...prev, followUpsList: next.length ? next : [''] })); }}
+                        className="icon-btn icon-btn-danger shrink-0"><TrashIcon /></button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setForm(prev => ({ ...prev, followUpsList: [...prev.followUpsList, ''] }))}
+                    className="action-btn action-btn--ok mt-1">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    {T('إضافة متابعة', 'Add Follow-up')}
+                  </button>
+                </div>
               </SectionCard>
             </div>
 
