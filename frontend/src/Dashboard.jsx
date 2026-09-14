@@ -5831,7 +5831,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     handover_date: date || todayStr(),
     local_news_count: 0, global_news_count: 0, forms_count: 0,
     issuesList: [''],
-    tetra_count: 0, huawei_count: 0, new_equipment_count: 0,
+    tetra_count: 0, huawei_count: 0,
     shift_matrix: EMPTY_SHIFT_MATRIX(),
     follow_ups_text: '',
   });
@@ -5864,7 +5864,6 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       issuesList: splitIssuesText(rec.issues_text),
       tetra_count: rec.tetra_count || 0,
       huawei_count: rec.huawei_count || 0,
-      new_equipment_count: rec.new_equipment_count || 0,
       shift_matrix: { ...EMPTY_SHIFT_MATRIX(), ...(rec.shift_matrix || {}) },
       follow_ups_text: rec.follow_ups_text || '',
     });
@@ -5901,7 +5900,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   };
 
   const onMatrixChange = (s, d, val) => {
-    setForm(prev => ({ ...prev, shift_matrix: { ...prev.shift_matrix, [`${s}_${d}`]: Number(val) || 0 } }));
+    setForm(prev => ({ ...prev, shift_matrix: { ...prev.shift_matrix, [`${s}_${d}`]: val === '' ? '' : Math.max(0, Number(val)) } }));
   };
 
   const resetMatrix = () => setForm(prev => ({ ...prev, shift_matrix: EMPTY_SHIFT_MATRIX() }));
@@ -5917,7 +5916,18 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     setSaving(true);
     const token = localStorage.getItem('access_token') || '';
     const { issuesList, ...formRest } = form;
-    const payload = { ...formRest, issues_text: joinIssuesList(issuesList), follow_ups_text: form.follow_ups_text || '', shift_matrix: form.shift_matrix || {} };
+    const normalize = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
+    const payload = {
+      ...formRest,
+      local_news_count: normalize(form.local_news_count),
+      global_news_count: normalize(form.global_news_count),
+      forms_count: normalize(form.forms_count),
+      tetra_count: normalize(form.tetra_count),
+      huawei_count: normalize(form.huawei_count),
+      issues_text: joinIssuesList(issuesList),
+      follow_ups_text: form.follow_ups_text || '',
+      shift_matrix: Object.fromEntries(Object.entries(form.shift_matrix || {}).map(([k, v]) => [k, normalize(v)])),
+    };
     const url = editingId ? `${BASE}/api/handovers/${editingId}` : `${BASE}/api/handovers`;
     const method = editingId ? 'PUT' : 'POST';
     try {
@@ -5962,7 +5972,6 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       [T('الاستمارات المنشأة', 'Forms created')]: rec.forms_count || 0,
       [T('أجهزة تيترا', 'Tetra devices')]: rec.tetra_count || 0,
       [T('أجهزة هواوي', 'Huawei devices')]: rec.huawei_count || 0,
-      [T('معدات جديدة', 'New equipment')]: rec.new_equipment_count || 0,
     };
     HANDOVER_SHIFTS.forEach(s => HANDOVER_DEPTS.forEach(d => { row[`${HANDOVER_SHIFT_AR[s.key]} - ${HANDOVER_DEPT_AR[d.key]}`] = m[`${s.key}_${d.key}`] || 0; }));
     row[T('المشاكل والملاحظات', 'Issues')] = rec.issues_text || '';
@@ -6004,7 +6013,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
         <StatCard title={T('إجمالي التسليمات', 'Total Handovers')} value={handovers.length} color="text-white" borderHighlight />
         <StatCard title={T('آخر تسليم', 'Latest Handover')} value={handovers[0] ? fmtDate(handovers[0].handover_date) : '—'} color="text-[var(--accent)]" />
         <StatCard title={T('إجمالي أفراد الورديات', 'Total Shift Personnel')} value={handovers.reduce((a, r) => a + sumMatrix(r.shift_matrix), 0)} color="text-[var(--ok)]" />
-        <StatCard title={T('إجمالي الأجهزة', 'Total Devices')} value={handovers.reduce((a, r) => a + (r.tetra_count || 0) + (r.huawei_count || 0) + (r.new_equipment_count || 0), 0)} color="text-purple-400" />
+        <StatCard title={T('إجمالي الأجهزة', 'Total Devices')} value={handovers.reduce((a, r) => a + (r.tetra_count || 0) + (r.huawei_count || 0), 0)} color="text-purple-400" />
       </div>
 
       <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col">
@@ -6042,7 +6051,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                 <th>{T('التاريخ', 'Date')}</th>
                 <th>{T('المحلية/العالمية', 'Local / Global')}</th>
                 <th>{T('استمارات', 'Forms')}</th>
-                <th>{T('معدات (ت/هـ/ج)', 'Equipment (T/H/N)')}</th>
+                <th>{T('معدات (ت/هـ)', 'Equipment (T/H)')}</th>
                 <th>{T('أفراد الورديات', 'Shift Staff')}</th>
                 <th>{T('المنشئ', 'Created by')}</th>
                 <th>{T('آخر تعديل', 'Last updated')}</th>
@@ -6059,7 +6068,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                   <td className="font-bold text-[var(--accent)]" dir="ltr">{r.handover_date}</td>
                   <td>{r.local_news_count || 0} / {r.global_news_count || 0}</td>
                   <td>{r.forms_count || 0}</td>
-                  <td>{r.tetra_count || 0} / {r.huawei_count || 0} / {r.new_equipment_count || 0}</td>
+                  <td>{r.tetra_count || 0} / {r.huawei_count || 0}</td>
                   <td>{sumMatrix(r.shift_matrix)}</td>
                   <td>{r.created_by_name || '—'}</td>
                   <td>{r.updated_at ? (r.updated_by_name || '—') : '—'}</td>
@@ -6107,13 +6116,16 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               <SectionCard title={T('عدّاد الأخبار والاستمارات', 'News & Forms Count')} icon={<NewsIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormGroup label={T('الأخبار المحلية', 'Local news count')}>
-                    <StyledInput type="number" min="0" value={form.local_news_count} onChange={e => setForm(prev => ({ ...prev, local_news_count: Number(e.target.value) || 0 }))} />
+                    <StyledInput type="number" min="0" inputMode="numeric" value={form.local_news_count === '' ? '' : form.local_news_count}
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, local_news_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
                   </FormGroup>
                   <FormGroup label={T('الأخبار العالمية', 'Global news count')}>
-                    <StyledInput type="number" min="0" value={form.global_news_count} onChange={e => setForm(prev => ({ ...prev, global_news_count: Number(e.target.value) || 0 }))} />
+                    <StyledInput type="number" min="0" inputMode="numeric" value={form.global_news_count === '' ? '' : form.global_news_count}
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, global_news_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
                   </FormGroup>
                   <FormGroup label={T('عدد الاستمارات المنشأة', 'Number of forms created')}>
-                    <StyledInput type="number" min="0" value={form.forms_count} onChange={e => setForm(prev => ({ ...prev, forms_count: Number(e.target.value) || 0 }))} />
+                    <StyledInput type="number" min="0" inputMode="numeric" value={form.forms_count === '' ? '' : form.forms_count}
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, forms_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
                   </FormGroup>
                 </div>
               </SectionCard>
@@ -6140,15 +6152,14 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               </SectionCard>
 
               <SectionCard title={T('حالة المعدات', 'Equipment Status')} icon={<InventoryIcon />}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormGroup label={T('أجهزة تيترا', 'Tetra devices')}>
-                    <StyledInput type="number" min="0" value={form.tetra_count} onChange={e => setForm(prev => ({ ...prev, tetra_count: Number(e.target.value) || 0 }))} />
+                    <StyledInput type="number" min="0" inputMode="numeric" value={form.tetra_count === '' ? '' : form.tetra_count}
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, tetra_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
                   </FormGroup>
                   <FormGroup label={T('أجهزة هواوي', 'Huawei devices')}>
-                    <StyledInput type="number" min="0" value={form.huawei_count} onChange={e => setForm(prev => ({ ...prev, huawei_count: Number(e.target.value) || 0 }))} />
-                  </FormGroup>
-                  <FormGroup label={T('معدات مستلمة حديثاً', 'Newly received equipment')}>
-                    <StyledInput type="number" min="0" value={form.new_equipment_count} onChange={e => setForm(prev => ({ ...prev, new_equipment_count: Number(e.target.value) || 0 }))} />
+                    <StyledInput type="number" min="0" inputMode="numeric" value={form.huawei_count === '' ? '' : form.huawei_count}
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, huawei_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
                   </FormGroup>
                 </div>
               </SectionCard>
@@ -6171,8 +6182,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                           <td className="p-2 font-bold">{lang === 'ar' ? s.ar : s.en}</td>
                           {HANDOVER_DEPTS.map(d => (
                             <td key={d.key} className="p-2">
-                              <StyledInput type="number" min="0" value={form.shift_matrix[`${s.key}_${d.key}`] ?? 0}
-                                onChange={e => onMatrixChange(s.key, d.key, e.target.value)} className="!py-1.5 !px-2 text-center w-24 mx-auto" />
+                              <StyledInput type="number" min="0" inputMode="numeric" value={form.shift_matrix[`${s.key}_${d.key}`] === '' ? '' : (form.shift_matrix[`${s.key}_${d.key}`] ?? 0)}
+                                onFocus={e => e.target.select()} onChange={e => onMatrixChange(s.key, d.key, e.target.value)} className="!py-1.5 !px-2 text-center w-24 mx-auto" />
                             </td>
                           ))}
                           <td className="p-2 text-center font-bold text-[var(--accent)]">{shiftTotal(s.key)}</td>
