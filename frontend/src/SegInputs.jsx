@@ -229,7 +229,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
       if (iso === lastSyncedValue.current) return; // already in sync
       lastSyncedValue.current = iso;
       const m = iso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-      if (m) setSegs([pad(+m[2]), pad(+m[3]), m[1]]);
+      if (m) setSegs([pad(+m[3]), pad(+m[2]), m[1]]);
       else setSegs(['','','']);
       setMachine(iso);
     }
@@ -343,7 +343,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   const pickDay = (dIso) => {
     setSelDate(dIso);
     const m = dIso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (m) setSegs([pad(+m[2]), pad(+m[3]), m[1]]);
+    if (m) setSegs([pad(+m[3]), pad(+m[2]), m[1]]);
     setView({ y: +m[1], mo: +m[2] });
     setOpen(false);
   };

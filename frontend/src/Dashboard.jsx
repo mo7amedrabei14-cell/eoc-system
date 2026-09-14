@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
@@ -342,7 +341,12 @@ const ENGLISH_UI = {
   'تاريخ الإنشاء (يسجل آلياً)': 'Creation date (recorded automatically)',
   'مصدر البلاغ': 'Report source',
   'واتساب': 'WhatsApp',
-  'هاتفياً': 'By phone',
+  'واتساب - هاتفياً': 'WhatsApp - Phone',
+  'واتساب - هاتفياً - لاسلكي': 'WhatsApp - Phone - Radio',
+  'واتساب - لاسلكي': 'WhatsApp - Radio',
+  'هاتفياً - لاسلكي': 'Phone - Radio',
+  'هاتفياً': 'Phone',
+  'لاسلكي': 'Radio',
   'التواريخ والتوقيتات': 'Dates and times',
   'تاريخ المهمة': 'Mission date',
   'تاريخ الخروج': 'Departure date',
@@ -1032,6 +1036,57 @@ function isoLocal(d) {
 function todayFileDate() {
   return isoLocal(new Date()).slice(0, 10);
 }
+
+// 📊 التنسيق الموحّد لكل ملفات الإكسيل المُصدَّرة في النظام:
+//   - اتجاه الورقة RTL
+//   - كل الخلايا متمركزة أفقياً وعمودياً (مع التفاف النص)
+//   - صف العناوين: خلفية #cbcbcb بخط عريض
+//   - حواف رفيعة صلبة على كل جوانب كل الخلايا
+// العائلة المكتوبة في النظام (SheetJS CE 0.18.5) لا تكتب أنماط الخلايا إطلاقاً
+// (source: xlsx.js write_ws_xml_cell → get_cell_style تُهمل cell.s تماماً) —
+// لذلك نكتب الأنماط فعلياً عبر exceljs الذي يدعم RTL والتمركز والحدود والتعبئة.
+
+// تحويل صفوف JSON (مصفوفة أشياء بنفس المفاتيح) إلى جدول {header, rows} موحّد
+const gridFromRows = (objs) => {
+  if (!objs || !objs.length) return { header: [], rows: [] };
+  const header = Object.keys(objs[0]);
+  return { header, rows: objs.map(o => header.map(h => (o[h] === undefined || o[h] === null ? '' : o[h]))) };
+};
+
+// 📦 تصدير مصنّف Excel منسّق — sheets: [{name, header, rows, merges?, widths?}]
+const exportWorkbook = async (sheets, fileName) => {
+  const ExcelJS = await import('exceljs');
+  const wb = new ExcelJS.Workbook();
+  wb.created = new Date();
+  wb.creator = 'EOC System';
+  const headerStyle = {
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } },
+    font: { bold: true },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
+  };
+  const cellStyle = {
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
+  };
+  sheets.forEach(({ name, header = [], rows = [], merges = [], widths }) => {
+    const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true }] });
+    if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
+    rows.forEach((r) => ws.addRow(r).eachCell((c) => Object.assign(c, cellStyle)));
+    merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
+    if (widths) ws.columns = widths.map((w) => ({ width: w }));
+    else if (header.length) ws.columns = header.map(() => ({ width: 20 }));
+  });
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+};
 
 // fix #5: عرض الساعات بالدقائق — الحساب يبقى دقيقًا (كسور داخلية)، والتحويل للدقائق عند العرض فقط.
 // أمثلة: 0.75 → "45 دقيقة"/"45 min" · 1.33 → "1س 20د"/"1h 20m" · 2.083 → "2س 05د"/"2h 05m"
@@ -2522,6 +2577,8 @@ function BranchesAndInventoryView({ branches, theme = 'dark' }) {
 // ==========================================
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar' }) {
   const [customAlert, setCustomAlert] = useState(null);
+  // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
+  const [downloadTarget, setDownloadTarget] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
 const [isModalOpen, setIsModalOpen] = useState(false);
@@ -3114,7 +3171,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
   };
-  const handleExportTableExcel = () => {
+  const handleExportTableExcel = async () => {
     if (missionsList.length === 0) return alert("لا توجد مهام لتصديرها.");
     const missionsSheet = missionsList.map(m => ({
       "كود المهمة": m.mission_code,
@@ -3149,197 +3206,192 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       }
     });
 
-    const wb = XLSX.utils.book_new();
-    const ws1 = XLSX.utils.json_to_sheet(missionsSheet);
-    XLSX.utils.book_append_sheet(wb, ws1, "المهام الشاملة");
-    if(beneficiariesSheet.length > 0) {
-      const ws2 = XLSX.utils.json_to_sheet(beneficiariesSheet);
-      XLSX.utils.book_append_sheet(wb, ws2, "إحصائيات المستفيدين");
-    }
-    XLSX.writeFile(wb, `السجل_الشامل_${todayFileDate()}.xlsx`);
+    const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
+    if (beneficiariesSheet.length > 0) sheets.push({ name: 'إحصائيات المستفيدين', ...gridFromRows(beneficiariesSheet) });
+    await exportWorkbook(sheets, `السجل_الشامل_${todayFileDate()}.xlsx`);
   };
 
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
-  // (نفس الأقسام والترتيب والجداول)، واسم الملف هو الاسم المدخل في حقل «اسم الاستمارة».
-  const handleExportSingleExcel = () => {
+  // (نفس الأقسام والترتيب والجداول)، واسم الملف هو اسم الاستمارة.
+  // يُستدعى من زر التنزيل في صف الجدول: يجلب تفاصيل المهمة الكاملة (مع المسارات) ثم يُصدّر.
+  const handleExportSingleMission = async (m) => {
     const text = (v) => (v === undefined || v === null ? '' : String(v));
     const val = (v) => (v === undefined || v === null ? '' : v);
-    const gid = (id) => document.getElementById(id)?.value || '';
-    const optText = (id) => { const el = document.getElementById(id); return el ? getSelectedOptionSourceText(el) : ''; };
     const dateT = (v) => (v ? formatDateTime(v) : '—');
     const tm12 = (v) => (v ? formatTime12(v) : '—');
-
-    // ——— أنماط التنسيق (بثيم النظام: أحمر EOC على أسطح داكنة/فاتحة) ———
-    const thin = { style: 'thin', color: { rgb: 'D9D9DF' } };
-    const S = {
-      title:    { font: { bold: true, sz: 18, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'C70000' } }, alignment: { horizontal: 'center', vertical: 'center' } },
-      subtitle: { font: { sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '303238' } }, alignment: { horizontal: 'center', vertical: 'center' } },
-      section:  { font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'C70000' } }, alignment: { horizontal: 'right', vertical: 'center' } },
-      th:       { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '3A3C42' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: thin },
-      td:       { font: { sz: 10, color: { rgb: '202126' } }, alignment: { vertical: 'center', wrapText: true }, border: thin },
-      label:    { font: { bold: true, sz: 10, color: { rgb: '202126' } }, fill: { fgColor: { rgb: 'ECECEF' } }, alignment: { vertical: 'center', wrapText: true }, border: thin },
+    const branchName = (id) => {
+      if (id == null || id === '') return '';
+      if (String(id) === '19') return 'المركز العام';
+      const b = branches.find(x => String(x.id) === String(id));
+      return b ? b.name : String(id);
+    };
+    const staffName = (role) => {
+      const s = ((detail && detail.eoc_staff) || []).find(x => x.role_name === role);
+      return s ? s.staff_name : '';
     };
 
+    // 🔄 جلب تفاصيل المهمة (نفس نقطة handleViewMission) — المسارات والأسطول والمشاركون تأتي هنا
+    let detail = m || {};
+    if (m && m.mission_id) {
+      try {
+        const token = localStorage.getItem('access_token');
+        const res = await fetch(`${BASE}/api/missions/${m.mission_id}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) detail = await res.json();
+      } catch (e) { /* نُبقي بيانات الصف الحالية عند فشل الشبكة */ }
+    }
+
     const aoa = [];
-    const styles = {};
     const merges = [];
     let row = 0;
     const TOTAL = 12; // أعمدة A:L
-    const put = (c, v, s) => { if (!aoa[row]) aoa[row] = []; aoa[row][c] = v; if (s) styles[`R${row}C${c}`] = s; };
+    const put = (c, v) => { if (!aoa[row]) aoa[row] = []; aoa[row][c] = v; };
     const span = (from, to) => { if (to > from) merges.push({ s: { r: row, c: from }, e: { r: row, c: to } }); };
-    const section = (title) => { put(0, title, S.section); span(0, TOTAL - 1); row++; };
-    const header = (cols) => { cols.forEach((v, i) => put(i, v, S.th)); row++; };
-    const data = (cells, s = S.td) => { cells.forEach((v, i) => put(i, val(v), s)); row++; };
-    const emptyRow = (msg) => { put(0, msg, S.td); span(0, TOTAL - 1); row++; };
+    const section = (title) => { put(0, title); span(0, TOTAL - 1); row++; };
+    const headerRow = (cols) => { cols.forEach((v, i) => put(i, v)); row++; };
+    const dataRow = (cells) => { cells.forEach((v, i) => put(i, val(v))); row++; };
+    const emptyRow = (msg) => { put(0, msg); span(0, TOTAL - 1); row++; };
     const field = (label, value) => {
-      put(0, label, S.label); span(0, 2);
-      put(3, text(value), S.td); span(3, TOTAL - 1);
+      put(0, label); span(0, 2);
+      put(3, text(value)); span(3, TOTAL - 1);
       row++;
     };
 
     // ── العنوان: اسم الاستمارة + كود الاستمارة + تاريخ الإنشاء ──
-    const formName = text(missionName || gid('f_mission_name'));
-    const formCode = gid('f_mission_code');
-    put(0, formName || 'استمارة مهمة', S.title); span(0, TOTAL - 1); row++;
-    const created = creationDateTime ? formatDateTime(creationDateTime) : '';
-    put(0, `كود الاستمارة: ${formCode || '—'}${created ? `   |   تاريخ الإنشاء: ${created}` : ''}`, S.subtitle); span(0, TOTAL - 1); row++;
+    const formName = text(detail.mission_name);
+    const formCode = detail.mission_code;
+    put(0, formName || 'استمارة مهمة'); span(0, TOTAL - 1); row++;
+    const created = (detail.creation_datetime || detail.created_at) ? formatDateTime(detail.creation_datetime || detail.created_at) : '';
+    put(0, `كود الاستمارة: ${formCode || '—'}${created ? `   |   تاريخ الإنشاء: ${created}` : ''}`); span(0, TOTAL - 1); row++;
 
     // 1) البيانات الأساسية للمهمة
     section('البيانات الأساسية للمهمة');
-    field('تصنيف المهمة', gid('f_mission_class'));
-    field('التمركز / الفرع', optText('f_branch_id'));
-    field('نوع المهمة', gid('f_mission_type'));
-    field('مكان المهمة', gid('f_mission_location'));
-    field('حالة العملية الميدانية', gid('f_mission_field_status'));
-    field('مسؤول المهمة', gid('f_responsible_person'));
+    field('تصنيف المهمة', detail.mission_classification);
+    field('التمركز / الفرع', branchName(detail.branch_id));
+    field('نوع المهمة', detail.mission_type);
+    field('مكان المهمة', detail.mission_location);
+    field('حالة العملية الميدانية', detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة');
+    field('مسؤول المهمة', detail.responsible_person);
     field('تاريخ إنشاء المهمة', created || '—');
-    field('مصدر البلاغ', gid('f_data_source'));
+    field('مصدر البلاغ', detail.data_source);
 
     // 2) التواريخ والتوقيتات
     section('التواريخ والتوقيتات');
-    header(['تاريخ المهمة', 'تاريخ الخروج', 'تاريخ الوصول', 'تاريخ العودة', 'تاريخ الانتهاء', 'ساعة البدء', 'ساعة التحرك', 'ساعة الوصول', 'ساعة الانتهاء']);
-    data([
-      dateT(gid('f_exit_date')), dateT(gid('f_departure_date')), dateT(gid('f_arrival_date')),
-      dateT(gid('f_return_date')), dateT(gid('f_completion_date')),
-      tm12(gid('f_start_time')), tm12(gid('f_departure_time')), tm12(gid('f_arrival_time')), tm12(gid('f_completion_time')),
+    headerRow(['تاريخ المهمة', 'تاريخ الخروج', 'تاريخ الوصول', 'تاريخ العودة', 'تاريخ الانتهاء', 'ساعة البدء', 'ساعة التحرك', 'ساعة الوصول', 'ساعة الانتهاء']);
+    dataRow([
+      dateT(detail.exit_date), dateT(detail.departure_date), dateT(detail.arrival_date),
+      dateT(detail.return_date), dateT(detail.completion_date),
+      tm12(detail.start_time), tm12(detail.departure_time), tm12(detail.arrival_time), tm12(detail.completion_time),
     ]);
 
     // 3) تفاصيل خط السير الأساسي
     section('تفاصيل خط السير الأساسي');
-    header(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
+    headerRow(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
+    const allRoutes = detail.routes || [];
     let routeCount = 0;
-    routes.forEach((_, i) => {
-      const from = gid(`r_from_main_${i}`), to = gid(`r_to_main_${i}`);
-      const depVal = gid(`r_dep_main_${i}`), arrVal = gid(`r_arr_main_${i}`);
-      if (!from && !to) return;
+    allRoutes.filter(r => r.group_title === 'خط السير الأساسي').forEach((r) => {
+      if (!r.route_from && !r.route_to) return;
       routeCount++;
-      data(['خط السير الأساسي', from, to,
-        depVal.split('T')[0] ? dateT(depVal.split('T')[0]) : '—',
-        depVal.split('T')[1] ? tm12(depVal.split('T')[1]) : '—',
-        arrVal.split('T')[0] ? dateT(arrVal.split('T')[0]) : '—',
-        arrVal.split('T')[1] ? tm12(arrVal.split('T')[1]) : '—']);
+      dataRow(['خط السير الأساسي', r.route_from, r.route_to,
+        r.departure_date ? dateT(r.departure_date) : '—',
+        r.departure_time ? tm12(r.departure_time) : '—',
+        r.arrival_date ? dateT(r.arrival_date) : '—',
+        r.arrival_time ? tm12(r.arrival_time) : '—']);
     });
     if (!routeCount) emptyRow('لا توجد مسارات مسجلة');
 
     // 4) الأيام / خطوط السير المخصصة
     section('الأيام / خطوط السير المخصصة');
-    header(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
+    headerRow(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
+    const customGroups = {};
+    allRoutes.filter(r => r.group_title !== 'خط السير الأساسي').forEach(r => {
+      const t = r.group_title || '—';
+      if (!customGroups[t]) customGroups[t] = [];
+      customGroups[t].push(r);
+    });
     let custCount = 0;
-    customItineraries.forEach((ci, ciIndex) => {
-      (ci.routes || []).forEach((_, rIndex) => {
-        const from = gid(`r_from_cust_${ciIndex}_${rIndex}`), to = gid(`r_to_cust_${ciIndex}_${rIndex}`);
-        const depVal = gid(`r_dep_cust_${ciIndex}_${rIndex}`), arrVal = gid(`r_arr_cust_${ciIndex}_${rIndex}`);
-        if (!from && !to) return;
+    Object.keys(customGroups).forEach(title => {
+      customGroups[title].forEach(r => {
+        if (!r.route_from && !r.route_to) return;
         custCount++;
-        data([ci.title || '—', from, to,
-          depVal.split('T')[0] ? dateT(depVal.split('T')[0]) : '—',
-          depVal.split('T')[1] ? tm12(depVal.split('T')[1]) : '—',
-          arrVal.split('T')[0] ? dateT(arrVal.split('T')[0]) : '—',
-          arrVal.split('T')[1] ? tm12(arrVal.split('T')[1]) : '—']);
+        dataRow([title, r.route_from, r.route_to,
+          r.departure_date ? dateT(r.departure_date) : '—',
+          r.departure_time ? tm12(r.departure_time) : '—',
+          r.arrival_date ? dateT(r.arrival_date) : '—',
+          r.arrival_time ? tm12(r.arrival_time) : '—']);
       });
     });
     if (!custCount) emptyRow('لا توجد أيام / خطوط سير مخصصة');
 
     // 5) السيارات والسائقين (أسطول المهمة)
     section('السيارات والسائقين (أسطول المهمة)');
-    header(['اسم السائق', 'رقم السيارة']);
+    headerRow(['اسم السائق', 'رقم السيارة']);
     let vCount = 0;
-    vehicles.forEach((_, i) => {
-      const driver = gid(`v_driver_${i}`), plate = gid(`v_plate_${i}`);
-      if (!driver && !plate) return;
+    (detail.vehicles || []).forEach(v => {
+      if (!v.driver_name && !v.vehicle_number) return;
       vCount++;
-      data([driver, plate]);
+      dataRow([v.driver_name || '', v.vehicle_number || '']);
     });
     if (!vCount) emptyRow('لا توجد سيارات');
 
     // 6) القوة البشرية والمشاركين (نفس أعمدة جدول الاستمارة)
     section('القوة البشرية والمشاركين');
-    header(['م', 'النوع', 'الاسم', 'رقم العضوية', 'صفة المشارك', 'الفريق', 'الساعات', 'خط السير المخصص', 'الفرع']);
+    headerRow(['م', 'النوع', 'الاسم', 'رقم العضوية', 'صفة المشارك', 'الفريق', 'الساعات', 'خط السير المخصص', 'الفرع']);
     let pCount = 0;
-    participants.forEach((p, i) => {
-      const name = gid(`p_name_${i}`);
-      if (!name) return;
+    (detail.participants || []).forEach((p, i) => {
+      if (!p.full_name) return;
       pCount++;
-      const typeSel = document.getElementById(`p_type_${i}`);
-      const typeAr = typeSel ? getSelectedOptionSourceText(typeSel) : (p.participant_type === 'non_volunteer' ? 'غير متطوع' : 'متطوع');
+      const typeAr = p.participant_type === 'non_volunteer' ? 'غير متطوع' : 'متطوع';
       const days = (p.assigned_days || []).join(' + ') || '—';
       const wh = p.working_hours != null ? fmtHours(p.working_hours, lang) : '—';
-      data([i + 1, typeAr, name, gid(`p_role_${i}`), gid(`p_position_${i}`), gid(`p_team_${i}`), wh, days, optText(`p_branch_${i}`)]);
+      dataRow([i + 1, typeAr, p.full_name, p.participation_role || '', p.participant_position || '', p.team_name || '', wh, days, branchName(p.branch_id)]);
     });
     if (!pCount) emptyRow('لا يوجد مشاركون');
 
     // 7) كود الفريق/الإدارة
     section('كود الفريق/الإدارة');
-    field('كود الفريق/الإدارة', gid('f_team_code'));
+    field('كود الفريق/الإدارة', detail.team_code);
 
     // 8) إحصائيات المستفيدين
     section('إحصائيات المستفيدين');
-    header(['تصنيف المستفيدين', 'مستفيدين (مباشر)', 'مستفيدين (غير مباشر)']);
+    headerRow(['تصنيف المستفيدين', 'مستفيدين (مباشر)', 'مستفيدين (غير مباشر)']);
     let bCount = 0;
-    beneficiaries.forEach((_, i) => {
-      const cat = gid(`b_cat_${i}`);
-      if (!cat) return;
+    (detail.beneficiaries || []).forEach(b => {
+      if (!b.category_name) return;
       bCount++;
-      data([cat, gid(`b_count_${i}`), gid(`b_indirect_${i}`)]);
+      dataRow([b.category_name, b.direct_count, b.indirect_count]);
     });
     if (!bCount) emptyRow('لا توجد إحصائيات مسجلة');
 
     // 9) فريق إدارة الغرفة (الهيكل الإداري)
     section('فريق إدارة الغرفة (الهيكل الإداري)');
-    header(['المسؤولية', 'الاسم']);
+    headerRow(['المسؤولية', 'الاسم']);
     [
-      ['مسؤول المتابعة (قائد العملية)', 'eoc_leader'],
-      ['المشرف', 'eoc_supervisor'],
-      ['المشرف المراجع', 'eoc_reviewer'],
-      ['الجوكر', 'eoc_joker'],
-      ['معبئ الاستمارة', 'eoc_filler'],
-      ['مستكمل الاستمارة', 'eoc_completer'],
-      ['مراجع الاستمارة', 'eoc_final_reviewer'],
-    ].forEach(([label, id]) => data([label, gid(id)]));
+      ['مسؤول المتابعة (قائد العملية)', 'مسؤول المتابعة'],
+      ['المشرف', 'المشرف'],
+      ['المشرف المراجع', 'المشرف المراجع'],
+      ['الجوكر', 'الجوكر'],
+      ['معبئ الاستمارة', 'معبئ الاستمارة'],
+      ['مستكمل الاستمارة', 'مستكمل الاستمارة'],
+      ['مراجع الاستمارة', 'مراجع الاستمارة'],
+    ].forEach(([label, role]) => dataRow([label, staffName(role)]));
 
     // 10) الحالة والملاحظات العامة
     section('الحالة والملاحظات العامة');
-    const statusAr = currentMissionData ? ({ Draft: 'مسودة', Active: 'نشطة', 'Under Review': 'قيد المراجعة', Approved: 'معتمدة وفي انتظار الانتهاء', Completed: 'مكتملة (تم انتهاء المهمة)', Returned: 'إرجاع للمتطوع (يوجد أخطاء)', Cancelled: 'ملغاة' }[currentMissionData.status] || 'جديدة') : 'جديدة';
+    const statusAr = detail.status ? ({ Draft: 'مسودة', Active: 'نشطة', 'Under Review': 'قيد المراجعة', Approved: 'معتمدة وفي انتظار الانتهاء', Completed: 'مكتملة (تم انتهاء المهمة)', Returned: 'إرجاع للمتطوع (يوجد أخطاء)', Cancelled: 'ملغاة' }[detail.status] || 'جديدة') : 'جديدة';
     field('موقف الاستمارة إدارياً', statusAr);
-    field('سجل الميدان / ملاحظات عامة', gid('f_notes'));
-    field('ملاحظات داخلية', gid('f_internal_notes'));
+    field('سجل الميدان / ملاحظات عامة', detail.notes);
+    field('ملاحظات داخلية', detail.internal_notes);
 
-    // ── تحويل شبكة القيم إلى ورقة عمل مصمّمة ──
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    Object.keys(styles).forEach((k) => {
-      const m = k.match(/^R(\d+)C(\d+)$/);
-      if (!m) return;
-      const addr = XLSX.utils.encode_cell({ r: +m[1], c: +m[2] });
-      if (ws[addr]) ws[addr].s = styles[k];
-    });
-    if (merges.length) ws['!merges'] = merges;
-    ws['!cols'] = Array.from({ length: TOTAL }, (_, i) => ({ wch: i === 0 ? 16 : 15 }));
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'الاستمارة');
-    // اسم الملف = الاسم المدخل في حقل «اسم الاستمارة» بالضبط (مع إزالة محارف غير صالحة فقط)
-    const rawName = text(missionName || gid('f_mission_name')).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
-    XLSX.writeFile(wb, `${rawName}_${todayFileDate()}.xlsx`);
+    // ── تصدير مصنّف منسّق (RTL · تمركز · حدود · رأس #cbcbcb) مع الحفاظ على دمج الخلايا ──
+    // اسم الملف = اسم الاستمارة كما هو (مع إزالة محارف غير صالحة فقط)
+    const rawName = text(detail.mission_name).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
+    await exportWorkbook([{
+      name: 'الاستمارة',
+      header: aoa[0] || [],
+      rows: aoa.slice(1),
+      merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
+      widths: Array.from({ length: TOTAL }, (_, i) => (i === 0 ? 16 : 15)),
+    }], `${rawName}_${todayFileDate()}.xlsx`);
   };
 
   // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
@@ -3684,7 +3736,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     <div className="card-surface overflow-hidden flex flex-col min-h-[700px] flex-1">
       {missionToDelete && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
-          <div className="bg-[var(--surface-2)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+          <div className="bg-[var(--surface-2)] border-2 border-[var(--accent)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
             <div className="w-20 h-20 bg-[var(--accent-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]"><TrashIcon className="w-10 h-10" /></div>
             <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
             <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذه المهمة نهائياً؟</p>
@@ -3903,6 +3955,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <td className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                   <div className="flex justify-center gap-1.5">
                     <button onClick={() => handleViewMission(m.mission_id)} className="icon-btn" title="فتح المهمة"><EyeIcon /></button>
+                    <button onClick={() => setDownloadTarget(m)} className="icon-btn" title="تصدير الاستمارة"><DownloadIcon /></button>
                     {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
                   </div>
                 </td>
@@ -4047,7 +4100,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       </span>
                     )}
                   </FormGroup>
-                  <FormGroup label="مصدر البلاغ"><StyledSelect id="f_data_source" defaultValue={currentMissionData?.data_source || 'واتساب'}><option>واتساب</option><option>هاتفياً</option></StyledSelect></FormGroup>
+                  <FormGroup label="مصدر البلاغ"><StyledSelect id="f_data_source" defaultValue={currentMissionData?.data_source || 'واتساب'}><option>واتساب</option><option>واتساب - هاتفياً</option><option>واتساب - هاتفياً - لاسلكي</option><option>واتساب - لاسلكي</option><option>هاتفياً - لاسلكي</option><option>هاتفياً</option><option>لاسلكي</option></StyledSelect></FormGroup>
                 </div>
               </SectionCard>
 
@@ -4565,7 +4618,6 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
             {/* 💡 أضفنا كلاسات بتخلي الزراير فوق بعض في الموبايل وبعرض الشاشة بالكامل لسهولة اللمس */}
             <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              {!isVolunteer && <button onClick={handleExportSingleExcel} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-green-500 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تصدير الاستمارة</button>}
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إغلاق</button>
               
               {/* 👑 المالك (God Mode) */}
@@ -4627,8 +4679,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             </div>
             
             {returnModalOpen && (
-              <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[120] p-4">
-                <div className="bg-[var(--surface-2)] border border-[var(--warn)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_var(--warn-soft)] animate-fade-in-up text-center">
+              <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[120] p-4">
+                <div className="bg-[var(--surface-2)] border border-[var(--warn)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--warn-soft), 0 0 20px var(--warn-soft)' }}>
                   <div className="w-20 h-20 bg-[var(--warn)]/10 rounded-full flex items-center justify-center mb-5 border border-[var(--warn)]/20 text-[var(--warn)]"><svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div>
                   <h3 className="text-xl font-bold text-white mb-2">إرجاع الاستمارة للمتطوع</h3>
                   <p className="text-[var(--muted-2)] text-sm mb-4 leading-relaxed">برجاء كتابة سبب الإرجاع أو التعديلات المطلوبة بوضوح.</p>
@@ -4685,8 +4737,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 />
 
       {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
             <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
               <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
@@ -4700,6 +4752,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           </div>
         </div>
       )}
+
+      {/* 📥 تأكيد تنزيل الاستمارة — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
+      <DownloadConfirmModal
+        show={downloadTarget !== null}
+        title="تصدير الاستمارة"
+        onCancel={() => setDownloadTarget(null)}
+        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); handleExportSingleMission(rec); }}
+      />
     </div>
   );
 }
@@ -5185,7 +5245,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
     const matchesSearch = log.full_name?.includes(searchTerm) || log.details?.includes(searchTerm);
     const matchesAction = actionFilter === 'الكل' || log.action === actionFilter;
     // 💡 التعديل هنا: لو اختار "system" يجيب أي حاجة ملهاش قسم (يعني تسجيل دخول، باسورد، إلخ)
-    const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter || (entityFilter === 'system' && !['mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news'].includes(log.entity_type));
+    const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter || (entityFilter === 'system' && !['mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news', 'handover'].includes(log.entity_type));
     return matchesSearch && matchesAction && matchesEntity;
   });
 
@@ -5211,7 +5271,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       
       const excelData = logsToExport.map(log => ({
         "التاريخ والوقت": formatDateTime(log.created_at),
-        "القسم": log.entity_type === 'mission' ? 'المهام الميدانية' : log.entity_type === 'local_news' ? 'الأخبار المحلية' : log.entity_type === 'global_disaster' ? 'الكوارث العالمية' : 'نظام داخلي',
+        "القسم": log.entity_type === 'mission' ? 'المهام الميدانية' : log.entity_type === 'local_news' ? 'الأخبار المحلية' : log.entity_type === 'global_disaster' ? 'الكوارث العالمية' : log.entity_type === 'handover' ? 'تسليم وتسلم مشرفين' : 'نظام داخلي',
         "اسم المستخدم": log.full_name,
         "نوع الإجراء": log.action,
         "تفاصيل العملية": log.details
@@ -5223,11 +5283,9 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       if (entityFilter === 'local_news') fileName = 'سجل_لوج_الأخبار_المحلية.xlsx';
       if (entityFilter === 'global_disaster') fileName = 'سجل_لوج_الكوارث_العالمية.xlsx';
       if (entityFilter === 'earthquake') fileName = 'سجل_لوج_الزلازل.xlsx';
+      if (entityFilter === 'handover') fileName = 'سجل_لوج_تسليم_وتسلم_المشرفين.xlsx';
 
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(excelData);
-      XLSX.utils.book_append_sheet(wb, ws, "الأرشيف");
-      XLSX.writeFile(wb, `${fileName.replace(/\.xlsx$/i, '')}_${todayFileDate()}.xlsx`);
+      await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${todayFileDate()}.xlsx`);
     } catch (err) {
       alert("حدث خطأ في الاتصال بالسيرفر أثناء تحميل الأرشيف.");
     }
@@ -5253,6 +5311,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
             <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[var(--accent)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الأخبار المحلية</button>
             <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكوارث العالمية</button>
             <button onClick={() => setEntityFilter('earthquake')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'earthquake' ? 'bg-purple-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الزلازل</button>
+            <button onClick={() => setEntityFilter('handover')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'handover' ? 'bg-teal-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>تسليم وتسلم مشرفين</button>
             {/* 💡 الزرار الجديد لفلترة النظام */}
             <button onClick={() => setEntityFilter('system')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'system' ? 'bg-[var(--surface-4)] text-[var(--ink)]' : 'text-[var(--muted-2)] hover:text-white'}`}>النظام</button>
           </div>
@@ -5292,6 +5351,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
                    log.entity_type === 'local_news' ? <span className="bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-1 rounded text-xs border border-[var(--accent)]/30">الأخبار المحلية</span> : 
                    log.entity_type === 'global_disaster' ? <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs border border-orange-500/30">الكوارث العالمية</span> : 
                    log.entity_type === 'earthquake' ? <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs border border-purple-500/30">الزلازل</span> :
+                   log.entity_type === 'handover' ? <span className="bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs border border-teal-500/30">تسليم وتسلم مشرفين</span> :
                    <span className="bg-[var(--surface-hover)] text-[var(--muted-2)] px-2 py-1 rounded text-xs border border-[var(--border)]">نظام</span>}
                 </td>
                 <td className="p-4 font-bold text-white border-l border-[var(--border)]">{log.full_name}</td>
@@ -5322,6 +5382,11 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const [filterGov, setFilterGov] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [customAlert, setCustomAlert] = useState(null);
+  // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
+  const [downloadTarget, setDownloadTarget] = useState(null);
+  // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
+  const [savingNews, setSavingNews] = useState(false);
+  const submitLockRef = useRef(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
 
@@ -5409,6 +5474,7 @@ const [nd, setNd] = useState({
   };
 
   const handleSubmit = async () => {
+    if (submitLockRef.current) return;
     // 💡 التحقق الصارم من لينك الخبر المحلي
     if (!nd.news_link || nd.news_link.trim() === '') return setCustomAlert("عفواً، رابط الخبر (لينك الخبر) إلزامي ولا يمكن تسجيل الخبر بدونه لتأكيد المصداقية!");
     if (!nd.incident_date) return setCustomAlert("عفواً، يجب إدخال تاريخ الحادث.");
@@ -5447,8 +5513,15 @@ const [nd, setNd] = useState({
     const url = nd.news_id ? `https://eoc-system-b12f.vercel.app/api/local-news/${nd.news_id}` : 'https://eoc-system-b12f.vercel.app/api/local-news';
     const method = nd.news_id ? 'PUT' : 'POST';
 
-    const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-    if (res.ok) { setIsModalOpen(false); fetchNews(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
+    submitLockRef.current = true;
+    setSavingNews(true);
+    try {
+      const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      if (res.ok) { setIsModalOpen(false); fetchNews(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
+    } finally {
+      setSavingNews(false);
+      submitLockRef.current = false;
+    }
   };
   const handleClearAllLocalNews = () => {
     if (!isOwner) return;
@@ -5489,9 +5562,9 @@ const [nd, setNd] = useState({
       setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
   };
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (newsList.length === 0) return setCustomAlert("لا توجد أخبار للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredNews.map(n => ({
+    const newsRows = filteredNews.map(n => ({
       "التاريخ": formatDateTime(n.incident_date), "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
       "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": n.governorate || '',
       "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(n.report_time), "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
@@ -5501,27 +5574,24 @@ const [nd, setNd] = useState({
       "الزمن المتخذ لبدء الاستجابة": n.report_to_arrival_duration || '', "نوع الاستجابة": n.intervention_type || '', "الفرع المتدخل": n.intervening_branch || '',
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "سجل الأخبار");
-    XLSX.writeFile(wb, `سجل_الأخبار_المحلية_${todayFileDate()}.xlsx`);
+    }));
+    await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${todayFileDate()}.xlsx`);
   };
 
-  const handleExportSingleNewsExcel = () => {
-    const ws = XLSX.utils.json_to_sheet([{
-      "التاريخ": formatDateTime(nd.incident_date), "الشهر": nd.incident_month || '', "وصف الحادث": nd.incident_description || '', "نوع الخبر": nd.news_type || '', "ناشر الخبر": nd.news_publisher || '',
-      "اسم الشارع": nd.street_name || '', "المنطقة": nd.area_name || '', "المحافظة": nd.governorate || '',
-      "الابلاغ": nd.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(nd.report_time), "حالة الرد": nd.is_responded ? 'نعم' : 'لا', "رد الفرع": nd.branch_response_text || '',
-      "توقيت الرد": format12H(nd.response_time), "حالة توقيت الرد": nd.response_time_points || 0, "زمن الرد": nd.response_duration || '',
-      "الاستجابة": nd.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": format12H(nd.movement_time), "المدة بين الابلاغ و التحرك": nd.report_to_movement_duration || '',
-      "حالة المدة بين الابلاغ و التحرك": nd.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": format12H(nd.field_arrival_time), "حالة الاستجابة": nd.field_response_points || 0,
-      "الزمن المتخذ لبدء الاستجابة": nd.report_to_arrival_duration || '', "نوع الاستجابة": nd.intervention_type || '', "الفرع المتدخل": nd.intervening_branch || '',
-      "اسم الاستمارة": nd.mission_form_name || '', "عدد المشاركين": nd.participants_count || 0, "اسم المستشفى": nd.hospital_name || '', "عدد المصابين": nd.injured_count || 0, "عدد الوفيات": nd.deaths_count || 0,
-      "تطورات الخبر": nd.news_updates || '', "لينك الخبر": nd.news_link || '', "اسم مدخل الخبر": nd.data_entry_name || '', "ملاحظات": nd.notes || '', "طول المسافة بين مكان الحادث و الفرع": nd.distance_km || ''
-    }]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الخبر");
-    XLSX.writeFile(wb, `خبر_${nd.area_name || 'محلي'}_${todayFileDate()}.xlsx`);
+  // تصدير خبر واحد — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
+  const handleExportSingleNews = async (n) => {
+    const newsRow = [{
+      "التاريخ": formatDateTime(n.incident_date), "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
+      "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": n.governorate || '',
+      "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(n.report_time), "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
+      "توقيت الرد": format12H(n.response_time), "حالة توقيت الرد": n.response_time_points || 0, "زمن الرد": n.response_duration || '',
+      "الاستجابة": n.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": format12H(n.movement_time), "المدة بين الابلاغ و التحرك": n.report_to_movement_duration || '',
+      "حالة المدة بين الابلاغ و التحرك": n.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": format12H(n.field_arrival_time), "حالة الاستجابة": n.field_response_points || 0,
+      "الزمن المتخذ لبدء الاستجابة": n.report_to_arrival_duration || '', "نوع الاستجابة": n.intervention_type || '', "الفرع المتدخل": n.intervening_branch || '',
+      "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
+      "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
+    }];
+    await exportWorkbook([{ name: 'تفاصيل الخبر', ...gridFromRows(newsRow) }], `خبر_${n.area_name || 'محلي'}_${todayFileDate()}.xlsx`);
   };
 
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
@@ -5614,7 +5684,7 @@ const [nd, setNd] = useState({
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--data)]">نقاط (رد/تحرك/وصول)</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المتطوعين</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">مدخل الخبر</th>
-                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">إجراءات</th>
+                <th className="px-3 py-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
@@ -5633,11 +5703,12 @@ const [nd, setNd] = useState({
                   </td>
                   <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{n.participants_count}</td>
                   <td className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.data_entry_name}</td>
-                  <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
-                    <div className="flex justify-center gap-2">
-                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
-                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon /></button>}
+                  <td className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
+                    <div className="flex justify-center gap-1">
+                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-1.5 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
+                      <button onClick={() => handleEdit(n)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
+                      <button onClick={() => setDownloadTarget(n)} className="p-1.5 bg-[var(--surface-4)] hover:bg-green-600 text-green-500 hover:text-white rounded-lg" title="تصدير الخبر"><DownloadIcon /></button>
+                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
@@ -5652,11 +5723,11 @@ const [nd, setNd] = useState({
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><NewsIcon /> {nd.news_id ? 'تعديل الخبر والمؤشرات' : 'إضافة خبر جديد'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} disabled={savingNews} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><TrashIcon /></button>
             </div>
 
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              
+            <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${savingNews ? 'opacity-60 pointer-events-none' : ''}`} inert={savingNews}>
+
               <SectionCard title="1. بيانات الخبر الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormGroup label="التاريخ (مطلوب)"><SegDateField value={nd.incident_date} onChange={e => setNd({...nd, incident_date: e.target.value})} className="field border-[var(--accent)]/30" /></FormGroup>
@@ -5753,11 +5824,8 @@ const [nd, setNd] = useState({
             </div>
             
             <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={handleExportSingleNewsExcel} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto">
-                <ExcelIcon /> تصدير الخبر الحالي
-              </button>
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إلغاء</button>
-              <button onClick={handleSubmit} className="btn-accent px-8 py-2.5 rounded-xl text-sm font-bold">حفظ الخبر وتقييم الأداء</button>
+              <button onClick={() => setIsModalOpen(false)} disabled={savingNews} className="px-6 py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed">إلغاء</button>
+              <button onClick={handleSubmit} disabled={savingNews} className="btn-accent px-8 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">{savingNews ? 'جاري الحفظ...' : 'حفظ الخبر وتقييم الأداء'}</button>
             </div>
           </div>
         </div>
@@ -5779,8 +5847,8 @@ const [nd, setNd] = useState({
 />
 
       {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
             <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
               <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
@@ -5794,6 +5862,14 @@ const [nd, setNd] = useState({
           </div>
         </div>
       )}
+
+      {/* 📥 تأكيد تنزيل الخبر — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
+      <DownloadConfirmModal
+        show={downloadTarget !== null}
+        title="تصدير الخبر"
+        onCancel={() => setDownloadTarget(null)}
+        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); handleExportSingleNews(rec); }}
+      />
     </div>
   );
 }
@@ -5841,8 +5917,13 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const submitLockRef = useRef(false);
   const [notice, setNotice] = useState(null);
   const [form, setForm] = useState(() => emptyForm(todayStr()));
+  // 🗑️ نافذة تأكيد الحذف المخصصة (بدلاً من confirm الجاهزة في المتصفح)
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
+  const [downloadTarget, setDownloadTarget] = useState(null);
 
   const fetchHandovers = useCallback(() => {
     setIsLoading(true);
@@ -5872,7 +5953,12 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const openCreate = () => {
     setNotice(null);
     setEditingId(null);
-    setForm(emptyForm(todayStr()));
+    // 📌 ترحيل المشاكل والملاحظات من آخر تسليم مسجّل إلى استمارة اليوم الجديد،
+    // حتى تتابع من يوم لآخر حتى تُحذف يدوياً من آخر استمارة وتُحفظ فارغة.
+    const latest = handovers[0];
+    const base = emptyForm(todayStr());
+    if (latest && latest.issues_text) base.issuesList = splitIssuesText(latest.issues_text);
+    setForm(base);
     setModalOpen(true); // يفتح فوراً دون انتظار الشبكة
     const token = localStorage.getItem('access_token') || '';
     fetch(`${BASE}/api/handovers/by-date/${todayStr()}`, { headers: { 'Authorization': `Bearer ${token}` } })
@@ -5912,8 +5998,10 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const fmtDate = (d) => { if (!d) return '—'; const p = String(d).split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d; };
 
   const handleSave = async () => {
+    if (submitLockRef.current) return;
     if (!form.handover_date) { setNotice(T('يرجى اختيار التاريخ', 'Please choose a date')); return; }
     setSaving(true);
+    submitLockRef.current = true;
     const token = localStorage.getItem('access_token') || '';
     const { issuesList, followUpsList, ...formRest } = form;
     const normalize = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
@@ -5938,18 +6026,22 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
         setEditingId(rec ? rec.handover_id : null);
         setNotice(T('يوجد سجل تسليم لهذا التاريخ — تم فتحه للتعديل مع الحفاظ على مدخلاتك', 'A handover exists for this date — opened for editing with your input preserved'));
         setSaving(false);
+        submitLockRef.current = false;
         return;
       }
-      if (!res.ok) { setNotice(T('فشل الحفظ', 'Save failed')); setSaving(false); return; }
+      if (!res.ok) { setNotice(T('فشل الحفظ', 'Save failed')); setSaving(false); submitLockRef.current = false; return; }
       setModalOpen(false);
       setNotice(null);
       fetchHandovers();
     } catch { setNotice(T('فشل الاتصال بالخادم', 'Connection failed')); }
     setSaving(false);
+    submitLockRef.current = false;
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm(T('هل أنت متأكد من حذف هذا التسليم؟ لا يمكن التراجع.', 'Delete this handover record? This cannot be undone.'))) return;
+  const confirmDelete = async () => {
+    if (deleteTarget == null) return;
+    const id = deleteTarget;
+    setDeleteTarget(null);
     try {
       const res = await fetch(`${BASE}/api/handovers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } });
       if (res.ok) fetchHandovers();
@@ -5981,19 +6073,15 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
   const downloadSingle = async (rec) => {
     await auditDownload('single', rec.handover_id);
-    const ws = XLSX.utils.json_to_sheet([matrixToExportRow(rec)]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, T('تسليم', 'Handover'));
-    XLSX.writeFile(wb, `تسليم_تسلم_مشرفين_${rec.handover_date}_${todayFileDate()}.xlsx`);
+    await exportWorkbook([{ name: T('تسليم', 'Handover'), ...gridFromRows([matrixToExportRow(rec)]) }], `تسليم_تسلم_مشرفين_${rec.handover_date}_${todayFileDate()}.xlsx`);
   };
 
   const downloadAll = async () => {
     await auditDownload('all', null);
-    const rows = handovers.map(r => matrixToExportRow(r));
-    const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{}]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, T('سجل التسليمات', 'Handover Log'));
-    XLSX.writeFile(wb, `السجل_الشامل_تسليمات_${todayFileDate()}.xlsx`);
+    if (!handovers.length) { setNotice(T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')); return; }
+    // 📌 السجل الشامل: تبويب واحد يجمع كل سجلات الأيام (بدلاً من تبويب مستقل لكل يوم).
+    const allRows = handovers.map(r => matrixToExportRow(r));
+    await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${todayFileDate()}.xlsx`);
   };
 
   if (!canAccess) {
@@ -6006,7 +6094,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   }
 
   return (
-    <div className="space-y-6 pb-10 animate-fade-in-up">
+    <div className="space-y-6 pb-10 animate-fade-in">
       {notice && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
@@ -6075,8 +6163,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                   <td>
                     <div className="flex items-center justify-center gap-1.5">
                       <button title={T('تعديل', 'Edit')} onClick={() => openEdit(r)} className="action-btn action-btn--icon action-btn--info"><EditIcon /></button>
-                      <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => downloadSingle(r)} className="action-btn action-btn--icon"><DownloadIcon /></button>
-                      {isOwner && <button title={T('حذف', 'Delete')} onClick={() => handleDelete(r.handover_id)} className="action-btn action-btn--icon action-btn--danger"><TrashIcon /></button>}
+                      <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => setDownloadTarget(r)} className="action-btn action-btn--icon"><DownloadIcon /></button>
+                      {isOwner && <button title={T('حذف', 'Delete')} onClick={() => setDeleteTarget(r.handover_id)} className="action-btn action-btn--icon action-btn--danger"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
@@ -6086,8 +6174,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
         </div>
       </div>
 
-      {modalOpen && (
-        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
+      {modalOpen && createPortal(
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[9999] p-4">
           <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
@@ -6096,10 +6184,12 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                   <h2 className="text-lg font-bold">{editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
                 </div>
               </div>
-              <button onClick={() => setModalOpen(false)} className="icon-btn icon-btn-danger" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setModalOpen(false)} disabled={saving} className="icon-btn icon-btn-danger disabled:opacity-40 disabled:cursor-not-allowed" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              </div>
             </div>
 
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+            <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${saving ? 'opacity-60 pointer-events-none' : ''}`} inert={saving}>
               {notice && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
 
               <SectionCard title={T('التاريخ', 'Date')} icon={<HandoverIcon />}>
@@ -6151,7 +6241,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                 </div>
               </SectionCard>
 
-              <SectionCard title={T('حالة المعدات', 'Equipment Status')} icon={<InventoryIcon />}>
+              <SectionCard title={T('عدد الأجهزة بالمركز', 'Number of Devices in the Center')} icon={<InventoryIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormGroup label={T('أجهزة تيترا', 'Tetra devices')}>
                     <StyledInput type="number" min="0" inputMode="numeric" value={form.tetra_count === '' ? '' : form.tetra_count}
@@ -6222,14 +6312,32 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
             </div>
 
             <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={() => setModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">{T('إلغاء', 'Cancel')}</button>
+              <button onClick={() => setModalOpen(false)} disabled={saving} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed">{T('إلغاء', 'Cancel')}</button>
               <button onClick={handleSave} disabled={saving} className="btn-accent px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">
                 {saving ? T('جاري الحفظ...', 'Saving...') : (editingId ? T('حفظ التعديلات', 'Save Changes') : T('حفظ التسليم', 'Save Handover'))}
               </button>
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
+
+      {/* 🗑️ نافذة تأكيد الحذف المخصصة بدلاً من confirm الجاهزة في المتصفح */}
+      <DangerConfirmModal
+        show={deleteTarget !== null}
+        title={T('تأكيد الحذف', 'Confirm Deletion')}
+        message={T('هل أنت متأكد من حذف هذا التسليم؟ لا يمكن التراجع.', 'Are you sure you want to delete this handover? This cannot be undone.')}
+        confirmLabel={T('نعم، احذف', 'Yes, delete')}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+
+      {/* 📥 تأكيد تنزيل سجل التسليم — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
+      <DownloadConfirmModal
+        show={downloadTarget !== null}
+        title={T('تنزيل سجل التسليم', 'Download record')}
+        onCancel={() => setDownloadTarget(null)}
+        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); downloadSingle(rec); }}
+      />
     </div>
   );
 }
@@ -6256,6 +6364,11 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [disasterToDelete, setDisasterToDelete] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
+  // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
+  const [downloadTarget, setDownloadTarget] = useState(null);
+  // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
+  const [savingDisaster, setSavingDisaster] = useState(false);
+  const submitLockRef = useRef(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
   const [filterDate, setFilterDate] = useState(getLocalDate());
@@ -6294,6 +6407,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   };
 
   const handleSubmit = async () => {
+    if (submitLockRef.current) return;
     if (!gd.news_link || gd.news_link.trim() === '') return setCustomAlert("عفواً، رابط الخبر (لينك الخبر) إلزامي ولا يمكن تسجيل الكارثة بدونه لتأكيد المصداقية!");
     if (!gd.incident_date) return setCustomAlert("عفواً، يجب إدخال التاريخ.");
     if (!gd.country) return setCustomAlert("عفواً، يجب تحديد الدولة/المكان.");
@@ -6304,8 +6418,15 @@ const [clearAllCode, setClearAllCode] = useState('');
     const url = gd.disaster_id ? `https://eoc-system-b12f.vercel.app/api/global-disasters/${gd.disaster_id}` : 'https://eoc-system-b12f.vercel.app/api/global-disasters';
     const method = gd.disaster_id ? 'PUT' : 'POST';
 
-    const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-    if (res.ok) { setIsModalOpen(false); fetchDisasters(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
+    submitLockRef.current = true;
+    setSavingDisaster(true);
+    try {
+      const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      if (res.ok) { setIsModalOpen(false); fetchDisasters(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
+    } finally {
+      setSavingDisaster(false);
+      submitLockRef.current = false;
+    }
   };
 
   // 💡 تطبيق الفلتر على الجدول والإحصائيات وتصدير الإكسيل
@@ -6314,9 +6435,9 @@ const [clearAllCode, setClearAllCode] = useState('');
     : disasters;
 
   // 💡 التصدير الشامل للجدول بالترتيب المطلوب
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filteredDisasters.length === 0) return setCustomAlert("لا توجد كوارث للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredDisasters.map(d => ({
+    const disasterRows = filteredDisasters.map(d => ({
       "التاريخ": formatDateTime(d.incident_date),
       "الشهر": d.incident_month || '',
       "الخبر": d.news_title || '',
@@ -6333,35 +6454,31 @@ const [clearAllCode, setClearAllCode] = useState('');
       "تطورات الخبر": d.news_updates || '',
       "اسم مدخل الخبر": d.data_entry_name || '',
       "ملاحظات": d.notes || ''
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "الكوارث العالمية");
-    XLSX.writeFile(wb, `سجل_الكوارث_العالمية_${todayFileDate()}.xlsx`);
+    }));
+    await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${todayFileDate()}.xlsx`);
   };
 
-  // 💡 تصدير الخبر الفردي بنفس الترتيب
-  const handleExportSingleExcel = () => {
-    const ws = XLSX.utils.json_to_sheet([{
-      "التاريخ": formatDateTime(gd.incident_date),
-      "الشهر": gd.incident_month || '',
-      "الخبر": gd.news_title || '',
-      "الدولة": gd.country || '',
-      "نوع الكارثة": gd.disaster_type || '',
-      "المناطق المتأثرة من الكارثة": gd.affected_areas || '',
-      "المناطق المتوقعة الخطر": gd.at_risk_areas || '',
-      "المصدر": gd.source_name || '',
-      "عدد المصابين": gd.injured_count || 0,
-      "عدد الوفيات": gd.deaths_count || 0,
-      "عدد المفقودين": gd.missing_count || 0,
-      "تدخلات الجمعيات الوطنية": gd.national_societies_interventions || '',
-      "لينك الخبر": gd.news_link || '',
-      "تطورات الخبر": gd.news_updates || '',
-      "اسم مدخل الخبر": gd.data_entry_name || '',
-      "ملاحظات": gd.notes || ''
-    }]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "تفاصيل الكارثة");
-    XLSX.writeFile(wb, `كارثة_${gd.country || 'عالمية'}_${todayFileDate()}.xlsx`);
+  // 💡 تصدير الكارثة الفردية — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
+  const handleExportSingleDisaster = async (d) => {
+    const disasterRow = [{
+      "التاريخ": formatDateTime(d.incident_date),
+      "الشهر": d.incident_month || '',
+      "الخبر": d.news_title || '',
+      "الدولة": d.country || '',
+      "نوع الكارثة": d.disaster_type || '',
+      "المناطق المتأثرة من الكارثة": d.affected_areas || '',
+      "المناطق المتوقعة الخطر": d.at_risk_areas || '',
+      "المصدر": d.source_name || '',
+      "عدد المصابين": d.injured_count || 0,
+      "عدد الوفيات": d.deaths_count || 0,
+      "عدد المفقودين": d.missing_count || 0,
+      "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
+      "لينك الخبر": d.news_link || '',
+      "تطورات الخبر": d.news_updates || '',
+      "اسم مدخل الخبر": d.data_entry_name || '',
+      "ملاحظات": d.notes || ''
+    }];
+    await exportWorkbook([{ name: 'تفاصيل الكارثة', ...gridFromRows(disasterRow) }], `كارثة_${d.country || 'عالمية'}_${todayFileDate()}.xlsx`);
   };
 
   // 💡 الإحصائيات تتحدث مع الفلتر
@@ -6477,7 +6594,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">الخبر</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الوفيات</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">المصابين</th>
-                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)] text-center">إجراءات</th>
+                <th className="px-3 py-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)] text-center">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
@@ -6490,18 +6607,21 @@ const [clearAllCode, setClearAllCode] = useState('');
                   <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{d.news_title}</td>
                   <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.deaths_count}</td>
                   <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.injured_count}</td>
-                  <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
-                    <div className="flex justify-center gap-2">
+                  <td className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
+                    <div className="flex justify-center gap-1">
                       {d.news_link && (
-                        <a href={d.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                        <a href={d.news_link} target="_blank" rel="noreferrer" className="p-1.5 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
-                      <button onClick={() => handleEdit(d)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg transition-colors" title="تعديل">
+                      <button onClick={() => handleEdit(d)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg transition-colors" title="تعديل">
                         <EyeIcon />
                       </button>
+                      <button onClick={() => setDownloadTarget(d)} className="p-1.5 bg-[var(--surface-4)] hover:bg-green-600 text-green-500 hover:text-white rounded-lg transition-colors" title="تحميل سجل الكارثة">
+                        <DownloadIcon />
+                      </button>
                       {(isOwner || isSupervisor || isJoker) && (
-                        <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--accent)] hover:text-white rounded-lg transition-colors border border-[var(--accent)]/20" title="حذف">
+                        <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--accent)] hover:text-white rounded-lg transition-colors border border-[var(--accent)]/20" title="حذف">
                           <TrashIcon />
                         </button>
                       )}
@@ -6519,10 +6639,10 @@ const [clearAllCode, setClearAllCode] = useState('');
           <div className="bg-[var(--surface)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(199,0,0,0.1)] animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> {gd.disaster_id ? 'تعديل رصد الكارثة' : 'رصد كارثة عالمية جديدة'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} disabled={savingDisaster} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><TrashIcon /></button>
             </div>
 
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+            <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${savingDisaster ? 'opacity-60 pointer-events-none' : ''}`} inert={savingDisaster}>
               <SectionCard title="بيانات الكارثة الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormGroup label="التاريخ"><SegDateField value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} className="field" /></FormGroup>
@@ -6569,9 +6689,8 @@ const [clearAllCode, setClearAllCode] = useState('');
             </div>
             
             <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
-              <button onClick={handleExportSingleExcel} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-green-500 border border-green-500/30 px-4 py-3 md:py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 md:mr-auto"><ExcelIcon /> تحميل سجل الكارثة</button>
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إلغاء</button>
-              <button onClick={handleSubmit} className="btn-accent px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold">حفظ وتوثيق الكارثة</button>
+              <button onClick={() => setIsModalOpen(false)} disabled={savingDisaster} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)] disabled:opacity-40 disabled:cursor-not-allowed">إلغاء</button>
+              <button onClick={handleSubmit} disabled={savingDisaster} className="btn-accent px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">{savingDisaster ? 'جاري الحفظ...' : 'حفظ وتوثيق الكارثة'}</button>
             </div>
           </div>
         </div>
@@ -6579,7 +6698,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {disasterToDelete && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
-          <div className="bg-[var(--surface-2)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+          <div className="bg-[var(--surface-2)] border-2 border-[var(--accent)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
             <div className="w-20 h-20 bg-[var(--accent-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]"><TrashIcon className="w-10 h-10" /></div>
             <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
             <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذا الرصد نهائياً؟</p>
@@ -6606,14 +6725,22 @@ const [clearAllCode, setClearAllCode] = useState('');
 />
 
       {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] animate-fade-in-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
             <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4"><AlertIcon /><h3 className="text-xl font-bold text-white">تنبيه النظام</h3></div>
             <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
             <div className="mt-8 flex justify-end"><button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg">علم، جاري التعديل</button></div>
           </div>
         </div>
       )}
+
+      {/* 📥 تأكيد تنزيل الكارثة — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
+      <DownloadConfirmModal
+        show={downloadTarget !== null}
+        title="تحميل سجل الكارثة"
+        onCancel={() => setDownloadTarget(null)}
+        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); handleExportSingleDisaster(rec); }}
+      />
     </div>
   );
 }
@@ -6809,16 +6936,16 @@ const [clearAllCode, setClearAllCode] = useState('');
   const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
   const deleteEgyptEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
 
-  const handleExportGlobalEqs = () => {
+  const handleExportGlobalEqs = async () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "الزلازل العالمية"); XLSX.writeFile(wb, `سجل_الزلازل_العالمية_${todayFileDate()}.xlsx`);
+    const eqRows = filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
+    await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${todayFileDate()}.xlsx`);
   };
 
-  const handleExportEgyptEqs = () => {
+  const handleExportEgyptEqs = async () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
-    const ws = XLSX.utils.json_to_sheet(filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' })));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "زلازل مصر"); XLSX.writeFile(wb, `سجل_زلازل_مصر_${todayFileDate()}.xlsx`);
+    const eqRows = filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
+    await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${todayFileDate()}.xlsx`);
   };
 
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
@@ -7074,8 +7201,8 @@ const [clearAllCode, setClearAllCode] = useState('');
 />
 
       {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(199,0,0,0.3)] text-center">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
             <h3 className="text-xl font-bold text-white mb-4">تنبيه</h3>
             <p className="text-[var(--ink-2)] mb-6">{customAlert}</p>
             <button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] px-6 py-2 rounded-xl text-white font-bold">حسناً</button>
@@ -7183,14 +7310,14 @@ const [clearAllCode, setClearAllCode] = useState('');
 
   const handleEdit = (n) => { setForm({...n}); setIsModalOpen(true); };
 
-  const handleExportAllExcel = () => {
+  const handleExportAllExcel = async () => {
     if (aiNewsList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
-    const ws = XLSX.utils.json_to_sheet(aiNewsList.map(n => ({
+    const aiNewsRows = aiNewsList.map(n => ({
       "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
-    })));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "سجل الرصد الآلي"); XLSX.writeFile(wb, `سجل_الذكاء_الاصطناعي_${todayFileDate()}.xlsx`);
+    }));
+    await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${todayFileDate()}.xlsx`);
   };
 
   const handleDeleteAiNews = (id) => {
@@ -7640,8 +7767,8 @@ const totalAiCountries = new Set(
 
       {/* 👇 شاشة التنبيهات عشان الزرار يرد عليك 👇 */}
       {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[var(--surface-3)] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full shadow-[0_0_40px_rgba(168,85,247,0.3)] animate-fade-in-up">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-[var(--surface-3)] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px rgba(168,85,247,0.2), 0 0 24px rgba(168,85,247,0.2)' }}>
             <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
               <AIIcon className="w-7 h-7 text-purple-500" />
               <h3 className="text-xl font-bold text-white">رسالة النظام</h3>
@@ -7661,6 +7788,49 @@ const totalAiCountries = new Set(
 }
 
 // 💡 نافذة تأكيد موحّدة لعمليات الحذف
+// 📥 مُؤكِّد تنزيل سجل فردي — نافذة تأكيد محايدة وودّية بإطار وزر أخضر (var(--ok) — لون فعل التحميل):
+//   زر «نعم» ينفّذ التنزيل فوراً، وزر «إلغاء» يُغلق النافذة فقط.
+function DownloadConfirmModal({
+  show,
+  title = 'تنزيل السجل',
+  message = 'هل تود تحميل هذا السجل الفردي ؟',
+  onCancel,
+  onConfirm,
+  confirmLabel = 'نعم',
+  cancelLabel = 'إلغاء',
+}) {
+  if (!show) return null;
+
+  return (
+    <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[9999] p-4">
+      <div className="bg-[var(--surface-2)] border-2 border-[var(--ok)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--ok-soft), 0 0 20px color-mix(in srgb, var(--ok) 28%, transparent)' }}>
+        <div className="w-20 h-20 bg-[var(--ok-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--ok)]/20 text-[var(--ok)]">
+          <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        </div>
+
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+
+        <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">{message}</p>
+
+        <div className="flex gap-4 w-full">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white bg-[var(--ok)] hover:brightness-110 active:scale-[0.97] shadow-[0_8px_28px_-6px_color-mix(in_srgb,_var(--ok)_55%,_transparent)] transition-all"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DangerConfirmModal({
   show,
   title = 'تأكيد الحذف',
@@ -7676,7 +7846,7 @@ function DangerConfirmModal({
 
   return (
     <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
-      <div className="bg-[var(--surface-2)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-md p-8 flex flex-col items-center shadow-[0_0_40px_rgba(199,0,0,0.2)] animate-fade-in-up text-center">
+      <div className="bg-[var(--surface-2)] border-2 border-[var(--accent)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
 
         <div className="w-20 h-20 bg-[var(--accent-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]">
           <TrashIcon className="w-10 h-10" />
@@ -7820,9 +7990,9 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
   const countActive = hrList.filter(p => p.active_mission).length;
   const countInactive = hrList.length - countActive;
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filteredHR.length === 0) return alert("لا توجد بيانات لتصديرها.");
-    const ws = XLSX.utils.json_to_sheet(filteredHR.map((p, i) => ({
+    const hrRows = filteredHR.map((p, i) => ({
       "م": i + 1,
       "الاسم الرباعي": p.full_name,
       "رقم العضوية / الصفة": p.membership_number,
@@ -7833,10 +8003,8 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "إجمالي المهام الميدانية": p.missions_count,
       "عدد ساعات آخر مهمة": fmtHours(p.last_mission_hours, lang),
       "إجمالي الساعات": fmtHours(p.total_hours, lang)
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "القوة البشرية");
-    XLSX.writeFile(wb, `سجل_القوة_البشرية_${todayFileDate()}.xlsx`);
+    }));
+    await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${todayFileDate()}.xlsx`);
   };
 
   const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];

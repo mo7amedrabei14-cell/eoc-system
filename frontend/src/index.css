@@ -2337,6 +2337,7 @@ select.field {
 .btn-primary, .btn-accent {
   position: relative;
   isolation: isolate;
+  overflow: hidden;
 }
 .btn-primary::before, .btn-accent::before {
   content: "";
