@@ -8,6 +8,7 @@ import L from 'leaflet';
 // ⏰ وحدة الزمن الموحّدة — العرض 12 ساعة فقط، الآلة 24 ساعة (راجع timeutils.js)
 import { normTime, formatTime12, formatDateTime12 } from './timeutils';
 import { SegDateField, SegTimeField, SegDateTimeField } from './SegInputs';
+import { translate } from './i18n.js';
 
 // 🔧 Module-level API base. Must be declared here (module scope), NOT inside a
 // component's effect: MissionsView's live modal-sync effect fetches
@@ -1846,11 +1847,9 @@ useEffect(() => {
         </div>
       )}
 
-      {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] md:hidden" onClick={() => setIsSidebarOpen(false)}></div>
-      )}
+      <div className={`sidebar-backdrop ${isSidebarOpen ? 'is-visible' : ''} block md:hidden`} onClick={() => setIsSidebarOpen(false)} />
 
-      <aside className={`sidebar-shell bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] ${isSidebarOpen ? 'right-0 w-64 md:w-72 shadow-[12px_0_40px_-18px_rgba(0,0,0,0.55)]' : '-right-80 md:right-0 w-64 md:w-20'}`}>
+      <aside className={`sidebar-shell bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed overflow-hidden ${isSidebarOpen ? 'is-open' : ''} left-auto right-0 top-0 bottom-0 ${isSidebarOpen ? 'w-64 md:w-72' : 'w-64 md:w-20'} ${isSidebarOpen ? 'shadow-[12px_0_40px_-18px_rgba(0,0,0,0.55)]' : ''} z-[70] transform-none`}>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isSidebarOpen ? (
             <div className="px-6 pt-7 pb-5 border-b border-[var(--border)] relative overflow-hidden">
@@ -1860,7 +1859,7 @@ useEffect(() => {
                   <svg viewBox="0 0 100 100" className="w-7 h-7"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="var(--accent)" /></svg>
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || 'المالك'}</h2>
+                  <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || translate('المالك', language)}</h2>
                   <p className="text-[11px] text-[var(--muted)] truncate">مركز عمليات الطوارئ</p>
                 </div>
               </div>
@@ -4010,7 +4009,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                   </div>
                   <h3 className="text-lg font-bold">تعذر فتح الاستمارة</h3>
                   <p className="text-sm text-[var(--muted)]">فشل تحميل بيانات الاستمارة من السيرفر.</p>
-                  <p className="text-xs text-[var(--faint)]">تم إبقاء الاستمارة مفتوحة — أعد المحاولة أو تواصل مع المالك.</p>
+                  <p className="text-xs text-[var(--faint)]">{translate('تم إبقاء الاستمارة مفتوحة — أعد المحاولة أو تواصل مع المالك.', language)}</p>
                   <div className="flex items-center justify-center gap-2">
                     {modalError.status === 0 ? (
                       <span className="text-xs text-[var(--faint)]">خطأ في الاتصال بالخادم</span>
