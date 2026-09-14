@@ -5819,6 +5819,8 @@ const EMPTY_SHIFT_MATRIX = () => {
 };
 const HANDOVER_SHIFT_AR = { night: 'وردة الليل', morning: 'وردة الصباح', evening: 'وردة المساء' };
 const HANDOVER_DEPT_AR = { relief: 'الإغاثة', youth: 'الشباب والمتطوعين', resources: 'تنمية الموارد', case: 'إدارة الحالات' };
+const splitIssuesText = (text) => { const arr = String(text || '').split('\n').map(s => s.trim()).filter(Boolean); return arr.length ? arr : ['']; };
+const joinIssuesList = (list) => (list || []).map(s => (s || '').trim()).filter(Boolean).join('\n');
 
 function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 0 }) {
   const T = (ar, en) => (lang === 'ar' ? ar : en);
@@ -5828,7 +5830,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const emptyForm = (date) => ({
     handover_date: date || todayStr(),
     local_news_count: 0, global_news_count: 0, forms_count: 0,
-    issues_text: '',
+    issuesList: [''],
     tetra_count: 0, huawei_count: 0, new_equipment_count: 0,
     shift_matrix: EMPTY_SHIFT_MATRIX(),
     follow_ups_text: '',
@@ -5859,7 +5861,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       local_news_count: rec.local_news_count || 0,
       global_news_count: rec.global_news_count || 0,
       forms_count: rec.forms_count || 0,
-      issues_text: rec.issues_text || '',
+      issuesList: splitIssuesText(rec.issues_text),
       tetra_count: rec.tetra_count || 0,
       huawei_count: rec.huawei_count || 0,
       new_equipment_count: rec.new_equipment_count || 0,
@@ -5868,21 +5870,22 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     });
   };
 
-  const openCreate = async () => {
+  const openCreate = () => {
     setNotice(null);
+    setEditingId(null);
     setForm(emptyForm(todayStr()));
-    try {
-      const res = await fetch(`${BASE}/api/handovers/by-date/${todayStr()}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } });
-      if (res.ok) {
-        const rec = await res.json();
-        setEditingId(rec.handover_id);
-        loadIntoForm(rec);
-        setNotice(T('يوجد سجل تسليم مسجل بالفعل لهذا اليوم — سيتم فتحه للتعديل', 'A handover already exists for today — opening it for editing'));
-      } else {
-        setEditingId(null);
-      }
-    } catch { setEditingId(null); }
-    setModalOpen(true);
+    setModalOpen(true); // يفتح فوراً دون انتظار الشبكة
+    const token = localStorage.getItem('access_token') || '';
+    fetch(`${BASE}/api/handovers/by-date/${todayStr()}`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => (res.ok ? res.json() : null))
+      .then(rec => {
+        if (rec) {
+          setEditingId(rec.handover_id);
+          loadIntoForm(rec);
+          setNotice(T('يوجد سجل تسليم مسجل بالفعل لهذا اليوم — سيتم فتحه للتعديل', 'A handover already exists for today — opening it for editing'));
+        }
+      })
+      .catch(() => {});
   };
 
   const openEdit = (rec) => {
@@ -5913,7 +5916,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     if (!form.handover_date) { setNotice(T('يرجى اختيار التاريخ', 'Please choose a date')); return; }
     setSaving(true);
     const token = localStorage.getItem('access_token') || '';
-    const payload = { ...form, issues_text: form.issues_text || '', follow_ups_text: form.follow_ups_text || '', shift_matrix: form.shift_matrix || {} };
+    const { issuesList, ...formRest } = form;
+    const payload = { ...formRest, issues_text: joinIssuesList(issuesList), follow_ups_text: form.follow_ups_text || '', shift_matrix: form.shift_matrix || {} };
     const url = editingId ? `${BASE}/api/handovers/${editingId}` : `${BASE}/api/handovers`;
     const method = editingId ? 'PUT' : 'POST';
     try {
@@ -6075,10 +6079,13 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
       {modalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[210] p-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl w-full max-w-3xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
-            <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2"><HandoverIcon /> {editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
-              <button onClick={() => setModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+          <div className="modal-card w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="w-1.5 h-8 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]"></span>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2"><HandoverIcon /> {editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
+              </div>
+              <button onClick={() => setModalOpen(false)} className="icon-btn icon-btn-danger" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
@@ -6109,9 +6116,25 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                 </div>
               </SectionCard>
 
-              <SectionCard title={T('المشاكل والملاحظات', 'Issues & Observations')} icon={<AlertIcon />}>
-                <textarea rows="3" value={form.issues_text} onChange={e => setForm(prev => ({ ...prev, issues_text: e.target.value }))}
-                  className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm text-white outline-none focus:border-[var(--accent)]" />
+              <SectionCard title={T('المشاكل والملاحظات', 'Issues & Notes')} icon={<AlertIcon />}>
+                <div className="space-y-2.5">
+                  {form.issuesList.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <span className="w-7 h-7 shrink-0 rounded-lg bg-[var(--surface-3)] border border-[var(--border)] flex items-center justify-center text-xs font-bold text-[var(--accent)]">{i + 1}</span>
+                      <StyledInput value={item}
+                        onChange={e => { const next = [...form.issuesList]; next[i] = e.target.value; setForm(prev => ({ ...prev, issuesList: next })); }}
+                        placeholder={T(`مشكلة / ملحوظة رقم ${i + 1}...`, `Issue / note #${i + 1}...`)} />
+                      <button type="button" title={T('حذف', 'Remove')}
+                        onClick={() => { const next = form.issuesList.filter((_, idx) => idx !== i); setForm(prev => ({ ...prev, issuesList: next.length ? next : [''] })); }}
+                        className="icon-btn icon-btn-danger shrink-0"><TrashIcon /></button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setForm(prev => ({ ...prev, issuesList: [...prev.issuesList, ''] }))}
+                    className="action-btn action-btn--ok mt-1">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                    {T('إضافة مشكلة / ملحوظة', 'Add Issue / Note')}
+                  </button>
+                </div>
               </SectionCard>
 
               <SectionCard title={T('حالة المعدات', 'Equipment Status')} icon={<InventoryIcon />}>
