@@ -6078,14 +6078,16 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       </div>
 
       {modalOpen && (
-        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[210] p-4">
+        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
           <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-3">
-                <span className="w-1.5 h-8 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]"></span>
-                <h2 className="text-lg font-bold">{editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="w-1.5 h-8 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]"></span>
+                  <h2 className="text-lg font-bold">{editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
+                </div>
               </div>
-              <button onClick={() => setModalOpen(false)} className="icon-btn icon-btn-danger" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+              <button onClick={() => setModalOpen(false)} className="icon-btn icon-btn-danger" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
