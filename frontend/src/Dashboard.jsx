@@ -6006,13 +6006,28 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col">
         <div className="p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xl font-bold text-white flex items-center gap-2.5"><HandoverIcon /> {T('سجل التسليمات', 'Handover Log')}</h3>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="actionbar shrink-0">
             {isOwner && (
-              <button onClick={downloadAll} title={T('تنزيل السجل الشامل', 'Download Comprehensive Log')} className="action-btn action-btn--ok">
-                <ExcelIcon /> {T('تنزيل السجل الشامل', 'Download Comprehensive Log')}
+              <button
+                type="button"
+                onClick={downloadAll}
+                data-tip={T('تنزيل السجل الشامل', 'Download Comprehensive Log')}
+                className="action-btn action-btn--ok shrink-0"
+              >
+                <ExcelIcon />
+                <span className="hidden md:inline">{T('تنزيل السجل الشامل', 'Download Comprehensive Log')}</span>
               </button>
             )}
-            <button onClick={openCreate} className="btn-accent flex items-center gap-2">+ {T('إنشاء تسليم يومي', 'Create Daily Handover')}</button>
+            <Magnetic strength={0.16} className="shrink-0">
+              <button
+                type="button"
+                onClick={openCreate}
+                className="btn-primary whitespace-nowrap"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                <span>{T('إنشاء تسليم يومي', 'Create Daily Handover')}</span>
+              </button>
+            </Magnetic>
           </div>
         </div>
 
@@ -6046,9 +6061,9 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                   <td>{r.updated_at ? (r.updated_by_name || '—') : '—'}</td>
                   <td>
                     <div className="flex items-center justify-center gap-1.5">
-                      <button title={T('تعديل', 'Edit')} onClick={() => openEdit(r)} className="action-btn action-btn--info"><EditIcon /></button>
-                      <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => downloadSingle(r)} className="action-btn"><DownloadIcon /></button>
-                      {isOwner && <button title={T('حذف', 'Delete')} onClick={() => handleDelete(r.handover_id)} className="action-btn action-btn--danger"><TrashIcon /></button>}
+                      <button title={T('تعديل', 'Edit')} onClick={() => openEdit(r)} className="action-btn action-btn--icon action-btn--info"><EditIcon /></button>
+                      <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => downloadSingle(r)} className="action-btn action-btn--icon"><DownloadIcon /></button>
+                      {isOwner && <button title={T('حذف', 'Delete')} onClick={() => handleDelete(r.handover_id)} className="action-btn action-btn--icon action-btn--danger"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
@@ -6060,14 +6075,14 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
       {modalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[210] p-4">
-          <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border)] sticky top-0 bg-[var(--surface-2)] z-10">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2.5"><HandoverIcon /> {editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h3>
-              <button onClick={() => setModalOpen(false)} className="icon-btn" title={T('إغلاق', 'Close')}>✕</button>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl w-full max-w-3xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
+            <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2"><HandoverIcon /> {editingId ? T('تعديل تسليم يومي', 'Edit Daily Handover') : T('إنشاء تسليم يومي', 'Create Daily Handover')}</h2>
+              <button onClick={() => setModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl" title={T('إغلاق', 'Close')}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
 
-            <div className="p-5 space-y-5">
-              {notice && modalOpen && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+              {notice && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
 
               <SectionCard title={T('التاريخ', 'Date')} icon={<HandoverIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -6154,9 +6169,9 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               </SectionCard>
             </div>
 
-            <div className="p-5 border-t border-[var(--border)] flex flex-wrap items-center justify-end gap-2 sticky bottom-0 bg-[var(--surface-2)]">
-              <button onClick={() => setModalOpen(false)} className="btn-ghost">{T('إلغاء', 'Cancel')}</button>
-              <button onClick={handleSave} disabled={saving} className="btn-accent">
+            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 rounded-b-3xl [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
+              <button onClick={() => setModalOpen(false)} className="px-6 py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">{T('إلغاء', 'Cancel')}</button>
+              <button onClick={handleSave} disabled={saving} className="btn-accent px-8 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed">
                 {saving ? T('جاري الحفظ...', 'Saving...') : (editingId ? T('حفظ التعديلات', 'Save Changes') : T('حفظ التسليم', 'Save Handover'))}
               </button>
             </div>
