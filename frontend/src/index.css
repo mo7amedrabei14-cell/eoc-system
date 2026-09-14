@@ -65,6 +65,13 @@
   ──────────────────────────────────────────────────────────── */
   --data: #d9a441;
   --data-soft: rgba(217, 164, 65, 0.13);
+
+  /* AI/Intelligence semantic tokens (purple) */
+  --ai: #a855f7;
+  --ai-hover: #c084fc;
+  --ai-soft: rgba(168, 85, 247, 0.12);
+  --ai-softer: rgba(168, 85, 247, 0.06);
+
   --disabled: rgba(255, 255, 255, 0.06);
   --disabled-fg: #4a4e57;
 
@@ -134,6 +141,13 @@
   --danger-soft: rgba(174, 0, 0, 0.1);
   --data: #a6781f;
   --data-soft: rgba(166, 120, 31, 0.12);
+
+  /* AI/Intelligence semantic tokens (purple) */
+  --ai: #9333ea;
+  --ai-hover: #a855f7;
+  --ai-soft: rgba(147, 51, 234, 0.1);
+  --ai-softer: rgba(147, 51, 234, 0.05);
+
   --disabled: rgba(18, 22, 34, 0.06);
   --disabled-fg: #a2a7b0;
 
@@ -790,8 +804,8 @@ textarea:not(.field):focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 0.7rem;
   background: var(--surface-2);
   color: var(--muted);
@@ -2510,6 +2524,11 @@ select.field {
      تجاوز الشاشة، وكل اختيار يبقى بعرض محتواه الكامل (لا قطع). */
   .filters-seg { flex-wrap: wrap; }
   .filters-seg > .eoc-select--toolbar { max-width: 100%; }
+
+  /* Mobile-specific touch target fixes - 44x44px minimum */
+  .icon-btn { width: 2.75rem; height: 2.75rem; }
+  .action-btn--icon { width: 2.75rem; height: 2.75rem; padding: 0; }
+  .btn-primary { min-width: 0; flex-shrink: 1; }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -2577,3 +2596,8 @@ select.field {
 /* حقل معطّل: خفوت الـ pills وأزرار التقويم/الساعة تزامناً مع .field:disabled */
 .seg-ghost:disabled ~ .seg-pills { opacity: 0.55; }
 .seg-ghost:disabled ~ button { opacity: 0.55; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Mobile Styles Import — MUST BE LAST to override everything above
+   ═══════════════════════════════════════════════════════════════════════════ */
+@import "./mobile.css";

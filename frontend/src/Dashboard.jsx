@@ -1745,9 +1745,9 @@ useEffect(() => {
           </button>
         )}
         {[...visibleToasts, ...closingToasts].map(toastItem => (
-          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.closing ? 'toast-item-closing' : ''} ${toastItem.isAi ? 'toast-item-ai !border-purple-500/50' : ''}`}>
-            <div className={`absolute start-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-purple-500' : 'bg-[var(--accent)]'} animate-pulse`}></div>
-            <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30'} rounded-full flex items-center justify-center border shrink-0`}>
+          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.closing ? 'toast-item-closing' : ''} ${toastItem.isAi ? 'toast-item-ai !border-[var(--ai)]/50' : ''}`}>
+            <div className={`absolute start-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-[var(--ai)]' : 'bg-[var(--accent)]'} animate-pulse`}></div>
+            <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-[var(--ai-soft)] text-[var(--ai)] border-[var(--ai)]/30' : 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30'} rounded-full flex items-center justify-center border shrink-0`}>
               {toastItem.isAi ? <AIIcon className="w-5 h-5 animate-pulse" /> : <AlertIcon className="w-5 h-5 animate-bounce" />}
             </div>
             <div className="flex-1 min-w-0">
@@ -1762,7 +1762,7 @@ useEffect(() => {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </h4>
-              <p className={`${toastItem.isAi ? 'text-purple-400' : 'text-[var(--info)]'} text-xs mt-2 font-bold bg-[var(--surface-3)] p-2 rounded-lg border border-[var(--border)] inline-block`}>
+              <p className={`${toastItem.isAi ? 'text-[var(--ai)]' : 'text-[var(--info)]'} text-xs mt-2 font-bold bg-[var(--surface-3)] p-2 rounded-lg border border-[var(--border)] inline-block`}>
                 {toastItem.isAi ? 'الذكاء الاصطناعي وجد خبراً جديداً' : <>{'إجراء: '}{toastItem.action}</>}
               </p>
               <p className="text-[var(--ink-2)] text-xs mt-2 leading-relaxed">{localizeMissionDetails(toastItem.details, language)}</p>
@@ -2320,15 +2320,15 @@ function HomeView({ branches = [], theme = 'dark' }) {
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام المفتوحة</h3><div className="p-2 rounded-xl text-blue-500 bg-blue-500/10 border border-blue-500/20 shrink-0"><AlertIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام المفتوحة</h3><div className="p-2 rounded-xl text-[var(--info)] bg-[var(--info-soft)] border border-[var(--info)]/20 shrink-0"><AlertIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-4xl text-[var(--ink)]"><CountUp value={activeOpen} /></p>
             <span className="kpi-sub">تنتظر الإغلاق</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-purple-400 bg-purple-500/10 border border-purple-500/20 shrink-0"><NewsIcon/></div></div>
-          <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-4xl text-[var(--ink)]"><CountUp value={totalNews} /></p><span className="text-xs font-bold text-purple-400 mb-1.5">(<CountUp value={activeNews} className="!text-xs !text-purple-400 font-bold" /> استجابة)</span></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-[var(--ai)] bg-[var(--ai-soft)] border border-[var(--ai)]/20 shrink-0"><NewsIcon/></div></div>
+          <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-4xl text-[var(--ink)]"><CountUp value={totalNews} /></p><span className="text-xs font-bold text-[var(--ai)] mb-1.5">(<CountUp value={activeNews} className="!text-xs !text-[var(--ai)] font-bold" /> استجابة)</span></div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface border-l-4 border-l-[var(--accent)] p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
@@ -2345,7 +2345,7 @@ function HomeView({ branches = [], theme = 'dark' }) {
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-green-500 bg-green-500/10 border border-green-500/20 shrink-0"><EarthquakeIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-4xl text-[var(--ink)]"><CountUp value={totalEgyptEqs} /></p>
             <span className="kpi-sub">خلال 24 ساعة</span>
@@ -2443,7 +2443,7 @@ function BranchesAndInventoryView({ branches, theme = 'dark' }) {
               <tbody className="divide-y divide-[var(--border)]">
                 {branches.map(branch => (
                   <tr key={`list-${branch.id}`} onClick={() => handleSelectBranch(branch.id)} className={`transition-colors cursor-pointer ${selectedBranchId === branch.id ? 'bg-[var(--accent-soft)] border-r-4 border-[var(--accent)]' : 'hover:bg-[var(--surface-hover)] border-r-4 border-transparent'}`}>
-                    <td className={`p-4 font-bold ${selectedBranchId === branch.id ? 'text-[var(--accent)]' : 'text-white'}`}>{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</td>
+                    <td data-label="الفرع" className={`p-4 font-bold ${selectedBranchId === branch.id ? 'text-[var(--accent)]' : 'text-white'}`}>{branch.name === 'القاهرة' ? 'المركز العام' : branch.name}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2523,44 +2523,44 @@ function BranchesAndInventoryView({ branches, theme = 'dark' }) {
               <tbody className="divide-y divide-[var(--border)]">
                 {displayedBranches.map((item) => (
                   <tr key={`inv-row-${item.id}`} className="hover:bg-[var(--surface-hover)] transition-colors group">
-                    <td className="p-4 font-bold text-white group-hover:text-[var(--accent)] sticky right-0 bg-[var(--surface-2)] group-hover:bg-[var(--surface-3)] border-l border-[var(--border)] z-10">{item.name === 'القاهرة' ? 'المركز العام' : item.name}</td>
-                    <td className="p-4 text-[var(--ink-2)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.cars}</td>
-                    <td className="p-4 text-[var(--ink-2)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.ambulances}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.tents}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.blankets}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.mattresses}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.bed_sheets}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.pillows}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_mats}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.water_tanks}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_buckets}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_jerrycans}</td>
-                    <td className="p-4 text-blue-400 font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_kits}</td>
-                    <td className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.stretchers}</td>
-                    <td className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.hospitals > 0 ? '✔️' : '-'}</td>
-                    <td className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.blood_banks > 0 ? '✔️' : '-'}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.motorola_radios}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.huawei_radios}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.fire_extinguishers}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.disinfection_machines}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.manual_sprayers}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.helmets}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.vests}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.caps}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_goggles}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_boots}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.ice_boxes}</td>
-                    <td className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_teams}</td>
-                    <td className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_vols}</td>
-                    <td className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.emergency_teams}</td>
-                    <td className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.emergency_vols}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.psych_support_teams}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.psych_support_vols}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.health_awareness_teams}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.health_awareness_vols}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.first_aid_trainers_hq}</td>
-                    <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.first_aid_trainers_branch}</td>
-                    <td className="p-4 text-[var(--muted-2)]">{item.wash_vols}</td>
+                    <td data-label="الفرع / التمركز" className="p-4 font-bold text-white group-hover:text-[var(--accent)] sticky right-0 bg-[var(--surface-2)] group-hover:bg-[var(--surface-3)] border-l border-[var(--border)] z-10">{item.name === 'القاهرة' ? 'المركز العام' : item.name}</td>
+                    <td data-label="سيارات" className="p-4 text-[var(--ink-2)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.cars}</td>
+                    <td data-label="إسعاف" className="p-4 text-[var(--ink-2)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.ambulances}</td>
+                    <td data-label="خيم" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.tents}</td>
+                    <td data-label="بطاطين" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.blankets}</td>
+                    <td data-label="مراتب" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.mattresses}</td>
+                    <td data-label="ملايات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.bed_sheets}</td>
+                    <td data-label="مخدات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.pillows}</td>
+                    <td data-label="حصر" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_mats}</td>
+                    <td data-label="تنك مياه" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.water_tanks}</td>
+                    <td data-label="بستلة" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_buckets}</td>
+                    <td data-label="جركن" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_jerrycans}</td>
+                    <td data-label="شنط إسعاف" className="p-4 text-blue-400 font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_kits}</td>
+                    <td data-label="نقالات" className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.stretchers}</td>
+                    <td data-label="مستشفى ميداني" className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.hospitals > 0 ? '✔️' : '-'}</td>
+                    <td data-label="بنك دم" className="p-4 text-[var(--ink-2)] bg-[var(--surface-week)] border-l border-[var(--border)]">{item.blood_banks > 0 ? '✔️' : '-'}</td>
+                    <td data-label="لاسلكي تترا" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.motorola_radios}</td>
+                    <td data-label="لاسلكي هواوي" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.huawei_radios}</td>
+                    <td data-label="طفايات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.fire_extinguishers}</td>
+                    <td data-label="مكن تطهير" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.disinfection_machines}</td>
+                    <td data-label="بخاخات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.manual_sprayers}</td>
+                    <td data-label="خوذ" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.helmets}</td>
+                    <td data-label="فيستات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.vests}</td>
+                    <td data-label="كابات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.caps}</td>
+                    <td data-label="نظارات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_goggles}</td>
+                    <td data-label="بوت" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.plastic_boots}</td>
+                    <td data-label="آيس بوكس" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.ice_boxes}</td>
+                    <td data-label="فرق إسعافات" className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_teams}</td>
+                    <td data-label="متطوعين إسعافات" className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.first_aid_vols}</td>
+                    <td data-label="فرق طوارئ" className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.emergency_teams}</td>
+                    <td data-label="متطوعين طوارئ" className="p-4 text-[var(--data)] font-bold bg-[var(--surface-week)] border-l border-[var(--border)]">{item.emergency_vols}</td>
+                    <td data-label="فرق دعم نفسي" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.psych_support_teams}</td>
+                    <td data-label="متطوعين دعم نفسي" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.psych_support_vols}</td>
+                    <td data-label="فرق توعية" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.health_awareness_teams}</td>
+                    <td data-label="متطوعين توعية" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.health_awareness_vols}</td>
+                    <td data-label="مدربين (مركز عام)" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.first_aid_trainers_hq}</td>
+                    <td data-label="مدربين (فرع)" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{item.first_aid_trainers_branch}</td>
+                    <td data-label="إصحاح بيئي" className="p-4 text-[var(--muted-2)]">{item.wash_vols}</td>
                   </tr>
                 ))}
               </tbody>
@@ -3651,11 +3651,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const StatusBadge = ({ status }) => {
     const statuses = {
       'Draft': { text: 'مسودة', color: 'text-[var(--muted-2)] bg-[var(--surface-hover)] border-[var(--border)]' },
-      'Active': { text: 'نشطة', color: 'text-green-500 bg-green-500/10 border-green-500/20' },
+      'Active': { text: 'نشطة', color: 'text-[var(--ok)] bg-[var(--ok-soft)] border-[var(--ok)]/20' },
       'Under Review': { text: 'قيد المراجعة', color: 'text-[var(--warn)] bg-[var(--warn-soft)] border-[var(--warn)]/20' },
-      'Approved': { text: 'معتمدة (بانتظار الانتهاء)', color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' },
-      'Completed': { text: 'مكتملة', color: 'text-teal-500 bg-teal-500/10 border-teal-500/20' },
-      'Returned': { text: 'إرجاع للمتطوع', color: 'text-orange-500 bg-orange-500/10 border-orange-500/20' },
+      'Approved': { text: 'معتمدة (بانتظار الانتهاء)', color: 'text-[var(--info)] bg-[var(--info-soft)] border-[var(--info)]/20' },
+      'Completed': { text: 'مكتملة', color: 'text-[var(--ok)] bg-[var(--ok-soft)] border-[var(--ok)]/20' },
+      'Returned': { text: 'إرجاع للمتطوع', color: 'text-[var(--warn)] bg-[var(--warn-soft)] border-[var(--warn)]/20' },
       'Cancelled': { text: 'ملغاة', color: 'text-[var(--accent)] bg-[var(--danger-soft)] border-[var(--accent)]/20' },
     };
     const s = statuses[status] || statuses['Draft'];
@@ -3863,9 +3863,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[var(--surface-week)] border-b border-[var(--border)] shrink-0">
         <StatCard title="إجمالي المهام" value={regionStats.total} color="text-[var(--ink)]" borderHighlight />
         <StatCard title="المركز العام" value={regionStats.hq} color="text-[var(--accent)]" />
-        <StatCard title="إقليم القنال" value={regionStats.canal} color="text-blue-400" />
-        <StatCard title="إقليم الدلتا" value={regionStats.delta} color="text-green-400" />
-        <StatCard title="إقليم الصعيد" value={regionStats.saeed} color="text-yellow-400" />
+        <StatCard title="إقليم القنال" value={regionStats.canal} color="text-[var(--info)]" />
+        <StatCard title="إقليم الدلتا" value={regionStats.delta} color="text-[var(--ok)]" />
+        <StatCard title="إقليم الصعيد" value={regionStats.saeed} color="text-[var(--warn)]" />
       </div>
       )}
 
@@ -3922,19 +3922,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             ) :
             filteredMissions.length > 0 ? filteredMissions.map(m => (
               <tr key={`mission-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'}`}>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
-                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
-                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
-                <td className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60">
+                <td data-label="تاريخ الإنشاء" className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
+                <td data-label="تاريخ المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
+                <td data-label="تصنيف المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
+                <td data-label="فترة المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60">
                   <div className="inline-flex items-center gap-2 bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] font-mono text-[11px] whitespace-nowrap">
                     <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : (m.created_at ? formatDateTime(m.created_at) : 'غير مسجل')}</span>
                     <span className="text-[var(--faint)]">|</span>
                     <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? formatDateTime(m.completion_date) : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
                 </td>
-                <td className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_code}</td>
-                <td className="px-3 md:px-4 py-3 font-semibold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.branch}</td>
-                <td className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60 min-w-[180px] max-w-[280px]">
+                <td data-label="كود المهمة" className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_code}</td>
+                <td data-label="التمركز (الفرع)" className="px-3 md:px-4 py-3 font-semibold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.branch}</td>
+                <td data-label="اسم المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60 min-w-[180px] max-w-[280px]">
                   <button
                     type="button"
                     onClick={() => handleViewMission(m.mission_id)}
@@ -3945,14 +3945,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     {m.mission_name}
                   </button>
                 </td>
-                <td className="px-3 md:px-4 py-3 text-[var(--ok)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[140px] max-w-[220px]"><span className="block truncate" title={m.vehicles_info}>{m.vehicles_info}</span></td>
-                <td className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_type}</td>
-                <td className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
-                <td className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.completion_date)}</td>
-                <td className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><StatusBadge status={m.status} /></td>
-                <td className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
+                <td data-label="السيارات والسائقين" className="px-3 md:px-4 py-3 text-[var(--ok)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[140px] max-w-[220px]"><span className="block truncate" title={m.vehicles_info}>{m.vehicles_info}</span></td>
+                <td data-label="نوع المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_type}</td>
+                <td data-label="مكان المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
+                <td data-label="مسؤول المهمة" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
+                <td data-label="مصدر البلاغ" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
+                <td data-label="تاريخ الانتهاء" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.completion_date)}</td>
+                <td data-label="الحالة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><StatusBadge status={m.status} /></td>
+                <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                   <div className="flex justify-center gap-1.5">
                     <button onClick={() => handleViewMission(m.mission_id)} className="icon-btn" title="فتح المهمة"><EyeIcon /></button>
                     <button onClick={() => setDownloadTarget(m)} className="icon-btn" title="تصدير الاستمارة"><DownloadIcon /></button>
@@ -4213,8 +4213,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                         <th className="p-3">رقم العضوية</th>
                         <th className="p-3 text-[var(--accent)]">صفة المشارك <span className="text-[var(--accent)]">*</span></th>
                         <th className="p-3 text-[var(--ink)]">الفريق</th>
-                        <th className="p-3 text-cyan-400">الساعات</th>
-                        <th className="p-3 text-purple-400">خط السير المخصص</th>
+                        <th className="p-3 text-[var(--info)]">الساعات</th>
+                        <th className="p-3 text-[var(--ai)]">خط السير المخصص</th>
                         <th className="p-3">الفرع</th>
                         <th className="p-3 text-center">حذف</th>
                       </tr>
@@ -4222,40 +4222,40 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     <tbody className="divide-y divide-[var(--border)]">
                       {participants.map((p, index) => (
                         <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
-                          <td className="p-2 text-center text-[var(--muted-2)] font-bold">{index + 1}</td>
-                          <td className="p-2">
+                          <td data-label="م" className="p-2 text-center text-[var(--muted-2)] font-bold">{index + 1}</td>
+                          <td data-label="النوع" className="p-2">
                             <EocSelect variant="cell" id={`p_type_${index}`} value={p.participant_type || 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_type = e.target.value; setParticipants(newP); }}>
                               <option value="volunteer" className="bg-[var(--surface-4)]">متطوع</option>
                               <option value="non_volunteer" className="bg-[var(--surface-4)]">غير متطوع</option>
                             </EocSelect>
                           </td>
-                          <td className="p-2">
+                          <td data-label="الاسم" className="p-2">
                             <input id={`p_name_${index}`} list="all-volunteers-datalist" type="text" defaultValue={p.full_name || ''} placeholder="الاسم (اختر أو اكتب)..." onChange={(e) => handleParticipantNameChange(e, index)} className="eoc-manual-field bg-transparent outline-none text-white w-full" />
                             <datalist id="all-volunteers-datalist">
                               {allVolunteers.map(v => <option key={v.volunteer_id} value={v.full_name}>{v.branch_name} — {v.membership_number || 'بدون رقم'}</option>)}
                             </datalist>
                           </td>
-                          <td className="p-2">
+                          <td data-label="رقم العضوية" className="p-2">
                             <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : '—'} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : 'text-white'}`} />
                           </td>
-                          <td className="p-2">
+                          <td data-label="صفة المشارك" className="p-2">
                             <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
                           </td>
 
                           {/* الفريق — حقل يدوي فارغ by default، يُستخدم لتسمية الفرق الداخلي */}
-                          <td className="p-2">
+                          <td data-label="الفريق" className="p-2">
                             <input id={`p_team_${index}`} type="text" value={p.team_name || ''} placeholder="اكتب الفريق..." onChange={(e) => { const newP = [...participants]; newP[index].team_name = e.target.value; setParticipants(newP); }} className="eoc-manual-field bg-transparent outline-none text-[var(--ink)] w-full" />
                           </td>
 
                           {/* 🕒 الساعات — تُحسب من القطاعات (segments) أو الافتراضي من خطة السير */}
-                          <td className="p-2 text-center space-y-1">
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-cyan-400/10 text-cyan-400' : 'text-[var(--faint)]'}`}>
+                          <td data-label="الساعات" className="p-2 text-center space-y-1">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-[var(--info-soft)] text-[var(--info)]' : 'text-[var(--faint)]'}`}>
                               {p.working_hours != null ? fmtHours(p.working_hours, lang) : '—'}
                             </span>
                             {/* 🆕 «يُحسب من بداية المهمة» — مفتاح نقي: TRUE (افتراضي) ⇒ البداية المخططة
                                 من بداية المهمة؛ FALSE ⇒ بداية مساره المحدد. لا شروط تواريخ إطلاقاً. */}
                             <label
-                              className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap cursor-pointer select-none ${p.start_from_mission !== false ? 'text-cyan-400' : 'text-[var(--muted-2)]'}`}
+                              className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap cursor-pointer select-none ${p.start_from_mission !== false ? 'text-[var(--info)]' : 'text-[var(--muted-2)]'}`}
                               title="يُحسب من بداية المهمة (بدل بداية مساره المحدد) — للمالك/المشرف"
                             >
                               <input
@@ -4269,12 +4269,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           </td>
 
                           {/* خط السير المخصص — موحد لكل أنواع المهام (يعرض الأيام/المجموعات المخصصة للمشارك) */}
-                          <td className="p-2">
+                          <td data-label="خط السير المخصص" className="p-2">
                             <button
                               type="button"
                               onClick={() => setDaysPicker(daysPicker === index ? null : index)}
                               title="تحديد خطوط السير المخصصة للمشارك"
-                              className={`text-xs font-bold px-2 py-1 rounded-lg border w-full text-right ${((p.assigned_days || []).length > 0) ? 'text-purple-400 bg-purple-400/10 border-purple-400/30' : 'text-[var(--muted-2)] bg-[var(--surface-3)] border-[var(--border)]'}`}
+                              className={`text-xs font-bold px-2 py-1 rounded-lg border w-full text-right ${((p.assigned_days || []).length > 0) ? 'text-[var(--ai)] bg-[var(--ai-soft)] border-[var(--ai)]/30' : 'text-[var(--muted-2)] bg-[var(--surface-3)] border-[var(--border)]'}`}
                             >
                               {((p.assigned_days || []).length > 0) ? (() => {
                                 const { routes: routeDays } = splitAssignedDays(p.assigned_days);
@@ -4283,12 +4283,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                                   <span className="inline-flex flex-wrap items-center gap-1">
                                     {routeDays.length > 0 && <span className="text-purple-400">📍</span>}
                                     {routeDays.map(day => (
-                                      <span key={'r:'+day} className="inline-block bg-purple-400/20 text-purple-300 px-1.5 py-0.5 rounded text-[10px]">{day}</span>
+                                      <span key={'r:'+day} className="inline-block bg-[var(--ai-soft)] text-[var(--ai)] px-1.5 py-0.5 rounded text-[10px]">{day}</span>
                                     ))}
                                     {jlDays.map(day => {
                                       const isJoin = day.startsWith('JL:J:');
                                       return (
-                                        <span key={day} className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${isJoin ? 'bg-green-400/20 text-green-300' : 'bg-[var(--accent)]/20 text-[var(--accent)]'}`}>
+                                        <span key={day} className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${isJoin ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--accent-softer)] text-[var(--accent)]'}`}>
                                           {isJoin ? '📥' : '📤'} {day.slice(5)}
                                         </span>
                                       );
@@ -4302,7 +4302,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           </td>
 
                           {/* الفرع — كل الفروع بدون فلترة (داخل جدول المشاركين فقط) */}
-                          <td className="p-2">
+                          <td data-label="الفرع" className="p-2">
                             <EocSelect variant="cell" id={`p_branch_${index}`} defaultValue={p.branch_id || userBranchId} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}>
                               {branches.map(b => (
                                 <option key={b.id} value={b.id} className="bg-[var(--surface-4)]">{b.name}</option>
@@ -4310,7 +4310,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                             </EocSelect>
                           </td>
 
-                          <td className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-[var(--faint)] hover:text-[var(--accent)]"><TrashIcon /></button></td>
+                          <td data-label="حذف" className="p-2 text-center"><button onClick={() => removeParticipant(p.id)} className="text-[var(--faint)] hover:text-[var(--accent)]"><TrashIcon /></button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -4365,7 +4365,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           {assignedTo.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {assignedTo.map(name => (
-                                <span key={name} className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-purple-400/15 text-purple-300">{name}</span>
+                                <span key={name} className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-[var(--ai-soft)] text-[var(--ai)]">{name}</span>
                               ))}
                             </div>
                           )}
@@ -5302,7 +5302,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
           </div>
         </div>
         
-        <div className="flex items-center gap-3 w-full flex-1 overflow-x-auto custom-scrollbar pb-2 md:pb-0">
+        <div className="flex flex-wrap items-center gap-3 w-full flex-1 pb-2 md:pb-0">
           
           {/* فلتر القطاع (مهام / أخبار) */}
           <div className="flex items-center gap-1 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner shrink-0">
@@ -5342,21 +5342,21 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
-            {isLoading ? (<TableLoadingRow colSpan={5} label="جاري سحب السجلات السرية…" />) : 
+            {isLoading ? (<TableLoadingRow colSpan={5} label="جاري سحب السجلات السرية…" />) :
             filteredLogs.length > 0 ? filteredLogs.map((log, idx) => (
               <tr key={idx} className="hover:bg-[var(--surface-hover)] transition-colors">
-                <td className="p-4 text-[var(--muted-2)] font-mono border-l border-[var(--border)]" dir="ltr">{formatDateTime(log.created_at)}</td>
-                <td className="p-4 border-l border-[var(--border)] text-center">
-                  {log.entity_type === 'mission' ? <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/30">المهام</span> : 
-                   log.entity_type === 'local_news' ? <span className="bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-1 rounded text-xs border border-[var(--accent)]/30">الأخبار المحلية</span> : 
-                   log.entity_type === 'global_disaster' ? <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs border border-orange-500/30">الكوارث العالمية</span> : 
+                <td data-label="التاريخ والوقت" className="p-4 text-[var(--muted-2)] font-mono border-l border-[var(--border)]" dir="ltr">{formatDateTime(log.created_at)}</td>
+                <td data-label="القسم" className="p-4 border-l border-[var(--border)] text-center">
+                  {log.entity_type === 'mission' ? <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/30">المهام</span> :
+                   log.entity_type === 'local_news' ? <span className="bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-1 rounded text-xs border border-[var(--accent)]/30">الأخبار المحلية</span> :
+                   log.entity_type === 'global_disaster' ? <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded text-xs border border-orange-500/30">الكوارث العالمية</span> :
                    log.entity_type === 'earthquake' ? <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs border border-purple-500/30">الزلازل</span> :
                    log.entity_type === 'handover' ? <span className="bg-teal-500/20 text-teal-400 px-2 py-1 rounded text-xs border border-teal-500/30">تسليم وتسلم مشرفين</span> :
                    <span className="bg-[var(--surface-hover)] text-[var(--muted-2)] px-2 py-1 rounded text-xs border border-[var(--border)]">نظام</span>}
                 </td>
-                <td className="p-4 font-bold text-white border-l border-[var(--border)]">{log.full_name}</td>
-                <td className="p-4 font-bold border-l border-[var(--border)]"><span className="bg-[var(--surface-4)] px-3 py-1 rounded-lg border border-[var(--border)] text-xs">{log.action}</span></td>
-                <td className="p-4 text-[var(--ink-2)] truncate max-w-md whitespace-normal">{log.details}</td>
+                <td data-label="اسم المستخدم" className="p-4 font-bold text-white border-l border-[var(--border)]">{log.full_name}</td>
+                <td data-label="نوع الإجراء" className="p-4 font-bold border-l border-[var(--border)]"><span className="bg-[var(--surface-4)] px-3 py-1 rounded-lg border border-[var(--border)] text-xs">{log.action}</span></td>
+                <td data-label="تفاصيل العملية" className="p-4 text-[var(--ink-2)] truncate max-w-md whitespace-normal">{log.details}</td>
               </tr>
             )) : (<tr><td colSpan="5" className="p-8 text-center text-[var(--faint)]">لا توجد سجلات مطابقة للبحث</td></tr>)}
           </tbody>
@@ -5688,22 +5688,22 @@ const [nd, setNd] = useState({
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
-              {isLoading ? <TableLoadingRow colSpan={7} /> : 
+              {isLoading ? <TableLoadingRow colSpan={7} /> :
                filteredNews.length > 0 ? filteredNews.map(n => (
                 <tr key={n.news_id} className="hover:bg-[var(--surface-hover)]">
-                  <td className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(n.incident_date)}</td>
-                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
-                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
-                  <td className="p-4 border-l border-[var(--border)]">
+                  <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(n.incident_date)}</td>
+                  <td data-label="المحافظة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
+                  <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
+                  <td data-label="نقاط (رد/تحرك/وصول)" className="p-4 border-l border-[var(--border)]">
                     <div className="flex gap-1">
                       <span className="bg-[var(--data-soft)] text-[var(--data)] px-2 py-0.5 rounded text-xs border border-[var(--data)]/30" title="نقاط الرد">{n.response_time_points}</span>
                       <span className="bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded text-xs border border-orange-500/30" title="نقاط التحرك">{n.movement_points}</span>
                       <span className="bg-green-500/20 text-green-500 px-2 py-0.5 rounded text-xs border border-green-500/30" title="نقاط الوصول">{n.field_response_points}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{n.participants_count}</td>
-                  <td className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.data_entry_name}</td>
-                  <td className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
+                  <td data-label="المتطوعين" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{n.participants_count}</td>
+                  <td data-label="مدخل الخبر" className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.data_entry_name}</td>
+                  <td data-label="إجراءات" className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                     <div className="flex justify-center gap-1">
                       {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-1.5 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
                       <button onClick={() => handleEdit(n)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
@@ -6230,7 +6230,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                         placeholder={T(`مشكلة / ملحوظة رقم ${i + 1}...`, `Issue / note #${i + 1}...`)} />
                       <button type="button" title={T('حذف', 'Remove')}
                         onClick={() => { const next = form.issuesList.filter((_, idx) => idx !== i); setForm(prev => ({ ...prev, issuesList: next.length ? next : [''] })); }}
-                        className="icon-btn icon-btn-danger shrink-0"><TrashIcon /></button>
+                        className="p-2.5 rounded-xl hover:bg-[var(--accent-soft)] text-[var(--accent)] active:scale-95 transition"><TrashIcon className="w-5 h-5" /></button>
                     </div>
                   ))}
                   <button type="button" onClick={() => setForm(prev => ({ ...prev, issuesList: [...prev.issuesList, ''] }))}
@@ -6269,20 +6269,20 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                     <tbody>
                       {HANDOVER_SHIFTS.map(s => (
                         <tr key={s.key}>
-                          <td className="p-2 font-bold">{lang === 'ar' ? s.ar : s.en}</td>
+                          <td data-label={T('الوردية', 'Shift')} className="p-2 font-bold">{lang === 'ar' ? s.ar : s.en}</td>
                           {HANDOVER_DEPTS.map(d => (
-                            <td key={d.key} className="p-2">
+                            <td key={d.key} data-label={lang === 'ar' ? d.ar : d.en} className="p-2">
                               <StyledInput type="number" min="0" inputMode="numeric" value={form.shift_matrix[`${s.key}_${d.key}`] === '' ? '' : (form.shift_matrix[`${s.key}_${d.key}`] ?? 0)}
                                 onFocus={e => e.target.select()} onChange={e => onMatrixChange(s.key, d.key, e.target.value)} className="!py-1.5 !px-2 text-center w-24 mx-auto" />
                             </td>
                           ))}
-                          <td className="p-2 text-center font-bold text-[var(--accent)]">{shiftTotal(s.key)}</td>
+                          <td data-label={T('الإجمالي', 'Total')} className="p-2 text-center font-bold text-[var(--accent)]">{shiftTotal(s.key)}</td>
                         </tr>
                       ))}
                       <tr>
-                        <td className="p-2 font-bold">{T('الإجمالي', 'Total')}</td>
-                        {HANDOVER_DEPTS.map(d => <td key={d.key} className="p-2 text-center font-bold text-[var(--accent)]">{deptTotal(d.key)}</td>)}
-                        <td className="p-2 text-center font-bold text-[var(--accent)]">{matrixTotal}</td>
+                        <td data-label={T('الوردية', 'Shift')} className="p-2 font-bold">{T('الإجمالي', 'Total')}</td>
+                        {HANDOVER_DEPTS.map(d => <td key={d.key} data-label={lang === 'ar' ? d.ar : d.en} className="p-2 text-center font-bold text-[var(--accent)]">{deptTotal(d.key)}</td>)}
+                        <td data-label={T('الإجمالي', 'Total')} className="p-2 text-center font-bold text-[var(--accent)]">{matrixTotal}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -6299,7 +6299,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                         placeholder={T(`متابعة رقم ${i + 1}...`, `Follow-up #${i + 1}...`)} />
                       <button type="button" title={T('حذف', 'Remove')}
                         onClick={() => { const next = form.followUpsList.filter((_, idx) => idx !== i); setForm(prev => ({ ...prev, followUpsList: next.length ? next : [''] })); }}
-                        className="icon-btn icon-btn-danger shrink-0"><TrashIcon /></button>
+                        className="p-2.5 rounded-xl hover:bg-[var(--accent-soft)] text-[var(--accent)] active:scale-95 transition"><TrashIcon className="w-5 h-5" /></button>
                     </div>
                   ))}
                   <button type="button" onClick={() => setForm(prev => ({ ...prev, followUpsList: [...prev.followUpsList, ''] }))}
@@ -6598,16 +6598,16 @@ const [clearAllCode, setClearAllCode] = useState('');
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
-              {isLoading ? <TableLoadingRow colSpan={7} label="جاري تحميل البيانات…" /> : 
+              {isLoading ? <TableLoadingRow colSpan={7} label="جاري تحميل البيانات…" /> :
                filteredDisasters.length > 0 ? filteredDisasters.map(d => (
                 <tr key={d.disaster_id} className="hover:bg-[var(--surface-hover)]">
-                  <td className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(d.incident_date)}</td>
-                  <td className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
-                  <td className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[var(--accent-softer)]">{d.disaster_type}</td>
-                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{d.news_title}</td>
-                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.deaths_count}</td>
-                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.injured_count}</td>
-                  <td className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
+                  <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(d.incident_date)}</td>
+                  <td data-label="الدولة / المكان" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
+                  <td data-label="نوع الكارثة" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[var(--accent-softer)]">{d.disaster_type}</td>
+                  <td data-label="الخبر" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{d.news_title}</td>
+                  <td data-label="الوفيات" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.deaths_count}</td>
+                  <td data-label="المصابين" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.injured_count}</td>
+                  <td data-label="إجراءات" className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                     <div className="flex justify-center gap-1">
                       {d.news_link && (
                         <a href={d.news_link} target="_blank" rel="noreferrer" className="p-1.5 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
@@ -7077,17 +7077,17 @@ const [clearAllCode, setClearAllCode] = useState('');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {isLoading ? <TableLoadingRow colSpan={8} /> : 
+                  {isLoading ? <TableLoadingRow colSpan={8} /> :
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
                     <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
-                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
-                      <td className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
-                      <td className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
-                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
-                      <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
-                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
-                      <td className="p-4 border-l border-[var(--border)] text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-[var(--danger-soft)] text-[var(--accent)] border border-[var(--accent)]/30' : 'bg-[var(--surface-hover)] text-[var(--muted-2)] border border-[var(--border)]'}`}>{eq.status}</span></td>
-                      <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
+                      <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
+                      <td data-label="الدولة" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
+                      <td data-label="القوة (ريختر)" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
+                      <td data-label="العمق" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
+                      <td data-label="المنطقة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
+                      <td data-label="الإحداثيات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
+                      <td data-label="الحالة" className="p-4 border-l border-[var(--border)] text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-[var(--danger-soft)] text-[var(--accent)] border border-[var(--accent)]/30' : 'bg-[var(--surface-hover)] text-[var(--muted-2)] border border-[var(--border)]'}`}>{eq.status}</span></td>
+                      <td data-label="الإجراءات" className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                         <div className="flex justify-center gap-2">
                           <button onClick={() => handleEditGlobal(eq)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
                           {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon/></button>}
@@ -7115,15 +7115,15 @@ const [clearAllCode, setClearAllCode] = useState('');
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
-                  {isLoading ? <TableLoadingRow colSpan={6} /> : 
+                  {isLoading ? <TableLoadingRow colSpan={6} /> :
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
                     <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
-                      <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
-                      <td className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
-                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
-                      <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
-                      <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
-                      <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
+                      <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
+                      <td data-label="القوة (ريختر)" className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
+                      <td data-label="العمق" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
+                      <td data-label="المنطقة (مصر)" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
+                      <td data-label="الإحداثيات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
+                      <td data-label="الإجراءات" className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                         <div className="flex justify-center gap-2">
                           <button onClick={() => handleEditEgypt(eq)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
                           {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon/></button>}
@@ -7140,24 +7140,28 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {isGlobalModalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="bg-[var(--surface)] border border-red-600/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <FormGroup label="التاريخ"><SegDateField value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
-              <FormGroup label="التوقيت"><SegTimeField className="field" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
-              <FormGroup label="الدولة">
-                <StyledSelect value={gForm.country} onChange={e => setGForm({...gForm, country: e.target.value})}>
-                  <option value="" disabled>اختر الدولة...</option>
-                  {COUNTRIES_LIST.map(c => <option key={c} value={c}>{c}</option>)}
-                </StyledSelect>
-              </FormGroup>
-              <FormGroup label="المنطقة"><StyledInput value={gForm.region} onChange={e => setGForm({...gForm, region: e.target.value})} /></FormGroup>
-              <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={gForm.magnitude} onChange={e => setGForm({...gForm, magnitude: e.target.value})} className="border-[var(--accent)]/50" /></FormGroup>
-              <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={gForm.depth_km} onChange={e => setGForm({...gForm, depth_km: e.target.value})} /></FormGroup>
-              <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={gForm.latitude} onChange={e => setGForm({...gForm, latitude: e.target.value})} /></FormGroup>
-              <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={gForm.longitude} onChange={e => setGForm({...gForm, longitude: e.target.value})} /></FormGroup>
+          <div className="modal-card w-full max-w-3xl h-full max-h-[95vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-[var(--border)] shrink-0">
+              <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             </div>
-            <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto">
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <FormGroup label="التاريخ"><SegDateField value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
+                <FormGroup label="التوقيت"><SegTimeField className="field" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
+                <FormGroup label="الدولة">
+                  <StyledSelect value={gForm.country} onChange={e => setGForm({...gForm, country: e.target.value})}>
+                    <option value="" disabled>اختر الدولة...</option>
+                    {COUNTRIES_LIST.map(c => <option key={c} value={c}>{c}</option>)}
+                  </StyledSelect>
+                </FormGroup>
+                <FormGroup label="المنطقة"><StyledInput value={gForm.region} onChange={e => setGForm({...gForm, region: e.target.value})} /></FormGroup>
+                <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={gForm.magnitude} onChange={e => setGForm({...gForm, magnitude: e.target.value})} className="border-[var(--accent)]/50" /></FormGroup>
+                <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={gForm.depth_km} onChange={e => setGForm({...gForm, depth_km: e.target.value})} /></FormGroup>
+                <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={gForm.latitude} onChange={e => setGForm({...gForm, latitude: e.target.value})} /></FormGroup>
+                <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={gForm.longitude} onChange={e => setGForm({...gForm, longitude: e.target.value})} /></FormGroup>
+              </div>
+            </div>
+            <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto p-4 border-t border-[var(--border)] shrink-0">
               <button onClick={() => setIsGlobalModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-[var(--muted-2)] bg-[var(--surface-4)]">إلغاء</button>
               <button onClick={handleGlobalSubmit} className="px-6 py-2 rounded-xl text-white bg-[var(--accent)] font-bold">حفظ</button>
             </div>
@@ -7659,17 +7663,17 @@ const totalAiCountries = new Set(
                  const aiData = extractAiData(n.news_updates);
                  return (
                 <tr key={n.id} className="hover:bg-[var(--surface-hover)]">
-                  <td className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
-                  <td className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
+                  <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
+                  <td data-label="نوع الخبر" className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                     {n.news_type}
                     {aiData && aiData.severity && <span className="block mt-1 bg-[var(--danger-soft)] text-[var(--accent)] px-2 py-0.5 rounded text-[10px] w-max">خطورة: {aiData.severity}/10</span>}
                   </td>
-                  <td className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{n.governorate}</td>
-                  <td className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] w-[500px] min-w-[500px] whitespace-normal leading-7">
+                  <td data-label="المحافظة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{n.governorate}</td>
+                  <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] min-w-[200px] max-w-[400px] whitespace-normal leading-7">
                       {n.incident_description || 'لا يوجد وصف'}
                   </td>
-                  <td className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.news_publisher}</td>
-                  <td className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
+                  <td data-label="الناشر" className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.news_publisher}</td>
+                  <td data-label="الإجراءات" className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
                     <div className="flex justify-center gap-2">
                       {n.news_link && (
                         <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
@@ -8117,16 +8121,16 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                 <tr><td colSpan={10} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
               ) : filteredHR.map((person, index) => (
                 <tr key={person.id || person.membership_number || index} className={`transition-colors duration-300 ${person.active_mission ? 'hr-active-row' : ''} hover:bg-[var(--surface-2)]`}>
-                  <td className="p-4 text-center">{index + 1}</td>
-                  <td className="p-4 font-semibold">{person.full_name}</td>
-                  <td className="p-4">{person.membership_number}</td>
-                  <td className="p-4">{person.participant_position || '—'}</td>
-                  <td className="p-4">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
-                  <td className="p-4 text-center">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</td>
-                  <td className="p-4 text-center">{person.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا'}</td>
-                  <td className="p-4 text-center">{person.missions_count}</td>
-                  <td className="p-4 text-center">{fmtHours(person.last_mission_hours, lang)}</td>
-                  <td className="p-4 text-center">{fmtHours(person.total_hours, lang)}</td>
+                  <td data-label="م" className="p-4 text-center">{index + 1}</td>
+                  <td data-label="الاسم" className="p-4 font-semibold">{person.full_name}</td>
+                  <td data-label="رقم العضوية / الصفة" className="p-4">{person.membership_number}</td>
+                  <td data-label="صفة المشارك" className="p-4">{person.participant_position || '—'}</td>
+                  <td data-label="الفرع التابع له" className="p-4">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
+                  <td data-label="النوع" className="p-4 text-center">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</td>
+                  <td data-label="الحالة الآن" className="p-4 text-center">{person.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا'}</td>
+                  <td data-label="عدد المهام" className="p-4 text-center">{person.missions_count}</td>
+                  <td data-label="عدد ساعات آخر مهمة" className="p-4 text-center">{fmtHours(person.last_mission_hours, lang)}</td>
+                  <td data-label="إجمالي الساعات" className="p-4 text-center">{fmtHours(person.total_hours, lang)}</td>
                 </tr>
               ))}
             </tbody>
