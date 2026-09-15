@@ -2489,7 +2489,7 @@ function BranchesAndInventoryView({ branches, theme = 'dark' }) {
         </div>
         <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg max-h-[600px] mt-4">
           <div className="flex-1 overflow-auto custom-scrollbar">
-            <table className="w-full text-center text-xs whitespace-nowrap">
+            <table className="w-full min-w-[2200px] text-center text-xs whitespace-nowrap">
               <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
                 <tr>
                   <th className="p-4 font-semibold border-l border-[var(--border)] sticky right-0 bg-[var(--surface-3)] z-20">الفرع / التمركز</th>
@@ -3865,7 +3865,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             <button
               type="button"
               onClick={handleCreateNew}
-              className="btn-primary w-full justify-center whitespace-nowrap"
+              className="btn-primary w-full justify-center"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
               {lang === 'ar' ? 'إنشاء مهمة' : 'Create mission'}
@@ -3902,7 +3902,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         )}
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-start border-separate border-spacing-0">
+          <table className="w-full min-w-[1100px] text-start border-separate border-spacing-0">
           <thead className="sticky top-0 z-20">
             <tr className="text-[var(--muted-2)] text-[11px] md:text-xs">
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ الإنشاء</th>
@@ -4425,7 +4425,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                           <span className={isJoin ? 'text-green-400' : 'text-[var(--accent)]'}>{isJoin ? '📥' : '📤'}</span>
                           {isJoin ? (isEdit ? 'تعديل انضمام' : 'إضافة انضمام') : (isEdit ? 'تعديل انفصال' : 'إضافة انفصال')}
                         </h3>
-                        <button onClick={() => setEntryDialog(null)} className="text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
+                        <button onClick={() => setEntryDialog(null)} className="touch-close text-[var(--muted-2)] hover:text-white text-xl leading-none" title="إغلاق">×</button>
                       </div>
                       <div className="p-5 space-y-4">
                         <div>
@@ -5326,7 +5326,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
         <div className="flex flex-wrap items-center gap-3 w-full flex-1 pb-2 md:pb-0">
           
           {/* فلتر القطاع (مهام / أخبار) */}
-          <div className="flex items-center gap-1 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner shrink-0">
+          <div className="flex flex-wrap items-center gap-1 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
             <button onClick={() => setEntityFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'all' ? 'bg-[var(--surface-3)] text-[var(--ink)]' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
             <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>المهام</button>
             <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[var(--accent)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الأخبار المحلية</button>
@@ -5352,7 +5352,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       </div>
 
       <div className="flex-1 overflow-auto custom-scrollbar relative">
-        <table className="w-full text-right text-sm whitespace-nowrap">
+        <table className="w-full min-w-[700px] text-right text-sm whitespace-nowrap">
           <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
             <tr>
               <th className="p-4 font-semibold border-l border-[var(--border)] w-48">التاريخ والوقت</th>
@@ -5659,7 +5659,7 @@ const [nd, setNd] = useState({
             </div>
           </div>
 
-          <div className="actionbar shrink-0">
+          <div className="actionbar">
             {isOwner && (
               <button
                 type="button"
@@ -5686,7 +5686,7 @@ const [nd, setNd] = useState({
               <button
                 type="button"
                 onClick={handleCreateNew}
-                className="btn-primary whitespace-nowrap"
+                className="btn-primary"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                 <span>إضافة خبر</span>
@@ -5696,7 +5696,7 @@ const [nd, setNd] = useState({
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[720px] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
@@ -5744,7 +5744,7 @@ const [nd, setNd] = useState({
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><NewsIcon /> {nd.news_id ? 'تعديل الخبر والمؤشرات' : 'إضافة خبر جديد'}</h2>
-              <button onClick={() => setIsModalOpen(false)} disabled={savingNews} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} disabled={savingNews} className="touch-close bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><TrashIcon /></button>
             </div>
 
             <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${savingNews ? 'opacity-60 pointer-events-none' : ''}`} inert={savingNews}>
@@ -6128,7 +6128,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col">
         <div className="p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xl font-bold text-white flex items-center gap-2.5"><HandoverIcon /> {T('سجل التسليمات', 'Handover Log')}</h3>
-          <div className="actionbar shrink-0">
+          <div className="actionbar">
             {isOwner && (
               <button
                 type="button"
@@ -6144,7 +6144,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               <button
                 type="button"
                 onClick={openCreate}
-                className="btn-primary whitespace-nowrap"
+                className="btn-primary"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                 <span>{T('إنشاء تسليم يومي', 'Create Daily Handover')}</span>
@@ -6174,14 +6174,14 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                 <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')}</td></tr>
               ) : handovers.map(r => (
                 <tr key={r.handover_id}>
-                  <td className="font-bold text-[var(--accent)]" dir="ltr">{r.handover_date}</td>
-                  <td>{r.local_news_count || 0} / {r.global_news_count || 0}</td>
-                  <td>{r.forms_count || 0}</td>
-                  <td>{r.tetra_count || 0} / {r.huawei_count || 0}</td>
-                  <td>{sumMatrix(r.shift_matrix)}</td>
-                  <td>{r.created_by_name || '—'}</td>
-                  <td>{r.updated_at ? (r.updated_by_name || '—') : '—'}</td>
-                  <td>
+                  <td data-label={T('التاريخ', 'Date')} className="font-bold text-[var(--accent)]" dir="ltr">{r.handover_date}</td>
+                  <td data-label={T('المحلية/العالمية', 'Local / Global')}>{r.local_news_count || 0} / {r.global_news_count || 0}</td>
+                  <td data-label={T('استمارات', 'Forms')}>{r.forms_count || 0}</td>
+                  <td data-label={T('معدات (ت/هـ)', 'Equipment (T/H)')}>{r.tetra_count || 0} / {r.huawei_count || 0}</td>
+                  <td data-label={T('أفراد الورديات', 'Shift Staff')}>{sumMatrix(r.shift_matrix)}</td>
+                  <td data-label={T('المنشئ', 'Created by')}>{r.created_by_name || '—'}</td>
+                  <td data-label={T('آخر تعديل', 'Last updated')}>{r.updated_at ? (r.updated_by_name || '—') : '—'}</td>
+                  <td data-label="actions">
                     <div className="flex items-center justify-center gap-1.5">
                       <button title={T('تعديل', 'Edit')} onClick={() => openEdit(r)} className="icon-btn"><EditIcon /></button>
                       <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => setDownloadTarget(r)} className="icon-btn"><DownloadIcon /></button>
@@ -6569,7 +6569,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             </div>
           </div>
 
-          <div className="actionbar shrink-0">
+          <div className="actionbar">
             {isOwner && (
               <button
                 type="button"
@@ -6596,7 +6596,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <button
                 type="button"
                 onClick={handleCreateNew}
-                className="btn-primary whitespace-nowrap"
+                className="btn-primary"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                 <span>رصد كارثة</span>
@@ -6606,7 +6606,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[720px] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
@@ -6660,7 +6660,7 @@ const [clearAllCode, setClearAllCode] = useState('');
           <div className="bg-[var(--surface)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(199,0,0,0.1)] animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> {gd.disaster_id ? 'تعديل رصد الكارثة' : 'رصد كارثة عالمية جديدة'}</h2>
-              <button onClick={() => setIsModalOpen(false)} disabled={savingDisaster} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} disabled={savingDisaster} className="touch-close bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><TrashIcon /></button>
             </div>
 
             <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${savingDisaster ? 'opacity-60 pointer-events-none' : ''}`} inert={savingDisaster}>
@@ -7084,7 +7084,7 @@ const [clearAllCode, setClearAllCode] = useState('');
           {(activeEqTab === 'global' || activeEqTab === 'all') ? (
             <div className="mb-8">
               {activeEqTab === 'all' && <h4 className="p-4 text-[var(--accent)] font-bold bg-[var(--surface-4)]">الزلازل العالمية</h4>}
-              <table className="w-full text-right whitespace-nowrap text-sm">
+              <table className="w-full text-right whitespace-nowrap min-w-[800px] text-sm">
                 <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
@@ -7124,7 +7124,7 @@ const [clearAllCode, setClearAllCode] = useState('');
           {(activeEqTab === 'egypt' || activeEqTab === 'all') ? (
             <div>
               {activeEqTab === 'all' && <h4 className="p-4 text-green-500 font-bold bg-[var(--surface-4)]">زلازل مصر</h4>}
-              <table className="w-full text-right whitespace-nowrap text-sm">
+              <table className="w-full text-right whitespace-nowrap min-w-[600px] text-sm">
                 <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
@@ -7192,18 +7192,22 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {isEgyptModalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="bg-[var(--surface)] border border-[var(--ok)]/30 rounded-3xl w-full max-w-3xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <FormGroup label="التاريخ"><SegDateField value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
-              <FormGroup label="التوقيت"><SegTimeField className="field" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
-              <FormGroup label="المنطقة داخل مصر"><StyledInput value={eForm.region} onChange={e => setEForm({...eForm, region: e.target.value})} /></FormGroup>
-              <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={eForm.magnitude} onChange={e => setEForm({...eForm, magnitude: e.target.value})} className="border-green-500/50" /></FormGroup>
-              <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={eForm.depth_km} onChange={e => setEForm({...eForm, depth_km: e.target.value})} /></FormGroup>
-              <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={eForm.latitude} onChange={e => setEForm({...eForm, latitude: e.target.value})} /></FormGroup>
-              <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={eForm.longitude} onChange={e => setEForm({...eForm, longitude: e.target.value})} /></FormGroup>
+          <div className="modal-card w-full max-w-3xl h-full max-h-[95vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-[var(--border)] shrink-0">
+              <h2 className="text-lg font-bold text-white mb-0 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             </div>
-            <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <FormGroup label="التاريخ"><SegDateField value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
+                <FormGroup label="التوقيت"><SegTimeField className="field" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>
+                <FormGroup label="المنطقة داخل مصر"><StyledInput value={eForm.region} onChange={e => setEForm({...eForm, region: e.target.value})} /></FormGroup>
+                <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={eForm.magnitude} onChange={e => setEForm({...eForm, magnitude: e.target.value})} className="border-green-500/50" /></FormGroup>
+                <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={eForm.depth_km} onChange={e => setEForm({...eForm, depth_km: e.target.value})} /></FormGroup>
+                <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={eForm.latitude} onChange={e => setEForm({...eForm, latitude: e.target.value})} /></FormGroup>
+                <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={eForm.longitude} onChange={e => setEForm({...eForm, longitude: e.target.value})} /></FormGroup>
+              </div>
+            </div>
+            <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] shrink-0 flex flex-col-reverse md:flex-row justify-end gap-3 [&>button]:w-full md:[&>button]:w-auto">
               <button onClick={() => setIsEgyptModalOpen(false)} className="px-6 py-3 md:py-2 rounded-xl text-[var(--muted-2)] bg-[var(--surface-4)]">إلغاء</button>
               <button onClick={handleEgyptSubmit} className="px-6 py-2 rounded-xl text-white bg-[var(--ok)] font-bold">حفظ</button>
             </div>
@@ -7668,7 +7672,7 @@ const totalAiCountries = new Set(
         )}
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[760px] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-purple-500/30">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
@@ -7725,7 +7729,7 @@ const totalAiCountries = new Set(
           <div className="bg-[var(--surface)] border border-purple-500/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500"/> التقرير الاستخباراتي (OSINT)</h2>
-              <button onClick={() => setIsModalOpen(false)} className="bg-[var(--surface-4)] text-[var(--muted-2)] hover:text-[var(--accent)] p-2 rounded-xl"><TrashIcon /></button>
+              <button onClick={() => setIsModalOpen(false)} className="touch-close bg-[var(--surface-4)] text-[var(--muted-2)] hover:text-[var(--accent)] p-2 rounded-xl"><TrashIcon /></button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
@@ -8120,7 +8124,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[1000px] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-2)] text-[var(--muted)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)] w-16 text-center">م</th>
