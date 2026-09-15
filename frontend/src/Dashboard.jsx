@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
@@ -1284,16 +1284,20 @@ useEffect(() => {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toasts.length]);
-  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false, handover: false });
+  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false, handover: false, weather: false });
   // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
-  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0 });
+  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0, weather: 0 });
 
   const userRole = userData?.role?.toUpperCase() || 'VOLUNTEER';
   const isOwner = userData?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
   const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
   const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
   const isVolunteer = !isOwner && !isSupervisor && !isJoker;
+
+  // 🌤️ صلاحيات وحدة الطقس (مستقلة عن isVolunteer — «أوبريشن» لا ينهار لمتطوع هنا):
+  //    متاح لكل الأدوار من «أوبريشن» فما فوق (الرؤية العامة/الإقليمية تُحسب داخل الوحدة).
+  const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
 
   // 💡 مركز الإشعارات الفوري (متطلب #5):
   // - Incremental polling بوسم تصاعدي (event_id) — من غير ما ننزل الـ audit_logs كاملة
@@ -1443,6 +1447,7 @@ useEffect(() => {
         ai_news: prev.ai_news + (isAi ? 1 : 0),
         audit: prev.audit + 1,
         handover: prev.handover + (e.event_type === 'handover' ? 1 : 0),
+        weather: prev.weather + (e.event_type === 'weather' ? 1 : 0),
       }));
 
       // تنوير النقطة الحمراء في القائمة الجانبية
@@ -1455,6 +1460,7 @@ useEffect(() => {
         ai_news: prev.ai_news || isAi,
         audit: true,
         handover: prev.handover || e.event_type === 'handover',
+        weather: prev.weather || e.event_type === 'weather',
       }));
 
       // وميض صف المهمة المتغيّرة + تغذية أحداث المهام لفصل الـ modal
@@ -1636,8 +1642,9 @@ useEffect(() => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <HomeView branches={branchesList} theme={theme} />;
+      case 'home': return <HomeView branches={branchesList} theme={theme} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
       case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} theme={theme} />;
+      case 'weather': return <WeatherForecastView branches={branchesList} isOwner={isOwner} isJoker={isJoker} userRole={userRole} lang={language} theme={theme} liveUpdateVersion={liveUpdateVersion.weather} />;
       case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} />;
       case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
       case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
@@ -1659,6 +1666,7 @@ useEffect(() => {
       items: [
         ...((isOwner || isSupervisor || isJoker) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات الغرفة', en: 'Operations Overview' }] : []),
         { id: 'ai_news', icon: <AIIcon />, ar: 'رصد الذكاء الاصطناعي', en: 'AI Monitoring', update: newUpdates.ai_news },
+        ...(weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
         { id: 'missions', icon: <AlertIcon />, ar: 'سجل المهام الميدانية', en: 'Field Missions', update: newUpdates.missions },
         ...((isOwner || isSupervisor || isJoker) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
         { id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news },
@@ -1880,6 +1888,7 @@ useEffect(() => {
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />
+            {weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
 
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
 
@@ -1914,6 +1923,7 @@ useEffect(() => {
                 <h1 className="text-lg md:text-2xl font-extrabold tracking-tight truncate">
                   {activeTab === 'home' && 'موجز عمليات اليوم'}
                   {activeTab === 'ai_news' && 'رصد الذكاء الاصطناعي'}
+                  {activeTab === 'weather' && (language === 'ar' ? 'توقعات الطقس' : 'Weather Forecasts')}
                   {activeTab === 'missions' && 'إدارة المهام الميدانية'}
                   {activeTab === 'human_resources' && 'سجل القوة البشرية'}
                   {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
@@ -2195,25 +2205,27 @@ function TiltCard({ children, className = '', max = 9 }) {
   );
 }
 
-function HomeView({ branches = [], theme = 'dark' }) {
+function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang = 'ar', weatherEligible = true }) {
   const [missions, setMissions] = useState([]);
   const [news, setNews] = useState([]);
   const [globalDisasters, setGlobalDisasters] = useState([]);
-  const [globalEqs, setGlobalEqs] = useState([]); 
-  const [egyptEqs, setEgyptEqs] = useState([]); 
+  const [globalEqs, setGlobalEqs] = useState([]);
+  const [egyptEqs, setEgyptEqs] = useState([]);
   const [selectedBranchName, setSelectedBranchName] = useState(null);
 
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const [filterDate, setFilterDate] = useState(getLocalDate());
+  // 🌤️ الطقس اليومي المجمّع (قراءة فقط) — يتحدّث تلقائياً مع أي حفظ/إنهاء توقعات
+  const [dailyWeather, setDailyWeather] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     Promise.all([
-      fetch('https://eoc-system-b12f.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-b12f.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-b12f.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
+      fetch(`https://eoc-system-b12f.vercel.app/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`https://eoc-system-b12f.vercel.app/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`https://eoc-system-b12f.vercel.app/api/global-disasters`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
     ]).then(([missionsData, newsData, globalData, gEqs, eEqs]) => {
       setMissions(missionsData);
       setNews(newsData);
@@ -2222,6 +2234,15 @@ function HomeView({ branches = [], theme = 'dark' }) {
       setEgyptEqs(eEqs);
     });
   }, []);
+
+  // 🌤️ سحب الطقس اليومي: عند تغيير تاريخ الفلتر أو عند وصول تحديث لحظي للطقس
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const d = filterDate || getLocalDate();
+    fetch(`${BASE}/api/weather/daily?date=${d}`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setDailyWeather(data));
+  }, [filterDate, liveUpdateVersion.weather]);
 
   const filterMissionBranch = selectedBranchName; 
   const filterNewsGov = (selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'القاهرة' : selectedBranchName;
@@ -2280,6 +2301,25 @@ function HomeView({ branches = [], theme = 'dark' }) {
     if (m.status === 'Completed') return 'bg-[var(--ok)]';
     return m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]' : 'bg-[var(--accent)]';
   };
+
+  // 🌤️ بطاقة الطقس اليومي: لكل مقياس نُبرز المحافظة صاحبة العظمى والمحافظة صاحبة الصغرى
+  // (تتخطى القيم الفارغة NULL — لا تعطل، وتظهر «—» عند غياب البيانات)
+  const weatherMetrics = [
+    { key: 'temp', ar: 'درجة الحرارة', en: 'Temperature', unit: '°C' },
+    { key: 'wind', ar: 'سرعة الرياح', en: 'Wind Speed', unit: 'كم/س' },
+    { key: 'rain', ar: 'الأمطار', en: 'Rain', unit: 'مم' },
+    { key: 'humidity', ar: 'الرطوبة', en: 'Humidity', unit: '%' },
+    { key: 'clouds', ar: 'الغيوم', en: 'Clouds', unit: '%' },
+    { key: 'aqi', ar: 'جودة الهواء/الغبار', en: 'Air Quality/Dust', unit: '' },
+  ];
+  const weatherHighlights = weatherMetrics.map(m => {
+    const withMax = dailyWeather.filter(r => r[`${m.key}_max`] != null);
+    const withMin = dailyWeather.filter(r => r[`${m.key}_min`] != null);
+    const maxRow = withMax.length ? withMax.reduce((b, r) => (Number(r[`${m.key}_max`]) >= Number(b[`${m.key}_max`]) ? r : b)) : null;
+    const minRow = withMin.length ? withMin.reduce((b, r) => (Number(r[`${m.key}_min`]) <= Number(b[`${m.key}_min`]) ? r : b)) : null;
+    return { ...m, maxRow, minRow };
+  });
+  const weatherDateLabel = filterDate || getLocalDate();
 
   return (
     <div id="home-view-top" className="space-y-8 pb-10 animate-fade-in-up scroll-mt-6">
@@ -2364,6 +2404,37 @@ function HomeView({ branches = [], theme = 'dark' }) {
           </div>
         </TiltCard>
       </div>
+
+      {/* 🌤️ بطاقة الطقس اليومي — فوق الخريطة مباشرة، تتحدّث لحظياً مع أي حفظ توقعات */}
+      {weatherEligible && (<div className="card-surface p-4 md:p-6 animate-fade-in-up">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <span className="text-[var(--accent)]"><WeatherIcon /></span>
+            {lang === 'ar' ? 'الطقس اليومي' : 'Daily Weather'}
+            <span className="text-xs font-bold text-[var(--muted)] bg-[var(--surface-3)] border border-[var(--border)] rounded-full px-2 py-0.5" dir="ltr">{weatherDateLabel}</span>
+          </h3>
+          <span className="ops-chip text-[var(--info)] border-[var(--info-soft)] bg-[var(--info-soft)]"><span className="w-1.5 h-1.5 rounded-full bg-[var(--info)] animate-pulse" /> {lang === 'ar' ? 'تجميع آلي للورديات الثلاث' : 'Auto aggregation of the 3 shifts'}</span>
+        </div>
+        {dailyWeather.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm">{lang === 'ar' ? 'لا توجد توقعات جوية موثقة بعد لهذا اليوم.' : 'No weather forecasts recorded for today yet.'}</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            {weatherHighlights.map((m, i) => (
+              <div key={m.key} className="kpi-card card-surface p-3.5 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[var(--muted)] font-bold text-xs">{lang === 'ar' ? m.ar : m.en}</h4>
+                  <span className="text-[var(--faint)] font-bold text-[10px]">{m.unit}</span>
+                </div>
+                <div className="text-[11px] font-bold leading-relaxed">
+                  <p className="text-[var(--ink)] truncate">{lang === 'ar' ? 'العظمى' : 'Max'}: {m.maxRow ? `${m.maxRow.branch_name} (${m.maxRow[`${m.key}_max`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
+                  <p className="text-[var(--muted)] truncate mt-0.5">{lang === 'ar' ? 'الصغرى' : 'Min'}: {m.minRow ? `${m.minRow.branch_name} (${m.minRow[`${m.key}_min`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      )}
 
       {/* 💡 صغرنا المسافات الداخلية في الموبايل */}
       <div className="card-surface p-4 md:p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
@@ -5919,6 +5990,529 @@ const [nd, setNd] = useState({
 }
 
 // ==========================================
+// وحدة الطقس - Weather Module
+// (توقعات الورديات الثلاث لكل محافظة + الطقس اليومي المجمّع آلياً)
+// ==========================================
+// دورة التوقعات الاستباقية: كل وردية تدخل توقعات الوردية التي تليها:
+//   Morning (صباحية) 08-16 → 16-24 نفس التاريخ
+//   Evening (مسائية) 16-24 → 00-08 تاريخ اليوم التالي
+//   Night (ليلية)    00-08 → 08-16 نفس التاريخ
+// القاعدة: «القاهرة» (المركز العام) كيان واحد بنفس رمز الفرع (branch_id 19) — ليس لهما سطران منفصلان.
+const WEATHER_SHIFT_CHIPS = [
+  { key: 'morning', ar: 'وردية الصباح (08-16)', en: 'Morning Shift (08-16)' },
+  { key: 'evening', ar: 'وردية المساء (16-24)', en: 'Evening Shift (16-24)' },
+  { key: 'night', ar: 'وردية الليل (00-08)', en: 'Night Shift (00-08)' },
+];
+const WEATHER_METRICS = [
+  { key: 'temp', ar: 'درجة الحرارة', en: 'Temperature', unit: '°C' },
+  { key: 'wind', ar: 'سرعة الرياح', en: 'Wind Speed', unit: 'كم/س' },
+  { key: 'rain', ar: 'الأمطار', en: 'Rain', unit: 'مم' },
+  { key: 'humidity', ar: 'الرطوبة', en: 'Humidity', unit: '%' },
+  { key: 'clouds', ar: 'الغيوم', en: 'Clouds', unit: '%' },
+  { key: 'aqi', ar: 'جودة الهواء/الغبار', en: 'Air Quality/Dust', unit: '' },
+];
+const WEATHER_METRIC_FIELDS = (m) => [`${m.key}_min`, `${m.key}_max`];
+// خريطة الأقاليم بالرقم (مرآة للواجهة الحالية و main.py BRANCH_ID_TO_REGION)
+const W_BRANCH_ID_TO_REGION = {
+  19: 'hq', 13: 'hq', 20: 'hq', 8: 'hq', 12: 'hq', 32: 'hq',
+  9: 'canal', 25: 'canal', 15: 'canal', 29: 'canal', 26: 'canal', 16: 'canal',
+  17: 'delta', 14: 'delta', 31: 'delta', 21: 'delta', 27: 'delta',
+  18: 'saeed', 24: 'saeed', 22: 'saeed', 7: 'saeed', 28: 'saeed', 30: 'saeed', 10: 'saeed', 6: 'saeed', 23: 'saeed', 11: 'saeed',
+};
+// خريطة الأقاليم باسم المحافظة الموحّد (قاهرة/مركز عام = نفس nطاق «المركز العام»)
+const W_REGION_NAME_MAP = {
+  'المركزالعام': 'hq', 'القاهره': 'hq', 'الجيزه': 'hq', 'القليوبيه': 'hq', 'البحيره': 'hq', 'الاسكندريه': 'hq', 'مرسيمطروح': 'hq', 'مطروح': 'hq',
+  'الاسماعيليه': 'canal', 'بورسعيد': 'canal', 'السويس': 'canal', 'شمالسيناء': 'canal', 'جنوبسيناء': 'canal', 'الشرقيه': 'canal',
+  'الغربيه': 'delta', 'الدقهليه': 'delta', 'كفرالشيخ': 'delta', 'المنوفيه': 'delta', 'دمياط': 'delta',
+  'الفيوم': 'saeed', 'بنيسويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الواديالجديد': 'saeed', 'البحرالاحمر': 'saeed',
+};
+const W_REGION_LABELS = { hq: 'المركز العام', canal: 'أقاليم القنال', delta: 'أقاليم الدلتا', saeed: 'أقاليم الصعيد' };
+// قائمة «إنهاء التوقعات» للأدوار العامة — الخيارات 1-4 = نيابةً عن إقليم، الخيار 5 = اعتماد وطني شامل
+const W_FINISH_REGIONS = [
+  { region: 'hq', label: 'Operation.HQ' },
+  { region: 'canal', label: 'Operation.Canal' },
+  { region: 'delta', label: 'Operation.Delta' },
+  { region: 'saeed', label: 'Operation.Upper' },
+];
+
+function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang = 'ar', theme = 'dark', liveUpdateVersion = 0 }) {
+  // 🌤️ صلاحيات مستقلة: لا نستخدم isVolunteer هنا (دور «أوبريشن» أهونها يفتح الطقس)
+  const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
+  const isGlobalWeather = isOwner || isJoker || ['MANAGER', 'ADMIN', 'مدير', 'أدمن'].includes(userRole);
+
+  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+  // فلاتر الأدوات الأربعة: (1) الوردية (2) التاريخ
+  const [shift, setShift] = useState('morning');
+  const [filterDate, setFilterDate] = useState(getLocalDate());
+  const [rows, setRows] = useState([]);            // توقعات الوردية المختارة (من السيرفر)
+  const [formValues, setFormValues] = useState({}); // {branchId: {metric_min: '', ...}}
+  const [daily, setDaily] = useState([]);           // الطقس اليومي المجمّع (قراءة فقط)
+  const [isLoading, setIsLoading] = useState(true);
+  const [customAlert, setCustomAlert] = useState(null);
+  // 🔒 قفل الحفظ (متزامن) لمنع الضغط المزدوج
+  const [savingWeather, setSavingWeather] = useState(false);
+  const submitLockRef = useRef(false);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [clearAllCode, setClearAllCode] = useState('');
+  // 🌤️ تتبع اللمس: فقط المحافظات التي عدّل المستخدم قيمها فعلاً هي ما يُرفع (لا نعيد إرسال الصفوف الجاهزة)
+  const touchedRef = useRef(new Set());
+  // 📉 قائمة «إنهاء التوقعات» (للأدوار العامة فقط)
+  const [finishOpen, setFinishOpen] = useState(false);
+
+  // — تحديد إقليم المستخدم (نفس منطق الواجهة الحالية: username ثم فرعه ثم اسم الفرع)
+  const wNormalize = (name) => String(name || '').replace(/[أإآا]/g, 'ا').replace(/[يى]/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, '').trim();
+  let currentUserData = {};
+  try { currentUserData = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) { currentUserData = {}; }
+  const wUsername = String(currentUserData?.username || '').toLowerCase();
+  const wBranchId = Number(currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19);
+  const wBranchName = String(currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام');
+  let userRegion = 'hq';
+  if (wUsername.includes('delta')) userRegion = 'delta';
+  else if (wUsername.includes('canal')) userRegion = 'canal';
+  else if (wUsername.includes('upper') || wUsername.includes('saeed')) userRegion = 'saeed';
+  else if (W_BRANCH_ID_TO_REGION[wBranchId]) userRegion = W_BRANCH_ID_TO_REGION[wBranchId];
+  else userRegion = W_REGION_NAME_MAP[wNormalize(wBranchName)] || 'hq';
+
+  // — فروع كل إقليم (محتسبة من الأسماء والرموز) ثم المحافظات الظاهرة للمستخدم
+  const wRegionBranches = useMemo(() => {
+    const byRegion = { hq: [], canal: [], delta: [], saeed: [] };
+    (branches || []).forEach(b => {
+      const region = W_REGION_NAME_MAP[wNormalize(b.name)] || W_BRANCH_ID_TO_REGION[b.id] || 'hq';
+      if (!byRegion[region].some(x => x.id === b.id)) byRegion[region].push(b);
+    });
+    return byRegion;
+  }, [branches]);
+  const visibleBranches = isGlobalWeather ? branches : (wRegionBranches[userRegion] || []);
+  const scopeRegionLabel = isGlobalWeather ? null : W_REGION_LABELS[userRegion];
+
+  // — جلب توقعات الوردية المختارة (جدول الإدخال) والطقس اليومي (المجمّع)
+  const loadGrid = async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`${BASE}/api/weather?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        // السيرفر يعيد كل الورديات لهذا التاريخ (مطلوب لتصدير سجل الورديات الثلاث) —
+        // جدول الإدخال لا يملأ إلا قيم الوردية المختارة فقط.
+        const shiftRows = (data || []).filter(r => r.shift === shift);
+        setRows(shiftRows);
+        const m = {};
+        shiftRows.forEach(r => {
+          m[r.branch_id] = {
+            temp_min: r.temp_min ?? '', temp_max: r.temp_max ?? '',
+            wind_min: r.wind_min ?? '', wind_max: r.wind_max ?? '',
+            rain_min: r.rain_min ?? '', rain_max: r.rain_max ?? '',
+            humidity_min: r.humidity_min ?? '', humidity_max: r.humidity_max ?? '',
+            clouds_min: r.clouds_min ?? '', clouds_max: r.clouds_max ?? '',
+            aqi_min: r.aqi_min ?? '', aqi_max: r.aqi_max ?? '',
+          };
+        });
+        setFormValues(m);
+      } else {
+        setRows([]); setFormValues({});
+      }
+    } catch (e) { setRows([]); setFormValues({}); }
+    finally { setIsLoading(false); }
+  };
+  const loadDaily = async (silent = false) => {
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`${BASE}/api/weather/daily?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) setDaily(await res.json());
+    } catch (e) { /* صامت — يظهر «—» */ }
+  };
+
+  // كل تغيير (وردية/تاريخ) → نبدأ من لوح نظيف ونعيد جلب الوردية واليومي
+  useEffect(() => { touchedRef.current = new Set(); loadGrid(false); loadDaily(false); }, [shift, filterDate]);
+  // تحديث لحظي: مستخدم آخر حفظ توقعات أو أنهى وردية → refetch صامت
+  useEffect(() => { if (liveUpdateVersion > 0) { loadGrid(true); loadDaily(true); } }, [liveUpdateVersion]);
+
+  const setCell = (bid, field, value) => {
+    touchedRef.current.add(bid);
+    setFormValues(prev => ({ ...prev, [bid]: { ...(prev[bid] || {}), [field]: value } }));
+  };
+  const cellVal = (bid, field) => {
+    const v = (formValues[bid] || {})[field];
+    return v ?? '';
+  };
+  const govLabel = (b) => (b.id === 19
+    ? (lang === 'ar' ? 'القاهرة (المركز العام)' : 'Cairo (General HQ)')
+    : b.name);
+
+  const handleSave = async () => {
+    if (submitLockRef.current) return;
+    // فقط المحافظات الملموسة (touched) والتي بها ≥1 قيمة
+    const dirtyRows = visibleBranches
+      .filter(b => touchedRef.current.has(b.id))
+      .map(b => ({ branch_id: b.id, shift, ...(formValues[b.id] || {}) }))
+      .filter(r => Object.keys(r).some(k => k.endsWith('_min') || k.endsWith('_max'))
+        && WEATHER_METRICS.some(m => {
+          const v = (formValues[r.branch_id] || {});
+          return (v[`${m.key}_min`] !== '' && v[`${m.key}_min`] != null) || (v[`${m.key}_max`] !== '' && v[`${m.key}_max`] != null);
+        }));
+    if (!dirtyRows.length) {
+      return setCustomAlert(lang === 'ar' ? 'لا توجد قيم جديدة لحفظها — أدخل قيماً في الخلايا أولاً.' : 'Nothing to save — enter values first.');
+    }
+
+    submitLockRef.current = true;
+    setSavingWeather(true);
+    const token = localStorage.getItem('access_token');
+    const bodyRows = dirtyRows.map(r => {
+      const o = { branch_id: r.branch_id, shift: r.shift };
+      WEATHER_METRICS.forEach(m => {
+        WEATHER_METRIC_FIELDS(m).forEach(f => {
+          const v = r[f];
+          o[f] = (v !== '' && v != null) ? Number(v) : null;
+        });
+      });
+      return o;
+    });
+    try {
+      const res = await fetch(`${BASE}/api/weather/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ date: filterDate, shift, rows: bodyRows }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCustomAlert(data.detail || (lang === 'ar' ? 'حدث خطأ أثناء الحفظ' : 'Failed to save'));
+        return;
+      }
+      setCustomAlert(data.message || (lang === 'ar' ? 'تم الحفظ بنجاح' : 'Saved successfully'));
+      touchedRef.current = new Set();
+      loadGrid(true); loadDaily(true);
+    } catch (err) {
+      setCustomAlert(lang === 'ar' ? 'حدث خطأ في الاتصال بالسيرفر.' : 'Network error');
+    } finally {
+      submitLockRef.current = false;
+      setSavingWeather(false);
+    }
+  };
+
+  const handleClearAllWeather = () => { if (!isOwner) return; setClearAllCode(''); setShowClearAllConfirm(true); };
+  const confirmClearAllWeather = async () => {
+    if (clearAllCode !== "301014") { setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات."); return; }
+    setShowClearAllConfirm(false);
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${BASE}/api/weather/clear-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ confirmation_code: clearAllCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCustomAlert(data.detail || 'فشل تنفيذ عملية المسح.'); return; }
+      setCustomAlert(`تم مسح جميع توقعات الطقس بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
+      touchedRef.current = new Set();
+      loadGrid(true); loadDaily(true);
+    } catch (error) { setCustomAlert('حدث خطأ أثناء الاتصال بالسيرفر.'); }
+  };
+
+  // — تصديران (المالك فقط) + تسجيل كلٍّ منهما حدثاً مميزاً في سجل النظام
+  const logWeatherExport = async (kind) => {
+    const token = localStorage.getItem('access_token');
+    try {
+      await fetch(`${BASE}/api/weather/export-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ kind }),
+      });
+    } catch (e) { /* لا نمنع التنزيل لتعثر تسجيل */ }
+  };
+  const handleExportDaily = async () => {
+    if (!isOwner) return;
+    try {
+      await logWeatherExport('daily');
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${BASE}/api/weather/daily?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) return setCustomAlert('تعذّر جلب الطقس اليومي للتصدير.');
+      const data = await res.json();
+      if (!data.length) return setCustomAlert(lang === 'ar' ? 'لا توجد بيانات طقس يومي للتصدير في هذا التاريخ.' : 'No daily weather data to export.');
+      const shiftRows = data.map(r => ({
+        'المحافظة': r.branch_name,
+        'حرارة صغرى (°C)': r.temp_min ?? '', 'حرارة عظمى (°C)': r.temp_max ?? '',
+        'رياح صغرى (كم/س)': r.wind_min ?? '', 'رياح عظمى (كم/س)': r.wind_max ?? '',
+        'أمطار صغرى (مم)': r.rain_min ?? '', 'أمطار عظمى (مم)': r.rain_max ?? '',
+        'رطوبة صغرى (%)': r.humidity_min ?? '', 'رطوبة عظمى (%)': r.humidity_max ?? '',
+        'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
+        'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
+      }));
+      await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}_${todayFileDate()}.xlsx`);
+    } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
+  };
+  const handleExportLog = async () => {
+    if (!isOwner) return;
+    try {
+      await logWeatherExport('log');
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`${BASE}/api/weather?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) return setCustomAlert('تعذّر جلب سجل الورديات للتصدير.');
+      const data = await res.json();
+      if (!data.length) return setCustomAlert(lang === 'ar' ? 'لا توجد توقعات مسجلة في هذا التاريخ.' : 'No forecasts recorded for this date.');
+      const shiftAr = WEATHER_SHIFT_CHIPS.reduce((a, s) => { a[s.key] = s.ar; return a; }, {});
+      const exportRows = data.map(r => ({
+        'التاريخ': r.forecast_date, 'الوردية': shiftAr[r.shift] || r.shift, 'المحافظة': r.branch_name,
+        'حرارة صغرى (°C)': r.temp_min ?? '', 'حرارة عظمى (°C)': r.temp_max ?? '',
+        'رياح صغرى (كم/س)': r.wind_min ?? '', 'رياح عظمى (كم/س)': r.wind_max ?? '',
+        'أمطار صغرى (مم)': r.rain_min ?? '', 'أمطار عظمى (مم)': r.rain_max ?? '',
+        'رطوبة صغرى (%)': r.humidity_min ?? '', 'رطوبة عظمى (%)': r.humidity_max ?? '',
+        'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
+        'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
+      }));
+      await exportWorkbook([{ name: 'سجل الورديات الثلاث', ...gridFromRows(exportRows) }], `سجل_الورديات_الثلاث_${filterDate}_${todayFileDate()}.xlsx`);
+    } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
+  };
+
+  // — «إنهاء التوقعات»: إقليمي = زر واحد، عام = قائمة من 5 خيارات
+  const handleFinish = async (kind, region) => {
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch(`${BASE}/api/weather/finish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ kind, region: region || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCustomAlert(data.detail || 'تعذّر تنفيذ خطوة الإنهاء.'); return; }
+      setCustomAlert(data.message || 'تم إرسال إشعار الإنهاء');
+      setFinishOpen(false);
+    } catch (e) { setCustomAlert('حدث خطأ أثناء الاتصال بالسيرفر.'); }
+  };
+
+  if (!weatherEligible) {
+    return (
+      <div className="card-surface p-8 text-center">
+        <h3 className="text-xl font-bold text-white mb-2">{lang === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3>
+        <p className="text-[var(--muted)]">{lang === 'ar' ? 'وحدة الطقس متاحة لأدوار الأوبريشن فما فوق' : 'Weather module is open to Operation roles and above'}</p>
+      </div>
+    );
+  }
+
+  const cellCls = "w-20 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-1.5 py-1.5 text-center text-sm text-white outline-none focus:border-[var(--accent)]/50 transition-colors";
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
+
+  return (
+    <div className="space-y-6 pb-10 animate-fade-in-up">
+      {/* — شريط الفلاتر: الوردية + التاريخ (+ أدوات المالك) — */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="px-3 text-xs font-bold text-[var(--muted)] whitespace-nowrap">{T('الوردية:', 'Shift:')}</span>
+          <div className="segmented flex-wrap">
+            {WEATHER_SHIFT_CHIPS.map(s => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setShift(s.key)}
+                className={`px-3 py-1.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${shift === s.key ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
+              >
+                {T(s.ar, s.en)}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2 text-xs font-bold text-[var(--muted)] whitespace-nowrap">{T('التاريخ:', 'Date:')}</span>
+            <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
+          </div>
+        </div>
+
+        <div className="actionbar flex-wrap">
+          {isOwner && (
+            <>
+              <button type="button" onClick={handleExportDaily} data-tip="تصدير الطقس اليومي إلى Excel" className="action-btn action-btn--ok shrink-0">
+                <ExcelIcon /><span className="hidden md:inline">{T('تصدير الطقس اليومي', 'Export Daily Weather')}</span>
+              </button>
+              <button type="button" onClick={handleExportLog} data-tip="تصدير سجل الورديات الثلاث" className="action-btn action-btn--ok shrink-0">
+                <ExcelIcon /><span className="hidden md:inline">{T('تصدير سجل الورديات الثلاث', 'Export 3-Shift Log')}</span>
+              </button>
+              <button type="button" onClick={handleClearAllWeather} data-tip="مسح جميع التوقعات نهائيًا" className="action-btn action-btn--danger shrink-0">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span className="hidden md:inline">{T('مسح الكل', 'Delete All')}</span>
+              </button>
+            </>
+          )}
+          {/* — زر «إنهاء التوقعات» — */}
+          {isGlobalWeather ? (
+            <div className="relative shrink-0">
+              <button type="button" onClick={() => setFinishOpen(o => !o)} className="btn-primary">
+                <CheckIcon /><span>{T('إنهاء التوقعات', 'Finish Forecast')}</span>
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              {finishOpen && (
+                <>
+                  <div className="fixed inset-0 z-[40]" onClick={() => setFinishOpen(false)} />
+                  <div className="absolute right-0 top-full z-[41] mt-2 w-72 bg-[var(--surface-3)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
+                    {W_FINISH_REGIONS.map(r => (
+                      <button key={r.region} type="button" onClick={() => handleFinish('region', r.region)}
+                        className="w-full text-right px-4 py-3 text-sm font-bold text-[var(--ink)] hover:bg-[var(--surface-hover)] border-b border-[var(--border)] flex items-center gap-2">
+                        <WeatherIcon className="w-4 h-4 text-[var(--muted)]" /> {r.label}
+                        <span className="text-[10px] text-[var(--faint)] font-normal">{W_REGION_LABELS[r.region]}</span>
+                      </button>
+                    ))}
+                    <button type="button" onClick={() => handleFinish('all', null)}
+                      className="w-full text-right px-4 py-3 text-sm font-bold text-[var(--ok)] hover:bg-[var(--surface-hover)] flex items-center gap-2">
+                      <CheckIcon /> ✅ Approve All Regions (Global Completion)
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <button type="button" onClick={() => handleFinish('region', userRegion)} className="btn-primary shrink-0">
+              <CheckIcon /><span>{T(`إنهاء توقعات ${scopeRegionLabel || ''}`, 'Finish Forecast')}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* — ملخص دورة التوقعات — */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {WEATHER_SHIFT_CHIPS.map(s => (
+          <div key={s.key} className="card-surface px-4 py-3 rounded-2xl border border-[var(--border)]">
+            <p className="text-sm font-bold text-[var(--ink)]">{T(s.ar, s.en)}</p>
+            <p className="text-xs text-[var(--muted)] mt-0.5">{T(
+              s.key === 'morning' ? 'تُدخل توقعات الفترة 16:00 - 24:00 (نفس التاريخ)' :
+              s.key === 'evening' ? 'تُدخل توقعات الفترة 00:00 - 08:00 (اليوم التالي)' :
+              'تُدخل توقعات الفترة 08:00 - 16:00 (نفس التاريخ)',
+              s.key === 'morning' ? 'Forecasts the 16:00–24:00 block (same date)' :
+              s.key === 'evening' ? 'Forecasts the 00:00–08:00 block (next date)' :
+              'Forecasts the 08:00–16:00 block (same date)'
+            )}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* — جدول الإدخال: المحافظة + 6 مقاييس × (صغرى/عظمى) — */}
+      <div className="card-surface p-4 md:p-6 rounded-3xl border border-[var(--border)]">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <span className="text-[var(--accent)]"><WeatherIcon /></span>
+            {T('إدخال توقعات الوردية المختارة', 'Enter Forecasts for Selected Shift')}
+            {scopeRegionLabel && !isGlobalWeather && (
+              <span className="text-xs font-bold text-[var(--info)] bg-[var(--info-soft)] border border-[var(--info)]/20 rounded-full px-2.5 py-0.5">{T('نطاقك: ' + scopeRegionLabel, 'Scope: ' + scopeRegionLabel)}</span>
+            )}
+          </h3>
+          <span className="text-xs text-[var(--muted)] font-bold">{T('ابدأ بيوم نظيف كل يوم — املأ القيم بالترتيب حسب الحاجة', 'Clean slate each day — fill values as needed')}</span>
+        </div>
+        {isLoading ? (
+          <p className="text-[var(--muted)] text-sm py-8 text-center">{T('جارٍ تحميل التوقعات…', 'Loading forecasts…')}</p>
+        ) : visibleBranches.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
+        ) : (
+          <div className="overflow-x-auto custom-scrollbar" style={{ pointerEvents: savingWeather ? 'none' : undefined, opacity: savingWeather ? 0.6 : 1 }}>
+            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
+              <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
+                <tr>
+                  <th className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  {WEATHER_METRICS.map(m => (
+                    <Fragment key={m.key}>
+                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('صغرى', 'Min')}</div></th>
+                      <th className="p-3 font-semibold border-l border-[var(--border)]"><span className="opacity-0">·</span><div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
+                    </Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleBranches.map(b => (
+                  <tr key={b.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
+                    <td className="p-2 font-bold text-[var(--ink)] whitespace-nowrap">{govLabel(b)}</td>
+                    {WEATHER_METRICS.map(m => (
+                      <Fragment key={m.key}>
+                        <td className="p-2"><input type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_min`)} onChange={e => setCell(b.id, `${m.key}_min`, e.target.value)} className={cellCls} placeholder="—" /></td>
+                        <td className="p-2"><input type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_max`)} onChange={e => setCell(b.id, `${m.key}_max`, e.target.value)} className={cellCls} placeholder="—" /></td>
+                      </Fragment>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
+          <span className="text-xs text-[var(--muted)]">{T('عدد المحافظات المرئية', 'Visible governorates')}: <b className="text-[var(--ink)]">{visibleBranches.length}</b> {scopeRegionLabel && !isGlobalWeather ? `(${T('نطاق ' + scopeRegionLabel, 'Region ' + scopeRegionLabel)})` : ''}</span>
+          <button type="button" onClick={handleSave} disabled={savingWeather} className="btn-accent px-8 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed">
+            {savingWeather ? T('جاري الحفظ...', 'Saving…') : T(`حفظ توقعات الوردية`, 'Save Shift Forecast')}
+          </button>
+        </div>
+      </div>
+
+      {/* — الطقس اليومي (تجميع آلي قراءة فقط) — */}
+      <div className="card-surface p-4 md:p-6 rounded-3xl border border-[var(--border)]">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <span className="text-[var(--data)]"><WeatherIcon /></span>
+            {T('الطقس اليومي (تجميع آلي للورديات الثلاث)', 'Daily Weather (Auto Aggregation)')}
+          </h3>
+          <span className="ops-chip text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]"><span className="live-dot" /> {T('قراءة فقط', 'Read-only')}</span>
+        </div>
+        {daily.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm py-6 text-center">{T('لا توجد بيانات مجمّعة لهذا اليوم بعد — أدخل توقعات الورديات أولاً.', 'No aggregated data yet — enter shift forecasts first.')}</p>
+        ) : (
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
+              <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
+                <tr>
+                  <th className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  {WEATHER_METRICS.map(m => (
+                    <Fragment key={m.key}>
+                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('صغرى', 'Min')}</div></th>
+                      <th className="p-3 font-semibold border-l border-[var(--border)]">·<div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
+                    </Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {daily.map(r => (
+                  <tr key={r.branch_id} className="border-t border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
+                    <td className="p-2 font-bold text-[var(--ink)]">{r.branch_name}</td>
+                    {WEATHER_METRICS.map(m => (
+                      <Fragment key={m.key}>
+                        <td className="p-2 text-[var(--ink-2)]">{r[`${m.key}_min`] != null ? r[`${m.key}_min`] : <span className="text-[var(--faint)]">—</span>}</td>
+                        <td className="p-2 text-[var(--ink-2)]">{r[`${m.key}_max`] != null ? r[`${m.key}_max`] : <span className="text-[var(--faint)]">—</span>}</td>
+                      </Fragment>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* — نافذة تأكيد مسح الكل — */}
+      <DangerConfirmModal
+        show={showClearAllConfirm}
+        title="تأكيد الحذف"
+        message="سيتم حذف جميع توقعات الطقس (كل الورديات وكل المحافظات) نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+        confirmationCode={clearAllCode}
+        onConfirmationCodeChange={setClearAllCode}
+        showConfirmationInput={true}
+        onCancel={() => { setShowClearAllConfirm(false); setClearAllCode(''); }}
+        onConfirm={confirmClearAllWeather}
+      />
+
+      {customAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
+            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
+              <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
+            </div>
+            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
+            <div className="mt-8 flex justify-end">
+              <button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-[0_0_22px_var(--accent-glow)]">
+                علم، جاري التعديل
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
 // تسليم وتسلم المشرفين (Supervisors Handover)
 // ==========================================
 const HANDOVER_SHIFTS = [
@@ -7272,6 +7866,7 @@ const GlobalWorldIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 
 const EarthquakeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12h4l3-9 5 18 3-9h3" /></svg>;
 const CarIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.909.53l1.415 2.83M15 16h1a1 1 0 001-1v-1.586a1 1 0 00-.293-.707l-1.415-1.415A1 1 0 0014.586 11H13v5z" /></svg>;
 const SidebarToggleIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>;
+const WeatherIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-2.4-8.3 5.5 5.5 0 0 0-10.2 2.6A3.7 3.7 0 0 0 7 19h10.5Z"/><path d="M12 3v2M5 6l1.4 1.4M19 6l-1.4 1.4"/></svg>;
 const globalEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #ef4444; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px #ef4444;"></div>`, iconSize: [14, 14] });
 const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [16, 16] });
 

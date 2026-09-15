@@ -216,6 +216,44 @@ def ensure_schema():
                 CREATE INDEX IF NOT EXISTS idx_handover_log_created_by
                     ON handover_log (created_by);
             """)
+
+            # ── 9) وحدة الطقس: توقعات الورديات الثلاث لكل محافظة
+            #    (مطابق لـ migrations/20260916_weather_module.sql — idempotent، يلتئم أي worker جديد)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_forecasts (
+                    id            BIGSERIAL PRIMARY KEY,
+                    forecast_date DATE NOT NULL,
+                    shift         VARCHAR(10) NOT NULL CHECK (shift IN ('morning', 'evening', 'night')),
+                    branch_id     INTEGER NOT NULL REFERENCES branches(branch_id),
+                    temp_min      NUMERIC(6,2),
+                    temp_max      NUMERIC(6,2),
+                    wind_min      NUMERIC(6,2),
+                    wind_max      NUMERIC(6,2),
+                    rain_min      NUMERIC(6,2),
+                    rain_max      NUMERIC(6,2),
+                    humidity_min  NUMERIC(6,2),
+                    humidity_max  NUMERIC(6,2),
+                    clouds_min    NUMERIC(6,2),
+                    clouds_max    NUMERIC(6,2),
+                    aqi_min       NUMERIC(6,2),
+                    aqi_max       NUMERIC(6,2),
+                    entered_by    INTEGER NOT NULL REFERENCES users(user_id),
+                    created_at    TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo'),
+                    updated_at    TIMESTAMP WITHOUT TIME ZONE
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_weather_forecast_shift_branch
+                    ON weather_forecasts (forecast_date, shift, branch_id);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_weather_forecasts_date
+                    ON weather_forecasts (forecast_date);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_weather_forecasts_branch
+                    ON weather_forecasts (branch_id);
+            """)
         connection.commit()
     except Exception as e:
         print(f"ensure_schema error (will retry on next boot): {e}")
@@ -5018,5 +5056,544 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
     except Exception as e:
         print(f"Error fetching HR: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء جلب بيانات القوة البشرية")
+    finally:
+        connection.close()
+
+
+# =====================================================================
+# قطاع الطقس - Weather Module (توقعات الورديات الثلاث + الطقس اليومي)
+# =====================================================================
+# كل شيفت يدخّل توقعات الشيفت الذي يليه لكل محافظة:
+#   Morning (صباحية) 08-16 → 16-24 نفس التاريخ
+#   Evening (مسائية) 16-24 → 00-08 تاريخ اليوم التالي
+#   Night (ليلية)    00-08 → 08-16 نفس التاريخ
+# سطر واحد = (تاريخ الوردية، الوردية، المحافظة) + 12 عموداً عددياً: 6 مقاييس × (صغرى min / عظمى max)
+# الصلاحيات: متاح لكل الأدوار من «أوبريشن» فما فوق؛ الأدوار العامة (مالك/مدير/أدمن/جوكر)
+# يرون كل المحافظات، وأدوار الأقاليم يرون محافظات إقليمهم فقط (RLS بالتوازي مع الواجهة).
+
+# ── الأدوار: لا نعدّل أي صلاحية موجودة — نضيف منطقاً داخل الكود فقط
+WEATHER_GLOBAL_ROLES = {"OWNER", "MANAGER", "ADMIN", "JOKER", "المالك", "مدير", "أدمن", "جوكر"}
+WEATHER_OWNER_ROLES = {"OWNER", "المالك"}
+WEATHER_VOLUNTEER_ROLES = {"VOLUNTEER", "متطوع"}
+WEATHER_SHIFTS = {"morning", "evening", "night"}
+WEATHER_METRIC_COLS = (
+    ("temp_min", "temp_max"), ("wind_min", "wind_max"), ("rain_min", "rain_max"),
+    ("humidity_min", "humidity_max"), ("clouds_min", "clouds_max"), ("aqi_min", "aqi_max"),
+)
+REGION_LABELS = {
+    "hq": "المركز العام",
+    "canal": "أقاليم القنال",
+    "delta": "أقاليم الدلتا",
+    "saeed": "أقاليم الصعيد",
+}
+BRANCH_ID_TO_REGION = {
+    19: 'hq', 13: 'hq', 20: 'hq', 8: 'hq', 12: 'hq', 32: 'hq',
+    9: 'canal', 25: 'canal', 15: 'canal', 29: 'canal', 26: 'canal', 16: 'canal',
+    17: 'delta', 14: 'delta', 31: 'delta', 21: 'delta', 27: 'delta',
+    18: 'saeed', 24: 'saeed', 22: 'saeed', 7: 'saeed', 28: 'saeed', 30: 'saeed',
+    10: 'saeed', 6: 'saeed', 23: 'saeed', 11: 'saeed',
+}
+
+
+def is_weather_eligible(role):
+    """متاح لكل الأدوار من «أوبريشن» فما فوق — المتطوع فقط يُستبعد."""
+    if not role:
+        return False
+    return str(role.get("role_name", "")).strip().upper() not in WEATHER_VOLUNTEER_ROLES
+
+
+def is_weather_global(role):
+    """مالك / مدير / أدمن / جوكر — يرون كل المحافظات."""
+    return bool(role) and str(role.get("role_name", "")).strip().upper() in WEATHER_GLOBAL_ROLES
+
+
+def is_weather_owner(role):
+    return bool(role) and str(role.get("role_name", "")).strip().upper() in WEATHER_OWNER_ROLES
+
+
+def require_weather_eligible(role):
+    if not is_weather_eligible(role):
+        raise HTTPException(status_code=403, detail="الطقس متاح لأدوار الأوبريشن فما فوق فقط")
+
+
+def require_weather_owner(role):
+    if not is_weather_owner(role):
+        raise HTTPException(status_code=403, detail="المالك فقط يمكنه تنفيذ هذا الإجراء")
+
+
+def regions_to_branch_ids(regions):
+    return [bid for bid, reg in BRANCH_ID_TO_REGION.items() if reg in regions]
+
+
+def weather_region_scope(user_id, role):
+    """
+    نطاق «أقاليم» لمستخدم الطقس (RLS): None = عام (يرى كل المحافظات)،
+    وإلا مجموعة أقاليم {hq, canal, delta, saeed} = اتحاد فروع المستخدم — لا تصعّد أبداً.
+    لو الجدول الرابط (user_branches) فارغ نرجع لاسم المستخدم مثل الواجهة بالضبط.
+    """
+    if is_weather_global(role):
+        return None
+
+    regions = set()
+    for b in get_user_branches(user_id):
+        r = BRANCH_ID_TO_REGION.get(b["branch_id"])
+        if r:
+            regions.add(r)
+    if regions:
+        return regions
+
+    user_name = ""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
+            row = cursor.fetchone()
+            user_name = str(row[0] or "").lower() if row else ""
+    finally:
+        connection.close()
+
+    if "delta" in user_name:
+        return {"delta"}
+    if "canal" in user_name:
+        return {"canal"}
+    if "upper" in user_name or "saeed" in user_name:
+        return {"saeed"}
+    return {"hq"}
+
+
+def validate_forecast_date(value: str):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(status_code=400, detail="التاريخ غير صحيح (الصيغة YYYY-MM-DD)")
+
+
+class WeatherRowModel(BaseModel):
+    branch_id: int
+    shift: str
+    temp_min: Optional[float] = None
+    temp_max: Optional[float] = None
+    wind_min: Optional[float] = None
+    wind_max: Optional[float] = None
+    rain_min: Optional[float] = None
+    rain_max: Optional[float] = None
+    humidity_min: Optional[float] = None
+    humidity_max: Optional[float] = None
+    clouds_min: Optional[float] = None
+    clouds_max: Optional[float] = None
+    aqi_min: Optional[float] = None
+    aqi_max: Optional[float] = None
+
+    def metric_flat_values(self):
+        """قائمة القيم الـ 12 بنفس ترتيب WEATHER_METRIC_COLS."""
+        values = []
+        for min_col, max_col in WEATHER_METRIC_COLS:
+            values.append(getattr(self, min_col))
+            values.append(getattr(self, max_col))
+        return values
+
+    def is_empty(self):
+        return all(v is None for v in self.metric_flat_values())
+
+
+class WeatherBatchModel(BaseModel):
+    date: str
+    shift: str
+    rows: List[WeatherRowModel]
+
+
+class WeatherFinishModel(BaseModel):
+    kind: str
+    region: Optional[str] = None
+
+
+class WeatherExportLogModel(BaseModel):
+    kind: str = "daily"  # 'daily' | 'log'
+
+
+def _weather_scope_branch_param(scope):
+    """معامل SQL لأعمدة النطاق: القائمة الكاملة لو عام، وإلا فروع الأقاليم المسموحة."""
+    return None if scope is None else regions_to_branch_ids(scope)
+
+
+@app.get("/api/weather")
+def get_weather(date: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_weather_eligible(role)
+    forecast_date = validate_forecast_date(date)
+    scope = weather_region_scope(user_id, role)
+    allowed_branch_ids = _weather_scope_branch_param(scope)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if allowed_branch_ids is None:
+                cursor.execute(
+                    """
+                    SELECT w.id, w.forecast_date, w.shift, w.branch_id, TRIM(b.branch_name),
+                           w.temp_min, w.temp_max, w.wind_min, w.wind_max, w.rain_min, w.rain_max,
+                           w.humidity_min, w.humidity_max, w.clouds_min, w.clouds_max, w.aqi_min, w.aqi_max,
+                           w.entered_by, u.full_name, w.created_at, w.updated_at
+                    FROM weather_forecasts w
+                    JOIN branches b ON b.branch_id = w.branch_id
+                    LEFT JOIN users u ON u.user_id = w.entered_by
+                    WHERE w.forecast_date = %s
+                    ORDER BY TRIM(b.branch_name), w.shift;
+                    """,
+                    (forecast_date,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT w.id, w.forecast_date, w.shift, w.branch_id, TRIM(b.branch_name),
+                           w.temp_min, w.temp_max, w.wind_min, w.wind_max, w.rain_min, w.rain_max,
+                           w.humidity_min, w.humidity_max, w.clouds_min, w.clouds_max, w.aqi_min, w.aqi_max,
+                           w.entered_by, u.full_name, w.created_at, w.updated_at
+                    FROM weather_forecasts w
+                    JOIN branches b ON b.branch_id = w.branch_id
+                    LEFT JOIN users u ON u.user_id = w.entered_by
+                    WHERE w.forecast_date = %s
+                      AND w.branch_id = ANY(%s)
+                    ORDER BY TRIM(b.branch_name), w.shift;
+                    """,
+                    (forecast_date, allowed_branch_ids),
+                )
+            rows = cursor.fetchall()
+
+            def _f(v):
+                return float(v) if v is not None else None
+
+            return [
+                {
+                    "id": r[0], "forecast_date": r[1].isoformat() if r[1] else "", "shift": r[2],
+                    "branch_id": r[3], "branch_name": r[4],
+                    "temp_min": _f(r[5]), "temp_max": _f(r[6]),
+                    "wind_min": _f(r[7]), "wind_max": _f(r[8]),
+                    "rain_min": _f(r[9]), "rain_max": _f(r[10]),
+                    "humidity_min": _f(r[11]), "humidity_max": _f(r[12]),
+                    "clouds_min": _f(r[13]), "clouds_max": _f(r[14]),
+                    "aqi_min": _f(r[15]), "aqi_max": _f(r[16]),
+                    "entered_by": r[17], "entered_by_name": r[18] or "",
+                    "created_at": r[19].strftime("%Y-%m-%d %H:%M:%S") if r[19] else "",
+                    "updated_at": r[20].strftime("%Y-%m-%d %H:%M:%S") if r[20] else "",
+                }
+                for r in rows
+            ]
+    except Exception as e:
+        print(f"Error fetching weather: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء جلب توقعات الطقس")
+    finally:
+        connection.close()
+
+
+@app.get("/api/weather/daily")
+def get_weather_daily(date: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_weather_eligible(role)
+    forecast_date = validate_forecast_date(date)
+    scope = weather_region_scope(user_id, role)
+    allowed_branch_ids = _weather_scope_branch_param(scope)
+
+    # تجميع يومي آلي: absolute Daily Min = أقل Min عبر الورديات، Daily Max = أكبر Max عبر الورديات.
+    # MIN/MAX في PostgreSQL تتخطى القيم NULL تلقائياً (null-safe بدون تعطل).
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if allowed_branch_ids is None:
+                cursor.execute(
+                    """
+                    SELECT w.branch_id, TRIM(b.branch_name),
+                           MIN(w.temp_min), MAX(w.temp_max),
+                           MIN(w.wind_min), MAX(w.wind_max),
+                           MIN(w.rain_min), MAX(w.rain_max),
+                           MIN(w.humidity_min), MAX(w.humidity_max),
+                           MIN(w.clouds_min), MAX(w.clouds_max),
+                           MIN(w.aqi_min), MAX(w.aqi_max)
+                    FROM weather_forecasts w
+                    JOIN branches b ON b.branch_id = w.branch_id
+                    WHERE w.forecast_date = %s
+                    GROUP BY w.branch_id, TRIM(b.branch_name)
+                    ORDER BY TRIM(b.branch_name);
+                    """,
+                    (forecast_date,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT w.branch_id, TRIM(b.branch_name),
+                           MIN(w.temp_min), MAX(w.temp_max),
+                           MIN(w.wind_min), MAX(w.wind_max),
+                           MIN(w.rain_min), MAX(w.rain_max),
+                           MIN(w.humidity_min), MAX(w.humidity_max),
+                           MIN(w.clouds_min), MAX(w.clouds_max),
+                           MIN(w.aqi_min), MAX(w.aqi_max)
+                    FROM weather_forecasts w
+                    JOIN branches b ON b.branch_id = w.branch_id
+                    WHERE w.forecast_date = %s
+                      AND w.branch_id = ANY(%s)
+                    GROUP BY w.branch_id, TRIM(b.branch_name)
+                    ORDER BY TRIM(b.branch_name);
+                    """,
+                    (forecast_date, allowed_branch_ids),
+                )
+            rows = cursor.fetchall()
+
+            def _f(v):
+                return float(v) if v is not None else None
+
+            return [
+                {
+                    "branch_id": r[0], "branch_name": r[1],
+                    "temp_min": _f(r[2]), "temp_max": _f(r[3]),
+                    "wind_min": _f(r[4]), "wind_max": _f(r[5]),
+                    "rain_min": _f(r[6]), "rain_max": _f(r[7]),
+                    "humidity_min": _f(r[8]), "humidity_max": _f(r[9]),
+                    "clouds_min": _f(r[10]), "clouds_max": _f(r[11]),
+                    "aqi_min": _f(r[12]), "aqi_max": _f(r[13]),
+                }
+                for r in rows
+            ]
+    except Exception as e:
+        print(f"Error fetching weather daily: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء تجميع الطقس اليومي")
+    finally:
+        connection.close()
+
+
+@app.post("/api/weather/batch")
+def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_weather_eligible(role)
+    forecast_date = validate_forecast_date(payload.date)
+    scope = weather_region_scope(user_id, role)
+
+    if payload.shift not in WEATHER_SHIFTS:
+        raise HTTPException(status_code=400, detail="الوردية غير معروفة")
+
+    # تحقق أمني قبل أي كتابة: لا يُنشئ مستخدم إقليمي صفاً لمحافظة خارج نطاقه أبداً.
+    valid_rows = []
+    for row in payload.rows:
+        if row.is_empty():
+            continue
+        if row.shift != payload.shift:
+            raise HTTPException(status_code=400, detail="يجب أن تكون كل الصفوف لنفس الوردية")
+        region = BRANCH_ID_TO_REGION.get(row.branch_id)
+        if scope is not None and region not in scope:
+            raise HTTPException(
+                status_code=403,
+                detail="لا يمكنك إدخال توقعات لمحافظة خارج نطاق إقليمك",
+            )
+        valid_rows.append(row)
+
+    if not valid_rows:
+        return {"message": "لا توجد قيم لحفظها", "saved": 0}
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            for row in valid_rows:
+                values = row.metric_flat_values()
+                cursor.execute(
+                    """
+                    INSERT INTO weather_forecasts
+                        (forecast_date, shift, branch_id,
+                         temp_min, temp_max, wind_min, wind_max, rain_min, rain_max,
+                         humidity_min, humidity_max, clouds_min, clouds_max, aqi_min, aqi_max,
+                         entered_by, updated_at)
+                    VALUES (%s, %s, %s, %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, %s,
+                            (now() AT TIME ZONE 'Africa/Cairo'))
+                    ON CONFLICT (forecast_date, shift, branch_id)
+                    DO UPDATE SET
+                        temp_min=EXCLUDED.temp_min, temp_max=EXCLUDED.temp_max,
+                        wind_min=EXCLUDED.wind_min, wind_max=EXCLUDED.wind_max,
+                        rain_min=EXCLUDED.rain_min, rain_max=EXCLUDED.rain_max,
+                        humidity_min=EXCLUDED.humidity_min, humidity_max=EXCLUDED.humidity_max,
+                        clouds_min=EXCLUDED.clouds_min, clouds_max=EXCLUDED.clouds_max,
+                        aqi_min=EXCLUDED.aqi_min, aqi_max=EXCLUDED.aqi_max,
+                        entered_by=EXCLUDED.entered_by,
+                        updated_at=(now() AT TIME ZONE 'Africa/Cairo');
+                    """,
+                    (forecast_date, payload.shift, row.branch_id,
+                     *values, user_id),
+                )
+
+            try:
+                create_audit_log(
+                    cursor,
+                    user_id,
+                    "حفظ توقعات الطقس",
+                    mission_id=None,
+                    entity_type="weather",
+                    entity_id=None,
+                    details={
+                        "action_text": f"حفظ توقعات وردية {payload.shift} ليوم {forecast_date} لعدد {len(valid_rows)} محافظة"
+                    },
+                    realtime=True,
+                )
+            except Exception as e:
+                print(f"Weather audit error: {e}")
+
+            connection.commit()
+            return {"message": f"تم حفظ توقعات {len(valid_rows)} محافظة بنجاح", "saved": len(valid_rows)}
+    except Exception as e:
+        connection.rollback()
+        print(f"Error saving weather: {e}")
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء حفظ توقعات الطقس: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.post("/api/weather/clear-all")
+def clear_all_weather(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM weather_forecasts")
+            deleted_count = cursor.fetchone()[0]
+
+            cursor.execute("DELETE FROM weather_forecasts")
+
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح جميع توقعات الطقس",
+                mission_id=None,
+                entity_type="weather",
+                entity_id=None,
+                details={
+                    "action_text": f"قام المالك بمسح جميع توقعات الطقس نهائياً. عدد السجلات المحذوفة: {deleted_count}"
+                },
+                realtime=True,
+            )
+
+            connection.commit()
+            return {
+                "message": "تم مسح جميع توقعات الطقس بنجاح",
+                "deleted_count": deleted_count,
+            }
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"حدث خطأ أثناء مسح توقعات الطقس: {str(e)}",
+        )
+    finally:
+        connection.close()
+
+
+@app.post("/api/weather/finish")
+def weather_finish(payload: WeatherFinishModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_weather_eligible(role)
+
+    scope = weather_region_scope(user_id, role)
+    if payload.kind not in ("region", "all"):
+        raise HTTPException(status_code=400, detail="نوع الإنهاء غير معروف")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if payload.kind == "all":
+                # الاعتماد الوطني (كل الأقاليم) — أدوار عامة فقط
+                if not is_weather_global(role):
+                    raise HTTPException(status_code=403, detail="الاعتماد الوطني متاح لأدوار الإدارة العامة فقط")
+                action = "اعتماد التوقعات الجوية الوطنية"
+                action_text = "تم إكمال التوقعات الجوية الوطنية والموافقة عليها ✅"
+            else:
+                region = payload.region
+                if region not in REGION_LABELS:
+                    raise HTTPException(status_code=400, detail="الإقليم غير معروف")
+                # حارس: المستخدم الإقليمي لا ينهي باسم إقليم آخر
+                if scope is not None and region not in scope:
+                    raise HTTPException(status_code=403, detail="لا يمكنك إنهاء توقعات إقليم آخر")
+                label = REGION_LABELS[region]
+                action = f"إكمال توقعات إقليم {label}"
+                action_text = f"أكمل إقليم {label} توقعاته الجوية ✅"
+
+            create_audit_log(
+                cursor,
+                user_id,
+                action,
+                mission_id=None,
+                entity_type="weather",
+                entity_id=None,
+                details={"action_text": action_text},
+                realtime=True,
+            )
+            connection.commit()
+            return {"message": action_text}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error finishing weather: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء إنهاء توقعات الطقس")
+    finally:
+        connection.close()
+
+
+@app.post("/api/weather/export-log")
+def weather_export_log(payload: WeatherExportLogModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """تسجيل تنزيل تقارير الطقس (المالك فقط) — حدثان مميزان: اليومي وسجل الورديات الثلاث."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_weather_owner(role)
+
+    if payload.kind == "log":
+        action = "تنزيل سجل الورديات الثلاث"
+        detail = "قام بتصدير سجل الورديات الثلاث لتوقعات الطقس"
+    else:
+        action = "تنزيل الطقس اليومي"
+        detail = "قام بتصدير تقرير الطقس اليومي"
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            create_audit_log(
+                cursor,
+                user_id,
+                action,
+                mission_id=None,
+                entity_type="weather",
+                entity_id=None,
+                details={"action_text": detail},
+            )
+            connection.commit()
+            return {"message": "تم تسجيل عملية التنزيل"}
+    except Exception as e:
+        connection.rollback()
+        print(f"Error logging weather export: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تسجيل التنزيل")
     finally:
         connection.close()
