@@ -16,11 +16,12 @@ jobs:
       - name: تجهيز بيئة البايثون
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
       - name: تسطيب المكتبات المطلوبة
         run: |
-          pip install feedparser requests google-generativeai beautifulsoup4
+          pip install --upgrade pip
+          pip install feedparser requests beautifulsoup4
 
       - name: تشغيل محرك الذكاء الاصطناعي
         env:

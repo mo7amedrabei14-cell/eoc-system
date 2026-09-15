@@ -82,6 +82,16 @@ const TIME_SEGS = [
 
 const pad = (n) => String(n).padStart(2, '0');
 
+/* ─── فحص اليوم التقويمي الحقيقي — يرفض 31/04, 30/02, 00/… ─── */
+function isRealDate(y, m, d) {
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(Date.UTC(+y, +m - 1, +d));
+  return dt.getUTCFullYear() === +y && dt.getUTCMonth() === +m - 1 && dt.getUTCDate() === +d;
+}
+
+/* ─── حلقة تنبيه حمراء للحقل غير الصحيح ─── */
+const invalidFieldStyle = { boxShadow: '0 0 0 2px var(--danger)' };
+
 /* ─── Segment parsing ─── */
 function parseDateSegs(display) {
   const m = (display || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{1,4})$/);
@@ -206,7 +216,9 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
       }
       return;
     }
-    if (dd.length === 2 && mm.length === 2 && yyyy.length === 4) {
+    // 🚨 أصدر التاريخ فقط إذا كان يوماً تقويمياً حقيقياً (31/04 أو 30/02 يُرفضان) —
+    // حتى لا يصل تاريخ «غير صحيح» إلى <input> فيردّه المتصفح فارغاً فتُمسح قيمته عند الإرسال.
+    if (dd.length === 2 && mm.length === 2 && yyyy.length === 4 && isRealDate(yyyy, mm, dd)) {
       const iso = `${yyyy}-${mm}-${dd}`;
       if (machine !== iso) {
         setMachine(iso);
@@ -380,9 +392,14 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   }
 
   const fieldPad = { paddingLeft: '1.75rem', paddingRight: '1.75rem' }; // 28px: icon-safe left + symmetric right
+  // 🚨 تاريخ مكتمل لكن غير موجود في التقويم (31/04…) → حلقة حمراء + لا تُرسل قيمة
+  const [segDd, segMm, segYy] = segs;
+  const dComplete = segDd.length === 2 && segMm.length === 2 && segYy.length === 4;
+  const invalidDate = dComplete && !isRealDate(segYy, segMm, segDd);
+  const carrier = (!dComplete || invalidDate) ? '' : machine; // الناقل الحقيقي للاستمارة — غير كامل أو غير صحيح => فارغ فلا يُحفظ تاريخ خاطئ
   return (
     <>
-      <div className="relative">
+      <div className="relative" style={invalidDate ? invalidFieldStyle : undefined}>
         <input
           ref={textRef}
           type="text"
@@ -396,13 +413,14 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
           onClick={handleInputClick}
           disabled={disabled}
           autoComplete="off"
+          aria-invalid={invalidDate || undefined}
+          title={invalidDate ? 'التاريخ غير صحيح — اختر يوماً موجوداً في التقويم' : undefined}
           {...props}
         />
         <div ref={pillsRef} className="seg-pills" style={fieldPad} dir="ltr" aria-hidden="true">
           <SegPills segs={segs} placeholders={['__', '__', '____']} separators={['/', '/']} active={activeSeg} />
         </div>
-        {id && <input id={id} type="date" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />}
+        {id && <input id={id} type="hidden" value={carrier || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled} />}
         <button type="button" onClick={openCalendar} disabled={disabled}
           className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
       </div>
@@ -745,7 +763,9 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
       }
       return;
     }
-    if (dd.length === 2 && mm.length === 2 && yyyy.length === 4 && hh.length === 2 && mm2.length === 2 && (ap === 'AM' || ap === 'PM')) {
+    // 🚨 أصدر التاريخ/الوقت فقط إذا كان اليوم تقويمياً حقيقياً (31/04 أو 30/02 يُرفضان) —
+    // وإلا يرفضه <input datetime-local> ويمحو القيمة فوراً عند قراءتها في الإرسال.
+    if (dd.length === 2 && mm.length === 2 && yyyy.length === 4 && hh.length === 2 && mm2.length === 2 && (ap === 'AM' || ap === 'PM') && isRealDate(yyyy, mm, dd)) {
       const machineH = from12Wheel(hh, ap);
       const iso = `${yyyy}-${mm}-${dd}T${machineH}:${mm2}`;
       if (machine !== iso) {
@@ -923,11 +943,16 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
     if (m) {
       const y = m[1], mo = pad(+m[2]), d = pad(+m[3]);
       // تحديث أجزاء التاريخ فقط (dd,mm,yyyy) — الحفاظ على الوقت الحالي كما هو
-      setSegs(prev => [d, mo, y, prev[3] || '', prev[4] || '', prev[5] || 'AM']);
+      const needTime = !segs[3] && !segs[4];   // الوقت لم يُملأ بعد
+      setSegs([d, mo, y, segs[3] || '', segs[4] || '', segs[5] || 'AM']);
       setSelDate(`${y}-${mo}-${d}`);
       setCalView({ y: +y, mo: +mo });
+      // 🚨 إن اختير التاريخ فقط دون وقت، افتح عجلة الوقت فوراً — وإلا بقي الحقل
+      // «تاريخاً فقط» وقيمته الآلة فارغة ⇒ يُمحى التاريخ عند الإرسال من غير تنبيه.
+      setPicker(needTime ? 'time' : null);
+    } else {
+      setPicker(null);   // إغلاق التقويم بعد الاختيار
     }
-    setPicker(null);   // إغلاق التقويم بعد الاختيار
   };
 
   const calMONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -962,9 +987,15 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   const twoIconsPad = { paddingLeft: '3.5rem', paddingRight: '1.75rem' };
   const singleIconPad = { paddingLeft: '1.75rem', paddingRight: '1.75rem' };
   const fieldPad = twoIcons ? twoIconsPad : singleIconPad;
+  // 🚨 تاريخ+وقت مكتمل لكن اليوم غير موجود في التقويم (31/04…) → حلقة حمراء + لا تُرسل قيمة
+  const [dtDd, dtMm, dtYy] = segs;
+  const dtComplete = dtDd.length === 2 && dtMm.length === 2 && dtYy.length === 4
+    && segs[3].length === 2 && segs[4].length === 2 && (segs[5] === 'AM' || segs[5] === 'PM');
+  const invalidDate = dtComplete && !isRealDate(dtYy, dtMm, dtDd);
+  const carrier = (!dtComplete || invalidDate) ? '' : machine; // الناقل الحقيقي للاستمارة — غير كامل أو غير صحيح => فارغ فلا يُحفظ تاريخ خاطئ
   return (
     <>
-      <div className="relative">
+      <div className="relative" style={invalidDate ? invalidFieldStyle : undefined}>
         <input
           ref={textRef}
           type="text"
@@ -978,13 +1009,14 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           onClick={handleInputClick}
           disabled={disabled}
           autoComplete="off"
+          aria-invalid={invalidDate || undefined}
+          title={invalidDate ? 'التاريخ غير صحيح — اختر يوماً موجوداً في التقويم' : undefined}
           {...props}
         />
         <div ref={pillsRef} className="seg-pills" style={fieldPad} dir="ltr" aria-hidden="true">
           <SegPills segs={segs} placeholders={['__', '__', '____', '__', '__', 'AM']} separators={['/', '/', ' ', ':', ' ']} active={activeSeg} />
         </div>
-        {id && <input id={id} type="datetime-local" value={machine || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }} />}
+        {id && <input id={id} type="hidden" value={carrier || ''} onChange={() => {}} tabIndex={-1} aria-hidden="true" disabled={disabled} />}
         {twoIcons ? (
           <>
             <button type="button" onClick={() => openPicker('date')} disabled={disabled}
