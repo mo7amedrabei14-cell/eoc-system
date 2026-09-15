@@ -2616,6 +2616,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   liveMissionIdRef.current = currentMissionData?.mission_id ?? null;
   const liveMissionStatusRef = useRef(null);
   liveMissionStatusRef.current = currentMissionData?.status ?? null;
+  // 🛡️ الحفاظ على حالة حقول «التواريخ والتوقيتات» (State Preservation):
+  //    - timelineTouchedRef: الحقول التي حرّرها المستخدم فعلياً هذا الجلسة.
+  //    - على الإرسال، الحقل غير المحرَّر الذي قرأ فارغاً يُحافَظ على آخر قيمته المحفوظة
+  //      بدلاً من تجريده إلى null — حماية من أي إعادة ترطيب/تنسيق تُسقط القيمة خارج الناقل.
+  const timelineTouchedRef = useRef(new Set());
+  const touchTimeline = (id) => timelineTouchedRef.current.add(id);
+  const timelineFieldValue = (id, storedKey) => {
+    const raw = document.getElementById(id)?.value;
+    if (raw) return raw;
+    const prev = currentMissionData?.[storedKey];
+    if (prev && !timelineTouchedRef.current.has(id)) return prev;
+    return null;
+  };
   const [isTableExpanded, setIsTableExpanded] = useState(false);
   // 🆕 تاريخ/وقت إنشاء المهمة — يُلتقط مرة واحدة عند أول إنشاء الاستمارة، ثابت على
   // إعادة الفتح/الحفظ؛ يُعدَّله المالك فقط (backend يمنع غيره بـ 403).
@@ -2783,10 +2796,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           f_mission_name: 'mission_name', f_mission_code: 'mission_code', f_team_code: 'team_code',
           f_mission_class: 'mission_classification', f_mission_type: 'mission_type',
           f_mission_location: 'mission_location', f_responsible_person: 'responsible_person',
-          f_data_source: 'data_source', f_exit_date: 'exit_date', f_departure_date: 'departure_date',
-          f_arrival_date: 'arrival_date', f_return_date: 'return_date', f_completion_date: 'completion_date',
-          f_start_time: 'start_time', f_departure_time: 'departure_time', f_arrival_time: 'arrival_time',
-          f_completion_time: 'completion_time', f_internal_notes: 'internal_notes',
+          f_data_source: 'data_source',
+          // 🛡️ حقول SegInputs (f_exit_date / f_arrival_date / f_completion_date /
+          //    f_departure_time / f_arrival_time / f_completion_time) مستثناة هُنا عمداً:
+          //    ناقلها مدعوم بـ React (value مُتحكم فيه) والكتابة المباشرة على الـ DOM تفصل
+          //    عرضها عن حالتها الداخلية وتُبطَل بأول إعادة عرض — القيم الحيّة تصل عند إعادة
+          //    فتح الاستمارة (مثل حقول الخط السير r_* تماماً). الحقول المخفية البسيطة فقط
+          //    (f_departure_date / f_start_time / f_return_date) آمنة للتحديث المباشر.
+          f_departure_date: 'departure_date', f_start_time: 'start_time', f_return_date: 'return_date',
+          f_internal_notes: 'internal_notes',
         };
         Object.entries(idMap).forEach(([id, key]) => {
           const node = el(id);
@@ -3028,6 +3046,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     currentMissionIdRef.current = null;
     setModalError(null);
     setCurrentMissionData(null);
+    timelineTouchedRef.current = new Set();
     setCreationDateTime(isoLocal(new Date())); // 🆕 لحظة أول إنشاء الاستمارة (قيمة المستخدم)
     newMissionIdempotencyKey.current = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
     setMissionName('');
@@ -3063,6 +3082,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         const data = await res.json();
         if (inFlightMissionRef.current !== missionId) return; // فحص ثانٍ بعد قراءة JSON
         setCurrentMissionData(data);
+        timelineTouchedRef.current = new Set();
         setMissionName(data.mission_name || '');
         setMissionClass(data.mission_classification || 'عادية');
         // 🆕 تاريخ الإنشاء يبقى كما هو على إعادة الفتح (لا يُلتقط من جديد أبداً)
@@ -3566,15 +3586,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          responsible_person: document.getElementById('f_responsible_person')?.value || '',
          data_source: document.getElementById('f_data_source')?.value || '',
          status: submitStatus,
-         exit_date: document.getElementById('f_exit_date')?.value || null,
+         // 🛡️ التواريخ/الأوقات: الحقل الذي لم يحرّره المستخدم (غير مسجَّل في timelineTouchedRef)
+         //    يحتفظ بآخر قيمته المحفوظة لو قرأ فارغاً — لا يُكتب فوقه null أبداً (State Preservation).
+         exit_date: timelineFieldValue('f_exit_date', 'exit_date'),
          departure_date: document.getElementById('f_departure_date')?.value || null,
-         arrival_date: document.getElementById('f_arrival_date')?.value || null,
+         arrival_date: timelineFieldValue('f_arrival_date', 'arrival_date'),
          return_date: document.getElementById('f_return_date')?.value || null,
-         completion_date: document.getElementById('f_completion_date')?.value || null,
+         completion_date: timelineFieldValue('f_completion_date', 'completion_date'),
          start_time: document.getElementById('f_start_time')?.value || null,
-         departure_time: document.getElementById('f_departure_time')?.value || null,
-         arrival_time: document.getElementById('f_arrival_time')?.value || null,
-         completion_time: document.getElementById('f_completion_time')?.value || null,
+         departure_time: timelineFieldValue('f_departure_time', 'departure_time'),
+         arrival_time: timelineFieldValue('f_arrival_time', 'arrival_time'),
+         completion_time: timelineFieldValue('f_completion_time', 'completion_time'),
          injured_count: 0, indirect_beneficiaries_total: 0,
          notes: finalNotes,
          internal_notes: sysNotes,
@@ -4130,16 +4152,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                     سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* تواريخ */}
-                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || ''} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" defaultValue={currentMissionData?.completion_date || ''} onChange={bumpValidation} /></FormGroup>
+                  <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || ''} onChange={() => { bumpValidation(); touchTimeline('f_exit_date'); }} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || ''} onChange={() => touchTimeline('f_arrival_date')} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="تاريخ الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_date') ? 'field-invalid' : ''}`} id="f_completion_date" defaultValue={currentMissionData?.completion_date || ''} onChange={() => { bumpValidation(); touchTimeline('f_completion_date'); }} /></FormGroup>
                   {/* أوقات */}
-                  <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={bumpValidation} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="ساعة الوصول"><SegTimeField className="field text-center" id="f_arrival_time" defaultValue={currentMissionData?.arrival_time || ''} /></FormGroup>
-                  <FormGroup className="items-center text-center" label="ساعة الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_time') ? 'field-invalid' : ''}`} id="f_completion_time" defaultValue={currentMissionData?.completion_time || ''} onChange={bumpValidation} /></FormGroup>
-                  {/* حقول مخفية لضمان عدم تلف الحفظ وحساب الساعات */}
+                  <FormGroup className="items-center text-center" required label="ساعة التحرك / البدء" invalid={requiredTouched && missingFields.includes('field_departure_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_departure_time') ? 'field-invalid' : ''}`} id="f_departure_time" defaultValue={currentMissionData?.departure_time || currentMissionData?.start_time || ''} onChange={() => { bumpValidation(); touchTimeline('f_departure_time'); }} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الوصول"><SegTimeField className="field text-center" id="f_arrival_time" defaultValue={currentMissionData?.arrival_time || ''} onChange={() => touchTimeline('f_arrival_time')} /></FormGroup>
+                  <FormGroup className="items-center text-center" label="ساعة الانتهاء" invalid={requiredTouched && missingFields.includes('field_completion_time')}><SegTimeField className={`field text-center ${requiredTouched && missingFields.includes('field_completion_time') ? 'field-invalid' : ''}`} id="f_completion_time" defaultValue={currentMissionData?.completion_time || ''} onChange={() => { bumpValidation(); touchTimeline('f_completion_time'); }} /></FormGroup>
+                  {/* حقول مخفية للحفظ المباشر وحساب الساعات — مرور حرفي للقيم المحفوظة لا تمسها أي صياغة */}
                   <input type="hidden" id="f_departure_date" defaultValue={currentMissionData?.departure_date || ''} />
                   <input type="hidden" id="f_start_time" defaultValue={currentMissionData?.start_time || ''} />
+                  <input type="hidden" id="f_return_date" defaultValue={currentMissionData?.return_date || ''} />
                 </div>
               </SectionCard>
 

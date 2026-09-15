@@ -26,8 +26,8 @@ SYSTEM_API_URL = "https://eoc-system-b12f.vercel.app/api/ai-news"
 GEMINI_DAILY_LIMIT = 18
 gemini_calls_today = 0
 
-# Correct Gemini model names (gemini-3.5-flash does NOT exist)
-GEMINI_MODEL = "gemini-2.0-flash"
+# Current stable Gemini Flash model — 2.0-flash was retired (404), 3.6-flash is the live name
+GEMINI_MODEL = "gemini-3.6-flash"
 BATCH_SIZE = 5  # articles per Gemini API call
 
 KEYWORDS = [
