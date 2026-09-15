@@ -223,11 +223,17 @@
   }
   .toast-item { border-radius: var(--radius-lg); margin-bottom: 0.5rem; }
   .notif-dropdown {
-    position: fixed;
-    inset: auto 0.75rem 0.75rem 0.75rem !important;
+    position: fixed !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    bottom: auto !important;
+    /* Anchor below the sticky header: py-3.5 (1.75rem×2) + content ≈ 3.5rem + safe-area */
+    top: calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
     max-width: calc(100vw - 1.5rem);
-    max-height: 60vh;
-    border-radius: var(--radius-xl) var(--radius-xl) var(--radius) var(--radius);
+    max-height: 75vh;
+    overflow-y: auto;
+    border-radius: var(--radius-lg);
+    z-index: 50;
   }
 
   /* ──────────────────────────────────────────────────────────────────────

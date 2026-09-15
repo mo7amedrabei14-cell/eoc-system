@@ -2230,9 +2230,22 @@ function HomeView({ branches = [], theme = 'dark' }) {
   const filteredNews = selectedBranchName ? news.filter(n => n.governorate === filterNewsGov) : news;
 
   const dailyMissions = filterDate ? filteredMissions.filter(m => {
-    // 🆕 التاريخ المعياري لتجميع/تصفية يومية المهمة هو «تاريخ إنشاء المهمة» (creation_datetime)
-    const mDate = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
-    return mDate === filterDate;
+    const createdAt = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
+    const isCompleted = m.status === 'Completed';
+    const isCancelled = m.status === 'Cancelled';
+    const isFinished = isCompleted || isCancelled;
+    // Active missions persist across all days after creation until completed/cancelled;
+    // when finished, visible ONLY on the day they finished (completion_date)
+    if (!isFinished) {
+      return createdAt <= filterDate;
+    }
+    const completedAt = (m.completion_date && m.completion_date !== '-')
+      ? String(m.completion_date).split(' ')[0] : null;
+    if (isCompleted && completedAt) {
+      return completedAt === filterDate;
+    }
+    // Cancelled without completion_date: show on creation date only
+    return createdAt === filterDate;
   }) : filteredMissions;
   const dailyNews = filterDate ? filteredNews.filter(n => n.incident_date === filterDate) : filteredNews;
   const dailyDisasters = filterDate ? globalDisasters.filter(d => d.incident_date === filterDate) : globalDisasters;
@@ -3679,12 +3692,21 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     if (filterDate) {
        baseMissions = baseMissions.filter(m => {
-          // 🆕 التاريخ المعياري لتجميع/تصفية سجل المهام هو «تاريخ/وقت إنشاء المهمة» (creation_datetime)
-          //    وليس تاريخ المهمة التشغيلي (exit_date). fallback: created_at (قديم بلا تاريخ إنشاء).
-          const creationDate = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
-          const isOpenActive = m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status);
-          if (isOpenActive) return true;
-          return creationDate === filterDate;
+          const createdAt = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
+          const isCompleted = m.status === 'Completed';
+          const isCancelled = m.status === 'Cancelled';
+          const isFinished = isCompleted || isCancelled;
+          // Active missions persist across all days after creation until completed/cancelled
+          if (!isFinished) {
+             return createdAt <= filterDate;
+          }
+          const completedAt = (m.completion_date && m.completion_date !== '-')
+             ? String(m.completion_date).split(' ')[0] : null;
+          if (isCompleted && completedAt) {
+             return completedAt === filterDate;
+          }
+          // Cancelled without completion_date: show on creation date only
+          return createdAt === filterDate;
        });
     }
 
