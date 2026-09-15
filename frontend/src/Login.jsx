@@ -4,11 +4,6 @@ import { useNavigate } from 'react-router-dom';
 /* ─────────────────────────────────────────────────────────────
    أيقونات داخلية خفيفة (SVG) بنفس لغة النظام
    ───────────────────────────────────────────────────────────── */
-const CrescentIcon = ({ className = 'w-6 h-6' }) => (
-  <svg viewBox="0 0 100 100" className={className} fill="currentColor">
-    <path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" />
-  </svg>
-);
 const UserIcon = () => (
   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
     <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -354,8 +349,8 @@ export default function Login() {
                 {dragProgress >= 0.92 && <span className="ripple-burst absolute inset-0 rounded-full bg-[var(--ok)]" />}
               </div>
 
-              <div id="opening-crest" className={`relative w-24 h-24 md:w-28 md:h-28 rounded-full bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
-                <CrescentIcon className={`w-14 h-14 md:w-16 md:h-16 drop-shadow-[0_0_14px_var(--accent-glow)] transition-colors duration-500 ${dragProgress >= 0.92 ? 'text-[var(--ok)]' : 'text-[var(--accent)]'}`} />
+              <div id="opening-crest" className={`relative w-24 h-24 md:w-28 md:h-28 rounded-full bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center p-2 transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
+                <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[31%] pointer-events-none" />
               </div>
             </div>
 
@@ -416,7 +411,7 @@ export default function Login() {
 
               {/* النص التوجيهي المتطور */}
               <div
-                className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[var(--muted)] text-xs sm:text-sm font-semibold tracking-wide"
+                className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[var(--ink)] text-xs sm:text-sm font-semibold tracking-wide"
                 style={{ opacity: 1 - dragProgress }}
               >
                 <ShieldIcon />
@@ -451,13 +446,13 @@ export default function Login() {
                 {isUnlocking && <span className="absolute inset-0 rounded-full bg-[var(--ok)] animate-ping opacity-50" />}
                 {isUnlocking && <span className="ripple-burst absolute inset-6 rounded-full border-2 border-[var(--ok)]" />}
                 {/* قلب المقبض */}
-                <span className={`relative h-full w-full rounded-full flex items-center justify-center text-white shadow-[var(--shadow-accent)] transition-colors duration-300 ${isUnlocking ? 'bg-[var(--ok)]' : 'bg-[var(--accent)]'}`}>
+                <span className={`relative h-full w-full rounded-full flex items-center justify-center shadow-lg transition-colors duration-300 ${isUnlocking ? 'bg-[var(--ok)] text-white' : 'bg-white'}`}>
                   {isUnlocking ? (
                     <svg viewBox="0 0 100 100" className="w-6 h-6 drop-shadow animate-scale-pop">
                       <path d="M 22 55 L 42 75 L 80 32" fill="none" stroke="white" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   ) : (
-                    <CrescentIcon className="w-6 h-6 drop-shadow-sm" />
+                    <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="w-8 h-8 object-contain object-[31%] drop-shadow-sm pointer-events-none" />
                   )}
                 </span>
               </div>
@@ -483,8 +478,8 @@ export default function Login() {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/25" />
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="w-11 h-11 shrink-0 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                  <CrescentIcon className="w-7 h-7 text-[#c70000]" />
+                <span className="w-11 h-11 shrink-0 bg-white rounded-xl flex items-center justify-center p-1 shadow-lg">
+                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[31%] pointer-events-none" />
                 </span>
                 <div className="min-w-0">
                   <p className="font-extrabold text-sm sm:text-base leading-tight tracking-tight">
@@ -526,7 +521,7 @@ export default function Login() {
                 <span className="absolute top-[12%] end-[24%] w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
                 <span className="absolute bottom-[20%] start-[22%] w-1.5 h-1.5 rounded-full bg-[var(--ok)] animate-pulse" style={{ animationDelay: '1.2s' }} />
                 <span className="absolute inset-0 flex items-center justify-center">
-                  <CrescentIcon className="w-6 h-6 text-[var(--accent)] opacity-90" />
+                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" className="w-8 h-8 object-contain object-[31%] opacity-90" />
                 </span>
               </div>
 

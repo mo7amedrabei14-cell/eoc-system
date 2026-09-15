@@ -1855,8 +1855,8 @@ useEffect(() => {
             <div className="px-6 pt-7 pb-5 border-b border-[var(--border)] relative overflow-hidden">
               <div className="absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
               <div className="relative z-10 flex items-center gap-3">
-                <div className="sidebar-brand w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center shadow-[0_0_26px_rgba(199,0,0,0.22)] shrink-0">
-                  <svg viewBox="0 0 100 100" className="w-7 h-7"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="var(--accent)" /></svg>
+                <div className="sidebar-brand w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center p-2 shadow-[0_0_26px_rgba(199,0,0,0.22)] shrink-0">
+                  <img src="/Egyptian_Red_Crescent.png" alt="Egyptian Red Crescent" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain pointer-events-none" />
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || translate('المالك', language)}</h2>
@@ -1870,8 +1870,8 @@ useEffect(() => {
             </div>
           ) : (
             <div className="p-4 border-b border-[var(--border)] flex justify-center">
-              <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center shadow-[0_0_18px_rgba(199,0,0,0.22)]" title={userData?.full_name}>
-                <svg viewBox="0 0 100 100" className="w-6 h-6"><path d="M 70 15 A 40 40 0 1 0 70 85 A 30 30 0 1 1 70 15 Z" fill="var(--accent)" /></svg>
+              <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center p-1 shadow-[0_0_18px_rgba(199,0,0,0.22)]" title={userData?.full_name}>
+                <img src="/Egyptian_Red_Crescent.png" alt="Egyptian Red Crescent" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain pointer-events-none" />
               </div>
             </div>
           )}
