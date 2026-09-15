@@ -421,7 +421,7 @@
 }
 
 /* ─────────────────────────── 3) قاعدة الشاشة ─────────────────────────── */
-html, body, #root { height: 100%; font-size: clamp(1rem, 0.8rem + 0.4vw, 1.2rem); }
+html, body, #root { height: 100%; }
 
 body {
   background-color: var(--bg);
@@ -804,8 +804,8 @@ textarea:not(.field):focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.15rem;
+  height: 2.15rem;
   border-radius: 0.7rem;
   background: var(--surface-2);
   color: var(--muted);

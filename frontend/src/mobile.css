@@ -10,7 +10,7 @@
   /* ──────────────────────────────────────────────────────────────────────
      1) LAYOUT & CONTAINER FIXES — Eliminate horizontal scroll
      ────────────────────────────────────────────────────────────────────── */
-  html, body, #root { overflow-x: hidden; max-width: 100vw; }
+  html, body, #root { overflow-x: hidden; max-width: 100vw; font-size: clamp(0.85rem, 0.6rem + 1.1vw, 1rem); }
 
   /* Main content area — no horizontal padding that could cause overflow */
   main, .app-shell > main { padding-inline: 0.75rem; }

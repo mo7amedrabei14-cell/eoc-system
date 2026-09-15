@@ -1849,7 +1849,7 @@ useEffect(() => {
 
       <div className={`sidebar-backdrop ${isSidebarOpen ? 'is-visible' : ''} block md:hidden`} onClick={() => setIsSidebarOpen(false)} />
 
-      <aside className={`sidebar-shell bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed overflow-hidden ${isSidebarOpen ? 'is-open' : ''} left-auto right-0 top-0 bottom-0 ${isSidebarOpen ? 'w-64 md:w-72' : 'w-64 md:w-20'} ${isSidebarOpen ? 'shadow-[12px_0_40px_-18px_rgba(0,0,0,0.55)]' : ''} z-[70] transform-none`}>
+      <aside className={`sidebar-shell bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] ${isSidebarOpen ? 'is-open right-0 w-64 md:w-72 shadow-[12px_0_40px_-18px_rgba(0,0,0,0.55)]' : '-right-80 md:right-0 w-64 md:w-20'}`}>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isSidebarOpen ? (
             <div className="px-6 pt-7 pb-5 border-b border-[var(--border)] relative overflow-hidden">
@@ -1902,7 +1902,7 @@ useEffect(() => {
         </div>
       </aside>
 
-      <main id="main-scroll-container" className="flex-1 flex flex-col h-screen overflow-y-auto bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative">
+      <main id="main-scroll-container" className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative">
         <header className="glass-header px-4 md:px-8 py-3.5 md:py-4 flex items-center gap-3 md:gap-4 sticky top-0 z-40">
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label="قائمة التنقل" className="icon-btn !w-11 !h-11 shrink-0">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
