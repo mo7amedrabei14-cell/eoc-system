@@ -2524,11 +2524,6 @@ select.field {
      تجاوز الشاشة، وكل اختيار يبقى بعرض محتواه الكامل (لا قطع). */
   .filters-seg { flex-wrap: wrap; }
   .filters-seg > .eoc-select--toolbar { max-width: 100%; }
-
-  /* Mobile-specific touch target fixes - 44x44px minimum */
-  .icon-btn { width: 2.75rem; height: 2.75rem; }
-  .action-btn--icon { width: 2.75rem; height: 2.75rem; padding: 0; }
-  .btn-primary { min-width: 0; flex-shrink: 1; }
 }
 
 /* ════════════════════════════════════════════════════════════════

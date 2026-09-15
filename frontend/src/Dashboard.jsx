@@ -5683,13 +5683,13 @@ const [nd, setNd] = useState({
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--data)]">نقاط (رد/تحرك/وصول)</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المتطوعين</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">مدخل الخبر</th>
-                <th className="px-3 py-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">إجراءات</th>
+                <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? <TableLoadingRow colSpan={7} /> :
                filteredNews.length > 0 ? filteredNews.map(n => (
-                <tr key={n.news_id} className="hover:bg-[var(--surface-hover)]">
+                <tr key={n.news_id} className="group hover:bg-[var(--surface-hover)]">
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(n.incident_date)}</td>
                   <td data-label="المحافظة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
                   <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
@@ -5702,12 +5702,12 @@ const [nd, setNd] = useState({
                   </td>
                   <td data-label="المتطوعين" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)]">{n.participants_count}</td>
                   <td data-label="مدخل الخبر" className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.data_entry_name}</td>
-                  <td data-label="إجراءات" className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
-                    <div className="flex justify-center gap-1">
-                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="p-1.5 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg" title="فتح الرابط"><GlobalWorldIcon /></a>}
-                      <button onClick={() => handleEdit(n)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
-                      <button onClick={() => setDownloadTarget(n)} className="p-1.5 bg-[var(--surface-4)] hover:bg-green-600 text-green-500 hover:text-white rounded-lg" title="تصدير الخبر"><DownloadIcon /></button>
-                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon /></button>}
+                  <td data-label="إجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
+                    <div className="flex justify-center gap-1.5">
+                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="icon-btn" title="فتح الرابط"><GlobalWorldIcon /></a>}
+                      <button onClick={() => handleEdit(n)} className="icon-btn" title="فتح الخبر"><EyeIcon /></button>
+                      <button onClick={() => setDownloadTarget(n)} className="icon-btn" title="تصدير الخبر"><DownloadIcon /></button>
+                      {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
@@ -6161,9 +6161,9 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                   <td>{r.updated_at ? (r.updated_by_name || '—') : '—'}</td>
                   <td>
                     <div className="flex items-center justify-center gap-1.5">
-                      <button title={T('تعديل', 'Edit')} onClick={() => openEdit(r)} className="action-btn action-btn--icon action-btn--info"><EditIcon /></button>
-                      <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => setDownloadTarget(r)} className="action-btn action-btn--icon"><DownloadIcon /></button>
-                      {isOwner && <button title={T('حذف', 'Delete')} onClick={() => setDeleteTarget(r.handover_id)} className="action-btn action-btn--icon action-btn--danger"><TrashIcon /></button>}
+                      <button title={T('تعديل', 'Edit')} onClick={() => openEdit(r)} className="icon-btn"><EditIcon /></button>
+                      <button title={T('تنزيل سجل التسليم', 'Download record')} onClick={() => setDownloadTarget(r)} className="icon-btn"><DownloadIcon /></button>
+                      {isOwner && <button title={T('حذف', 'Delete')} onClick={() => setDeleteTarget(r.handover_id)} className="icon-btn icon-btn-danger"><TrashIcon /></button>}
                     </div>
                   </td>
                 </tr>
@@ -6593,34 +6593,34 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">الخبر</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الوفيات</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">المصابين</th>
-                <th className="px-3 py-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)] text-center">إجراءات</th>
+                <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? <TableLoadingRow colSpan={7} label="جاري تحميل البيانات…" /> :
                filteredDisasters.length > 0 ? filteredDisasters.map(d => (
-                <tr key={d.disaster_id} className="hover:bg-[var(--surface-hover)]">
+                <tr key={d.disaster_id} className="group hover:bg-[var(--surface-hover)]">
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(d.incident_date)}</td>
                   <td data-label="الدولة / المكان" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
                   <td data-label="نوع الكارثة" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[var(--accent-softer)]">{d.disaster_type}</td>
                   <td data-label="الخبر" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{d.news_title}</td>
                   <td data-label="الوفيات" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.deaths_count}</td>
                   <td data-label="المصابين" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.injured_count}</td>
-                  <td data-label="إجراءات" className="px-3 py-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
-                    <div className="flex justify-center gap-1">
+                  <td data-label="إجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
+                    <div className="flex justify-center gap-1.5">
                       {d.news_link && (
-                        <a href={d.news_link} target="_blank" rel="noreferrer" className="p-1.5 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                        <a href={d.news_link} target="_blank" rel="noreferrer" className="icon-btn" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
-                      <button onClick={() => handleEdit(d)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg transition-colors" title="تعديل">
+                      <button onClick={() => handleEdit(d)} className="icon-btn" title="تعديل">
                         <EyeIcon />
                       </button>
-                      <button onClick={() => setDownloadTarget(d)} className="p-1.5 bg-[var(--surface-4)] hover:bg-green-600 text-green-500 hover:text-white rounded-lg transition-colors" title="تحميل سجل الكارثة">
+                      <button onClick={() => setDownloadTarget(d)} className="icon-btn" title="تحميل سجل الكارثة">
                         <DownloadIcon />
                       </button>
                       {(isOwner || isSupervisor || isJoker) && (
-                        <button onClick={() => setDisasterToDelete(d.disaster_id)} className="p-1.5 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--accent)] hover:text-white rounded-lg transition-colors border border-[var(--accent)]/20" title="حذف">
+                        <button onClick={() => setDisasterToDelete(d.disaster_id)} className="icon-btn icon-btn-danger" title="حذف">
                           <TrashIcon />
                         </button>
                       )}
@@ -7072,13 +7072,13 @@ const [clearAllCode, setClearAllCode] = useState('');
                     <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">المنطقة</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">الإحداثيات</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الحالة</th>
-                    <th className="p-4 font-semibold border-l border-[var(--border)] text-center">إجراءات</th>
+                    <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {isLoading ? <TableLoadingRow colSpan={8} /> :
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
-                    <tr key={`tbl-g-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
+                    <tr key={`tbl-g-${eq.eq_id}`} className="group hover:bg-[var(--surface-hover)]">
                       <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td data-label="الدولة" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
                       <td data-label="القوة (ريختر)" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
@@ -7086,10 +7086,10 @@ const [clearAllCode, setClearAllCode] = useState('');
                       <td data-label="المنطقة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
                       <td data-label="الإحداثيات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
                       <td data-label="الحالة" className="p-4 border-l border-[var(--border)] text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-[var(--danger-soft)] text-[var(--accent)] border border-[var(--accent)]/30' : 'bg-[var(--surface-hover)] text-[var(--muted-2)] border border-[var(--border)]'}`}>{eq.status}</span></td>
-                      <td data-label="الإجراءات" className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => handleEditGlobal(eq)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon/></button>}
+                      <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
+                        <div className="flex justify-center gap-1.5">
+                          <button onClick={() => handleEditGlobal(eq)} className="icon-btn" title="فتح التعديل"><EyeIcon /></button>
+                          {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
@@ -7110,22 +7110,22 @@ const [clearAllCode, setClearAllCode] = useState('');
                     <th className="p-4 font-semibold border-l border-[var(--border)]">العمق</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">المنطقة (مصر)</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">الإحداثيات</th>
-                    <th className="p-4 font-semibold border-l border-[var(--border)] text-center">إجراءات</th>
+                    <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border)]">
                   {isLoading ? <TableLoadingRow colSpan={6} /> :
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
-                    <tr key={`tbl-e-${eq.eq_id}`} className="hover:bg-[var(--surface-hover)]">
+                    <tr key={`tbl-e-${eq.eq_id}`} className="group hover:bg-[var(--surface-hover)]">
                       <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td data-label="القوة (ريختر)" className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td data-label="العمق" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
                       <td data-label="المنطقة (مصر)" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
                       <td data-label="الإحداثيات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
-                      <td data-label="الإجراءات" className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
-                        <div className="flex justify-center gap-2">
-                          <button onClick={() => handleEditEgypt(eq)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white rounded-lg"><TrashIcon/></button>}
+                      <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
+                        <div className="flex justify-center gap-1.5">
+                          <button onClick={() => handleEditEgypt(eq)} className="icon-btn" title="فتح التعديل"><EyeIcon /></button>
+                          {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
@@ -7654,14 +7654,14 @@ const totalAiCountries = new Set(
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المحافظة</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[250px]">وصف الحادث</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">الناشر</th>
-                <th className="p-4 font-semibold sticky top-0 left-0 z-30 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)] text-center">إجراءات</th>
+                <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {tableNews.length > 0 ? tableNews.map(n => {
                  const aiData = extractAiData(n.news_updates);
                  return (
-                <tr key={n.id} className="hover:bg-[var(--surface-hover)]">
+                <tr key={n.id} className="group hover:bg-[var(--surface-hover)]">
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
                   <td data-label="نوع الخبر" className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                     {n.news_type}
@@ -7672,18 +7672,18 @@ const totalAiCountries = new Set(
                       {n.incident_description || 'لا يوجد وصف'}
                   </td>
                   <td data-label="الناشر" className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.news_publisher}</td>
-                  <td data-label="الإجراءات" className="p-4 sticky left-0 z-10 bg-[var(--surface-3)] shadow-[4px_0_15px_rgba(0,0,0,0.5)] border-l border-[var(--border)]">
-                    <div className="flex justify-center gap-2">
+                  <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
+                    <div className="flex justify-center gap-1.5">
                       {n.news_link && (
-                        <a href={n.news_link} target="_blank" rel="noreferrer" className="p-2 bg-[var(--surface-4)] hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg transition-colors" title="فتح مصدر الخبر">
+                        <a href={n.news_link} target="_blank" rel="noreferrer" className="icon-btn" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
-                      <button onClick={() => handleEdit(n)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--warn)] text-[var(--muted-2)] hover:text-white rounded-lg transition-colors" title="قراءة التقرير الاستخباراتي">
+                      <button onClick={() => handleEdit(n)} className="icon-btn" title="قراءة التقرير الاستخباراتي">
                         <EyeIcon />
                       </button>
                       {isOwner && (
-                        <button onClick={() => handleDeleteAiNews(n.id)} className="p-2 bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--accent)] hover:text-white rounded-lg transition-colors border border-[var(--accent)]/20" title="حذف السجل">
+                        <button onClick={() => handleDeleteAiNews(n.id)} className="icon-btn icon-btn-danger" title="حذف السجل">
                           <TrashIcon />
                         </button>
                       )}
