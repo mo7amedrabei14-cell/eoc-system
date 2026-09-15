@@ -350,7 +350,7 @@ export default function Login() {
               </div>
 
               <div id="opening-crest" className={`relative w-24 h-24 md:w-28 md:h-28 rounded-full bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center p-2 transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
-                <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[31%] pointer-events-none" />
+                <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
               </div>
             </div>
 
@@ -452,7 +452,7 @@ export default function Login() {
                       <path d="M 22 55 L 42 75 L 80 32" fill="none" stroke="white" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   ) : (
-                    <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="w-8 h-8 object-contain object-[31%] drop-shadow-sm pointer-events-none" />
+                    <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="w-8 h-8 object-contain object-[39%] drop-shadow-sm pointer-events-none" />
                   )}
                 </span>
               </div>
@@ -479,7 +479,7 @@ export default function Login() {
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="w-11 h-11 shrink-0 bg-white rounded-xl flex items-center justify-center p-1 shadow-lg">
-                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[31%] pointer-events-none" />
+                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
                 </span>
                 <div className="min-w-0">
                   <p className="font-extrabold text-sm sm:text-base leading-tight tracking-tight">
@@ -521,7 +521,7 @@ export default function Login() {
                 <span className="absolute top-[12%] end-[24%] w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
                 <span className="absolute bottom-[20%] start-[22%] w-1.5 h-1.5 rounded-full bg-[var(--ok)] animate-pulse" style={{ animationDelay: '1.2s' }} />
                 <span className="absolute inset-0 flex items-center justify-center">
-                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" className="w-8 h-8 object-contain object-[31%] opacity-90" />
+                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" className="w-8 h-8 object-contain object-[39%] opacity-90" />
                 </span>
               </div>
 
