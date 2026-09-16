@@ -6522,18 +6522,11 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
       />
 
       {customAlert && (
-        <div className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div className="pointer-events-auto bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
-            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
-              <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
-            </div>
-            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
-            <div className="mt-8 flex justify-end">
-              <button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-[0_0_22px_var(--accent-glow)]">
-                {T('حسناً', 'OK')}
-              </button>
-            </div>
+        <div className="pointer-events-none fixed inset-x-0 top-3 z-[9999] flex justify-center px-4">
+          <div className="pointer-events-auto flex items-center gap-3 max-w-lg w-full rounded-xl px-4 py-3 bg-[var(--surface-3)] border border-[var(--accent)]/50 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 18px var(--accent-soft)' }}>
+            <svg className="w-5 h-5 shrink-0 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+            <span className="flex-1 text-sm font-bold text-white whitespace-pre-wrap leading-snug">{customAlert}</span>
+            <button onClick={() => setCustomAlert(null)} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
           </div>
         </div>
       )}
