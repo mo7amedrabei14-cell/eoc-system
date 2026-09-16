@@ -8424,6 +8424,7 @@ const totalAiCountries = new Set(
 // 💡 نافذة تأكيد موحّدة لعمليات الحذف
 // 📥 مُؤكِّد تنزيل سجل فردي — نافذة تأكيد محايدة وودّية بإطار وزر أخضر (var(--ok) — لون فعل التحميل):
 //   زر «نعم» ينفّذ التنزيل فوراً، وزر «إلغاء» يُغلق النافذة فقط.
+// 🍡 مودال تأكيد التنزيل — حبة عائمة موحّدة بالتصميم (بدون خلفية معتمة)
 function DownloadConfirmModal({
   show,
   title = 'تنزيل السجل',
@@ -8435,36 +8436,29 @@ function DownloadConfirmModal({
 }) {
   if (!show) return null;
 
-  return (
-    <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[9999] p-4">
-      <div className="bg-[var(--surface-2)] border-2 border-[var(--ok)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--ok-soft), 0 0 20px color-mix(in srgb, var(--ok) 28%, transparent)' }}>
-        <div className="w-20 h-20 bg-[var(--ok-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--ok)]/20 text-[var(--ok)]">
-          <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+  return createPortal(
+    <div className="pointer-events-none fixed inset-x-0 top-3 z-[9999] flex justify-center px-4">
+      <div className="pointer-events-auto w-full max-w-lg bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-5 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
+        {/* Header: checkmark + title + close ✕ */}
+        <div className="flex items-center gap-3 mb-2">
+          <svg className="w-6 h-6 shrink-0 text-[var(--ok)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+          <span className="flex-1 text-base font-bold text-white">{title}</span>
+          <button onClick={onCancel} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
         </div>
-
-        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-
-        <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">{message}</p>
-
-        <div className="flex gap-4 w-full">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white bg-[var(--ok)] hover:brightness-110 active:scale-[0.97] shadow-[0_8px_28px_-6px_color-mix(in_srgb,_var(--ok)_55%,_transparent)] transition-all"
-          >
-            {confirmLabel}
-          </button>
+        {/* Message */}
+        <p className="text-sm text-[var(--muted-2)] mb-4 pe-9 leading-relaxed">{message}</p>
+        {/* Buttons row */}
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">{cancelLabel}</button>
+          <button onClick={onConfirm} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-[var(--ok)] hover:brightness-110 active:scale-[0.97] shadow-[0_8px_28px_-6px_color-mix(in_srgb,_var(--ok)_55%,_transparent)] transition-all">{confirmLabel}</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
+// 🍡 مودال التأكيد الخطير — حبة عائمة موحّدة بالتصميم (بدون خلفية معتمة)
 function DangerConfirmModal({
   show,
   title = 'تأكيد الحذف',
@@ -8479,27 +8473,19 @@ function DangerConfirmModal({
   if (!show) return null;
 
   return createPortal(
-    <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
-      <div className="bg-[var(--surface-2)] border-2 border-[var(--accent)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
-
-        <div className="w-20 h-20 bg-[var(--accent-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]">
-          <TrashIcon className="w-10 h-10" />
+    <div className="pointer-events-none fixed inset-x-0 top-3 z-[9999] flex justify-center px-4">
+      <div className="pointer-events-auto w-full max-w-lg bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-5 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
+        {/* Header: checkmark + title + close ✕ */}
+        <div className="flex items-center gap-3 mb-2">
+          <svg className="w-6 h-6 shrink-0 text-[var(--ok)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+          <span className="flex-1 text-base font-bold text-white">{title}</span>
+          <button onClick={onCancel} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
         </div>
-
-        <h3 className="text-xl font-bold text-white mb-2">
-          {title}
-        </h3>
-
-        <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">
-          {message}
-        </p>
-
+        {/* Message */}
+        <p className="text-sm text-[var(--muted-2)] mb-4 pe-9 leading-relaxed">{message}</p>
+        {/* Code input (if needed) */}
         {showConfirmationInput && (
-          <div className="w-full mb-6 text-right">
-            <label className="block text-[var(--muted-2)] text-sm font-bold mb-2">
-              أدخل رمز التأكيد للمتابعة
-            </label>
-
+          <div className="mb-4">
             <input
               type="password"
               value={confirmationCode}
@@ -8509,27 +8495,22 @@ function DangerConfirmModal({
                   onConfirm();
                 }
               }}
-              placeholder="رمز التأكيد"
+              placeholder="أدخل رمز التأكيد"
               autoComplete="new-password"
-name="clear_all_confirmation"
-              className="w-full bg-[var(--surface-4)] border border-[var(--border)] focus:border-[var(--accent)]/50 rounded-xl px-4 py-3 text-white text-center tracking-[0.35em] outline-none transition-colors"
+              name="clear_all_confirmation"
+              className="w-full bg-[var(--surface-4)] border border-[var(--border)] focus:border-[var(--accent)]/50 rounded-xl px-4 py-2.5 text-white text-center tracking-[0.35em] text-sm outline-none transition-colors"
             />
           </div>
         )}
-
-        <div className="flex gap-4 w-full">
-
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors"
-          >
+        {/* Buttons row */}
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">
             إلغاء
           </button>
-
           <button
             onClick={onConfirm}
             disabled={showConfirmationInput && confirmationCode !== "301014"}
-            className={`flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-colors ${
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
               showConfirmationInput && confirmationCode !== "301014"
                 ? "bg-[var(--surface-3)] text-[var(--muted-2)] cursor-not-allowed"
                 : "btn-accent text-white shadow-[var(--shadow-accent)]"
@@ -8537,7 +8518,6 @@ name="clear_all_confirmation"
           >
             {confirmLabel}
           </button>
-
         </div>
       </div>
     </div>,
