@@ -8513,7 +8513,7 @@ function DangerConfirmModal({
 }) {
   if (!show) return null;
 
-  return (
+  return createPortal(
     <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
       <div className="bg-[var(--surface-2)] border-2 border-[var(--accent)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
 
@@ -8540,7 +8540,7 @@ function DangerConfirmModal({
               value={confirmationCode}
               onChange={(e) => onConfirmationCodeChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !(showConfirmationInput && confirmationCode !== '301014')) {
                   onConfirm();
                 }
               }}
@@ -8575,7 +8575,8 @@ name="clear_all_confirmation"
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
