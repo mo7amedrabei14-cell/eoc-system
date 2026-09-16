@@ -8456,7 +8456,7 @@ function DownloadConfirmModal({
   if (!show) return null;
 
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-5 z-[9999] flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
       <div className="pointer-events-auto w-full max-w-lg bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-5 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
         {/* Header: checkmark + title + close ✕ */}
         <div className="flex items-center gap-3 mb-2">
@@ -8492,7 +8492,7 @@ function DangerConfirmModal({
   if (!show) return null;
 
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-5 z-[9999] flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
       <div className="pointer-events-auto w-full max-w-lg bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-5 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
         {/* Header: checkmark + title + close ✕ */}
         <div className="flex items-center gap-3 mb-2">
@@ -8548,7 +8548,7 @@ function DangerConfirmModal({
 function ActionToast({ message, onClose }) {
   if (!message) return null;
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-5 z-[9999] flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
       <div className="pointer-events-auto inline-flex items-center gap-3 rounded-full px-5 py-2.5 max-w-[min(36rem,calc(100vw-2rem))] bg-[var(--surface-3)] border border-[var(--accent)]/50 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 18px var(--accent-soft)' }}>
         <svg className="w-5 h-5 shrink-0 text-[var(--ok)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
         <span className="text-sm font-bold text-white whitespace-pre-wrap leading-snug">{message}</span>
