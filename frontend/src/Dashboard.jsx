@@ -1228,13 +1228,14 @@ useEffect(() => {
   // 💡 1. حالات نظام الإشعارات والرادار (الجديدة)
   // 💡 1. حالات نظام الإشعارات والرادار (تم إضافة رصد الذكاء الاصطناعي)
   const [toasts, setToasts] = useState([]);
-  // 🎬 طابور الإشعارات الذكي (Premium Motion):
-  // - MAX_VISIBLE_TOASTS فقط يظهر في النافذة؛ الباقي ينتظر في الطابور مع عدّاد «+N إشعارات».
+  // 🎬 طابور الإشعارات (واحد تلو الآخر):
+  // - إشعار واحد فقط يظهر في النافذة المرئية في كل لحظة؛ الباقي ينتظر في الطابور
+  //   مع عدّاد «+N إشعارات أخرى» للتخطّي السريع.
   // - كل توست يُختم بـ shownAt لحظة دخوله النافذة المرئية → ينقضي بعد TOAST_LIFETIME_MS
-  //   كمَوْجَة واحدة (لا واحدًا واحدًا ثم ننتظر 9 ثوانٍ لكل توست).
+  //   ثم ينتقل الطابور للذي يليه (الخارج يلعب أنيميشن الـ TOAST_EXIT_MS بينما الجديد يستعد).
   // - dismissToast/closeAllToasts تضيف حالة closing فتلعب أنيميشن الخروج ثم يحذفه عدّاد
   //   التنظيف المركزي بعد TOAST_EXIT_MS — لا timers متضاربة، لا تكرار عمليات حذف.
-  const MAX_VISIBLE_TOASTS = 4;
+  const MAX_VISIBLE_TOASTS = 1;
   const TOAST_LIFETIME_MS = 9000;
   const TOAST_EXIT_MS = 320;
 
@@ -3247,7 +3248,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.ok) { setMissionToDelete(null); fetchMissions(); }
+      if (res.ok) { setMissionToDelete(null); fetchMissions(); setCustomAlert("تم حذف المهمة بنجاح."); }
+      else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف المهمة."); }
     } catch (error) { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
     finally { submitLockRef.current = false; }
   };
@@ -3328,7 +3330,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
     if (beneficiariesSheet.length > 0) sheets.push({ name: 'إحصائيات المستفيدين', ...gridFromRows(beneficiariesSheet) });
-    await exportWorkbook(sheets, `السجل_الشامل_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook(sheets, `السجل_الشامل_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
@@ -3505,13 +3507,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // ── تصدير مصنّف منسّق (RTL · تمركز · حدود · رأس #cbcbcb) مع الحفاظ على دمج الخلايا ──
     // اسم الملف = اسم الاستمارة كما هو (مع إزالة محارف غير صالحة فقط)
     const rawName = text(detail.mission_name).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
-    await exportWorkbook([{
+    try { await exportWorkbook([{
       name: 'الاستمارة',
       header: aoa[0] || [],
       rows: aoa.slice(1),
       merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
       widths: Array.from({ length: TOTAL }, (_, i) => (i === 0 ? 16 : 15)),
-    }], `${rawName}_${todayFileDate()}.xlsx`);
+    }], `${rawName}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الاستمارة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
@@ -3749,6 +3751,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          setIsModalOpen(false);
          fetchMissions();
          const rd = await res.json().catch(() => ({}));
+         setCustomAlert(isUpdate ? "تم تحديث المهمة بنجاح!" : "تم إنشاء المهمة بنجاح!");
          return { ok: true, mission_id: rd.mission_id };
        } else {
          // Error: keep the idempotency key for retry (idempotent if server actually committed)
@@ -5408,8 +5411,9 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       if (entityFilter === 'handover') fileName = 'سجل_لوج_تسليم_وتسلم_المشرفين.xlsx';
 
       await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${todayFileDate()}.xlsx`);
+      setCustomAlert("تم تصدير الأرشيف بنجاح!");
     } catch (err) {
-      setCustomAlert("حدث خطأ في الاتصال بالسيرفر أثناء تحميل الأرشيف.");
+      setCustomAlert("حدث خطأ أثناء التصدير.");
     }
   };
 
@@ -5593,9 +5597,12 @@ const [nd, setNd] = useState({
 
   const confirmDelete = async () => {
     if (!newsToDelete) return;
-    const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system-b12f.vercel.app/api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    setNewsToDelete(null); fetchNews();
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) { setNewsToDelete(null); fetchNews(); setCustomAlert("تم حذف الخبر بنجاح."); }
+      else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الخبر."); }
+    } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
   };
 
   const handleSubmit = async () => {
@@ -5642,8 +5649,10 @@ const [nd, setNd] = useState({
     setSavingNews(true);
     try {
       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsModalOpen(false); fetchNews(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
-    } finally {
+      if (res.ok) { setIsModalOpen(false); fetchNews(); setCustomAlert(nd.news_id ? "تم تحديث الخبر بنجاح!" : "تم إضافة الخبر بنجاح!"); }
+      else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
+    } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
+    finally {
       setSavingNews(false);
       submitLockRef.current = false;
     }
@@ -5700,7 +5709,7 @@ const [nd, setNd] = useState({
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
     }));
-    await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // تصدير خبر واحد — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -5716,7 +5725,7 @@ const [nd, setNd] = useState({
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
     }];
-    await exportWorkbook([{ name: 'تفاصيل الخبر', ...gridFromRows(newsRow) }], `خبر_${n.area_name || 'محلي'}_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'تفاصيل الخبر', ...gridFromRows(newsRow) }], `خبر_${n.area_name || 'محلي'}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الخبر بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
@@ -6250,6 +6259,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
       }));
       await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}.xlsx`);
+      setCustomAlert("تم تصدير الطقس اليومي بنجاح!");
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
   const handleExportLog = async () => {
@@ -6277,6 +6287,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         .map(k => ({ name: SHIFT_SHEET_NAMES[k], ...gridFromRows(data.filter(r => r.shift === k).map(toLogRow)) }))
         .filter(s => s && s.rows.length > 0);
       await exportWorkbook(sheets, `سجل_الورديات_الثلاث_${filterDate}.xlsx`);
+      setCustomAlert("تم تصدير سجل الورديات بنجاح!");
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
 
@@ -6685,6 +6696,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       setModalOpen(false);
       setNotice(null);
       fetchHandovers();
+      setCustomAlert(editingId ? "تم تحديث سجل التسليم بنجاح!" : "تم إنشاء سجل التسليم بنجاح!");
     } catch { setNotice(T('فشل الاتصال بالخادم', 'Connection failed')); }
     setSaving(false);
     submitLockRef.current = false;
@@ -6696,7 +6708,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     setDeleteTarget(null);
     try {
       const res = await fetch(`${BASE}/api/handovers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } });
-      if (res.ok) fetchHandovers();
+      if (res.ok) { fetchHandovers(); setCustomAlert("تم حذف سجل التسليم بنجاح."); }
       else setNotice(T('تعذر الحذف', 'Delete failed'));
     } catch { setNotice(T('تعذر الحذف', 'Delete failed')); }
   };
@@ -6725,7 +6737,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
   const downloadSingle = async (rec) => {
     await auditDownload('single', rec.handover_id);
-    await exportWorkbook([{ name: T('تسليم', 'Handover'), ...gridFromRows([matrixToExportRow(rec)]) }], `تسليم_تسلم_مشرفين_${rec.handover_date}_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: T('تسليم', 'Handover'), ...gridFromRows([matrixToExportRow(rec)]) }], `تسليم_تسلم_مشرفين_${rec.handover_date}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير التسليم بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const downloadAll = async () => {
@@ -6733,7 +6745,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     if (!handovers.length) { setNotice(T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')); return; }
     // 📌 السجل الشامل: تبويب واحد يجمع كل سجلات الأيام (بدلاً من تبويب مستقل لكل يوم).
     const allRows = handovers.map(r => matrixToExportRow(r));
-    await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   if (!canAccess) {
@@ -7055,9 +7067,12 @@ const [clearAllCode, setClearAllCode] = useState('');
 
   const confirmDelete = async () => {
     if (!disasterToDelete) return;
-    const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system-b12f.vercel.app/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    setDisasterToDelete(null); fetchDisasters();
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) { setDisasterToDelete(null); fetchDisasters(); setCustomAlert("تم حذف الكارثة بنجاح."); }
+      else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الكارثة."); }
+    } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
   };
 
   const handleSubmit = async () => {
@@ -7076,8 +7091,10 @@ const [clearAllCode, setClearAllCode] = useState('');
     setSavingDisaster(true);
     try {
       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsModalOpen(false); fetchDisasters(); } else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
-    } finally {
+      if (res.ok) { setIsModalOpen(false); fetchDisasters(); setCustomAlert(gd.disaster_id ? "تم تحديث الكارثة بنجاح!" : "تم إضافة الكارثة بنجاح!"); }
+      else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
+    } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
+    finally {
       setSavingDisaster(false);
       submitLockRef.current = false;
     }
@@ -7109,7 +7126,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "اسم مدخل الخبر": d.data_entry_name || '',
       "ملاحظات": d.notes || ''
     }));
-    await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 💡 تصدير الكارثة الفردية — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -7132,7 +7149,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "اسم مدخل الخبر": d.data_entry_name || '',
       "ملاحظات": d.notes || ''
     }];
-    await exportWorkbook([{ name: 'تفاصيل الكارثة', ...gridFromRows(disasterRow) }], `كارثة_${d.country || 'عالمية'}_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'تفاصيل الكارثة', ...gridFromRows(disasterRow) }], `كارثة_${d.country || 'عالمية'}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الكارثة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 💡 الإحصائيات تتحدث مع الفلتر
@@ -7489,12 +7506,14 @@ const [clearAllCode, setClearAllCode] = useState('');
       }
       if (parsedData.length > 0) {
         setIsLoading(true);
-        const token = localStorage.getItem('access_token');
-        const res = await fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/global/bulk', {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
-        });
-        if (res.ok) { setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); } 
-        else { setCustomAlert("حدث خطأ أثناء رفع الشيت للسيرفر."); setIsLoading(false); }
+        try {
+          const token = localStorage.getItem('access_token');
+          const res = await fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/global/bulk', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
+          });
+          if (res.ok) { setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); }
+          else { setCustomAlert("حدث خطأ أثناء رفع الشيت للسيرفر."); setIsLoading(false); }
+        } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); setIsLoading(false); }
       }
       e.target.value = '';
     };
@@ -7581,19 +7600,19 @@ const [clearAllCode, setClearAllCode] = useState('');
     } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
   };
 
-  const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
-  const deleteEgyptEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
+  const deleteGlobalEq = async (id) => { try { const token = localStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
+  const deleteEgyptEq = async (id) => { try { const token = localStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
 
   const handleExportGlobalEqs = async () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
     const eqRows = filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleExportEgyptEqs = async () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
     const eqRows = filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
@@ -7968,7 +7987,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     }));
-    await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleDeleteAiNews = (id) => {
@@ -8638,7 +8657,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "عدد ساعات آخر مهمة": fmtHours(p.last_mission_hours, lang),
       "إجمالي الساعات": fmtHours(p.total_hours, lang)
     }));
-    await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${todayFileDate()}.xlsx`);
+    try { await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
