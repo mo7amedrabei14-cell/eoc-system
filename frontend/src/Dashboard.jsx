@@ -6070,9 +6070,6 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   const submitLockRef = useRef(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [clearAllCode, setClearAllCode] = useState('');
-  // 🔒 مسح الكل: حالة مشغول + قفل مضاد للضغط المزدوج (Enter ثم زر) — يمنع تجميد الشاشة أثناء الطلب
-  const [clearingWeather, setClearingWeather] = useState(false);
-  const clearLockRef = useRef(false);
   // 🌤️ تتبع اللمس: فقط المحافظات التي عدّل المستخدم قيمها فعلاً هي ما يُرفع (لا نعيد إرسال الصفوف الجاهزة)
   const touchedRef = useRef(new Set());
   // 📉 قائمة «إنهاء التوقعات» (للأدوار العامة فقط)
@@ -6085,20 +6082,13 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   const wUsername = String(currentUserData?.username || '').toLowerCase();
   const wBranchId = Number(currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19);
   const wBranchName = String(currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام');
-  // الفروع المعيّنة للمستخدم هي المصدر الأوثق لإقليمه (مرآة RLS في main.py):
-  // إذا انحصرت الفروع في إقليم واحد غير المركز العام تحسم الإقليم، ثم الاسم ثم اسم الفرع.
   let userRegion = 'hq';
-  const resolvedBranchRegion = (b) => W_BRANCH_ID_TO_REGION[Number(b && b.branch_id)];
-  const branchRegionSet = new Set(
-    (currentUserData?.branches || []).map(resolvedBranchRegion).filter(r => r && r !== 'hq')
-  );
-  const regionCandidates = [W_BRANCH_ID_TO_REGION[wBranchId], ...branchRegionSet].filter(r => r && r !== 'hq');
-  if (regionCandidates.length && new Set(regionCandidates).size === 1) userRegion = regionCandidates[0];
-  else if (wUsername.includes('delta')) userRegion = 'delta';
+  if (wUsername.includes('delta')) userRegion = 'delta';
   else if (wUsername.includes('canal')) userRegion = 'canal';
   else if (wUsername.includes('upper') || wUsername.includes('saeed')) userRegion = 'saeed';
+  else if (W_BRANCH_ID_TO_REGION[wBranchId]) userRegion = W_BRANCH_ID_TO_REGION[wBranchId];
   else if (W_REGION_NAME_MAP[wNormalize(wBranchName)]) userRegion = W_REGION_NAME_MAP[wNormalize(wBranchName)];
-  // وإلا يبقى 'hq' (المركز العام / غير محدد) — دون زر «إنهاء» إقليمي في هذه الحالة.
+  // وإلا يبقى 'hq' (المركز العام / غير محدد)
 
   // — فروع كل إقليم (محتسبة من الأسماء والرموز) ثم المحافظات الظاهرة للمستخدم
   const wRegionBranches = useMemo(() => {
@@ -6219,10 +6209,11 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
 
   const handleClearAllWeather = () => { if (!isOwner) return; setClearAllCode(''); setShowClearAllConfirm(true); };
   const confirmClearAllWeather = async () => {
-    if (!isOwner || clearingWeather || clearLockRef.current) return;
-    if (clearAllCode !== "301014") { setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات."); return; }
-    clearLockRef.current = true;
-    setClearingWeather(true);
+    if (clearAllCode !== "301014") {
+      setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+      return;
+    }
+    setShowClearAllConfirm(false);
     try {
       const token = localStorage.getItem('access_token');
       const res = await fetch(`${BASE}/api/weather/clear-all`, {
@@ -6233,10 +6224,12 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
       const data = await res.json();
       if (!res.ok) { setCustomAlert(data.detail || 'فشل تنفيذ عملية المسح.'); return; }
       touchedRef.current = new Set();
-      await Promise.all([loadGrid(true), loadDaily(true)]);
       setCustomAlert(`تم مسح جميع توقعات الطقس بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
-    } catch (error) { setCustomAlert('حدث خطأ أثناء الاتصال بالسيرفر.'); }
-    finally { setShowClearAllConfirm(false); clearLockRef.current = false; setClearingWeather(false); }
+      loadGrid(true); loadDaily(true);
+    } catch (error) {
+      console.error(error);
+      setCustomAlert('حدث خطأ أثناء الاتصال بالسيرفر.');
+    }
   };
 
   // — تصديران (المالك فقط) + تسجيل كلٍّ منهما حدثاً مميزاً في سجل النظام
@@ -6392,11 +6385,11 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
                 </>
               )}
             </div>
-          ) : userRegion !== 'hq' ? (
+          ) : (
             <button type="button" onClick={() => handleFinish('region', userRegion)} className="btn-primary shrink-0">
-              <CheckIcon /><span>{T(`إنهاء توقعات ${W_REGION_LABELS[userRegion]}`, 'Finish Forecast')}</span>
+              <CheckIcon /><span>{T(`إنهاء توقعات ${scopeRegionLabel || ''}`, 'Finish Forecast')}</span>
             </button>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -6442,7 +6435,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
                   {WEATHER_METRICS.map(m => (
                     <Fragment key={m.key}>
                       <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('صغرى', 'Min')}</div></th>
-                      <th className="p-3 font-semibold border-l border-[var(--border)]"><span className="opacity-0">·</span><div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
+                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
                     </Fragment>
                   ))}
                 </tr>
@@ -6491,7 +6484,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
                   {WEATHER_METRICS.map(m => (
                     <Fragment key={m.key}>
                       <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('صغرى', 'Min')}</div></th>
-                      <th className="p-3 font-semibold border-l border-[var(--border)]">·<div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
+                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
                     </Fragment>
                   ))}
                 </tr>
@@ -6525,15 +6518,6 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         onCancel={() => { setShowClearAllConfirm(false); setClearAllCode(''); }}
         onConfirm={confirmClearAllWeather}
       />
-
-      {clearingWeather && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[var(--surface-3)] border border-[var(--border)] rounded-2xl px-6 py-5 flex items-center gap-3 shadow-xl animate-fade-in-up">
-            <div className="w-5 h-5 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
-            <span className="text-sm font-bold text-[var(--ink)]">{T('جارٍ مسح جميع التوقعات…', 'Deleting all forecasts…')}</span>
-          </div>
-        </div>
-      )}
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
