@@ -1665,6 +1665,11 @@ useEffect(() => {
     setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x)); // تحديد كمقروء (الجرس)
     closeNotifPanel();
     handleNavigation(tab);
+    // 🗑️ إشعار حذف: السلعة حُذفت فعلًا ولم تعد موجودة في الصفحة — افتح الصفحة فقط
+    //    دون بحث/نزول/تمييز لصف غير موجود، ودون أي تعارض مع حالة الحذف.
+    const actionText = String(n.action || '');
+    const isDeletion = /حذف/gi.test(actionText) || /delete/i.test(actionText);
+    if (isDeletion) return;
     const id = n.entity_id ?? n.mission_id; // mission_id يبقى للتوافق حتى يصل الـ backend الجديد
     if (id != null) setFocusTarget({ tab, type: n.event_type, id, nonce: Date.now() });
   };
@@ -2867,30 +2872,24 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => { fetchMissions(); }, []);
 
-  // 🎯 تتبّع إشعار المهام: ننزِّل فلاتر الشاشة للوضع الافتراضي حتى لا يختفي الصف المستهدف
-  //    (مثل مهمة مكتملة في يوم سابق)، ثم ننزل إليه ونومضه — وإن لم يوجد الصف تُفتح الصفحة فقط (سقوط آمن).
+  // 🎯 تتبّع إشعار المهام: ننزل إلى الصف المستهدف ونومّضه دون لمس فلاتر المستخدم الحالية.
+  //    لو الصف غير ظاهر في العرض الحالي (فلتر/بحث) أو سلعة محذوفة → تُفتح الصفحة فقط (سقوط آمن).
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'missions' || focusTarget.id == null) return;
     const id = focusTarget.id;
-    setFilterDate('');
-    setStatusFilter('all');
-    setMissionViewType('all_types');
-    setSearchTerm('');
-    setActiveRegionTab('all');
-    setFilterBranch('all');
     const start = Date.now();
     const iv = window.setInterval(() => {
       const el = document.getElementById(`focus-row-${id}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         setFocusedRowId(id);
         window.setTimeout(() => setFocusedRowId(null), 2600);
         window.clearInterval(iv);
-      } else if (Date.now() - start > 5500) {
+      } else if (Date.now() - start > 8000) {
         window.clearInterval(iv);
       }
-    }, 120);
+    }, 100);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.nonce]);
@@ -4102,7 +4101,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </tr>
             ) :
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} id={`focus-row-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'} ${focusedRowId === m.mission_id ? ' focus-row' : ''}`}>
+              <tr key={`mission-${m.mission_id}`} id={`focus-row-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'} ${String(focusedRowId) === String(m.mission_id) ? ' focus-row' : ''}`}>
                 <td data-label="تاريخ الإنشاء" className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
                 <td data-label="تاريخ المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
                 <td data-label="تصنيف المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
@@ -5581,17 +5580,16 @@ const [nd, setNd] = useState({
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'local_news' || focusTarget.id == null) return;
     const id = focusTarget.id;
-    setFilterDate(''); setFilterGov('all'); setFilterType('all');
     const start = Date.now();
     const iv = window.setInterval(() => {
       const el = document.getElementById(`focus-row-${id}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         setFocusedRowId(id);
         window.setTimeout(() => setFocusedRowId(null), 2600);
         window.clearInterval(iv);
-      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
-    }, 120);
+      } else if (Date.now() - start > 8000) { window.clearInterval(iv); }
+    }, 100);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.nonce]);
@@ -5890,7 +5888,7 @@ const [nd, setNd] = useState({
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? <TableLoadingRow colSpan={7} /> :
                filteredNews.length > 0 ? filteredNews.map(n => (
-                <tr key={n.news_id} id={`focus-row-${n.news_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === n.news_id ? ' focus-row' : ''}`}>
+                <tr key={n.news_id} id={`focus-row-${n.news_id}`} className={`group hover:bg-[var(--surface-hover)]${String(focusedRowId) === String(n.news_id) ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(n.incident_date)}</td>
                   <td data-label="المحافظة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
                   <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
@@ -6673,12 +6671,12 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     const iv = window.setInterval(() => {
       const el = document.getElementById(`focus-row-${id}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         setFocusedRowId(id);
         window.setTimeout(() => setFocusedRowId(null), 2600);
         window.clearInterval(iv);
-      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
-    }, 120);
+      } else if (Date.now() - start > 8000) { window.clearInterval(iv); }
+    }, 100);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.nonce]);
@@ -6900,7 +6898,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               ) : handovers.length === 0 ? (
                 <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')}</td></tr>
               ) : handovers.map(r => (
-                <tr key={r.handover_id} id={`focus-row-${r.handover_id}`} className={focusedRowId === r.handover_id ? 'focus-row' : undefined}>
+                <tr key={r.handover_id} id={`focus-row-${r.handover_id}`} className={String(focusedRowId) === String(r.handover_id) ? 'focus-row' : undefined}>
                   <td data-label={T('التاريخ', 'Date')} className="font-bold text-[var(--accent)]" dir="ltr">{r.handover_date}</td>
                   <td data-label={T('المحلية/العالمية', 'Local / Global')}>{r.local_news_count || 0} / {r.global_news_count || 0}</td>
                   <td data-label={T('استمارات', 'Forms')}>{r.forms_count || 0}</td>
@@ -7146,17 +7144,16 @@ const [clearAllCode, setClearAllCode] = useState('');
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'global_disasters' || focusTarget.id == null) return;
     const id = focusTarget.id;
-    setFilterDate('');
     const start = Date.now();
     const iv = window.setInterval(() => {
       const el = document.getElementById(`focus-row-${id}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         setFocusedRowId(id);
         window.setTimeout(() => setFocusedRowId(null), 2600);
         window.clearInterval(iv);
-      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
-    }, 120);
+      } else if (Date.now() - start > 8000) { window.clearInterval(iv); }
+    }, 100);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.nonce]);
@@ -7374,7 +7371,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? <TableLoadingRow colSpan={7} label="جاري تحميل البيانات…" /> :
                filteredDisasters.length > 0 ? filteredDisasters.map(d => (
-                <tr key={d.disaster_id} id={`focus-row-${d.disaster_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === d.disaster_id ? ' focus-row' : ''}`}>
+                <tr key={d.disaster_id} id={`focus-row-${d.disaster_id}`} className={`group hover:bg-[var(--surface-hover)]${String(focusedRowId) === String(d.disaster_id) ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(d.incident_date)}</td>
                   <td data-label="الدولة / المكان" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
                   <td data-label="نوع الكارثة" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[var(--accent-softer)]">{d.disaster_type}</td>
@@ -7562,17 +7559,16 @@ const [clearAllCode, setClearAllCode] = useState('');
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'earthquakes' || focusTarget.id == null) return;
     const id = focusTarget.id;
-    setFilterDate(''); setActiveEqTab('all'); setSelectedEqId(null);
     const start = Date.now();
     const iv = window.setInterval(() => {
       const el = document.getElementById(`focus-row-g-${id}`) || document.getElementById(`focus-row-e-${id}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         setFocusedRowId(id);
         window.setTimeout(() => setFocusedRowId(null), 2600);
         window.clearInterval(iv);
-      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
-    }, 120);
+      } else if (Date.now() - start > 8000) { window.clearInterval(iv); }
+    }, 100);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.nonce]);
@@ -7868,7 +7864,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <tbody className="divide-y divide-[var(--border)]">
                   {isLoading ? <TableLoadingRow colSpan={8} /> :
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
-                    <tr key={`tbl-g-${eq.eq_id}`} id={`focus-row-g-${eq.eq_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === eq.eq_id ? ' focus-row' : ''}`}>
+                    <tr key={`tbl-g-${eq.eq_id}`} id={`focus-row-g-${eq.eq_id}`} className={`group hover:bg-[var(--surface-hover)]${String(focusedRowId) === String(eq.eq_id) ? ' focus-row' : ''}`}>
                       <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td data-label="الدولة" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
                       <td data-label="القوة (ريختر)" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
@@ -7906,7 +7902,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <tbody className="divide-y divide-[var(--border)]">
                   {isLoading ? <TableLoadingRow colSpan={6} /> :
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
-                    <tr key={`tbl-e-${eq.eq_id}`} id={`focus-row-e-${eq.eq_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === eq.eq_id ? ' focus-row' : ''}`}>
+                    <tr key={`tbl-e-${eq.eq_id}`} id={`focus-row-e-${eq.eq_id}`} className={`group hover:bg-[var(--surface-hover)]${String(focusedRowId) === String(eq.eq_id) ? ' focus-row' : ''}`}>
                       <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td data-label="القوة (ريختر)" className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td data-label="العمق" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
@@ -8104,17 +8100,16 @@ const [clearAllCode, setClearAllCode] = useState('');
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'ai_news' || focusTarget.id == null) return;
     const id = focusTarget.id;
-    setFilterDate(''); setSelectedCountry('all');
     const start = Date.now();
     const iv = window.setInterval(() => {
       const el = document.getElementById(`focus-row-${id}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
         setFocusedRowId(id);
         window.setTimeout(() => setFocusedRowId(null), 2600);
         window.clearInterval(iv);
-      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
-    }, 120);
+      } else if (Date.now() - start > 8000) { window.clearInterval(iv); }
+    }, 100);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.nonce]);
@@ -8469,7 +8464,7 @@ const totalAiCountries = new Set(
               {tableNews.length > 0 ? tableNews.map(n => {
                  const aiData = extractAiData(n.news_updates);
                  return (
-                <tr key={n.id} id={`focus-row-${n.id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === n.id ? ' focus-row' : ''}`}>
+                <tr key={n.id} id={`focus-row-${n.id}`} className={`group hover:bg-[var(--surface-hover)]${String(focusedRowId) === String(n.id) ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
                   <td data-label="نوع الخبر" className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                     {n.news_type}
