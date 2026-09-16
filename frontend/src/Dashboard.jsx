@@ -3914,19 +3914,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div className="card-surface overflow-hidden flex flex-col min-h-[700px] flex-1">
-      {missionToDelete && (
-        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
-          <div className="bg-[var(--surface-2)] border-2 border-[var(--accent)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
-            <div className="w-20 h-20 bg-[var(--accent-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]"><TrashIcon className="w-10 h-10" /></div>
-            <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
-            <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذه المهمة نهائياً؟</p>
-            <div className="flex gap-4 w-full">
-              <button onClick={() => setMissionToDelete(null)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">إلغاء</button>
-              <button onClick={confirmDeleteMission} className="flex-1 btn-accent px-4 py-3 rounded-xl text-sm font-bold">نعم، احذف</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 🗑️ تأكيد حذف مهمة فردية — التصميم الموحّد (كبسولة علوية عائمة) */}
+      <DangerConfirmModal
+        show={missionToDelete !== null}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذه المهمة نهائياً؟"
+        confirmLabel="نعم، احذف"
+        onCancel={() => setMissionToDelete(null)}
+        onConfirm={confirmDeleteMission}
+      />
 
       <div className="p-5 md:p-6 border-b border-[var(--border)] bg-[var(--surface-2)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex flex-col gap-3 w-full">
@@ -6029,6 +6025,16 @@ const [nd, setNd] = useState({
         </div>
       )}
 
+      {/* 🗑️ تأكيد حذف خبر فردي — التصميم الموحّد (كبسولة علوية عائمة) */}
+      <DangerConfirmModal
+        show={newsToDelete !== null}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذا الخبر نهائياً؟"
+        confirmLabel="نعم، احذف"
+        onCancel={() => setNewsToDelete(null)}
+        onConfirm={confirmDelete}
+      />
+
       {/* -- تصميم التنبيه الإداري الفخم -- */}
       <DangerConfirmModal
   show={showClearAllConfirm}
@@ -7467,19 +7473,15 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
       )}
 
-      {disasterToDelete && (
-        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[110] p-4">
-          <div className="bg-[var(--surface-2)] border-2 border-[var(--accent)]/40 rounded-3xl w-full max-w-md p-8 flex flex-col items-center animate-fade-in-up text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
-            <div className="w-20 h-20 bg-[var(--accent-soft)] rounded-full flex items-center justify-center mb-5 border border-[var(--accent)]/20 text-[var(--accent)]"><TrashIcon className="w-10 h-10" /></div>
-            <h3 className="text-xl font-bold text-white mb-2">تأكيد الحذف</h3>
-            <p className="text-[var(--muted-2)] text-sm mb-8 leading-relaxed">هل أنت متأكد من حذف هذا الرصد نهائياً؟</p>
-            <div className="flex gap-4 w-full">
-              <button onClick={() => setDisasterToDelete(null)} className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">إلغاء</button>
-              <button onClick={confirmDelete} className="flex-1 btn-accent px-4 py-3 rounded-xl text-sm font-bold">نعم، احذف</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 🗑️ تأكيد حذف رصد فردي — التصميم الموحّد (كبسولة علوية عائمة) */}
+      <DangerConfirmModal
+        show={disasterToDelete !== null}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذا الرصد نهائياً؟"
+        confirmLabel="نعم، احذف"
+        onCancel={() => setDisasterToDelete(null)}
+        onConfirm={confirmDelete}
+      />
 
       <DangerConfirmModal
   show={showClearAllConfirm}
@@ -7680,46 +7682,71 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-    
+    // 🔒 قفل متزامن: يمنع الضغط المزدوج/الحفظ المتكرر (نفس نمط باقي الأقسام)
+    if (eqSubmitLockRef.current) return;
+    eqSubmitLockRef.current = true;
+
     // شيلنا الـ eq_id من الـ payload عشان السيرفر يقبله
-    const payload = { 
-      date: gForm.date, time: gForm.time, country: gForm.country, 
-      magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية', 
-      month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM', 
-      region: gForm.region, longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null, 
-      latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null 
+    const payload = {
+      date: gForm.date, time: gForm.time, country: gForm.country,
+      magnitude: parseFloat(gForm.magnitude), status: parseFloat(gForm.magnitude) >= 5.1 ? 'زلزال' : 'هزة أرضية',
+      month: getMonthName(gForm.date), depth_km: gForm.depth_km ? `${gForm.depth_km} KM` : 'KM',
+      region: gForm.region, longitude: gForm.longitude !== '' ? parseFloat(gForm.longitude) : null,
+      latitude: gForm.latitude !== '' ? parseFloat(gForm.latitude) : null
     };
+
+    // ✅ إغلاق المودال فور الضغط على «حفظ» — يمنع تكرار الضغط وإرسال طلبات مكررة
+    setIsGlobalModalOpen(false);
 
     const token = localStorage.getItem('access_token');
     const url = gForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/global';
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
+      if (res.ok) { fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
       else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
     } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
+    finally { eqSubmitLockRef.current = false; }
   };
 
   const handleEgyptSubmit = async () => {
     if (!eForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!eForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
-    
-    const payload = { 
-      date: eForm.date, time: eForm.time, magnitude: parseFloat(eForm.magnitude), 
-      depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', region: eForm.region, 
-      longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null 
+    // 🔒 قفل متزامن: يمنع الضغط المزدوج/الحفظ المتكرر (نفس نمط باقي الأقسام)
+    if (eqSubmitLockRef.current) return;
+    eqSubmitLockRef.current = true;
+
+    const payload = {
+      date: eForm.date, time: eForm.time, magnitude: parseFloat(eForm.magnitude),
+      depth_km: eForm.depth_km ? `${eForm.depth_km} KM` : 'KM', region: eForm.region,
+      longitude: eForm.longitude !== '' ? parseFloat(eForm.longitude) : null, latitude: eForm.latitude !== '' ? parseFloat(eForm.latitude) : null
     };
+
+    // ✅ إغلاق المودال فور الضغط على «حفظ» — يمنع تكرار الضغط وإرسال طلبات مكررة
+    setIsEgyptModalOpen(false);
 
     const token = localStorage.getItem('access_token');
     const url = eForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/egypt';
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
+      if (res.ok) { fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
       else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
     } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
+    finally { eqSubmitLockRef.current = false; }
   };
 
   const deleteGlobalEq = async (id) => { try { const token = localStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
   const deleteEgyptEq = async (id) => { try { const token = localStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
+
+  // 🗑️ تأكيد الحذف الفردي: نرصد الهدف أولاً (عالمي / مصري) ثم ننفّذ بعد موافقة المستخدم
+  const [eqToDelete, setEqToDelete] = useState(null);
+  // 🔒 قفل متزامن للحفظ (عالمي/مصري): يمنع الضغط المزدوج وإرسال طلبات متكررة للسيرفر
+  const eqSubmitLockRef = useRef(false);
+  const confirmDeleteEq = () => {
+    if (!eqToDelete) return;
+    const { kind, id } = eqToDelete;
+    setEqToDelete(null);
+    if (kind === 'global') deleteGlobalEq(id); else deleteEgyptEq(id);
+  };
 
   const handleExportGlobalEqs = async () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
@@ -7875,7 +7902,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                       <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                         <div className="flex justify-center gap-1.5">
                           <button onClick={() => handleEditGlobal(eq)} className="icon-btn" title="فتح التعديل"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => deleteGlobalEq(eq.eq_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
+                          {(isOwner || isSupervisor) && <button onClick={() => setEqToDelete({ kind: 'global', id: eq.eq_id })} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
@@ -7911,7 +7938,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                       <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                         <div className="flex justify-center gap-1.5">
                           <button onClick={() => handleEditEgypt(eq)} className="icon-btn" title="فتح التعديل"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => deleteEgyptEq(eq.eq_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
+                          {(isOwner || isSupervisor) && <button onClick={() => setEqToDelete({ kind: 'egypt', id: eq.eq_id })} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
@@ -7978,6 +8005,16 @@ const [clearAllCode, setClearAllCode] = useState('');
           </div>
         </div>
       )}
+
+      {/* 🗑️ تأكيد حذف زلزال فردي — التصميم الموحّد (كبسولة علوية عائمة) */}
+      <DangerConfirmModal
+  show={eqToDelete !== null}
+  title="تأكيد الحذف"
+  message="هل أنت متأكد من حذف هذا الزلزال نهائياً؟"
+  confirmLabel="نعم، احذف"
+  onCancel={() => setEqToDelete(null)}
+  onConfirm={confirmDeleteEq}
+/>
 
       <DangerConfirmModal
   show={showClearAllConfirm}
