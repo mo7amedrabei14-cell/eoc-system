@@ -613,7 +613,7 @@ const ENGLISH_UI = {
   'المناطق المتوقعة الخطر': 'Areas at risk',
   'الإصابات والتدخلات': 'Injuries and interventions',
   'عدد المفقودين': 'Missing count',
-  'تدخلات الجمعيات الوطنية': 'National Society interventions',
+  'تدخلات الجمعيات ': 'National Society interventions',
   'التوثيق (إلزامي)': 'Documentation (required)',
   'الزلازل العالمية المرصودة': 'Monitored global earthquakes',
   'أقوى هزة / زلزال': 'Strongest tremor / earthquake',

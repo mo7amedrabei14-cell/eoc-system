@@ -5524,8 +5524,8 @@ def weather_finish(payload: WeatherFinishModel, credentials: HTTPAuthorizationCr
                 # الاعتماد الوطني (كل الأقاليم) — أدوار عامة فقط
                 if not is_weather_global(role):
                     raise HTTPException(status_code=403, detail="الاعتماد الوطني متاح لأدوار الإدارة العامة فقط")
-                action = "اعتماد التوقعات الجوية الوطنية"
-                action_text = "تم إكمال التوقعات الجوية الوطنية والموافقة عليها ✅"
+                action = "اعتماد التوقعات الجوية "
+                action_text = "تم إكمال التوقعات الجوية  والموافقة عليها ✅"
             else:
                 region = payload.region
                 if region not in REGION_LABELS:

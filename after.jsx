@@ -447,7 +447,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
       "عدد المصابين": d.injured_count || 0,
       "عدد الوفيات": d.deaths_count || 0,
       "عدد المفقودين": d.missing_count || 0,
-      "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
+      "تدخلات الجمعيات ": d.national_societies_interventions || '',
       "لينك الخبر": d.news_link || '',
       "تطورات الخبر": d.news_updates || '',
       "اسم مدخل الخبر": d.data_entry_name || '',
@@ -472,7 +472,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
       "عدد المصابين": gd.injured_count || 0,
       "عدد الوفيات": gd.deaths_count || 0,
       "عدد المفقودين": gd.missing_count || 0,
-      "تدخلات الجمعيات الوطنية": gd.national_societies_interventions || '',
+      "تدخلات الجمعيات ": gd.national_societies_interventions || '',
       "لينك الخبر": gd.news_link || '',
       "تطورات الخبر": gd.news_updates || '',
       "اسم مدخل الخبر": gd.data_entry_name || '',
@@ -648,7 +648,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
                   <FormGroup label="عدد الوفيات"><StyledInput type="number" value={gd.deaths_count} onChange={e => setGd({...gd, deaths_count: parseInt(e.target.value) || 0})} className="bg-[#c70000]/10 text-red-400" /></FormGroup>
                   <FormGroup label="عدد المصابين"><StyledInput type="number" value={gd.injured_count} onChange={e => setGd({...gd, injured_count: parseInt(e.target.value) || 0})} className="bg-yellow-500/10 text-yellow-400" /></FormGroup>
                   <FormGroup label="عدد المفقودين"><StyledInput type="number" value={gd.missing_count} onChange={e => setGd({...gd, missing_count: parseInt(e.target.value) || 0})} className="bg-gray-500/10 text-gray-300" /></FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="تدخلات الجمعيات الوطنية"><textarea value={gd.national_societies_interventions} onChange={e => setGd({...gd, national_societies_interventions: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-blue-500" rows="2"></textarea></FormGroup></div>
+                  <div className="md:col-span-3"><FormGroup label="تدخلات الجمعيات "><textarea value={gd.national_societies_interventions} onChange={e => setGd({...gd, national_societies_interventions: e.target.value})} className="w-full bg-[#111] border border-white/5 rounded-xl p-3 text-sm outline-none text-white focus:border-blue-500" rows="2"></textarea></FormGroup></div>
                 </div>
               </SectionCard>
 

@@ -650,7 +650,7 @@ const ENGLISH_UI = {
   'المناطق المتوقعة الخطر': 'Areas at risk',
   'الإصابات والتدخلات': 'Injuries and interventions',
   'عدد المفقودين': 'Missing count',
-  'تدخلات الجمعيات الوطنية': 'National Society interventions',
+  'تدخلات الجمعيات ': 'National Society interventions',
   'التوثيق (إلزامي)': 'Documentation (required)',
   'الزلازل العالمية المرصودة': 'Monitored global earthquakes',
   'أقوى هزة / زلزال': 'Strongest tremor / earthquake',
@@ -2675,6 +2675,8 @@ function BranchesAndInventoryView({ branches, theme = 'dark' }) {
 // ==========================================
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar' }) {
   const [customAlert, setCustomAlert] = useState(null);
+  // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -3246,7 +3248,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     try {
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setMissionToDelete(null); fetchMissions(); }
-    } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
+    } catch (error) { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
     finally { submitLockRef.current = false; }
   };
 
@@ -3290,7 +3292,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     }
   };
   const handleExportTableExcel = async () => {
-    if (missionsList.length === 0) return alert("لا توجد مهام لتصديرها.");
+    if (missionsList.length === 0) { setCustomAlert("لا توجد مهام لتصديرها."); return; }
     const missionsSheet = missionsList.map(m => ({
       "كود المهمة": m.mission_code,
       "تصنيف المهمة": m.mission_classification || "عادية",
@@ -4866,22 +4868,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   onConfirm={confirmClearAllMissions}
 />
 
-      {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
-            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
-              <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
-            </div>
-            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
-            <div className="mt-8 flex justify-end">
-              <button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-[0_0_22px_var(--accent-glow)]">
-                علم، جاري التعديل
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
       {/* 📥 تأكيد تنزيل الاستمارة — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
       <DownloadConfirmModal
@@ -5351,6 +5338,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('الكل');
   const [entityFilter, setEntityFilter] = useState('all'); // الفلتر الجديد (الكل، مهام، أخبار)
+  const [customAlert, setCustomAlert] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -5359,6 +5347,9 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       .then(data => { setLogs(data); setIsLoading(false); })
       .catch(() => setIsLoading(false));
   }, []);
+
+  // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
 
   // 🔄 سجل النظام يتحدث لحظياً (silent refetch) عند أي تغيير حقيقي في الـ DB
   const isFirstAuditLive = useRef(true);
@@ -5390,14 +5381,15 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       
       if (!res.ok) {
         const errorData = await res.json();
-        return alert(`خطأ من السيرفر: ${errorData.detail || 'غير معروف'}`);
+        setCustomAlert(`خطأ من السيرفر: ${errorData.detail || 'غير معروف'}`);
+        return;
       }
       
       const allLogs = await res.json();
       
       // بنفلتر البيانات اللي جاية من السيرفر قبل التصدير بناءً على الفلتر اللي اليوزر مختاره
       const logsToExport = allLogs.filter(log => entityFilter === 'all' || log.entity_type === entityFilter);
-      if (logsToExport.length === 0) return alert("لا توجد سجلات لهذا القسم لتصديرها.");
+      if (logsToExport.length === 0) { setCustomAlert("لا توجد سجلات لهذا القسم لتصديرها."); return; }
       
       const excelData = logsToExport.map(log => ({
         "التاريخ والوقت": formatDateTime(log.created_at),
@@ -5417,7 +5409,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
 
       await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${todayFileDate()}.xlsx`);
     } catch (err) {
-      alert("حدث خطأ في الاتصال بالسيرفر أثناء تحميل الأرشيف.");
+      setCustomAlert("حدث خطأ في الاتصال بالسيرفر أثناء تحميل الأرشيف.");
     }
   };
 
@@ -5492,6 +5484,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
           </tbody>
         </table>
       </div>
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
     </div>
   );
 }
@@ -5512,6 +5505,8 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }
   const [filterGov, setFilterGov] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [customAlert, setCustomAlert] = useState(null);
+  // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
@@ -5976,22 +5971,7 @@ const [nd, setNd] = useState({
   onConfirm={confirmClearAllLocalNews}
 />
 
-      {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
-            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
-              <svg className="w-7 h-7 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              <h3 className="text-xl font-bold text-white">تنبيه النظام</h3>
-            </div>
-            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
-            <div className="mt-8 flex justify-end">
-              <button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-[0_0_22px_var(--accent-glow)]">
-                علم، جاري التعديل
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
       {/* 📥 تأكيد تنزيل الخبر — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
       <DownloadConfirmModal
@@ -6209,12 +6189,15 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
     }
   };
 
+  const clearAllBusyRef = useRef(false);
   const handleClearAllWeather = () => { if (!isOwner) return; setClearAllCode(''); setShowClearAllConfirm(true); };
   const confirmClearAllWeather = async () => {
     if (clearAllCode !== "301014") {
       setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
       return;
     }
+    if (clearAllBusyRef.current) return;
+    clearAllBusyRef.current = true;
     setShowClearAllConfirm(false);
     try {
       const token = localStorage.getItem('access_token');
@@ -6227,10 +6210,13 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
       if (!res.ok) { setCustomAlert(data.detail || 'فشل تنفيذ عملية المسح.'); return; }
       touchedRef.current = new Set();
       setCustomAlert(`تم مسح جميع توقعات الطقس بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
+      setClearAllCode('');
       loadGrid(true); loadDaily(true);
     } catch (error) {
       console.error(error);
       setCustomAlert('حدث خطأ أثناء الاتصال بالسيرفر.');
+    } finally {
+      clearAllBusyRef.current = false;
     }
   };
 
@@ -6347,21 +6333,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         </div>
 
         <div className="actionbar flex-wrap">
-          {isOwner && (
-            <>
-              <button type="button" onClick={handleExportDaily} data-tip="تصدير الطقس اليومي إلى Excel" className="action-btn action-btn--ok shrink-0">
-                <ExcelIcon /><span className="hidden md:inline">{T('تصدير الطقس اليومي', 'Export Daily Weather')}</span>
-              </button>
-              <button type="button" onClick={handleExportLog} data-tip="تصدير سجل الورديات الثلاث" className="action-btn action-btn--ok shrink-0">
-                <ExcelIcon /><span className="hidden md:inline">{T('تصدير سجل الورديات الثلاث', 'Export 3-Shift Log')}</span>
-              </button>
-              <button type="button" onClick={handleClearAllWeather} data-tip="مسح جميع التوقعات نهائيًا" className="action-btn action-btn--danger shrink-0">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                <span className="hidden md:inline">{T('مسح الكل', 'Delete All')}</span>
-              </button>
-            </>
-          )}
-          {/* — زر «إنهاء التوقعات» — */}
+          {/* — زر «إنهاء التوقعات» — (في موضعه الأصلي: أول عناصر الشريط) */}
           {isGlobalWeather ? (
             <div className="relative shrink-0">
               <button type="button" onClick={() => setFinishOpen(o => !o)} className="btn-primary">
@@ -6392,7 +6364,21 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
               <CheckIcon /><span>{T(`إنهاء توقعات ${scopeRegionLabel || ''}`, 'Finish Forecast')}</span>
             </button>
           )}
-        </div>
+          {isOwner && (
+            <>
+              <button type="button" onClick={handleExportDaily} data-tip="تصدير الطقس اليومي إلى Excel" className="action-btn action-btn--ok shrink-0">
+                <ExcelIcon /><span className="hidden md:inline">{T('تصدير الطقس اليومي', 'Export Daily Weather')}</span>
+              </button>
+              <button type="button" onClick={handleExportLog} data-tip="تصدير سجل الورديات الثلاث" className="action-btn action-btn--ok shrink-0">
+                <ExcelIcon /><span className="hidden md:inline">{T('تصدير سجل الورديات الثلاث', 'Export 3-Shift Log')}</span>
+              </button>
+              <button type="button" onClick={handleClearAllWeather} data-tip="مسح جميع التوقعات نهائيًا" className="action-btn action-btn--danger shrink-0">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span className="hidden md:inline">{T('مسح الكل', 'Delete All')}</span>
+              </button>
+            </>
+          )}
+          </div>
       </div>
 
       {/* — ملخص دورة التوقعات — */}
@@ -6433,11 +6419,18 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
             <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
                 <tr>
-                  <th className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  <th rowSpan="2" className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  {WEATHER_METRICS.map(m => (
+                    <th key={m.key} colSpan="2" className="p-3 font-semibold border-l border-[var(--border)] text-center">
+                      {T(m.ar, m.en)}{m.unit ? <span className="text-[10px] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
+                    </th>
+                  ))}
+                </tr>
+                <tr>
                   {WEATHER_METRICS.map(m => (
                     <Fragment key={m.key}>
-                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('صغرى', 'Min')}</div></th>
-                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
+                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('صغرى', 'Min')}</th>
+                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('عظمى', 'Max')}</th>
                     </Fragment>
                   ))}
                 </tr>
@@ -6482,11 +6475,18 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
             <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
                 <tr>
-                  <th className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  <th rowSpan="2" className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  {WEATHER_METRICS.map(m => (
+                    <th key={m.key} colSpan="2" className="p-3 font-semibold border-l border-[var(--border)] text-center">
+                      {T(m.ar, m.en)}{m.unit ? <span className="text-[10px] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
+                    </th>
+                  ))}
+                </tr>
+                <tr>
                   {WEATHER_METRICS.map(m => (
                     <Fragment key={m.key}>
-                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('صغرى', 'Min')}</div></th>
-                      <th className="p-3 font-semibold border-l border-[var(--border)]">{T(m.ar, m.en)}<div className="text-[10px] font-normal text-[var(--faint)]">{T('عظمى', 'Max')}</div></th>
+                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('صغرى', 'Min')}</th>
+                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('عظمى', 'Max')}</th>
                     </Fragment>
                   ))}
                 </tr>
@@ -6521,15 +6521,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         onConfirm={confirmClearAllWeather}
       />
 
-      {customAlert && (
-        <div className="pointer-events-none fixed inset-x-0 top-3 z-[9999] flex justify-center px-4">
-          <div className="pointer-events-auto flex items-center gap-3 max-w-lg w-full rounded-xl px-4 py-3 bg-[var(--surface-3)] border border-[var(--accent)]/50 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 18px var(--accent-soft)' }}>
-            <svg className="w-5 h-5 shrink-0 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-            <span className="flex-1 text-sm font-bold text-white whitespace-pre-wrap leading-snug">{customAlert}</span>
-            <button onClick={() => setCustomAlert(null)} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
-          </div>
-        </div>
-      )}
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
     </div>
   );
 }
@@ -7024,6 +7016,8 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [disasterToDelete, setDisasterToDelete] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
+  // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
@@ -7109,7 +7103,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "عدد المصابين": d.injured_count || 0,
       "عدد الوفيات": d.deaths_count || 0,
       "عدد المفقودين": d.missing_count || 0,
-      "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
+      "تدخلات الجمعيات ": d.national_societies_interventions || '',
       "لينك الخبر": d.news_link || '',
       "تطورات الخبر": d.news_updates || '',
       "اسم مدخل الخبر": d.data_entry_name || '',
@@ -7132,7 +7126,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "عدد المصابين": d.injured_count || 0,
       "عدد الوفيات": d.deaths_count || 0,
       "عدد المفقودين": d.missing_count || 0,
-      "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
+      "تدخلات الجمعيات ": d.national_societies_interventions || '',
       "لينك الخبر": d.news_link || '',
       "تطورات الخبر": d.news_updates || '',
       "اسم مدخل الخبر": d.data_entry_name || '',
@@ -7330,7 +7324,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   <FormGroup label="عدد الوفيات"><StyledInput type="number" value={gd.deaths_count} onChange={e => setGd({...gd, deaths_count: parseInt(e.target.value) || 0})} className="bg-[var(--accent-soft)] text-[var(--accent)]" /></FormGroup>
                   <FormGroup label="عدد المصابين"><StyledInput type="number" value={gd.injured_count} onChange={e => setGd({...gd, injured_count: parseInt(e.target.value) || 0})} className="bg-yellow-500/10 text-yellow-400" /></FormGroup>
                   <FormGroup label="عدد المفقودين"><StyledInput type="number" value={gd.missing_count} onChange={e => setGd({...gd, missing_count: parseInt(e.target.value) || 0})} className="bg-[var(--surface-hover)] text-[var(--ink-2)]" /></FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="تدخلات الجمعيات الوطنية"><textarea value={gd.national_societies_interventions} onChange={e => setGd({...gd, national_societies_interventions: e.target.value})} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-white focus:border-blue-500" rows="2"></textarea></FormGroup></div>
+                  <div className="md:col-span-3"><FormGroup label="تدخلات الجمعيات "><textarea value={gd.national_societies_interventions} onChange={e => setGd({...gd, national_societies_interventions: e.target.value})} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-white focus:border-blue-500" rows="2"></textarea></FormGroup></div>
                 </div>
               </SectionCard>
 
@@ -7384,15 +7378,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   onConfirm={confirmClearAllGlobalDisasters}
 />
 
-      {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
-            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4"><AlertIcon /><h3 className="text-xl font-bold text-white">تنبيه النظام</h3></div>
-            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
-            <div className="mt-8 flex justify-end"><button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg">علم، جاري التعديل</button></div>
-          </div>
-        </div>
-      )}
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
       {/* 📥 تأكيد تنزيل الكارثة — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
       <DownloadConfirmModal
@@ -7412,6 +7398,8 @@ function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', theme = 'dark' })
   const [egyptEqs, setEgyptEqs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
+  // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
   
@@ -7868,15 +7856,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   onConfirm={confirmClearAllEarthquakes}
 />
 
-      {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-6 max-w-md w-full text-center" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 24px var(--accent-soft)' }}>
-            <h3 className="text-xl font-bold text-white mb-4">تنبيه</h3>
-            <p className="text-[var(--ink-2)] mb-6">{customAlert}</p>
-            <button onClick={() => setCustomAlert(null)} className="bg-[var(--accent)] px-6 py-2 rounded-xl text-white font-bold">حسناً</button>
-          </div>
-        </div>
-      )}
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
     </div>
   );
 }
@@ -7921,6 +7901,8 @@ function AINewsMonitorView({ branches, isOwner, lang = 'ar', theme = 'dark' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [customAlert, setCustomAlert] = useState(null);
+  // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
@@ -8434,24 +8416,7 @@ const totalAiCountries = new Set(
   onConfirm={confirmClearAllAINews}
 />
 
-      {/* 👇 شاشة التنبيهات عشان الزرار يرد عليك 👇 */}
-      {customAlert && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[var(--surface-3)] border border-purple-500/50 rounded-2xl p-6 max-w-md w-full animate-fade-in-up" style={{ boxShadow: '0 0 0 1px rgba(168,85,247,0.2), 0 0 24px rgba(168,85,247,0.2)' }}>
-            <div className="flex items-center gap-3 mb-4 border-b border-[var(--border)] pb-4">
-              <AIIcon className="w-7 h-7 text-purple-500" />
-              <h3 className="text-xl font-bold text-white">رسالة النظام</h3>
-            </div>
-            <p className="text-[var(--ink-2)] text-sm leading-relaxed whitespace-pre-wrap">{customAlert}</p>
-            <div className="mt-8 flex justify-end">
-              <button onClick={() => setCustomAlert(null)} className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] w-full">
-                علم
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* 👆 نهاية شاشة التنبيهات 👆 */}
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
     </div>
   );
 }
@@ -8580,6 +8545,21 @@ name="clear_all_confirmation"
   );
 }
 
+// 🍡 تنبيه الإجراءات الموحّد — حبة عائمة (pill) خضراء تُعرض أعلى الشاشة دون أن تحجب التفاعل
+function ActionToast({ message, onClose }) {
+  if (!message) return null;
+  return createPortal(
+    <div className="pointer-events-none fixed inset-x-0 top-3 z-[9999] flex justify-center px-4">
+      <div className="pointer-events-auto inline-flex items-center gap-3 rounded-full px-5 py-2.5 max-w-[min(36rem,calc(100vw-2rem))] bg-[var(--surface-3)] border border-[var(--accent)]/50 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 18px var(--accent-soft)' }}>
+        <svg className="w-5 h-5 shrink-0 text-[var(--ok)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+        <span className="text-sm font-bold text-white whitespace-pre-wrap leading-snug">{message}</span>
+        <button onClick={onClose} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // 💡 أيقونات
 const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5 h-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h.01M15 9h.01" /></svg>;
 
@@ -8594,6 +8574,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
   const [filterActive, setFilterActive] = useState('all'); // الكل / في مهمة حاليًا / ليس في مهمة حاليًا
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [customAlert, setCustomAlert] = useState(null);
   const fetchInFlight = useRef(false);
 
   const fetchHR = useCallback(async (silent = false) => {
@@ -8620,6 +8601,9 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
   }, []);
 
   useEffect(() => { fetchHR(); }, [fetchHR]);
+
+  // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
 
   // تحديث لحظي صامت: لو أي مهمة اتغيرت في النظام، ينعكس في "في مهمة حاليًا" فوراً
   useEffect(() => {
@@ -8661,7 +8645,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
   const countInactive = hrList.length - countActive;
 
   const handleExportExcel = async () => {
-    if (filteredHR.length === 0) return alert("لا توجد بيانات لتصديرها.");
+    if (filteredHR.length === 0) { setCustomAlert("لا توجد بيانات لتصديرها."); return; }
     const hrRows = filteredHR.map((p, i) => ({
       "م": i + 1,
       "الاسم الرباعي": p.full_name,
@@ -8803,5 +8787,6 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
           </table>
         </div>
       </div>
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
     </div>
 )}
