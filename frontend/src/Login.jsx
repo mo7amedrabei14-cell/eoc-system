@@ -230,8 +230,8 @@ export default function Login() {
       });
       const data = await response.json();
       if (response.ok) {
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        sessionStorage.setItem('access_token', data.access_token);
+        sessionStorage.setItem('user', JSON.stringify(data.user));
         navigate('/dashboard');
       } else {
         setErrorMsg(language === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid login credentials');

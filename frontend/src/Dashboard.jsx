@@ -1123,7 +1123,7 @@ export default function Dashboard() {
   
   // 💡 1. نسحب اليوزر من اللحظة الأولى (Synchronous) عشان نمنع أي خطفة أو تحميل متأخر
   const [userData, setUserData] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('user')) || null; } 
+    try { return JSON.parse(sessionStorage.getItem('user')) || null; } 
     catch (e) { return null; }
   });
 
@@ -1433,7 +1433,7 @@ useEffect(() => {
 
   // 💡 2. رادار الغرفة المركزية المتطور (قناة ريال تايم)
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (!token || !userData) return;
 
     let pollTimer = null;
@@ -1583,8 +1583,8 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    const token = localStorage.getItem('access_token');
+    const userStr = sessionStorage.getItem('user');
+    const token = sessionStorage.getItem('access_token');
     
     if (userStr && token) {
       try {
@@ -2259,7 +2259,7 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
   const [dailyWeather, setDailyWeather] = useState([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     Promise.all([
       fetch(`https://eoc-system-b12f.vercel.app/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
       fetch(`https://eoc-system-b12f.vercel.app/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
@@ -2277,7 +2277,7 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
 
   // 🌤️ سحب الطقس اليومي: عند تغيير تاريخ الفلتر أو عند وصول تحديث لحظي للطقس
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const d = filterDate || getLocalDate();
     fetch(`${BASE}/api/weather/daily?date=${d}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
@@ -2806,7 +2806,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 4. استخراج بيانات اليوزر وتحديد إقليمه (تأمين ثلاثي الأبعاد ضد أخطاء الكاش)
   let currentUserData = {};
   try {
-    currentUserData = JSON.parse(localStorage.getItem('user') || '{}');
+    currentUserData = JSON.parse(sessionStorage.getItem('user') || '{}');
   } catch (e) {
     currentUserData = {}; // كاش تالف في localStorage — لا نكسر التطبيق
   }
@@ -2861,7 +2861,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchMissions = async (silent = false) => {
     if (!silent) setIsLoading(true);
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
@@ -2918,7 +2918,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (ev.mission_id !== currentMissionData.mission_id) return;
     if (lastSyncedEventRef.current === ev.event_id) return;
     lastSyncedEventRef.current = ev.event_id;
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     fetch(`${BASE}/api/missions/${currentMissionData.mission_id}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
@@ -2966,7 +2966,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     const st = liveMissionStatusRef.current;
     if (!pid || !isModalOpenRef.current) return undefined;
     if (['Completed', 'Cancelled'].includes(st)) return undefined; // جليدت / ملغاة → لا عدّ حي للدقائق
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     let cancelled = false;
     const applyLive = (data) => {
       if (cancelled || !data) return;
@@ -3148,7 +3148,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   
   // 🆕 تحميل كل المتطوعين عبر الفروع لاختيار المشارك (#6)
   const loadAllVolunteers = async () => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/volunteers/all', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setAllVolunteers(await res.json());
@@ -3203,7 +3203,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleViewMission = async (missionId) => {
     if (inFlightMissionRef.current === missionId) return; // منع طلبات مكررة من النقر المزدوج
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     inFlightMissionRef.current = missionId;
     currentMissionIdRef.current = missionId;
     // 💡 فتح فوري: المودال يظهر بسكلتون فوراً ثم تُحقن البيانات — بدون انتظار الشبكة
@@ -3291,7 +3291,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // 🔒 قفل متزامن: mutation واحدة في نفس السياق في كل لحظة (حذف ↔ إرسال/إرجاع...)
     if (submitLockRef.current) return;
     submitLockRef.current = true;
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setMissionToDelete(null); fetchMissions(); setCustomAlert("تم حذف المهمة بنجاح."); }
@@ -3402,7 +3402,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     let detail = m || {};
     if (m && m.mission_id) {
       try {
-        const token = localStorage.getItem('access_token');
+        const token = sessionStorage.getItem('access_token');
         const res = await fetch(`${BASE}/api/missions/${m.mission_id}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) detail = await res.json();
       } catch (e) { /* نُبقي بيانات الصف الحالية عند فشل الشبكة */ }
@@ -3768,7 +3768,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          }))
        };
 
-       const token = localStorage.getItem('access_token');
+       const token = sessionStorage.getItem('access_token');
 
        // Generate or retain idempotency key for this submit attempt
        if (newMissionIdempotencyKey.current === null) {
@@ -5386,7 +5386,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const [customAlert, setCustomAlert] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     fetch('https://eoc-system-b12f.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => { setLogs(data); setIsLoading(false); })
@@ -5400,7 +5400,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const isFirstAuditLive = useRef(true);
   useEffect(() => {
     if (isFirstAuditLive.current) { isFirstAuditLive.current = false; return; }
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     fetch('https://eoc-system-b12f.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => { if (Array.isArray(data)) setLogs(data); })
@@ -5418,7 +5418,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const uniqueActions = ['الكل', ...new Set(logs.map(l => l.action))];
   
   const handleExportLogs = async () => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/audit-logs/export', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -5592,7 +5592,7 @@ const [nd, setNd] = useState({
 
   const fetchNews = async () => {
     setIsLoading(true);
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setNewsList(await res.json());
@@ -5658,7 +5658,7 @@ const [nd, setNd] = useState({
   const confirmDelete = async () => {
     if (!newsToDelete) return;
     try {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setNewsToDelete(null); fetchNews(); setCustomAlert("تم حذف الخبر بنجاح."); }
       else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الخبر."); }
@@ -5701,7 +5701,7 @@ const [nd, setNd] = useState({
       report_to_arrival_duration: nd.is_field_response ? formatDuration(getMinutesDiff(nd.report_time, nd.field_arrival_time)) : ''
     };
 
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const url = nd.news_id ? `https://eoc-system-b12f.vercel.app/api/local-news/${nd.news_id}` : 'https://eoc-system-b12f.vercel.app/api/local-news';
     const method = nd.news_id ? 'PUT' : 'POST';
 
@@ -6137,7 +6137,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   // — تحديد إقليم المستخدم (نفس منطق الواجهة الحالية: username ثم فرعه ثم اسم الفرع)
   const wNormalize = (name) => String(name || '').replace(/[أإآا]/g, 'ا').replace(/[يى]/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, '').trim();
   let currentUserData = {};
-  try { currentUserData = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) { currentUserData = {}; }
+  try { currentUserData = JSON.parse(sessionStorage.getItem('user') || '{}'); } catch (e) { currentUserData = {}; }
   const wUsername = String(currentUserData?.username || '').toLowerCase();
   const wBranchId = Number(currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19);
   const wBranchName = String(currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام');
@@ -6164,7 +6164,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   // — جلب توقعات الوردية المختارة (جدول الإدخال) والطقس اليومي (المجمّع)
   const loadGrid = async (silent = false) => {
     if (!silent) setIsLoading(true);
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch(`${BASE}/api/weather?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
@@ -6192,7 +6192,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
     finally { setIsLoading(false); }
   };
   const loadDaily = async (silent = false) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch(`${BASE}/api/weather/daily?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setDaily(await res.json());
@@ -6235,7 +6235,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
 
     submitLockRef.current = true;
     setSavingWeather(true);
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const bodyRows = dirtyRows.map(r => {
       const o = { branch_id: r.branch_id, shift: r.shift };
       WEATHER_METRICS.forEach(m => {
@@ -6279,7 +6279,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
     clearAllBusyRef.current = true;
     setShowClearAllConfirm(false);
     try {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${BASE}/api/weather/clear-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -6301,7 +6301,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
 
   // — تصديران (المالك فقط) + تسجيل كلٍّ منهما حدثاً مميزاً في سجل النظام
   const logWeatherExport = async (kind) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       await fetch(`${BASE}/api/weather/export-log`, {
         method: 'POST',
@@ -6314,7 +6314,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
     if (!isOwner) return;
     try {
       await logWeatherExport('daily');
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${BASE}/api/weather/daily?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!res.ok) return setCustomAlert('تعذّر جلب الطقس اليومي للتصدير.');
       const data = await res.json();
@@ -6336,7 +6336,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
     if (!isOwner) return;
     try {
       await logWeatherExport('log');
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${BASE}/api/weather?date=${filterDate}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (!res.ok) return setCustomAlert('تعذّر جلب سجل الورديات للتصدير.');
       const data = await res.json();
@@ -6363,7 +6363,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
 
   // — «إنهاء التوقعات»: إقليمي = زر واحد، عام = قائمة من 5 خيارات
   const handleFinish = async (kind, region) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch(`${BASE}/api/weather/finish`, {
         method: 'POST',
@@ -6657,10 +6657,50 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const [deleteTarget, setDeleteTarget] = useState(null);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
+  // 🗑️ نافذة تأكيد مسح جميع التسليمات
+  const [handoverClearAllCode, setHandoverClearAllCode] = useState('');
+  const [showHandoverClearAllConfirm, setShowHandoverClearAllConfirm] = useState(false);
+  // Auto-logout timeout (8 hours of inactivity)
+  useEffect(() => {
+    const timeoutDuration = 8 * 60 * 60 * 1000; // 8 hours
+    let timeoutId;
+
+    const resetTimeout = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(logoutDueToInactivity, timeoutDuration);
+    };
+
+    const logoutDueToInactivity = () => {
+      // Clear authentication token
+      sessionStorage.removeItem('access_token');
+      // Optionally, clear other auth-related items
+      // Redirect to login page - assuming login is at root or /login
+      window.location.href = '/login'; // Adjust if needed
+      // Show a message to the user (optional)
+      setCustomAlert("تم تسجيل خروجك تلقائيًا بسبب عدم النشاط.");
+    };
+
+    // Set initial timeout
+    timeoutId = setTimeout(logoutDueToInactivity, timeoutDuration);
+
+    // Listen for activity events
+    const activityEvents = ['mousemove', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetTimeout);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetTimeout);
+      });
+    };
+  }, []); // Empty run-once effect
 
   const fetchHandovers = useCallback(() => {
     setIsLoading(true);
-    fetch(`${BASE}/api/handovers`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } })
+    fetch(`${BASE}/api/handovers`, { headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token') || ''}` } })
       .then(res => (res.ok ? res.json() : []))
       .then(data => { setHandovers(data || []); setIsLoading(false); })
       .catch(() => setIsLoading(false));
@@ -6711,7 +6751,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     if (latest && latest.issues_text) base.issuesList = splitIssuesText(latest.issues_text);
     setForm(base);
     setModalOpen(true); // يفتح فوراً دون انتظار الشبكة
-    const token = localStorage.getItem('access_token') || '';
+    const token = sessionStorage.getItem('access_token') || '';
     fetch(`${BASE}/api/handovers/by-date/${todayStr()}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => (res.ok ? res.json() : null))
       .then(rec => {
@@ -6753,7 +6793,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     if (!form.handover_date) { setNotice(T('يرجى اختيار التاريخ', 'Please choose a date')); return; }
     setSaving(true);
     submitLockRef.current = true;
-    const token = localStorage.getItem('access_token') || '';
+    const token = sessionStorage.getItem('access_token') || '';
     const { issuesList, followUpsList, ...formRest } = form;
     const normalize = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
     const payload = {
@@ -6790,12 +6830,48 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     submitLockRef.current = false;
   };
 
+  const handleClearAllHandovers = () => {
+    if (!isOwner) return; // Assuming only owners can clear all handovers
+    setHandoverClearAllCode('');
+    setShowHandoverClearAllConfirm(true);
+  };
+
+  const confirmClearAllHandovers = async () => {
+    if (handoverClearAllCode !== "301014") {
+      setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات.");
+      return;
+    }
+    setShowHandoverClearAllConfirm(false);
+    try {
+      const token = sessionStorage.getItem("access_token");
+      const res = await fetch(`${BASE}/api/handovers/clear-all`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ confirmation_code: handoverClearAllCode })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCustomAlert(data.detail || "فشل تنفيذ عملية المسح.");
+        return;
+      }
+      setCustomAlert(`تم مسح جميع سجلات التسليمات بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
+      // Refetch handover data to update UI
+      fetchHandovers();
+    } catch (error) {
+      console.error(error);
+      setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
+    }
+  };
+
   const confirmDelete = async () => {
     if (deleteTarget == null) return;
     const id = deleteTarget;
     setDeleteTarget(null);
     try {
-      const res = await fetch(`${BASE}/api/handovers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` } });
+      const res = await fetch(`${BASE}/api/handovers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token') || ''}` } });
       if (res.ok) { fetchHandovers(); setCustomAlert("تم حذف سجل التسليم بنجاح."); }
       else setNotice(T('تعذر الحذف', 'Delete failed'));
     } catch { setNotice(T('تعذر الحذف', 'Delete failed')); }
@@ -6803,7 +6879,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
   const auditDownload = async (scope, scope_id) => {
     try {
-      await fetch(`${BASE}/api/handovers/export-log`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}` }, body: JSON.stringify({ scope, scope_id }) });
+      await fetch(`${BASE}/api/handovers/export-log`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token') || ''}` }, body: JSON.stringify({ scope, scope_id }) });
     } catch { /* التسجيل في اللوج لا يمنع التنزيل */ }
   };
 
@@ -6869,6 +6945,17 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               >
                 <ExcelIcon />
                 <span className="hidden md:inline">{T('تنزيل السجل الشامل', 'Download Comprehensive Log')}</span>
+              </button>
+            )}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleClearAllHandovers}
+                data-tip={T('حذف جميع التسليمات', 'Delete All Handovers')}
+                className="action-btn action-btn--danger shrink-0"
+              >
+                <TrashIcon className="w-5 h-5" />
+                <span className="hidden md:inline">{T('حذف جميع التسليمات', 'Delete All Handovers')}</span>
               </button>
             )}
             <Magnetic strength={0.16} className="shrink-0">
@@ -6947,7 +7034,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               <SectionCard title={T('التاريخ', 'Date')} icon={<HandoverIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormGroup label={T('تاريخ التسليم', 'Handover date')} invalid={!form.handover_date}>
-                    <SegDateField value={form.handover_date} onChange={e => handleDateChange(e.target.value)} className="field" />
+                    <SegDateField value={form.handover_date} onChange={e => handleDateChange(e.target.value)} className="field" autocapitalize="none" />
                   </FormGroup>
                   <div className="flex flex-col justify-center text-xs text-[var(--muted)]">
                     <span>{T('سجل واحد لكل يوم — عند وجود سجل سابق يتم فتحه للتعديل', 'One record per day — an existing record opens for editing')}</span>
@@ -6959,15 +7046,15 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormGroup label={T('الأخبار المحلية', 'Local news count')}>
                     <StyledInput type="number" min="0" inputMode="numeric" value={form.local_news_count === '' ? '' : form.local_news_count}
-                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, local_news_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, local_news_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} autocapitalize="none" />
                   </FormGroup>
                   <FormGroup label={T('الأخبار العالمية', 'Global news count')}>
                     <StyledInput type="number" min="0" inputMode="numeric" value={form.global_news_count === '' ? '' : form.global_news_count}
-                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, global_news_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, global_news_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} autocapitalize="none" />
                   </FormGroup>
                   <FormGroup label={T('عدد الاستمارات المنشأة', 'Number of forms created')}>
                     <StyledInput type="number" min="0" inputMode="numeric" value={form.forms_count === '' ? '' : form.forms_count}
-                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, forms_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, forms_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} autocapitalize="none" />
                   </FormGroup>
                 </div>
               </SectionCard>
@@ -6979,7 +7066,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                       <span className="w-7 h-7 shrink-0 rounded-lg bg-[var(--surface-3)] border border-[var(--border)] flex items-center justify-center text-xs font-bold text-[var(--accent)]">{i + 1}</span>
                       <StyledInput value={item}
                         onChange={e => { const next = [...form.issuesList]; next[i] = e.target.value; setForm(prev => ({ ...prev, issuesList: next })); }}
-                        placeholder={T(`مشكلة / ملحوظة رقم ${i + 1}...`, `Issue / note #${i + 1}...`)} />
+                        placeholder={T(`مشكلة / ملحوظة رقم ${i + 1}...`, `Issue / note #${i + 1}...`)} autocapitalize="none" />
                       <button type="button" title={T('حذف', 'Remove')}
                         onClick={() => { const next = form.issuesList.filter((_, idx) => idx !== i); setForm(prev => ({ ...prev, issuesList: next.length ? next : [''] })); }}
                         className="p-2.5 rounded-xl hover:bg-[var(--accent-soft)] text-[var(--accent)] active:scale-95 transition"><TrashIcon className="w-5 h-5" /></button>
@@ -6997,11 +7084,11 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormGroup label={T('أجهزة تيترا', 'Tetra devices')}>
                     <StyledInput type="number" min="0" inputMode="numeric" value={form.tetra_count === '' ? '' : form.tetra_count}
-                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, tetra_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, tetra_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} autocapitalize="none" />
                   </FormGroup>
                   <FormGroup label={T('أجهزة هواوي', 'Huawei devices')}>
                     <StyledInput type="number" min="0" inputMode="numeric" value={form.huawei_count === '' ? '' : form.huawei_count}
-                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, huawei_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} />
+                      onFocus={e => e.target.select()} onChange={e => setForm(prev => ({ ...prev, huawei_count: e.target.value === '' ? '' : Math.max(0, Number(e.target.value)) }))} autocapitalize="none" />
                   </FormGroup>
                 </div>
               </SectionCard>
@@ -7025,7 +7112,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                           {HANDOVER_DEPTS.map(d => (
                             <td key={d.key} data-label={lang === 'ar' ? d.ar : d.en} className="p-2">
                               <StyledInput type="number" min="0" inputMode="numeric" value={form.shift_matrix[`${s.key}_${d.key}`] === '' ? '' : (form.shift_matrix[`${s.key}_${d.key}`] ?? 0)}
-                                onFocus={e => e.target.select()} onChange={e => onMatrixChange(s.key, d.key, e.target.value)} className="!py-1.5 !px-2 text-center w-24 mx-auto" />
+                                onFocus={e => e.target.select()} onChange={e => onMatrixChange(s.key, d.key, e.target.value)} className="!py-1.5 !px-2 text-center w-24 mx-auto" autocapitalize="none" />
                             </td>
                           ))}
                           <td data-label={T('الإجمالي', 'Total')} className="p-2 text-center font-bold text-[var(--accent)]">{shiftTotal(s.key)}</td>
@@ -7048,7 +7135,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
                       <span className="w-7 h-7 shrink-0 rounded-lg bg-[var(--surface-3)] border border-[var(--border)] flex items-center justify-center text-xs font-bold text-[var(--accent)]">{i + 1}</span>
                       <StyledInput value={item}
                         onChange={e => { const next = [...form.followUpsList]; next[i] = e.target.value; setForm(prev => ({ ...prev, followUpsList: next })); }}
-                        placeholder={T(`متابعة رقم ${i + 1}...`, `Follow-up #${i + 1}...`)} />
+                        placeholder={T(`متابعة رقم ${i + 1}...`, `Follow-up #${i + 1}...`)} autocapitalize="none" />
                       <button type="button" title={T('حذف', 'Remove')}
                         onClick={() => { const next = form.followUpsList.filter((_, idx) => idx !== i); setForm(prev => ({ ...prev, followUpsList: next.length ? next : [''] })); }}
                         className="p-2.5 rounded-xl hover:bg-[var(--accent-soft)] text-[var(--accent)] active:scale-95 transition"><TrashIcon className="w-5 h-5" /></button>
@@ -7089,6 +7176,20 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
         title={T('تنزيل سجل التسليم', 'Download record')}
         onCancel={() => setDownloadTarget(null)}
         onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); downloadSingle(rec); }}
+      />
+      {/* 🗑️ نافذة تأكيد مسح جميع التسليمات */}
+      <DangerConfirmModal
+        show={showHandoverClearAllConfirm}
+        title={T('تأكيد الحذف', 'Confirm Deletion')}
+        message={T('سيتم حذف جميع سجلات التسليمات نهائياً. هذا الإجراء لا يمكن التراجع عنه.', 'All handover records will be permanently deleted. This action cannot be undone.')}
+        confirmationCode={handoverClearAllCode}
+        onConfirmationCodeChange={setHandoverClearAllCode}
+        showConfirmationInput={true}
+        onCancel={() => {
+          setShowHandoverClearAllConfirm(false);
+          setHandoverClearAllCode('');
+        }}
+        onConfirm={confirmClearAllHandovers}
       />
     </div>
   );
@@ -7137,7 +7238,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
   const fetchDisasters = async () => {
     setIsLoading(true);
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setDisasters(await res.json());
@@ -7174,7 +7275,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   const confirmDelete = async () => {
     if (!disasterToDelete) return;
     try {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setDisasterToDelete(null); fetchDisasters(); setCustomAlert("تم حذف الكارثة بنجاح."); }
       else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الكارثة."); }
@@ -7189,7 +7290,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     if (!gd.disaster_type) return setCustomAlert("عفواً، يجب تحديد نوع الكارثة.");
 
     const payload = { ...gd, incident_month: getMonthName(gd.incident_date) };
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const url = gd.disaster_id ? `https://eoc-system-b12f.vercel.app/api/global-disasters/${gd.disaster_id}` : 'https://eoc-system-b12f.vercel.app/api/global-disasters';
     const method = gd.disaster_id ? 'PUT' : 'POST';
 
@@ -7546,7 +7647,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
   const fetchEarthquakes = async () => {
     setIsLoading(true);
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       const resG = await fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } });
       if (resG.ok) setGlobalEqs(await resG.json());
@@ -7627,7 +7728,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       if (parsedData.length > 0) {
         setIsLoading(true);
         try {
-          const token = localStorage.getItem('access_token');
+          const token = sessionStorage.getItem('access_token');
           const res = await fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/global/bulk', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
           });
@@ -7698,7 +7799,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     // ✅ إغلاق المودال فور الضغط على «حفظ» — يمنع تكرار الضغط وإرسال طلبات مكررة
     setIsGlobalModalOpen(false);
 
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const url = gForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/global';
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
@@ -7724,7 +7825,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     // ✅ إغلاق المودال فور الضغط على «حفظ» — يمنع تكرار الضغط وإرسال طلبات مكررة
     setIsEgyptModalOpen(false);
 
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     const url = eForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/egypt';
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
@@ -7734,8 +7835,8 @@ const [clearAllCode, setClearAllCode] = useState('');
     finally { eqSubmitLockRef.current = false; }
   };
 
-  const deleteGlobalEq = async (id) => { try { const token = localStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
-  const deleteEgyptEq = async (id) => { try { const token = localStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
+  const deleteGlobalEq = async (id) => { try { const token = sessionStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
+  const deleteEgyptEq = async (id) => { try { const token = sessionStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
 
   // 🗑️ تأكيد الحذف الفردي: نرصد الهدف أولاً (عالمي / مصري) ثم ننفّذ بعد موافقة المستخدم
   const [eqToDelete, setEqToDelete] = useState(null);
@@ -8119,7 +8220,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   useEffect(() => {
     const fetchAiNews = async () => {
       try {
-        const token = localStorage.getItem('access_token');
+        const token = sessionStorage.getItem('access_token');
         const res = await fetch('https://eoc-system-b12f.vercel.app/api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) setAiNewsList(await res.json());
       } catch (err) {}
@@ -8174,7 +8275,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setAiNewsToDelete(null);
 
     try {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch(`https://eoc-system-b12f.vercel.app/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         setCustomAlert("تم الحذف بنجاح!");
@@ -8194,7 +8295,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     
     setIsScanning(true);
     try {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/trigger-ai-radar', {
         method: 'POST',
         headers: { 
@@ -8753,7 +8854,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
     if (fetchInFlight.current) return; // منع التداخل / الطلبات المكررة
     fetchInFlight.current = true;
     if (silent) setIsRefreshing(true);
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     try {
       // fix #10 (live-HR): نفس إطار ساعات كل استعلام حي — ساعة العميل المحلية (مصر).
       // غيابها يجعل خلفية HR تُحسب بـLOCALTIMESTAMP (GMT على خادم Neon) فينقلب الفرق
