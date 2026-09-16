@@ -1505,6 +1505,7 @@ useEffect(() => {
         isAi,
         event_type: e.event_type,
         mission_id: e.mission_id,
+        entity_id: e.entity_id ?? null,
         created_at: e.created_at,
         // ⏱️ انقضاء الموجة يُدار مركزيًا عبر shownAt (لا يوجد timer خاص بكل توست)
       }].slice(-40));
@@ -1520,6 +1521,7 @@ useEffect(() => {
           actor_name: e.actor_name,
           details: typeof e.details === 'object' ? JSON.stringify(e.details) : String(e.details || ''),
           mission_id: e.mission_id,
+          entity_id: e.entity_id ?? null,
           created_at: e.created_at,
           read: false,
         }, ...prev].slice(0, 40);
@@ -1650,6 +1652,23 @@ useEffect(() => {
     }
   };
 
+  // 🎯 «عمق التتبّع»: يخبر الشاشة المفتوحة أيُّ صفٍ هو مصدر الإشعار حتى تنزل إليه وتومضه.
+  //    - tab/type/id = الوجهة وصفّها، nonce = عداد يضمن إعادة الاشتعال لنفس الصف مرتين
+  //    - id يقبل null (إشعار بلا entity_id) → تُفتح الصفحة فقط دون أي تتبع (سقوط آمن).
+  const [focusTarget, setFocusTarget] = useState(null);
+  const EVENT_TAB_MAP = { mission: 'missions', local_news: 'local_news', global_disaster: 'global_disasters', earthquake: 'earthquakes', ai_news: 'ai_news', handover: 'handover', weather: 'weather', audit: 'audit' };
+
+  // فتح الإشعار (توست أو جرس): تنقّل للصفحة، واطلب تتبّع الصف لو لنا معرف.
+  const handleNotificationOpen = (n) => {
+    if (!n) return;
+    const tab = EVENT_TAB_MAP[n.event_type] || 'missions';
+    setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x)); // تحديد كمقروء (الجرس)
+    closeNotifPanel();
+    handleNavigation(tab);
+    const id = n.entity_id ?? n.mission_id; // mission_id يبقى للتوافق حتى يصل الـ backend الجديد
+    if (id != null) setFocusTarget({ tab, type: n.event_type, id, nonce: Date.now() });
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
@@ -1659,15 +1678,15 @@ useEffect(() => {
   const renderContent = () => {
     switch (activeTab) {
       case 'home': return <MemoHomeView branches={branchesList} theme={theme} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
-      case 'ai_news': return <MemoAINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} theme={theme} />;
+      case 'ai_news': return <MemoAINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} theme={theme} focusTarget={focusTarget} />;
       case 'weather': return <MemoWeatherForecastView branches={branchesList} isOwner={isOwner} isJoker={isJoker} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.weather} />;
-      case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} />;
-      case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
-      case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
-      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} theme={theme} />;
+      case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
+      case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
+      case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
+      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} theme={theme} focusTarget={focusTarget} />;
       case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} theme={theme} />;
       case 'handover': return (isOwner || isSupervisor)
-        ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} />
+        ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} focusTarget={focusTarget} />
         : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
       case 'audit': return <MemoAuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <MemoHumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
@@ -1770,7 +1789,7 @@ useEffect(() => {
           </button>
         )}
         {[...visibleToasts, ...closingToasts].map(toastItem => (
-          <div key={toastItem.id} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto ${toastItem.closing ? 'toast-item-closing' : ''} ${toastItem.isAi ? 'toast-item-ai !border-[var(--ai)]/50' : ''}`}>
+          <div key={toastItem.id} onClick={() => { dismissToast(toastItem.id); handleNotificationOpen(toastItem); }} className={`toast-item p-4 flex items-start gap-4 relative overflow-hidden pointer-events-auto cursor-pointer ${toastItem.closing ? 'toast-item-closing' : ''} ${toastItem.isAi ? 'toast-item-ai !border-[var(--ai)]/50' : ''}`}>
             <div className={`absolute start-0 top-0 bottom-0 w-1.5 ${toastItem.isAi ? 'bg-[var(--ai)]' : 'bg-[var(--accent)]'} animate-pulse`}></div>
             <div className={`w-10 h-10 mt-1 ${toastItem.isAi ? 'bg-[var(--ai-soft)] text-[var(--ai)] border-[var(--ai)]/30' : 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30'} rounded-full flex items-center justify-center border shrink-0`}>
               {toastItem.isAi ? <AIIcon className="w-5 h-5 animate-pulse" /> : <AlertIcon className="w-5 h-5 animate-bounce" />}
@@ -1779,7 +1798,7 @@ useEffect(() => {
               <h4 className="text-[var(--ink)] font-bold text-sm flex justify-between items-center">
                 <span className="truncate">{toastItem.isAi ? 'رصد آلي جديد (AI) 🤖' : `تحديث بواسطة: `} {!toastItem.isAi && <span className="text-[var(--accent)] ms-1">{toastItem.user}</span>}</span>
                 <button
-                  onClick={() => dismissToast(toastItem.id)}
+                  onClick={(e) => { e.stopPropagation(); dismissToast(toastItem.id); }}
                   aria-label={language === 'en' ? 'Dismiss notification' : 'إغلاق الإشعار'}
                   title={language === 'en' ? 'Dismiss' : 'إغلاق'}
                   className="text-[var(--faint)] hover:text-[var(--ink)] transition-colors shrink-0"
@@ -2066,7 +2085,7 @@ useEffect(() => {
             <button
               key={n.id}
               type="button"
-              onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))}
+              onClick={() => handleNotificationOpen(n)}
               className={`notif-item notif-item-in w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)] ' + (notifications.find(x => !x.read)?.id === n.id ? 'update-glow-notif' : '')}`}
               style={{ animationDelay: `${Math.min(i, 8) * 42}ms` }}
             >
@@ -2674,7 +2693,7 @@ function BranchesAndInventoryView({ branches, theme = 'dark' }) {
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
-function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar' }) {
+function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
@@ -2847,6 +2866,34 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   useEffect(() => { fetchMissions(); }, []);
+
+  // 🎯 تتبّع إشعار المهام: ننزِّل فلاتر الشاشة للوضع الافتراضي حتى لا يختفي الصف المستهدف
+  //    (مثل مهمة مكتملة في يوم سابق)، ثم ننزل إليه ونومضه — وإن لم يوجد الصف تُفتح الصفحة فقط (سقوط آمن).
+  const [focusedRowId, setFocusedRowId] = useState(null);
+  useEffect(() => {
+    if (!focusTarget || focusTarget.tab !== 'missions' || focusTarget.id == null) return;
+    const id = focusTarget.id;
+    setFilterDate('');
+    setStatusFilter('all');
+    setMissionViewType('all_types');
+    setSearchTerm('');
+    setActiveRegionTab('all');
+    setFilterBranch('all');
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const el = document.getElementById(`focus-row-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFocusedRowId(id);
+        window.setTimeout(() => setFocusedRowId(null), 2600);
+        window.clearInterval(iv);
+      } else if (Date.now() - start > 5500) {
+        window.clearInterval(iv);
+      }
+    }, 120);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.nonce]);
 
   // 🔄 لو التاب ده مفتوح فعلاً وحصل تحديث لحظي (زي المتطوع بعت استمارة، أو الجوكر رجعها)
   // نعمل Refetch تلقائي (silent) من غير ما ننتظر المستخدم يعمل Refresh يدوي — وبدون وميض سكلتونز.
@@ -4055,7 +4102,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               </tr>
             ) :
             filteredMissions.length > 0 ? filteredMissions.map(m => (
-              <tr key={`mission-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'}`}>
+              <tr key={`mission-${m.mission_id}`} id={`focus-row-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'} ${focusedRowId === m.mission_id ? ' focus-row' : ''}`}>
                 <td data-label="تاريخ الإنشاء" className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
                 <td data-label="تاريخ المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
                 <td data-label="تصنيف المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
@@ -5496,7 +5543,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
 // ==========================================
 // 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
 // ==========================================
-function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer }) {
+function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer, focusTarget = null }) {
   const [newsList, setNewsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -5529,6 +5576,25 @@ const [nd, setNd] = useState({
   });
 
   useEffect(() => { fetchNews(); }, []);
+
+  const [focusedRowId, setFocusedRowId] = useState(null);
+  useEffect(() => {
+    if (!focusTarget || focusTarget.tab !== 'local_news' || focusTarget.id == null) return;
+    const id = focusTarget.id;
+    setFilterDate(''); setFilterGov('all'); setFilterType('all');
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const el = document.getElementById(`focus-row-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFocusedRowId(id);
+        window.setTimeout(() => setFocusedRowId(null), 2600);
+        window.clearInterval(iv);
+      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
+    }, 120);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.nonce]);
 
   const fetchNews = async () => {
     setIsLoading(true);
@@ -5824,7 +5890,7 @@ const [nd, setNd] = useState({
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? <TableLoadingRow colSpan={7} /> :
                filteredNews.length > 0 ? filteredNews.map(n => (
-                <tr key={n.news_id} className="group hover:bg-[var(--surface-hover)]">
+                <tr key={n.news_id} id={`focus-row-${n.news_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === n.news_id ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(n.incident_date)}</td>
                   <td data-label="المحافظة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
                   <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
@@ -6561,7 +6627,7 @@ const HANDOVER_DEPT_AR = { relief: 'الإغاثة', youth: 'الشباب وال
 const splitIssuesText = (text) => { const arr = String(text || '').split('\n').map(s => s.trim()).filter(Boolean); return arr.length ? arr : ['']; };
 const joinIssuesList = (list) => (list || []).map(s => (s || '').trim()).filter(Boolean).join('\n');
 
-function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 0 }) {
+function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 0, focusTarget = null }) {
   const T = (ar, en) => (lang === 'ar' ? ar : en);
   const canAccess = isOwner || isSupervisor;
 
@@ -6598,6 +6664,24 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
   useEffect(() => { if (canAccess) fetchHandovers(); }, [canAccess, fetchHandovers]);
   useEffect(() => { if (canAccess && liveUpdateVersion > 0) fetchHandovers(); }, [liveUpdateVersion, canAccess, fetchHandovers]);
+
+  const [focusedRowId, setFocusedRowId] = useState(null);
+  useEffect(() => {
+    if (!focusTarget || focusTarget.tab !== 'handover' || focusTarget.id == null) return;
+    const id = focusTarget.id;
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const el = document.getElementById(`focus-row-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFocusedRowId(id);
+        window.setTimeout(() => setFocusedRowId(null), 2600);
+        window.clearInterval(iv);
+      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
+    }, 120);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.nonce]);
 
   const loadIntoForm = (rec) => {
     setForm({
@@ -6816,7 +6900,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
               ) : handovers.length === 0 ? (
                 <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')}</td></tr>
               ) : handovers.map(r => (
-                <tr key={r.handover_id}>
+                <tr key={r.handover_id} id={`focus-row-${r.handover_id}`} className={focusedRowId === r.handover_id ? 'focus-row' : undefined}>
                   <td data-label={T('التاريخ', 'Date')} className="font-bold text-[var(--accent)]" dir="ltr">{r.handover_date}</td>
                   <td data-label={T('المحلية/العالمية', 'Local / Global')}>{r.local_news_count || 0} / {r.global_news_count || 0}</td>
                   <td data-label={T('استمارات', 'Forms')}>{r.forms_count || 0}</td>
@@ -7009,7 +7093,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 // ==========================================
 // 7. شاشة الكوارث العالمية (Global Disasters)
 // ==========================================
-function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
+function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer, focusTarget = null }) {
   // 💡 1. تعريف دوال التاريخ في أول الشاشة عشان الكل يشوفها بدون تكرار
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => {
@@ -7057,6 +7141,25 @@ const [clearAllCode, setClearAllCode] = useState('');
   };
 
   useEffect(() => { fetchDisasters(); }, []);
+
+  const [focusedRowId, setFocusedRowId] = useState(null);
+  useEffect(() => {
+    if (!focusTarget || focusTarget.tab !== 'global_disasters' || focusTarget.id == null) return;
+    const id = focusTarget.id;
+    setFilterDate('');
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const el = document.getElementById(`focus-row-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFocusedRowId(id);
+        window.setTimeout(() => setFocusedRowId(null), 2600);
+        window.clearInterval(iv);
+      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
+    }, 120);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.nonce]);
 
   const handleCreateNew = () => {
     setGd({ disaster_id: null, incident_date: getLocalDate(), incident_month: '', news_title: '', country: '', disaster_type: '', affected_areas: '', at_risk_areas: '', source_name: '', injured_count: 0, deaths_count: 0, missing_count: 0, national_societies_interventions: '', news_link: '', news_updates: '', data_entry_name: '', notes: '' });
@@ -7271,7 +7374,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             <tbody className="divide-y divide-[var(--border)]">
               {isLoading ? <TableLoadingRow colSpan={7} label="جاري تحميل البيانات…" /> :
                filteredDisasters.length > 0 ? filteredDisasters.map(d => (
-                <tr key={d.disaster_id} className="group hover:bg-[var(--surface-hover)]">
+                <tr key={d.disaster_id} id={`focus-row-${d.disaster_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === d.disaster_id ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(d.incident_date)}</td>
                   <td data-label="الدولة / المكان" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
                   <td data-label="نوع الكارثة" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[var(--accent-softer)]">{d.disaster_type}</td>
@@ -7409,7 +7512,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 }
 
 
-function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', theme = 'dark' }) {
+function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', theme = 'dark', focusTarget = null }) {
   const [activeEqTab, setActiveEqTab] = useState('all'); 
   const [globalEqs, setGlobalEqs] = useState([]);
   const [egyptEqs, setEgyptEqs] = useState([]);
@@ -7454,6 +7557,25 @@ const [clearAllCode, setClearAllCode] = useState('');
   };
 
   useEffect(() => { fetchEarthquakes(); }, []);
+
+  const [focusedRowId, setFocusedRowId] = useState(null);
+  useEffect(() => {
+    if (!focusTarget || focusTarget.tab !== 'earthquakes' || focusTarget.id == null) return;
+    const id = focusTarget.id;
+    setFilterDate(''); setActiveEqTab('all'); setSelectedEqId(null);
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const el = document.getElementById(`focus-row-g-${id}`) || document.getElementById(`focus-row-e-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFocusedRowId(id);
+        window.setTimeout(() => setFocusedRowId(null), 2600);
+        window.clearInterval(iv);
+      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
+    }, 120);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.nonce]);
 
   const filteredGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
   const filteredEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
@@ -7746,7 +7868,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <tbody className="divide-y divide-[var(--border)]">
                   {isLoading ? <TableLoadingRow colSpan={8} /> :
                    tableGlobalEqs.length > 0 ? tableGlobalEqs.map(eq => (
-                    <tr key={`tbl-g-${eq.eq_id}`} className="group hover:bg-[var(--surface-hover)]">
+                    <tr key={`tbl-g-${eq.eq_id}`} id={`focus-row-g-${eq.eq_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === eq.eq_id ? ' focus-row' : ''}`}>
                       <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td data-label="الدولة" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
                       <td data-label="القوة (ريختر)" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
@@ -7784,7 +7906,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <tbody className="divide-y divide-[var(--border)]">
                   {isLoading ? <TableLoadingRow colSpan={6} /> :
                    tableEgyptEqs.length > 0 ? tableEgyptEqs.map(eq => (
-                    <tr key={`tbl-e-${eq.eq_id}`} className="group hover:bg-[var(--surface-hover)]">
+                    <tr key={`tbl-e-${eq.eq_id}`} id={`focus-row-e-${eq.eq_id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === eq.eq_id ? ' focus-row' : ''}`}>
                       <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td data-label="القوة (ريختر)" className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td data-label="العمق" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
@@ -7904,7 +8026,7 @@ const aiIncidentIcon = new L.DivIcon({
 // ==========================================
 // 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor - God Mode)
 // ==========================================
-function AINewsMonitorView({ branches, isOwner, lang = 'ar', theme = 'dark' }) {
+function AINewsMonitorView({ branches, isOwner, lang = 'ar', theme = 'dark', focusTarget = null }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => {
     if (!dateStr) return '';
@@ -7977,6 +8099,25 @@ const [clearAllCode, setClearAllCode] = useState('');
     const interval = setInterval(fetchAiNews, 15000); 
     return () => clearInterval(interval);
   }, []);
+
+  const [focusedRowId, setFocusedRowId] = useState(null);
+  useEffect(() => {
+    if (!focusTarget || focusTarget.tab !== 'ai_news' || focusTarget.id == null) return;
+    const id = focusTarget.id;
+    setFilterDate(''); setSelectedCountry('all');
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const el = document.getElementById(`focus-row-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setFocusedRowId(id);
+        window.setTimeout(() => setFocusedRowId(null), 2600);
+        window.clearInterval(iv);
+      } else if (Date.now() - start > 5500) { window.clearInterval(iv); }
+    }, 120);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.nonce]);
 
   const handleEdit = (n) => { setForm({...n}); setIsModalOpen(true); };
 
@@ -8328,7 +8469,7 @@ const totalAiCountries = new Set(
               {tableNews.length > 0 ? tableNews.map(n => {
                  const aiData = extractAiData(n.news_updates);
                  return (
-                <tr key={n.id} className="group hover:bg-[var(--surface-hover)]">
+                <tr key={n.id} id={`focus-row-${n.id}`} className={`group hover:bg-[var(--surface-hover)]${focusedRowId === n.id ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
                   <td data-label="نوع الخبر" className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                     {n.news_type}

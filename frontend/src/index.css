@@ -1504,6 +1504,10 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* وميض خفيف على صف المهمة المتغيّرة لحظياً */
 .mission-flash-row td { animation: mission-flash 2.3s var(--ease-out); }
 
+/* ── تمييز صف الإشعار المفتوح: وميض ثابت = "ده الإشعار" ──
+   يُفعَّل عند النقر على إشعار (توست أو جرس) للتنقل للصف وتمييزه */
+.focus-row td { animation: mission-flash 2.3s var(--ease-out); }
+
 /* ── صف "في مهمة حاليًا" في سجل القوة البشرية: تمييز برتقالي فوري ──
    يُطبق تلقائياً من حالة الـ DB لحظياً ويُرفع فور خروج الشخص من المهمة */
 .hr-active-row,

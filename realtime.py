@@ -76,6 +76,7 @@ def create_realtime_event(
     action: str,
     actor_user_id: Optional[int] = None,
     mission_id: Optional[int] = None,
+    entity_id: Optional[int] = None,
     details: Optional[Dict[str, Any]] = None,
     target_user_id: Optional[int] = None,
     resolve_creator: bool = False,
@@ -102,9 +103,9 @@ def create_realtime_event(
     cursor.execute(
         """
         INSERT INTO realtime_events (
-            event_type, action, actor_user_id, mission_id, target_user_id, details, created_at
+            event_type, action, actor_user_id, mission_id, entity_id, target_user_id, details, created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
+        VALUES (%s, %s, %s, %s, %s, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
         RETURNING event_id, created_at;
         """,
         (
@@ -112,6 +113,7 @@ def create_realtime_event(
             action,
             actor_user_id,
             mission_id,
+            entity_id,
             target_user_id,
             Jsonb(details) if details is not None else None,
         ),

@@ -78,10 +78,14 @@ def ensure_schema():
                     actor_user_id  INTEGER,
                     target_user_id INTEGER,
                     mission_id     INTEGER,
+                    entity_id      INTEGER,
                     details        JSONB,
                     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+            cursor.execute(
+                "ALTER TABLE realtime_events ADD COLUMN IF NOT EXISTS entity_id INTEGER;"
+            )
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS realtime_events_id_idx ON realtime_events (event_id);"
             )
@@ -3461,7 +3465,7 @@ def get_realtime_events(
                 cursor.execute(
                     """
                     SELECT e.event_id, e.event_type, e.action, e.actor_user_id,
-                           u.full_name, e.mission_id, e.details, e.target_user_id, e.created_at
+                           u.full_name, e.mission_id, e.entity_id, e.details, e.target_user_id, e.created_at
                     FROM realtime_events e
                     LEFT JOIN users u ON e.actor_user_id = u.user_id
                     WHERE e.event_id > %s
@@ -3476,7 +3480,7 @@ def get_realtime_events(
                 cursor.execute(
                     """
                     SELECT e.event_id, e.event_type, e.action, e.actor_user_id,
-                           u.full_name, e.mission_id, e.details, e.target_user_id, e.created_at
+                           u.full_name, e.mission_id, e.entity_id, e.details, e.target_user_id, e.created_at
                     FROM realtime_events e
                     LEFT JOIN users u ON e.actor_user_id = u.user_id
                     WHERE e.event_id > %s
@@ -3512,9 +3516,10 @@ def get_realtime_events(
                     "actor_user_id": r[3],
                     "actor_name": r[4] or "نظام",
                     "mission_id": r[5],
-                    "details": r[6].get("action_text", str(r[6])) if isinstance(r[6], dict) else str(r[6] or ""),
-                    "target_user_id": r[7],
-                    "created_at": r[8].strftime("%Y-%m-%d %H:%M") if r[8] else "",
+                    "entity_id": r[6],
+                    "details": r[7].get("action_text", str(r[7])) if isinstance(r[7], dict) else str(r[7] or ""),
+                    "target_user_id": r[8],
+                    "created_at": r[9].strftime("%Y-%m-%d %H:%M") if r[9] else "",
                 }
                 for r in rows
             ]
@@ -4391,8 +4396,10 @@ def add_global_eq(eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials =
             cursor.execute("""
                 INSERT INTO global_earthquakes (date, month, time, country, magnitude, depth_km, region, status, longitude, latitude)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING eq_id
             """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude))
-            try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})
+            eq_id = cursor.fetchone()[0]
+            try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})
             except Exception: pass
             connection.commit()
             return {"message": "تم الإضافة"}
@@ -4436,8 +4443,10 @@ def add_egypt_eq(eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = D
             cursor.execute("""
                 INSERT INTO egypt_earthquakes (date, time, magnitude, depth_km, region, longitude, latitude)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING eq_id
             """, (eq.date, eq.time, eq.magnitude, eq.depth_km, eq.region, eq.longitude, eq.latitude))
-            try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})
+            eq_id = cursor.fetchone()[0]
+            try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})
             except Exception: pass
             connection.commit()
             return {"message": "تم الإضافة"}
@@ -4471,7 +4480,7 @@ def update_global_eq(eq_id: int, eq: GlobalEqModel, credentials: HTTPAuthorizati
                 SET date=%s, month=%s, time=%s, country=%s, magnitude=%s, depth_km=%s, region=%s, status=%s, longitude=%s, latitude=%s
                 WHERE eq_id=%s
             """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude, eq_id))
-            try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})
+            try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})
             except Exception: pass
             connection.commit()
             return {"message": "تم التعديل"}
@@ -4493,7 +4502,7 @@ def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorization
                 SET date=%s, time=%s, magnitude=%s, depth_km=%s, region=%s, longitude=%s, latitude=%s
                 WHERE eq_id=%s
             """, (eq.date, eq.time, eq.magnitude, eq.depth_km, eq.region, eq.longitude, eq.latitude, eq_id))
-            try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"عدّل بيانات زلزال محلي (مصر) بقوة {eq.magnitude}"})
+            try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال محلي (مصر) بقوة {eq.magnitude}"})
             except Exception: pass
             connection.commit()
             return {"message": "تم التعديل"}

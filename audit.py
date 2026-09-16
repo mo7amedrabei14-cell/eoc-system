@@ -88,6 +88,7 @@ def create_audit_log(
                 action=action,
                 actor_user_id=realtime_actor,
                 mission_id=entity_id if entity_type == "mission" else None,
+                entity_id=entity_id if entity_type != "mission" else None,
                 details=details,
                 target_user_id=target_user_id,
                 resolve_creator=(entity_type == "mission"),
