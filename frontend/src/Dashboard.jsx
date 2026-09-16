@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
@@ -16,6 +16,21 @@ import { translate } from './i18n.js';
 // inside Dashboard's radar effect caused `ReferenceError: BASE is not defined`
 // → React 18 unmounts the whole tree (no error boundary) → blank page.
 const BASE = 'https://eoc-system-b12f.vercel.app';
+
+// 🚀 أرصفة الذاكرة (React.memo): العروض الثقيلة تُعاد رسمها فقط عندما تتغير قيم بروبسها الفعلية.
+// بهذا لا يجرّ تبديل الثيم (الذي يغيّر data-theme فقط) إعادة رسم الجداول الثقيلة مثل شبكة الطقس
+// (27 محافظة × 12 خلية) — يبقى التنقل بين الدارك والفاتح ناعماً بلا عمليات إعادة رسم بلا داعٍ.
+const MemoHomeView = memo(HomeView);
+const MemoBranchesAndInventoryView = memo(BranchesAndInventoryView);
+const MemoMissionsView = memo(MissionsView);
+const MemoAuditLogsView = memo(AuditLogsView);
+const MemoLocalNewsView = memo(LocalNewsView);
+const MemoWeatherForecastView = memo(WeatherForecastView);
+const MemoHandoverView = memo(HandoverView);
+const MemoGlobalDisastersView = memo(GlobalDisastersView);
+const MemoEarthquakesView = memo(EarthquakesView);
+const MemoAINewsMonitorView = memo(AINewsMonitorView);
+const MemoHumanResourcesView = memo(HumanResourcesView);
 
 // Static dashboard labels are kept in Arabic in the existing screens.  This
 // table lets the whole dashboard share Login.jsx's language choice without
@@ -1642,20 +1657,20 @@ useEffect(() => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <HomeView branches={branchesList} theme={theme} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
-      case 'ai_news': return <AINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} theme={theme} />;
-      case 'weather': return <WeatherForecastView branches={branchesList} isOwner={isOwner} isJoker={isJoker} userRole={userRole} lang={language} theme={theme} liveUpdateVersion={liveUpdateVersion.weather} />;
-      case 'missions': return <MissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} />;
-      case 'local_news': return <LocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
-      case 'global_disasters': return <GlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
-      case 'earthquakes': return <EarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} theme={theme} />;
-      case 'branches_inventory': return <BranchesAndInventoryView branches={branchesList} theme={theme} />;
+      case 'home': return <MemoHomeView branches={branchesList} theme={theme} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
+      case 'ai_news': return <MemoAINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} theme={theme} />;
+      case 'weather': return <MemoWeatherForecastView branches={branchesList} isOwner={isOwner} isJoker={isJoker} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.weather} />;
+      case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} />;
+      case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
+      case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} />;
+      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} theme={theme} />;
+      case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} theme={theme} />;
       case 'handover': return (isOwner || isSupervisor)
-        ? <HandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} />
+        ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} />
         : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
-      case 'audit': return <AuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
-      case 'human_resources': return <HumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
-      default: return <HomeView branches={branchesList} theme={theme} />;
+      case 'audit': return <MemoAuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
+      case 'human_resources': return <MemoHumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
+      default: return <MemoHomeView branches={branchesList} theme={theme} />;
     }
   };
 
@@ -5994,14 +6009,14 @@ const [nd, setNd] = useState({
 // (توقعات الورديات الثلاث لكل محافظة + الطقس اليومي المجمّع آلياً)
 // ==========================================
 // دورة التوقعات الاستباقية: كل وردية تدخل توقعات الوردية التي تليها:
-//   Morning (صباحية) 08-16 → 16-24 نفس التاريخ
-//   Evening (مسائية) 16-24 → 00-08 تاريخ اليوم التالي
-//   Night (ليلية)    00-08 → 08-16 نفس التاريخ
+//   Morning (صباحية) 08:00 ص - 04:00 م → 04:00 م - 12:00 ص نفس التاريخ
+//   Evening (مسائية) 04:00 م - 12:00 ص → 12:00 ص - 08:00 ص تاريخ اليوم التالي
+//   Night (ليلية)    12:00 ص - 08:00 ص → 08:00 ص - 04:00 م نفس التاريخ
 // القاعدة: «القاهرة» (المركز العام) كيان واحد بنفس رمز الفرع (branch_id 19) — ليس لهما سطران منفصلان.
 const WEATHER_SHIFT_CHIPS = [
-  { key: 'morning', ar: 'وردية الصباح (08-16)', en: 'Morning Shift (08-16)' },
-  { key: 'evening', ar: 'وردية المساء (16-24)', en: 'Evening Shift (16-24)' },
-  { key: 'night', ar: 'وردية الليل (00-08)', en: 'Night Shift (00-08)' },
+  { key: 'morning', ar: 'وردية الصباح (08:00 ص - 04:00 م)', en: 'Morning Shift (08:00 AM - 04:00 PM)' },
+  { key: 'evening', ar: 'وردية المساء (04:00 م - 12:00 ص)', en: 'Evening Shift (04:00 PM - 12:00 AM)' },
+  { key: 'night', ar: 'وردية الليل (12:00 ص - 08:00 ص)', en: 'Night Shift (12:00 AM - 08:00 AM)' },
 ];
 const WEATHER_METRICS = [
   { key: 'temp', ar: 'درجة الحرارة', en: 'Temperature', unit: '°C' },
@@ -6035,7 +6050,7 @@ const W_FINISH_REGIONS = [
   { region: 'saeed', label: 'Operation.Upper' },
 ];
 
-function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang = 'ar', theme = 'dark', liveUpdateVersion = 0 }) {
+function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang = 'ar', liveUpdateVersion = 0 }) {
   // 🌤️ صلاحيات مستقلة: لا نستخدم isVolunteer هنا (دور «أوبريشن» أهونها يفتح الطقس)
   const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
   const isGlobalWeather = isOwner || isJoker || ['MANAGER', 'ADMIN', 'مدير', 'أدمن'].includes(userRole);
@@ -6055,6 +6070,9 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   const submitLockRef = useRef(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [clearAllCode, setClearAllCode] = useState('');
+  // 🔒 مسح الكل: حالة مشغول + قفل مضاد للضغط المزدوج (Enter ثم زر) — يمنع تجميد الشاشة أثناء الطلب
+  const [clearingWeather, setClearingWeather] = useState(false);
+  const clearLockRef = useRef(false);
   // 🌤️ تتبع اللمس: فقط المحافظات التي عدّل المستخدم قيمها فعلاً هي ما يُرفع (لا نعيد إرسال الصفوف الجاهزة)
   const touchedRef = useRef(new Set());
   // 📉 قائمة «إنهاء التوقعات» (للأدوار العامة فقط)
@@ -6067,12 +6085,20 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   const wUsername = String(currentUserData?.username || '').toLowerCase();
   const wBranchId = Number(currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19);
   const wBranchName = String(currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام');
+  // الفروع المعيّنة للمستخدم هي المصدر الأوثق لإقليمه (مرآة RLS في main.py):
+  // إذا انحصرت الفروع في إقليم واحد غير المركز العام تحسم الإقليم، ثم الاسم ثم اسم الفرع.
   let userRegion = 'hq';
-  if (wUsername.includes('delta')) userRegion = 'delta';
+  const resolvedBranchRegion = (b) => W_BRANCH_ID_TO_REGION[Number(b && b.branch_id)];
+  const branchRegionSet = new Set(
+    (currentUserData?.branches || []).map(resolvedBranchRegion).filter(r => r && r !== 'hq')
+  );
+  const regionCandidates = [W_BRANCH_ID_TO_REGION[wBranchId], ...branchRegionSet].filter(r => r && r !== 'hq');
+  if (regionCandidates.length && new Set(regionCandidates).size === 1) userRegion = regionCandidates[0];
+  else if (wUsername.includes('delta')) userRegion = 'delta';
   else if (wUsername.includes('canal')) userRegion = 'canal';
   else if (wUsername.includes('upper') || wUsername.includes('saeed')) userRegion = 'saeed';
-  else if (W_BRANCH_ID_TO_REGION[wBranchId]) userRegion = W_BRANCH_ID_TO_REGION[wBranchId];
-  else userRegion = W_REGION_NAME_MAP[wNormalize(wBranchName)] || 'hq';
+  else if (W_REGION_NAME_MAP[wNormalize(wBranchName)]) userRegion = W_REGION_NAME_MAP[wNormalize(wBranchName)];
+  // وإلا يبقى 'hq' (المركز العام / غير محدد) — دون زر «إنهاء» إقليمي في هذه الحالة.
 
   // — فروع كل إقليم (محتسبة من الأسماء والرموز) ثم المحافظات الظاهرة للمستخدم
   const wRegionBranches = useMemo(() => {
@@ -6193,8 +6219,10 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
 
   const handleClearAllWeather = () => { if (!isOwner) return; setClearAllCode(''); setShowClearAllConfirm(true); };
   const confirmClearAllWeather = async () => {
+    if (!isOwner || clearingWeather || clearLockRef.current) return;
     if (clearAllCode !== "301014") { setCustomAlert("رمز التأكيد غير صحيح. لم يتم حذف أي بيانات."); return; }
-    setShowClearAllConfirm(false);
+    clearLockRef.current = true;
+    setClearingWeather(true);
     try {
       const token = localStorage.getItem('access_token');
       const res = await fetch(`${BASE}/api/weather/clear-all`, {
@@ -6204,10 +6232,11 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
       });
       const data = await res.json();
       if (!res.ok) { setCustomAlert(data.detail || 'فشل تنفيذ عملية المسح.'); return; }
-      setCustomAlert(`تم مسح جميع توقعات الطقس بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
       touchedRef.current = new Set();
-      loadGrid(true); loadDaily(true);
+      await Promise.all([loadGrid(true), loadDaily(true)]);
+      setCustomAlert(`تم مسح جميع توقعات الطقس بنجاح.\nعدد السجلات المحذوفة: ${data.deleted_count}`);
     } catch (error) { setCustomAlert('حدث خطأ أثناء الاتصال بالسيرفر.'); }
+    finally { setShowClearAllConfirm(false); clearLockRef.current = false; setClearingWeather(false); }
   };
 
   // — تصديران (المالك فقط) + تسجيل كلٍّ منهما حدثاً مميزاً في سجل النظام
@@ -6239,7 +6268,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
         'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
       }));
-      await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}_${todayFileDate()}.xlsx`);
+      await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}.xlsx`);
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
   const handleExportLog = async () => {
@@ -6252,7 +6281,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
       const data = await res.json();
       if (!data.length) return setCustomAlert(lang === 'ar' ? 'لا توجد توقعات مسجلة في هذا التاريخ.' : 'No forecasts recorded for this date.');
       const shiftAr = WEATHER_SHIFT_CHIPS.reduce((a, s) => { a[s.key] = s.ar; return a; }, {});
-      const exportRows = data.map(r => ({
+      const toLogRow = (r) => ({
         'التاريخ': r.forecast_date, 'الوردية': shiftAr[r.shift] || r.shift, 'المحافظة': r.branch_name,
         'حرارة صغرى (°C)': r.temp_min ?? '', 'حرارة عظمى (°C)': r.temp_max ?? '',
         'رياح صغرى (كم/س)': r.wind_min ?? '', 'رياح عظمى (كم/س)': r.wind_max ?? '',
@@ -6260,8 +6289,13 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         'رطوبة صغرى (%)': r.humidity_min ?? '', 'رطوبة عظمى (%)': r.humidity_max ?? '',
         'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
         'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
-      }));
-      await exportWorkbook([{ name: 'سجل الورديات الثلاث', ...gridFromRows(exportRows) }], `سجل_الورديات_الثلاث_${filterDate}_${todayFileDate()}.xlsx`);
+      });
+      // 📑 مصنّف بأوراقٍ منفصلة لكل وردية (صباح/مساء/ليل) — الأوراق الفارغة تُستبعد تلقائياً.
+      const SHIFT_SHEET_NAMES = { morning: 'وردية الصباح', evening: 'وردية المساء', night: 'وردية الليل' };
+      const sheets = ['morning', 'evening', 'night']
+        .map(k => ({ name: SHIFT_SHEET_NAMES[k], ...gridFromRows(data.filter(r => r.shift === k).map(toLogRow)) }))
+        .filter(s => s && s.rows.length > 0);
+      await exportWorkbook(sheets, `سجل_الورديات_الثلاث_${filterDate}.xlsx`);
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
 
@@ -6342,7 +6376,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
               {finishOpen && (
                 <>
                   <div className="fixed inset-0 z-[40]" onClick={() => setFinishOpen(false)} />
-                  <div className="absolute right-0 top-full z-[41] mt-2 w-72 bg-[var(--surface-3)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden animate-fade-in-up">
+                  <div className="absolute end-0 top-full z-[41] mt-2 w-72 max-w-[min(18rem,calc(100vw-1.5rem))] bg-[var(--surface-3)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden animate-fade-in-up origin-top-right">
                     {W_FINISH_REGIONS.map(r => (
                       <button key={r.region} type="button" onClick={() => handleFinish('region', r.region)}
                         className="w-full text-right px-4 py-3 text-sm font-bold text-[var(--ink)] hover:bg-[var(--surface-hover)] border-b border-[var(--border)] flex items-center gap-2">
@@ -6358,11 +6392,11 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
                 </>
               )}
             </div>
-          ) : (
+          ) : userRegion !== 'hq' ? (
             <button type="button" onClick={() => handleFinish('region', userRegion)} className="btn-primary shrink-0">
-              <CheckIcon /><span>{T(`إنهاء توقعات ${scopeRegionLabel || ''}`, 'Finish Forecast')}</span>
+              <CheckIcon /><span>{T(`إنهاء توقعات ${W_REGION_LABELS[userRegion]}`, 'Finish Forecast')}</span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -6372,12 +6406,12 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
           <div key={s.key} className="card-surface px-4 py-3 rounded-2xl border border-[var(--border)]">
             <p className="text-sm font-bold text-[var(--ink)]">{T(s.ar, s.en)}</p>
             <p className="text-xs text-[var(--muted)] mt-0.5">{T(
-              s.key === 'morning' ? 'تُدخل توقعات الفترة 16:00 - 24:00 (نفس التاريخ)' :
-              s.key === 'evening' ? 'تُدخل توقعات الفترة 00:00 - 08:00 (اليوم التالي)' :
-              'تُدخل توقعات الفترة 08:00 - 16:00 (نفس التاريخ)',
-              s.key === 'morning' ? 'Forecasts the 16:00–24:00 block (same date)' :
-              s.key === 'evening' ? 'Forecasts the 00:00–08:00 block (next date)' :
-              'Forecasts the 08:00–16:00 block (same date)'
+              s.key === 'morning' ? 'تُدخل توقعات الفترة (04:00 م - 12:00 ص) لنفس التاريخ' :
+              s.key === 'evening' ? 'تُدخل توقعات الفترة (12:00 ص - 08:00 ص) لليوم التالي' :
+              'تُدخل توقعات الفترة (08:00 ص - 04:00 م) لنفس التاريخ',
+              s.key === 'morning' ? 'Forecasts the (04:00 PM - 12:00 AM) block for the same date' :
+              s.key === 'evening' ? 'Forecasts the (12:00 AM - 08:00 AM) block for the next date' :
+              'Forecasts the (08:00 AM - 04:00 PM) block for the same date'
             )}</p>
           </div>
         ))}
@@ -6491,6 +6525,15 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         onCancel={() => { setShowClearAllConfirm(false); setClearAllCode(''); }}
         onConfirm={confirmClearAllWeather}
       />
+
+      {clearingWeather && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--surface-3)] border border-[var(--border)] rounded-2xl px-6 py-5 flex items-center gap-3 shadow-xl animate-fade-in-up">
+            <div className="w-5 h-5 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" />
+            <span className="text-sm font-bold text-[var(--ink)]">{T('جارٍ مسح جميع التوقعات…', 'Deleting all forecasts…')}</span>
+          </div>
+        </div>
+      )}
 
       {customAlert && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
