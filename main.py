@@ -3926,6 +3926,56 @@ def get_handovers(credentials: HTTPAuthorizationCredentials = Depends(security))
         connection.close()
 
 
+@app.post("/api/handovers/clear-all")
+def clear_all_handovers(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM handover_log")
+            deleted_count = cursor.fetchone()[0]
+
+            cursor.execute("DELETE FROM handover_log")
+
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح جميع التسليمات",
+                mission_id=None,
+                entity_type="handover_log",
+                entity_id=None,
+                details={
+                    "action_text": f"قام المالك بمسح جميع التسليمات نهائياً. عدد السجلات المحذوفة: {deleted_count}"
+                }
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم مسح جميع التسليمات بنجاح",
+                "deleted_count": deleted_count
+            }
+
+    except Exception as e:
+        connection.rollback()
+        print(f"Error clearing handovers: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء مسح التسليمات")
+    finally:
+        connection.close()
+
+
 @app.get("/api/handovers/by-date/{handover_date}")
 def get_handover_by_date(handover_date: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials

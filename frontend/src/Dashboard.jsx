@@ -6660,6 +6660,11 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   // 🗑️ نافذة تأكيد مسح جميع التسليمات
   const [handoverClearAllCode, setHandoverClearAllCode] = useState('');
   const [showHandoverClearAllConfirm, setShowHandoverClearAllConfirm] = useState(false);
+  // 🔔 كانت setCustomAlert بتتنادى في كل العمليات هنا (حفظ/حذف/مسح الكل/تنزيل) من غير
+  // ما تتعرّف أصلاً - يعني كل عملية ناجحة كانت بتوقع بعدها بخطأ (ReferenceError) بيقطع
+  // تنفيذ باقي الكود (زي إعادة تحميل البيانات) وبيتحوّل غلط لرسالة "فشل الاتصال بالخادم".
+  const [customAlert, setCustomAlert] = useState(null);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
   // Auto-logout timeout (8 hours of inactivity)
   useEffect(() => {
     const timeoutDuration = 8 * 60 * 60 * 1000; // 8 hours
@@ -6825,7 +6830,10 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       setNotice(null);
       fetchHandovers();
       setCustomAlert(editingId ? "تم تحديث سجل التسليم بنجاح!" : "تم إنشاء سجل التسليم بنجاح!");
-    } catch { setNotice(T('فشل الاتصال بالخادم', 'Connection failed')); }
+    } catch (error) {
+      console.error('Save error:', error);
+      setNotice(T('فشل الاتصال بالخادم', 'Connection failed'));
+    }
     setSaving(false);
     submitLockRef.current = false;
   };
@@ -6843,7 +6851,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     }
     setShowHandoverClearAllConfirm(false);
     try {
-      const token = sessionStorage.getItem("access_token");
+      const token = sessionStorage.getItem('access_token') || '';
       const res = await fetch(`${BASE}/api/handovers/clear-all`, {
         method: "POST",
         headers: {
@@ -6880,7 +6888,10 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const auditDownload = async (scope, scope_id) => {
     try {
       await fetch(`${BASE}/api/handovers/export-log`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem('access_token') || ''}` }, body: JSON.stringify({ scope, scope_id }) });
-    } catch { /* التسجيل في اللوج لا يمنع التنزيل */ }
+    } catch (error) {
+      // التسجيل في اللوج لا يمنع التنزيل
+      console.warn('Failed to log download attempt:', error);
+    }
   };
 
   const matrixToExportRow = (rec) => {
@@ -6923,6 +6934,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
   return (
     <div className="space-y-6 pb-10 animate-fade-in">
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
       {notice && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
@@ -7379,7 +7391,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setShowClearAllConfirm(false);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const token = sessionStorage.getItem("access_token");
       const res = await fetch("https://eoc-system-b12f.vercel.app/api/global-disasters/clear-all", {
         method: "POST",
         headers: {
@@ -7756,7 +7768,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setShowClearAllConfirm(false);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const token = sessionStorage.getItem("access_token");
       const res = await fetch("https://eoc-system-b12f.vercel.app/api/earthquakes/clear-all", {
         method: "POST",
         headers: {
@@ -8378,7 +8390,7 @@ const totalAiCountries = new Set(
     setShowClearAllConfirm(false);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const token = sessionStorage.getItem("access_token");
 
       const res = await fetch(
         "https://eoc-system-b12f.vercel.app/api/ai-news/clear-all",
