@@ -5732,7 +5732,7 @@ const [nd, setNd] = useState({
     setShowClearAllConfirm(false);
 
     try {
-      const token = localStorage.getItem("access_token");
+      const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
       const res = await fetch("https://eoc-system-b12f.vercel.app/api/local-news/clear-all", {
         method: "POST",
         headers: {
@@ -7391,7 +7391,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setShowClearAllConfirm(false);
 
     try {
-      const token = sessionStorage.getItem("access_token");
+      const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
       const res = await fetch("https://eoc-system-b12f.vercel.app/api/global-disasters/clear-all", {
         method: "POST",
         headers: {
@@ -7768,7 +7768,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setShowClearAllConfirm(false);
 
     try {
-      const token = sessionStorage.getItem("access_token");
+      const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
       const res = await fetch("https://eoc-system-b12f.vercel.app/api/earthquakes/clear-all", {
         method: "POST",
         headers: {
@@ -8390,7 +8390,7 @@ const totalAiCountries = new Set(
     setShowClearAllConfirm(false);
 
     try {
-      const token = sessionStorage.getItem("access_token");
+      const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
 
       const res = await fetch(
         "https://eoc-system-b12f.vercel.app/api/ai-news/clear-all",
