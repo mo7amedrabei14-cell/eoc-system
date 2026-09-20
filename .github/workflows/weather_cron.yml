@@ -30,9 +30,8 @@ jobs:
           SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-b12f.vercel.app' }}
           HISTORY_WINDOW_DAYS: ${{ secrets.HISTORY_WINDOW_DAYS || '3' }}
           MIN_SAMPLES: ${{ secrets.MIN_SAMPLES || '20' }}
-          AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
-          AI_MODEL: ${{ secrets.AI_MODEL }}
-          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_MAX_TOKENS: ${{ secrets.AI_MAX_TOKENS }}
+          AI_PROVIDER: gemini
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.6-flash
+          AI_MAX_TOKENS: '2000'
         run: python weather_intel.py

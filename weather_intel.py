@@ -25,6 +25,12 @@ from datetime import datetime, timedelta
 from statistics import mean, median, stdev
 from zoneinfo import ZoneInfo
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Selected AI configuration (set in run_pipeline)
 SELECTED_AI_PROVIDER = None
 SELECTED_AI_MODEL = None
@@ -53,6 +59,8 @@ AI_BASE_URL = os.environ.get("AI_BASE_URL", "").strip()          # for OmniRoute
 AI_API_KEY = os.environ.get("AI_API_KEY", "").strip()            # for OmniRoute or others
 AI_MODEL = os.environ.get("AI_MODEL", "").strip()                # model name for the provider
 AI_MAX_TOKENS = optional_positive_int("AI_MAX_TOKENS")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip()
 
 SYSTEM_API_URL = os.environ.get(
     "SYSTEM_API_URL", "https://eoc-system-b12f.vercel.app"
@@ -446,7 +454,7 @@ def build_baseline(history_rows, recent_rows, target_day, window):
 column_map = history_metric_columns()
 
 
-def build_frequencies(series, config, stats_by_metric, target_day, window):
+def build_frequencies(location_id, series, config, stats_by_metric, target_day, window):
     """سجلات التكرار من عتبات weather_intel_config (المقام = العينات الصالحة)."""
     freq_specs = [
         ("freq.tmax_ge", "tmax", "ge"),
@@ -468,7 +476,7 @@ def build_frequencies(series, config, stats_by_metric, target_day, window):
         unit = config.get(key, {}).get("unit") or METRIC_DEFS[metric]["unit"]
         f = compute_frequency(series[metric], thr, relation, desc)
         out.append({
-            "metric": metric, "threshold_value": thr,
+            "location_id": location_id, "metric": metric, "threshold_value": thr,
             "threshold_unit": unit, "threshold_desc_ar": desc,
             "qualifying_count": f["qualifying_count"], "total_count": f["total_count"],
             "frequency_pct": f["frequency_pct"],
@@ -531,20 +539,45 @@ def cfg_f(config, key, default):
 def extract_json(text):
     if not text:
         return None
-    t = text.strip()
-    if t.startswith("```"):
-        t = t.split("\n", 1)[1] if "\n" in t else t[3:]
-        t = t.rsplit("```", 1)[0]
-    t = t.strip()
-    candidates = [t]
-    s, e = t.find("{"), t.rfind("}")
-    if s != -1 and e != -1 and s < e:
-        candidates.append(t[s:e + 1])
-    for c in candidates:
-        try:
-            return json.loads(c)
-        except (json.JSONDecodeError, TypeError):
+
+    stripped = text.strip()
+    candidates = [stripped]
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        if len(lines) > 1:
+            fenced = "\n".join(lines[1:])
+            closing = fenced.rfind("```")
+            if closing != -1:
+                fenced = fenced[:closing].rstrip()
+            candidates.append(fenced.strip())
+
+    decoder = json.JSONDecoder()
+    seen = set()
+    for candidate in candidates:
+        if not candidate or candidate in seen:
             continue
+        seen.add(candidate)
+
+        # Try the complete response first; this handles raw JSON and a complete
+        # fenced JSON block without relying on surrounding prose.
+        try:
+            value, _ = decoder.raw_decode(candidate)
+            if isinstance(value, dict):
+                return value
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+        # If prose or a second object surrounds the payload, decode the first
+        # balanced object found in the response.
+        for index, char in enumerate(candidate):
+            if char != "{":
+                continue
+            try:
+                value, _ = decoder.raw_decode(candidate[index:])
+                if isinstance(value, dict):
+                    return value
+            except (json.JSONDecodeError, ValueError):
+                continue
     return None
 
 
@@ -659,7 +692,27 @@ def call_ai(structured_input):
                 else:
                     return parsed, raw_text, None
             else:
-                last_err = f"خطأ {provider} {r.status_code}: {r.text[:300]}"
+                status_code = r.status_code
+                response_text = r.text or ""
+                response_lower = response_text.lower()
+                quota_limited = (
+                    provider == "gemini"
+                    and (
+                        status_code == 429
+                        or "rate limit" in response_lower
+                        or "ratelimit" in response_lower
+                        or "quota" in response_lower
+                        or "too many requests" in response_lower
+                    )
+                )
+                if quota_limited:
+                    last_err = (
+                        "Gemini غير متاح مؤقتًا بسبب حدّ المعدل أو الحصة "
+                        f"(HTTP {status_code}): {response_text[:300]}"
+                    )
+                    print(f"  ⚠️ {last_err} — لن تُعاد المحاولة في هذا التشغيل.")
+                    break
+                last_err = f"خطأ {provider} {status_code}: {response_text[:300]}"
             if attempt < 2:
                 print(f"  ⚠️ محاولة {attempt + 1} فشلت ({last_err[:80]}) — إعادة بعد 2 ثانية…")
                 time.sleep(2)
@@ -750,6 +803,8 @@ def run_pipeline():
     if provider == "anthropic":
         base_url = ANTHROPIC_MESSAGES_URL
     elif provider == "gemini":
+        model = GEMINI_MODEL
+        api_key = GEMINI_API_KEY
         base_url = None
     elif provider:
         config_error = f"موفر AI غير معروف: {provider}"
@@ -858,7 +913,7 @@ def run_pipeline():
             # — سلسلة القيم لكل متري (للتكرار) من التواريخ المدموجة بلا تكرار —
             series, _ = build_metric_series(hist_rows, recent, target_day, HISTORY_WINDOW_DAYS)
 
-            freq_records = build_frequencies(series, config, stats, target_day, HISTORY_WINDOW_DAYS)
+            freq_records = build_frequencies(lid, series, config, stats, target_day, HISTORY_WINDOW_DAYS)
 
             # — التصنيف الحتمي + المخاطر —
             anomalies = {}

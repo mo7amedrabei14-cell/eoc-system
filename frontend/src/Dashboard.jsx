@@ -10422,17 +10422,183 @@ function DangerConfirmModal({
   );
 }
 
-// 🍡 تنبيه الإجراءات الموحّد — حبة عائمة (pill) خضراء تُعرض أعلى الشاشة دون أن تحجب التفاعل
+// 🌌 تنبيه الإجراءات الفضائي — (Glowing Edge & Pulse Burst) - الحجم الأكبر والأكثر تفاعلية
 function ActionToast({ message, onClose }) {
   if (!message) return null;
+
+  // الذكاء الاصطناعي لحساب وقت القراءة
+  const wordCount = message.split(/\s+/).length;
+  const smartDuration = Math.min(Math.max(wordCount * 350 + 3500, 3500), 8000); 
+
+  // التعرف التلقائي
+  const isError = /تعذر|فشل|خطأ|غير صحيح|لا يمكن|مرفوض|ممنوع|not found|failed|error/i.test(message);
+  
+  // ألوان مشعة (Cyber/Neon Vibes)
+  const themeColor = isError ? '#ff2a2a' : '#00e676'; 
+  const themeSoft = isError ? 'rgba(255, 42, 42, 0.2)' : 'rgba(0, 230, 118, 0.2)';
+
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
-      <div className="pointer-events-auto inline-flex items-center gap-3 rounded-full px-5 py-2.5 max-w-[min(36rem,calc(100vw-2rem))] bg-[var(--surface-3)] border border-[var(--accent)]/50 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 18px var(--accent-soft)' }}>
-        <svg className="w-5 h-5 shrink-0 text-[var(--ok)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-        <span className="text-sm font-bold text-white whitespace-pre-wrap leading-snug">{message}</span>
-        <button onClick={onClose} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
+    <>
+      <style>{`
+        /* 1. دخول 3D عميق مع بلور */
+        @keyframes ultra-enter {
+          0% { opacity: 0; transform: translateY(-40px) scale(0.85) rotateX(-20deg); filter: blur(20px); }
+          70% { transform: translateY(4px) scale(1.02) rotateX(5deg); filter: blur(0); }
+          100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); filter: blur(0); }
+        }
+
+        /* 2. دوران الضوء على الإطار */
+        @keyframes border-spin {
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* 3. رسم الأيقونة */
+        @keyframes draw-path {
+          to { stroke-dashoffset: 0; }
+        }
+
+        /* 4. انفجار النور حوالين الأيقونة أول ما تظهر */
+        @keyframes ring-burst {
+          0% { transform: scale(0.5); opacity: 0.8; border-width: 4px; }
+          100% { transform: scale(2.5); opacity: 0; border-width: 0px; }
+        }
+
+        /* 5. دخول النص (Slide & Fade) */
+        @keyframes text-slide-up {
+          0% { opacity: 0; transform: translateY(10px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 6. شريط الوقت الذكي */
+        @keyframes smart-progress {
+          from { transform: scaleX(1); }
+          to { transform: scaleX(0); }
+        }
+
+        .ultra-toast-wrapper {
+          animation: ultra-enter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+          perspective: 1200px;
+          --toast-theme: ${themeColor};
+        }
+
+        .border-spinner {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 300%;
+          height: 300%;
+          background: conic-gradient(from 0deg, transparent 0%, transparent 70%, var(--toast-theme) 100%);
+          transform: translate(-50%, -50%) rotate(0deg);
+          animation: border-spin 3s linear infinite;
+        }
+
+        .svg-draw-path {
+          stroke-dasharray: 40;
+          stroke-dashoffset: 40;
+          animation: draw-path 0.7s cubic-bezier(0.65, 0, 0.35, 1) 0.3s forwards;
+        }
+
+        .burst-ring {
+          animation: ring-burst 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) 0.3s forwards;
+        }
+
+        .text-reveal {
+          opacity: 0;
+          animation: text-slide-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s forwards;
+        }
+
+        .ultra-toast-wrapper:hover .smart-bar,
+        .ultra-toast-wrapper:hover .border-spinner {
+          animation-play-state: paused;
+        }
+        
+        .ultra-toast-wrapper:hover .inner-capsule {
+          transform: scale(1.01);
+          box-shadow: 0 20px 40px -10px rgba(0,0,0,0.7), 0 0 30px ${themeSoft};
+        }
+      `}</style>
+
+      <div className="pointer-events-none fixed inset-x-0 top-8 z-[9999] flex justify-center px-4">
+        <div className="ultra-toast-wrapper">
+          
+          {/* الكبسولة الخارجية (للإطار المضيء) - زودنا الـ Padding هنا سنة */}
+          <div className="pointer-events-auto relative rounded-full p-[1.5px] overflow-hidden shadow-2xl">
+            
+            {/* الضوء اللي بيلف */}
+            <div className="border-spinner pointer-events-none" />
+
+            {/* الكبسولة الداخلية (الخلفية الداكنة) - كبرنا الـ Padding العمودي والأفقي */}
+            <div
+              className="inner-capsule relative flex items-center gap-4 rounded-full pl-2 pr-5 py-2.5 transition-all duration-300"
+              style={{
+                background: 'rgba(12, 12, 15, 0.95)',
+                backdropFilter: 'blur(20px)',
+                minWidth: '320px',
+                maxWidth: 'calc(100vw - 2rem)',
+              }}
+            >
+              {/* الأيقونة بحركاتها المبهرة */}
+              <div className="relative flex shrink-0 items-center justify-center w-11 h-11 rounded-full">
+                {/* هالة النور اللي بتنفجر للخارج */}
+                <div 
+                  className="burst-ring absolute inset-0 rounded-full border-solid pointer-events-none"
+                  style={{ borderColor: themeColor }}
+                />
+                
+                {/* خلفية الأيقونة الخفيفة */}
+                <div 
+                  className="absolute inset-0 rounded-full opacity-20"
+                  style={{ background: `radial-gradient(circle, ${themeColor} 0%, transparent 70%)` }}
+                />
+
+                {/* رسم الـ SVG */}
+                {isError ? (
+                  <svg className="w-6 h-6 relative z-10" style={{ color: themeColor, filter: `drop-shadow(0 0 6px ${themeColor})` }} fill="none" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.2" />
+                    <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" className="svg-draw-path" />
+                  </svg>
+                ) : (
+                  <svg className="w-7 h-7 relative z-10" style={{ color: themeColor, filter: `drop-shadow(0 0 6px ${themeColor})` }} fill="none" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.2" />
+                    <path d="M8 12.5l3 3 5-6" stroke="currentColor" className="svg-draw-path" />
+                  </svg>
+                )}
+              </div>
+
+              {/* النص - حجمه كبر سنة وبقى بيدخل من تحت لفوق بنعومة */}
+              <div className="text-reveal relative flex-1 py-1.5 text-[15.5px] font-semibold tracking-wide text-zinc-100 whitespace-pre-wrap leading-relaxed">
+                {message}
+              </div>
+
+              {/* زر الإغلاق */}
+              <button
+                onClick={onClose}
+                className="text-reveal relative shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="إغلاق"
+              >
+                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* شريط الوقت الذكي المدمج في الكيرف السفلي */}
+              <div className="absolute bottom-0 inset-x-6 h-[2px] bg-transparent pointer-events-none overflow-hidden rounded-t-full">
+                <div
+                  className="smart-bar h-full w-full"
+                  style={{ 
+                    backgroundColor: themeColor,
+                    boxShadow: `0 0 10px ${themeColor}, 0 0 20px ${themeColor}`,
+                    transformOrigin: 'right',
+                    animation: `smart-progress ${smartDuration}ms linear forwards`
+                  }}
+                />
+              </div>
+
+            </div>
+          </div>
+        </div>
       </div>
-    </div>,
+    </>,
     document.body
   );
 }
