@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/eoc-logo.png" />
@@ -13,7 +13,7 @@
     <script>
       // 🎯 طبق الثيم المحفوظ قبل أول رسم حتى لا يومض الداكن ثم الفاتح (متطلب #14)
       try { var th = localStorage.getItem('dashboard-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
-      try { var lg = localStorage.getItem('dashboard-language'); if (lg) document.documentElement.lang = lg; } catch (e) {}
+      try { var lg = localStorage.getItem('dashboard-language'); if (lg) { document.documentElement.lang = lg; document.documentElement.dir = lg === 'en' ? 'ltr' : 'rtl'; } } catch (e) {}
     </script>
   </head>
   <body>

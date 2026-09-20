@@ -1,17 +1,18 @@
 """
 استخبارات الطقس — محرك التشغيل اليومي (runner)
 ==============================================
-مشغَّل من GitHub Actions cron (weather_cron.yml) — mirror لهيكل ai_radar.py:
-البوت لا يلمس قاعدة البيانات إطلاقًا؛ يكتب فقط عبر الـ API بـ SYSTEM_TOKEN.
+مشغَّل من GitHub Actions cron (weather_cron.yml). المحرك لا يلمس القاعدة مباشرة؛
+يكتب فقط عبر API النظام باستخدام SYSTEM_TOKEN.
 
-البنية: config → فحص الموديل (fail-fast قبل أي جلب) → مواقع/إعدادات ← API
-      → تحديث أرشيف حديث (best-effort، لا يمسّ المخزون) → forecast ← Open-Meteo
-      → إحصاءات/تواتر/شذوذ/مخاطر **حتمية** (statistics stdlib) — ليس Claude
-      → Claude يكتب التقييم فقط من JSON محدد
-      → POST /api/weather-intel/ingest (معاملة واحدة)
+البنية: إعداد AI صريح وغير حاسم → مواقع/عتبات ← API
+      → تحديث أرشيف حديث best-effort دون إعادة backfill
+      → توقعات Open-Meteo ليوم الغد
+      → إحصاءات/تواتر/شذوذ/مخاطر حتمية من السجل المخزّن
+      → تقييم AI استرشادي من JSON محدد فقط عند اكتمال الإعداد
+      → POST /api/weather-intel/ingest في معاملة واحدة
 
-صفر dependencies جديدة: requests + statistics + zoneinfo (stdlib).
-كل طلب خارجي: timeout + محاولات محدودة + تسجيل.
+لا توجد fallbacks ضمنية للموفر أو الموديل. فشل/غياب AI لا يوقف المعالجة الحتمية
+ولا حفظ التشغيل، ويُسجَّل ai_status لكل محافظة.
 """
 
 import json
@@ -24,15 +25,34 @@ from datetime import datetime, timedelta
 from statistics import mean, median, stdev
 from zoneinfo import ZoneInfo
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+# Selected AI configuration (set in run_pipeline)
+SELECTED_AI_PROVIDER = None
+SELECTED_AI_MODEL = None
+SELECTED_AI_MAX_TOKENS = None
+SELECTED_AI_API_KEY = None
+SELECTED_AI_BASE_URL = None
+
+
+def optional_positive_int(name):
+    """اقرا إعدادًا رقميًا اختياريًا دون إدخال قيمة افتراضية مخترعة."""
+    raw = os.environ.get(name, "").strip()
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
 
 # ── 1) الإعدادات والمفاتيح ──────────────────────────────────────────────────
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN", "").strip()
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+
+# Provider-agnostic AI configuration. Empty values mean "AI unavailable", not
+# permission to silently substitute a provider or model.
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "").strip().lower()  # e.g., "anthropic", "omniroute", "gemini"
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "").strip()          # for OmniRoute: http://localhost:20128/v1
+AI_API_KEY = os.environ.get("AI_API_KEY", "").strip()            # for OmniRoute or others
+AI_MODEL = os.environ.get("AI_MODEL", "").strip()                # model name for the provider
+AI_MAX_TOKENS = optional_positive_int("AI_MAX_TOKENS")
 
 SYSTEM_API_URL = os.environ.get(
     "SYSTEM_API_URL", "https://eoc-system-b12f.vercel.app"
@@ -48,20 +68,8 @@ TZ = ZoneInfo("Africa/Cairo")          # لا UTC إطلاقًا لحساب «ا
 TARGET_DELTA_DAYS = 1                  # TARGET_DATE = (تاريخ القاهرة المحلي) + يوم
 BACKFILL_MIN_YEAR = int(os.environ.get("BACKFILL_MIN_YEAR", "1996"))
 
-# نقطة 7: الموديل قابل للضبط ويُتحقَّق منه ضد الـ API الفعلي قبل أول جلب طقس.
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5").strip()
-# نقطة «1» من الموافقة: حدّ مخرجات واقعي قابل للضبط (لا 3 ولا حذف JSON)
-CLAUDE_MAX_TOKENS = int(os.environ.get("CLAUDE_MAX_TOKENS", "2000"))
-CLAUDE_MAX_TOKENS = max(100, min(CLAUDE_MAX_TOKENS, 16000))
-
 HISTORY_WINDOW_DAYS = int(os.environ.get("HISTORY_WINDOW_DAYS", "3"))
 MIN_SAMPLES = int(os.environ.get("MIN_SAMPLES", "20"))
-
-# معلومة فقط لعرضها في السجل عند تعذّر واجهة الـModels (ليست بوابة تأكيد)
-KNOWN_CLAUDE_MODELS = {
-    "claude-sonnet-5", "claude-opus-5", "claude-fable-5-1",
-    "claude-haiku-4-5", "claude-haiku-4-5-20251001",
-}
 
 # مقاييس الخط المرجعي: مفتاح داخلي → مفتاح Open-Meteo (forecast/archive)
 #   1) يجب أن يتطابق تعريف المتري بين التوقعات والأرشيف حتى يكون المقارنة سليمة.
@@ -82,7 +90,7 @@ WMO_LABELS = {
     51: ("رذاذ خفيف", "Light drizzle"), 53: ("رذاذ", "Drizzle"), 55: ("رذاذ كثيف", "Dense drizzle"),
     61: ("مطر خفيف", "Slight rain"), 63: ("مطر", "Moderate rain"), 65: ("مطر غزير", "Heavy rain"),
     66: ("مطر متجمد", "Freezing rain"), 67: ("مطر متجمد غزير", "Freezing rain heavy"),
-    71: ("ثلوج خفيفة", "Slight snow"), 73: ("ثلوج", "Snow"), 75: ("ثلوج كثيفة", "Heavy snow"),
+    71: ("ثلوج خفيف", "Slight snow"), 73: ("ثلوج", "Snow"), 75: ("ثلوج كثيفة", "Heavy snow"),
     77: ("حبيبات ثلجية", "Snow grains"), 80: ("زخات خفيفة", "Slight showers"), 81: ("زخات مطر", "Showers"),
     82: ("زخات غزيرة", "Violent showers"), 85: ("زخات ثلجية خفيفة", "Slight snow showers"),
     86: ("زخات ثلجية كثيفة", "Heavy snow showers"), 95: ("عاصفة رعدية", "Thunderstorm"),
@@ -169,6 +177,9 @@ def percentile(sorted_vals, q):
         return None
     if n == 1:
         return sorted_vals[0]
+    if q > 1.0:
+        q = q / 100.0
+    q = max(0.0, min(1.0, float(q)))
     r = q * (n - 1)
     lo = int(math.floor(r))
     hi = int(math.ceil(r))
@@ -269,28 +280,7 @@ def compute_frequency(values, threshold, relation='ge', desc=None):
     }
 
 
-# ── 4) فحص الموديل قبل أول جلب (fail-fast — نقطة «2» من الموافقة) ───────────
-def validate_claude_model(model, api_key):
-    """يتحقق من الموديل ضد واجهة Models الفعلية في Anthropic. يعيد (سليم أم لا, رسالة).
-    لو تعذّرت واجهة الـModels (شبكة) → نحذّر ونتابع: المكالمة الفعلية ستكشف أي خطأ حقيقي."""
-    if not api_key:
-        return False, "ANTHROPIC_API_KEY مفقود — لا يمكن تشغيل التقييم الذكي."
-    try:
-        r = http_get(
-            ANTHROPIC_MODELS_URL,
-            headers={"x-api-key": api_key, "anthropic-version": ANTHROPIC_VERSION},
-            timeout=15,
-        )
-        ids = {m.get("id") for m in r.get("data", []) if m.get("id")}
-        if model in ids:
-            return True, ""
-        return False, f"الموديل المكوّن «{model}» غير متاح في الـ API الحالي. المتاح مثلًا: {sorted(ids)[:8]}"
-    except Exception as e:
-        print(f"⚠️ تعذّر الوصول لواجهة التحقق من الموديلات ({e}) — سيتحقق الـ API الفعلي بنفسه.")
-        return True, ""
-
-
-# ── 5) جلب البيانات (كلها timeout + خطأ واضح) ───────────────────────────────
+# ── 4) جلب البيانات (كلها timeout + خطأ واضح) ───────────────────────────────
 def api_headers():
     return {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
 
@@ -312,7 +302,7 @@ def fetch_history(location_id, target_day, window):
         params={"location_id": location_id, "target_date": str(target_day), "window": window},
         timeout=30,
     )
-    return rows or []
+    return rows.get("rows", []) if isinstance(rows, dict) else (rows or [])
 
 
 def fetch_forecast(lat, lon, target_day):
@@ -356,7 +346,7 @@ def first(arr):
     return arr[0]
 
 
-def fetch_archive_recent(lat, lon, start_day, end_day):
+def fetch_archive_recent(location_id, lat, lon, start_day, end_day):
     """تحديث أرشيف حديث (best-effort). يعيد قائمة dicts على شكل صفوف weather_history_daily."""
     daily = ",".join(dict.fromkeys(
         d["archive"] for d in METRIC_DEFS.values() if d["archive"]
@@ -378,6 +368,7 @@ def fetch_archive_recent(lat, lon, start_day, end_day):
         except Exception:
             continue
         out.append({
+            "location_id": location_id,
             "record_date": str(d),
             "tmax": numeric(first(blk.get("temperature_2m_max")[i:i + 1] or [None])),
             "tmin": numeric(first(blk.get("temperature_2m_min")[i:i + 1] or [None])),
@@ -401,33 +392,51 @@ def history_metric_columns():
     }
 
 
-def build_baseline(history_rows, recent_rows, target_day, window):
-    """يحوّل الصفوف (من DB + الأرشيف الحديث) إلى قيم النافذة لكل متري، ثم يحسب الإحصاءات.
-    merged = تاريخ → صف (يكمل صفوف DB بأي أيام جلبناها حديثًا لا توجد فيها)."""
+def merge_history_rows(history_rows, recent_rows):
+    """دمج صفوف DB والأرشيف الحديث حسب التاريخ؛ الصف الحديث يكمل أو يحدّث اليوم نفسه."""
     by_date = {}
-    for h in history_rows:
-        by_date[h["record_date"]] = h
-    for r in recent_rows:
-        by_date[r["record_date"]] = r
+    for row in history_rows or []:
+        if not isinstance(row, dict) or not row.get("record_date"):
+            continue
+        by_date[str(row["record_date"])] = row
+    for row in recent_rows or []:
+        if not isinstance(row, dict) or not row.get("record_date"):
+            continue
+        rd = str(row["record_date"])
+        current = by_date.get(rd, {})
+        merged = dict(current)
+        merged.update({k: v for k, v in row.items() if v is not None})
+        by_date[rd] = merged
+    return by_date
+
+
+def build_metric_series(history_rows, recent_rows, target_day, window):
+    """يبني سلسلة كل متري من خريطة تواريخ موحدة حتى لا تُحتسب الأيام مرتين."""
+    by_date = merge_history_rows(history_rows, recent_rows)
     window_set = {str(d) for d in window_dates(target_day, window)}
     col = history_metric_columns()
     series = {m: [] for m in col}
     dates = []
-    for rd, row in by_date.items():
-        if rd not in window_set:
+    for rd in sorted(window_set):
+        row = by_date.get(rd)
+        if row is None:
             continue
         dates.append(rd)
         for m, c in col.items():
             v = row.get(c)
             if numeric(v) is not None:
                 series[m].append(float(v))
+    return series, dates
+
+
+def build_baseline(history_rows, recent_rows, target_day, window):
+    """يحوّل الصفوف (من DB + الأرشيف الحديث) إلى قيم النافذة لكل متري، ثم يحسب الإحصاءات."""
+    series, dates = build_metric_series(history_rows, recent_rows, target_day, window)
     period_start = min(dates) if dates else None
     period_end = max(dates) if dates else None
     stats = {}
     for m in METRIC_DEFS:
         if m not in column_map:
-            continue
-        if m not in series:
             continue
         stats[m] = compute_statistics(series[m], window, period_start, period_end)
     return stats
@@ -518,7 +527,7 @@ def cfg_f(config, key, default):
         return default
 
 
-# ── 6) تقييم Claude (الإخراج JSON فقط، والحذر من الاقتطاع) ──────────────────
+# ── 6) تقييم الذكاء الاصطناعي (الإخراج JSON فقط، والحذر من الاقتطاع) ───────
 def extract_json(text):
     if not text:
         return None
@@ -539,54 +548,130 @@ def extract_json(text):
     return None
 
 
-def call_claude_ai(structured_input):
-    """يكتب التقييم من JSON مُدخل فقط. يعيد (parsed, raw_text, error_msg)."""
-    if not ANTHROPIC_API_KEY:
-        return None, "", "ANTHROPIC_API_KEY مفقود (ai_status='error' بدون نص وهمي)."
-    headers = {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": ANTHROPIC_VERSION,
-        "content-type": "application/json",
-    }
-    body = {
-        "model": CLAUDE_MODEL,
-        "max_tokens": CLAUDE_MAX_TOKENS,
-        "messages": [
-            {"role": "user", "content": f"{SYSTEM_PROMPT}\n\nالبيانات المدخلة (JSON):\n{json.dumps(structured_input, ensure_ascii=False, indent=2)}"}
-        ],
-    }
+def call_ai(structured_input):
+    """يكتب التقييم من JSON مُدخل فقط باستخدام الموفر المحدد. يعيد (parsed, raw_text, error_msg)."""
+    provider = SELECTED_AI_PROVIDER
+    model = SELECTED_AI_MODEL
+    max_tokens = SELECTED_AI_MAX_TOKENS
+    api_key = SELECTED_AI_API_KEY
+    base_url = SELECTED_AI_BASE_URL
+
+    if not provider:
+        return None, "", "AI غير مضبوط؛ استُخدمت النتائج الحتمية وسُجل ai_status='skipped'."
+    if not model:
+        return None, "", "ai_model غير مضبوط."
+    if not api_key:
+        return None, "", "مفتاح API غير مضبوط."
+    if provider in {"anthropic", "gemini"} and max_tokens is None:
+        return None, "", "AI_MAX_TOKENS غير مضبوط."
+    if provider == "omniroute" and not base_url:
+        return None, "", "AI_BASE_URL غير مضبوط."
+    if provider not in {"anthropic", "omniroute", "gemini"}:
+        return None, "", f"موفر AI غير مدعوم: {provider}"
+
     last_err = None
     for attempt in range(3):
         try:
             import requests
-            r = requests.post(ANTHROPIC_MESSAGES_URL, headers=headers, json=body, timeout=90)
+            if provider == "anthropic":
+                headers = {
+                    "x-api-key": api_key,
+                    "anthropic-version": ANTHROPIC_VERSION,
+                    "content-type": "application/json",
+                }
+                url = ANTHROPIC_MESSAGES_URL
+                body = {
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "messages": [
+                        {"role": "user", "content": f"{SYSTEM_PROMPT}\n\nالبيانات المدخلة (JSON):\n{json.dumps(structured_input, ensure_ascii=False, indent=2)}"}
+                    ],
+                }
+            elif provider == "omniroute":
+                # OpenAI-compatible chat/completions
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "content-type": "application/json",
+                }
+                normalized_base_url = base_url.rstrip("/")
+                url = (
+                    f"{normalized_base_url}/chat/completions"
+                    if normalized_base_url.endswith("/v1")
+                    else f"{normalized_base_url}/v1/chat/completions"
+                )
+                body = {
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "messages": [
+                        {"role": "user", "content": f"{SYSTEM_PROMPT}\n\nالبيانات المدخلة (JSON):\n{json.dumps(structured_input, ensure_ascii=False, indent=2)}"}
+                    ],
+                }
+            elif provider == "gemini":
+                # Google Generative Language API
+                headers = {
+                    "content-type": "application/json",
+                }
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+                # Gemini expects a different structure
+                body = {
+                    "contents": [{
+                        "parts": [{
+                            "text": f"{SYSTEM_PROMPT}\n\nالبيانات المدخلة (JSON):\n{json.dumps(structured_input, ensure_ascii=False, indent=2)}"
+                        }]
+                    }],
+                    "generationConfig": {
+                        "maxOutputTokens": max_tokens,
+                        "temperature": 0.2,
+                    }
+                }
+            else:
+                return None, "", f"موفر AI غير مدعوم: {provider}"
+
+            r = requests.post(url, headers=headers, json=body, timeout=90)
             if r.status_code == 200:
                 data = r.json()
-                stop = data.get("stop_reason")
-                parts = data.get("content") or []
-                raw = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
-                parsed = extract_json(raw)
+                raw_text = ""
+                if provider == "anthropic":
+                    stop = data.get("stop_reason")
+                    parts = data.get("content") or []
+                    raw_text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+                elif provider == "omniroute":
+                    # OpenAI format: choices[0].message.content
+                    choices = data.get("choices", [])
+                    if choices:
+                        message = choices[0].get("message", {})
+                        raw_text = message.get("content", "")
+                elif provider == "gemini":
+                    # Gemini format: candidates[0].content.parts[0].text
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        content = candidates[0].get("content", {})
+                        parts = content.get("parts", [])
+                        if parts:
+                            raw_text = parts[0].get("text", "")
+                # Extract JSON from raw_text
+                parsed = extract_json(raw_text)
                 if parsed is None:
-                    if stop == "max_tokens":
-                        last_err = "الرد وصل حدّ الخطوط (max_tokens) قبل اكتمال JSON — زِد CLAUDE_MAX_TOKENS."
+                    if provider == "anthropic" and stop == "max_tokens":
+                        last_err = "الرد وصل حدّ الخطوط (max_tokens) قبل اكتمال JSON — زِد AI_MAX_TOKENS."
                     else:
-                        last_err = "Claude لم يخرج JSON صالحًا."
+                        last_err = "النموذج لم يخرج JSON صالحًا."
                 else:
-                    return parsed, raw, None
+                    return parsed, raw_text, None
             else:
-                last_err = f"خطأ Anthropic {r.status_code}: {r.text[:300]}"
+                last_err = f"خطأ {provider} {r.status_code}: {r.text[:300]}"
             if attempt < 2:
                 print(f"  ⚠️ محاولة {attempt + 1} فشلت ({last_err[:80]}) — إعادة بعد 2 ثانية…")
                 time.sleep(2)
         except Exception as e:
-            last_err = f"فشل الاتصال بـ Anthropic: {e}"
+            last_err = f"فشل الاتصال بـ {provider}: {e}"
             if attempt < 2:
                 print(f"  ⚠️ محاولة {attempt + 1}: {last_err}")
                 time.sleep(2)
     return None, "", last_err
 
 
-def build_claude_input(loc, fc, stats, frequencies, anomalies, hazards, target_day):
+def build_ai_input(loc, fc, stats, frequencies, anomalies, hazards, target_day):
     from collections import OrderedDict
     fc_clean = OrderedDict()
     for m, d in METRIC_DEFS.items():
@@ -653,21 +738,51 @@ def run_pipeline():
         return 1
     print(f"\n[{cairo_now_str()}] 🌤️ بدء تشغيل استخبارات الطقس (TARGET = {target_date_for_run()})")
 
-    # — فحص الموديل أولًا: أي تكوين سيّئ يتوقف هنا قبل إنفاق أي مكالمة (نقطة «2») —
-    ok_model, model_msg = validate_claude_model(CLAUDE_MODEL, ANTHROPIC_API_KEY)
-    if not ok_model:
-        print(f"🚫 فشل إنهائي مبكر: {model_msg}")
-        send_ingest({
-            "client_run_uuid": str(uuid.uuid4()),
-            "run_date": str(cairo_today()), "target_date": str(target_date_for_run()),
-            "status": "failed",
-            "total_locations": 0, "successful_locations": 0, "error_locations": 0,
-            "source_meta": {"claude_model": CLAUDE_MODEL},
-            "error_details": {"fatal": model_msg},
-            "snapshots": [], "statistics": [], "frequencies": [], "assessments": [], "history_rows": [],
-        })
-        return 1
-    print(f"  ✓ الموديل {CLAUDE_MODEL} متاح (max_tokens={CLAUDE_MAX_TOKENS})")
+    # Resolve only explicitly configured AI. An absent or invalid AI configuration
+    # is recorded on the run and becomes a per-assessment status, never a fatal run.
+    provider = AI_PROVIDER or None
+    model = AI_MODEL or None
+    max_tokens = AI_MAX_TOKENS
+    api_key = AI_API_KEY or None
+    base_url = AI_BASE_URL.rstrip("/") if AI_BASE_URL else None
+    config_error = None
+
+    if provider == "anthropic":
+        base_url = ANTHROPIC_MESSAGES_URL
+    elif provider == "gemini":
+        base_url = None
+    elif provider:
+        config_error = f"موفر AI غير معروف: {provider}"
+    else:
+        config_error = "لم يُضبط AI_PROVIDER؛ سيُسجَّل التقييم كـ skipped."
+
+    if provider and not config_error:
+        missing = []
+        if not model:
+            missing.append("ai_model")
+        if not api_key:
+            missing.append("api_key")
+        if provider == "anthropic" and max_tokens is None:
+            missing.append("ai_max_tokens")
+        if provider == "omniroute" and not base_url:
+            missing.append("ai_base_url")
+        if missing:
+            config_error = "إعدادات AI الناقصة: " + ", ".join(missing)
+
+    if provider:
+        print(f"  ℹ️ AI configured: provider={provider}, model={model or '—'}")
+        if config_error:
+            print(f"  ⚠️ AI غير متاح في هذا التشغيل: {config_error}")
+    else:
+        print("  ℹ️ AI غير مضبوط؛ سيستمر التشغيل الحتمي ويُسجَّل ai_status=skipped.")
+
+    # Store selected configuration for use in AI calls. None means AI is skipped.
+    global SELECTED_AI_PROVIDER, SELECTED_AI_MODEL, SELECTED_AI_MAX_TOKENS, SELECTED_AI_API_KEY, SELECTED_AI_BASE_URL
+    SELECTED_AI_PROVIDER = provider
+    SELECTED_AI_MODEL = model
+    SELECTED_AI_MAX_TOKENS = max_tokens
+    SELECTED_AI_API_KEY = api_key
+    SELECTED_AI_BASE_URL = base_url
 
     target_day = target_date_for_run()
     run_date = cairo_today()
@@ -677,8 +792,10 @@ def run_pipeline():
         "historical_source": "era5-reanalysis",
         "window_days": HISTORY_WINDOW_DAYS,
         "min_samples": MIN_SAMPLES,
-        "claude_model": CLAUDE_MODEL,
-        "claude_max_tokens": CLAUDE_MAX_TOKENS,
+        "ai_provider": SELECTED_AI_PROVIDER,
+        "ai_model": SELECTED_AI_MODEL,
+        "ai_max_tokens": SELECTED_AI_MAX_TOKENS,
+        "ai_config_error": config_error,
         "archive_refresh": {},   # «best-effort» — أي فشل يُسجَّل هنا ولا يمسّ المخزون
     }
 
@@ -715,7 +832,7 @@ def run_pipeline():
             try:
                 start_d = run_date - timedelta(days=6)
                 end_d = run_date - timedelta(days=1)
-                recent = fetch_archive_recent(loc.get("latitude"), loc.get("longitude"), start_d, end_d)
+                recent = fetch_archive_recent(lid, loc.get("latitude"), loc.get("longitude"), start_d, end_d)
                 if recent:
                     history_rows_to_ingest.extend(recent)
                     source_meta["archive_refresh"][str(lid)] = f"OK {len(recent)} يومًا ({start_d}..{end_d})"
@@ -738,20 +855,8 @@ def run_pipeline():
                 raise RuntimeError(f"فشل جلب التاريخ ({e})")
             stats = build_baseline(hist_rows, recent, target_day, HISTORY_WINDOW_DAYS)
 
-            # — سلسلة القيم لكل متري (للتكرار) بأمان —
-            series = {}
-            for m in chain_metrics(stats):
-                col = column_map[m]
-                vals = []
-                for h in hist_rows:
-                    v = h.get(col)
-                    if numeric(v) is not None:
-                        vals.append(float(v))
-                for h in recent:
-                    v = h.get(col)
-                    if numeric(v) is not None:
-                        vals.append(float(v))
-                series[m] = vals
+            # — سلسلة القيم لكل متري (للتكرار) من التواريخ المدموجة بلا تكرار —
+            series, _ = build_metric_series(hist_rows, recent, target_day, HISTORY_WINDOW_DAYS)
 
             freq_records = build_frequencies(series, config, stats, target_day, HISTORY_WINDOW_DAYS)
 
@@ -762,11 +867,24 @@ def run_pipeline():
                 anomalies[m] = classify_anomaly(fc.get(m), st, direction=dir_, min_samples=MIN_SAMPLES)
             hazards = detect_hazards(fc, config)
 
-            # — تقييم Claude (فشله = حفظ التقارير مع ai_status='error' بلا نص وهمي) —
-            claude_input = build_claude_input(loc, fc, stats, freq_records, anomalies, hazards, target_day)
-            ai_parsed, ai_raw, ai_error = call_claude_ai(claude_input)
-            ai_status = "success" if (ai_parsed is not None and isinstance(ai_parsed, dict)) else "error"
-            ai_text = json.dumps(ai_parsed, ensure_ascii=False, indent=2) if ai_status == "success" else ""
+            # — تقييم الذكاء الاصطناعي (فشله لا يمنع حفظ النتائج الحتمية) —
+            ai_parsed, ai_raw, ai_error = None, "", None
+            ai_status = "error"
+            ai_text = ""
+            try:
+                ai_input = build_ai_input(loc, fc, stats, freq_records, anomalies, hazards, target_day)
+                ai_parsed, ai_raw, ai_error = call_ai(ai_input)
+                if SELECTED_AI_PROVIDER is None:
+                    ai_status = "skipped"
+                elif ai_error or not isinstance(ai_parsed, dict):
+                    ai_status = "error"
+                else:
+                    ai_status = "success"
+            except Exception as e:
+                ai_status = "error"
+                ai_error = f"فشل تقييم الذكاء الاصطناعي: {e}"
+            if ai_status == "success":
+                ai_text = ai_raw
 
             fetched_at = datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S")
             snapshots.append({
@@ -794,10 +912,13 @@ def run_pipeline():
                 "location_id": lid, "target_date": str(target_day),
                 "anomalies": anomalies, "hazards": hazards,
                 "ai_assessment": ai_text, "ai_assessment_json": ai_parsed,
-                "ai_model": CLAUDE_MODEL, "ai_status": ai_status, "ai_error": (ai_error if ai_status == "error" else None),
+                "ai_model": SELECTED_AI_MODEL,
+                "ai_provider": SELECTED_AI_PROVIDER,
+                "ai_status": ai_status,
+                "ai_error": (ai_error if ai_status in {"error", "skipped"} else None),
             })
             ok_count += 1
-            print(f"  ✓ التقييم {('عبر ' + CLAUDE_MODEL) if ai_status == 'success' else 'بدون AI (ai_status=error)'} · عينات التاريخ N={stats.get('tmax', {}).get('sample_count', '—')}")
+            print(f"  ✓ التقييم {('عبر ' + SELECTED_AI_MODEL) if ai_status == 'success' else 'بدون AI (ai_status=' + ai_status + ')'} · عينات التاريخ N={stats.get('tmax', {}).get('sample_count', '—')}")
             time.sleep(0.4)
         except Exception as e:
             err_count += 1
@@ -816,7 +937,8 @@ def run_pipeline():
         "frequencies": frequencies, "assessments": assessments,
         "history_rows": history_rows_to_ingest,
     }
-    send_ingest(payload)
+    if not send_ingest(payload):
+        return 1
     print(f"\n[{cairo_now_str()}] ✅ اكتمل: {ok_count}/{total} موقع ناجح ، حالة التشغيل: {status}")
     return 0 if status != "failed" else 1
 

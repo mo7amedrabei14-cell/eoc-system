@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useLayoutEffect, useRef, Children } from 'react';
+import { useState, useEffect, useMemo, useLayoutEffect, useRef, useId, Children } from 'react';
 import { createPortal } from 'react-dom';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -32,9 +32,11 @@ const EocSelect = ({
   const menuRef = useRef(null);
 
   const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [val, setVal] = useState('');
   const [pos, setPos] = useState(null);
   const [active, setActive] = useState(-1);
+  const searchInputRef = useRef(null);
   const suppressClick = useRef(false);
 
   const isControlled = value !== undefined;
@@ -60,6 +62,15 @@ const EocSelect = ({
 
   const currentValue = isControlled ? value : val;
   const selectedIndex = options.findIndex((o) => String(o.value) === String(currentValue));
+  const visibleOptions = options
+  .map((o, i) => ({ option: o, index: i }))
+  .filter(({ option }) => {
+    if (!searchTerm.trim()) return true;
+
+    return String(option.text)
+      .toLocaleLowerCase('ar')
+      .includes(searchTerm.trim().toLocaleLowerCase('ar'));
+  });
 
   // النص المعروض في الغلاف
   let labelText = '';
@@ -264,26 +275,72 @@ const EocSelect = ({
             aria-hidden="true"
             style={pos ? { minWidth: pos.minW, maxWidth: pos.maxW, left: pos.left, right: pos.right, top: pos.top, bottom: pos.bottom } : undefined}
           >
-            {options.map((o, i) => (
-              <button
-                key={i}
-                type="button"
-                tabIndex={-1}
-                className={[
-                  'eoc-select__option',
-                  i === selectedIndex ? 'is-selected' : '',
-                  o.disabled ? 'is-placeholder' : '',
-                  i === active ? 'is-active' : '',
-                ].filter(Boolean).join(' ')}
-                onMouseEnter={() => setActive(i)}
-                onClick={() => commit(o)}
-              >
-                <svg className="eoc-select__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-                <span className="eoc-select__option__text">{o.text}</span>
-              </button>
-            ))}
+            <div className="eoc-select__search-wrap">
+  <input
+    ref={searchInputRef}
+    type="search"
+    value={searchTerm}
+    onChange={(e) => {
+      const next = e.target.value;
+      setSearchTerm(next);
+
+      const firstMatch = options.findIndex((o) =>
+        !o.disabled &&
+        String(o.text)
+          .toLocaleLowerCase('ar')
+          .includes(next.trim().toLocaleLowerCase('ar'))
+      );
+
+      setActive(firstMatch >= 0 ? firstMatch : -1);
+    }}
+    onKeyDown={(e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMenu();
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+
+        const firstMatch = visibleOptions.find(({ option }) => !option.disabled);
+
+        if (firstMatch) {
+          commit(firstMatch.option);
+        }
+      }
+    }}
+    placeholder="اكتب للبحث..."
+    autoFocus
+    className="eoc-select__search"
+  />
+</div>
+
+{visibleOptions.length === 0 ? (
+  <div className="eoc-select__no-results">
+    لا توجد نتائج
+  </div>
+) : (
+  visibleOptions.map(({ option: o, index: i }) => (
+    <button
+      key={i}
+      type="button"
+      tabIndex={-1}
+      className={[
+        'eoc-select__option',
+        i === selectedIndex ? 'is-selected' : '',
+        o.disabled ? 'is-placeholder' : '',
+        i === active ? 'is-active' : '',
+      ].filter(Boolean).join(' ')}
+      onMouseEnter={() => setActive(i)}
+      onClick={() => commit(o)}
+    >
+      <svg className="eoc-select__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      <span className="eoc-select__option__text">{o.text}</span>
+    </button>
+  ))
+)}
           </div>,
           document.body
         )}

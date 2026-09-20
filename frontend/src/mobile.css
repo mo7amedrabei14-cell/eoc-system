@@ -374,3 +374,43 @@
     .sidebar-shell { position: static; transform: none; width: 16rem; max-width: none; box-shadow: none; }
   }
 }
+
+.eoc-select__no-results {
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .eoc-select__menu {
+    max-height: 60vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .eoc-select__search-wrap {
+    padding: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .eoc-select__search {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
+  .eoc-select__option {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .eoc-select__no-results {
+    padding: 16px 12px;
+    font-size: 14px;
+  }
+}

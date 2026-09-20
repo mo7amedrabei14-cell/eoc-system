@@ -2600,3 +2600,36 @@ select.field {
    Mobile Styles Import — MUST BE LAST to override everything above
    ═══════════════════════════════════════════════════════════════════════════ */
 @import "./mobile.css";
+
+.eoc-select__search-wrap {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-3);
+}
+
+.eoc-select__search {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  outline: none;
+  font-size: 13px;
+}
+
+.eoc-select__search:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.eoc-select__search::placeholder {
+  color: var(--faint);
+}
+
+.eoc-select__no-results {
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}

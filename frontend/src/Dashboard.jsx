@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
@@ -17,6 +17,93 @@ import { translate } from './i18n.js';
 // → React 18 unmounts the whole tree (no error boundary) → blank page.
 const BASE = 'https://eoc-system-b12f.vercel.app';
 
+const getBrowserStorages = () => {
+  const storages = [];
+  for (const name of ['sessionStorage', 'localStorage']) {
+    try {
+      const storage = globalThis[name];
+      if (storage) storages.push(storage);
+    } catch {
+      // Storage can be unavailable in hardened browser contexts.
+    }
+  }
+  return storages;
+};
+
+const getStoredAccessToken = () => {
+  for (const storage of getBrowserStorages()) {
+    try {
+      const token = storage.getItem('access_token');
+      if (typeof token === 'string' && token.trim() !== '') return token;
+    } catch {
+      // Continue to the next storage area if access is denied.
+    }
+  }
+  return null;
+};
+
+const getStoredAuth = () => {
+  for (const storage of getBrowserStorages()) {
+    try {
+      const userStr = storage.getItem('user');
+      const token = storage.getItem('access_token');
+      if (!userStr || typeof token !== 'string' || token.trim() === '') continue;
+      const user = JSON.parse(userStr);
+      if (user && typeof user === 'object' && !Array.isArray(user)) {
+        return { user, token };
+      }
+    } catch {
+      // Ignore inaccessible or malformed browser storage without exposing its contents.
+    }
+  }
+  return null;
+};
+
+const clearStoredAuth = () => {
+  for (const storage of getBrowserStorages()) {
+    try {
+      storage.removeItem('access_token');
+      storage.removeItem('user');
+    } catch {
+      // Storage can be unavailable in hardened browser contexts.
+    }
+  }
+};
+
+const getRoleFlags = (user) => {
+  const userRole = user?.role?.toUpperCase() || 'VOLUNTEER';
+  const isOwner = user?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
+  const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
+  const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
+  const isVolunteer = !isOwner && !isSupervisor && !isJoker;
+  const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
+  return { userRole, isOwner, isSupervisor, isJoker, isVolunteer, weatherEligible };
+};
+
+class WeatherIntelErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]">
+          <h3 className="text-xl font-bold text-white mb-2">تعذر عرض استخبارات الطقس / Weather Intelligence unavailable</h3>
+          <p className="text-[var(--muted)]">حدث خطأ أثناء عرض الوحدة. يمكنك العودة إلى لوحة العمليات أو إعادة المحاولة.</p>
+          <p className="text-[var(--muted)] text-sm mt-1">The dashboard remains available; return to Operations or try another tab.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // 🚀 أرصفة الذاكرة (React.memo): العروض الثقيلة تُعاد رسمها فقط عندما تتغير قيم بروبسها الفعلية.
 // بهذا لا يجرّ تبديل الثيم (الذي يغيّر data-theme فقط) إعادة رسم الجداول الثقيلة مثل شبكة الطقس
 // (27 محافظة × 12 خلية) — يبقى التنقل بين الدارك والفاتح ناعماً بلا عمليات إعادة رسم بلا داعٍ.
@@ -31,6 +118,7 @@ const MemoGlobalDisastersView = memo(GlobalDisastersView);
 const MemoEarthquakesView = memo(EarthquakesView);
 const MemoAINewsMonitorView = memo(AINewsMonitorView);
 const MemoHumanResourcesView = memo(HumanResourcesView);
+const MemoWeatherIntelView = memo(WeatherIntelView);
 
 // Static dashboard labels are kept in Arabic in the existing screens.  This
 // table lets the whole dashboard share Login.jsx's language choice without
@@ -936,6 +1024,21 @@ const baseMapUrl = (theme) =>
     ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
     : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 
+// 🎯 طبقة الخريطة بتتابع الثيم بنفسها (بدل ما تاخده Prop من الأب) عشان أي صفحة
+// تقيلة فيها خريطة (المهام، الزلازل، الفروع، رصد الذكاء الاصطناعي) تقدر تستخدمها
+// من غير ما تحتاج theme كـ Prop على مستوى الصفحة كلها - وده اللي كان بيلغي فايدة
+// React.memo على الصفحات دي ويجبرها تعيد الرسم بالكامل (شبكات كبيرة وجداول) في كل
+// مرة يتم فيها الضغط على زرار الدارك/لايت مود، وهو السبب الحقيقي وراء إحساس التهنيج.
+function ThemedTileLayer() {
+  const [localTheme, setLocalTheme] = useState(() => document.documentElement.dataset.theme || 'dark');
+  useEffect(() => {
+    const handler = () => setLocalTheme(document.documentElement.dataset.theme || 'dark');
+    window.addEventListener('dashboard-theme-change', handler);
+    return () => window.removeEventListener('dashboard-theme-change', handler);
+  }, []);
+  return <TileLayer url={baseMapUrl(localTheme)} />;
+}
+
 /* ════════════════════════════════════════════════════════════════
    Motion Primitives — أدوات حركة قابلة لإعادة الاستخدام
    • عداد رقمي متحرك (count-up) — transform/digit فقط، بلا jank
@@ -1120,31 +1223,55 @@ function fmtHours(hours, lang = 'ar') {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  
+  const initialAuthRef = useRef(getStoredAuth());
+
   // 💡 1. نسحب اليوزر من اللحظة الأولى (Synchronous) عشان نمنع أي خطفة أو تحميل متأخر
-  const [userData, setUserData] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('user')) || null; } 
-    catch (e) { return null; }
-  });
+  const [userData, setUserData] = useState(() => initialAuthRef.current?.user || null);
 
   // 💡 2. نحدد الشاشة الافتراضية بناءً على الرتبة فوراً بثبات
+  const initialRoleFlags = getRoleFlags(initialAuthRef.current?.user);
   const [activeTab, setActiveTab] = useState(() => {
-    const r = userData?.role?.toUpperCase() || '';
-    const isLeader = userData?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(r);
+    const isLeader = initialAuthRef.current?.user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(initialRoleFlags.userRole);
     return isLeader ? 'home' : 'missions';
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [customAlert, setCustomAlert] = useState(null);
+
+  useEffect(() => {
+    if (!customAlert) return undefined;
+    const timeout = setTimeout(() => setCustomAlert(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [customAlert]);
 
 const [theme, setTheme] = useState(() => {
   return localStorage.getItem('dashboard-theme') || 'dark';
 });
 
 useEffect(() => {
+  // 🚀 السبب المتبقي للإحساس بالبطء: مئات العناصر في الصفحة بتعمل Transition
+  // للونها/حدودها/ظلها في نفس اللحظة بالظبط لما data-theme يتغيّر — وده تكلفة على
+  // مستوى المتصفح نفسه (رسم/تركيب) مش React، فمكانش هيتصلح بمجرد منع إعادة الرسم.
+  // الحل: نجمّد كل الـ Transitions والأنيميشن لحظيًا وقت التبديل بس (كسر واحد للثانية
+  // تقريبًا)، فيترسم الوضع الجديد فورًا بدل ما ننتظر مئات الانتقالات تتزامن مع بعض،
+  // وبعدها نرجّعها زي ما هي عادي فورًا.
+  const freezeStyle = document.createElement('style');
+  freezeStyle.textContent = '*, *::before, *::after { transition: none !important; animation-duration: 0.001ms !important; }';
+  document.head.appendChild(freezeStyle);
+
   localStorage.setItem('dashboard-theme', theme);
   // 🎯 الجذر الحقيقي للثيم: <html> يوصل data-theme لحديث CSS الجذري
   // (كل القواعد مكتوبة على :root[data-theme=...]) — بدونه كان الوضع الفاتح يبقى داكن فعلياً
   document.documentElement.dataset.theme = theme;
+  // 🚀 حدث خفيف لأي عنصر معزول محتاج يعرف تغيّر الثيم (زي طبقة الخريطة) من غير
+  // ما ناخده كـ Prop في مكوّنات تقيلة (بيلغي فايدة React.memo ويسبب تهنيج عند التبديل).
+  window.dispatchEvent(new Event('dashboard-theme-change'));
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      freezeStyle.remove();
+    });
+  });
 }, [theme]);
 
   // Keep the selected language in sync with Login.jsx, so it survives navigation.
@@ -1305,15 +1432,7 @@ useEffect(() => {
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
   const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0, weather: 0 });
 
-  const userRole = userData?.role?.toUpperCase() || 'VOLUNTEER';
-  const isOwner = userData?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
-  const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
-  const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
-  const isVolunteer = !isOwner && !isSupervisor && !isJoker;
-
-  // 🌤️ صلاحيات وحدة الطقس (مستقلة عن isVolunteer — «أوبريشن» لا ينهار لمتطوع هنا):
-  //    متاح لكل الأدوار من «أوبريشن» فما فوق (الرؤية العامة/الإقليمية تُحسب داخل الوحدة).
-  const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
+  const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, weatherEligible } = getRoleFlags(userData);
 
   // 💡 مركز الإشعارات الفوري (متطلب #5):
   // - Incremental polling بوسم تصاعدي (event_id) — من غير ما ننزل الـ audit_logs كاملة
@@ -1583,35 +1702,40 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
-    const userStr = sessionStorage.getItem('user');
-    const token = sessionStorage.getItem('access_token');
-    
-    if (userStr && token) {
-      try {
-        setUserData(JSON.parse(userStr));
-      } catch (error) {
-        localStorage.clear();
-        navigate('/');
-        return;
-      }
-    } else {
-      navigate('/'); 
+    const auth = getStoredAuth();
+    if (!auth?.user || !auth?.token) {
+      clearStoredAuth();
+      navigate('/');
       return;
     }
 
+    setUserData(auth.user);
+    const flags = getRoleFlags(auth.user);
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    setActiveTab(requestedTab === 'weather_intel' && flags.weatherEligible
+      ? 'weather_intel'
+      : (auth.user.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole) ? 'home' : 'missions'));
+
     const fetchData = async () => {
       try {
-        const branchesRes = await fetch('https://eoc-system-b12f.vercel.app/api/branches/locations', {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const branchesRes = await fetch(`${BASE}/api/branches/locations`, {
+          headers: { Authorization: `Bearer ${auth.token}` }
         });
-        
-        if (branchesRes.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
-        
+
+        if (branchesRes.status === 401) {
+          clearStoredAuth();
+          setUserData(null);
+          navigate('/');
+          return;
+        }
+
         if (branchesRes.ok) {
-          const branchesData = await branchesRes.json();
-          const uniqueData = branchesData.filter((branch, index, self) =>
-            index === self.findIndex((t) => (t.name || '').trim() === (branch.name || '').trim())
-          );
+          const branchesData = await branchesRes.json().catch(() => null);
+          const uniqueData = Array.isArray(branchesData)
+            ? branchesData.filter((branch, index, self) =>
+              index === self.findIndex((t) => (t.name || '').trim() === (branch.name || '').trim())
+            )
+            : [];
 
           const normalizedBranches = uniqueData.map(b => ({
             id: b.id || 0, name: b.name || 'غير محدد', lat: parseFloat(b.lat || 0), lng: parseFloat(b.lng || 0), address: b.address || 'بدون عنوان',
@@ -1628,15 +1752,20 @@ useEffect(() => {
           }));
           setBranchesList(normalizedBranches);
         }
-        
-        // 💡 سحب إحصائيات الداش بورد
-        const statsRes = await fetch('https://eoc-system-b12f.vercel.app/api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
-        if (statsRes.ok) setDashboardStats(await statsRes.json());
-        
-      } catch (error) { console.error("فشل في جلب البيانات:", error); }
 
+        // 💡 سحب إحصائيات الداش بورد
+        const statsRes = await fetch(`${BASE}/api/dashboard/stats`, { headers: { Authorization: `Bearer ${auth.token}` } });
+        if (statsRes.ok) {
+          const statsData = await statsRes.json().catch(() => null);
+          if (statsData && typeof statsData === 'object' && !Array.isArray(statsData)) {
+            setDashboardStats(prev => ({ ...prev, ...statsData }));
+          }
+        }
+      } catch {
+        // Keep the Dashboard shell mounted when optional dashboard data is unavailable.
+      }
     };
-    if (token) fetchData();
+    fetchData();
   }, [navigate]);
 
   // 💡 النزول لأول الصفحة أوتوماتيك مع كل تغيير للشاشة
@@ -1675,27 +1804,30 @@ useEffect(() => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
+    clearStoredAuth();
+    setUserData(null);
     navigate('/');
   };
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <MemoHomeView branches={branchesList} theme={theme} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
-      case 'ai_news': return <MemoAINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} theme={theme} focusTarget={focusTarget} />;
+      case 'home': return <MemoHomeView branches={branchesList} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
+      case 'ai_news': return <MemoAINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} focusTarget={focusTarget} />;
       case 'weather': return <MemoWeatherForecastView branches={branchesList} isOwner={isOwner} isJoker={isJoker} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.weather} />;
+      case 'weather_intel': return weatherEligible
+        ? <WeatherIntelErrorBoundary><MemoWeatherIntelView branches={branchesList} isOwner={isOwner} userRole={userRole} lang={language} setCustomAlert={setCustomAlert} /></WeatherIntelErrorBoundary>
+        : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
       case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
       case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
       case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
-      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} theme={theme} focusTarget={focusTarget} />;
-      case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} theme={theme} />;
+      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} focusTarget={focusTarget} />;
+      case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} />;
       case 'handover': return (isOwner || isSupervisor)
         ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} focusTarget={focusTarget} />
         : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
       case 'audit': return <MemoAuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <MemoHumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
-      default: return <MemoHomeView branches={branchesList} theme={theme} />;
+      default: return <MemoHomeView branches={branchesList} />;
     }
   };
 
@@ -1707,6 +1839,7 @@ useEffect(() => {
         ...((isOwner || isSupervisor || isJoker) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات الغرفة', en: 'Operations Overview' }] : []),
         { id: 'ai_news', icon: <AIIcon />, ar: 'رصد الذكاء الاصطناعي', en: 'AI Monitoring', update: newUpdates.ai_news },
         ...(weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
+        ...(weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
         { id: 'missions', icon: <AlertIcon />, ar: 'سجل المهام الميدانية', en: 'Field Missions', update: newUpdates.missions },
         ...((isOwner || isSupervisor || isJoker) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
         { id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news },
@@ -1776,6 +1909,7 @@ useEffect(() => {
 
   return (
     <div ref={dashboardRootRef} data-theme={theme} className="app-shell min-h-screen bg-[var(--bg)] text-white font-sans selection:bg-[var(--accent)] selection:text-white flex overflow-hidden transition-colors duration-300" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
       {/* 💡 الثيم الآن عبر data-theme + نظام CSS تصميمي واحد في index.css (light=طبقات بيضاء/ألوان حيادية، dark=أسطح عميقة) */}
 
@@ -1929,6 +2063,7 @@ useEffect(() => {
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />
             {weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
+            {weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
 
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
 
@@ -1964,6 +2099,7 @@ useEffect(() => {
                   {activeTab === 'home' && 'موجز عمليات اليوم'}
                   {activeTab === 'ai_news' && 'رصد الذكاء الاصطناعي'}
                   {activeTab === 'weather' && (language === 'ar' ? 'توقعات الطقس' : 'Weather Forecasts')}
+                  {activeTab === 'weather_intel' && (language === 'ar' ? 'استخبارات الطقس اليومية' : 'Daily Weather Intelligence')}
                   {activeTab === 'missions' && 'إدارة المهام الميدانية'}
                   {activeTab === 'human_resources' && 'سجل القوة البشرية'}
                   {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
@@ -2245,7 +2381,7 @@ function TiltCard({ children, className = '', max = 9 }) {
   );
 }
 
-function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang = 'ar', weatherEligible = true }) {
+function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherEligible = true }) {
   const [missions, setMissions] = useState([]);
   const [news, setNews] = useState([]);
   const [globalDisasters, setGlobalDisasters] = useState([]);
@@ -2291,7 +2427,12 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
   const filteredNews = selectedBranchName ? news.filter(n => n.governorate === filterNewsGov) : news;
 
   const dailyMissions = filterDate ? filteredMissions.filter(m => {
-    const createdAt = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
+    const createdAt = (m.created_at && m.created_at !== '-')
+  ? String(m.created_at).split(/[ T]/)[0]
+  : ((m.creation_datetime && m.creation_datetime !== '-')
+    ? String(m.creation_datetime).split(/[ T]/)[0]
+    : '');
+
     const isCompleted = m.status === 'Completed';
     const isCancelled = m.status === 'Cancelled';
     const isFinished = isCompleted || isCancelled;
@@ -2300,8 +2441,16 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
     if (!isFinished) {
       return createdAt <= filterDate;
     }
-    const completedAt = (m.completion_date && m.completion_date !== '-')
-      ? String(m.completion_date).split(' ')[0] : null;
+    const storedCompletedAt = (m.completion_date && m.completion_date !== '-')
+  ? String(m.completion_date).split(/[ T]/)[0]
+  : null;
+
+// حماية للبيانات القديمة التي تحمل تاريخ إغلاق أقدم من إنشاء السجل
+const completedAt =
+  storedCompletedAt && storedCompletedAt >= createdAt
+    ? storedCompletedAt
+    : createdAt;
+
     if (isCompleted && completedAt) {
       return completedAt === filterDate;
     }
@@ -2315,6 +2464,7 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
 
   const activeDaily = dailyMissions.filter(m => m.mission_classification !== 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
   const activeOpen = dailyMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const completedMissions = dailyMissions.filter(m => m.status === 'Completed').length;
   const totalNews = dailyNews.length;
   const activeNews = dailyNews.filter(n => n.is_field_response).length;
   
@@ -2411,11 +2561,11 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
             <span className="kpi-sub"><span className="live-dot" /> نشطة الآن</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام المفتوحة</h3><div className="p-2 rounded-xl text-[var(--info)] bg-[var(--info-soft)] border border-[var(--info)]/20 shrink-0"><AlertIcon/></div></div>
+                <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-sm">المهام المكتملة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><CheckIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
-            <p className="kpi-value text-4xl text-[var(--ink)]"><CountUp value={activeOpen} /></p>
-            <span className="kpi-sub">تنتظر الإغلاق</span>
+            <p className="kpi-value text-4xl text-[var(--ink)]"><CountUp value={completedMissions} /></p>
+            <span className="kpi-sub">تم الانتهاء</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
@@ -2484,7 +2634,7 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
         {/* 💡 الارتفاع بقى 300 في الموبايل و 450 في الديسكتوب */}
         <div className="h-[300px] md:h-[450px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url={baseMapUrl(theme)} />
+            <ThemedTileLayer />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
             {branches.map(branch => branch.lat && branch.lng ? (
                 <Marker keyboard={false} key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { setSelectedBranchName(prev => prev === branch.name ? null : branch.name); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); } }}>
@@ -2533,7 +2683,7 @@ function HomeView({ branches = [], theme = 'dark', liveUpdateVersion = {}, lang 
   );
 }
 
-function BranchesAndInventoryView({ branches, theme = 'dark' }) {
+function BranchesAndInventoryView({ branches }) {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const displayedBranches = selectedBranchId ? branches.filter(b => b.id === selectedBranchId) : branches;
   const totalFirstAid = displayedBranches.reduce((sum, b) => sum + (b.first_aid_kits || 0), 0);
@@ -2577,7 +2727,7 @@ function BranchesAndInventoryView({ branches, theme = 'dark' }) {
         {/* 💡 الخريطة هتاخد 350 بيكسل في الموبايل */}
         <div className="w-full lg:w-3/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl relative overflow-hidden shadow-lg z-0 h-[350px] lg:h-auto">
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url={baseMapUrl(theme)} />
+              <ThemedTileLayer />
               {branches.map(branch => branch.lat && branch.lng ? (
                   <Marker keyboard={false} key={`marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { handleSelectBranch(branch.id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('inventory-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
                     <Tooltip direction="top">
@@ -2861,12 +3011,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchMissions = async (silent = false) => {
     if (!silent) setIsLoading(true);
-    const token = sessionStorage.getItem('access_token');
+    const token = getStoredAccessToken();
     try {
       const res = await fetch('https://eoc-system-b12f.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
-      if (res.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
+      if (res.status === 401) {
+        clearStoredAuth();
+        setUserData(null);
+        navigate('/');
+        return;
+      }
       if (res.ok) setMissionsList(await res.json());
-    } catch (error) { console.error("Error:", error); }
+    } catch {
+      // Keep the Dashboard shell mounted when mission data is unavailable.
+    }
     finally { if (!silent) setIsLoading(false); }
   };
 
@@ -3710,6 +3867,21 @@ const [isModalOpen, setIsModalOpen] = useState(false);
            sysNotes = '';
        }
 
+       const isClosingNow =
+  submitStatus === 'Completed' &&
+  currentMissionData?.status !== 'Completed';
+
+const closeNow = new Date();
+const pad2 = (n) => String(n).padStart(2, '0');
+
+const actualCompletionDateTime =
+  `${closeNow.getFullYear()}-${pad2(closeNow.getMonth() + 1)}-${pad2(closeNow.getDate())} ` +
+  `${pad2(closeNow.getHours())}:${pad2(closeNow.getMinutes())}:${pad2(closeNow.getSeconds())}`;
+
+const actualCompletionTime =
+  `${pad2(closeNow.getHours())}:${pad2(closeNow.getMinutes())}`;
+
+
        const missionData = {
          mission_code: document.getElementById('f_mission_code')?.value || null,
          // 🆕 تاريخ إنشاء المهمة (إصدار المستخدم) — يُرسل كما هو، المالك فقط يعدّله
@@ -3728,11 +3900,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          departure_date: document.getElementById('f_departure_date')?.value || null,
          arrival_date: timelineFieldValue('f_arrival_date', 'arrival_date'),
          return_date: document.getElementById('f_return_date')?.value || null,
-         completion_date: timelineFieldValue('f_completion_date', 'completion_date'),
+         completion_date: isClosingNow
+  ? actualCompletionDateTime
+  : timelineFieldValue('f_completion_date', 'completion_date'),
+
          start_time: document.getElementById('f_start_time')?.value || null,
          departure_time: timelineFieldValue('f_departure_time', 'departure_time'),
          arrival_time: timelineFieldValue('f_arrival_time', 'arrival_time'),
-         completion_time: timelineFieldValue('f_completion_time', 'completion_time'),
+         completion_time: isClosingNow
+  ? actualCompletionTime
+  : timelineFieldValue('f_completion_time', 'completion_time'),
+
          injured_count: 0, indirect_beneficiaries_total: 0,
          notes: finalNotes,
          internal_notes: sysNotes,
@@ -3851,7 +4029,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     if (filterDate) {
        baseMissions = baseMissions.filter(m => {
-          const createdAt = (m.creation_datetime && m.creation_datetime !== '-') ? String(m.creation_datetime).split(' ')[0] : (m.created_at ? String(m.created_at).split(' ')[0] : '');
+          const createdAt = (m.created_at && m.created_at !== '-')
+  ? String(m.created_at).split(/[ T]/)[0]
+  : ((m.creation_datetime && m.creation_datetime !== '-')
+    ? String(m.creation_datetime).split(/[ T]/)[0]
+    : '');
+
           const isCompleted = m.status === 'Completed';
           const isCancelled = m.status === 'Cancelled';
           const isFinished = isCompleted || isCancelled;
@@ -3859,8 +4042,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           if (!isFinished) {
              return createdAt <= filterDate;
           }
-          const completedAt = (m.completion_date && m.completion_date !== '-')
-             ? String(m.completion_date).split(' ')[0] : null;
+          const storedCompletedAt = (m.completion_date && m.completion_date !== '-')
+  ? String(m.completion_date).split(/[ T]/)[0]
+  : null;
+
+// حماية للبيانات القديمة التي تحمل تاريخ إغلاق أقدم من إنشاء السجل
+const completedAt =
+  storedCompletedAt && storedCompletedAt >= createdAt
+    ? storedCompletedAt
+    : createdAt;
+
           if (isCompleted && completedAt) {
              return completedAt === filterDate;
           }
@@ -5371,7 +5562,23 @@ const InventoryIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24
 const HandoverIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 7h12M8 7l4-4M8 7l4 4"/><path d="M16 17H4M16 17l-4-4m4 4-4 4"/></svg>;
 const EditIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>;
 const DownloadIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>;
-const CheckIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const CheckIcon = ({ className = '', ...props }) => (
+  <svg
+    {...props}
+    className={`w-5 h-5 ${className}`}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+);
+
 const PendingIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ExcelIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9L13 3z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 3v6h6"/><path strokeLinecap="round" strokeWidth={2} d="M9 13.5h6M9 16.5h6M9 19h4"/></svg>;
 // ==========================================
@@ -5692,6 +5899,11 @@ const [nd, setNd] = useState({
     const payload = {
       ...nd,
       branch_id: 19,
+      distance_km:
+  nd.distance_km === '' || nd.distance_km == null
+    ? null
+    : Number(nd.distance_km),
+
       incident_month: getMonthName(nd.incident_date),
       response_time_points: nd.is_reported && nd.is_responded ? responsePoints : 0,
       response_duration: nd.is_reported && nd.is_responded ? formatDuration(responseDiff) : '',
@@ -5709,9 +5921,38 @@ const [nd, setNd] = useState({
     setSavingNews(true);
     try {
       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsModalOpen(false); fetchNews(); setCustomAlert(nd.news_id ? "تم تحديث الخبر بنجاح!" : "تم إضافة الخبر بنجاح!"); }
-      else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم حفظ الخبر."); }
-    } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
+      if (res.ok) {
+  setIsModalOpen(false);
+  fetchNews();
+  setCustomAlert(
+    nd.news_id
+      ? "تم تحديث الخبر بنجاح!"
+      : "تم إضافة الخبر بنجاح!"
+  );
+} else {
+  const errorBody = await res.json().catch(() => ({}));
+
+  const detail =
+    typeof errorBody?.detail === 'string'
+      ? errorBody.detail
+      : (
+          errorBody?.detail
+            ? JSON.stringify(errorBody.detail)
+            : 'لم يحدد السيرفر سبب الخطأ'
+        );
+
+  setCustomAlert(
+    `فشل حفظ الخبر (HTTP ${res.status}):\n${detail}`
+  );
+}
+} catch (error) {
+  setCustomAlert(
+    `تعذر الاتصال بالسيرفر أثناء حفظ الخبر:\n${
+      error?.message || 'تحقق من الاتصال بالشبكة'
+    }`
+  );
+}
+
     finally {
       setSavingNews(false);
       submitLockRef.current = false;
@@ -6073,9 +6314,9 @@ const [nd, setNd] = useState({
 //   Night (ليلية)    12:00 ص - 08:00 ص → 08:00 ص - 04:00 م نفس التاريخ
 // القاعدة: «القاهرة» (المركز العام) كيان واحد بنفس رمز الفرع (branch_id 19) — ليس لهما سطران منفصلان.
 const WEATHER_SHIFT_CHIPS = [
+  { key: 'night', ar: 'وردية الليل (12:00 ص - 08:00 ص)', en: 'Night Shift (12:00 AM - 08:00 AM)' },
   { key: 'morning', ar: 'وردية الصباح (08:00 ص - 04:00 م)', en: 'Morning Shift (08:00 AM - 04:00 PM)' },
   { key: 'evening', ar: 'وردية المساء (04:00 م - 12:00 ص)', en: 'Evening Shift (04:00 PM - 12:00 AM)' },
-  { key: 'night', ar: 'وردية الليل (12:00 ص - 08:00 ص)', en: 'Night Shift (12:00 AM - 08:00 AM)' },
 ];
 const WEATHER_METRICS = [
   { key: 'temp', ar: 'درجة الحرارة', en: 'Temperature', unit: '°C' },
@@ -6112,12 +6353,15 @@ const W_FINISH_REGIONS = [
 function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang = 'ar', liveUpdateVersion = 0 }) {
   // 🌤️ صلاحيات مستقلة: لا نستخدم isVolunteer هنا (دور «أوبريشن» أهونها يفتح الطقس)
   const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
+  const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
   const isGlobalWeather = isOwner || isJoker || ['MANAGER', 'ADMIN', 'مدير', 'أدمن'].includes(userRole);
+  // 🔒 «إنهاء التوقعات» بقى حصريًا من الجوكر فما فوق (جوكر/مشرف/أونر) — اتشالت من رول الأوبريشن
+  const canFinishForecast = isOwner || isJoker || isSupervisor;
 
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   // فلاتر الأدوات الأربعة: (1) الوردية (2) التاريخ
-  const [shift, setShift] = useState('morning');
+  const [shift, setShift] = useState('night');
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [rows, setRows] = useState([]);            // توقعات الوردية المختارة (من السيرفر)
   const [formValues, setFormValues] = useState({}); // {branchId: {metric_min: '', ...}}
@@ -6158,7 +6402,57 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
     });
     return byRegion;
   }, [branches]);
-  const visibleBranches = isGlobalWeather ? branches : (wRegionBranches[userRegion] || []);
+  const WEATHER_BRANCH_ORDER = [
+  19, // المركز العام — يظهر للمستخدم القاهرة (المركز العام)
+  13, // الجيزة
+  20, // القليوبية
+  8,  // الاسكندرية
+  32, // مرسي مطروح
+  12, // البحيرة
+  26, // جنوب سيناء
+  29, // شمال سيناء
+  15, // السويس
+  16, // الشرقية
+  9,  // الاسماعيلية
+  25, // بورسعيد
+  21, // المنوفية
+  17, // الغربية
+  14, // الدقهلية
+  31, // كفر الشيخ
+  27, // دمياط
+  18, // الفيوم
+  24, // بنى سويف
+  22, // المنيا
+  7,  // اسيوط
+  23, // الوادي الجديد
+  28, // سوهاج
+  30, // قنا
+  10, // الاقصر
+  11, // البحر الاحمر
+  6,  // اسوان
+];
+
+const visibleBranches = (
+  isGlobalWeather
+    ? branches
+    : (wRegionBranches[userRegion] || [])
+)
+  .slice()
+  .sort((a, b) => {
+    const indexA = WEATHER_BRANCH_ORDER.indexOf(Number(a.id));
+    const indexB = WEATHER_BRANCH_ORDER.indexOf(Number(b.id));
+
+    return (indexA === -1 ? 999 : indexA) -
+           (indexB === -1 ? 999 : indexB);
+  });
+  
+  console.table(
+  (branches || []).map((b) => ({
+    id: b.id,
+    name: b.name,
+  }))
+);
+
   const scopeRegionLabel = isGlobalWeather ? null : W_REGION_LABELS[userRegion];
 
   // — جلب توقعات الوردية المختارة (جدول الإدخال) والطقس اليومي (المجمّع)
@@ -6414,8 +6708,9 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
         </div>
 
         <div className="actionbar flex-wrap">
-          {/* — زر «إنهاء التوقعات» — (في موضعه الأصلي: أول عناصر الشريط) */}
-          {isGlobalWeather ? (
+          {/* — زر «إنهاء التوقعات» — (في موضعه الأصلي: أول عناصر الشريط) — حصريًا جوكر/مشرف/أونر */}
+          {canFinishForecast && (
+          isGlobalWeather ? (
             <div className="relative shrink-0">
               <button type="button" onClick={() => setFinishOpen(o => !o)} className="btn-primary">
                 <CheckIcon /><span>{T('إنهاء التوقعات', 'Finish Forecast')}</span>
@@ -6444,6 +6739,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
             <button type="button" onClick={() => handleFinish('region', userRegion)} className="btn-primary shrink-0">
               <CheckIcon /><span>{T(`إنهاء توقعات ${scopeRegionLabel || ''}`, 'Finish Forecast')}</span>
             </button>
+          )
           )}
           {isOwner && (
             <>
@@ -6676,12 +6972,9 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     };
 
     const logoutDueToInactivity = () => {
-      // Clear authentication token
-      sessionStorage.removeItem('access_token');
-      // Optionally, clear other auth-related items
-      // Redirect to login page - assuming login is at root or /login
-      window.location.href = '/login'; // Adjust if needed
-      // Show a message to the user (optional)
+      clearStoredAuth();
+      setUserData(null);
+      navigate('/');
       setCustomAlert("تم تسجيل خروجك تلقائيًا بسبب عدم النشاط.");
     };
 
@@ -7624,7 +7917,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 }
 
 
-function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', theme = 'dark', focusTarget = null }) {
+function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', focusTarget = null }) {
   const [activeEqTab, setActiveEqTab] = useState('all'); 
   const [globalEqs, setGlobalEqs] = useState([]);
   const [egyptEqs, setEgyptEqs] = useState([]);
@@ -7933,7 +8226,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         {/* 💡 زوم أوت للخريطة */}
         <div className="h-[300px] md:h-[380px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative mt-4 md:mt-0">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url={baseMapUrl(theme)}/>
+            <ThemedTileLayer />
             
             {(activeEqTab === 'global' || activeEqTab === 'all') && tableGlobalEqs.map(eq => {
               const lat = parseFloat(eq.latitude); const lng = parseFloat(eq.longitude);
@@ -8148,6 +8441,1252 @@ const [clearAllCode, setClearAllCode] = useState('');
   );
 }
 
+// ==========================================
+// 10. شاشة استخبارات الطقس اليومية والتحليل المتقدم (Weather Intelligence Module)
+// ==========================================
+function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert }) {
+  const isAr = lang === 'ar';
+  const T = (ar, en) => (isAr ? ar : en);
+
+  const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const normalizeArray = (value) => Array.isArray(value) ? value : [];
+  const normalizeObject = (value) => isObject(value) ? value : {};
+  const safeScalar = (value, fallback = '') => {
+    if (value === null || value === undefined) return fallback;
+    return ['string', 'number', 'boolean'].includes(typeof value) ? value : fallback;
+  };
+  const safeText = (value, fallback = '') => {
+    const scalar = safeScalar(value, fallback);
+    return typeof scalar === 'string' ? scalar : String(scalar);
+  };
+  const safeNumber = (value, fallback = '') => {
+    if (value === null || value === undefined) return fallback;
+    const numberValue = typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim() !== ''
+        ? Number(value)
+        : NaN;
+    return Number.isFinite(numberValue) ? numberValue : fallback;
+  };
+  const normalizeAnomalyEntry = (value) => {
+    if (isObject(value)) return value;
+    if (typeof value === 'string') return { category: value };
+    return { category: 'normal' };
+  };
+  const normalizeAnomalies = (value) => {
+    const source = normalizeObject(value);
+    return Object.entries(source).reduce((result, [key, anomaly]) => {
+      result[key] = normalizeAnomalyEntry(anomaly);
+      return result;
+    }, {});
+  };
+  const normalizeForecast = (value) => {
+    const source = normalizeObject(value);
+    return {
+      ...source,
+      target_date: safeText(source.target_date),
+      forecast_date: safeText(source.forecast_date),
+      forecast_date_explicit: Boolean(source.forecast_date),
+      tmax: safeScalar(source.tmax),
+      tmin: safeScalar(source.tmin),
+      precip: safeScalar(source.precip_mm),
+      wind: safeScalar(source.wind_max_kph),
+      gusts: safeScalar(source.wind_gusts_kph),
+      humidity: safeScalar(source.humidity_mean_pct),
+      cloud: safeScalar(source.cloud_cover_mean_pct),
+      precip_mm: safeScalar(source.precip_mm),
+      precip_prob_pct: safeScalar(source.precip_prob_pct),
+      wind_max_kph: safeScalar(source.wind_max_kph),
+      wind_gusts_kph: safeScalar(source.wind_gusts_kph),
+      humidity_mean_pct: safeScalar(source.humidity_mean_pct),
+      cloud_cover_mean_pct: safeScalar(source.cloud_cover_mean_pct),
+      weather_code: safeScalar(source.weather_code),
+      fetched_at: safeText(source.fetched_at),
+      data_source: safeText(source.data_source),
+    };
+  };
+  const normalizeStatistic = (value) => {
+    const source = normalizeObject(value);
+    return {
+      ...source,
+      metric: safeText(source.metric),
+      mean: safeScalar(source.mean),
+      median: safeScalar(source.median),
+      p10: safeScalar(source.p10),
+      p25: safeScalar(source.p25),
+      p75: safeScalar(source.p75),
+      p90: safeScalar(source.p90),
+      min: safeScalar(source.min),
+      max: safeScalar(source.max),
+      sample_count: safeScalar(source.sample_count),
+      stddev: safeScalar(source.stddev),
+      period_start: safeText(source.period_start),
+      period_end: safeText(source.period_end),
+      window_days: safeScalar(source.window_days),
+    };
+  };
+  const normalizeFrequency = (value) => {
+    const source = normalizeObject(value);
+    return {
+      ...source,
+      metric: safeText(source.metric),
+      threshold_desc_ar: safeText(source.threshold_desc_ar),
+      threshold_value: safeScalar(source.threshold_value),
+      threshold_unit: safeText(source.threshold_unit),
+      qualifying_count: safeScalar(source.qualifying_count),
+      total_count: safeScalar(source.total_count),
+      frequency_pct: safeScalar(source.frequency_pct),
+    };
+  };
+  const normalizeSnapshot = (value) => ({
+    ...normalizeForecast(value),
+    id: safeScalar(value?.id),
+    location_id: safeScalar(value?.location_id),
+  });
+  const groupAssessmentData = (assessments, snapshots, statistics, frequencies) => {
+    const assessmentList = normalizeArray(assessments)
+      .map(normalizeAssessment)
+      .filter(Boolean);
+    const locationIds = new Set(assessmentList.map((assessment) => String(assessment.location_id)));
+    const byLocation = new Map();
+    const getGroup = (locationId) => {
+      const key = String(locationId);
+      if (!byLocation.has(key)) {
+        byLocation.set(key, { location_id: locationId, forecast: null, statistics: [], frequencies: [] });
+      }
+      return byLocation.get(key);
+    };
+
+    assessmentList.forEach((assessment) => {
+      Object.assign(getGroup(assessment.location_id), assessment);
+    });
+    normalizeArray(snapshots).forEach((rawSnapshot) => {
+      const snapshot = normalizeSnapshot(rawSnapshot);
+      if (
+        locationIds.has(String(snapshot.location_id)) &&
+        snapshot.location_id !== undefined &&
+        snapshot.location_id !== ''
+      ) {
+        getGroup(snapshot.location_id).forecast = snapshot;
+      }
+    });
+    normalizeArray(statistics).forEach((rawStatistic) => {
+      const statistic = normalizeStatistic(rawStatistic);
+      if (
+        locationIds.has(String(statistic.location_id)) &&
+        statistic.location_id !== undefined &&
+        statistic.location_id !== ''
+      ) {
+        getGroup(statistic.location_id).statistics.push(statistic);
+      }
+    });
+    normalizeArray(frequencies).forEach((rawFrequency) => {
+      const frequency = normalizeFrequency(rawFrequency);
+      if (
+        locationIds.has(String(frequency.location_id)) &&
+        frequency.location_id !== undefined &&
+        frequency.location_id !== ''
+      ) {
+        getGroup(frequency.location_id).frequencies.push(frequency);
+      }
+    });
+
+    return assessmentList;
+  };
+  const normalizeAiAssessmentJson = (value) => {
+    let source = normalizeObject(value);
+    if (!isObject(value) && typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        source = normalizeObject(parsed);
+      } catch {
+        source = {};
+      }
+    }
+    return {
+      weather_summary: safeText(source.weather_summary),
+      historical_comparison: safeText(source.historical_comparison),
+      significant_anomalies: safeText(source.significant_anomalies),
+      operational_implications: safeText(source.operational_implications),
+      recommended_monitoring: safeText(source.recommended_monitoring),
+    };
+  };
+  const normalizeHazard = (value) => {
+    if (!isObject(value)) return null;
+    return {
+      ...value,
+      code: safeText(value.code),
+      level: safeText(value.level),
+      title_ar: safeText(value.title_ar),
+      title_en: safeText(value.title_en),
+      detail_ar: safeText(value.detail_ar),
+      detail_en: safeText(value.detail_en),
+      unit: safeText(value.unit),
+    };
+  };
+  const normalizeAssessment = (assessment) => {
+    if (!isObject(assessment)) return null;
+    return {
+      ...assessment,
+      id: safeScalar(assessment.id),
+      location_id: safeScalar(assessment.location_id),
+      location_name_ar: safeText(assessment.location_name_ar),
+      location_name_en: safeText(assessment.location_name_en),
+      region: safeText(assessment.region),
+      latitude: safeScalar(assessment.latitude),
+      longitude: safeScalar(assessment.longitude),
+      target_date: safeText(assessment.target_date),
+      forecast: normalizeForecast(assessment.forecast),
+      statistics: normalizeArray(assessment.statistics).map(normalizeStatistic).filter(isObject),
+      frequencies: normalizeArray(assessment.frequencies).map(normalizeFrequency).filter(isObject),
+      hazards: normalizeArray(assessment.hazards).map(normalizeHazard).filter(isObject),
+      anomalies: normalizeAnomalies(assessment.anomalies),
+      ai_model: safeText(assessment.ai_model),
+      ai_provider: safeText(assessment.ai_provider),
+      ai_status: safeText(assessment.ai_status),
+      ai_error: safeText(assessment.ai_error),
+      ai_assessment: safeText(assessment.ai_assessment),
+      ai_assessment_json: normalizeAiAssessmentJson(assessment.ai_assessment_json),
+    };
+  };
+  const normalizeAssessments = (value) => normalizeArray(value).map(normalizeAssessment).filter(Boolean);
+  const normalizeSourceMeta = (value) => {
+    const source = normalizeObject(value);
+    return {
+      ...source,
+      ai_provider: safeText(source.ai_provider),
+      ai_model: safeText(source.ai_model),
+    };
+  };
+  const normalizeRun = (run) => ({
+    ...run,
+    id: safeScalar(run.id),
+    target_date: safeText(run.target_date),
+    forecast_date: safeText(run.forecast_date),
+    latest_observed_date: safeText(run.latest_observed_date),
+    run_date: safeText(run.run_date),
+    status: safeText(run.status),
+    successful_locations: safeScalar(run.successful_locations),
+    total_locations: safeScalar(run.total_locations),
+    source_meta: normalizeSourceMeta(run.source_meta),
+  });
+  const normalizeRuns = (value) => normalizeArray(value).filter(isObject).map(normalizeRun);
+  const formatAiProvider = (provider) => {
+    const rawProvider = safeText(provider).trim();
+    const providerNames = {
+      anthropic: 'Anthropic',
+      gemini: 'Gemini',
+      omniroute: 'OmniRoute',
+    };
+    return providerNames[rawProvider.toLowerCase()] || rawProvider;
+  };
+  const getAnalystLabel = (sourceMeta, fallbackModel = '', status = 'success') => {
+    if (status !== 'success') return '';
+    const provider = formatAiProvider(sourceMeta?.ai_provider);
+    const model = safeText(sourceMeta?.ai_model || fallbackModel).trim();
+    return provider && model ? `${provider} — ${model}` : '';
+  };
+  const normalizeLocations = (value) => normalizeArray(value).filter(isObject).map((location) => ({
+    ...location,
+    id: safeScalar(location.id),
+    name_ar: safeText(location.name_ar),
+    name_en: safeText(location.name_en),
+    region: safeText(location.region),
+    latitude: safeScalar(location.latitude),
+    longitude: safeScalar(location.longitude),
+  }));
+  const normalizeConfig = (value) => {
+    const source = normalizeObject(value);
+    return Object.entries(source).reduce((result, [key, item]) => {
+      const configItem = normalizeObject(item);
+      result[key] = {
+        ...configItem,
+        value: safeScalar(configItem.value),
+        unit: safeText(configItem.unit),
+        description_ar: safeText(configItem.description_ar),
+        source: safeText(configItem.source),
+        updated_at: safeText(configItem.updated_at),
+      };
+      return result;
+    }, {});
+  };
+  const formatCoordinate = (value) => {
+    const numberValue = safeNumber(value, NaN);
+    return Number.isFinite(numberValue) ? numberValue.toFixed(4) : '—';
+  };
+  const readJsonObject = async (response, endpoint) => {
+    const data = await response.json().catch(() => null);
+    if (!isObject(data) && !Array.isArray(data)) {
+      throw new Error(T(`استجابة غير صالحة من ${endpoint}.`, `Invalid response from ${endpoint}.`));
+    }
+    return data;
+  };
+
+  // حساب تاريخ الغد وفق تقويم القاهرة المحلي، بعيدًا عن UTC.
+  const getDefaultTargetDate = () => {
+    let year;
+    let month;
+    let day;
+    for (const { type, value } of new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Cairo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date())) {
+      if (type === 'year') year = Number(value);
+      if (type === 'month') month = Number(value);
+      if (type === 'day') day = Number(value);
+    }
+
+    const tomorrow = new Date(Date.UTC(year, month - 1, day + 1));
+    return tomorrow.toISOString().slice(0, 10);
+  };
+
+  const [targetDate, setTargetDate] = useState(getDefaultTargetDate());
+  const [selectedLocationId, setSelectedLocationId] = useState('all');
+  const [activeFilterTab, setActiveFilterTab] = useState('all'); // all | hazards | anomalies | ai
+  const [assessmentsData, setAssessmentsData] = useState([]);
+  const [currentRun, setCurrentRun] = useState(null);
+  const [runsHistory, setRunsHistory] = useState([]);
+  const [locationsList, setLocationsList] = useState([]);
+  const [intelConfig, setIntelConfig] = useState({});
+  const [apiError, setApiError] = useState(null);
+  const [apiPartial, setApiPartial] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isTriggering, setIsTriggering] = useState(false);
+  const [showRunsModal, setShowRunsModal] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({}); // { [locId]: { summary: true, comp: true, anom: true, ops: true, rec: true } }
+  const successfulAssessments = assessmentsData.filter((assessment) => assessment.ai_status === 'success');
+  const analystLabel = assessmentsData.length > 0 && successfulAssessments.length === assessmentsData.length
+    ? getAnalystLabel({
+      ai_provider: successfulAssessments[0]?.ai_provider || currentRun?.source_meta?.ai_provider,
+      ai_model: successfulAssessments[0]?.ai_model || currentRun?.source_meta?.ai_model,
+    }, '', 'success')
+    : '';
+
+  // جلب البيانات الأساسية مع الاحتفاظ بأي بيانات نجحت قبل حدوث خطأ
+  const fetchWeatherIntelData = async () => {
+    setIsLoading(true);
+    setApiError(null);
+    const token = getStoredAccessToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    let successfulEndpoints = 0;
+    let hasFailure = false;
+    const recordFailure = () => {
+      hasFailure = true;
+    };
+
+    try {
+      // 1. جلب التقييمات للتاريخ المحدد
+      const params = new URLSearchParams();
+      if (targetDate) params.append('target_date', targetDate);
+      if (selectedLocationId && selectedLocationId !== 'all') params.append('location_id', selectedLocationId);
+
+      try {
+        const resAssessments = await fetch(`${BASE}/api/weather-intel/assessments?${params.toString()}`, { headers });
+        if (!resAssessments.ok) {
+          throw new Error(T("تعذر تحميل بيانات التقييمات.", "Assessment data could not be loaded."));
+        }
+        const data = await readJsonObject(resAssessments, 'assessments');
+        setAssessmentsData(
+          groupAssessmentData(
+            data.assessments,
+            data.snapshots,
+            data.statistics,
+            data.frequencies
+          )
+        );
+        setCurrentRun(isObject(data.run) ? normalizeRun(data.run) : null);
+        setLocationsList(normalizeLocations(data.locations));
+        successfulEndpoints += 1;
+      } catch (err) {
+        recordFailure();
+      }
+
+      // 2. جلب سجل التشغيلات الأخيرة
+      try {
+        const resRuns = await fetch(`${BASE}/api/weather-intel/runs?limit=10`, { headers });
+        if (!resRuns.ok) {
+          throw new Error(T("تعذر تحميل سجل التشغيلات.", "Weather intelligence run history could not be loaded."));
+        }
+        const data = await readJsonObject(resRuns, 'runs');
+        setRunsHistory(normalizeRuns(data));
+        successfulEndpoints += 1;
+      } catch {
+        recordFailure();
+      }
+
+      // 3. جلب الإعدادات والعتبات
+      try {
+        const resConfig = await fetch(`${BASE}/api/weather-intel/config`, { headers });
+        if (!resConfig.ok) {
+          throw new Error(T("تعذر تحميل إعدادات استخبارات الطقس.", "Weather intelligence configuration could not be loaded."));
+        }
+        const data = await readJsonObject(resConfig, 'config');
+        setIntelConfig(normalizeConfig(data.config ?? data));
+        successfulEndpoints += 1;
+      } catch {
+        recordFailure();
+      }
+
+      // 4. جلب المواقع إن لم تكن محملة
+      if (locationsList.length === 0) {
+        try {
+          const resLocs = await fetch(`${BASE}/api/weather-intel/locations?active=1`, { headers });
+          if (!resLocs.ok) {
+            throw new Error(T("تعذر تحميل المواقع.", "Weather intelligence locations could not be loaded."));
+          }
+          const data = await readJsonObject(resLocs, 'locations');
+          setLocationsList(normalizeLocations(data.locations || data));
+          successfulEndpoints += 1;
+        } catch {
+          recordFailure();
+        }
+      }
+    } finally {
+      if (successfulEndpoints === 0) {
+        setApiError(T("تعذر الاتصال بخدمة استخبارات الطقس.", "Weather intelligence service is unavailable."));
+        setApiPartial(false);
+        if (setCustomAlert) setCustomAlert(T("تعذر جلب بيانات استخبارات الطقس.", "Failed to fetch weather intelligence data."));
+      } else if (hasFailure) {
+        setApiError(T("تم جلب جزء من البيانات، لكن بعض نقاط النهاية فشلت.", "Some Weather Intelligence data could not be loaded."));
+        setApiPartial(true);
+      } else {
+        setApiError(null);
+        setApiPartial(false);
+      }
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeatherIntelData();
+  }, [targetDate, selectedLocationId]);
+
+  // تشغيل التحليل اليومي يدويًا (Owner Only)
+  const handleTriggerRun = async () => {
+    if (!isOwner) return;
+    setIsTriggering(true);
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/weather-intel/trigger`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && isObject(data) && data.status === 'success') {
+        if (setCustomAlert) setCustomAlert(T("🚀 تم إطلاق مهمة استخبارات الطقس بنجاح عبر GitHub Actions. ستظهر النتائج خلال دقيقة إلى دقيقتين.", "Weather intelligence workflow triggered successfully. Results will appear in 1-2 minutes."));
+      } else {
+        if (setCustomAlert) setCustomAlert(T("تعذر تشغيل مهمة استخبارات الطقس.", "Weather intelligence analysis could not be started."));
+      }
+    } catch {
+      if (setCustomAlert) setCustomAlert(T("حدث خطأ أثناء الاتصال لتشغيل التحليل.", "Network error while triggering analysis."));
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
+  // تصدير التقرير إلى Excel
+  const handleExportExcel = async () => {
+    if (!assessmentsData || assessmentsData.length === 0) {
+      if (setCustomAlert) setCustomAlert(T("لا توجد بيانات متاحة للتصدير.", "No data available to export."));
+      return;
+    }
+
+    try {
+      const locationName = (a) => isAr
+        ? safeText(a.location_name_ar)
+        : safeText(a.location_name_en || a.location_name_ar);
+      const formatHazard = (h) => {
+        const title = isAr
+          ? safeText(h.title_ar)
+          : safeText(h.title_en || h.title_ar);
+        const detail = isAr
+          ? safeText(h.detail_ar)
+          : safeText(h.detail_en || h.detail_ar);
+        return [title, detail].filter(Boolean).join(' — ');
+      };
+      // 1. ورقة التوقعات الميدانية
+      const forecastRows = assessmentsData.map(a => {
+        const fc = a.forecast || {};
+        const hazards = a.hazards || [];
+        return {
+          [T('الموقع', 'Location')]: locationName(a),
+          [T('التاريخ المستهدف', 'Target Date')]: a.target_date,
+          [T('تاريخ التنبؤ', 'Forecast Date')]: fc.forecast_date || '',
+          [T('آخر تاريخ مرصود', 'Latest Observed Date')]: currentRun?.latest_observed_date || '',
+          [T('معرف لقطة التوقع', 'Forecast Snapshot ID')]: fc.id ?? a.forecast_snapshot_id ?? '',
+          [T('الحرارة العظمى (°م)', 'Max Temp (°C)')]: fc.tmax ?? '',
+          [T('الحرارة الصغرى (°م)', 'Min Temp (°C)')]: fc.tmin ?? '',
+          [T('الهطول المطري (مم)', 'Precipitation (mm)')]: fc.precip_mm ?? '',
+          [T('احتمالية الهطول (%)', 'Precip Probability (%)')]: fc.precip_prob_pct ?? '',
+          [T('سرعة الرياح القصوى (كم/س)', 'Max Wind Speed (km/h)')]: fc.wind_max_kph ?? '',
+          [T('هبات الرياح القصوى (كم/س)', 'Wind Gusts (km/h)')]: fc.wind_gusts_kph ?? '',
+          [T('متوسط الرطوبة (%)', 'Mean Humidity (%)')]: fc.humidity_mean_pct ?? '',
+          [T('الغطاء السحابي (%)', 'Cloud Cover (%)')]: fc.cloud_cover_mean_pct ?? '',
+          [T('كود الطقس WMO', 'WMO Weather Code')]: fc.weather_code ?? '',
+          [T('أكواد المخاطر', 'Hazard Codes')]: hazards.map(h => safeText(h.code)).filter(Boolean).join(' | '),
+          [T('مستويات المخاطر', 'Hazard Levels')]: hazards.map(h => safeText(h.level)).filter(Boolean).join(' | '),
+          [T('المخاطر المرصودة', 'Detected Hazards')]: hazards.map(formatHazard).filter(Boolean).join(' | '),
+          [T('مصدر التوقعات', 'Forecast Source')]: fc.data_source || 'open-meteo-forecast'
+        };
+      });
+
+      // 2. ورقة الخط المرجعي التاريخي (ERA5)
+      const statsRows = [];
+      assessmentsData.forEach(a => {
+        (a.statistics || []).forEach(s => {
+          const anomaly = a.anomalies?.[s.metric] || {};
+          statsRows.push({
+            [T('الموقع', 'Location')]: locationName(a),
+            [T('التاريخ المستهدف', 'Target Date')]: a.target_date,
+            [T('تاريخ التنبؤ', 'Forecast Date')]: a.forecast?.forecast_date || '',
+            [T('المتغير', 'Metric')]: s.metric,
+            [T('المتوسط التاريخي', 'Historical Mean')]: s.mean,
+            [T('الوسيط التاريخي', 'Historical Median')]: s.median,
+            [T('المئين 10 (P10)', '10th Percentile')]: s.p10,
+            [T('المئين 25 (P25)', '25th Percentile')]: s.p25,
+            [T('المئين 75 (P75)', '75th Percentile')]: s.p75,
+            [T('المئين 90 (P90)', '90th Percentile')]: s.p90,
+            [T('الحد الأدنى المسجل', 'Historical Min')]: s.min,
+            [T('الحد الأقصى المسجل', 'Historical Max')]: s.max,
+            [T('الانحراف المعياري', 'Std Dev')]: s.stddev,
+            [T('عدد المشاهدات الصالحة (N)', 'Valid Samples (N)')]: s.sample_count,
+            [T('فترة السجل', 'History Period')]: `${s.period_start} → ${s.period_end}`,
+            [T('نافذة الأيام', 'Window Days')]: `±${s.window_days}d`,
+            [T('فئة الشذوذ', 'Anomaly Category')]: safeText(anomaly.category || 'normal'),
+            [T('سبب الشذوذ', 'Anomaly Reason')]: safeText(anomaly.reason),
+            [T('قيمة الشذوذ', 'Anomaly Value')]: anomaly.value ?? '',
+            [T('الحد التاريخي الأدنى', 'Historical Min for Anomaly')]: anomaly.min_hist ?? '',
+            [T('الحد التاريخي الأقصى', 'Historical Max for Anomaly')]: anomaly.max_hist ?? '',
+            [T('السجل المرتبط', 'Anomaly Record')]: isObject(anomaly.record) ? JSON.stringify(anomaly.record) : safeText(anomaly.record)
+          });
+        });
+      });
+
+      // 3. ورقة تكرارات العتبات
+      const freqRows = [];
+      assessmentsData.forEach(a => {
+        (a.frequencies || []).forEach(f => {
+          freqRows.push({
+            [T('الموقع', 'Location')]: locationName(a),
+            [T('التاريخ المستهدف', 'Target Date')]: a.target_date,
+            [T('تاريخ التنبؤ', 'Forecast Date')]: a.forecast?.forecast_date || '',
+            [T('المتغير', 'Metric')]: f.metric,
+            [T('وصف العتبة', 'Threshold Description')]: f.threshold_desc_ar,
+            [T('قيمة العتبة', 'Threshold Value')]: `${f.threshold_value} ${f.threshold_unit}`,
+            [T('عدد مرات التحقق', 'Qualifying Count')]: f.qualifying_count,
+            [T('إجمالي المشاهدات الصالحة', 'Total Valid Count')]: f.total_count,
+            [T('نسبة التكرار التاريخي (%)', 'Historical Frequency (%)')]: `${f.frequency_pct}%`
+          });
+        });
+      });
+
+      // 4. ورقة تقييمات الذكاء الاصطناعي التشغيلية
+      const aiRows = assessmentsData.map(a => {
+        const json = a.ai_assessment_json || {};
+        return {
+          [T('الموقع', 'Location')]: locationName(a),
+          [T('التاريخ المستهدف', 'Target Date')]: a.target_date,
+          [T('تاريخ التنبؤ', 'Forecast Date')]: a.forecast?.forecast_date || '',
+          [T('آخر تاريخ مرصود', 'Latest Observed Date')]: currentRun?.latest_observed_date || '',
+          [T('معرف لقطة التوقع', 'Forecast Snapshot ID')]: a.forecast?.id ?? a.forecast_snapshot_id ?? '',
+          [T('مزود الذكاء الاصطناعي', 'AI Provider')]: formatAiProvider(a.ai_provider || currentRun?.source_meta?.ai_provider),
+          [T('نموذج الذكاء الاصطناعي', 'AI Model')]: a.ai_model || currentRun?.source_meta?.ai_model || '',
+          [T('حالة التقييم', 'AI Status')]: a.ai_status || 'skipped',
+          [T('خطأ التقييم', 'AI Error')]: a.ai_error || '',
+          [T('ملخص الأحوال الجوية', 'Weather Summary')]: json.weather_summary || '',
+          [T('المقارنة بالسياق التاريخي', 'Historical Comparison')]: json.historical_comparison || '',
+          [T('الشذوذ الإحصائي', 'Significant Anomalies')]: json.significant_anomalies || '',
+          [T('الآثار التشغيلية', 'Operational Implications')]: json.operational_implications || '',
+          [T('توصيات المراقبة والمتابعة', 'Recommended Monitoring')]: json.recommended_monitoring || '',
+          [T('التقرير الكامل الخام', 'Full Raw Text')]: a.ai_assessment || ''
+        };
+      });
+
+      const sheets = [
+        { name: T('توقعات الطقس', 'Forecasts'), ...gridFromRows(forecastRows) },
+        { name: T('الخط المرجعي التاريخي', 'Historical Baseline'), ...gridFromRows(statsRows) },
+        { name: T('تكرار العتبات', 'Threshold Frequencies'), ...gridFromRows(freqRows) },
+        { name: T('تقييم الذكاء الاصطناعي', 'AI Operational Assessment'), ...gridFromRows(aiRows) }
+      ];
+
+      await exportWorkbook(sheets, `تقرير_استخبارات_الطقس_${targetDate}.xlsx`);
+      if (setCustomAlert) setCustomAlert(T("تم تصدير تقرير استخبارات الطقس الشامل بنجاح!", "Weather intelligence report exported successfully!"));
+    } catch (err) {
+      console.error("Export error:", err);
+      if (setCustomAlert) setCustomAlert(T("حدث خطأ أثناء تصدير التقرير.", "Error exporting report."));
+    }
+  };
+
+  // ترجمة وتفسير الأكواد
+  const METRIC_DICT = {
+    tmax: { ar: 'الحرارة العظمى', en: 'Max Temp', unit: '°C' },
+    tmin: { ar: 'الحرارة الصغرى', en: 'Min Temp', unit: '°C' },
+    precip: { ar: 'الهطول المطري', en: 'Precipitation', unit: isAr ? 'مم' : 'mm' },
+    precip_mm: { ar: 'الهطول المطري', en: 'Precipitation', unit: isAr ? 'مم' : 'mm' },
+    wind: { ar: 'سرعة الرياح', en: 'Max Wind', unit: isAr ? 'كم/س' : 'km/h' },
+    wind_max_kph: { ar: 'سرعة الرياح', en: 'Max Wind', unit: isAr ? 'كم/س' : 'km/h' },
+    gusts: { ar: 'هبات الرياح', en: 'Wind Gusts', unit: isAr ? 'كم/س' : 'km/h' },
+    wind_gusts_kph: { ar: 'هبات الرياح', en: 'Wind Gusts', unit: isAr ? 'كم/س' : 'km/h' },
+    humidity: { ar: 'الرطوبة النسبية', en: 'Relative Humidity', unit: '%' },
+    humidity_mean_pct: { ar: 'الرطوبة النسبية', en: 'Relative Humidity', unit: '%' },
+    cloud: { ar: 'الغطاء السحابي', en: 'Cloud Cover', unit: '%' },
+    cloud_cover_mean_pct: { ar: 'الغطاء السحابي', en: 'Cloud Cover', unit: '%' }
+  };
+
+  const ANOMALY_DICT = {
+    extreme_high: { ar: 'مرتفع جداً (>P90)', en: 'Extreme High (>P90)', style: 'bg-red-500/20 text-red-300 border-red-500/40' },
+    high: { ar: 'أعلى من الطبيعي (P75-P90)', en: 'Above Normal (P75-P90)', style: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
+    normal: { ar: 'ضمن النطاق المعتاد (P25-P75)', en: 'Normal (P25-P75)', style: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+    low: { ar: 'أدنى من الطبيعي (P10-P25)', en: 'Below Normal (P10-P25)', style: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' },
+    extreme_low: { ar: 'منخفض جداً (<P10)', en: 'Extreme Low (<P10)', style: 'bg-blue-500/20 text-blue-300 border-blue-500/40' },
+    insufficient_data: { ar: 'بيانات غير كافية', en: 'Insufficient Data', style: 'bg-zinc-700/30 text-zinc-400 border-zinc-600/40' }
+  };
+
+  const HAZARD_DICT = {
+    heat: { ar: '🔥 موجة حرارة مرتفعة', en: '🔥 High Heat Risk', color: 'bg-red-950/60 text-red-300 border-red-700/60' },
+    cold: { ar: '❄️ موجة صقيع وبرودة شديدة', en: '❄️ Extreme Cold Risk', color: 'bg-blue-950/60 text-blue-300 border-blue-700/60' },
+    heavy_rain: { ar: '🌧️ هطول أمطار غزيرة', en: '🌧️ Heavy Rain Alert', color: 'bg-cyan-950/60 text-cyan-300 border-cyan-700/60' },
+    strong_wind: { ar: '💨 رياح نشطة وقوية', en: '💨 Strong Wind Warning', color: 'bg-amber-950/60 text-amber-300 border-amber-700/60' },
+    thunderstorm: { ar: '⚡ عواصف رعدية متوقعة', en: '⚡ Thunderstorm Alert', color: 'bg-purple-950/60 text-purple-300 border-purple-700/60' },
+    fog: { ar: '🌫️ ضباب ورؤية أفقية منخفضة', en: '🌫️ Fog & Low Visibility', color: 'bg-zinc-800/80 text-zinc-300 border-zinc-600/60' }
+  };
+
+  const getWmoDescription = (code) => {
+    if (code === 0) return T('سماء صافية', 'Clear Sky');
+    if ([1, 2, 3].includes(code)) return T('غائم جزئياً / غائم', 'Partly Cloudy');
+    if ([45, 48].includes(code)) return T('ضباب كثيف', 'Fog');
+    if ([51, 53, 55].includes(code)) return T('رذاذ مطري خفيف', 'Drizzle');
+    if ([61, 63, 65].includes(code)) return T('أمطار متفرقة إلى غزيرة', 'Rain');
+    if ([71, 73, 75].includes(code)) return T('ثلوج متفرقة', 'Snowfall');
+    if ([80, 81, 82].includes(code)) return T('زخات مطرية', 'Rain Showers');
+    if ([95, 96, 99].includes(code)) return T('عواصف رعدية نشطة', 'Thunderstorm');
+    return T(`حالة جوية (WMO ${code})`, `Weather code (${code})`);
+  };
+
+  // فلترة البطاقات
+  const filteredAssessments = useMemo(() => {
+    if (!assessmentsData) return [];
+    return assessmentsData.filter(a => {
+      if (activeFilterTab === 'hazards') {
+        return (a.hazards || []).length > 0;
+      }
+      if (activeFilterTab === 'anomalies') {
+        const anomValues = Object.values(a.anomalies || {});
+        return anomValues.some(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class));
+      }
+      if (activeFilterTab === 'ai') {
+        return a.ai_status === 'success' && a.ai_assessment_json;
+      }
+      return true;
+    });
+  }, [assessmentsData, activeFilterTab]);
+
+  // إحصاءات ملخصة للكروت العلوية
+  const kpiTotalLocations = assessmentsData.length;
+  const kpiHazardsCount = assessmentsData.reduce((acc, a) => acc + (a.hazards || []).length, 0);
+  const kpiAnomaliesCount = assessmentsData.reduce((acc, a) => {
+    const anomValues = Object.values(a.anomalies || {});
+    return acc + anomValues.filter(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class)).length;
+  }, 0);
+  const kpiAiSuccessCount = assessmentsData.filter(a => a.ai_status === 'success').length;
+
+  // تنسيق نصوص الذكاء الاصطناعي لتلوين وسوم الأدلة
+  const renderFormattedAIText = (text) => {
+    const safeTextValue = safeText(text);
+    if (!safeTextValue) return null;
+    const parts = safeTextValue.split(/(\[(?:توقعات|تاريخي|إحصائي|تشغيلي)\])/g);
+    return parts.map((part, idx) => {
+      if (part === '[توقعات]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono">[توقعات]</span>;
+      if (part === '[تاريخي]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">[تاريخي]</span>;
+      if (part === '[إحصائي]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">[إحصائي]</span>;
+      if (part === '[تشغيلي]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">[تشغيلي]</span>;
+      return <span key={idx}>{part}</span>;
+    });
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-12">
+      {/* 1. لوحة التحكم والخيارات العلوية */}
+      <div className="card-surface p-4 md:p-6 rounded-3xl border border-[var(--border)] shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 border border-[var(--accent)]/30 flex items-center justify-center text-[var(--accent)]">
+                <WeatherIntelIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--ink)] flex items-center gap-2">
+                  {T('استخبارات الطقس اليومية والتحليل المتقدم', 'Daily Weather Intelligence & Advanced Analysis')}
+                </h2>
+                <p className="text-xs md:text-sm text-[var(--muted)] mt-0.5">
+                  {T('تحليل آلي شامل لطقس الغد مقارنة بالسجل التاريخي لـ 30 عاماً عبر Open-Meteo و ERA5', 'Automated next-day weather intelligence vs 30-year ERA5 baseline with Open-Meteo')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* أزرار الإجراءات */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleTriggerRun}
+                disabled={isTriggering}
+                className="ops-btn bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                <span className={isTriggering ? "animate-spin" : ""}>⚡</span>
+                {isTriggering ? T('جارٍ إطلاق التحليل...', 'Triggering...') : T('تشغيل التحليل الآن', 'Run Analysis Now')}
+              </button>
+            )}
+
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+              >
+                <span>📊</span>
+                {T('تصدير التقرير (Excel)', 'Export Excel')}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowRunsModal(true)}
+              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-3.5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+              title={T('سجل التشغيلات', 'Runs History')}
+            >
+              <span>📜</span>
+              {T('سجل التشغيلات', 'Runs History')}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowConfigModal(true)}
+              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-all"
+              title={T('العتبات والإعدادات الفنية', 'Technical Config')}
+            >
+              <span>⚙️</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={fetchWeatherIntelData}
+              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-all"
+              title={T('تحديث البيانات', 'Refresh')}
+            >
+              <span>🔄</span>
+            </button>
+          </div>
+        </div>
+
+        {/* شريط الفلاتر والاختيارات */}
+        <div className="mt-6 pt-5 border-t border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* اختيار التاريخ */}
+            <div className="flex items-center gap-2 bg-[var(--surface-2)] px-3 py-1.5 rounded-xl border border-[var(--border)]">
+              <span className="text-xs font-bold text-[var(--muted)]">{T('التاريخ المستهدف:', 'Target Date:')}</span>
+              <SegDateField
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className="bg-transparent border-0 text-sm font-bold text-[var(--ink)] focus:outline-none cursor-pointer"
+              />
+            </div>
+
+            {/* اختيار الموقع */}
+            <div className="flex items-center gap-2 bg-[var(--surface-2)] px-3 py-1.5 rounded-xl border border-[var(--border)]">
+              <span className="text-xs font-bold text-[var(--muted)]">{T('الموقع:', 'Location:')}</span>
+              <EocSelect
+                variant="toolbar"
+                value={selectedLocationId}
+                onChange={(e) => setSelectedLocationId(e.target.value)}
+              >
+                <option value="all" className="bg-[var(--surface-2)] text-[var(--ink)]">
+                  {T('كل المواقع', 'All locations')} ({locationsList.length})
+                </option>
+                {locationsList.map(loc => (
+                  <option key={loc.id} value={loc.id} className="bg-[var(--surface-2)] text-[var(--ink)]">
+                    {isAr ? loc.name_ar : (loc.name_en || loc.name_ar)}
+                  </option>
+                ))}
+              </EocSelect>
+            </div>
+          </div>
+
+          {/* تبويبات الفلترة السريعة */}
+          <div className="flex items-center gap-1.5 bg-[var(--surface-2)] p-1 rounded-2xl border border-[var(--border)] self-start md:self-auto overflow-x-auto max-w-full">
+            <button type="button" onClick={() => setActiveFilterTab('all')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeFilterTab === 'all' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+              {T('الكل', 'All')} ({assessmentsData.length})
+            </button>
+            <button type="button" onClick={() => setActiveFilterTab('hazards')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeFilterTab === 'hazards' ? 'bg-red-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+              ⚠️ {T('المخاطر المرصودة', 'Hazards')} ({kpiHazardsCount})
+            </button>
+            <button type="button" onClick={() => setActiveFilterTab('anomalies')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeFilterTab === 'anomalies' ? 'bg-amber-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+              📈 {T('الشذوذ الإحصائي', 'Anomalies')} ({kpiAnomaliesCount})
+            </button>
+            <button type="button" onClick={() => setActiveFilterTab('ai')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeFilterTab === 'ai' ? 'bg-purple-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+              🤖 {T('تقييم الذكاء الاصطناعي', 'AI Assessment')} ({kpiAiSuccessCount})
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. شريط المصادر والمنهجية المعتمدة */}
+      <div className="bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-purple-950/40 border border-blue-800/40 rounded-2xl p-4 text-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-zinc-300">
+          <div className="flex items-center gap-2">
+            <span className="text-base">ℹ️</span>
+            <span className="font-bold text-white">{T('المصادر والمنهجية المعتمدة:', 'Sources & Methodology:')}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
+            <span className="inline-flex items-center gap-1.5 bg-blue-900/40 px-2.5 py-1 rounded-lg border border-blue-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+              {T('التوقعات: Open-Meteo Forecast (ECMWF IFS 0.25°)', 'Forecast: Open-Meteo Forecast (ECMWF IFS 0.25°)')}
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-purple-900/40 px-2.5 py-1 rounded-lg border border-purple-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+              {T('السجل التاريخي: ERA5 reanalysis (1996–2026)', 'Baseline: ERA5 reanalysis (1996–2026)')}
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-indigo-900/40 px-2.5 py-1 rounded-lg border border-indigo-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+              {T('المنهجية: استيفاء خطي للمئينات (P10/P25/P75/P90) · نافذة ±3 أيام · حد أدنى N=20', 'Methodology: Linear percentiles (P10/P25/P75/P90) · ±3d window · min N=20')}
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-emerald-900/40 px-2.5 py-1 rounded-lg border border-emerald-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              {T(`المحلل: ${analystLabel} (استرشادي لغرفة العمليات)`, `AI Analyst: ${analystLabel} (Advisory)`)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. كروت الإحصاءات السريعة (KPIs) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--muted)]">{T('المواقع المغطاة', 'Monitored Locations')}</p>
+            <h4 className="text-2xl font-black text-[var(--ink)] mt-1">{kpiTotalLocations}</h4>
+            <p className="text-[10px] text-[var(--faint)] mt-0.5">{T('جميع المواقع النشطة', 'All active locations')}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl font-black">📍</div>
+        </div>
+        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--muted)]">{T('إشارات المخاطر المرصودة', 'Detected Hazard Alerts')}</p>
+            <h4 className={`text-2xl font-black mt-1 ${kpiHazardsCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{kpiHazardsCount}</h4>
+            <p className="text-[10px] text-[var(--faint)] mt-0.5">{kpiHazardsCount > 0 ? T('تتطلب متابعة تشغيلية', 'Requires monitoring') : T('لا توجد مخاطر استثنائية', 'No extreme hazards')}</p>
+          </div>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black ${kpiHazardsCount > 0 ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>⚠️</div>
+        </div>
+        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--muted)]">{T('حالات الشذوذ الإحصائي', 'Statistical Anomalies')}</p>
+            <h4 className={`text-2xl font-black mt-1 ${kpiAnomaliesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{kpiAnomaliesCount}</h4>
+            <p className="text-[10px] text-[var(--faint)] mt-0.5">{T('انحراف عن النطاق المعتاد (P25-P75)', 'Deviation from P25-P75')}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-black">📈</div>
+        </div>
+        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-[var(--muted)]">{T('حالة التحليل الذكي', 'AI Assessment Status')}</p>
+            <h4 className="text-2xl font-black text-purple-400 mt-1">{kpiAiSuccessCount}/{kpiTotalLocations}</h4>
+            <p className="text-[10px] text-[var(--faint)] mt-0.5">{analystLabel}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl font-black">🤖</div>
+        </div>
+      </div>
+
+      {/* 4. حالة API المرئية مع الاحتفاظ بالبيانات التي تم جلبها بنجاح */}
+      {apiError && !isLoading && (
+        <div role="alert" className="card-surface rounded-3xl border border-red-500/40 bg-red-950/20 p-4 md:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 w-9 h-9 shrink-0 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 flex items-center justify-center font-bold">!</div>
+              <div className="min-w-0">
+                <h3 className="text-sm md:text-base font-extrabold text-red-300">
+                  {apiPartial
+                    ? T('تم تحميل جزء من البيانات', 'Some data loaded')
+                    : T('تعذر تحميل بيانات استخبارات الطقس', 'Weather Intelligence data could not be loaded')}
+                </h3>
+                <p className="text-xs text-red-200/90 mt-1 break-words" dir={isAr ? 'rtl' : 'ltr'}>{apiError}</p>
+                {apiPartial && (
+                  <p className="text-[11px] text-[var(--muted)] mt-1.5">
+                    {T('تظل البطاقات والبيانات التي تم جلبها بنجاح ظاهرة أدناه.', 'Data loaded from successful endpoints remains visible below.')}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={fetchWeatherIntelData}
+              disabled={isLoading}
+              className="ops-btn shrink-0 bg-red-600 text-white hover:bg-red-500 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+            >
+              {T('إعادة المحاولة', 'Retry')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 5. كروت المواقع التفصيلية */}
+      {isLoading ? (
+        <div className="card-surface p-12 text-center rounded-3xl border border-[var(--border)]">
+          <div className="inline-block w-8 h-8 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mb-4" />
+          <h3 className="text-lg font-bold text-[var(--ink)]">{T('جارٍ استرجاع وتحليل استخبارات الطقس...', 'Loading Weather Intelligence Data...')}</h3>
+          <p className="text-xs text-[var(--muted)] mt-1">{T('جلب التوقعات والخط المرجعي والتقييمات التشغيلية', 'Fetching forecasts, historical baselines & operational assessments')}</p>
+        </div>
+      ) : apiError && !apiPartial ? null : filteredAssessments.length === 0 ? (
+        <div className="card-surface p-12 text-center rounded-3xl border border-[var(--border)]">
+          <div className="text-4xl mb-3">🌤️</div>
+          <h3 className="text-lg font-bold text-[var(--ink)]">{T('لا توجد بيانات استخبارات طقس مسجلة لهذا التاريخ', 'No Weather Intelligence Data for this Date')}</h3>
+          <p className="text-xs text-[var(--muted)] mt-1 max-w-md mx-auto">
+            {T('لم يتم العثور على تشغيل يومي مسجل لهذا التاريخ. يمكنك تشغيل التحليل يدويًا عبر زر "تشغيل التحليل الآن" أو اختيار تاريخ آخر.', 'No daily run found for this date. You can manually trigger an analysis or select another date.')}
+          </p>
+          {isOwner && (
+            <button type="button" onClick={handleTriggerRun} disabled={isTriggering} className="mt-5 ops-btn bg-[var(--accent)] text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md inline-flex items-center gap-2">
+              ⚡ {T('تشغيل التحليل الآن', 'Run Analysis Now')}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {filteredAssessments.map(item => {
+            const locId = item.location_id;
+            const fc = item.forecast || {};
+            const stats = item.statistics || [];
+            const freqs = item.frequencies || [];
+            const latestObservedDate = currentRun?.latest_observed_date || '';
+            const assessmentAnalystLabel = getAnalystLabel({
+              ai_provider: item.ai_provider || currentRun?.source_meta?.ai_provider,
+              ai_model: item.ai_model || currentRun?.source_meta?.ai_model,
+            }, '', item.ai_status);
+            const hazards = item.hazards || [];
+            const anomalies = item.anomalies || {};
+            const aiJson = item.ai_assessment_json;
+
+            return (
+              <div key={item.id || locId} className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden shadow-sm transition-all hover:shadow-md">
+                {/* رأس كارت الموقع */}
+                <div className="bg-gradient-to-r from-[var(--surface-2)] via-[var(--surface-3)] to-[var(--surface-2)] p-4 md:p-6 border-b border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] flex items-center justify-center text-xl font-bold shadow-inner">📍</div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-xl font-extrabold text-[var(--ink)]">{isAr ? item.location_name_ar : (item.location_name_en || item.location_name_ar)}</h3>
+                        {item.region && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)]">{item.region}</span>}
+                        <span className="text-[11px] font-mono text-[var(--faint)]" dir="ltr">[{formatCoordinate(item.latitude)}°, {formatCoordinate(item.longitude)}°]</span>
+                      </div>
+                      <p className="text-xs text-[var(--muted)] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span>{T('التاريخ المستهدف:', 'Target Date:')} <strong className="text-[var(--ink)]">{item.target_date}</strong></span>
+                        <span>{T('تاريخ التنبؤ:', 'Forecast Date:')} <strong className="text-[var(--ink)]">{fc.forecast_date || '—'}</strong></span>
+                        <span>{T('آخر تاريخ مرصود:', 'Latest Observed Date:')} <strong className="text-[var(--ink)]">{latestObservedDate || '—'}</strong></span>
+                        {fc.fetched_at && <span className="text-[11px] text-[var(--faint)]">({T('تم الجلب:', 'Fetched:')} {new Date(fc.fetched_at).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })})</span>}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* شارات المخاطر إن وُجدت */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {hazards.length === 0 ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-950/40 text-emerald-300 border border-emerald-800/60">✅ {T('المؤشرات ضمن الحدود الآمنة', 'Safe Weather Range')}</span>
+                    ) : (
+                      hazards.map((hz, hzIndex) => {
+                        const hazardCode = safeText(hz.code).trim();
+                        const hzInfo = HAZARD_DICT[hazardCode.toLowerCase()] || null;
+                        const hazardTitle = safeText(isAr ? hz.title_ar : (hz.title_en || hz.title_ar))
+                          || (isAr ? hzInfo?.ar : hzInfo?.en)
+                          || hazardCode
+                          || (isAr ? 'مؤشر طقس' : 'Weather indicator');
+                        const hazardDetail = safeText(isAr ? hz.detail_ar : (hz.detail_en || hz.detail_ar));
+                        const hazardLevel = safeText(hz.level);
+                        const hazardUnit = safeText(hz.unit);
+                        const levelClass = ['high', 'critical', 'extreme'].includes(hazardLevel.toLowerCase())
+                          ? 'bg-red-950/60 text-red-300 border-red-700/60'
+                          : ['medium', 'moderate'].includes(hazardLevel.toLowerCase())
+                            ? 'bg-amber-950/50 text-amber-300 border-amber-700/50'
+                            : 'bg-cyan-950/50 text-cyan-300 border-cyan-700/50';
+                        return (
+                          <span key={`${hazardCode || 'hazard'}-${hzIndex}`} className={`inline-flex max-w-xs flex-col items-start gap-0.5 px-3 py-1.5 rounded-xl text-[10px] font-bold border shadow-sm ${hzInfo?.color || levelClass}`} title={hazardDetail || undefined}>
+                            <span className="flex items-center gap-1.5">
+                              <span className="truncate">{hazardTitle}</span>
+                              {(hazardLevel || hazardUnit) && (
+                                <span className="shrink-0 font-mono opacity-85">{[hazardLevel, hazardUnit].filter(Boolean).join(' ')}</span>
+                              )}
+                            </span>
+                            {hazardDetail && <span className="w-full truncate font-normal opacity-80">{hazardDetail}</span>}
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 md:p-6 space-y-6">
+                  {/* أ) بلاطات التوقعات المرصودة (Forecast Tiles) */}
+                  <div>
+                    <h4 className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider mb-3 flex items-center gap-1.5">🌤️ {T('التوقعات المرصودة ليوم الغد (Open-Meteo Forecast)', 'Next-Day Forecast Observations (Open-Meteo)')}</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('درجة الحرارة', 'Temperature')}</span><span>🌡️</span></div>
+                        <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-red-400">{fc.tmax ?? '—'}°</span><span className="text-xs font-bold text-blue-400">/ {fc.tmin ?? '—'}°C</span></div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('عظمى / صغرى', 'Max / Min')}</p>
+                      </div>
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('الهطول المطري', 'Precipitation')}</span><span>🌧️</span></div>
+                        <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-cyan-400">{fc.precip_mm ?? 0}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'مم' : 'mm'}</span></div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('الاحتمالية:', 'Probability:')} {fc.precip_prob_pct ?? 0}%</p>
+                      </div>
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('سرعة الرياح', 'Wind Speed')}</span><span>💨</span></div>
+                        <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-amber-400">{fc.wind_max_kph ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'كم/س' : 'km/h'}</span></div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('الهبات:', 'Gusts:')} {fc.wind_gusts_kph ?? '—'} {isAr ? 'كم/س' : 'km/h'}</p>
+                      </div>
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('الرطوبة النسبية', 'Humidity')}</span><span>💧</span></div>
+                        <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-indigo-400">{fc.humidity_mean_pct ?? '—'}%</span></div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">{fc.humidity_mean_pct >= 75 ? <span className="text-amber-400 font-bold">{T('رطوبة جوية مرتفعة', 'High Humidity')}</span> : T('متوسط اليوم', 'Daily mean')}</p>
+                      </div>
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)] col-span-2 sm:col-span-1">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('حالة السماء', 'Sky Condition')}</span><span>☁️</span></div>
+                        <div className="text-sm font-black text-[var(--ink)] truncate">{getWmoDescription(fc.weather_code)}</div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('الغيوم:', 'Clouds:')} {fc.cloud_cover_mean_pct ?? 0}%</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ب) الخط المرجعي التاريخي وتحليل الشذوذ (ERA5 Baseline & Statistics) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <h4 className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">📊 {T('الخط المرجعي التاريخي لـ 30 عاماً وشذوذ التوقعات (ERA5 Reanalysis)', '30-Year Historical Baseline & Anomalies (ERA5)')}</h4>
+                      <span className="text-[11px] text-[var(--faint)] bg-[var(--surface-2)] px-2.5 py-0.5 rounded-full border border-[var(--border)]">{T('نافذة ±3 أيام حول التاريخ عبر 1996–2026', '±3-day window across 1996–2026')}</span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
+                      <table className="w-full text-right text-xs whitespace-nowrap">
+                        <thead className="bg-[var(--surface-2)] text-[var(--muted)] font-bold border-b border-[var(--border)]">
+                          <tr>
+                            <th className="p-3">{T('المتغير', 'Metric')}</th>
+                            <th className="p-3 text-center">{T('قيمة الغد', 'Forecast')}</th>
+                            <th className="p-3 text-center">{T('المتوسط ± σ', 'Mean ± σ')}</th>
+                            <th className="p-3 text-center">{T('الوسيط', 'Median')}</th>
+                            <th className="p-3 text-center">{T('P25 – P75', 'P25 – P75')}</th>
+                            <th className="p-3 text-center">{T('P10 / P90', 'P10 / P90')}</th>
+                            <th className="p-3 text-center">{T('Min / Max', 'Min / Max')}</th>
+                            <th className="p-3 text-center">{T('N', 'N')}</th>
+                            <th className="p-3 text-center">{T('تصنيف الشذوذ', 'Anomaly')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border)]">
+                          {stats.length === 0 ? (
+                            <tr><td colSpan={9} className="p-4 text-center text-[var(--muted)]">{T('لا توجد بيانات خط مرجعي تاريخي مسجلة.', 'No baseline stats available.')}</td></tr>
+                          ) : (
+                            stats.map(s => {
+                              const metricInfo = METRIC_DICT[s.metric] || { ar: s.metric, en: s.metric, unit: '' };
+                              const forecastVal = fc[s.metric];
+                              const anomClass = anomalies[s.metric]?.category || anomalies[s.metric]?.class || 'normal';
+                              const anomBadge = ANOMALY_DICT[anomClass] || ANOMALY_DICT.normal;
+                              const isRecordBreak = (s.max !== null && forecastVal != null && forecastVal > s.max) || (s.min !== null && forecastVal != null && forecastVal < s.min);
+
+                              return (
+                                <tr key={s.metric} className="hover:bg-[var(--surface-2)]/50 transition-colors">
+                                  <td className="p-3 font-bold text-[var(--ink)]">{isAr ? metricInfo.ar : metricInfo.en}</td>
+                                  <td className="p-3 text-center font-black text-sm text-[var(--accent)]">{forecastVal != null ? `${forecastVal} ${metricInfo.unit}` : '—'}</td>
+                                  <td className="p-3 text-center font-mono text-[var(--ink)]" dir="ltr">{s.mean ?? '—'} {s.stddev ? `± ${s.stddev}` : ''}</td>
+                                  <td className="p-3 text-center font-mono text-[var(--muted)]" dir="ltr">{s.median ?? '—'}</td>
+                                  <td className="p-3 text-center font-mono text-emerald-400" dir="ltr">{s.p25 != null && s.p75 != null ? `[${s.p25} – ${s.p75}]` : '—'}</td>
+                                  <td className="p-3 text-center font-mono text-amber-400" dir="ltr">{s.p10 != null && s.p90 != null ? `${s.p10} / ${s.p90}` : '—'}</td>
+                                  <td className="p-3 text-center font-mono text-blue-300" dir="ltr">{s.min != null && s.max != null ? `${s.min} .. ${s.max}` : '—'}</td>
+                                  <td className="p-3 text-center font-mono text-[var(--muted)]">{s.sample_count < 20 ? <span className="text-red-400 font-bold">{s.sample_count} ⚠️</span> : <span className="text-zinc-400">{s.sample_count}</span>}</td>
+                                  <td className="p-3 text-center">
+                                    <div className="flex items-center justify-center gap-1 flex-wrap">
+                                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${anomBadge.style}`}>{isAr ? anomBadge.ar : anomBadge.en}</span>
+                                      {isRecordBreak && <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">{T('رقم قياسي!', 'Record!')}</span>}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* ج) تكرارات العتبات التاريخية (Threshold Frequencies) */}
+                  {freqs.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider mb-2 flex items-center gap-1.5">🎯 {T('احتماليات وتكرار العتبات التاريخية (Historical Frequencies)', 'Historical Threshold Frequencies')}</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        {freqs.map((f, fIdx) => (
+                          <div key={fIdx} className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)] flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1">
+                              <span className="font-bold text-[var(--ink)]">{f.threshold_desc_ar}</span>
+                              <span className="font-mono text-[11px] bg-[var(--surface-3)] px-1.5 py-0.5 rounded text-[var(--faint)]">{f.threshold_value} {f.threshold_unit}</span>
+                            </div>
+                            <div className="mt-2 flex items-baseline justify-between">
+                              <span className="text-base font-black text-[var(--accent)] font-mono">{f.frequency_pct}%</span>
+                              <span className="text-[11px] text-[var(--muted)] font-mono" dir="ltr">({f.qualifying_count} / {f.total_count})</span>
+                            </div>
+                            <div className="w-full bg-[var(--surface-3)] h-1.5 rounded-full mt-2 overflow-hidden">
+                              <div className="bg-[var(--accent)] h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(f.frequency_pct, 100)}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* د) التقييم التشغيلي للذكاء الاصطناعي (AI Operational Assessment) */}
+                  <div className="bg-gradient-to-br from-purple-950/20 via-[var(--surface-2)] to-indigo-950/20 rounded-2xl border border-purple-800/40 p-4 md:p-6 space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2 border-b border-purple-800/30 pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center justify-center font-black">🤖</div>
+                        <div>
+                          <h4 className="text-sm font-extrabold text-[var(--ink)] flex items-center gap-2">{T('التقييم التشغيلي لغرفة العمليات', 'EOC Operational Weather Assessment')}</h4>
+                          <p className="text-[10px] text-[var(--muted)]">{T('تحليل آلي استرشادي مبني على الأدلة دون تكهنات', 'Evidence-based AI assessment with strict operational guidance')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono bg-purple-900/40 text-purple-300 border border-purple-700/50 px-2.5 py-0.5 rounded-full">{assessmentAnalystLabel}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.ai_status === 'success' ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50' : item.ai_status === 'skipped' ? 'bg-amber-950/40 text-amber-300 border border-amber-700/50' : 'bg-red-900/40 text-red-300 border border-red-700/50'}`}>
+                          {item.ai_status === 'success' ? T('مكتمل بنجاح', 'Generated') : item.ai_status === 'skipped' ? T('مُتخطى', 'Skipped') : T('تعذر التوليد', 'Failed')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {item.ai_status === 'error' ? (
+                      <div className="bg-red-950/30 border border-red-800/40 rounded-xl p-4 text-xs text-red-300 flex items-start gap-2.5">
+                        <span className="text-base">⚠️</span>
+                        <div>
+                          <p className="font-bold">{T('تعذر توليد التقييم الذكي لهذا الموقع في هذا التشغيل.', 'AI operational assessment could not be generated for this location.')}</p>
+                          <p className="text-[11px] text-red-400 mt-0.5">{item.ai_error || T('يرجى الاعتماد على الإحصاءات والجداول الرقمية المباشرة أعلاه.', 'Please rely on the numerical statistics and baseline tables above.')}</p>
+                        </div>
+                      </div>
+                    ) : item.ai_status === 'skipped' ? (
+                      <div className="bg-amber-950/25 border border-amber-800/35 rounded-xl p-4 text-xs text-amber-300 flex items-start gap-2.5">
+                        <span className="text-base">ℹ️</span>
+                        <div>
+                          <p className="font-bold">{T('لم يُطلب توليد تقييم ذكي لهذا الموقع في هذا التشغيل.', 'AI operational assessment was not requested for this location.')}</p>
+                          <p className="text-[11px] text-amber-400 mt-0.5">{T('النتائج الحتمية والإحصاءات الرقمية المباشرة أعلاه مكتملة.', 'Deterministic results and direct numerical statistics above remain available.')}</p>
+                        </div>
+                      </div>
+                    ) : !aiJson ? (
+                      <div className="bg-red-950/30 border border-red-800/40 rounded-xl p-4 text-xs text-red-300 flex items-start gap-2.5">
+                        <span className="text-base">⚠️</span>
+                        <div>
+                          <p className="font-bold">{T('تعذر توليد التقييم الذكي لهذا الموقع في هذا التشغيل.', 'AI operational assessment could not be generated for this location.')}</p>
+                          <p className="text-[11px] text-red-400 mt-0.5">{item.ai_error || T('يرجى الاعتماد على الإحصاءات والجداول الرقمية المباشرة أعلاه.', 'Please rely on the numerical statistics and baseline tables above.')}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
+                          <h5 className="font-bold text-purple-300 mb-1.5 flex items-center gap-1.5 text-xs">🌤️ {T('1. ملخص الأحوال الجوية المتوقعة', '1. Weather Summary')}</h5>
+                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.weather_summary)}</p>
+                        </div>
+                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
+                          <h5 className="font-bold text-blue-300 mb-1.5 flex items-center gap-1.5 text-xs">🏛️ {T('2. المقارنة بالسياق التاريخي', '2. Historical Context Comparison')}</h5>
+                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.historical_comparison)}</p>
+                        </div>
+                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
+                          <h5 className="font-bold text-amber-300 mb-1.5 flex items-center gap-1.5 text-xs">📈 {T('3. الشذوذ الإحصائي البارز', '3. Significant Statistical Anomalies')}</h5>
+                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.significant_anomalies)}</p>
+                        </div>
+                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
+                          <h5 className="font-bold text-red-300 mb-1.5 flex items-center gap-1.5 text-xs">🚨 {T('4. الآثار والتبعات التشغيلية', '4. Operational Implications')}</h5>
+                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.operational_implications)}</p>
+                        </div>
+                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20 md:col-span-2">
+                          <h5 className="font-bold text-emerald-300 mb-1.5 flex items-center gap-1.5 text-xs">📋 {T('5. توصيات المتابعة الميدانية', '5. Recommended Field Monitoring')}</h5>
+                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.recommended_monitoring)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2 text-[10px] text-[var(--faint)] border-t border-purple-800/20">
+                      {T('إخلاء مسؤولية: هذا التحليل أداة مساعدة رقمية لغرفة العمليات ولا يحل محل التحذيرات الرسمية للهيئة العامة للأرصاد الجوية.', 'Disclaimer: This analysis is an operational advisory tool and does not replace official meteorological warnings.')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 5. نافذة سجل التشغيلات التاريخية (Runs History Modal) */}
+      {showRunsModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-surface w-full max-w-3xl rounded-3xl border border-[var(--border)] overflow-hidden shadow-2xl animate-fade-in flex flex-col max-h-[85vh]">
+            <div className="p-4 md:p-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface-2)]">
+              <div className="flex items-center gap-2.5"><span className="text-xl">📜</span><h3 className="text-lg font-bold text-[var(--ink)]">{T('سجل تشغيلات استخبارات الطقس الأخيرة', 'Recent Weather Intelligence Runs')}</h3></div>
+              <button type="button" onClick={() => setShowRunsModal(false)} className="w-8 h-8 rounded-full bg-[var(--surface-3)] text-[var(--muted)] hover:text-[var(--ink)] flex items-center justify-center font-bold">✕</button>
+            </div>
+            <div className="p-4 md:p-6 overflow-y-auto flex-1 space-y-3">
+              {runsHistory.length === 0 ? (
+                <p className="text-center text-xs text-[var(--muted)] py-8">{T('لا توجد تشغيلات مسجلة.', 'No past runs recorded.')}</p>
+              ) : runsHistory.map(r => (
+                <div key={r.id} className="p-3.5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <strong className="text-[var(--ink)]">{T('التاريخ المستهدف:', 'Target:')} {r.target_date}</strong>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'success' ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-700/60' : r.status === 'partial' ? 'bg-amber-950/60 text-amber-300 border border-amber-700/60' : 'bg-red-950/60 text-red-300 border border-red-700/60'}`}>{r.status}</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--muted)] mt-1">{T('تاريخ التشغيل:', 'Run at:')} {r.run_date}</p>
+                    <p className="text-[11px] text-[var(--muted)]">{T('تاريخ التنبؤ:', 'Forecast Date:')} {r.forecast_date || '—'} | {T('آخر تاريخ مرصود:', 'Latest Observed Date:')} {r.latest_observed_date || '—'}</p>
+                    <p className="text-[11px] text-[var(--muted)]">{T('الناجحة:', 'OK:')} {r.successful_locations}/{r.total_locations}</p>
+                  </div>
+                  <button type="button" onClick={() => { setTargetDate(r.target_date); setShowRunsModal(false); }} className="ops-btn bg-[var(--accent)] text-white px-3 py-1.5 rounded-xl font-bold text-xs">{T('عرض التقرير', 'View Report')}</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. نافذة العتبات الفنية والإعدادات (Config Modal) */}
+      {showConfigModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="card-surface w-full max-w-2xl rounded-3xl border border-[var(--border)] overflow-hidden shadow-2xl animate-fade-in flex flex-col max-h-[85vh]">
+            <div className="p-4 md:p-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface-2)]">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">⚙️</span>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--ink)]">{T('العتبات الفنية وإعدادات المخاطر', 'Technical Hazard Thresholds')}</h3>
+                  <p className="text-xs text-[var(--muted)]">{T('قيم فنية افتراضية قابلة للتعديل — ليست عتبات رسمية ملزمة', 'Configurable defaults — not official thresholds')}</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowConfigModal(false)} className="w-8 h-8 rounded-full bg-[var(--surface-3)] text-[var(--muted)] hover:text-[var(--ink)] flex items-center justify-center font-bold">✕</button>
+            </div>
+            <div className="p-4 md:p-6 overflow-y-auto flex-1 space-y-3">
+              {Object.keys(intelConfig).length === 0 ? (
+                <p className="text-center text-xs text-[var(--muted)] py-8">{T('جاري تحميل الإعدادات...', 'Loading config...')}</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {Object.entries(intelConfig).map(([key, item]) => (
+                    <div key={key} className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <div className="font-mono text-purple-300 font-bold">{key}</div>
+                        <div className="text-[11px] text-[var(--muted)] mt-0.5">{item.description_ar}</div>
+                      </div>
+                      <span className="font-mono text-base font-black text-amber-400 bg-[var(--surface-3)] px-2.5 py-1 rounded-lg border border-[var(--border)]">{item.value} {item.unit || ''}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SearchIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
 const ShieldIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 const NewsIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>;
@@ -8156,6 +9695,7 @@ const EarthquakeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 2
 const CarIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.909.53l1.415 2.83M15 16h1a1 1 0 001-1v-1.586a1 1 0 00-.293-.707l-1.415-1.415A1 1 0 0014.586 11H13v5z" /></svg>;
 const SidebarToggleIcon = () => <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>;
 const WeatherIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-2.4-8.3 5.5 5.5 0 0 0-10.2 2.6A3.7 3.7 0 0 0 7 19h10.5Z"/><path d="M12 3v2M5 6l1.4 1.4M19 6l-1.4 1.4"/></svg>;
+const WeatherIntelIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-2.4-8.3 5.5 5.5 0 0 0-10.2 2.6A3.7 3.7 0 0 0 7 19h10.5Z"/><path d="M12 3v2M5 6l1.4 1.4M19 6l-1.4 1.4"/><circle cx="18" cy="18" r="3" fill="currentColor" fillOpacity="0.25"/><path d="M18 16.5v3M16.5 18h3"/></svg>;
 const globalEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #ef4444; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px #ef4444;"></div>`, iconSize: [14, 14] });
 const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [16, 16] });
 
@@ -8172,7 +9712,7 @@ const aiIncidentIcon = new L.DivIcon({
 // ==========================================
 // 8. شاشة رصد الذكاء الاصطناعي (AI News Monitor - God Mode)
 // ==========================================
-function AINewsMonitorView({ branches, isOwner, lang = 'ar', theme = 'dark', focusTarget = null }) {
+function AINewsMonitorView({ branches, isOwner, lang = 'ar', focusTarget = null }) {
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const getMonthName = (dateStr) => {
     if (!dateStr) return '';
@@ -8544,7 +10084,7 @@ const totalAiCountries = new Set(
         </div>
         <div className="h-[300px] md:h-[350px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url={baseMapUrl(theme)}/>
+            <ThemedTileLayer />
             
             {filteredNews.map(news => {
               const aiData = extractAiData(news.news_updates);
@@ -8655,14 +10195,31 @@ const totalAiCountries = new Set(
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
           <div className="bg-[var(--surface)] border border-purple-500/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500"/> التقرير الاستخباراتي (OSINT)</h2>
-              <button onClick={() => setIsModalOpen(false)} className="touch-close bg-[var(--surface-4)] text-[var(--muted-2)] hover:text-[var(--accent)] p-2 rounded-xl"><TrashIcon /></button>
+              <h2 className="text-lg font-bold text-[var(--ink)] flex items-center gap-2"><AIIcon className="text-purple-500"/> التقرير الاستخباراتي (OSINT)</h2>
+              <button
+  onClick={() => setIsModalOpen(false)}
+  className="touch-close bg-[var(--surface-4)] text-[var(--muted-2)] hover:text-[var(--accent)] p-2 rounded-xl"
+  title="إغلاق الخبر"
+  aria-label="إغلاق الخبر"
+>
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+  >
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+</button>
+
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
               
               {/* عرض التقرير التكتيكي والصورة فوق */}
-              <div className="bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-purple-500/50 p-6 rounded-2xl shadow-[0_0_20px_rgba(168,85,247,0.1)] flex flex-col md:flex-row gap-6">
+              <div className="bg-gradient-to-br from-[var(--surface-2)] to-[var(--surface-3)] border border-purple-500/50 p-6 rounded-2xl shadow-[0_0_20px_rgba(168,85,247,0.1)] flex flex-col md:flex-row gap-6">
                 <div className="flex-1 space-y-4">
                    <h3 className="text-purple-400 font-bold flex items-center gap-2 border-b border-[var(--border)] pb-2"><ShieldIcon/> التقرير الاستراتيجي الميداني</h3>
                    <div className="text-[var(--ink-2)] text-sm leading-loose whitespace-pre-wrap font-mono">
@@ -8775,6 +10332,20 @@ function DangerConfirmModal({
   onConfirmationCodeChange,
   showConfirmationInput = false
 }) {
+    const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleConfirm = async () => {
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+
+    try {
+      await onConfirm();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!show) return null;
 
   return createPortal(
@@ -8784,7 +10355,15 @@ function DangerConfirmModal({
         <div className="flex items-center gap-3 mb-2">
           <svg className="w-6 h-6 shrink-0 text-[var(--ok)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
           <span className="flex-1 text-base font-bold text-white">{title}</span>
-          <button onClick={onCancel} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
+          <button
+  onClick={() => !isProcessing && onCancel()}
+  disabled={isProcessing}
+  className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+  aria-label="إغلاق"
+>
+  ✕
+</button>
+
         </div>
         {/* Message */}
         <p className="text-sm text-[var(--muted-2)] mb-4 pe-9 leading-relaxed">{message}</p>
@@ -8796,9 +10375,14 @@ function DangerConfirmModal({
               value={confirmationCode}
               onChange={(e) => onConfirmationCodeChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !(showConfirmationInput && confirmationCode !== '301014')) {
-                  onConfirm();
-                }
+                if (
+  e.key === 'Enter' &&
+  !isProcessing &&
+  !(showConfirmationInput && confirmationCode !== '301014')
+) {
+  handleConfirm();
+}
+
               }}
               placeholder="أدخل رمز التأكيد"
               autoComplete="new-password"
@@ -8809,20 +10393,28 @@ function DangerConfirmModal({
         )}
         {/* Buttons row */}
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">
-            إلغاء
-          </button>
           <button
-            onClick={onConfirm}
-            disabled={showConfirmationInput && confirmationCode !== "301014"}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-              showConfirmationInput && confirmationCode !== "301014"
-                ? "bg-[var(--surface-3)] text-[var(--muted-2)] cursor-not-allowed"
-                : "btn-accent text-white shadow-[var(--shadow-accent)]"
-            }`}
-          >
-            {confirmLabel}
-          </button>
+  onClick={() => !isProcessing && onCancel()}
+  disabled={isProcessing}
+  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+>
+  إلغاء
+</button>
+          <button
+  onClick={handleConfirm}
+  disabled={
+    isProcessing ||
+    (showConfirmationInput && confirmationCode !== "301014")
+  }
+  className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+    isProcessing ||
+    (showConfirmationInput && confirmationCode !== "301014")
+      ? "bg-[var(--surface-3)] text-[var(--muted-2)] cursor-not-allowed"
+      : "btn-accent text-white shadow-[var(--shadow-accent)]"
+  }`}
+>
+  {isProcessing ? 'جاري الحذف...' : confirmLabel}
+</button>
         </div>
       </div>
     </div>,

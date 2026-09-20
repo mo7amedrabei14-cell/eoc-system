@@ -1,0 +1,163 @@
+"""
+استخبارات الطقس — ملء تاريخي لمرة واحدة (backfill)
+====================================================
+ملء الجدول weather_history_daily بـ ERA5 من Open-Meteo Archive
+لكل موقع 1996–2026 (الحد الأدنى من BACKFILL_MIN_YEAR/env أو 1996).
+المسافة بين الطلبات 0.5 ثانية لتجنب الحظر.
+مُعَمَّد: ON CONFLICT DO NOTHING — آمن للإعادة.
+لا يلمس جدول weather_runs أو أي جداول تشغيل — فقط التاريخ الخام.
+
+متطلبات: psycopg[3-binary], python-dotenv, requests
+"""
+
+import json
+import os
+import sys
+import time
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+try:
+    import psycopg
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError as e:
+    print(f"✋ missing dependency: {e}. Run: pip install psycopg[binary] python-dotenv requests")
+    sys.exit(1)
+
+# الإعدادات
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    print("✋ DATABASE_URL غير مضبوط في .env أو البيئة.")
+    sys.exit(1)
+
+BACKFILL_MIN_YEAR = int(os.environ.get("BACKFILL_MIN_YEAR", "1996"))
+BACKFILL_MAX_YEAR = int(os.environ.get("BACKFILL_MAX_YEAR", str(date.today().year)))
+REQUEST_DELAY = float(os.environ.get("BACKFILL_REQUEST_DELAY", "0.5"))
+OPEN_METEO_ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
+TZ = ZoneInfo("Africa/Cairo")
+
+# متريّات الأرشيف التي نحتاجها (مطابقة للجدول)
+ARCHIVE_VARS = [
+    "temperature_2m_max",
+    "temperature_2m_min",
+    "precipitation_sum",
+    "wind_speed_10m_max",
+    "wind_gusts_10m_max",
+    "relative_humidity_2m_mean",
+    "cloud_cover_mean",
+]
+
+def http_get_json(url, params=None, timeout=30):
+    import requests
+    r = requests.get(url, params=params or {}, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+
+def fetch_locations_pg():
+    """جلب المواقع النشطة من weather_locations عبر psycopg."""
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, name_ar, latitude, longitude
+                FROM weather_locations
+                WHERE is_active = TRUE
+                ORDER BY id
+            """)
+            return cur.fetchall()
+
+def insert_history_rows(rows):
+    """إدراج صفوف التاريخ عبر psycopg مع ON CONFLICT DO NOTHING."""
+    if not rows:
+        return 0
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            inserted = 0
+            for r in rows:
+                cur.execute("""
+                    INSERT INTO weather_history_daily
+                    (location_id, record_date, tmax, tmin, precip_mm, wind_max_kph, wind_gusts_kph,
+                     humidity_mean_pct, cloud_cover_mean_pct, data_source)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (location_id, record_date, data_source) DO NOTHING
+                """, (
+                    r["location_id"], r["record_date"],
+                    r.get("tmax"), r.get("tmin"), r.get("precip_mm"),
+                    r.get("wind_max_kph"), r.get("wind_gusts_kph"),
+                    r.get("humidity_mean_pct"), r.get("cloud_cover_mean_pct"),
+                    r.get("data_source", "era5-archive")
+                ))
+                if cur.rowcount:
+                    inserted += 1
+            conn.commit()
+            return inserted
+
+def backfill_location(loc_id, name, lat, lon):
+    """ملء الموقع: لكل سنة من MIN إلى MAX، جلب كامل السنة."""
+    total_inserted = 0
+    for year in range(BACKFILL_MIN_YEAR, BACKFILL_MAX_YEAR + 1):
+        start = f"{year}-01-01"
+        end = f"{year}-12-31"
+        print(f"  📅 {name} {year} ...", end=" ", flush=True)
+        try:
+            data = http_get_json(
+                OPEN_METEO_ARCHIVE,
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "start_date": start,
+                    "end_date": end,
+                    "daily": ",".join(ARCHIVE_VARS),
+                    "timezone": "Africa/Cairo",
+                },
+                timeout=30,
+            )
+            blk = data.get("daily", {})
+            times = blk.get("time", [])
+            if not times:
+                print("⚠️ لا بيانات")
+                time.sleep(REQUEST_DELAY)
+                continue
+            rows = []
+            for i, tstr in enumerate(times):
+                try:
+                    d = datetime.strptime(tstr, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                rows.append({
+                    "location_id": loc_id,
+                    "record_date": str(d),
+                    "tmax": blk.get("temperature_2m_max", [None])[i],
+                    "tmin": blk.get("temperature_2m_min", [None])[i],
+                    "precip_mm": blk.get("precipitation_sum", [None])[i],
+                    "wind_max_kph": blk.get("wind_speed_10m_max", [None])[i],
+                    "wind_gusts_kph": blk.get("wind_gusts_10m_max", [None])[i],
+                    "humidity_mean_pct": blk.get("relative_humidity_2m_mean", [None])[i],
+                    "cloud_cover_mean_pct": blk.get("cloud_cover_mean", [None])[i],
+                })
+            inserted = insert_history_rows(rows)
+            total_inserted += inserted
+            print(f"✅ {inserted} صف/({len(rows)} محاولة)")
+        except Exception as e:
+            print(f"❌ فشل: {e}")
+        time.sleep(REQUEST_DELAY)
+    return total_inserted
+
+def main():
+    print(f"\n[{datetime.now(TZ)}] 🌤️ بدء ملء تاريخي لاستخبارات الطقس")
+    print(f"   النطاق: {BACKFILL_MIN_YEAR}–{BACKFILL_MAX_YEAR} | التأخير: {REQUEST_DELAY}s")
+    locations = fetch_locations_pg()
+    if not locations:
+        print("⚠️ لا توجد مواقع نشطة.")
+        return 0
+    grand_total = 0
+    for loc_id, name_ar, lat, lon in locations:
+        print(f"\n📍 {name_ar} (id={loc_id})")
+        inserted = backfill_location(loc_id, name_ar, float(lat), float(lon))
+        grand_total += inserted
+        print(f"   → الإجمالي لهذا الموقع: {inserted}")
+    print(f"\n[{datetime.now(TZ)}] ✅ انتهى: إجمالي صفوف مُدرَجة جديدة = {grand_total}")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

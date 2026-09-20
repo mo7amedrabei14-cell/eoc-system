@@ -33,6 +33,27 @@ VALUES
     ('الأقصر',      'Luxor',      25.6872, 32.6396, 89, 'saeed'),
     ('أسوان',       'Aswan',      24.0889, 32.8998, 99, 'saeed')
 ON CONFLICT (name_ar) DO NOTHING;
+INSERT INTO weather_locations (name_ar, name_en, latitude, longitude, altitude_m, region)
+VALUES
+    ('القليوبية',     'Qalyubia',      30.4581, 31.1782, NULL, NULL),
+    ('البحيرة',       'Beheira',       31.0342, 30.4682, NULL, NULL),
+    ('مطروح',         'Matrouh',       31.3500, 27.2333, NULL, NULL),
+    ('شمال سيناء',    'North Sinai',   31.1317, 33.7989, NULL, NULL),
+    ('جنوب سيناء',    'South Sinai',   28.2368, 33.6369, NULL, NULL),
+    ('السويس',        'Suez',          29.9737, 32.5263, NULL, NULL),
+    ('الشرقية',       'Sharqia',       30.5877, 31.5023, NULL, NULL),
+    ('الإسماعيلية',   'Ismailia',      30.5971, 32.2725, NULL, NULL),
+    ('بورسعيد',       'Port Said',     31.2565, 32.2839, NULL, NULL),
+    ('المنوفية',      'Monufia',       30.5526, 31.0090, NULL, NULL),
+    ('الغربية',       'Gharbia',       30.7833, 31.0033, NULL, NULL),
+    ('الدقهلية',      'Dakahlia',      31.0364, 31.3807, NULL, NULL),
+    ('كفر الشيخ',     'Kafr El-Sheikh',31.1143, 30.9386, NULL, NULL),
+    ('دمياط',         'Damietta',      31.4165, 31.8133, NULL, NULL),
+    ('بني سويف',      'Beni Suef',     29.0722, 31.0969, NULL, NULL),
+    ('الفيوم',        'Fayoum',        29.3084, 30.8428, NULL, NULL),
+    ('الوادي الجديد', 'New Valley',    25.4484, 30.5531, NULL, NULL),
+    ('البحر الأحمر',  'Red Sea',       27.2579, 33.8116, NULL, NULL)
+ON CONFLICT (name_ar) DO NOTHING;
 
 -- ── 2) السجل التاريخي الخام (ERA5 عبر Open-Meteo Archive) ───────────────────
 CREATE TABLE IF NOT EXISTS weather_history_daily (

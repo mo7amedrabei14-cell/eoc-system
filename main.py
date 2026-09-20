@@ -1,9 +1,11 @@
+from zoneinfo import ZoneInfo
+
 from fastapi import FastAPI, Depends, HTTPException, status, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
 from datetime import date, time, datetime, timedelta
 from psycopg.errors import UniqueViolation
@@ -257,6 +259,213 @@ def ensure_schema():
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_weather_forecasts_branch
                     ON weather_forecasts (branch_id);
+            """)
+
+            # ── جداول استخبارات الطقس اليومية (Weather Intelligence) ──────────
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_locations (
+                    id          BIGSERIAL PRIMARY KEY,
+                    name_ar     VARCHAR(100) NOT NULL UNIQUE,
+                    name_en     VARCHAR(100) NOT NULL,
+                    latitude    NUMERIC(9,6)  NOT NULL,
+                    longitude   NUMERIC(9,6)  NOT NULL,
+                    altitude_m  NUMERIC(8,2),
+                    region      VARCHAR(10),
+                    branch_id   INTEGER REFERENCES branches(branch_id),
+                    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at  TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                INSERT INTO weather_locations (name_ar, name_en, latitude, longitude, altitude_m, region)
+                VALUES
+                    ('القاهرة',     'Cairo',      30.0444, 31.2357, 23, 'hq'),
+                    ('الجيزة',      'Giza',       30.0131, 31.2089, 19, 'hq'),
+                    ('الإسكندرية',  'Alexandria', 31.2001, 29.9187,  7, 'hq'),
+                    ('المنيا',      'Minya',      28.1099, 30.7503, 47, 'saeed'),
+                    ('أسيوط',       'Assiut',     27.1809, 31.1837, 56, 'saeed'),
+                    ('سوهاج',       'Sohag',      26.5560, 31.6949, 61, 'saeed'),
+                    ('قنا',         'Qena',       26.1551, 32.7269, 75, 'saeed'),
+                    ('الأقصر',      'Luxor',      25.6872, 32.6396, 89, 'saeed'),
+                    ('أسوان',       'Aswan',      24.0889, 32.8998, 99, 'saeed')
+                ON CONFLICT (name_ar) DO NOTHING;
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_history_daily (
+                    id                  BIGSERIAL PRIMARY KEY,
+                    location_id         INTEGER NOT NULL REFERENCES weather_locations(id),
+                    record_date         DATE NOT NULL,
+                    tmax                NUMERIC(6,2),
+                    tmin                NUMERIC(6,2),
+                    precip_mm           NUMERIC(8,2),
+                    wind_max_kph        NUMERIC(7,2),
+                    wind_gusts_kph      NUMERIC(7,2),
+                    humidity_mean_pct   NUMERIC(6,2),
+                    cloud_cover_mean_pct NUMERIC(6,2),
+                    data_source         VARCHAR(50) NOT NULL DEFAULT 'era5-archive',
+                    created_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_weather_history_day
+                    ON weather_history_daily (location_id, record_date, data_source);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_weather_history_loc_date
+                    ON weather_history_daily (location_id, record_date);
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_runs (
+                    id                    BIGSERIAL PRIMARY KEY,
+                    client_run_uuid       UUID NOT NULL UNIQUE,
+                    run_date              DATE NOT NULL,
+                    target_date           DATE NOT NULL,
+                    status                VARCHAR(16) NOT NULL CHECK (status IN ('success','partial','failed')),
+                    total_locations       INTEGER NOT NULL DEFAULT 0,
+                    successful_locations  INTEGER NOT NULL DEFAULT 0,
+                    error_locations       INTEGER NOT NULL DEFAULT 0,
+                    error_details         JSONB,
+                    source_meta           JSONB,
+                    started_at            TIMESTAMP WITHOUT TIME ZONE,
+                    completed_at          TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_weather_runs_target ON weather_runs (target_date DESC);
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_forecast_snapshots (
+                    id                   BIGSERIAL PRIMARY KEY,
+                    weather_run_id       INTEGER NOT NULL REFERENCES weather_runs(id),
+                    location_id          INTEGER NOT NULL REFERENCES weather_locations(id),
+                    target_date          DATE NOT NULL,
+                    data_source          VARCHAR(50) NOT NULL DEFAULT 'open-meteo-forecast',
+                    fetched_at           TIMESTAMP WITHOUT TIME ZONE,
+                    raw_json             JSONB,
+                    tmax                 NUMERIC(6,2),
+                    tmin                 NUMERIC(6,2),
+                    precip_mm            NUMERIC(8,2),
+                    precip_prob_pct      NUMERIC(5,2),
+                    wind_max_kph         NUMERIC(7,2),
+                    wind_gusts_kph       NUMERIC(7,2),
+                    humidity_mean_pct    NUMERIC(6,2),
+                    cloud_cover_mean_pct NUMERIC(6,2),
+                    weather_code         INTEGER
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_weather_snapshot
+                    ON weather_forecast_snapshots (weather_run_id, location_id, target_date);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_weather_snap_loc_date
+                    ON weather_forecast_snapshots (location_id, target_date);
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_statistics (
+                    id                  BIGSERIAL PRIMARY KEY,
+                    weather_run_id      INTEGER NOT NULL REFERENCES weather_runs(id),
+                    location_id         INTEGER NOT NULL REFERENCES weather_locations(id),
+                    target_date         DATE NOT NULL,
+                    metric              VARCHAR(32) NOT NULL,
+                    history_source      VARCHAR(50) NOT NULL DEFAULT 'era5-reanalysis',
+                    window_days         INTEGER NOT NULL,
+                    methodology_version VARCHAR(16) NOT NULL DEFAULT 'v1',
+                    period_start        DATE,
+                    period_end          DATE,
+                    sample_count        INTEGER NOT NULL,
+                    mean                NUMERIC(10,3),
+                    median              NUMERIC(10,3),
+                    min                 NUMERIC(10,3),
+                    max                 NUMERIC(10,3),
+                    p10                 NUMERIC(10,3),
+                    p25                 NUMERIC(10,3),
+                    p75                 NUMERIC(10,3),
+                    p90                 NUMERIC(10,3),
+                    stddev              NUMERIC(10,3),
+                    computed_at         TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_weather_stat
+                    ON weather_statistics (weather_run_id, location_id, target_date, metric);
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_frequencies (
+                    id                  BIGSERIAL PRIMARY KEY,
+                    weather_run_id      INTEGER NOT NULL REFERENCES weather_runs(id),
+                    location_id         INTEGER NOT NULL REFERENCES weather_locations(id),
+                    target_date         DATE NOT NULL,
+                    metric              VARCHAR(32) NOT NULL,
+                    threshold_value     NUMERIC(10,3) NOT NULL,
+                    threshold_unit      VARCHAR(16),
+                    threshold_desc_ar   VARCHAR(200),
+                    qualifying_count    INTEGER NOT NULL,
+                    total_count         INTEGER NOT NULL,
+                    frequency_pct       NUMERIC(7,4),
+                    period_start        DATE,
+                    period_end          DATE,
+                    methodology         VARCHAR(64),
+                    computed_at         TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_weather_freq
+                    ON weather_frequencies (weather_run_id, location_id, target_date, metric, threshold_value);
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_assessments (
+                    id                  BIGSERIAL PRIMARY KEY,
+                    weather_run_id      INTEGER NOT NULL REFERENCES weather_runs(id),
+                    location_id         INTEGER NOT NULL REFERENCES weather_locations(id),
+                    target_date         DATE NOT NULL,
+                    forecast_snapshot_id INTEGER REFERENCES weather_forecast_snapshots(id),
+                    anomalies           JSONB,
+                    hazards             JSONB,
+                    ai_assessment       TEXT,
+                    ai_assessment_json  JSONB,
+                    ai_model            VARCHAR(64),
+                    ai_status           VARCHAR(16) CHECK (ai_status IN ('success','error','skipped')),
+                    ai_error            TEXT,
+                    generated_at        TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_weather_assessment
+                    ON weather_assessments (weather_run_id, location_id, target_date);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_weather_assess_loc_date
+                    ON weather_assessments (location_id, target_date);
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS weather_intel_config (
+                    key             VARCHAR(64) PRIMARY KEY,
+                    value           VARCHAR(255) NOT NULL,
+                    unit            VARCHAR(16),
+                    description_ar  VARCHAR(300),
+                    source          VARCHAR(200) NOT NULL DEFAULT 'قيمة افتراضية فنية قابلة للتعديل — ليست عتبة EOC رسمية',
+                    updated_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                INSERT INTO weather_intel_config (key, value, unit, description_ar) VALUES
+                    ('hazard.tmax_high_c',            '40',           '°C',   'موجّه حرارة مرتفعة (الحرارة العظمى المتوقعة تبلغ أو تتجاوز)'),
+                    ('hazard.tmin_low_c',             '5',            '°C',   'برودة (الحرارة الصغرى المتوقعة تنخفض إلى أو دون)'),
+                    ('hazard.precip_heavy_mm',        '10',           'mm',   'أمطار غزيرة (الهطول المتوقع يبلغ أو يتجاوز)'),
+                    ('hazard.wind_high_kph',          '40',           'كم/س', 'رياح قوية (الرياح القصوى المتوقعة تبلغ أو تتجاوز)'),
+                    ('hazard.wind_gusts_high_kph',    '60',           'كم/س', 'هبات رياح قوية (محسوبة فقط عند توفر حقل الهبات)'),
+                    ('hazard.thunderstorm_codes',     '95,96,99',     '',     'رعد (أكواد WMO للتوقعات فقط — لا خط تاريخي)'),
+                    ('hazard.fog_codes',              '45,48',        '',     'ضباب (فئة WMO لتوقعات اليوم فقط — لا خط تاريخي)'),
+                    ('freq.tmax_ge',                  '40',           '°C',   'أيام تبلغ/تتجاوز فيها الحرارة العظمى هذه القيمة'),
+                    ('freq.tmin_le',                  '5',            '°C',   'أيام تنخفض فيها الحرارة الصغرى إلى هذه القيمة أو أقل'),
+                    ('freq.precip_ge',                '10',           'mm',   'أيام يبلغ/يتجاوز فيها الهطول هذه القيمة'),
+                    ('freq.wind_ge',                  '40',           'كم/س', 'أيام تتجاوز فيها الرياح القصوى هذه القيمة'),
+                    ('stats.metrics',                 'tmax,tmin,precip,wind,humidity', '', 'المقاييس النشطة للخط المرجعي'),
+                    ('history.window_days',           '3',            'يوم',  'نافذة الأيام حول تاريخ الهدف عبر كل السنوات (0 = مطابقة اليوم بالضبط)'),
+                    ('stats.min_samples',             '20',           '',     'الحد الأدنى للمشاهدات الصالحة لتصنيف الشذوذ والتكرار'),
+                    ('visibility.degraded_m',         '5000',         'm',    'حدّ الرؤية الضعيفة — مفعّل فقط عند توفّر حقل رؤية فعلي (ERA5 لا يوفره)')
+                ON CONFLICT (key) DO NOTHING;
             """)
         connection.commit()
     except Exception as e:
@@ -5184,6 +5393,36 @@ def regions_to_branch_ids(regions):
     return [bid for bid, reg in BRANCH_ID_TO_REGION.items() if reg in regions]
 
 
+def get_user_region_scope(role):
+    """حقل النطاق الإقليمي المستخدم في واجهة استخبارات الطقس.
+    إرجاع "ALL" أو اسم إقليم واحد: hq/canal/delta/saeed.
+    """
+    if not role:
+        return "ALL"
+
+    scope = role.get("scope")
+    if isinstance(scope, str):
+        normalized = scope.strip().lower()
+        if normalized in ("all", "all_regions", "global"):
+            return "ALL"
+        if normalized in REGION_LABELS:
+            return normalized
+
+    role_name = str(role.get("role_name", "")).strip().upper()
+    if role_name in WEATHER_GLOBAL_ROLES:
+        return "ALL"
+
+    for region_key, label in REGION_LABELS.items():
+        if region_key.upper() == role_name or role_name in {label.upper(), label.replace(" ", "").upper()}:
+            return region_key
+
+    role_scope = str(role.get("region_scope") or role.get("region") or "").strip().lower()
+    if role_scope in REGION_LABELS:
+        return role_scope
+
+    return "ALL"
+
+
 def weather_region_scope(user_id, role):
     """
     نطاق «أقاليم» لمستخدم الطقس (RLS): None = عام (يرى كل المحافظات)،
@@ -5656,3 +5895,894 @@ def weather_export_log(payload: WeatherExportLogModel, credentials: HTTPAuthoriz
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء تسجيل التنزيل")
     finally:
         connection.close()
+
+
+# =====================================================================
+# استخبارات الطقس اليومية — Weather Intelligence Module
+# =====================================================================
+
+class WeatherIntelLocationIn(BaseModel):
+    name_ar: str
+    name_en: str
+    latitude: float
+    longitude: float
+    altitude_m: Optional[float] = None
+    region: Optional[str] = None
+    branch_id: Optional[int] = None
+    is_active: Optional[bool] = True
+
+class WeatherIntelLocationPatch(BaseModel):
+    name_ar: Optional[str] = None
+    name_en: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    altitude_m: Optional[float] = None
+    region: Optional[str] = None
+    branch_id: Optional[int] = None
+    is_active: Optional[bool] = None
+
+class WeatherIntelIngestModel(BaseModel):
+    client_run_uuid: str
+    run_date: str
+    target_date: str
+    status: str
+    total_locations: int = 0
+    successful_locations: int = 0
+    error_locations: int = 0
+    error_details: Optional[Dict[str, Any]] = None
+    source_meta: Optional[Dict[str, Any]] = None
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    history_rows: Optional[List[Dict[str, Any]]] = None
+    snapshots: Optional[List[Dict[str, Any]]] = None
+    statistics: Optional[List[Dict[str, Any]]] = None
+    frequencies: Optional[List[Dict[str, Any]]] = None
+    assessments: Optional[List[Dict[str, Any]]] = None
+
+def get_weather_intel_auth(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    if system_token and token.strip() == system_token:
+        return 1, {"role_name": "OWNER", "scope": "ALL"}, True
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    role = get_user_role(user_id)
+    return user_id, role, False
+
+
+@app.get("/api/weather-intel/locations")
+def get_weather_intel_locations(
+    active: Optional[int] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_eligible(role)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                SELECT id, name_ar, name_en, latitude, longitude, altitude_m, region, branch_id, is_active, created_at
+                FROM weather_locations
+            """
+            params = []
+            if active == 1 or active is True:
+                query += " WHERE is_active = TRUE"
+            query += " ORDER BY id ASC"
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            results = []
+            for r in rows:
+                results.append({
+                    "id": r[0],
+                    "name_ar": r[1],
+                    "name_en": r[2],
+                    "latitude": float(r[3]) if r[3] is not None else None,
+                    "longitude": float(r[4]) if r[4] is not None else None,
+                    "altitude_m": float(r[5]) if r[5] is not None else None,
+                    "region": r[6],
+                    "branch_id": r[7],
+                    "is_active": bool(r[8]),
+                    "created_at": str(r[9]) if r[9] is not None else None,
+                })
+            return results
+    except Exception as e:
+        print(f"Error fetching weather intel locations: {e}")
+        raise HTTPException(status_code=500, detail="فشل جلب مواقع الطقس")
+    finally:
+        connection.close()
+
+
+@app.post("/api/weather-intel/locations")
+def create_weather_intel_location(
+    payload: WeatherIntelLocationIn,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_owner(role)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO weather_locations (name_ar, name_en, latitude, longitude, altitude_m, region, branch_id, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                payload.name_ar,
+                payload.name_en,
+                payload.latitude,
+                payload.longitude,
+                payload.altitude_m,
+                payload.region,
+                payload.branch_id,
+                payload.is_active if payload.is_active is not None else True
+            ))
+            new_id = cursor.fetchone()[0]
+
+            create_audit_log(
+                cursor,
+                user_id,
+                f"إضافة موقع استخبارات طقس جديد: {payload.name_ar}",
+                mission_id=None,
+                entity_type="weather_intel",
+                entity_id=new_id,
+                details={"name_ar": payload.name_ar, "name_en": payload.name_en, "lat": payload.latitude, "lon": payload.longitude}
+            )
+            connection.commit()
+            return {"message": "تم إضافة الموقع بنجاح", "id": new_id}
+    except Exception as e:
+        connection.rollback()
+        print(f"Error creating weather intel location: {e}")
+        raise HTTPException(status_code=500, detail=f"فشل إضافة الموقع: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.patch("/api/weather-intel/locations/{loc_id}")
+def update_weather_intel_location(
+    loc_id: int,
+    payload: WeatherIntelLocationPatch,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_owner(role)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            fields = []
+            params = []
+            if payload.name_ar is not None:
+                fields.append("name_ar = %s")
+                params.append(payload.name_ar)
+            if payload.name_en is not None:
+                fields.append("name_en = %s")
+                params.append(payload.name_en)
+            if payload.latitude is not None:
+                fields.append("latitude = %s")
+                params.append(payload.latitude)
+            if payload.longitude is not None:
+                fields.append("longitude = %s")
+                params.append(payload.longitude)
+            if payload.altitude_m is not None:
+                fields.append("altitude_m = %s")
+                params.append(payload.altitude_m)
+            if payload.region is not None:
+                fields.append("region = %s")
+                params.append(payload.region)
+            if payload.branch_id is not None:
+                fields.append("branch_id = %s")
+                params.append(payload.branch_id)
+            if payload.is_active is not None:
+                fields.append("is_active = %s")
+                params.append(payload.is_active)
+
+            if not fields:
+                return {"message": "لا توجد تعديلات"}
+
+            params.append(loc_id)
+            cursor.execute(f"UPDATE weather_locations SET {', '.join(fields)} WHERE id = %s RETURNING id, name_ar", params)
+            updated = cursor.fetchone()
+            if not updated:
+                raise HTTPException(status_code=404, detail="الموقع غير موجود")
+
+            create_audit_log(
+                cursor,
+                user_id,
+                f"تعديل موقع استخبارات طقس: {updated[1]} (id={loc_id})",
+                mission_id=None,
+                entity_type="weather_intel",
+                entity_id=loc_id,
+                details={"patch": payload.model_dump(exclude_unset=True)}
+            )
+            connection.commit()
+            return {"message": "تم تحديث الموقع بنجاح", "id": loc_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error updating weather intel location: {e}")
+        raise HTTPException(status_code=500, detail=f"فشل تعديل الموقع: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.get("/api/weather-intel/config")
+def get_weather_intel_config(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_eligible(role)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT key, value, unit, description_ar, source, updated_at FROM weather_intel_config ORDER BY key")
+            rows = cursor.fetchall()
+            configs = {}
+            for r in rows:
+                configs[r[0]] = {
+                    "value": r[1],
+                    "unit": r[2] or "",
+                    "description_ar": r[3] or "",
+                    "source": r[4] or "",
+                    "updated_at": str(r[5]) if r[5] is not None else None
+                }
+            return configs
+    except Exception as e:
+        print(f"Error fetching weather intel config: {e}")
+        raise HTTPException(status_code=500, detail="فشل جلب إعدادات الطقس")
+    finally:
+        connection.close()
+
+
+@app.get("/api/weather-intel/history")
+def get_weather_intel_history(
+    location_id: int,
+    target_date: str,
+    window: int = 3,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_eligible(role)
+
+    try:
+        t_date = datetime.strptime(target_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="تنسيق التاريخ غير صحيح (YYYY-MM-DD)")
+
+    valid_md = set()
+    for offset in range(-window, window + 1):
+        try:
+            d = t_date + timedelta(days=offset)
+            valid_md.add((d.month, d.day))
+        except Exception:
+            pass
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT record_date, tmax, tmin, precip_mm, wind_max_kph, wind_gusts_kph,
+                       humidity_mean_pct, cloud_cover_mean_pct, data_source
+                FROM weather_history_daily
+                WHERE location_id = %s
+                ORDER BY record_date ASC
+            """, (location_id,))
+            rows = cursor.fetchall()
+            filtered_rows = []
+            for r in rows:
+                rec_date = r[0]
+                if (rec_date.month, rec_date.day) in valid_md:
+                    filtered_rows.append({
+                        "record_date": str(rec_date),
+                        "tmax": float(r[1]) if r[1] is not None else None,
+                        "tmin": float(r[2]) if r[2] is not None else None,
+                        "precip_mm": float(r[3]) if r[3] is not None else None,
+                        "wind_max_kph": float(r[4]) if r[4] is not None else None,
+                        "wind_gusts_kph": float(r[5]) if r[5] is not None else None,
+                        "humidity_mean_pct": float(r[6]) if r[6] is not None else None,
+                        "cloud_cover_mean_pct": float(r[7]) if r[7] is not None else None,
+                        "data_source": r[8] or "era5-archive",
+                    })
+            return {"rows": filtered_rows, "count": len(filtered_rows)}
+    except Exception as e:
+        print(f"Error fetching weather history window: {e}")
+        raise HTTPException(status_code=500, detail="فشل جلب السجل التاريخي للطقس")
+    finally:
+        connection.close()
+
+
+@app.post("/api/weather-intel/ingest")
+def ingest_weather_intel(
+    payload: WeatherIntelIngestModel,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_owner(role)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # 1. Insert or update weather_runs
+            cursor.execute("""
+                INSERT INTO weather_runs
+                (client_run_uuid, run_date, target_date, status, total_locations,
+                 successful_locations, error_locations, error_details, source_meta,
+                 started_at, completed_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (client_run_uuid) DO UPDATE SET
+                    status = EXCLUDED.status,
+                    total_locations = EXCLUDED.total_locations,
+                    successful_locations = EXCLUDED.successful_locations,
+                    error_locations = EXCLUDED.error_locations,
+                    error_details = EXCLUDED.error_details,
+                    source_meta = EXCLUDED.source_meta,
+                    completed_at = EXCLUDED.completed_at
+                RETURNING id
+            """, (
+                payload.client_run_uuid,
+                payload.run_date,
+                payload.target_date,
+                payload.status,
+                payload.total_locations,
+                payload.successful_locations,
+                payload.error_locations,
+                json.dumps(payload.error_details) if payload.error_details else None,
+                json.dumps(payload.source_meta) if payload.source_meta else None,
+                payload.started_at,
+                payload.completed_at or datetime.now(ZoneInfo("Africa/Cairo")).strftime("%Y-%m-%d %H:%M:%S")
+            ))
+            run_id = cursor.fetchone()[0]
+
+            # 2. Insert recent history rows (if any)
+            if payload.history_rows:
+                for h in payload.history_rows:
+                    cursor.execute("""
+                        INSERT INTO weather_history_daily
+                        (location_id, record_date, tmax, tmin, precip_mm, wind_max_kph,
+                         wind_gusts_kph, humidity_mean_pct, cloud_cover_mean_pct, data_source)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (location_id, record_date, data_source) DO NOTHING
+                    """, (
+                        h.get("location_id"),
+                        h.get("record_date"),
+                        h.get("tmax"),
+                        h.get("tmin"),
+                        h.get("precip_mm"),
+                        h.get("wind_max_kph"),
+                        h.get("wind_gusts_kph"),
+                        h.get("humidity_mean_pct"),
+                        h.get("cloud_cover_mean_pct"),
+                        h.get("data_source", "era5-archive")
+                    ))
+
+            # 3. Insert forecast snapshots & map location_id -> snapshot_id
+            loc_snap_map = {}
+            if payload.snapshots:
+                for s in payload.snapshots:
+                    cursor.execute("""
+                        INSERT INTO weather_forecast_snapshots
+                        (weather_run_id, location_id, target_date, data_source, fetched_at,
+                         raw_json, tmax, tmin, precip_mm, precip_prob_pct, wind_max_kph,
+                         wind_gusts_kph, humidity_mean_pct, cloud_cover_mean_pct, weather_code)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (weather_run_id, location_id, target_date) DO UPDATE SET
+                            fetched_at = EXCLUDED.fetched_at,
+                            raw_json = EXCLUDED.raw_json,
+                            tmax = EXCLUDED.tmax,
+                            tmin = EXCLUDED.tmin,
+                            precip_mm = EXCLUDED.precip_mm,
+                            precip_prob_pct = EXCLUDED.precip_prob_pct,
+                            wind_max_kph = EXCLUDED.wind_max_kph,
+                            wind_gusts_kph = EXCLUDED.wind_gusts_kph,
+                            humidity_mean_pct = EXCLUDED.humidity_mean_pct,
+                            cloud_cover_mean_pct = EXCLUDED.cloud_cover_mean_pct,
+                            weather_code = EXCLUDED.weather_code
+                        RETURNING id, location_id
+                    """, (
+                        run_id,
+                        s.get("location_id"),
+                        s.get("target_date", payload.target_date),
+                        s.get("data_source", "open-meteo-forecast"),
+                        s.get("fetched_at"),
+                        json.dumps(s.get("raw_json")) if s.get("raw_json") else None,
+                        s.get("tmax"),
+                        s.get("tmin"),
+                        s.get("precip_mm"),
+                        s.get("precip_prob_pct"),
+                        s.get("wind_max_kph"),
+                        s.get("wind_gusts_kph"),
+                        s.get("humidity_mean_pct"),
+                        s.get("cloud_cover_mean_pct"),
+                        s.get("weather_code")
+                    ))
+                    res = cursor.fetchone()
+                    if res:
+                        loc_snap_map[res[1]] = res[0]
+
+            # 4. Insert statistics
+            if payload.statistics:
+                for st in payload.statistics:
+                    cursor.execute("""
+                        INSERT INTO weather_statistics
+                        (weather_run_id, location_id, target_date, metric, history_source,
+                         window_days, methodology_version, period_start, period_end,
+                         sample_count, mean, median, min, max, p10, p25, p75, p90, stddev)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (weather_run_id, location_id, target_date, metric) DO UPDATE SET
+                            sample_count = EXCLUDED.sample_count,
+                            mean = EXCLUDED.mean,
+                            median = EXCLUDED.median,
+                            min = EXCLUDED.min,
+                            max = EXCLUDED.max,
+                            p10 = EXCLUDED.p10,
+                            p25 = EXCLUDED.p25,
+                            p75 = EXCLUDED.p75,
+                            p90 = EXCLUDED.p90,
+                            stddev = EXCLUDED.stddev
+                    """, (
+                        run_id,
+                        st.get("location_id"),
+                        st.get("target_date", payload.target_date),
+                        st.get("metric"),
+                        st.get("history_source", "era5-reanalysis"),
+                        st.get("window_days", 3),
+                        st.get("methodology_version", "v1"),
+                        st.get("period_start"),
+                        st.get("period_end"),
+                        st.get("sample_count", 0),
+                        st.get("mean"),
+                        st.get("median"),
+                        st.get("min"),
+                        st.get("max"),
+                        st.get("p10"),
+                        st.get("p25"),
+                        st.get("p75"),
+                        st.get("p90"),
+                        st.get("stddev")
+                    ))
+
+            # 5. Insert frequencies
+            if payload.frequencies:
+                for f in payload.frequencies:
+                    cursor.execute("""
+                        INSERT INTO weather_frequencies
+                        (weather_run_id, location_id, target_date, metric, threshold_value,
+                         threshold_unit, threshold_desc_ar, qualifying_count, total_count,
+                         frequency_pct, period_start, period_end, methodology)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (weather_run_id, location_id, target_date, metric, threshold_value) DO UPDATE SET
+                            qualifying_count = EXCLUDED.qualifying_count,
+                            total_count = EXCLUDED.total_count,
+                            frequency_pct = EXCLUDED.frequency_pct
+                    """, (
+                        run_id,
+                        f.get("location_id"),
+                        f.get("target_date", payload.target_date),
+                        f.get("metric"),
+                        f.get("threshold_value"),
+                        f.get("threshold_unit"),
+                        f.get("threshold_desc_ar"),
+                        f.get("qualifying_count", 0),
+                        f.get("total_count", 0),
+                        f.get("frequency_pct"),
+                        f.get("period_start"),
+                        f.get("period_end"),
+                        f.get("methodology")
+                    ))
+
+            # 6. Insert assessments
+            if payload.assessments:
+                for a in payload.assessments:
+                    loc_id = a.get("location_id")
+                    snap_id = a.get("forecast_snapshot_id") or loc_snap_map.get(loc_id)
+                    cursor.execute("""
+                        INSERT INTO weather_assessments
+                        (weather_run_id, location_id, target_date, forecast_snapshot_id,
+                         anomalies, hazards, ai_assessment, ai_assessment_json, ai_model,
+                         ai_status, ai_error)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (weather_run_id, location_id, target_date) DO UPDATE SET
+                            forecast_snapshot_id = EXCLUDED.forecast_snapshot_id,
+                            anomalies = EXCLUDED.anomalies,
+                            hazards = EXCLUDED.hazards,
+                            ai_assessment = EXCLUDED.ai_assessment,
+                            ai_assessment_json = EXCLUDED.ai_assessment_json,
+                            ai_model = EXCLUDED.ai_model,
+                            ai_status = EXCLUDED.ai_status,
+                            ai_error = EXCLUDED.ai_error
+                    """, (
+                        run_id,
+                        loc_id,
+                        a.get("target_date", payload.target_date),
+                        snap_id,
+                        json.dumps(a.get("anomalies")) if a.get("anomalies") else None,
+                        json.dumps(a.get("hazards")) if a.get("hazards") else None,
+                        a.get("ai_assessment"),
+                        json.dumps(a.get("ai_assessment_json")) if a.get("ai_assessment_json") else None,
+                        a.get("ai_model"),
+                        a.get("ai_status", "skipped"),
+                        a.get("ai_error")
+                    ))
+
+            create_audit_log(
+                cursor,
+                user_id,
+                f"استلام تقرير استخبارات الطقس ليوم {payload.target_date} (حالة: {payload.status})",
+                mission_id=None,
+                entity_type="weather_intel_run",
+                entity_id=run_id,
+                details={
+                    "client_run_uuid": payload.client_run_uuid,
+                    "target_date": payload.target_date,
+                    "status": payload.status,
+                    "successful": payload.successful_locations,
+                    "total": payload.total_locations
+                }
+            )
+            connection.commit()
+            return {"message": "تم حفظ تقرير استخبارات الطقس بنجاح", "run_id": run_id}
+    except Exception as e:
+        connection.rollback()
+        print(f"Error ingesting weather intel: {e}")
+        raise HTTPException(status_code=500, detail=f"فشل حفظ بيانات استخبارات الطقس: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.get("/api/weather-intel/assessments")
+def get_weather_intel_assessments(
+    target_date: Optional[str] = None,
+    location_id: Optional[int] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_eligible(role)
+
+    region_scope = get_user_region_scope(role)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # 1. Determine run
+            if target_date:
+                cursor.execute("""
+                    SELECT id, client_run_uuid, run_date, target_date, status,
+                           total_locations, successful_locations, error_locations,
+                           error_details, source_meta, started_at, completed_at
+                    FROM weather_runs
+                    WHERE target_date = %s
+                    ORDER BY id DESC
+                    LIMIT 1
+                """, (target_date,))
+            else:
+                cursor.execute("""
+                    SELECT id, client_run_uuid, run_date, target_date, status,
+                           total_locations, successful_locations, error_locations,
+                           error_details, source_meta, started_at, completed_at
+                    FROM weather_runs
+                    WHERE status IN ('success', 'partial')
+                    ORDER BY target_date DESC, id DESC
+                    LIMIT 1
+                """)
+
+            run_row = cursor.fetchone()
+            if not run_row and not target_date:
+                cursor.execute("""
+                    SELECT id, client_run_uuid, run_date, target_date, status,
+                           total_locations, successful_locations, error_locations,
+                           error_details, source_meta, started_at, completed_at
+                    FROM weather_runs
+                    ORDER BY id DESC
+                    LIMIT 1
+                """)
+                run_row = cursor.fetchone()
+
+            if not run_row:
+                return {
+                    "run": None,
+                    "assessments": [],
+                    "snapshots": [],
+                    "statistics": [],
+                    "frequencies": [],
+                    "locations": []
+                }
+
+            source_meta = run_row[9] if isinstance(run_row[9], dict) else {}
+            ai_provider = source_meta.get("ai_provider") if source_meta else None
+            cursor.execute("SELECT MAX(record_date) FROM weather_history_daily")
+            latest_observed_row = cursor.fetchone()
+            latest_observed_date = str(latest_observed_row[0]) if latest_observed_row and latest_observed_row[0] is not None else None
+
+            run_dict = {
+                "id": run_row[0],
+                "client_run_uuid": str(run_row[1]),
+                "run_date": str(run_row[2]),
+                "target_date": str(run_row[3]),
+                "forecast_date": str(run_row[3]),
+                "status": run_row[4],
+                "total_locations": run_row[5],
+                "successful_locations": run_row[6],
+                "error_locations": run_row[7],
+                "error_details": run_row[8],
+                "source_meta": source_meta,
+                "started_at": str(run_row[10]) if run_row[10] is not None else None,
+                "completed_at": str(run_row[11]) if run_row[11] is not None else None,
+                "latest_observed_date": latest_observed_date,
+            }
+            run_id = run_row[0]
+
+            # 2. Fetch locations
+            loc_query = """
+                SELECT id, name_ar, name_en, latitude, longitude, altitude_m, region, branch_id, is_active
+                FROM weather_locations
+                WHERE is_active = TRUE
+            """
+            loc_params = []
+            if region_scope != "ALL":
+                loc_query += " AND (region = %s OR region = 'hq' OR region IS NULL)"
+                loc_params.append(region_scope.lower())
+            loc_query += " ORDER BY id ASC"
+
+            cursor.execute(loc_query, loc_params)
+            loc_rows = cursor.fetchall()
+            locations_list = []
+            loc_ids_allowed = set()
+            for lr in loc_rows:
+                loc_ids_allowed.add(lr[0])
+                locations_list.append({
+                    "id": lr[0],
+                    "name_ar": lr[1],
+                    "name_en": lr[2],
+                    "latitude": float(lr[3]) if lr[3] is not None else None,
+                    "longitude": float(lr[4]) if lr[4] is not None else None,
+                    "altitude_m": float(lr[5]) if lr[5] is not None else None,
+                    "region": lr[6],
+                    "branch_id": lr[7],
+                    "is_active": lr[8],
+                })
+
+            if location_id:
+                loc_ids_allowed = {location_id}
+
+            # 3. Fetch assessments
+            cursor.execute("""
+                SELECT a.id, a.location_id, a.target_date, a.forecast_snapshot_id,
+                       a.anomalies, a.hazards, a.ai_assessment, a.ai_assessment_json,
+                       a.ai_model, a.ai_status, a.ai_error, a.generated_at,
+                       loc.name_ar, loc.name_en, loc.region, loc.latitude, loc.longitude
+                FROM weather_assessments a
+                JOIN weather_locations loc ON a.location_id = loc.id
+                WHERE a.weather_run_id = %s
+                ORDER BY a.location_id ASC
+            """, (run_id,))
+            assess_rows = cursor.fetchall()
+            assessments = []
+            for ar in assess_rows:
+                l_id = ar[1]
+                if loc_ids_allowed and l_id not in loc_ids_allowed:
+                    continue
+                assessments.append({
+                    "id": ar[0],
+                    "location_id": l_id,
+                    "target_date": str(ar[2]),
+                    "forecast_snapshot_id": ar[3],
+                    "anomalies": ar[4],
+                    "hazards": ar[5],
+                    "ai_assessment": ar[6],
+                    "ai_assessment_json": ar[7],
+                    "ai_model": ar[8],
+                    "ai_provider": ai_provider,
+                    "ai_status": ar[9],
+                    "ai_error": ar[10],
+                    "generated_at": str(ar[11]) if ar[11] is not None else None,
+                    "location_name_ar": ar[12],
+                    "location_name_en": ar[13],
+                    "region": ar[14],
+                    "latitude": float(ar[15]) if ar[15] is not None else None,
+                    "longitude": float(ar[16]) if ar[16] is not None else None,
+                })
+
+            # 4. Fetch snapshots
+            cursor.execute("""
+                SELECT id, location_id, target_date, data_source, fetched_at,
+                       tmax, tmin, precip_mm, precip_prob_pct, wind_max_kph,
+                       wind_gusts_kph, humidity_mean_pct, cloud_cover_mean_pct, weather_code
+                FROM weather_forecast_snapshots
+                WHERE weather_run_id = %s
+                ORDER BY location_id ASC
+            """, (run_id,))
+            snap_rows = cursor.fetchall()
+            snapshots = []
+            for sr in snap_rows:
+                l_id = sr[1]
+                if loc_ids_allowed and l_id not in loc_ids_allowed:
+                    continue
+                snapshots.append({
+                    "id": sr[0],
+                    "location_id": l_id,
+                    "target_date": str(sr[2]),
+                    "forecast_date": str(sr[2]),
+                    "data_source": sr[3],
+                    "fetched_at": str(sr[4]) if sr[4] is not None else None,
+                    "tmax": float(sr[5]) if sr[5] is not None else None,
+                    "tmin": float(sr[6]) if sr[6] is not None else None,
+                    "precip_mm": float(sr[7]) if sr[7] is not None else None,
+                    "precip_prob_pct": float(sr[8]) if sr[8] is not None else None,
+                    "wind_max_kph": float(sr[9]) if sr[9] is not None else None,
+                    "wind_gusts_kph": float(sr[10]) if sr[10] is not None else None,
+                    "humidity_mean_pct": float(sr[11]) if sr[11] is not None else None,
+                    "cloud_cover_mean_pct": float(sr[12]) if sr[12] is not None else None,
+                    "weather_code": sr[13],
+                })
+
+            # 5. Fetch statistics
+            cursor.execute("""
+                SELECT id, location_id, target_date, metric, history_source, window_days,
+                       methodology_version, period_start, period_end, sample_count,
+                       mean, median, min, max, p10, p25, p75, p90, stddev
+                FROM weather_statistics
+                WHERE weather_run_id = %s
+                ORDER BY location_id ASC, metric ASC
+            """, (run_id,))
+            stat_rows = cursor.fetchall()
+            statistics = []
+            for strw in stat_rows:
+                l_id = strw[1]
+                if loc_ids_allowed and l_id not in loc_ids_allowed:
+                    continue
+                statistics.append({
+                    "id": strw[0],
+                    "location_id": l_id,
+                    "target_date": str(strw[2]),
+                    "metric": strw[3],
+                    "history_source": strw[4],
+                    "window_days": strw[5],
+                    "methodology_version": strw[6],
+                    "period_start": str(strw[7]) if strw[7] is not None else None,
+                    "period_end": str(strw[8]) if strw[8] is not None else None,
+                    "sample_count": strw[9],
+                    "mean": float(strw[10]) if strw[10] is not None else None,
+                    "median": float(strw[11]) if strw[11] is not None else None,
+                    "min": float(strw[12]) if strw[12] is not None else None,
+                    "max": float(strw[13]) if strw[13] is not None else None,
+                    "p10": float(strw[14]) if strw[14] is not None else None,
+                    "p25": float(strw[15]) if strw[15] is not None else None,
+                    "p75": float(strw[16]) if strw[16] is not None else None,
+                    "p90": float(strw[17]) if strw[17] is not None else None,
+                    "stddev": float(strw[18]) if strw[18] is not None else None,
+                })
+
+            # 6. Fetch frequencies
+            cursor.execute("""
+                SELECT id, location_id, target_date, metric, threshold_value,
+                       threshold_unit, threshold_desc_ar, qualifying_count, total_count,
+                       frequency_pct, period_start, period_end, methodology
+                FROM weather_frequencies
+                WHERE weather_run_id = %s
+                ORDER BY location_id ASC, metric ASC
+            """, (run_id,))
+            freq_rows = cursor.fetchall()
+            frequencies = []
+            for fr in freq_rows:
+                l_id = fr[1]
+                if loc_ids_allowed and l_id not in loc_ids_allowed:
+                    continue
+                frequencies.append({
+                    "id": fr[0],
+                    "location_id": l_id,
+                    "target_date": str(fr[2]),
+                    "metric": fr[3],
+                    "threshold_value": float(fr[4]) if fr[4] is not None else None,
+                    "threshold_unit": fr[5] or "",
+                    "threshold_desc_ar": fr[6] or "",
+                    "qualifying_count": fr[7],
+                    "total_count": fr[8],
+                    "frequency_pct": float(fr[9]) if fr[9] is not None else None,
+                    "period_start": str(fr[10]) if fr[10] is not None else None,
+                    "period_end": str(fr[11]) if fr[11] is not None else None,
+                    "methodology": fr[12] or "",
+                })
+
+            return {
+                "run": run_dict,
+                "assessments": assessments,
+                "snapshots": snapshots,
+                "statistics": statistics,
+                "frequencies": frequencies,
+                "locations": locations_list
+            }
+    except Exception as e:
+        print(f"Error fetching weather intel assessments: {e}")
+        raise HTTPException(status_code=500, detail="فشل جلب تقارير استخبارات الطقس")
+    finally:
+        connection.close()
+
+
+@app.get("/api/weather-intel/runs")
+def get_weather_intel_runs(
+    limit: int = 20,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_eligible(role)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, client_run_uuid, run_date, target_date, status,
+                       total_locations, successful_locations, error_locations,
+                       error_details, source_meta, started_at, completed_at
+                FROM weather_runs
+                ORDER BY target_date DESC, id DESC
+                LIMIT %s
+            """, (min(limit, 100),))
+            rows = cursor.fetchall()
+            cursor.execute("SELECT MAX(record_date) FROM weather_history_daily")
+            latest_observed_row = cursor.fetchone()
+            latest_observed_date = str(latest_observed_row[0]) if latest_observed_row and latest_observed_row[0] is not None else None
+            runs = []
+            for r in rows:
+                runs.append({
+                    "id": r[0],
+                    "client_run_uuid": str(r[1]),
+                    "run_date": str(r[2]),
+                    "target_date": str(r[3]),
+                    "forecast_date": str(r[3]),
+                    "latest_observed_date": latest_observed_date,
+                    "status": r[4],
+                    "total_locations": r[5],
+                    "successful_locations": r[6],
+                    "error_locations": r[7],
+                    "error_details": r[8],
+                    "source_meta": r[9],
+                    "started_at": str(r[10]) if r[10] is not None else None,
+                    "completed_at": str(r[11]) if r[11] is not None else None,
+                })
+            return runs
+    except Exception as e:
+        print(f"Error fetching weather runs: {e}")
+        raise HTTPException(status_code=500, detail="فشل جلب سجلات تشغيل الطقس")
+    finally:
+        connection.close()
+
+
+@app.post("/api/weather-intel/trigger")
+def trigger_weather_intel_runner(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_owner(role)
+
+    radar_key = os.environ.get("RADAR_SECRET_KEY")
+    if not radar_key:
+        raise HTTPException(status_code=500, detail="الخطأ: مفتاح RADAR_SECRET_KEY غير موجود في إعدادات البيئة.")
+
+    url = "https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/weather_cron.yml/dispatches"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": f"Bearer {radar_key}",
+        "Content-Type": "application/json"
+    }
+    data = {"ref": "main"}
+
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=15)
+        if response.status_code in [200, 204]:
+            return {"message": "تم إطلاق محرك استخبارات الطقس بنجاح! 🌤️\nيتم جلب التوقعات وتحليل السجل التاريخي حالياً."}
+        else:
+            raise HTTPException(status_code=response.status_code, detail=f"فشل جيت هاب: {response.text}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"فشل الاتصال الداخلي: {str(e)}")

@@ -69,6 +69,14 @@ export default function Login() {
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  // 🔐 خطوة تحقق إضافية بكود 6 أرقام — تظهر فقط لحساب الأونر بعد نجاح الدخول العادي
+  const [loginStage, setLoginStage] = useState('form'); // 'form' | 'verify'
+  const [pendingAuthData, setPendingAuthData] = useState(null);
+  const [verifyDigits, setVerifyDigits] = useState(['', '', '', '', '', '']);
+  const [verifyStage, setVerifyStage] = useState('idle'); // 'idle' | 'checking' | 'success'
+  const [verifyError, setVerifyError] = useState(false);
+  const otpRefs = useRef([]);
+  const OWNER_VERIFICATION_CODE = '301014';
   // 🎉 مراسم الافتتاح — تظهر مع كل Refresh / تحميل جديد خارج الجلسة
   // الافتتاحية تعمل دائمًا عند كل Refresh بدون أي استثناء.
   const [openingCeremony, setOpeningCeremony] = useState(true);
@@ -230,6 +238,18 @@ export default function Login() {
       });
       const data = await response.json();
       if (response.ok) {
+        // نفس منطق تحديد الأونر المستخدم بالظبط في لوحة التحكم (Dashboard.jsx)
+        const userRole = (data.user?.role || '').toUpperCase();
+        const isOwnerAccount = data.user?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
+
+        if (isOwnerAccount) {
+          // 🔐 حساب الأونر: نوقف هنا ونطلب رمز التحقق قبل ما نكمل فعليًا للداشبورد
+          setPendingAuthData(data);
+          setLoginStage('verify');
+          setIsLoading(false);
+          return;
+        }
+
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('user', JSON.stringify(data.user));
         navigate('/dashboard');
@@ -241,6 +261,69 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 🔐 إتمام دخول الأونر بعد نجاح رمز التحقق
+  const finishOwnerLogin = () => {
+    if (!pendingAuthData) return;
+    sessionStorage.setItem('access_token', pendingAuthData.access_token);
+    sessionStorage.setItem('user', JSON.stringify(pendingAuthData.user));
+    navigate('/dashboard');
+  };
+
+  const resetVerification = () => {
+    setVerifyDigits(['', '', '', '', '', '']);
+    setVerifyStage('idle');
+    setVerifyError(false);
+    setTimeout(() => { if (otpRefs.current[0]) otpRefs.current[0].focus(); }, 10);
+  };
+
+  const checkVerificationCode = (digits) => {
+    const code = digits.join('');
+    if (code.length < 6) return;
+    if (code === OWNER_VERIFICATION_CODE) {
+      setVerifyError(false);
+      setVerifyStage('checking');
+      // ✨ نترك المدار يعمل أولًا، ثم نعرض حالة النجاح قبل الانتقال.
+      setTimeout(() => setVerifyStage('success'), 4200);
+      setTimeout(() => finishOwnerLogin(), 5200);
+    } else {
+      setVerifyError(true);
+      setTimeout(() => resetVerification(), 550);
+    }
+  };
+
+  const handleOtpChange = (index, rawValue) => {
+    const value = rawValue.replace(/[^0-9]/g, '').slice(-1);
+    setVerifyDigits((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      if (value && index < 5 && otpRefs.current[index + 1]) {
+        otpRefs.current[index + 1].focus();
+      }
+      if (next.every((d) => d !== '')) checkVerificationCode(next);
+      return next;
+    });
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !verifyDigits[index] && index > 0 && otpRefs.current[index - 1]) {
+      otpRefs.current[index - 1].focus();
+    }
+    if (e.key === 'ArrowLeft' && otpRefs.current[index + 1]) otpRefs.current[index + 1].focus();
+    if (e.key === 'ArrowRight' && otpRefs.current[index - 1]) otpRefs.current[index - 1].focus();
+  };
+
+  const handleOtpPaste = (e) => {
+    const pasted = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 6);
+    if (!pasted) return;
+    e.preventDefault();
+    const next = ['', '', '', '', '', ''];
+    for (let i = 0; i < pasted.length; i++) next[i] = pasted[i];
+    setVerifyDigits(next);
+    const lastIndex = Math.min(pasted.length, 6) - 1;
+    if (otpRefs.current[lastIndex]) otpRefs.current[lastIndex].focus();
+    if (next.every((d) => d !== '')) checkVerificationCode(next);
   };
 
   const t = (ar, en) => (language === 'ar' ? ar : en);
@@ -265,6 +348,112 @@ export default function Login() {
       className="relative min-h-screen bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
+      {/* 🔐 تجربة OTP: خط طبيعي → مدار تحميل → علامة نجاح، بدون تغيير منطق التحقق. */}
+      <style>{`
+        .otp-orbit-zone.is-checking {
+          min-height: 176px;
+          min-width: 176px;
+        }
+        .otp-orbit-zone.is-checking .otp-orbit-item {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          margin: -24px;
+          width: 48px;
+          height: 48px;
+          animation:
+            otp-form-circle .8s cubic-bezier(.22, .8, .25, 1) forwards,
+            otp-spin-circle 2s linear .8s infinite;
+        }
+        .otp-orbit-zone.is-checking .otp-box {
+          color: transparent !important;
+          caret-color: transparent;
+          -webkit-text-security: none;
+          box-shadow: 0 0 0 1px var(--accent-soft), 0 0 18px var(--accent-glow);
+        }
+        /* كل مربع يبدأ من موضعه في الخط ثم يصل إلى نقطة مستقلة في المدار */
+        @keyframes otp-form-circle {
+          from {
+            transform: translateX(var(--line-x)) scale(.92);
+            opacity: .65;
+          }
+          to {
+            transform: rotate(var(--angle)) translateX(66px) scale(1);
+            opacity: 1;
+          }
+        }
+        /* المدار يدور حول المركز؛ المربعات لا تدور حول محاورها */
+        @keyframes otp-spin-circle {
+          from {
+            transform: rotate(var(--angle)) translateX(66px) scale(1);
+          }
+          to {
+            transform: rotate(calc(var(--angle) + 360deg)) translateX(66px) scale(1);
+          }
+        }
+        .otp-orbit-zone.is-success {
+          min-height: 176px;
+          min-width: 176px;
+        }
+        .otp-orbit-zone.is-success .otp-orbit-item {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          margin: -24px;
+          width: 48px;
+          height: 48px;
+          animation: otp-collapse-success .7s cubic-bezier(.22, .8, .25, 1) forwards;
+        }
+        .otp-orbit-zone.is-success .otp-box {
+          color: transparent !important;
+          caret-color: transparent;
+          -webkit-text-security: none;
+          box-shadow: 0 0 0 1px var(--ok-soft), 0 0 18px var(--ok-soft);
+        }
+        @keyframes otp-collapse-success {
+          from {
+            transform: rotate(var(--angle)) translateX(66px) scale(1);
+            opacity: 1;
+          }
+          to {
+            transform: rotate(var(--angle)) translateX(0) scale(.35);
+            opacity: 0;
+          }
+        }
+        .otp-success-mark {
+          position: absolute;
+          inset: 50% auto auto 50%;
+          width: 64px;
+          height: 64px;
+          transform: translate(-50%, -50%) scale(.55);
+          display: grid;
+          place-items: center;
+          border: 1px solid var(--ok);
+          border-radius: 999px;
+          color: var(--ok);
+          background: var(--ok-soft);
+          box-shadow: 0 0 0 8px var(--ok-soft), 0 0 34px var(--ok-soft);
+          opacity: 0;
+          pointer-events: none;
+        }
+        .otp-orbit-zone.is-success .otp-success-mark {
+          animation: otp-success-pop .55s cubic-bezier(.22, .8, .25, 1) .5s forwards;
+        }
+        .otp-success-mark svg {
+          width: 34px;
+          height: 34px;
+          stroke-dasharray: 40;
+          stroke-dashoffset: 40;
+          animation: otp-success-draw .55s ease-out .75s forwards;
+        }
+        @keyframes otp-success-pop {
+          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes otp-success-draw {
+          to { stroke-dashoffset: 0; }
+        }
+      `}</style>
+
       {/* ═══════════ الخلفية المحيطة (نفس لغة لوحة التحكم) ═══════════ */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="absolute -top-[18%] -end-[8%] w-[55vw] h-[55vw] bg-[var(--accent-glow)] rounded-full blur-[130px] animate-pulse" style={{ animationDuration: '5s' }} />
@@ -574,6 +763,87 @@ export default function Login() {
                 {/* عمود النموذج */}
                 <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 stagger flex flex-col gap-5">
 
+                {loginStage === 'verify' ? (
+                <div className="flex flex-col items-center gap-6 text-center py-2">
+                  <div>
+                    <span className="eyebrow mb-3">
+                      {language === 'ar' ? 'طبقة حماية إضافية' : 'ADDITIONAL SECURITY LAYER'}
+                    </span>
+                    <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight">
+                      {language === 'ar' ? 'رمز التحقق' : 'Verification Code'}
+                    </h3>
+                    <p className="text-[var(--muted)] text-sm mt-1.5 leading-relaxed">
+                      {language === 'ar'
+                        ? 'أدخل رمز التحقق المكوّن من 6 أرقام لإكمال الدخول'
+                        : 'Enter the 6-digit verification code to complete sign-in'}
+                    </p>
+                  </div>
+
+                  {verifyError && (
+                    <div className="error-shake flex items-start gap-3 rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent-softer)] px-4 py-3 text-[var(--ink)] w-full" style={{ animation: 'fade-in 0.35s var(--ease-out)' }}>
+                      <span className="text-[var(--accent)]"><AlertIcon /></span>
+                      <div className="text-sm leading-snug text-start">
+                        <p className="font-bold mb-0.5">{language === 'ar' ? 'رمز غير صحيح' : 'Incorrect code'}</p>
+                        <p className="text-[var(--muted)]">{language === 'ar' ? 'تأكد من الرمز وحاول مرة أخرى' : 'Check the code and try again'}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    dir="ltr"
+                    className={`otp-orbit-zone relative flex items-center justify-center gap-2.5 ${verifyStage === 'checking' ? 'is-checking' : ''} ${verifyStage === 'success' ? 'is-success' : ''}`}
+                  >
+                    {verifyDigits.map((d, i) => (
+                      <span
+                        key={i}
+                        className="otp-orbit-item inline-flex"
+                        style={{
+                          '--angle': `${i * 60 - 150}deg`,
+                          '--line-x': `${(i - 2.5) * 58}px`
+                        }}
+                      >
+                        <input
+                          ref={(el) => (otpRefs.current[i] = el)}
+                          type="password"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          maxLength={1}
+                          value={verifyStage === 'checking' || verifyStage === 'success' ? '' : d}
+                          disabled={verifyStage === 'checking'}
+                          onChange={(e) => handleOtpChange(i, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                          onPaste={i === 0 ? handleOtpPaste : undefined}
+                          className="otp-box w-12 h-12 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--ink)] text-center text-xl font-bold font-mono outline-none transition-all duration-300 focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-glow)]"
+                        />
+                      </span>
+                    ))}
+                    {verifyStage === 'success' && (
+                      <span className="otp-success-mark" aria-label={language === 'ar' ? 'تم التحقق بنجاح' : 'Verification successful'}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 12.5 9.2 17 19 7" />
+                        </svg>
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginStage('form');
+                      setPendingAuthData(null);
+                      setVerifyDigits(['', '', '', '', '', '']);
+                      setVerifyStage('idle');
+                      setVerifyError(false);
+                    }}
+                    className="text-xs font-semibold text-[var(--faint)] hover:text-[var(--ink)] transition-colors"
+                  >
+                    {language === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to sign in'}
+                  </button>
+                </div>
+                ) : (
+                <>
                 {errorMsg && (
                   <div className="error-shake flex items-start gap-3 rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent-softer)] px-4 py-3 text-[var(--ink)]" style={{ animation: 'fade-in 0.35s var(--ease-out)' }}>
                     <span className="text-[var(--accent)]"><AlertIcon /></span>
@@ -667,6 +937,8 @@ export default function Login() {
                     {language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}
                   </span>
                 </div>
+                </>
+                )}
                 </div>
               </div>
             </div>

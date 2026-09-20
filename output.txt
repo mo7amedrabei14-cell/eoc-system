@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\weather_intel.py", line 993, in <module>
+    sys.exit(run_pipeline())
+             ~~~~~~~~~~~~^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\weather_intel.py", line 737, in run_pipeline
+    print(f"\n[{cairo_now_str()}] \U0001f324\ufe0f \u0628\u062f\u0621 \u062a\u0634\u063a\u064a\u0644 \u0627\u0633\u062a\u062e\u0628\u0627\u0631\u0627\u062a \u0627\u0644\u0637\u0642\u0633 (TARGET = {target_date_for_run()})")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 24-25: character maps to <undefined>

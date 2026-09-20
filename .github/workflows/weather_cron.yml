@@ -1,0 +1,38 @@
+name: Weather Intelligence Daily Runner 🌤️
+
+on:
+  schedule:
+    # 06:00 UTC = 08:00 Cairo (UTC+2 شتاءً) أو 09:00 Cairo (UTC+3 صيفاً بتوقيت مصر الصيفي: آخر جمعة من أبريل إلى آخر خميس من أكتوبر)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  weather-intel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: تحميل ملفات المشروع
+        uses: actions/checkout@v4
+
+      - name: تجهيز بيئة البايثون
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: تسطيب المكتبات المطلوبة
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: تشغيل محرك استخبارات الطقس
+        env:
+          SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
+          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-b12f.vercel.app' }}
+          HISTORY_WINDOW_DAYS: ${{ secrets.HISTORY_WINDOW_DAYS || '3' }}
+          MIN_SAMPLES: ${{ secrets.MIN_SAMPLES || '20' }}
+          AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MAX_TOKENS: ${{ secrets.AI_MAX_TOKENS }}
+        run: python weather_intel.py
