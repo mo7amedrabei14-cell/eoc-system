@@ -5190,8 +5190,8 @@ const completedAt =
                 if (!dp) return null;
                 // Build list of all available route options: basic routes + custom itineraries
                 const basicRouteOption = routes.length > 0 ? 'خط السير الأساسي' : null;
-                const customOptions = customItineraries.map(ci => {
-                  const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || `مخصص ${ci.id}`;
+                const customOptions = customItineraries.map((ci, ciIndex) => {
+                  const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || `يوم ${ciIndex + 1}`;
                   return ciTitle;
                 });
                 const allOptions = [basicRouteOption, ...customOptions].filter(Boolean);
