@@ -3586,6 +3586,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const handleCreateNew = () => {
     inFlightMissionRef.current = null;   // تجاهل أي استجابة مهمة قادمة متأخرة
     currentMissionIdRef.current = null;
+    clearDetailsRef.current = false; // 🛡️ مهمة جديدة تبدأ بلا «مسح مقصود» — لا تتسرب من جلسة سابقة
     setModalError(null);
     setCurrentMissionData(null);
     timelineTouchedRef.current = new Set();
@@ -4188,8 +4189,11 @@ row++;
        //    RouteCard حقول مُتحكَّم فيها وكل تغيير يُزامن الحالة فوراً — القراءة من
        //    الـ DOM (ids/الناقل المخفي) كانت تنهار لو أي عنصر اختلف/أُزيل فيُرسَل
        //    «خط سير فارغ» فتمسح السيرفر المسارات المحفوظة. الحالة محصّنة من ذلك.
+       // 🛡️ الصف يُرسَل لو فيه أي بيانات (من/إلى أو مواعيد) — صف بتواريخ فقط
+       //    (من/إلى فاضيين) مسار حقيقي محفوظ ولا يُسقَط وإلا ضاع عند إعادة الحفظ.
+       const hasRouteData = (r) => !!(r.route_from || r.route_to || r.departure_date || r.departure_time || r.arrival_date || r.arrival_time);
        routes.forEach((r) => {
-         if (r.route_from || r.route_to) allRoutes.push({
+         if (hasRouteData(r)) allRoutes.push({
            group_title: 'خط السير الأساسي',
            route_from: r.route_from || null,
            route_to: r.route_to || '',
@@ -4201,7 +4205,7 @@ row++;
        });
        customItineraries.forEach((ci) => {
          ci.routes.forEach((r) => {
-           if (r.route_from || r.route_to) allRoutes.push({
+           if (hasRouteData(r)) allRoutes.push({
              group_title: ci.title || 'خط سير مخصص',
              route_from: r.route_from || null,
              route_to: r.route_to || '',

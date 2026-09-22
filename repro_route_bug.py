@@ -145,6 +145,44 @@ try:
     n = cur.fetchone()[0]
     ok("routes still survive empty-routes save (shield works)", n == 3, f"rows={n}")
 
+    # ── 5) DATE-ONLY route row (from/to empty but dates set) must survive reopen+resave ──
+    resave3 = dict(payload)
+    resave3["status"] = "Approved"
+    resave3["routes"] = [
+        {"group_title": "خط السير الأساسي", "route_from": "القاهرة", "route_to": "الإسكندرية",
+         "departure_date": "2026-09-25", "departure_time": "08:00",
+         "arrival_date": "2026-09-25", "arrival_time": "10:00"},
+        {"group_title": "تحركات اليوم الأول", "route_from": None, "route_to": "",
+         "departure_date": "2026-09-26", "departure_time": "09:00",
+         "arrival_date": "2026-09-26", "arrival_time": None},
+    ]
+    resave3["idempotency_key"] = "repro-routes-dateonly-" + os.urandom(8).hex()
+    r = client.put(f"/api/missions/{MID}", json=resave3, headers=HDR)
+    ok("date-only route PUT 200", r.status_code == 200, r.text[:200] if r.status_code != 200 else "")
+    r = client.get(f"/api/missions/{MID}", headers=HDR)
+    detail3 = r.json()
+    ok("date-only route stored (2 rows)", len(detail3.get("routes", [])) == 2,
+       f"got {len(detail3.get('routes', []))}")
+    # resave AGAIN via empty payload → date-only row must also survive (backend shield)
+    resave4 = dict(resave3)
+    resave4["routes"] = []
+    resave4["idempotency_key"] = "repro-routes-dateonly-empty-" + os.urandom(8).hex()
+    r = client.put(f"/api/missions/{MID}", json=resave4, headers=HDR)
+    cur.execute("SELECT COUNT(*) FROM mission_itineraries WHERE mission_id=%s", (MID,))
+    n = cur.fetchone()[0]
+    ok("date-only route survives empty-payload save", n == 2, f"rows={n}")
+
+    # ── 6) INTENTIONAL clear still works: clear_details=True wipes routes ──
+    resave5 = dict(resave3)
+    resave5["routes"] = []
+    resave5["clear_details"] = True
+    resave5["idempotency_key"] = "repro-routes-clear-" + os.urandom(8).hex()
+    r = client.put(f"/api/missions/{MID}", json=resave5, headers=HDR)
+    ok("intentional clear PUT 200", r.status_code == 200)
+    cur.execute("SELECT COUNT(*) FROM mission_itineraries WHERE mission_id=%s", (MID,))
+    n = cur.fetchone()[0]
+    ok("intentional clear wipes routes", n == 0, f"rows={n}")
+
 except Exception as e:
     FAIL += 1
     print("CRASH:", e)
