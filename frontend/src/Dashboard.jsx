@@ -3161,14 +3161,15 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       try {
         // 1) لو طلعت للسيرفر فعلاً قبل ما النت يقطع → مش هنكررها
         const chk = await fetch(`${BASE}/api/missions/by-idempotency/${encodeURIComponent(item.key)}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (chk.ok && (await chk.json().catch(() => ({}))).exists) { removeFromOutbox(item.key); continue; }
+        if (chk.ok && (await chk.json().catch(() => ({}))).exists) { removeFromOutbox(item.key); refreshPending(); continue; }
         // 2) إعادة الإرسال بنفس المفتاح — السيرفر بيمنع التكرار بذاته
         const r = await fetch(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
-        if (r.ok) removeFromOutbox(item.key);
-        else if (r.status >= 400 && r.status < 500) removeFromOutbox(item.key); // مرفوضة منطقياً — محاولة تانية مش هتنفع
+        if (r.ok) { removeFromOutbox(item.key); refreshPending(); }        // ✅ وصلت فعلاً → الزرار يختفي فوراً
+        else if (r.status >= 400 && r.status < 500) { removeFromOutbox(item.key); refreshPending(); } // مرفوضة نهائياً → يختفي برضه
       } catch { /* الشبكة لسه واقفة — نسيبها في الطابور */ }
     }
     refreshPending();
+
   }, []);
 
   useEffect(() => {
