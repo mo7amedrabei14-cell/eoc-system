@@ -6788,7 +6788,7 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   // 🌤️ صلاحيات مستقلة: لا نستخدم isVolunteer هنا (دور «أوبريشن» أهونها يفتح الطقس)
   const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
   const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
-  const isGlobalWeather = isOwner || isJoker || ['MANAGER', 'ADMIN', 'مدير', 'أدمن'].includes(userRole);
+  const isGlobalWeather = isOwner || isJoker || isSupervisor || ['MANAGER', 'ADMIN', 'مدير', 'أدمن'].includes(userRole);
   // 🔒 «إنهاء التوقعات» بقى حصريًا من الجوكر فما فوق (جوكر/مشرف/أونر) — اتشالت من رول الأوبريشن
   const canFinishForecast = isOwner || isJoker || isSupervisor;
 
@@ -7193,7 +7193,7 @@ const visibleBranches = (
     );
   }
 
-  const cellCls = "w-20 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-1.5 py-1.5 text-center text-sm text-white outline-none focus:border-[var(--accent)]/50 transition-colors";
+  const cellCls = "w-24 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-2 py-2 text-center text-base text-white outline-none focus:border-[var(--accent)]/50 transition-colors";
   const T = (ar, en) => (lang === 'ar' ? ar : en);
 
   return (
