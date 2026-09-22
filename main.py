@@ -2323,6 +2323,7 @@ def update_mission(
                 none_if_empty(mission.completion_time),
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
                 mission.team_code if mission.team_code is not None else "",
+                mission.status,
                 ikey,
                 none_if_empty(mission.mission_code),
                 cd_value,
