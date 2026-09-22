@@ -7233,7 +7233,7 @@ def force_refresh_system(
                 SELECT 1
                 FROM realtime_events
                 WHERE event_type = 'system_refresh'
-                  AND created_at > CURRENT_TIMESTAMP - INTERVAL '10 seconds'
+                  AND created_at > (now() AT TIME ZONE 'Africa/Cairo') - INTERVAL '10 seconds'
                 LIMIT 1
             """)
 
