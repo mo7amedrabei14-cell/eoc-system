@@ -4099,7 +4099,7 @@ def get_realtime_events(
                     FROM realtime_events e
                     LEFT JOIN users u ON e.actor_user_id = u.user_id
                     WHERE e.event_id > %s
-                      AND e.actor_user_id IS DISTINCT FROM %s
+                      AND (e.event_type = 'system_refresh' OR e.actor_user_id IS DISTINCT FROM %s)
                     ORDER BY e.event_id ASC
                     LIMIT %s;
                     """,
@@ -4131,7 +4131,7 @@ def get_realtime_events(
                     FROM realtime_events e
                     LEFT JOIN users u ON e.actor_user_id = u.user_id
                     WHERE e.event_id > %s
-                      AND e.actor_user_id IS DISTINCT FROM %s
+                      AND (e.event_type = 'system_refresh' OR e.actor_user_id IS DISTINCT FROM %s)
                       AND (
                             e.target_user_id = %s
                             OR (

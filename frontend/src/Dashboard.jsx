@@ -1629,6 +1629,16 @@ if (e.event_type === 'system_refresh') {
         seenEventIdsRef.current = new Set([...seenEventIdsRef.current].slice(-1500));
       }
 
+      // 🔄 أمر تحديث شامل من المالك: Reload لكل الأجهزة والحسابات (حتى لو الحدث منك انت)
+      if (e.event_type === 'system_refresh') {
+        const seenKey = `eoc_sys_refresh_${e.event_id}`;
+        if (!sessionStorage.getItem(seenKey)) {
+          sessionStorage.setItem(seenKey, '1');
+          setTimeout(() => window.location.reload(), 1200);
+        }
+        return;
+      }
+
       const isAi = e.event_type === 'ai_news';
       const isMine = Number(userData?.user_id) > 0 && e.actor_user_id === Number(userData?.user_id);
 
