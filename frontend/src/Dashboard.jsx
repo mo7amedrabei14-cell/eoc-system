@@ -1579,7 +1579,7 @@ useEffect(() => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const lastEventIdRef = useRef(null);        // watermark تصاعدي
+  const lastRtSuccessAtRef = useRef(Date.now()); // ⏱️ آخر نجاح فعلي مع السيرفر (لساعة الشفاء الذاتي)
   const seenEventIdsRef = useRef(new Set());  // حماية من أي تكرار أثناء إعادة المحاولة
   const pollInFlightRef = useRef(false);      // لا تداخل بين الطلبات
   const pollBackoffRef = useRef(4000);        // backoff لإعادة الاتصال
@@ -1712,6 +1712,7 @@ if (e.event_type === 'system_refresh') {
         }
         pollBackoffRef.current = 4000;
         if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
+        lastRtSuccessAtRef.current = Date.now(); // ⏱️ نجاح فعلي — الساعة الذاتية تتقدّم
       } catch (e) {
         // network failure → backoff تصاعدي (لغاية 30 ثانية) ثم معاودة تلقائية
         pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 30000);
@@ -1736,6 +1737,25 @@ if (e.event_type === 'system_refresh') {
       if (pollTimer) clearTimeout(pollTimer);
     };
   }, [userData]);
+
+  // 🩺 الشفاء الذاتي: 60 ثانية بلا أي نجاح فعلي مع السيرفر ⇒ إعادة تحميل ذاتية
+  // (حتى لو مؤشر «متصل لحظياً» كاذب أو حلقة الاستقصاء تجمّدت).
+  // حاجز ضد العاصفة: 3 محاولات كحد أقصى كل 10 دقايق — لو السيرفر واقف كلياً مفيش لوب لا نهائي.
+  useEffect(() => {
+    const iv = setInterval(() => {
+      if (Date.now() - lastRtSuccessAtRef.current < 60000) return;
+      try {
+        const raw = JSON.parse(sessionStorage.getItem('eoc_wd') || '{"n":0,"t":0}');
+        const now = Date.now();
+        const n = (now - (raw.t || 0) < 600000) ? (raw.n || 0) : 0;
+        if (n >= 3) return; // السيرفر واقف كلياً — نستنى بدل ما نعيد بلا نهاية
+        sessionStorage.setItem('eoc_wd', JSON.stringify({ n: n + 1, t: now }));
+      } catch { /* نادر — نكمل للتحميل */ }
+      window.location.reload();
+    }, 30000);
+    return () => clearInterval(iv);
+  }, []);
+
 
   // تنظيف دائم للميض القديم (للأمان مهما طالت الجلسة في الصفحة)
   useEffect(() => {
@@ -6976,7 +6996,7 @@ const visibleBranches = (
       const res = await fetch(`${BASE}/api/weather/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ date: snap.date, shift: snap.shift, rows: bodyRows }),
+        body: JSON.stringify({ date: snap.date, shift: snap.shift, rows: bodyRows, silent: true }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) { loadDaily(true); return; }

@@ -5917,6 +5917,7 @@ class WeatherBatchModel(BaseModel):
     date: str
     shift: str
     rows: List[WeatherRowModel]
+    silent: bool = False   # 🤫 الحفظ التلقائي: يمنع بث الإشعار اللحظي (اللوج يُسجَّل عادي)
 
 
 class WeatherFinishModel(BaseModel):
@@ -6157,7 +6158,7 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
                     details={
                         "action_text": f"حفظ توقعات وردية {payload.shift} ليوم {forecast_date} لعدد {len(valid_rows)} محافظة"
                     },
-                    realtime=True,
+                    realtime=(not payload.silent),
                 )
             except Exception as e:
                 print(f"Weather audit error: {e}")
