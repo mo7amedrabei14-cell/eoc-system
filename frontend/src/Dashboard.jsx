@@ -7475,6 +7475,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const submitLockRef = useRef(false);
+  // 🆕 تتبع تعديل المستخدم لأي حقل — يمنع استجابة جلب السجل المتأخرة من مسح مدخلاته (سبب تصفير القيم)
+  const formDirtyRef = useRef(false);
   const [notice, setNotice] = useState(null);
   const [form, setForm] = useState(() => emptyForm(todayStr()));
   // 🗑️ نافذة تأكيد الحذف المخصصة (بدلاً من confirm الجاهزة في المتصفح)
@@ -7567,6 +7569,9 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     });
   };
 
+  // 🆕 تعبئة النموذج من سجل محفوظ تُعدّ بداية جلسة نظيفة (ليست تعديلاً من المستخدم)
+  const loadIntoFormClean = (rec) => { formDirtyRef.current = false; loadIntoForm(rec); };
+
   const openCreate = () => {
     setNotice(null);
     setEditingId(null);
@@ -7576,16 +7581,23 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     const base = emptyForm(todayStr());
     if (latest && latest.issues_text) base.issuesList = splitIssuesText(latest.issues_text);
     setForm(base);
+    formDirtyRef.current = false; // 🆕 جلسة جديدة نظيفة
     setModalOpen(true); // يفتح فوراً دون انتظار الشبكة
     const token = sessionStorage.getItem('access_token') || '';
     fetch(`${BASE}/api/handovers/by-date/${todayStr()}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => (res.ok ? res.json() : null))
       .then(rec => {
-        if (rec) {
+        if (!rec) return;
+        // 🆕 إذا بدأ المستخدم الكتابة فعلاً فلا نمسح مدخلاته أبداً — نربط السجل الموجود فقط
+        //    ليتم التحديث عليه عند الحفظ (بدل الاستبدال القسري الذي كان يصفّر القيم)
+        if (formDirtyRef.current) {
           setEditingId(rec.handover_id);
-          loadIntoForm(rec);
-          setNotice(T('يوجد سجل تسليم مسجل بالفعل لهذا اليوم — سيتم فتحه للتعديل', 'A handover already exists for today — opening it for editing'));
+          setNotice(T('يوجد سجل مسجل لهذا اليوم — الحفظ سيحدّثه مع الحفاظ على مدخلاتك', 'A record exists for today — saving will update it with your entries kept'));
+          return;
         }
+        setEditingId(rec.handover_id);
+        loadIntoFormClean(rec);
+        setNotice(T('يوجد سجل تسليم مسجل بالفعل لهذا اليوم — سيتم فتحه للتعديل', 'A handover already exists for today — opening it for editing'));
       })
       .catch(() => {});
   };
@@ -7593,16 +7605,18 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const openEdit = (rec) => {
     setNotice(null);
     setEditingId(rec.handover_id);
-    loadIntoForm(rec);
+    loadIntoFormClean(rec);
     setModalOpen(true);
   };
 
   const handleDateChange = (dateStr) => {
+    formDirtyRef.current = true;
     setForm(prev => ({ ...prev, handover_date: dateStr }));
     setNotice(null);
   };
 
 const onMatrixChange = (s, d, val) => {
+  formDirtyRef.current = true; // 🆕 أي إدخال في المصفوفة يحمي المدخلات من الاستبدال المتأخر
   setForm(prev => ({
     ...prev,
     shift_matrix: {
@@ -7613,7 +7627,7 @@ const onMatrixChange = (s, d, val) => {
 };
 
 
-  const resetMatrix = () => setForm(prev => ({ ...prev, shift_matrix: EMPTY_SHIFT_MATRIX() }));
+  const resetMatrix = () => { formDirtyRef.current = true; setForm(prev => ({ ...prev, shift_matrix: EMPTY_SHIFT_MATRIX() })); };
 
   const sumMatrix = (m) => { const mm = normalizeShiftMatrix(m); return Object.values(mm).reduce((a, b) => a + (Number(b) || 0), 0); };
   const shiftTotal = (sk) => HANDOVER_DEPTS.reduce((a, d) => a + (Number(form.shift_matrix[`${sk}_${d.key}`]) || 0), 0);
@@ -7645,10 +7659,24 @@ const onMatrixChange = (s, d, val) => {
     try {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.status === 409) {
+        // 🆕 يوجد سجل لهذا التاريخ — لا نتجاهل الحفظ: نلتقط السجل الموجود ونحدّثه فوراً بنفس المدخلات
+        //    (السلوك القديم كان يتجاهل الحفظ بصمت فيضطر المستخدم للضغط مرتين ويظن القيم لم تُحفظ)
         const byDate = await fetch(`${BASE}/api/handovers/by-date/${form.handover_date}`, { headers: { 'Authorization': `Bearer ${token}` } });
         const rec = byDate.ok ? await byDate.json() : null;
-        setEditingId(rec ? rec.handover_id : null);
-        setNotice(T('يوجد سجل تسليم لهذا التاريخ — تم فتحه للتعديل مع الحفاظ على مدخلاتك', 'A handover exists for this date — opened for editing with your input preserved'));
+        if (rec?.handover_id) {
+          const putRes = await fetch(`${BASE}/api/handovers/${rec.handover_id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+          if (putRes.ok) {
+            setEditingId(rec.handover_id);
+            setModalOpen(false);
+            setNotice(null);
+            fetchHandovers();
+            setCustomAlert("يوجد سجل لهذا التاريخ — تم تحديثه بمدخلاتك بنجاح!");
+            setSaving(false);
+            submitLockRef.current = false;
+            return;
+          }
+        }
+        setNotice(T('فشل الحفظ — يوجد سجل لهذا التاريخ', 'Save failed — a record exists for this date'));
         setSaving(false);
         submitLockRef.current = false;
         return;
@@ -7855,7 +7883,9 @@ const onMatrixChange = (s, d, val) => {
 
       {modalOpen && createPortal(
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[9999] p-4">
-          <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden">
+          <div className="modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden"
+            onChange={() => { formDirtyRef.current = true; }}
+            onKeyDown={() => { formDirtyRef.current = true; }}>
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
