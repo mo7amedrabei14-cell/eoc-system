@@ -2633,3 +2633,11 @@ select.field {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* 🆕 قفل نموذج حساب إدارة الشباب (Youth Administration) */
+/* الغرض: تثبيت كل أقسام الاستمارة للقراءة فقط ما عدا صندوق ملاحظات غرفة التطوع —
+   دون تعطيل أزرار المودال (الإغلاق / تمت المراجعة) أو تمرير الصفحة.
+   الأسلوب: pointer-events: none على أقسام الجسم المباشرة — الأحداث تمر إلى
+   الحاوية القابلة للتمرير نفسها فيبقى السكرول يعمل، وصندوق الملاحظات يستثنى. */
+.youth-form-locked > * { pointer-events: none; }
+.youth-form-locked > .youth-notes-escape { pointer-events: auto; }

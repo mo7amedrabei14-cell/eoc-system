@@ -138,6 +138,7 @@ const ENGLISH_UI = {
   'مفتوحة': 'Open',
   'نشطة الآن': 'Active now',
   'مكتملة': 'Completed',
+  'مكتملة (تمت المراجعة من إدارة الشباب)': 'Completed (Reviewed by Youth Administration)',
   'مسودة': 'Draft',
   'نشطة': 'Active',
   'قيد المراجعة': 'Under review',

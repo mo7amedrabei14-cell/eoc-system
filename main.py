@@ -1001,6 +1001,102 @@ def validate_mission_completion(mission):
 
 
 # =============================================================================
+# مراجعة إدارة الشباب (Youth & Volunteers) — ثوابت موحّدة + بوابات أدوار
+# =============================================================================
+# ملاحظة مهمة: كل منطق الحالة الجديد يستخدم الثوابت أدناه فقط (لا تكرار نصوص
+# الحالة في ملفات متفرقة) — missions.status عمود VARCHAR(50) بلا قيد CHECK،
+# فالقيمة الجديدة لا تحتاج أي تغيير في قاعدة البيانات.
+
+# الحالة الجديدة: «مكتملة (تمت المراجعة من إدارة الشباب)»
+MISSION_STATUS_COMPLETED_REVIEWED = "Completed (Reviewed by Youth Administration)"
+MISSION_STATUS_COMPLETED_REVIEWED_AR = "مكتملة (تمت المراجعة من إدارة الشباب)"
+
+# كل صيغ «مكتملة» (العادية + المراجَعة) — تُستخدم في الفلاتر وعدّادات الإنهاء
+COMPLETED_STATUSES_ALL = (
+    "Completed",
+    "مكتملة",
+    MISSION_STATUS_COMPLETED_REVIEWED,
+    MISSION_STATUS_COMPLETED_REVIEWED_AR,
+)
+
+# أدوار التعديل على المهمة (كما كانت — OWNER وقائمة الإداريين الحالية)
+MISSION_EDIT_ROLE_NAMES = [
+    "OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION",
+    "المالك", "مشرف", "جوكر", "أوبريشن",
+]
+
+
+def is_youth_role(role):
+    """هل هذا الدور هو Youth & Volunteers (READ_ONLY_MISSIONS)؟"""
+    return bool(role) and str(role.get("role_name", "")).strip().upper() == "READ_ONLY_MISSIONS"
+
+
+def is_owner_role(role):
+    """هل هذا الدور OWNER/المالك؟ (نفس قاعدة require_owner_for_clear الموجودة)"""
+    return bool(role) and str(role.get("role_name", "")).strip().upper() in ["OWNER", "المالك"]
+
+
+def can_edit_mission_role(role):
+    """هل هذا الدور يملك صلاحية تعديل المهمة (كل الحقول)؟"""
+    return bool(role) and str(role.get("role_name", "")).strip().upper() in [r.upper() for r in MISSION_EDIT_ROLE_NAMES]
+
+
+def find_youth_account_ids(cursor):
+    """كل حسابات Youth & Volunteers النشطة (user_id) — مستلمو إشعار اكتمال المهمة."""
+    cursor.execute("""
+        SELECT ur.user_id
+        FROM user_roles ur
+        INNER JOIN roles r ON r.role_id = ur.role_id
+        INNER JOIN users u ON u.user_id = ur.user_id
+        WHERE r.role_name = 'READ_ONLY_MISSIONS'
+          AND u.is_active = TRUE;
+    """)
+    return [row[0] for row in cursor.fetchall()]
+
+
+def notify_youth_of_completion(cursor, mission_id, mission_name, actor_user_id, previous_status=None):
+    """
+    إشعار حسابات Youth & Volunteers عند اكتمال المهمة فقط (لا مسودات/نشطة/تغييرات أخرى).
+    - حدث موجّه (target_user_id) عبر قناة realtime_events الموجودة — بدون بث عام.
+    - منع التكرار: لو كانت المهمة مكتملة أصلاً قبل هذا الحفظ (إعادة معالجة لنفس
+      حدث الإكمال) لا يُرسَل إشعار جديد لكل حساب استُلم به سابقاً.
+    - أما الاكتمال الجديد بعد إعادة فتح المهمة (سابقتها غير مكتملة) فيُرسَل —
+      فهو دورة إكمال جديدة تستحق مراجعة جديدة.
+    """
+    youth_ids = find_youth_account_ids(cursor)
+    if not youth_ids:
+        return
+    was_already_completed = previous_status in COMPLETED_STATUSES_ALL
+    for uid in youth_ids:
+        if uid == actor_user_id:
+            continue  # لا إشعار للفاعل نفسه (نفس قاعدة القناة اللحظية الحالية)
+        if was_already_completed:
+            cursor.execute("""
+                SELECT 1 FROM realtime_events
+                WHERE event_type = 'mission'
+                  AND mission_id = %s
+                  AND target_user_id = %s
+                  AND details @> %s::jsonb
+                LIMIT 1;
+            """, (mission_id, uid, Jsonb({"youth_completion": True})))
+            if cursor.fetchone():
+                continue  # تم إشعار هذا الحساب بهذا الاكتمال من قبل — لا تكرار
+        create_realtime_event(
+            cursor,
+            event_type="mission",
+            action=f"اكتملت المهمة: {mission_name or 'مهمة'} — بانتظار مراجعة إدارة الشباب",
+            actor_user_id=actor_user_id,
+            mission_id=mission_id,
+            details={
+                "action_text": f"اكتملت المهمة: {mission_name or 'مهمة'} — بانتظار مراجعة إدارة الشباب",
+                "youth_completion": True,
+                "mission_name": mission_name or "",
+            },
+            target_user_id=uid,
+        )
+
+
+# =============================================================================
 # هوية المشارِك — الجذر الحقيقي (#4)
 # المشارك لم يعد مجرد اسم/صفة نصية تُطابَق بالنصوص؛ الهوية الفعلية (volunteer_id /
 # user_id / membership_number) تتحل من قاعدة البيانات نفسها وتُخزَّن مع المشاركة.
@@ -1823,7 +1919,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
             
-            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"]:
+            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"] or is_youth_role(role):
                 # 🆕 التاريخ المعياري لترتيب سجل المهام هو «تاريخ/وقت إنشاء المهمة» (creation_datetime)
                 #    — لا «تاريخ المهمة» (exit_date) ولا created_at. fallback: created_at (قديم بلا تاريخ إنشاء)
                 query = base_query + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
@@ -1897,6 +1993,10 @@ def create_mission(
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    # 🔒 بوابة الدور: حساب Youth & Volunteers للقراءة فقط — لا إنشاء مهام عبر الـ API مباشرة
+    _creator_role = get_user_role(user_id)
+    if is_youth_role(_creator_role):
+        raise HTTPException(status_code=403, detail="حساب إدارة الشباب للعرض فقط — لا يمكن إنشاء مهام")
     # مفتاح الحماية يُقرأ من الترويسة أولاً (الواجهة ترسله في الـ header)،
     # مع مرونة دعم إرساله داخل الـ body أيضاً للتوافق مع أي عميل قديم.
     ikey = mission.idempotency_key or idempotency_key_header or None
@@ -2080,6 +2180,13 @@ def create_mission(
                 except Exception as e:
                     print(f"Participant notify error: {e}")
 
+            # 🆕 إشعار حسابات Youth & Volunteers لو أُنشئت المهمة مكتملة مباشرة (مرة واحدة)
+            if mission.status in COMPLETED_STATUSES_ALL:
+                try:
+                    notify_youth_of_completion(cursor, mission_id, mission.mission_name, user_id)
+                except Exception as e:
+                    print(f"Youth completion notify error: {e}")
+
             connection.commit()
             return {"message": "تم حفظ المهمة بنجاح", "mission_code": mission_code, "mission_id": mission_id}
             
@@ -2116,6 +2223,10 @@ def update_mission(
     # 🆕 بوابة المالك — تعديل «تاريخ/وقت إنشاء المهمة» متاح لهم فقط (403 لغيرهم)
     role = get_user_role(user_id)
     is_owner = bool(role) and role["role_name"].upper() in ["OWNER", "المالك"]
+    # 🔒 بوابة الدور: حساب Youth & Volunteers لا يعدّل المهام عبر هذا المسار —
+    #    مراجعته تتم عبر مسار مخصّص منفصل (youth-review) وملاحظات الغرفة عبر مساره أيضاً.
+    if is_youth_role(role):
+        raise HTTPException(status_code=403, detail="حساب إدارة الشباب للعرض فقط — التعديل يتم عبر إجراء المراجعة المخصص")
     # مفتاح الحماية من الإرسال المكرر — يُقرأ من الترويسة أولاً (الواجهة ترسله في الـ header)؛
     # يعمل جنباً إلى جنب مع مفتاح المهمة المخزَّن في قاعدة البيانات (DB هو مصدر الحقيقة).
     ikey = mission.idempotency_key or idempotency_key_header or None
@@ -2147,9 +2258,11 @@ def update_mission(
             # 🆕 تاريخ/وقت الإنشاء: لقطة ثابتة لا تتجدد أبداً — «تغيير القيمة» فعل مالك
             #    فقط (403 لغير المالك). إعادة إرسال نفس القيمة من غير المالك = ليس تغييراً.
             cur_db_cd = None
-            cd_row = cursor.execute("SELECT creation_datetime FROM missions WHERE mission_id = %s", (mission_id,)).fetchone()
+            cd_row = cursor.execute("SELECT creation_datetime, status FROM missions WHERE mission_id = %s", (mission_id,)).fetchone()
             if cd_row:
                 cur_db_cd = cd_row[0]
+            # 🆕 الحالة السابقة قبل التحديث — تُستخدم لمنع إشعارات المراجعة المكررة
+            _previous_mission_status = cd_row[1] if cd_row else None
             req_cd = parse_dt_input(mission.creation_datetime) if mission.creation_datetime else None
             cd_change = bool(req_cd) and (cur_db_cd is None or req_cd != cur_db_cd)
             cd_value = None  # COALESCE يحافظ على القديم لو لم يُطلب تغيير
@@ -2483,6 +2596,14 @@ def update_mission(
                 notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, removed_user_ids)
             except Exception as e:
                 print(f"Participant notify error: {e}")
+
+            # 🆕 إشعار حسابات Youth & Volunteers عند انتقال المهمة إلى مكتملة فقط
+            #    (مسودة/نشطة/غيرها لا تُشعِر — وإعادة معالجة نفس الاكتمال لا تُكرّر الإشعار)
+            if mission.status in COMPLETED_STATUSES_ALL:
+                try:
+                    notify_youth_of_completion(cursor, mission_id, mission.mission_name, user_id, previous_status=_previous_mission_status)
+                except Exception as e:
+                    print(f"Youth completion notify error: {e}")
 
             connection.commit()
             return {"message": "تم تحديث المهمة بنجاح"}
@@ -3439,6 +3560,25 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
                 for r in cursor.fetchall()
             ]
 
+            # 🆕 ملاحظات غرفة التطوع (صفوف + اسم مراجع الاستمارة) — تُحمَّل مع تفاصيل المهمة
+            cursor.execute("""
+                SELECT note_id, note_date, membership_number, member_name, note_text
+                FROM mission_volunteer_room_notes
+                WHERE mission_id = %s
+                ORDER BY row_order, note_id;
+            """, (mission_id,))
+            mission_data["volunteer_room_notes"] = [
+                {
+                    "note_id": r[0],
+                    "note_date": str(r[1]) if r[1] else "",
+                    "membership_number": r[2] or "",
+                    "member_name": r[3] or "",
+                    "note_text": r[4] or "",
+                }
+                for r in cursor.fetchall()
+            ]
+            mission_data["volunteer_room_reviewer_name"] = mission_data.get("volunteer_room_reviewer_name") or ""
+
             return mission_data
     except Exception as e:
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء جلب التفاصيل")
@@ -3513,6 +3653,10 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    # 🔒 بوابة الدور: لا حذف مهام عبر الـ API مباشرة لحساب Youth & Volunteers
+    _deleter_role = get_user_role(user_id)
+    if is_youth_role(_deleter_role):
+        raise HTTPException(status_code=403, detail="حساب إدارة الشباب للعرض فقط — لا يمكن حذف المهام")
         
     connection = get_connection()
     try:
@@ -3547,6 +3691,229 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500)
+    finally:
+        connection.close()
+
+
+# =============================================================================
+# 🆕 مراجعة إدارة الشباب + ملاحظات غرفة التطوع
+# مسارات مخصصة ضيقة النطاق: تُمكّن حساب Youth & Volunteers (والمالك) من
+# إجراء المراجعة وتحرير قسم ملاحظات غرفة التطوع فقط — دون أي صلاحية تعديل
+# عامة على باقي حقول الاستمارة (بوابة PUT /api/missions تظل محجوبة عنه).
+# =============================================================================
+
+class YouthReviewRequest(BaseModel):
+    pass  # لا حاجة لجسم الطلب — الإجراء انتقال حالة موحّد ومحدد سلفاً
+
+
+class VolunteerRoomNoteRowModel(BaseModel):
+    note_date: Optional[str] = None
+    membership_number: Optional[str] = None
+    member_name: Optional[str] = None
+    note_text: Optional[str] = None
+
+
+class VolunteerRoomNotesRequest(BaseModel):
+    rows: List[VolunteerRoomNoteRowModel] = []
+    reviewer_name: Optional[str] = None
+
+
+def _mission_exists(cursor, mission_id: int):
+    cursor.execute("SELECT mission_id FROM missions WHERE mission_id = %s", (mission_id,))
+    return cursor.fetchone() is not None
+
+
+@app.post("/api/missions/{mission_id}/youth-review")
+def youth_review_mission(
+    mission_id: int,
+    data: YouthReviewRequest = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    إجراء «تمت المراجعة من إدارة الشباب»: ينقل المهمة من مكتملة (Completed)
+    إلى الحالة الجديدة MISSION_STATUS_COMPLETED_REVIEWED فقط.
+    - الصلاحية: mission.youth_review (ممنوحة للدور 6 والمالك عبر migration 20260923).
+    - الانتقال مسموح من الحالة «مكتملة» فقط (أي صيغة Completed عادية) —
+      تكرار الإجراء على مهمة مُراجَعة أصلاً يُرجع نجاحاً بدون تكرار لوج (idempotent).
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    if not authorize(user_id, "mission.youth_review"):
+        raise HTTPException(status_code=403, detail="هذا الإجراء متاح لإدارة الشباب والمالك فقط")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status, mission_name FROM missions WHERE mission_id = %s", (mission_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+            current_status, mission_name = row[0], row[1]
+
+            # تمت المراجعة سابقاً → نجاح صامت بدون كتابة (idempotent)
+            if current_status in (MISSION_STATUS_COMPLETED_REVIEWED, MISSION_STATUS_COMPLETED_REVIEWED_AR):
+                return {"message": "تمت مراجعة هذه المهمة مسبقاً", "status": current_status}
+
+            # الانتقال مسموح من الحالة «مكتملة» فقط
+            if current_status not in ("Completed", "مكتملة"):
+                raise HTTPException(
+                    status_code=400,
+                    detail="لا يمكن تنفيذ مراجعة إدارة الشباب إلا على مهمة مكتملة"
+                )
+
+            cursor.execute(
+                "UPDATE missions SET status = %s WHERE mission_id = %s",
+                (MISSION_STATUS_COMPLETED_REVIEWED, mission_id),
+            )
+
+            # سجل تدقيق مخصص (جدول mission_youth_monitoring من migration 20260920)
+            try:
+                cursor.execute("""
+                    INSERT INTO mission_youth_monitoring (mission_id, user_id)
+                    VALUES (%s, %s);
+                """, (mission_id, user_id))
+            except Exception as e:
+                print(f"Youth monitoring log error: {e}")
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "تمت المراجعة من إدارة الشباب",
+                    mission_id=mission_id, entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"تمت مراجعة الاستمارة من إدارة الشباب: {mission_name or ''}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم تسجيل مراجعة إدارة الشباب", "status": MISSION_STATUS_COMPLETED_REVIEWED}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء تسجيل المراجعة: {e}")
+    finally:
+        connection.close()
+
+
+@app.get("/api/missions/{mission_id}/volunteer-room-notes")
+def get_volunteer_room_notes(
+    mission_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """قراءة قسم ملاحظات غرفة التطوع (متاح لكل من يرى المهمة — القراءة فقط)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if not _mission_exists(cursor, mission_id):
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+            cursor.execute("""
+                SELECT note_id, note_date, membership_number, member_name, note_text
+                FROM mission_volunteer_room_notes
+                WHERE mission_id = %s
+                ORDER BY row_order, note_id;
+            """, (mission_id,))
+            rows = [
+                {
+                    "note_id": r[0],
+                    "note_date": str(r[1]) if r[1] else "",
+                    "membership_number": r[2] or "",
+                    "member_name": r[3] or "",
+                    "note_text": r[4] or "",
+                }
+                for r in cursor.fetchall()
+            ]
+            cursor.execute(
+                "SELECT volunteer_room_reviewer_name FROM missions WHERE mission_id = %s",
+                (mission_id,),
+            )
+            reviewer = cursor.fetchone()[0]
+            return {"rows": rows, "reviewer_name": reviewer or ""}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء جلب ملاحظات الغرفة: {e}")
+    finally:
+        connection.close()
+
+
+@app.put("/api/missions/{mission_id}/volunteer-room-notes")
+def update_volunteer_room_notes(
+    mission_id: int,
+    data: VolunteerRoomNotesRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    تحرير قسم ملاحظات غرفة التطوع فقط (صفوف + اسم مراجع الاستمارة).
+    - الصلاحية: mission.volunteer_room_notes (ممنوحة للدور 6 والمالك عبر migration 20260922).
+    - لا يمسّ أي حقل آخر من حقول المهمة — نطاق ضيق مقصود.
+    - الاستبدال الكامل للصفوف حسب الترتيب المرسل (نفس نمط «حفظ الاستمارة كاملة» الحالي).
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    if not authorize(user_id, "mission.volunteer_room_notes"):
+        raise HTTPException(status_code=403, detail="تحرير ملاحظات غرفة التطوع متاح لإدارة الشباب والمالك فقط")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if not _mission_exists(cursor, mission_id):
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+
+            def _clean(v):
+                if v is None:
+                    return None
+                s = str(v).strip()
+                return s if s != "" else None
+
+            cursor.execute("DELETE FROM mission_volunteer_room_notes WHERE mission_id = %s", (mission_id,))
+            for order, r in enumerate(data.rows or []):
+                cursor.execute("""
+                    INSERT INTO mission_volunteer_room_notes
+                        (mission_id, note_date, membership_number, member_name, note_text, row_order)
+                    VALUES (%s, %s, %s, %s, %s, %s);
+                """, (
+                    mission_id,
+                    _clean(r.note_date),
+                    _clean(r.membership_number),
+                    _clean(r.member_name),
+                    _clean(r.note_text),
+                    order,
+                ))
+
+            cursor.execute(
+                "UPDATE missions SET volunteer_room_reviewer_name = %s WHERE mission_id = %s",
+                (_clean(data.reviewer_name), mission_id),
+            )
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "تحديث ملاحظات غرفة التطوع",
+                    mission_id=mission_id, entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"حدّث ملاحظات غرفة التطوع ({len(data.rows or [])} صف)"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+
+            connection.commit()
+            return {"message": "تم حفظ ملاحظات غرفة التطوع", "rows_count": len(data.rows or [])}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء حفظ ملاحظات الغرفة: {e}")
     finally:
         connection.close()
 
@@ -3685,6 +4052,9 @@ def get_realtime_events(
     is_privileged = bool(role) and role["role_name"].upper() in [
         "OWNER", "MANAGER", "SUPERVISOR", "JOKER", "OPERATION", "المالك", "مشرف", "جوكر", "أوبريشن",
     ]
+    # 🆕 حساب إدارة الشباب: قناة مخصصة — يستقبل فقط إشعار اكتمال الاستمارة الموجّه إليه
+    #    (youth_completion) ولا يرى أي أحداث عامة أخرى (مهام/أخبار/كوارث/تحديثات نظام).
+    is_youth_channel = bool(role) and role["role_name"].strip().upper() == "READ_ONLY_MISSIONS"
 
     connection = get_connection()
     try:
@@ -3707,6 +4077,23 @@ def get_realtime_events(
                     """,
                     (after_id, user_id, limit),
                 )
+            elif is_youth_channel:
+                # 🔒 قناة إدارة الشباب: الإشعار الموجّه الخاص باكتمال الاستمارة فقط
+                cursor.execute(
+                    """
+                    SELECT e.event_id, e.event_type, e.action, e.actor_user_id,
+                           u.full_name, e.mission_id, e.entity_id, e.details, e.target_user_id, e.created_at
+                    FROM realtime_events e
+                    LEFT JOIN users u ON e.actor_user_id = u.user_id
+                    WHERE e.event_id > %s
+                      AND e.actor_user_id IS DISTINCT FROM %s
+                      AND e.target_user_id = %s
+                      AND e.details @> %s::jsonb
+                    ORDER BY e.event_id ASC
+                    LIMIT %s;
+                    """,
+                    (after_id, user_id, user_id, Jsonb({"youth_completion": True}), limit),
+                )
             else:
                 branch_ids = [b["branch_id"] for b in get_user_branches(user_id)]
                 cursor.execute(
@@ -3721,7 +4108,7 @@ def get_realtime_events(
                             e.target_user_id = %s
                             OR (
                                 e.target_user_id IS NULL
-                                AND e.event_type IN ('mission','local_news','global_disaster','earthquake','ai_news')
+                                AND e.event_type IN ('mission','local_news','global_disaster','earthquake','ai_news','system_refresh')
                                 AND (
                                     e.event_type != 'mission'
                                     OR e.mission_id IS NULL
@@ -5119,7 +5506,8 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
     if not user_id: raise HTTPException(status_code=401)
     
     role = get_user_role(user_id)
-    if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
+    # 🔒 Youth & Volunteers (READ_ONLY_MISSIONS) له قراءة سجل القوة البشرية (متطلب 3 صفحات)
+    if not role or (role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"] and not is_youth_role(role)):
         raise HTTPException(status_code=403, detail="عفواً، هذه الصفحة متاحة للمالك فقط")
 
     connection = get_connection()
@@ -6817,3 +7205,61 @@ def trigger_weather_intel_runner(credentials: HTTPAuthorizationCredentials = Dep
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"فشل الاتصال الداخلي: {str(e)}")
+
+@app.post("/api/system/force-refresh")
+def force_refresh_system(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id = get_current_user_id(credentials.credentials)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    role = get_user_role(user_id)
+    role_name = str(role.get("role_name", "")).strip().upper() if role else ""
+
+    if role_name not in {"OWNER", "المالك"}:
+        raise HTTPException(
+            status_code=403,
+            detail="هذا الإجراء متاح للمالك فقط"
+        )
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            # منع الضغط المتكرر خلال 10 ثوانٍ
+            cursor.execute("""
+                SELECT 1
+                FROM realtime_events
+                WHERE event_type = 'system_refresh'
+                  AND created_at > CURRENT_TIMESTAMP - INTERVAL '10 seconds'
+                LIMIT 1
+            """)
+
+            if cursor.fetchone():
+                raise HTTPException(
+                    status_code=429,
+                    detail="تم إرسال أمر تحديث منذ لحظات"
+                )
+
+            create_realtime_event(
+                cursor,
+                event_type="system_refresh",
+                action="تحديث النظام للجميع",
+                actor_user_id=user_id,
+                target_user_id=None,
+                mission_id=None,
+                details={
+                    "action_text": "أصدر المالك أمراً بتحديث النظام لجميع المستخدمين"
+                }
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم إرسال أمر تحديث النظام لجميع المستخدمين"
+            }
+
+    finally:
+        connection.close()

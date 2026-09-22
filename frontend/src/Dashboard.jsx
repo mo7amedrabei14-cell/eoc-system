@@ -15,7 +15,11 @@ import { translate } from './i18n.js';
 // `${BASE}/api/missions/...` from its own scope, and a local `const BASE`
 // inside Dashboard's radar effect caused `ReferenceError: BASE is not defined`
 // → React 18 unmounts the whole tree (no error boundary) → blank page.
-const BASE = 'https://eoc-system-b12f.vercel.app';
+// 💡 API base: Vite dev server uses the proxy to localhost:8000 (vite.config.js) —
+// production keeps the deployed URL. Override with VITE_API_BASE if needed.
+const BASE = import.meta.env.VITE_API_BASE !== undefined
+  ? import.meta.env.VITE_API_BASE
+  : (import.meta.env.DEV ? '' : 'https://eoc-system-b12f.vercel.app');
 
 // 📤 Outbox: أي استمارة بيتحفظ محلياً قبل الإرسال — لو الإرسال فشل تفضل هنا وبتتعاد تلقائياً
 const MISSION_OUTBOX_KEY = 'eoc_mission_outbox_v1';
@@ -88,13 +92,18 @@ const getRoleFlags = (user) => {
   const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
   const isYouth = isYouthRole(userRole);
   const isVolunteer = !isOwner && !isSupervisor && !isJoker && !isYouth;
-  const weatherEligible = !isYouth && !['VOLUNTEER', 'متطوع'].includes(userRole);
+  // 🆕 الطقس متاح لكل من غير المتطوع — حساب إدارة الشباب يرى بطاقة الطقس أيضاً
+  const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
   return { userRole, isOwner, isSupervisor, isJoker, isYouth, isVolunteer, weatherEligible };
 };
 
-const getDefaultTab = (user) => {
+// 🔒 للصفحات المسموحة لإدارة الشباب: الحساب يرى 3 صفحات فقط (المؤشرات، المهام، القوة البشرية)
+const getDefaultTab = (user, requestedTab = null) => {
   const flags = getRoleFlags(user);
-  if (flags.isYouth) return 'home';
+  if (flags.isYouth) {
+    return requestedTab && YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'home';
+  }
+  if (requestedTab === 'weather_intel' && flags.weatherEligible) return 'weather_intel';
   const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole);
   return isLeader ? 'home' : 'missions';
 };
@@ -730,6 +739,7 @@ const ENGLISH_UI = {
   'مسؤول المتابعة (قائد العملية)': 'Follow-up lead (operation commander)',
   'الاسم ورقم الهاتف...': 'Name and phone number...',
   'الجوكر': 'Joker',
+  'ملاحظات غرفة التطوع': 'Volunteer room notes',
   'الحالة والملاحظات العامة': 'Status and general notes',
   'موقف الاستمارة إدارياً وميدانياً (مغلق)': 'Administrative and field form status (locked)',
   'أسباب الإرجاع والتعديلات (مغلق)': 'Reasons for return and edits (locked)',
@@ -1457,7 +1467,7 @@ useEffect(() => {
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
   const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0, weather: 0 });
 
-  const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, weatherEligible } = getRoleFlags(userData);
+  const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, isYouth, weatherEligible } = getRoleFlags(userData);
 
   // 💡 مركز الإشعارات الفوري (متطلب #5):
   // - Incremental polling بوسم تصاعدي (event_id) — من غير ما ننزل الـ audit_logs كاملة
@@ -1589,6 +1599,15 @@ useEffect(() => {
       // منع التكرار (لو وقع retry بعد فشل شبكة مثلاً)
       if (seenEventIdsRef.current.has(e.event_id)) return;
       seenEventIdsRef.current.add(e.event_id);
+if (e.event_type === 'system_refresh') {
+  setCustomAlert('سيتم تحديث النظام خلال ثانيتين...');
+
+  window.setTimeout(() => {
+    window.location.reload();
+  }, 2000);
+
+  return;
+}
       if (seenEventIdsRef.current.size > 2000) {
         seenEventIdsRef.current = new Set([...seenEventIdsRef.current].slice(-1500));
       }
@@ -1737,9 +1756,8 @@ useEffect(() => {
     setUserData(auth.user);
     const flags = getRoleFlags(auth.user);
     const requestedTab = new URLSearchParams(window.location.search).get('tab');
-    setActiveTab(requestedTab === 'weather_intel' && flags.weatherEligible
-      ? 'weather_intel'
-      : (auth.user.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole) ? 'home' : 'missions'));
+    // 🔒 توجيه موحّد: حساب إدارة الشباب يبقى ضمن صفحاته الثلاث المسموحة دائماً
+    setActiveTab(getDefaultTab(auth.user, requestedTab));
 
     const fetchData = async () => {
       try {
@@ -1815,7 +1833,9 @@ useEffect(() => {
   // فتح الإشعار (توست أو جرس): تنقّل للصفحة، واطلب تتبّع الصف لو لنا معرف.
   const handleNotificationOpen = (n) => {
     if (!n) return;
-    const tab = EVENT_TAB_MAP[n.event_type] || 'missions';
+    const _requestedTab = EVENT_TAB_MAP[n.event_type] || 'missions';
+    // 🔒 حساب إدارة الشباب: التنقل عبر الإشعارات يبقى ضمن صفحاته المسموحة فقط
+    const tab = isYouth && !YOUTH_ALLOWED_TABS.includes(_requestedTab) ? 'missions' : _requestedTab;
     setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x)); // تحديد كمقروء (الجرس)
     closeNotifPanel();
     handleNavigation(tab);
@@ -1828,11 +1848,44 @@ useEffect(() => {
     if (id != null) setFocusTarget({ tab, type: n.event_type, id, nonce: Date.now() });
   };
 
+  const handleForceRefresh = async () => {
+    if (!isOwner) return;
+
+    const token = getStoredAccessToken();
+
+    try {
+      const res = await fetch(`${BASE}/api/system/force-refresh`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setCustomAlert(data.detail || 'فشل إرسال أمر التحديث.');
+        return;
+      }
+
+      setCustomAlert('سيتم تحديث النظام لجميع المستخدمين خلال ثانيتين...');
+
+      // تحديث المالك نفسه أيضاً
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
+    } catch {
+      setCustomAlert('تعذر الاتصال بالسيرفر.');
+    }
+  };
+
   const handleLogout = () => {
     clearStoredAuth();
     setUserData(null);
     navigate('/');
   };
+
 
   const renderContent = () => {
     switch (activeTab) {
@@ -1842,7 +1895,7 @@ useEffect(() => {
       case 'weather_intel': return weatherEligible
         ? <WeatherIntelErrorBoundary><MemoWeatherIntelView branches={branchesList} isOwner={isOwner} userRole={userRole} lang={language} setCustomAlert={setCustomAlert} /></WeatherIntelErrorBoundary>
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
-      case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
+      case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isYouth={isYouth} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
       case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
       case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
       case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} lang={language} focusTarget={focusTarget} />;
@@ -1852,7 +1905,11 @@ useEffect(() => {
         : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
       case 'audit': return <MemoAuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <MemoHumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
-      default: return <MemoHomeView branches={branchesList} />;
+      default:
+        if (isYouth && !YOUTH_ALLOWED_TABS.includes(activeTab)) {
+          return <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
+        }
+        return <MemoHomeView branches={branchesList} />;
     }
   };
 
@@ -1861,15 +1918,15 @@ useEffect(() => {
     {
       titleAr: 'الوحدات التشغيلية', titleEn: 'Operations',
       items: [
-        ...((isOwner || isSupervisor || isJoker) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات الغرفة', en: 'Operations Overview' }] : []),
-        { id: 'ai_news', icon: <AIIcon />, ar: 'رصد الذكاء الاصطناعي', en: 'AI Monitoring', update: newUpdates.ai_news },
-        ...(weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
-        ...(weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
+        ...((isOwner || isSupervisor || isJoker || isYouth) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات الغرفة', en: 'Operations Overview' }] : []),
+        ...(!isYouth ? [{ id: 'ai_news', icon: <AIIcon />, ar: 'رصد الذكاء الاصطناعي', en: 'AI Monitoring', update: newUpdates.ai_news }] : []),
+        ...(!isYouth && weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
+        ...(!isYouth && weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
         { id: 'missions', icon: <AlertIcon />, ar: 'سجل المهام الميدانية', en: 'Field Missions', update: newUpdates.missions },
-        ...((isOwner || isSupervisor || isJoker) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
-        { id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news },
-        { id: 'global_disasters', icon: <GlobalWorldIcon />, ar: 'رصد الكوارث العالمية', en: 'Global Disasters', update: newUpdates.global_disasters },
-        { id: 'earthquakes', icon: <EarthquakeIcon />, ar: 'مركز رصد الزلازل', en: 'Earthquake Center', update: newUpdates.earthquakes },
+        ...((isOwner || isSupervisor || isJoker || isYouth) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
+        ...(!isYouth ? [{ id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news }] : []),
+        ...(!isYouth ? [{ id: 'global_disasters', icon: <GlobalWorldIcon />, ar: 'رصد الكوارث العالمية', en: 'Global Disasters', update: newUpdates.global_disasters }] : []),
+        ...(!isYouth ? [{ id: 'earthquakes', icon: <EarthquakeIcon />, ar: 'مركز رصد الزلازل', en: 'Earthquake Center', update: newUpdates.earthquakes }] : []),
         ...((isOwner || isSupervisor) ? [{ id: 'branches_inventory', icon: <MapIcon />, ar: 'الفروع والمخزون الاستراتيجي', en: 'Branches & Inventory' }] : []),
         ...((isOwner || isSupervisor) ? [{ id: 'handover', icon: <HandoverIcon />, ar: 'تسليم وتسلم مشرفين', en: 'Supervisors Handover', update: newUpdates.handover }] : []),
         ...((isOwner || isSupervisor || isJoker) ? [{ id: 'audit', icon: <ShieldIcon />, ar: 'سجل النظام', en: 'System Audit', update: newUpdates.audit }] : []),
@@ -2085,25 +2142,54 @@ useEffect(() => {
 
           <nav key={isSidebarOpen ? 'nav-open' : 'nav-closed'} className="nav-shell p-3 space-y-1.5 mt-2">
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
+            {/* 🔒 حساب إدارة الشباب (yveoc): 3 صفحات فقط — مؤشرات الغرفة، المهام، القوة البشرية */}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
-            <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />
-            {weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
-            {weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
+            {isYouth && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
+            {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
+            {!isYouth && weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
+            {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
 
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
 
             {/* 💡 نقلنا زرار القوة البشرية هنا تحت المهام مباشرة */}
-            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<UsersIcon />} label="سجل القوة البشرية" isActive={activeTab === 'human_resources'} onClick={() => handleNavigation('human_resources')} isOpen={isSidebarOpen} />}
+            {(isOwner || isSupervisor || isJoker || isYouth) && <NavItem icon={<UsersIcon />} label="سجل القوة البشرية" isActive={activeTab === 'human_resources'} onClick={() => handleNavigation('human_resources')} isOpen={isSidebarOpen} />}
 
-            <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => handleNavigation('local_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.local_news} />
-            <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => handleNavigation('global_disasters')} isOpen={isSidebarOpen} hasUpdate={newUpdates.global_disasters} />
-            <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} hasUpdate={newUpdates.earthquakes} />
+            {!isYouth && <NavItem icon={<NewsIcon />} label="سجل الأخبار المحلية" isActive={activeTab === 'local_news'} onClick={() => handleNavigation('local_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.local_news} />}
+            {!isYouth && <NavItem icon={<GlobalWorldIcon />} label="رصد الكوارث العالمية" isActive={activeTab === 'global_disasters'} onClick={() => handleNavigation('global_disasters')} isOpen={isSidebarOpen} hasUpdate={newUpdates.global_disasters} />}
+            {!isYouth && <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} hasUpdate={newUpdates.earthquakes} />}
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => handleNavigation('branches_inventory')} isOpen={isSidebarOpen} />}
             {(isOwner || isSupervisor) && <NavItem icon={<HandoverIcon />} label="تسليم وتسلم مشرفين" isActive={activeTab === 'handover'} onClick={() => handleNavigation('handover')} isOpen={isSidebarOpen} hasUpdate={newUpdates.handover} />}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
         <div className="p-3 border-t border-[var(--border)]">
+          {isOwner && (
+  <button
+    onClick={handleForceRefresh}
+    title={!isSidebarOpen ? "تحديث النظام للجميع" : ""}
+    className={`nav-item ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}
+  >
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+      <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+    </svg>
+
+    {isSidebarOpen && (
+      <span className="font-semibold tracking-wide truncate">
+        تحديث النظام للجميع
+      </span>
+    )}
+  </button>
+)}
+
           <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`nav-item nav-item-danger ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}>
             <LogoutIcon />
             {isSidebarOpen && <span className="font-semibold tracking-wide truncate">إنهاء الجلسة الآمنة</span>}
@@ -2422,11 +2508,11 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   useEffect(() => {
     const token = sessionStorage.getItem('access_token');
     Promise.all([
-      fetch(`https://eoc-system-b12f.vercel.app/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`https://eoc-system-b12f.vercel.app/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`https://eoc-system-b12f.vercel.app/api/global-disasters`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
+      fetch(`${BASE}/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`${BASE}/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`${BASE}/api/global-disasters`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`${BASE}/api/earthquakes/global`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`${BASE}/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
     ]).then(([missionsData, newsData, globalData, gEqs, eEqs]) => {
       setMissions(missionsData);
       setNews(newsData);
@@ -2456,10 +2542,8 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   ? String(m.created_at).split(/[ T]/)[0]
   : ((m.creation_datetime && m.creation_datetime !== '-')
     ? String(m.creation_datetime).split(/[ T]/)[0]
-    : '');
-
-    const isCompleted = m.status === 'Completed';
-    const isCancelled = m.status === 'Cancelled';
+    : '');          const isCompleted = ['Completed', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status);
+          const isCancelled = m.status === 'Cancelled';
     const isFinished = isCompleted || isCancelled;
     // Active missions persist across all days after creation until completed/cancelled;
     // when finished, visible ONLY on the day they finished (completion_date)
@@ -2487,8 +2571,11 @@ const completedAt =
   const dailyGlobalEqs = filterDate ? globalEqs.filter(e => e.date === filterDate) : globalEqs;
   const dailyEgyptEqs = filterDate ? egyptEqs.filter(e => e.date === filterDate) : egyptEqs;
 
-  const activeDaily = dailyMissions.filter(m => m.mission_classification !== 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
-  const activeOpen = dailyMissions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const YOUTH_REVIEWED_STATUS = 'Completed (Reviewed by Youth Administration)';
+  const YOUTH_REVIEWED_STATUS_AR = 'مكتملة (تمت المراجعة من إدارة الشباب)';
+  const isFinishedStatus = (st) => ['Completed', 'Cancelled', YOUTH_REVIEWED_STATUS, YOUTH_REVIEWED_STATUS_AR].includes(st);
+  const activeDaily = dailyMissions.filter(m => m.mission_classification !== 'مفتوحة' && !isFinishedStatus(m.status)).length;
+  const activeOpen = dailyMissions.filter(m => m.mission_classification === 'مفتوحة' && !isFinishedStatus(m.status)).length;
   const completedMissions = dailyMissions.filter(m => m.status === 'Completed').length;
   const totalNews = dailyNews.length;
   const activeNews = dailyNews.filter(n => n.is_field_response).length;
@@ -2504,8 +2591,8 @@ const completedAt =
     return () => clearInterval(t);
   }, []);
 
-  const liveActive = missions.filter(m => !['Completed', 'Cancelled'].includes(m.status)).length;
-  const liveOpen = missions.filter(m => m.mission_classification === 'مفتوحة' && !['Completed', 'Cancelled'].includes(m.status)).length;
+  const liveActive = missions.filter(m => !isFinishedStatus(m.status)).length;
+  const liveOpen = missions.filter(m => m.mission_classification === 'مفتوحة' && !isFinishedStatus(m.status)).length;
   const latestMissions = [...missions]
     .sort((a, b) => String(b.creation_datetime || b.created_at || '').localeCompare(String(a.creation_datetime || a.created_at || '')))
     .slice(0, 5);
@@ -2513,7 +2600,7 @@ const completedAt =
   const liveDate = `${now.toLocaleDateString('ar-EG', { weekday: 'long' })}، ${formatDateTime(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`)}`;
   const statusTone = m => {
     if (m.status === 'Cancelled') return 'bg-[var(--warn)]';
-    if (m.status === 'Completed') return 'bg-[var(--ok)]';
+    if (m.status === 'Completed' || m.status === 'Completed (Reviewed by Youth Administration)' || m.status === 'مكتملة (تمت المراجعة من إدارة الشباب)') return 'bg-[var(--ok)]';
     return m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]' : 'bg-[var(--accent)]';
   };
 
@@ -2873,7 +2960,7 @@ function BranchesAndInventoryView({ branches }) {
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
-function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
+function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isYouth = false, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
@@ -2959,6 +3046,40 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionsList, setMissionsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRegionTab, setActiveRegionTab] = useState('all');
+
+  // 🆕 ملاحظات غرفة التطوع — حالة القسم الجديد في الاستمارة
+  const [volunteerRoomRows, setVolunteerRoomRows] = useState([]);
+  const [volunteerRoomReviewer, setVolunteerRoomReviewer] = useState('');
+  const volunteerRoomDirtyRef = useRef(false);
+  const addVolunteerRoomRow = () => setVolunteerRoomRows(prev => [...prev, { id: Date.now() + Math.random(), note_date: '', membership_number: '', member_name: '', note_text: '' }]);
+  const canEditVolunteerRoom = isOwner || isYouth;
+  const formBodyRef = useRef(null);
+  // 🆕 قفل قراءة فقط لكل حقول الاستمارة في جلسة حساب إدارة الشباب — يثبت طوال عمر
+  //    المكوّن حتى لو تتغير هوية المستخدم أثناء الجلسة. القسم الوحيد القابل للتحرير
+  //    هو «ملاحظات غرفة التطوع» (خارج الجسم المغلق) — للملاك أيضاً عبر canEditVolunteerRoom.
+  const [isYouthFormLocked] = useState(isYouth);
+  // 🛡️ حارس لوحة المفاتيح: جلسة القفل تمنع الكتابة/Tab في كل حقول الاستمارة ما عدا
+  //    صندوق ملاحظات غرفة التطوع (عنصره الحاوي يحمل youth-notes-escape) — وبذلك تبقى
+  //    أزرار المودال (إغلاق/تمت المراجعة) والسكرول يعملان بشكل طبيعي.
+  useEffect(() => {
+    if (!isYouthFormLocked) return;
+    const onKey = (e) => {
+      const t = e.target;
+      const editable = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT');
+      if (!editable) return;
+      const box = t.closest && t.closest('.youth-notes-escape');
+      const body = t.closest && t.closest('.youth-form-locked');
+      if (!body || box) return; // خارج القفل أو داخل صندوق الملاحظات → سلوك طبيعي
+      // قفل: منع الكتابة/اللصق/القص والتنقل بين الحقول المقفولة
+      if (e.key.length === 1 && !(e.ctrlKey || e.metaKey)) e.preventDefault();
+      else if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'x')) e.preventDefault();
+      else if (['Tab', 'Backspace', 'Delete', 'Enter'].includes(e.key)) e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isYouthFormLocked]);
+  // 🆕 هل المهمة منتهية؟ (نسخة محلية بنطاق MissionsView — لا تعتمد على helper نطاق HomeView)
+  const isFinishedStatus = (st) => ['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(st);
   // 🆕 فلتر الفروع — بجانب فلتر الأقاليم؛ الافتراضي «كل الفروع» مثل «كل الأقاليم»
   const [filterBranch, setFilterBranch] = useState('all');
 
@@ -3044,7 +3165,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (!silent) setIsLoading(true);
     const token = getStoredAccessToken();
     try {
-      const res = await fetch('https://eoc-system-b12f.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) {
         clearStoredAuth();
         setUserData(null);
@@ -3142,6 +3263,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         const fieldStatusNode = el('f_mission_field_status');
         if (fieldStatusNode) {
           fieldStatusNode.value = (data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة';
+        }
+        // 🆕 ملاحظات غرفة التطوع: تحديث القسم من السيرفر فقط لو ما فيش تعديلات محلية غير محفوظة
+        if (!volunteerRoomDirtyRef.current) {
+          setVolunteerRoomRows((data.volunteer_room_notes && data.volunteer_room_notes.length > 0)
+            ? data.volunteer_room_notes.map((n, i) => ({ id: n.note_id ?? (Date.now() + i), note_date: n.note_date || '', membership_number: n.membership_number || '', member_name: n.member_name || '', note_text: n.note_text || '' }))
+            : []);
+          setVolunteerRoomReviewer(data.volunteer_room_reviewer_name || '');
         }
         const notesNode = el('f_notes');
         if (notesNode && data.notes) {
@@ -3371,7 +3499,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const loadAllVolunteers = async () => {
     const token = sessionStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-b12f.vercel.app/api/volunteers/all', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/volunteers/all`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setAllVolunteers(await res.json());
     } catch (e) { /* تجاهل: الاختيار يبقى بالكتابة اليدوية */ }
   };
@@ -3417,6 +3545,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setJlDraft({ date: '', time: '' });
     setJoinLeaveEntries([]);
     setDaysPicker(null);
+    // 🆕 مهمة جديدة: صف ملاحظات غرفة فارغ جاهز للتحرير (للمالك/إدارة الشباب)
+    setVolunteerRoomRows([]);
+    setVolunteerRoomReviewer('');
+    volunteerRoomDirtyRef.current = false;
     loadAllVolunteers(); // 🆕 كل الفروع (#6)
     setIsModalLoading(false);
     setIsModalOpen(true);
@@ -3433,7 +3565,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setIsModalLoading(true);
     setIsModalOpen(true);
     try {
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionId}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/missions/${missionId}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (inFlightMissionRef.current !== missionId) return; // فُتحت مهمة/فورم أخرى في الأثناء — تجاهل القديم
       if (res.ok) {
         const data = await res.json();
@@ -3482,7 +3614,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         setJoinLeaveEntries((data.join_leave_entries && data.join_leave_entries.length > 0)
           ? data.join_leave_entries.map((e, i) => ({ id: e.entry_id ?? i, server: e.entry_id != null, title: e.title, kind: e.kind, dt: e.dt }))
           : []);
+        // 🆕 ملاحظات غرفة التطوع — تحميل من تفاصيل المهمة (مصدر الحقيقة)
+        setVolunteerRoomRows((data.volunteer_room_notes && data.volunteer_room_notes.length > 0)
+          ? data.volunteer_room_notes.map((n, i) => ({ id: n.note_id ?? (Date.now() + i), note_date: n.note_date || '', membership_number: n.membership_number || '', member_name: n.member_name || '', note_text: n.note_text || '' }))
+          : []);
+        setVolunteerRoomReviewer(data.volunteer_room_reviewer_name || '');
+        volunteerRoomDirtyRef.current = false;
         setBeneficiaries((data.beneficiaries && data.beneficiaries.length > 0) ? data.beneficiaries.map((b, i) => ({ id: i, ...b })) : [{ id: Date.now() }]);
+        // 🆕 مهمة جديدة: قسم ملاحظات غرفة التطوع يبدأ فارغاً
         inFlightMissionRef.current = null; // انتهى الطلب بنجاح — يسمح بإعادة الفتح لاحقاً
         setIsModalLoading(false);
         setIsModalOpen(true);
@@ -3515,7 +3654,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     submitLockRef.current = true;
     const token = sessionStorage.getItem('access_token');
     try {
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setMissionToDelete(null); fetchMissions(); setCustomAlert("تم حذف المهمة بنجاح."); }
       else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف المهمة."); }
     } catch (error) { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
@@ -3538,7 +3677,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-b12f.vercel.app/api/missions/clear-all", {
+      const res = await fetch(`${BASE}/api/missions/clear-all`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3844,7 +3983,64 @@ row++;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [participants, validationNonce]);
 
+  // 🆕 حفظ قسم ملاحظات غرفة التطوع فقط (بدون أي بيانات استمارة أخرى)
+  // 🆕 إجراء «تمت المراجعة من إدارة الشباب»: ينقل المهمة من مكتملة إلى الحالة الجديدة
+  //    عبر مسارها المخصص الضيق — دون تمرير أي بيانات استمارة (لا يمكن المسّ بحقول أخرى).
+  const handleYouthReview = async () => {
+    if (!currentMissionData?.mission_id) return;
+    // 🔒 قفل متزامن — نفس نمط بقية الإجراءات
+    if (submitLockRef.current || isSubmitting) return;
+    submitLockRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      // 💾 أي صفوف ملاحظات غير محفوظة تُحفظ أولاً (زر الحفظ المستقل أُلغي — الحفظ يرافق المراجعة)
+      if (volunteerRoomDirtyRef.current) {
+        const saveRes = await fetch(`${BASE}/api/missions/${currentMissionData.mission_id}/volunteer-room-notes`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            rows: volunteerRoomRows.map(r => ({
+              note_date: r.note_date || null,
+              membership_number: r.membership_number || null,
+              member_name: r.member_name || null,
+              note_text: r.note_text || null,
+            })),
+            reviewer_name: volunteerRoomReviewer || null,
+          }),
+        });
+        if (!saveRes.ok) {
+          const saveErr = await saveRes.json().catch(() => ({}));
+          setCustomAlert(`🚫 تعذر حفظ ملاحظات الغرفة قبل المراجعة:\n\n${saveErr?.detail || `(status ${saveRes.status})`}`);
+          return;
+        }
+        volunteerRoomDirtyRef.current = false;
+      }
+      const res = await fetch(`${BASE}/api/missions/${currentMissionData.mission_id}/youth-review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setIsModalOpen(false);
+        fetchMissions();
+        setCustomAlert("تم حفظ الملاحظات وتسجيل مراجعة إدارة الشباب بنجاح!");
+      } else {
+        const errBody = await res.json().catch(() => ({}));
+        setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errBody?.detail || `(status ${res.status})`}`);
+      }
+    } catch {
+      setCustomAlert("⚠️ فشل الاتصال بالسيرفر — حاول مرة أخرى.");
+    } finally {
+      setIsSubmitting(false);
+      submitLockRef.current = false;
+    }
+  };
+
   const bumpValidation = () => setValidationNonce(n => n + 1);
+
+  // 🆕 تعليم قسم ملاحظات غرفة التطوع كمتغيّر عند أي تحرير (يُحفظ مع الحفظ)
+  const markVolunteerRoomDirty = () => { volunteerRoomDirtyRef.current = true; };
 
   const handleSubmit = async (submitStatus) => {
      // 📋 متطلب الحقول الإلزامية: أي إجراء يغيّر حالة المهمة (حفظ/إرسال/اعتماد/إنهاء)
@@ -4015,7 +4211,8 @@ const actualCompletionTime =
            //    (مفاتيح JL:* تُرسَل حرفياً — مصدر الحقيقة للمشاركة; تُفصل أمامياً عند العرض)
            ...((hasDayGroups || joinLeaveEntries.length > 0) ? { assigned_days: participants[i]?.assigned_days || [] } : {}),
            // 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر البداية المخططة (افتراضي TRUE)
-           start_from_mission: participants[i]?.start_from_mission !== false
+            // 🔒 إلزامي: مشارك عليه انضمام ⇒ يُرسَل TRUE دائماً مهما كانت قيمة البوكس
+            start_from_mission: (participants[i]?.assigned_days || []).some(d => String(d || '').startsWith('JL:J:')) || participants[i]?.start_from_mission !== false
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
          eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== ''),
@@ -4037,7 +4234,7 @@ const actualCompletionTime =
        }
 
                const isUpdate = currentMissionData !== null;
-        const url = isUpdate ? `https://eoc-system-b12f.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system-b12f.vercel.app/api/missions';
+        const url = isUpdate ? `${BASE}/api/missions/${currentMissionData.mission_id}` : `${BASE}/api/missions`;
         const method = isUpdate ? 'PUT' : 'POST';
         const ikey = newMissionIdempotencyKey.current;
 
@@ -4068,6 +4265,27 @@ const actualCompletionTime =
          setIsModalOpen(false);
          fetchMissions();
          const rd = await res.json().catch(() => ({}));
+
+         // 🆕 حفظ ملاحظات غرفة التطوع (للمالك/إدارة الشباب فقط — عند وجود تغيير فعلي)
+         if (canEditVolunteerRoom && volunteerRoomDirtyRef.current) {
+           try {
+             await fetch(`${BASE}/api/missions/${rd.mission_id || currentMissionData?.mission_id}/volunteer-room-notes`, {
+               method: 'PUT',
+               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+               body: JSON.stringify({
+                 rows: volunteerRoomRows.map(r => ({
+                   note_date: r.note_date || null,
+                   membership_number: r.membership_number || null,
+                   member_name: r.member_name || null,
+                   note_text: r.note_text || null,
+                 })),
+                 reviewer_name: volunteerRoomReviewer || null,
+               }),
+             });
+             volunteerRoomDirtyRef.current = false;
+           } catch { /* فشل حفظ الملاحظات لا يُفشل حفظ المهمة — تظهر رسالة السيرفر عند إعادة الفتح */ }
+         }
+
          setCustomAlert(isUpdate ? "تم تحديث المهمة بنجاح!" : "تم إنشاء المهمة بنجاح!");
          return { ok: true, mission_id: rd.mission_id };
                } else {
@@ -4105,6 +4323,9 @@ const actualCompletionTime =
       'Under Review': { text: 'قيد المراجعة', color: 'text-[var(--warn)] bg-[var(--warn-soft)] border-[var(--warn)]/20' },
       'Approved': { text: 'معتمدة (بانتظار الانتهاء)', color: 'text-[var(--info)] bg-[var(--info-soft)] border-[var(--info)]/20' },
       'Completed': { text: 'مكتملة', color: 'text-[var(--ok)] bg-[var(--ok-soft)] border-[var(--ok)]/20' },
+      // 🆕 حالة «مكتملة (تمت المراجعة من إدارة الشباب)»
+      'Completed (Reviewed by Youth Administration)': { text: 'مكتملة (تمت المراجعة من إدارة الشباب)', color: 'text-[var(--info)] bg-[var(--info-soft)] border-[var(--info)]/20' },
+      'مكتملة (تمت المراجعة من إدارة الشباب)': { text: 'مكتملة (تمت المراجعة من إدارة الشباب)', color: 'text-[var(--info)] bg-[var(--info-soft)] border-[var(--info)]/20' },
       'Returned': { text: 'إرجاع للمتطوع', color: 'text-[var(--warn)] bg-[var(--warn-soft)] border-[var(--warn)]/20' },
       'Cancelled': { text: 'ملغاة', color: 'text-[var(--accent)] bg-[var(--danger-soft)] border-[var(--accent)]/20' },
     };
@@ -4136,7 +4357,7 @@ const actualCompletionTime =
     ? String(m.creation_datetime).split(/[ T]/)[0]
     : '');
 
-          const isCompleted = m.status === 'Completed';
+          const isCompleted = ['Completed', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status);
           const isCancelled = m.status === 'Cancelled';
           const isFinished = isCompleted || isCancelled;
           // Active missions persist across all days after creation until completed/cancelled
@@ -4161,8 +4382,10 @@ const completedAt =
        });
     }
 
-    if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled'].includes(m.status));
-    else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled'].includes(m.status));
+    // 🔒 الفلاتر: نشطة / مكتملة (كل الصيغ) / تمت مراجعتها من إدارة الشباب (الحالة الجديدة فقط)
+    if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
+    else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
+    else if (statusFilter === 'youth_reviewed') baseMissions = baseMissions.filter(m => ['Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
 
     // 💡 إحصائيات الأقاليم
     const regionStats = {
@@ -4223,6 +4446,8 @@ const completedAt =
             <h3 className="text-lg font-bold">سجل متابعة المهام</h3>
             {isVolunteer ? (
               <span className="badge badge-active font-mono">سيتم عرض مهام {userRegion === 'delta' ? 'إقليم الدلتا' : userRegion === 'canal' ? 'إقليم القنال' : userRegion === 'saeed' ? 'إقليم الصعيد' : 'المركز العام'} فقط</span>
+            ) : isYouth ? (
+              <span className="badge badge-info font-mono">حساب إدارة الشباب | حساب للمتابعة والرصد</span>
             ) : (
               <span className="badge badge-info font-mono">حساب إداري | الصلاحية: كل الأقاليم</span>
             )}
@@ -4241,6 +4466,8 @@ const completedAt =
               <button onClick={() => setStatusFilter('all')} className={`segmented-btn ${statusFilter === 'all' ? 'is-active' : ''}`}>الكل</button>
               <button onClick={() => setStatusFilter('active')} className={`segmented-btn ${statusFilter === 'active' ? 'is-active-accent' : ''}`}>نشطة</button>
               <button onClick={() => setStatusFilter('completed')} className={`segmented-btn ${statusFilter === 'completed' ? 'is-active-accent' : ''}`}>مكتملة</button>
+              {/* 🆕 فلتر «مكتملة وتمت مراجعتها من إدارة الشباب» — الحالة الجديدة فقط */}
+              <button onClick={() => setStatusFilter('youth_reviewed')} className={`segmented-btn ${statusFilter === 'youth_reviewed' ? 'is-active-accent' : ''}`}>مكتملة (تم المراجعة من إدارة الشباب)</button>
 
               {!isVolunteer && (<>
                 <div className="w-px h-6 bg-[var(--border)] mx-0.5"></div>
@@ -4309,14 +4536,16 @@ const completedAt =
           </div>
 
           <Magnetic strength={0.18} className="flex-1 sm:flex-none">
-            <button
-              type="button"
-              onClick={handleCreateNew}
-              className="btn-primary w-full justify-center"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-              {lang === 'ar' ? 'إنشاء مهمة' : 'Create mission'}
-            </button>
+            {!isYouth && (
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                className="btn-primary w-full justify-center"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                {lang === 'ar' ? 'إنشاء مهمة' : 'Create mission'}
+              </button>
+            )}
           </Magnetic>
         </div>
       </div>
@@ -4404,7 +4633,7 @@ const completedAt =
                   <div className="inline-flex items-center gap-2 bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] font-mono text-[11px] whitespace-nowrap">
                     <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : (m.created_at ? formatDateTime(m.created_at) : 'غير مسجل')}</span>
                     <span className="text-[var(--faint)]">|</span>
-                    <span className={['Completed', 'Cancelled'].includes(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {['Completed', 'Cancelled'].includes(m.status) ? (m.completion_date !== '-' && m.completion_date ? formatDateTime(m.completion_date) : 'غير مسجل') : '(حتى الآن...)'}</span>
+                    <span className={isFinishedStatus(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {isFinishedStatus(m.status) ? (m.completion_date !== '-' && m.completion_date ? formatDateTime(m.completion_date) : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
                 </td>
                 <td data-label="كود المهمة" className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_code}</td>
@@ -4431,7 +4660,7 @@ const completedAt =
                   <div className="flex justify-center gap-1.5">
                     <button onClick={() => handleViewMission(m.mission_id)} className="icon-btn" title="فتح المهمة"><EyeIcon /></button>
                     <button onClick={() => setDownloadTarget(m)} className="icon-btn" title="تصدير الاستمارة"><DownloadIcon /></button>
-                    {!isVolunteer && <button onClick={() => setMissionToDelete(m.mission_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
+                    {!isVolunteer && !isYouth && <button onClick={() => setMissionToDelete(m.mission_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
                   </div>
                 </td>
               </tr>
@@ -4502,7 +4731,7 @@ const completedAt =
                 </div>
               </div>
             ) : (
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+            <div ref={formBodyRef} className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${isYouthFormLocked ? 'youth-form-locked' : ''}`}>
 
               <div className="card-surface p-6 flex flex-col md:flex-row items-end gap-4">
                 <div className="flex-1 w-full">
@@ -4728,20 +4957,27 @@ const completedAt =
                             <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-[var(--info-soft)] text-[var(--info)]' : 'text-[var(--faint)]'}`}>
                               {p.working_hours != null ? fmtHours(p.working_hours, lang) : '—'}
                             </span>
-                            {/* 🆕 «يُحسب من بداية المهمة» — مفتاح نقي: TRUE (افتراضي) ⇒ البداية المخططة
-                                من بداية المهمة؛ FALSE ⇒ بداية مساره المحدد. لا شروط تواريخ إطلاقاً. */}
-                            <label
-                              className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap cursor-pointer select-none ${p.start_from_mission !== false ? 'text-[var(--info)]' : 'text-[var(--muted-2)]'}`}
-                              title="يُحسب من بداية المهمة (بدل بداية مساره المحدد) — للمالك/المشرف"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={p.start_from_mission !== false}
-                                onChange={(e) => { const newP = [...participants]; newP[index].start_from_mission = e.target.checked; setParticipants(newP); bumpValidation(); }}
-                                className="accent-[var(--accent)]"
-                              />
-                              من بداية المهمة
-                            </label>
+                            {/* 🆕 «يُحسب من بداية المهمة» — قاعدة إلزامية: أول ما يتسند انضمام (JL:J)
+                                للمشارك ⇒ البوكس يتحول TRUE ويُقفل (غير قابل للإلغاء) — على هذا المشارك فقط. */}
+                            {(() => {
+                              const hasJoinAssigned = (p.assigned_days || []).some(d => String(d || '').startsWith('JL:J:'));
+                              const forcedChecked = hasJoinAssigned ? true : (p.start_from_mission !== false);
+                              return (
+                                <label
+                                  className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap ${hasJoinAssigned ? 'text-[var(--info)] cursor-not-allowed' : `cursor-pointer select-none ${forcedChecked ? 'text-[var(--info)]' : 'text-[var(--muted-2)]'}`}`}
+                                  title={hasJoinAssigned ? 'مُقفل تلقائياً: المشارك عليه انضمام ⇒ يُحسب من بداية المهمة دائماً' : 'يُحسب من بداية المهمة (بدل بداية مساره المحدد) — للمالك/المشرف'}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={forcedChecked}
+                                    disabled={hasJoinAssigned}
+                                    onChange={(e) => { if (hasJoinAssigned) return; const newP = [...participants]; newP[index].start_from_mission = e.target.checked; setParticipants(newP); bumpValidation(); }}
+                                    className="accent-[var(--accent)]"
+                                  />
+                                  من بداية المهمة
+                                </label>
+                              );
+                            })()}
                           </td>
 
                           {/* خط السير المخصص — موحد لكل أنواع المهام (يعرض الأيام/المجموعات المخصصة للمشارك) */}
@@ -5052,13 +5288,90 @@ const completedAt =
                 </div>
               </SectionCard>
 
+              {/* 🆕 ملاحظات غرفة التطوع — تحريرها لإدارة الشباب (yveoc) والمالك فقط؛ للباقي عرض */}
+              <SectionCard className={canEditVolunteerRoom ? 'youth-notes-escape' : ''} title="ملاحظات غرفة التطوع" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>}>
+                <div className="space-y-3">
+                  <div className="hidden md:grid grid-cols-[24px_1fr_1fr_1fr_1.5fr_32px] gap-3 px-1 text-[10px] text-[var(--muted)] font-bold">
+                    <span>#</span>
+                    <span>التاريخ</span>
+                    <span>رقم العضوية</span>
+                    <span>اسم العضو</span>
+                    <span>الملاحظة</span>
+                    <span></span>
+                  </div>
+                  {volunteerRoomRows.map((row, index) => (
+                    <div key={row.id} className="grid grid-cols-2 md:grid-cols-[24px_1fr_1fr_1fr_1.5fr_32px] gap-3 items-center bg-[var(--surface-4)] p-3 rounded-xl border border-[var(--border)]">
+                      <span className="w-6 h-6 rounded-full bg-[var(--surface-3)] border border-[var(--border)] text-[10px] font-bold text-[var(--muted)] flex items-center justify-center">{index + 1}</span>
+                      <SegDateField
+                        value={row.note_date}
+                        onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.map(r => r.id === row.id ? { ...r, note_date: e.target.value } : r)); }}
+                        className="bg-[var(--surface-3)]"
+                        disabled={!canEditVolunteerRoom}
+                      />
+                      <StyledInput
+                        value={row.membership_number}
+                        onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.map(r => r.id === row.id ? { ...r, membership_number: e.target.value } : r)); }}
+                        placeholder="رقم العضوية"
+                        className="bg-[var(--surface-3)]"
+                        disabled={!canEditVolunteerRoom}
+                      />
+                      <StyledInput
+                        value={row.member_name}
+                        onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.map(r => r.id === row.id ? { ...r, member_name: e.target.value } : r)); }}
+                        placeholder="اسم العضو"
+                        className="bg-[var(--surface-3)]"
+                        disabled={!canEditVolunteerRoom}
+                      />
+                      <StyledInput
+                        value={row.note_text}
+                        onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.map(r => r.id === row.id ? { ...r, note_text: e.target.value } : r)); }}
+                        placeholder="الملاحظة"
+                        className="bg-[var(--surface-3)]"
+                        disabled={!canEditVolunteerRoom}
+                      />
+                      {canEditVolunteerRoom && (
+                        <button
+                          type="button"
+                          onClick={() => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.filter(r => r.id !== row.id)); }}
+                          className="p-2 text-[var(--muted-2)] hover:text-[var(--accent)] bg-[var(--surface-3)] rounded-lg border border-[var(--border)]"
+                          title="حذف الصف"
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {canEditVolunteerRoom && (
+                    <button
+                      type="button"
+                      onClick={() => { markVolunteerRoomDirty(); addVolunteerRoomRow(); }}
+                      className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg"
+                    >
+                      + إضافة صف
+                    </button>
+                  )}
+                  {/* اسم مراجع الاستمارة — دائماً العنصر الأخير في القسم مهما عدد الصفوف */}
+                  <div className="pt-2 border-t border-[var(--border)] flex flex-col md:flex-row md:items-center gap-3">
+                    <FormGroup label="اسم مراجع الاستمارة:" className="md:w-96">
+                      <StyledInput
+                        value={volunteerRoomReviewer}
+                        onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomReviewer(e.target.value); }}
+                        placeholder="الاسم..."
+                        className="bg-[var(--surface-3)]"
+                        disabled={!canEditVolunteerRoom}
+                      />
+                    </FormGroup>
+                  </div>
+                </div>
+              </SectionCard>
+
               <SectionCard title="الحالة والملاحظات العامة" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* 1. حالة الاستمارة (مغلق) */}
                   <FormGroup label="موقف الاستمارة إدارياً وميدانياً (مغلق)">
                     <textarea 
                       readOnly 
-                      value={`موقف الاستمارة إدارياً: ${currentMissionData ? {'Draft': 'مسودة', 'Active': 'نشطة', 'Under Review': 'قيد المراجعة', 'Approved': 'معتمدة وفي انتظار الانتهاء', 'Completed': 'مكتملة (تم انتهاء المهمة)', 'Returned': 'إرجاع للمتطوع (يوجد أخطاء)', 'Cancelled': 'ملغاة'}[currentMissionData.status] || 'جديدة' : 'جديدة'}\nحالة الحدث في الميدان: ${currentMissionData?.status === 'Completed' ? 'مكتملة (تم انتهاء المهمة)' : 'الاستمارة شغالة (ولم تنتهي حتى الآن)'}`}
+                      value={`موقف الاستمارة إدارياً: ${currentMissionData ? {'Draft': 'مسودة', 'Active': 'نشطة', 'Under Review': 'قيد المراجعة', 'Approved': 'معتمدة وفي انتظار الانتهاء', 'Completed': 'مكتملة (تم انتهاء المهمة)', 'Completed (Reviewed by Youth Administration)': 'مكتملة (تمت المراجعة من إدارة الشباب)', 'مكتملة (تمت المراجعة من إدارة الشباب)': 'مكتملة (تمت المراجعة من إدارة الشباب)', 'Returned': 'إرجاع للمتطوع (يوجد أخطاء)', 'Cancelled': 'ملغاة'}[currentMissionData.status] || 'جديدة' : 'جديدة'}\nحالة الحدث في الميدان: ${['Completed', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(currentMissionData?.status) ? 'مكتملة (تم انتهاء المهمة)' : 'الاستمارة شغالة (ولم تنتهي حتى الآن)'}`}
                       rows="4" 
                       className="w-full bg-[var(--surface)] border border-[var(--border)] text-blue-400 font-bold rounded-xl p-3 text-sm outline-none resize-none cursor-not-allowed" 
                     />
@@ -5095,6 +5408,11 @@ const completedAt =
             {/* 💡 أضفنا كلاسات بتخلي الزراير فوق بعض في الموبايل وبعرض الشاشة بالكامل لسهولة اللمس */}
             <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] flex flex-col-reverse md:flex-row flex-wrap justify-end gap-3 shrink-0 [&>button]:w-full md:[&>button]:w-auto [&_button]:justify-center">
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold text-[var(--muted-2)] hover:bg-[var(--surface-hover)]">إغلاق</button>
+              {/* 🆕 إجراء المراجعة — حساب إدارة الشباب (yveoc) والمالك على المهمة المكتملة فقط */}
+              {(isYouth || isOwner) && ['Completed', 'مكتملة'].includes(currentMissionData?.status) && (
+                <button onClick={handleYouthReview} disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(147,51,234,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تمت المراجعة من إدارة الشباب</button>
+              )}
+
               
               {/* 👑 المالك (God Mode) */}
               {isOwner ? (
@@ -5109,8 +5427,8 @@ const completedAt =
               ) : (
                 /* 👷 باقي الرتب */
                 <>
-                  {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة */}
-                                    {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
+                  {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة — لا أزرار لحساب إدارة الشباب */}
+                                    {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && !isYouth && (
                     <>
                       <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-[var(--ink-2)] px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ كمسودة</button>
                       {isVolunteer ? (
@@ -5126,7 +5444,7 @@ const completedAt =
 
                   
                   {/* 2. الإداري (الجوكر والمشرف) لو الاستمارة قيد المراجعة */}
-                  {currentMissionData?.status === 'Under Review' && !isVolunteer && (
+                  {currentMissionData?.status === 'Under Review' && !isVolunteer && !isYouth && (
                     <>
                       <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="btn-warn px-6 py-3 md:py-2.5 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للمتطوع</button>
                       <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="btn-success px-8 py-3 md:py-2.5 rounded-xl text-sm shadow-[0_0_18px_var(--ok-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
@@ -5141,7 +5459,7 @@ const completedAt =
                       {isVolunteer && <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال التحديثات للجوكر</button>}
                       
                       {/* الإداري (الجوكر وفوق) يقدر يرجعها، يخليها مستمرة، أو يقفلها */}
-                      {!isVolunteer && (
+                      {!isVolunteer && !isYouth && (
                         <>
                           <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="btn-warn px-6 py-3 md:py-2.5 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للمتطوع</button>
                           <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="btn-success px-8 py-3 md:py-2.5 rounded-xl text-sm shadow-[0_0_18px_var(--ok-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
@@ -5151,8 +5469,8 @@ const completedAt =
                     </>
                   )}
                   
-                  {/* 4. لو الاستمارة مكتملة (مغلقة) */}
-                  {currentMissionData?.status === 'Completed' && !isVolunteer && (
+                  {/* 4. لو الاستمارة مكتملة (مغلقة) — إدارة الشباب لا تعرض لها أزرار حفظ/إعادة فتح */}
+                  {currentMissionData?.status === 'Completed' && !isVolunteer && !isYouth && (
                     <>
                       <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ التعديلات (وهي مقفولة)</button>
                       <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إلغاء الإغلاق (إعادة فتح)</button>
@@ -5516,7 +5834,7 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
 // معرَّف لاحقاً (TDZ ⇒ شاشة بيضاء) — الأمان مضمون هكذا.
 
 const StyledSelect = (props) => <EocSelect variant="field" {...props} />;
-const SectionCard = ({ title, icon, actionBtn, children, className = "" }) => (<div className={`card-surface p-5 md:p-6 ${className}`}><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
+const SectionCard = ({ title, icon, actionBtn, children, className = "", ...rest }) => (<div {...rest} className={`card-surface p-5 md:p-6 ${className}`}><div className="flex justify-between items-center mb-5 border-b border-[var(--border)] pb-3"><div className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0">{icon}</span><h4 className="font-bold text-sm tracking-wide section-title">{title}</h4></div>{actionBtn && <div className="shrink-0">{actionBtn}</div>}</div>{children}</div>);
 
 const VehicleRow = ({ index, onRemove, data }) => (
   <div className="flex flex-col md:flex-row w-full border border-[var(--border)] rounded-lg overflow-hidden mb-2 bg-[var(--surface-4)]">
@@ -5710,7 +6028,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
 
   useEffect(() => {
     const token = sessionStorage.getItem('access_token');
-    fetch('https://eoc-system-b12f.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${BASE}/api/audit-logs`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => { setLogs(data); setIsLoading(false); })
       .catch(() => setIsLoading(false));
@@ -5724,7 +6042,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   useEffect(() => {
     if (isFirstAuditLive.current) { isFirstAuditLive.current = false; return; }
     const token = sessionStorage.getItem('access_token');
-    fetch('https://eoc-system-b12f.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${BASE}/api/audit-logs`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => { if (Array.isArray(data)) setLogs(data); })
       .catch(() => {});
@@ -5743,7 +6061,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const handleExportLogs = async () => {
     const token = sessionStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-b12f.vercel.app/api/audit-logs/export', {
+      const res = await fetch(`${BASE}/api/audit-logs/export`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -5917,7 +6235,7 @@ const [nd, setNd] = useState({
     setIsLoading(true);
     const token = sessionStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-b12f.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setNewsList(await res.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -5982,7 +6300,7 @@ const [nd, setNd] = useState({
     if (!newsToDelete) return;
     try {
       const token = sessionStorage.getItem('access_token');
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setNewsToDelete(null); fetchNews(); setCustomAlert("تم حذف الخبر بنجاح."); }
       else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الخبر."); }
     } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
@@ -6030,7 +6348,7 @@ const [nd, setNd] = useState({
     };
 
     const token = sessionStorage.getItem('access_token');
-    const url = nd.news_id ? `https://eoc-system-b12f.vercel.app/api/local-news/${nd.news_id}` : 'https://eoc-system-b12f.vercel.app/api/local-news';
+    const url = nd.news_id ? `${BASE}/api/local-news/${nd.news_id}` : `${BASE}/api/local-news`;
     const method = nd.news_id ? 'PUT' : 'POST';
 
     submitLockRef.current = true;
@@ -6090,7 +6408,7 @@ const [nd, setNd] = useState({
 
     try {
       const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-b12f.vercel.app/api/local-news/clear-all", {
+      const res = await fetch(`${BASE}/api/local-news/clear-all`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -6987,7 +7305,7 @@ const visibleBranches = (
         ) : visibleBranches.length === 0 ? (
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar" style={{ opacity: savingWeather ? 0.85 : 1 }}>
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
                 <tr>
@@ -7762,7 +8080,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setIsLoading(true);
     const token = sessionStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-b12f.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/global-disasters`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setDisasters(await res.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -7798,7 +8116,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     if (!disasterToDelete) return;
     try {
       const token = sessionStorage.getItem('access_token');
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setDisasterToDelete(null); fetchDisasters(); setCustomAlert("تم حذف الكارثة بنجاح."); }
       else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الكارثة."); }
     } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
@@ -7813,7 +8131,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
     const payload = { ...gd, incident_month: getMonthName(gd.incident_date) };
     const token = sessionStorage.getItem('access_token');
-    const url = gd.disaster_id ? `https://eoc-system-b12f.vercel.app/api/global-disasters/${gd.disaster_id}` : 'https://eoc-system-b12f.vercel.app/api/global-disasters';
+    const url = gd.disaster_id ? `${BASE}/api/global-disasters/${gd.disaster_id}` : `${BASE}/api/global-disasters`;
     const method = gd.disaster_id ? 'PUT' : 'POST';
 
     submitLockRef.current = true;
@@ -7902,7 +8220,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
     try {
       const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-b12f.vercel.app/api/global-disasters/clear-all", {
+      const res = await fetch(`${BASE}/api/global-disasters/clear-all`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -8171,9 +8489,9 @@ const [clearAllCode, setClearAllCode] = useState('');
     setIsLoading(true);
     const token = sessionStorage.getItem('access_token');
     try {
-      const resG = await fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } });
+      const resG = await fetch(`${BASE}/api/earthquakes/global`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (resG.ok) setGlobalEqs(await resG.json());
-      const resE = await fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } });
+      const resE = await fetch(`${BASE}/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (resE.ok) setEgyptEqs(await resE.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -8251,7 +8569,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         setIsLoading(true);
         try {
           const token = sessionStorage.getItem('access_token');
-          const res = await fetch('https://eoc-system-b12f.vercel.app/api/earthquakes/global/bulk', {
+          const res = await fetch(`${BASE}/api/earthquakes/global/bulk`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
           });
           if (res.ok) { setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); }
@@ -8279,7 +8597,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
     try {
       const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-b12f.vercel.app/api/earthquakes/clear-all", {
+      const res = await fetch(`${BASE}/api/earthquakes/clear-all`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -8322,7 +8640,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setIsGlobalModalOpen(false);
 
     const token = sessionStorage.getItem('access_token');
-    const url = gForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/global';
+    const url = gForm.eq_id ? `${BASE}/api/earthquakes/global/${gForm.eq_id}` : `${BASE}/api/earthquakes/global`;
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
@@ -8348,7 +8666,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setIsEgyptModalOpen(false);
 
     const token = sessionStorage.getItem('access_token');
-    const url = eForm.eq_id ? `https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system-b12f.vercel.app/api/earthquakes/egypt';
+    const url = eForm.eq_id ? `${BASE}/api/earthquakes/egypt/${eForm.eq_id}` : `${BASE}/api/earthquakes/egypt`;
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
@@ -8357,8 +8675,8 @@ const [clearAllCode, setClearAllCode] = useState('');
     finally { eqSubmitLockRef.current = false; }
   };
 
-  const deleteGlobalEq = async (id) => { try { const token = sessionStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
-  const deleteEgyptEq = async (id) => { try { const token = sessionStorage.getItem('access_token'); const res = await fetch(`https://eoc-system-b12f.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
+  const deleteGlobalEq = async (id) => { try { const token = sessionStorage.getItem('access_token'); const res = await fetch(`${BASE}/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
+  const deleteEgyptEq = async (id) => { try { const token = sessionStorage.getItem('access_token'); const res = await fetch(`${BASE}/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); if (res.ok) { fetchEarthquakes(); setCustomAlert("تم حذف الزلزال بنجاح."); } else { const d = await res.json().catch(() => ({})); setCustomAlert(d.detail || "فشل حذف الزلزال."); } } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); } };
 
   // 🗑️ تأكيد الحذف الفردي: نرصد الهدف أولاً (عالمي / مصري) ثم ننفّذ بعد موافقة المستخدم
   const [eqToDelete, setEqToDelete] = useState(null);
@@ -9989,7 +10307,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     const fetchAiNews = async () => {
       try {
         const token = sessionStorage.getItem('access_token');
-        const res = await fetch('https://eoc-system-b12f.vercel.app/api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(`${BASE}/api/ai-news`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) setAiNewsList(await res.json());
       } catch (err) {}
     };
@@ -10044,7 +10362,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
     try {
       const token = sessionStorage.getItem('access_token');
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         setCustomAlert("تم الحذف بنجاح!");
         setAiNewsList(prev => prev.filter(item => item.id !== id));
@@ -10064,7 +10382,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setIsScanning(true);
     try {
       const token = sessionStorage.getItem('access_token');
-      const res = await fetch('https://eoc-system-b12f.vercel.app/api/trigger-ai-radar', {
+      const res = await fetch(`${BASE}/api/trigger-ai-radar`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -10149,7 +10467,7 @@ const totalAiCountries = new Set(
       const token = sessionStorage.getItem("access_token") || localStorage.getItem("access_token");
 
       const res = await fetch(
-        "https://eoc-system-b12f.vercel.app/api/ai-news/clear-all",
+        `${BASE}/api/ai-news/clear-all`,
         {
           method: "POST",
           headers: {
@@ -10845,7 +11163,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       // fix #10 (live-HR): نفس إطار ساعات كل استعلام حي — ساعة العميل المحلية (مصر).
       // غيابها يجعل خلفية HR تُحسب بـLOCALTIMESTAMP (GMT على خادم Neon) فينقلب الفرق
       // مع التواريخ المحلية المخزنة (naive مصر) ويعرض ساعات مهمة نشطة ≈ 0.
-      const res = await fetch(`https://eoc-system-b12f.vercel.app/api/human-resources?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${BASE}/api/human-resources?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         // حسب #13: الفلتر يعتمد على حقيقة الـ Backend (active_mission مش محسوبة في الـ UI)
         setHrList(await res.json());
