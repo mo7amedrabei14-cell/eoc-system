@@ -2641,3 +2641,44 @@ select.field {
    الحاوية القابلة للتمرير نفسها فيبقى السكرول يعمل، وصندوق الملاحظات يستثنى. */
 .youth-form-locked > * { pointer-events: none; }
 .youth-form-locked > .youth-notes-escape { pointer-events: auto; }
+
+/* ── جداول الطقس: «تثبيت الأجزاء» مثل Excel ──
+   الغرض: عند التمرير داخل جدول التوقعات (أفقياً وعمودياً) تبقى:
+     1) صفّا رأس الجدول (المقياس + صغرى/عظمى) ثابتين أعلى الجدول.
+     2) عمود المحافظة/الفرع ثابتاً في جهة البداية (يمين في RTL).
+   الأسلوب: border-separate على الجدول (شرط عمل sticky على خلايا الجدول)
+   + position: sticky لكل خلية بحدودها وخلفيتها المعتمة (تمنع مرؤية المحتوى المنزلق). */
+.wx-frozen { position: relative; }
+.wx-frozen th,
+.wx-frozen td { background-clip: padding-box; }
+/* ارتفاع صف الرأس الأول ثابت حتى نزيح صف (صغرى/عظمى) بمقداره بدقة عند التثبيت */
+.wx-frozen thead tr:first-child th { height: 48px; vertical-align: middle; }
+.wx-frozen .wx-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface-3);
+}
+/* صف «صغرى/عظمى» يثبت تحت صف المقياس مباشرة (48px - 1px احتياطاً) */
+.wx-frozen thead tr:nth-child(2) .wx-sticky-head { top: 47px; }
+.wx-frozen .wx-sticky-col {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-inline-end: 1px solid var(--border);
+}
+.wx-frozen .wx-sticky-corner {
+  position: sticky;
+  top: 0;
+  inset-inline-start: 0;
+  z-index: 30; /* فوق رأس الجدول وعامود المحافظة معاً */
+  background: var(--surface-3);
+  border-inline-end: 1px solid var(--border);
+}
+/* صف الجدول hover لا يلوّن الخلايا المثبتة (تبقى معتمة فوق المحتوى) */
+.wx-frozen tr:hover .wx-sticky-col,
+.wx-frozen tr:hover .wx-sticky-corner { background: var(--surface-2); }
+/* border-separate يتجاهل حدود الصف <tr> — فنفصلها على مستوى الخلايا بدلاً منها */
+.wx-frozen tbody td,
+.wx-frozen tbody th { border-top: 1px solid var(--border); }

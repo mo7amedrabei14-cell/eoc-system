@@ -1227,8 +1227,20 @@ const gridFromRows = (objs) => {
   return { header, rows: objs.map(o => header.map(h => (o[h] === undefined || o[h] === null ? '' : o[h]))) };
 };
 
+// 📏 AutoFit: حساب عرض كل عمود تلقائياً من أطول محتوى فيه (عربي = عرض 2 لكل حرف كحد أقصى).
+// يحاكي «AutoFit Column Width» في Excel: العنوان عريض يُحسب بوزن أكبر، وحد أدنى 9 وحدات.
+const autoFitWidths = (header = [], rows = []) => {
+  const text = (v) => (v === undefined || v === null ? '' : String(v));
+  const weight = header.map(() => 0);
+  header.forEach((h, i) => { weight[i] = Math.max(weight[i], text(h).length + 2); }); // العنوان عريض → +2
+  rows.forEach((r) => r.forEach((v, i) => { if (i < weight.length) weight[i] = Math.max(weight[i], text(v).length); }));
+  // الأحرف العربية أعرض قليلاً من اللاتينية: نضاعف وزن الأحرف غير اللاتينية مع سقف 60
+  return weight.map((w) => Math.min(60, Math.max(9, Math.ceil(w * 1.6))));
+};
+
 // 📦 تصدير مصنّف Excel منسّق — sheets: [{name, header, rows, merges?, widths?}]
-const exportWorkbook = async (sheets, fileName) => {
+// العرض تلقائي (AutoFit) ما لم تُمرَّر widths صريحة (يستخدمها تصدير الاستمارة الفردية فقط).
+const exportWorkbook = async (sheets, fileName, wrapText = true) => {
   const ExcelJS = await import('exceljs');
   const wb = new ExcelJS.Workbook();
   wb.created = new Date();
@@ -1236,11 +1248,11 @@ const exportWorkbook = async (sheets, fileName) => {
   const headerStyle = {
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } },
     font: { bold: true },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText },
     border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
   };
   const cellStyle = {
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText },
     border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
   };
   sheets.forEach(({ name, header = [], rows = [], merges = [], widths }) => {
@@ -1249,7 +1261,7 @@ const exportWorkbook = async (sheets, fileName) => {
     rows.forEach((r) => ws.addRow(r).eachCell((c) => Object.assign(c, cellStyle)));
     merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
     if (widths) ws.columns = widths.map((w) => ({ width: w }));
-    else if (header.length) ws.columns = header.map(() => ({ width: 20 }));
+    else if (header.length) ws.columns = autoFitWidths(header, rows);
   });
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -3276,10 +3288,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           const v = data[key];
           if (v !== undefined && v !== null && String(node.value) !== String(v)) node.value = v;
         });
-        // 🛡️ درع خط السير: مهمة محفوظة عليها مسارات + الفورم مبعتش ولا مسار + مفيش مسح مقصود ⇒ ارفض
-        if ((currentMissionData?.routes?.length > 0) && allRoutes.length === 0 && !clearDetailsRef.current) {
-          return setCustomAlert('⚠️ خط السير فاضي في الاستمارة رغم إن المهمة عليها مسارات محفوظة!\nلو عايز تحذفه فعلاً اضغط زرار «لا يوجد خط سير» أولاً — ولو ده غلط اعمل Refresh وافتح الاستمارة تاني.');
-        }
+        // 🛡️ (كان هنا ReferenceError على allRoutes — متغير غير معرّف في نطاق المفعّل — يُسقط
+        //    المزامنة الحية بالكامل كلما وصل حدث حي). المزامنة هنا قراءة فقط: بيانات السيرفر
+        //    تتضمن routes أصلاً ولا يوجد أي مسار لحذفها.
         const fieldStatusNode = el('f_mission_field_status');
         if (fieldStatusNode) {
           fieldStatusNode.value = (data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة';
@@ -3748,8 +3759,30 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     }
   };
   const handleExportTableExcel = async () => {
-    if (missionsList.length === 0) { setCustomAlert("لا توجد مهام لتصديرها."); return; }
-    const missionsSheet = missionsList.map(m => ({
+    // 🆕 التصدير يعتمد على نفس فلترة الجدول المعروض تماماً:
+    // فلترت على تاريخ معيّن → يُصدّر هذا اليوم فقط. بدون فلتر → كل السجلات.
+    // نفس معادلة dailyMissions (المهام النشطة تبقى ظاهرة حتى تاريخ الفلتر، المكتملة تظهر يوم إغلاقها فقط).
+    const dayFilteredMissions = filterDate
+      ? filteredMissions.filter(m => {
+          const createdAt = (m.created_at && m.created_at !== '-')
+            ? String(m.created_at).split(/[ T]/)[0]
+            : ((m.creation_datetime && m.creation_datetime !== '-')
+              ? String(m.creation_datetime).split(/[ T]/)[0]
+              : '');
+          const isCompleted = ['Completed', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status);
+          const isCancelled = m.status === 'Cancelled';
+          const isFinished = isCompleted || isCancelled;
+          if (!isFinished) return createdAt <= filterDate;
+          const storedCompletedAt = (m.completion_date && m.completion_date !== '-')
+            ? String(m.completion_date).split(/[ T]/)[0]
+            : null;
+          const completedAt = storedCompletedAt && storedCompletedAt >= createdAt ? storedCompletedAt : createdAt;
+          if (isCompleted && completedAt) return completedAt === filterDate;
+          return createdAt === filterDate;
+        })
+      : filteredMissions;
+    if (dayFilteredMissions.length === 0) { setCustomAlert("لا توجد مهام لتصديرها."); return; }
+    const missionsSheet = dayFilteredMissions.map(m => ({
       "كود المهمة": m.mission_code,
       "تصنيف المهمة": m.mission_classification || "عادية",
       "تاريخ الإنشاء (السيرفر)": formatDateTime(m.created_at),
@@ -3767,7 +3800,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     }));
 
     const beneficiariesSheet = [];
-    missionsList.forEach(m => {
+    dayFilteredMissions.forEach(m => {
       if (m.beneficiaries && m.beneficiaries.length > 0) {
         m.beneficiaries.forEach(b => {
           beneficiariesSheet.push({
@@ -3784,7 +3817,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
     if (beneficiariesSheet.length > 0) sheets.push({ name: 'إحصائيات المستفيدين', ...gridFromRows(beneficiariesSheet) });
-    try { await exportWorkbook(sheets, `السجل_الشامل_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook(sheets, `السجل_الشامل_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
@@ -4151,29 +4184,32 @@ row++;
        // 🔧 المحرك الموحد: خط السير الأساسي يُرسَل دائماً (بكل المسارات) وبتواريخ
        //    كاملة لكل مسار (التاريخ من صف المسار نفسه لا من حقول المهمة المخفية).
        //    «من/إلى» حقول منفصلة (route_from / route_to).
-       //    datetime-local parsing: split 'YYYY-MM-DDTHH:MM' into date/time
-       routes.forEach((_, i) => {
-         const from = document.getElementById(`r_from_main_${i}`)?.value;
-         const to = document.getElementById(`r_to_main_${i}`)?.value;
-         const depVal = document.getElementById(`r_dep_main_${i}`)?.value || '';
-         const arrVal = document.getElementById(`r_arr_main_${i}`)?.value || '';
-         if (from || to) allRoutes.push({
+       // 🛡️ المصدر الوحيد للحقيقة = حالة React (routes / customItineraries):
+       //    RouteCard حقول مُتحكَّم فيها وكل تغيير يُزامن الحالة فوراً — القراءة من
+       //    الـ DOM (ids/الناقل المخفي) كانت تنهار لو أي عنصر اختلف/أُزيل فيُرسَل
+       //    «خط سير فارغ» فتمسح السيرفر المسارات المحفوظة. الحالة محصّنة من ذلك.
+       routes.forEach((r) => {
+         if (r.route_from || r.route_to) allRoutes.push({
            group_title: 'خط السير الأساسي',
-           route_from: from || null,
-           route_to: to,
-           departure_date: depVal.split('T')[0] || null,
-           departure_time: depVal.split('T')[1] || null,
-           arrival_date: arrVal.split('T')[0] || null,
-           arrival_time: arrVal.split('T')[1] || null
+           route_from: r.route_from || null,
+           route_to: r.route_to || '',
+           departure_date: r.departure_date || null,
+           departure_time: r.departure_time || null,
+           arrival_date: r.arrival_date || null,
+           arrival_time: r.arrival_time || null
          });
        });
-       customItineraries.forEach((ci, ciIndex) => {
-         ci.routes.forEach((_, rIndex) => {
-           const from = document.getElementById(`r_from_cust_${ciIndex}_${rIndex}`)?.value;
-           const to = document.getElementById(`r_to_cust_${ciIndex}_${rIndex}`)?.value;
-           const depVal = document.getElementById(`r_dep_cust_${ciIndex}_${rIndex}`)?.value || '';
-           const arrVal = document.getElementById(`r_arr_cust_${ciIndex}_${rIndex}`)?.value || '';
-           if (from || to) allRoutes.push({ group_title: ci.title || 'خط سير مخصص', route_from: from || null, route_to: to, departure_date: depVal.split('T')[0] || null, departure_time: depVal.split('T')[1] || null, arrival_date: arrVal.split('T')[0] || null, arrival_time: arrVal.split('T')[1] || null });
+       customItineraries.forEach((ci) => {
+         ci.routes.forEach((r) => {
+           if (r.route_from || r.route_to) allRoutes.push({
+             group_title: ci.title || 'خط سير مخصص',
+             route_from: r.route_from || null,
+             route_to: r.route_to || '',
+             departure_date: r.departure_date || null,
+             departure_time: r.departure_time || null,
+             arrival_date: r.arrival_date || null,
+             arrival_time: r.arrival_time || null
+           });
          });
        });
 
@@ -4251,6 +4287,15 @@ row++;
            dt: e.dt
          }))
        };
+
+       // 🛡️ درع خط السير على مستوى الحِمل (payload-shield): استمارة قائمة عليها مسارات
+       //    محفوظة + الحِمل خرج بلا أي مسار + مفيش «مسح مقصود» ⇒ حفظ خاطئ هي wipe المسارات.
+       //    نرفض الحفظ بدل ما نمسح بيانات المستخدم — مع رسالة واضحة بدل الصمت التام.
+       //    (المسح المقصود الوحيد = زرار «لا يوجد خط سير» الذي يضبط clearDetailsRef=true)
+       if (currentMissionData?.routes?.length > 0 && allRoutes.length === 0 && !clearDetailsRef.current) {
+         setCustomAlert('⚠️ خط السير اختفى من الاستمارة رغم إن المهمة عليها مسارات محفوظة!\nتم إلغاء الحفظ لحماية البيانات.\n\nلو عايز تحذفه فعلاً: اضغط زرار «لا يوجد خط سير» ثم احفظ.\nلو ده حصل بالغلط: أغلق الاستمارة وافتحها من جديد ثم أعد الحفظ.');
+         return; // القفل يُفكَّ آلياً في finally
+       }
 
        const token = sessionStorage.getItem('access_token');
 
@@ -6050,6 +6095,8 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('الكل');
   const [entityFilter, setEntityFilter] = useState('all'); // الفلتر الجديد (الكل، مهام، أخبار)
+  // 📅 فلتر التاريخ للسجل: يُطبَّق على الجدول المعروض وعلى التصدير معاً (فارغ = كل التواريخ)
+  const [filterDate, setFilterDate] = useState('');
   const [customAlert, setCustomAlert] = useState(null);
 
   useEffect(() => {
@@ -6079,7 +6126,9 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
     const matchesAction = actionFilter === 'الكل' || log.action === actionFilter;
     // 💡 التعديل هنا: لو اختار "system" يجيب أي حاجة ملهاش قسم (يعني تسجيل دخول، باسورد، إلخ)
     const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter || (entityFilter === 'system' && !['mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news', 'handover'].includes(log.entity_type));
-    return matchesSearch && matchesAction && matchesEntity;
+    // 📅 فلتر اليوم المحدد: أول 10 أحرف من created_at هي YYYY-MM-DD
+    const matchesDate = !filterDate || String(log.created_at || '').slice(0, 10) === filterDate;
+    return matchesSearch && matchesAction && matchesEntity && matchesDate;
   });
 
   const uniqueActions = ['الكل', ...new Set(logs.map(l => l.action))];
@@ -6099,9 +6148,13 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       
       const allLogs = await res.json();
       
-      // بنفلتر البيانات اللي جاية من السيرفر قبل التصدير بناءً على الفلتر اللي اليوزر مختاره
-      const logsToExport = allLogs.filter(log => entityFilter === 'all' || log.entity_type === entityFilter);
-      if (logsToExport.length === 0) { setCustomAlert("لا توجد سجلات لهذا القسم لتصديرها."); return; }
+      // بنفلتر البيانات اللي جاية من السيرفر قبل التصدير بناءً على الفلاتر اللي اليوزر مختارها
+      // (القسم + التاريخ المحدد — نفس فلاتر الجدول المعروض تماماً؛ بدون فلتر تاريخ → كل السجلات)
+      const logsToExport = allLogs.filter(log =>
+        (entityFilter === 'all' || log.entity_type === entityFilter)
+        && (!filterDate || String(log.created_at || '').slice(0, 10) === filterDate)
+      );
+      if (logsToExport.length === 0) { setCustomAlert(filterDate ? "لا توجد سجلات في هذا اليوم لتصديرها." : "لا توجد سجلات لهذا القسم لتصديرها."); return; }
       
       const excelData = logsToExport.map(log => ({
         "التاريخ والوقت": formatDateTime(log.created_at),
@@ -6119,7 +6172,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       if (entityFilter === 'earthquake') fileName = 'سجل_لوج_الزلازل.xlsx';
       if (entityFilter === 'handover') fileName = 'سجل_لوج_تسليم_وتسلم_المشرفين.xlsx';
 
-      await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${filterDate || todayFileDate()}.xlsx`);
+      await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${filterDate || todayFileDate()}.xlsx`, false);
       setCustomAlert("تم تصدير الأرشيف بنجاح!");
     } catch (err) {
       setCustomAlert("حدث خطأ أثناء التصدير.");
@@ -6152,6 +6205,10 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
           </div>
 
           <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-48 shrink-0" />
+          
+          {/* 📅 فلتر اليوم: يحكم الجدول والتصدير معاً (تصدير يوم بيوم) */}
+          <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl px-3 py-2 text-sm outline-none cursor-pointer shrink-0" />
+          {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-[var(--accent)] hover:text-white bg-[var(--danger-soft)] px-3 py-2 rounded-lg font-bold shrink-0">كل الأيام</button>}
           
           <EocSelect variant="toolbar" className="shrink-0" value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
             {uniqueActions.map(action => <option key={action} value={action}>{action}</option>)}
@@ -6470,7 +6527,7 @@ const [nd, setNd] = useState({
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
     }));
-    try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // تصدير خبر واحد — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -7161,7 +7218,7 @@ const visibleBranches = (
         'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
         'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
       }));
-      await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}.xlsx`);
+      await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}.xlsx`, false);
       setCustomAlert("تم تصدير الطقس اليومي بنجاح!");
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
@@ -7189,7 +7246,7 @@ const visibleBranches = (
       const sheets = ['morning', 'evening', 'night']
         .map(k => ({ name: SHIFT_SHEET_NAMES[k], ...gridFromRows(data.filter(r => r.shift === k).map(toLogRow)) }))
         .filter(s => s && s.rows.length > 0);
-      await exportWorkbook(sheets, `سجل_الورديات_الثلاث_${filterDate}.xlsx`);
+      await exportWorkbook(sheets, `سجل_الورديات_الثلاث_${filterDate}.xlsx`, false);
       setCustomAlert("تم تصدير سجل الورديات بنجاح!");
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
@@ -7331,13 +7388,13 @@ const visibleBranches = (
         ) : visibleBranches.length === 0 ? (
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
-              <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
+          <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
+            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm border-separate" style={{ borderSpacing: 0 }}>
+              <thead>
                 <tr>
-                  <th rowSpan="2" className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  <th rowSpan="2" className="wx-sticky-corner p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
                   {WEATHER_METRICS.map(m => (
-                    <th key={m.key} colSpan="2" className="p-3 font-semibold border-l border-[var(--border)] text-center">
+                    <th key={m.key} colSpan="2" className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)] text-center">
                       {T(m.ar, m.en)}{m.unit ? <span className="text-[10px] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
                     </th>
                   ))}
@@ -7345,8 +7402,8 @@ const visibleBranches = (
                 <tr>
                   {WEATHER_METRICS.map(m => (
                     <Fragment key={m.key}>
-                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('صغرى', 'Min')}</th>
-                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('عظمى', 'Max')}</th>
+                      <th className="wx-sticky-head p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('صغرى', 'Min')}</th>
+                      <th className="wx-sticky-head p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('عظمى', 'Max')}</th>
                     </Fragment>
                   ))}
                 </tr>
@@ -7354,7 +7411,7 @@ const visibleBranches = (
               <tbody>
                 {visibleBranches.map((b, rowIdx) => (
                   <tr key={b.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
-                    <td className="p-2 font-bold text-[var(--ink)] whitespace-nowrap">{govLabel(b)}</td>
+                    <td className="wx-sticky-col p-2 font-bold text-[var(--ink)] whitespace-nowrap">{govLabel(b)}</td>
                     {WEATHER_METRICS.map((m, mIdx) => (
                       <Fragment key={m.key}>
                         <td className="p-2"><input id={`wcell_${rowIdx}_${mIdx * 2}`} type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_min`)} onChange={e => setCell(b.id, `${m.key}_min`, e.target.value)} onKeyDown={e => weatherGridKeyDown(e, rowIdx, mIdx * 2)} className={cellCls} placeholder="—" /></td>
@@ -7387,13 +7444,13 @@ const visibleBranches = (
         {daily.length === 0 ? (
           <p className="text-[var(--muted)] text-sm py-6 text-center">{T('لا توجد بيانات مجمّعة لهذا اليوم بعد — أدخل توقعات الورديات أولاً.', 'No aggregated data yet — enter shift forecasts first.')}</p>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
-              <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
+          <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
+            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm border-separate" style={{ borderSpacing: 0 }}>
+              <thead>
                 <tr>
-                  <th rowSpan="2" className="p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  <th rowSpan="2" className="wx-sticky-corner p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
                   {WEATHER_METRICS.map(m => (
-                    <th key={m.key} colSpan="2" className="p-3 font-semibold border-l border-[var(--border)] text-center">
+                    <th key={m.key} colSpan="2" className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)] text-center">
                       {T(m.ar, m.en)}{m.unit ? <span className="text-[10px] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
                     </th>
                   ))}
@@ -7401,8 +7458,8 @@ const visibleBranches = (
                 <tr>
                   {WEATHER_METRICS.map(m => (
                     <Fragment key={m.key}>
-                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('صغرى', 'Min')}</th>
-                      <th className="p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('عظمى', 'Max')}</th>
+                      <th className="wx-sticky-head p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('صغرى', 'Min')}</th>
+                      <th className="wx-sticky-head p-2 font-semibold border-l border-[var(--border)] text-[var(--faint)]">{T('عظمى', 'Max')}</th>
                     </Fragment>
                   ))}
                 </tr>
@@ -7410,7 +7467,7 @@ const visibleBranches = (
               <tbody>
                 {daily.map(r => (
                   <tr key={r.branch_id} className="border-t border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
-                    <td className="p-2 font-bold text-[var(--ink)]">{r.branch_name}</td>
+                    <td className="wx-sticky-col p-2 font-bold text-[var(--ink)]">{r.branch_name}</td>
                     {WEATHER_METRICS.map(m => (
                       <Fragment key={m.key}>
                         <td className="p-2 text-[var(--ink-2)]">{r[`${m.key}_min`] != null ? r[`${m.key}_min`] : <span className="text-[var(--faint)]">—</span>}</td>
@@ -7496,6 +7553,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   });
 
   const [handovers, setHandovers] = useState([]);
+  // 📅 فلتر اليوم: يحكم الجدول المعروض والسجل الشامل معاً (فارغ = كل الأيام)
+  const [filterDate, setFilterDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -7776,6 +7835,9 @@ const onMatrixChange = (s, d, val) => {
     }
   };
 
+  // 📅 قائمة التسليمات المعروضة: نفس فلتر اليوم الذي يحكم السجل الشامل
+  const filteredHandovers = filterDate ? handovers.filter(r => r.handover_date === filterDate) : handovers;
+
   const matrixToExportRow = (rec) => {
     const m = { ...EMPTY_SHIFT_MATRIX(), ...(rec.shift_matrix || {}) };
     const row = {
@@ -7800,9 +7862,10 @@ const onMatrixChange = (s, d, val) => {
   const downloadAll = async () => {
     await auditDownload('all', null);
     if (!handovers.length) { setNotice(T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')); return; }
-    // 📌 السجل الشامل: تبويب واحد يجمع كل سجلات الأيام (بدلاً من تبويب مستقل لكل يوم).
-    const allRows = handovers.map(r => matrixToExportRow(r));
-    try { await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    // 📌 السجل الشامل: يتبع فلتر اليوم المعروض — يوم محدد → سجلات هذا اليوم فقط، بدون فلتر → كل الأيام.
+    const allRows = filteredHandovers.map(r => matrixToExportRow(r));
+    if (!allRows.length) { setNotice(T('لا توجد تسليمات في هذا اليوم', 'No handovers on the selected day')); return; }
+    try { await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   if (!canAccess) {
@@ -7830,6 +7893,9 @@ const onMatrixChange = (s, d, val) => {
         <div className="p-6 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xl font-bold text-white flex items-center gap-2.5"><HandoverIcon /> {T('سجل التسليمات', 'Handover Log')}</h3>
           <div className="actionbar">
+            {/* 📅 فلتر اليوم: يحكم الجدول والسجل الشامل معاً (تصدير يوم بيوم) */}
+            <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="field !py-2 !px-3 w-auto" />
+            {filterDate && <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">{T('كل الأيام', 'All days')}</button>}
             {isOwner && (
               <button
                 type="button"
@@ -7884,7 +7950,9 @@ const onMatrixChange = (s, d, val) => {
                 <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('جاري التحميل...', 'Loading...')}</td></tr>
               ) : handovers.length === 0 ? (
                 <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')}</td></tr>
-              ) : handovers.map(r => (
+              ) : filteredHandovers.length === 0 ? (
+                <tr><td colSpan={8} className="p-8 text-center text-[var(--muted)]">{T('لا توجد تسليمات في هذا اليوم', 'No handovers on the selected day')}</td></tr>
+              ) : filteredHandovers.map(r => (
                 <tr key={r.handover_id} id={`focus-row-${r.handover_id}`} className={String(focusedRowId) === String(r.handover_id) ? 'focus-row' : undefined}>
                   <td data-label={T('التاريخ', 'Date')} className="font-bold text-[var(--accent)]" dir="ltr">{r.handover_date}</td>
                   <td data-label={T('المحلية/العالمية', 'Local / Global')}>{r.local_news_count || 0} / {r.global_news_count || 0}</td>
@@ -8229,7 +8297,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "اسم مدخل الخبر": d.data_entry_name || '',
       "ملاحظات": d.notes || ''
     }));
-    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 💡 تصدير الكارثة الفردية — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -8748,13 +8816,13 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleExportGlobalEqs = async () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
     const eqRows = filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    try { await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleExportEgyptEqs = async () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
     const eqRows = filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    try { await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
@@ -9605,7 +9673,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         { name: T('تقييم الذكاء الاصطناعي', 'AI Operational Assessment'), ...gridFromRows(aiRows) }
       ];
 
-      await exportWorkbook(sheets, `تقرير_استخبارات_الطقس_${targetDate}.xlsx`);
+      await exportWorkbook(sheets, `تقرير_استخبارات_الطقس_${targetDate}.xlsx`, false);
       if (setCustomAlert) setCustomAlert(T("تم تصدير تقرير استخبارات الطقس الشامل بنجاح!", "Weather intelligence report exported successfully!"));
     } catch (err) {
       console.error("Export error:", err);
@@ -10397,13 +10465,15 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleEdit = (n) => { setForm({...n}); setIsModalOpen(true); };
 
   const handleExportAllExcel = async () => {
-    if (aiNewsList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
-    const aiNewsRows = aiNewsList.map(n => ({
+    // 📅 التصدير الشامل يتبع فلتر التاريخ المعروض: يوم محدد → بيانات هذا اليوم فقط، بدون فلتر → كل السجلات
+    const sourceList = filterDate ? dateFilteredNews : aiNewsList;
+    if (sourceList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
+    const aiNewsRows = sourceList.map(n => ({
       "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     }));
-    try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleDeleteAiNews = (id) => {
@@ -11291,7 +11361,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "عدد ساعات آخر مهمة": fmtHours(p.last_mission_hours, lang),
       "إجمالي الساعات": fmtHours(p.total_hours, lang)
     }));
-    try { await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
