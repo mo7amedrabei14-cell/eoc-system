@@ -28,6 +28,23 @@ const writeOutbox = (items) => { try { localStorage.setItem(MISSION_OUTBOX_KEY, 
 const enqueueOutbox = (item) => writeOutbox([...readOutbox().filter(x => x.key !== item.key), item]);
 const removeFromOutbox = (key) => writeOutbox(readOutbox().filter(x => x.key !== key));
 
+// 🗓️ اليوم اللي المهمة تظهر فيه بعد الإنهاء = closed_at من السيرفر (وقت الإغلاق الفعلي)
+// مع fallback للبيانات القديمة على completion_date، وحماية لو أقدم من الإنشاء.
+const missionClosedDay = (m) => {
+  const created = ((m.created_at && m.created_at !== '-')
+    ? String(m.created_at).split(/[ T]/)[0]
+    : ((m.creation_datetime && m.creation_datetime !== '-')
+      ? String(m.creation_datetime).split(/[ T]/)[0]
+      : ''));
+  const closedDay = (m.closed_at && m.closed_at !== '-')
+    ? String(m.closed_at).split(/[ T]/)[0]
+    : ((m.completion_date && m.completion_date !== '-')
+      ? String(m.completion_date).split(/[ T]/)[0]
+      : null);
+  return (closedDay && closedDay >= created) ? closedDay : created;
+};
+
+
 
 const getBrowserStorages = () => {
   const storages = [];
@@ -2550,15 +2567,7 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
     if (!isFinished) {
       return createdAt <= filterDate;
     }
-    const storedCompletedAt = (m.completion_date && m.completion_date !== '-')
-  ? String(m.completion_date).split(/[ T]/)[0]
-  : null;
-
-// حماية للبيانات القديمة التي تحمل تاريخ إغلاق أقدم من إنشاء السجل
-const completedAt =
-  storedCompletedAt && storedCompletedAt >= createdAt
-    ? storedCompletedAt
-    : createdAt;
+        const completedAt = missionClosedDay(m);
 
     if (isCompleted && completedAt) {
       return completedAt === filterDate;
@@ -2984,6 +2993,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     // 📤 عداد الاستمارات العالقة + علم المسح المقصود (للتعديل رقم 6 كمان)
   const [pendingSends, setPendingSends] = useState(readOutbox().length);
+  const [outboxRetrying, setOutboxRetrying] = useState(false);
   const refreshPending = () => setPendingSends(readOutbox().length);
   const clearDetailsRef = useRef(false);
 
@@ -3280,24 +3290,40 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   }, [liveMissionEvents, isModalOpen, currentMissionData]);
 
     // 📤 محرك إعادة الإرسال: عند فتح الصفحة + عند رجوع النت + كل 20 ثانية
+  // 🔒 حارس تداخل: جولة شغالة (طلب متعلق مثلاً) مانعة أي جولة توازيها
+  const retryInFlightRef = useRef(false);
   const retryOutbox = useCallback(async () => {
+    if (retryInFlightRef.current) return;
     const queued = readOutbox();
     if (!queued.length) return;
     const token = getStoredAccessToken();
     if (!token) return;
-    for (const item of queued) {
-      try {
-        // 1) لو طلعت للسيرفر فعلاً قبل ما النت يقطع → مش هنكررها
-        const chk = await fetch(`${BASE}/api/missions/by-idempotency/${encodeURIComponent(item.key)}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (chk.ok && (await chk.json().catch(() => ({}))).exists) { removeFromOutbox(item.key); refreshPending(); continue; }
-        // 2) إعادة الإرسال بنفس المفتاح — السيرفر بيمنع التكرار بذاته
-        const r = await fetch(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
-        if (r.ok) { removeFromOutbox(item.key); refreshPending(); }        // ✅ وصلت فعلاً → الزرار يختفي فوراً
-        else if (r.status >= 400 && r.status < 500) { removeFromOutbox(item.key); refreshPending(); } // مرفوضة نهائياً → يختفي برضه
-      } catch { /* الشبكة لسه واقفة — نسيبها في الطابور */ }
+    retryInFlightRef.current = true;
+    setOutboxRetrying(true);
+    // ⏱️ أي طلب متعلق في السيرفر يُقطع بعد 30 ثانية بدل ما يجمد الحلقة للأبد
+    const fetchWithTimeout = (url, opts = {}, ms = 30000) => {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), ms);
+      return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(t));
+    };
+    try {
+      for (const item of queued) {
+        try {
+          // 1) لو طلعت للسيرفر فعلاً قبل ما النت يقطع → مش هنكررها
+          const chk = await fetchWithTimeout(`${BASE}/api/missions/by-idempotency/${encodeURIComponent(item.key)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+          if (chk.ok && (await chk.json().catch(() => ({}))).exists) { removeFromOutbox(item.key); refreshPending(); continue; }
+          // 2) إعادة الإرسال بنفس المفتاح — السيرفر بيمنع التكرار بذاته
+          const r = await fetchWithTimeout(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
+          if (r.ok) { removeFromOutbox(item.key); refreshPending(); }
+          else if (r.status >= 400 && r.status < 500) { removeFromOutbox(item.key); refreshPending(); } // مرفوضة منطقياً
+          // 5xx → تفضل في الطابور وتتحاول تاني في الجولة الجاية
+        } catch { /* شبكة واقفة أو timeout — نسيبها في الطابور */ }
+      }
+    } finally {
+      retryInFlightRef.current = false;
+      setOutboxRetrying(false);
+      refreshPending(); // ✅ مزامنة نهائية دايماً — العداد عمره ما يفضل قديم
     }
-    refreshPending();
-
   }, []);
 
   useEffect(() => {
@@ -4145,21 +4171,6 @@ row++;
            sysNotes = '';
        }
 
-       const isClosingNow =
-  submitStatus === 'Completed' &&
-  currentMissionData?.status !== 'Completed';
-
-const closeNow = new Date();
-const pad2 = (n) => String(n).padStart(2, '0');
-
-const actualCompletionDateTime =
-  `${closeNow.getFullYear()}-${pad2(closeNow.getMonth() + 1)}-${pad2(closeNow.getDate())} ` +
-  `${pad2(closeNow.getHours())}:${pad2(closeNow.getMinutes())}:${pad2(closeNow.getSeconds())}`;
-
-const actualCompletionTime =
-  `${pad2(closeNow.getHours())}:${pad2(closeNow.getMinutes())}`;
-
-
        const missionData = {
          mission_code: document.getElementById('f_mission_code')?.value || null,
          // 🆕 تاريخ إنشاء المهمة (إصدار المستخدم) — يُرسل كما هو، المالك فقط يعدّله
@@ -4178,17 +4189,11 @@ const actualCompletionTime =
          departure_date: document.getElementById('f_departure_date')?.value || null,
          arrival_date: timelineFieldValue('f_arrival_date', 'arrival_date'),
          return_date: document.getElementById('f_return_date')?.value || null,
-         completion_date: isClosingNow
-  ? actualCompletionDateTime
-  : timelineFieldValue('f_completion_date', 'completion_date'),
-
+          completion_date: timelineFieldValue('f_completion_date', 'completion_date'),
          start_time: document.getElementById('f_start_time')?.value || null,
          departure_time: timelineFieldValue('f_departure_time', 'departure_time'),
          arrival_time: timelineFieldValue('f_arrival_time', 'arrival_time'),
-         completion_time: isClosingNow
-  ? actualCompletionTime
-  : timelineFieldValue('f_completion_time', 'completion_time'),
-
+        completion_time: timelineFieldValue('f_completion_time', 'completion_time'),
          injured_count: 0, indirect_beneficiaries_total: 0,
          notes: finalNotes,
          internal_notes: sysNotes,
@@ -4551,8 +4556,8 @@ const completedAt =
       </div>
 
         {pendingSends > 0 && (
-        <button onClick={retryOutbox} className="mt-4 w-full btn-warn px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.97]">
-          ⏳ عندك {pendingSends} استمارة لسه مبعتتش — اضغط هنا لإعادة المحاولة الآن
+        <button onClick={retryOutbox} disabled={outboxRetrying} className="mt-4 w-full btn-warn px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.97] disabled:opacity-60">
+          {outboxRetrying ? '⏳ جاري إعادة المحاولة الآن...' : `⏳ عندك ${pendingSends} استمارة لسه مبعتتش — اضغط هنا لإعادة المحاولة الآن`}
         </button>
       )}
 

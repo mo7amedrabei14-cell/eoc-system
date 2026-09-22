@@ -143,6 +143,11 @@ def ensure_schema():
                 ALTER TABLE missions
                     ADD COLUMN IF NOT EXISTS creation_datetime timestamp without time zone;
             """)
+            cursor.execute("""
+                ALTER TABLE missions
+                    ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP WITHOUT TIME ZONE;
+            """)
+
             # backfill لمرة واحدة (حارس IS NULL يحمي تعديلات المالك من الكتابة فوقها)
             cursor.execute("""
                 UPDATE missions m
@@ -1914,7 +1919,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
                     (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
                     m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date,
-                    m.team_code, m.creation_datetime
+                    m.team_code, m.creation_datetime, m.closed_at
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
@@ -1959,6 +1964,7 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     "exit_date": str(r[19]) if len(r) > 19 and r[19] else "-",
                     "team_code": (r[20] or "") if len(r) > 20 else "",
                     "creation_datetime": str(r[21]) if len(r) > 21 and r[21] else "-",
+                    "closed_at": str(r[22]) if len(r) > 22 and r[22] else "-",
                     "beneficiaries": beneficiaries_dict.get(m_id, []),
                     "vehicles_info": f"{r[9] or ''} ({r[10] or ''})" if r[9] else "لا توجد سيارات" 
                 })
@@ -2034,9 +2040,11 @@ def create_mission(
                     mission_code, mission_name, mission_classification, branch_id, mission_type, mission_location, responsible_person,
                     data_source, status, exit_date, departure_date, arrival_date, return_date, completion_date,
                     start_time, departure_time, arrival_time, completion_time, injured_count,
-                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key, team_code, creation_datetime
+                    indirect_beneficiaries_total, notes, internal_notes, idempotency_key, team_code, creation_datetime,
+                    closed_at
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    CASE WHEN %s IN ('Completed', 'مكتملة') THEN (now() AT TIME ZONE 'Africa/Cairo') ELSE NULL END
                 ) RETURNING mission_id;
             """, (
                 mission_code, mission.mission_name, mission.mission_classification, mission.branch_id, mission.mission_type, mission.mission_location,
@@ -2048,8 +2056,10 @@ def create_mission(
                 mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
                 ikey,
                 mission.team_code if mission.team_code is not None else "",
-                creation_dt_val
+                creation_dt_val,
+                mission.status
             ))
+
             mission_id = cursor.fetchone()[0]
 
             # 🛡️ حماية FK: التأكد من أن المهمة فعلاً موجودة قبل إدخال خطوط السير
@@ -2169,7 +2179,7 @@ def create_mission(
 
             # 💡 تسجيل اللوج
             try:
-                create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بإنشاء استمارة جديدة بكود: {mission_code}"})
+                create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم إنشاء استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission_code}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
 
@@ -2280,6 +2290,12 @@ def update_mission(
                     arrival_time=%s, completion_time=%s, injured_count=%s, indirect_beneficiaries_total=%s,
                     notes=%s, internal_notes=%s,
                     team_code=%s,
+                    closed_at = CASE
+                        WHEN %s IN ('Completed', 'مكتملة')
+                         AND COALESCE(status, '') NOT IN ('Completed', 'مكتملة')
+                        THEN (now() AT TIME ZONE 'Africa/Cairo')
+                        ELSE closed_at
+                    END,
                     idempotency_key = COALESCE(%s, idempotency_key),
                     mission_code = COALESCE(%s, mission_code),
                     creation_datetime = COALESCE(%s, creation_datetime)
@@ -2575,7 +2591,7 @@ def update_mission(
 
             # 💡 تسجيل اللوج
             try:
-                create_audit_log(cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"قام بتحديث الاستمارة أو تغيير حالتها إلى: {mission.status}"})
+                create_audit_log(cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» (كود: {mission.mission_code or '—'}) — الحالة: {mission.status}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
 
