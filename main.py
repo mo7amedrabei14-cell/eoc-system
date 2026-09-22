@@ -1976,14 +1976,23 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
         connection.close()
 
 @app.get("/api/missions/by-idempotency/{idempotency_key}")
-def get_mission_by_idempotency(idempotency_key: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """🛡️ مرآة الـ Outbox: هل وصلت استمارة بهذا المفتاح فعلاً؟ (منع التكرار عند إعادة الإرسال)"""
+def get_mission_by_idempotency(
+    idempotency_key: str,
+    mission_code: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """🛡️ مرآة الـ Outbox: مطابقة بالمفتاح أو بكود المهمة — يعترف بالاستمارة مهما كان شكل وصولها"""
     if not get_current_user_id(credentials.credentials):
         raise HTTPException(status_code=401)
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT mission_id, mission_code, status FROM missions WHERE idempotency_key = %s LIMIT 1", (idempotency_key,))
+            cursor.execute("""
+                SELECT mission_id, mission_code, status FROM missions
+                WHERE idempotency_key = %s
+                   OR (%s IS NOT NULL AND mission_code = %s)
+                LIMIT 1
+            """, (idempotency_key, mission_code, mission_code))
             row = cursor.fetchone()
             return {"exists": bool(row), "mission_id": row[0] if row else None, "status": row[2] if row else None}
     finally:

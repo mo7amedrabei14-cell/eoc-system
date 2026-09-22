@@ -3307,22 +3307,33 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(t));
     };
     try {
+      const checkMirror = async (item) => {
+        // 🪞 نعترف بالاستمارة بالمفتاح أو بكود المهمة — أي علامة وصول تكفي
+        const mCode = item.payload?.mission_code || '';
+        const url = `${BASE}/api/missions/by-idempotency/${encodeURIComponent(item.key)}${mCode ? `?mission_code=${encodeURIComponent(mCode)}` : ''}`;
+        try {
+          const chk = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+          return chk.ok && (await chk.json().catch(() => ({}))).exists === true;
+        } catch { return false; }
+      };
       for (const item of queued) {
         try {
-          // 1) لو طلعت للسيرفر فعلاً قبل ما النت يقطع → مش هنكررها
-          const chk = await fetchWithTimeout(`${BASE}/api/missions/by-idempotency/${encodeURIComponent(item.key)}`, { headers: { 'Authorization': `Bearer ${token}` } });
-          if (chk.ok && (await chk.json().catch(() => ({}))).exists) { removeFromOutbox(item.key); refreshPending(); continue; }
+          // 1) وصلت من قبل؟ نعترف ونشيلها فوراً
+          if (await checkMirror(item)) { removeFromOutbox(item.key); continue; }
           // 2) إعادة الإرسال بنفس المفتاح — السيرفر بيمنع التكرار بذاته
-          const r = await fetchWithTimeout(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
-          if (r.ok) { removeFromOutbox(item.key); refreshPending(); }
-          else if (r.status >= 400 && r.status < 500) { removeFromOutbox(item.key); refreshPending(); } // مرفوضة منطقياً
-          // 5xx → تفضل في الطابور وتتحاول تاني في الجولة الجاية
-        } catch { /* شبكة واقفة أو timeout — نسيبها في الطابور */ }
+          const r = await fetch(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
+          if (r.ok || (r.status >= 400 && r.status < 500)) { removeFromOutbox(item.key); continue; }
+          // 3) 5xx/خطأ شبكة — ممكن السيرفر يكون حفظ والرد ضاع: نسأل تاني قبل ما نحكم
+          if (await checkMirror(item)) removeFromOutbox(item.key);
+        } catch {
+          // الشبكة واقعة — آخر فحص قبل ما نسيبها في الطابور
+          try { if (await checkMirror(item)) removeFromOutbox(item.key); } catch {}
+        }
       }
+      refreshPending(); // ✅ مزامنة نهائية دايماً — العداد عمره ما يفضل قديم
     } finally {
       retryInFlightRef.current = false;
       setOutboxRetrying(false);
-      refreshPending(); // ✅ مزامنة نهائية دايماً — العداد عمره ما يفضل قديم
     }
   }, []);
 
