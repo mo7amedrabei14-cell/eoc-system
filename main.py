@@ -939,6 +939,9 @@ class MissionCreate(BaseModel):
     idempotency_key: Optional[str] = None
 
     routes: List[RouteModel] = []
+        # 🛡️ علم المسح المقصود: true فقط لما المستخدم يدوس «لا يوجد خط سير» عمداً
+    clear_details: bool = False
+
     vehicles: List[VehicleModel] = []
     participants: List[ParticipantModel] = []
     beneficiaries: List[BeneficiaryModel] = []
@@ -1870,6 +1873,21 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
     finally:
         connection.close()
 
+@app.get("/api/missions/by-idempotency/{idempotency_key}")
+def get_mission_by_idempotency(idempotency_key: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """🛡️ مرآة الـ Outbox: هل وصلت استمارة بهذا المفتاح فعلاً؟ (منع التكرار عند إعادة الإرسال)"""
+    if not get_current_user_id(credentials.credentials):
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT mission_id, mission_code, status FROM missions WHERE idempotency_key = %s LIMIT 1", (idempotency_key,))
+            row = cursor.fetchone()
+            return {"exists": bool(row), "mission_id": row[0] if row else None, "status": row[2] if row else None}
+    finally:
+        connection.close()
+
+
 @app.post("/api/missions")
 def create_mission(
     mission: MissionCreate,
@@ -2220,11 +2238,16 @@ def update_mission(
                     "claimed": False,
                 })
 
-            # مسح التفاصيل غير المسجلة (يعاد إدخالها تالياً) — لا تُمسح الـ segments
-            cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
-            cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
-            cursor.execute("DELETE FROM mission_participant_itineraries WHERE mission_id = %s", (mission_id,))
-            cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
+            # 🛡️ حماية من المسح بالغلط: لو الطلب جاي ومصفوفات التفاصيل فاضية
+            #   (خلل شبكة/حفظ مسودة) من غير «مسح مقصود» → نحتفظ بالبيانات القديمة كما هي.
+            #   المسح الحقيقي يحصل فقط لو فيه بيانات جديدة، أو المستخدم ضغط «لا يوجد خط سير» (clear_details).
+            if len(mission.routes) > 0 or mission.clear_details:
+                cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+                cursor.execute("DELETE FROM mission_participant_itineraries WHERE mission_id = %s", (mission_id,))
+            if len(mission.vehicles) > 0 or mission.clear_details:
+                cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
+            if len(mission.beneficiaries) > 0 or mission.clear_details:
+                cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
 
             # 3. إدخال التفاصيل الجديدة بعد التعديل
@@ -4124,7 +4147,7 @@ def get_handovers(credentials: HTTPAuthorizationCredentials = Depends(security))
             for row in rows:
                 data = dict(zip(col_names, row))
                 for k, v in data.items():
-                    if v is not None and not isinstance(v, (str, int, float, bool)):
+                    if v is not None and not isinstance(v, (str, int, float, bool, dict, list)):
                         data[k] = str(v)
                 result.append(data)
             return result
@@ -4208,7 +4231,7 @@ def get_handover_by_date(handover_date: str, credentials: HTTPAuthorizationCrede
             col_names = [desc[0] for desc in cursor.description]
             data = dict(zip(col_names, row))
             for k, v in data.items():
-                if v is not None and not isinstance(v, (str, int, float, bool)):
+                if v is not None and not isinstance(v, (str, int, float, bool, dict, list)):
                     data[k] = str(v)
             return data
     except HTTPException:
@@ -4670,7 +4693,11 @@ def add_global_eq(eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials =
 
 @app.delete("/api/earthquakes/global/{eq_id}")
 def delete_global_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if not get_current_user_id(credentials.credentials): raise HTTPException(401)
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id: raise HTTPException(401)
+    role = get_user_role(user_id)
+    if not (role and str(role.get("role_name", "")).strip().upper() in {"OWNER", "المالك", "MANAGER", "SUPERVISOR", "ADMIN", "مدير", "أدمن", "مشرف", "JOKER", "جوكر"}):
+        raise HTTPException(status_code=403, detail="الحذف متاح للجوكر والمشرفين والمالك فقط")
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
@@ -4717,7 +4744,11 @@ def add_egypt_eq(eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = D
 
 @app.delete("/api/earthquakes/egypt/{eq_id}")
 def delete_egypt_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if not get_current_user_id(credentials.credentials): raise HTTPException(401)
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id: raise HTTPException(401)
+    role = get_user_role(user_id)
+    if not (role and str(role.get("role_name", "")).strip().upper() in {"OWNER", "المالك", "MANAGER", "SUPERVISOR", "ADMIN", "مدير", "أدمن", "مشرف", "JOKER", "جوكر"}):
+        raise HTTPException(status_code=403, detail="الحذف متاح للجوكر والمشرفين والمالك فقط")
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
@@ -5340,7 +5371,7 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
 # يرون كل المحافظات، وأدوار الأقاليم يرون محافظات إقليمهم فقط (RLS بالتوازي مع الواجهة).
 
 # ── الأدوار: لا نعدّل أي صلاحية موجودة — نضيف منطقاً داخل الكود فقط
-WEATHER_GLOBAL_ROLES = {"OWNER", "MANAGER", "ADMIN", "JOKER", "المالك", "مدير", "أدمن", "جوكر"}
+WEATHER_GLOBAL_ROLES = {"OWNER", "MANAGER", "SUPERVISOR", "ADMIN", "JOKER", "المالك", "مدير", "مشرف", "أدمن", "جوكر"}
 WEATHER_OWNER_ROLES = {"OWNER", "المالك"}
 WEATHER_VOLUNTEER_ROLES = {"VOLUNTEER", "متطوع"}
 WEATHER_SHIFTS = {"morning", "evening", "night"}

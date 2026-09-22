@@ -8,6 +8,20 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
+  server: {
+    port: 5174,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+      },
+      '/token': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 1600,
     rollupOptions: {

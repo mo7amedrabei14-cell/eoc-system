@@ -17,6 +17,14 @@ import { translate } from './i18n.js';
 // → React 18 unmounts the whole tree (no error boundary) → blank page.
 const BASE = 'https://eoc-system-b12f.vercel.app';
 
+// 📤 Outbox: أي استمارة بيتحفظ محلياً قبل الإرسال — لو الإرسال فشل تفضل هنا وبتتعاد تلقائياً
+const MISSION_OUTBOX_KEY = 'eoc_mission_outbox_v1';
+const readOutbox = () => { try { return JSON.parse(localStorage.getItem(MISSION_OUTBOX_KEY) || '[]'); } catch { return []; } };
+const writeOutbox = (items) => { try { localStorage.setItem(MISSION_OUTBOX_KEY, JSON.stringify(items)); } catch {} };
+const enqueueOutbox = (item) => writeOutbox([...readOutbox().filter(x => x.key !== item.key), item]);
+const removeFromOutbox = (key) => writeOutbox(readOutbox().filter(x => x.key !== key));
+
+
 const getBrowserStorages = () => {
   const storages = [];
   for (const name of ['sessionStorage', 'localStorage']) {
@@ -70,14 +78,34 @@ const clearStoredAuth = () => {
   }
 };
 
+const YOUTH_ALLOWED_TABS = ['home', 'missions', 'human_resources'];
+const isYouthRole = (userRole) => String(userRole || '').trim().toUpperCase() === 'READ_ONLY_MISSIONS';
+
 const getRoleFlags = (user) => {
   const userRole = user?.role?.toUpperCase() || 'VOLUNTEER';
   const isOwner = user?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
   const isSupervisor = ['MANAGER', 'SUPERVISOR', 'ADMIN'].includes(userRole) || userRole === 'مشرف';
   const isJoker = userRole === 'JOKER' || userRole === 'جوكر';
-  const isVolunteer = !isOwner && !isSupervisor && !isJoker;
-  const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
-  return { userRole, isOwner, isSupervisor, isJoker, isVolunteer, weatherEligible };
+  const isYouth = isYouthRole(userRole);
+  const isVolunteer = !isOwner && !isSupervisor && !isJoker && !isYouth;
+  const weatherEligible = !isYouth && !['VOLUNTEER', 'متطوع'].includes(userRole);
+  return { userRole, isOwner, isSupervisor, isJoker, isYouth, isVolunteer, weatherEligible };
+};
+
+const getDefaultTab = (user) => {
+  const flags = getRoleFlags(user);
+  if (flags.isYouth) return 'home';
+  const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole);
+  return isLeader ? 'home' : 'missions';
+};
+
+const getRequestedTab = (requestedTab, user) => {
+  const flags = getRoleFlags(user);
+  if (flags.isYouth) return YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'home';
+  const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole);
+  return requestedTab === 'weather_intel' && flags.weatherEligible
+    ? 'weather_intel'
+    : (isLeader ? 'home' : 'missions');
 };
 
 class WeatherIntelErrorBoundary extends Component {
@@ -1230,10 +1258,7 @@ export default function Dashboard() {
 
   // 💡 2. نحدد الشاشة الافتراضية بناءً على الرتبة فوراً بثبات
   const initialRoleFlags = getRoleFlags(initialAuthRef.current?.user);
-  const [activeTab, setActiveTab] = useState(() => {
-    const isLeader = initialAuthRef.current?.user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(initialRoleFlags.userRole);
-    return isLeader ? 'home' : 'missions';
-  });
+  const [activeTab, setActiveTab] = useState(() => getDefaultTab(initialAuthRef.current?.user));
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
@@ -1820,7 +1845,7 @@ useEffect(() => {
       case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
       case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
       case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
-      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} focusTarget={focusTarget} />;
+      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} lang={language} focusTarget={focusTarget} />;
       case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} />;
       case 'handover': return (isOwner || isSupervisor)
         ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} focusTarget={focusTarget} />
@@ -2612,12 +2637,12 @@ const completedAt =
             {weatherHighlights.map((m, i) => (
               <div key={m.key} className="kpi-card card-surface p-3.5 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[var(--muted)] font-bold text-xs">{lang === 'ar' ? m.ar : m.en}</h4>
+                  <h4 className="text-[var(--muted)] font-bold text-xs md:text-sm">{lang === 'ar' ? m.ar : m.en}</h4>
                   <span className="text-[var(--faint)] font-bold text-[10px]">{m.unit}</span>
                 </div>
-                <div className="text-[11px] font-bold leading-relaxed">
-                  <p className="text-[var(--ink)] truncate">{lang === 'ar' ? 'العظمى' : 'Max'}: {m.maxRow ? `${m.maxRow.branch_name} (${m.maxRow[`${m.key}_max`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
-                  <p className="text-[var(--muted)] truncate mt-0.5">{lang === 'ar' ? 'الصغرى' : 'Min'}: {m.minRow ? `${m.minRow.branch_name} (${m.minRow[`${m.key}_min`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
+                <div className="text-xs md:text-sm font-bold leading-relaxed">
+                  <p className="text-[var(--ink)] break-words">{lang === 'ar' ? 'العظمى' : 'Max'}: {m.maxRow ? `${m.maxRow.branch_name} (${m.maxRow[`${m.key}_max`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
+                  <p className="text-[var(--muted)] break-words mt-1">{lang === 'ar' ? 'الصغرى' : 'Min'}: {m.minRow ? `${m.minRow.branch_name} (${m.minRow[`${m.key}_min`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
                 </div>
               </div>
             ))}
@@ -2869,6 +2894,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 🔑 مفتاح ثابت لكل مرة يتفتح فيها فورم "مهمة جديدة" - بيتبعت مع كل محاولة إرسال
   // عشان السيرفر يقدر يرفض أي تكرار حتى لو الزرار اتضغط أكتر من مرة أو حصل تأخير في الشبكة.
   const newMissionIdempotencyKey = useRef(null);
+
+    // 📤 عداد الاستمارات العالقة + علم المسح المقصود (للتعديل رقم 6 كمان)
+  const [pendingSends, setPendingSends] = useState(readOutbox().length);
+  const refreshPending = () => setPendingSends(readOutbox().length);
+  const clearDetailsRef = useRef(false);
+
   // 🔒 قفل إرسال لحظي (متزامن): يمنع أي ضغطة مزدوجة / Enter متكرر أثناء تنفيذ mutation
   // (isSubmitting هو state غير متزامن، فحده وحده لا يمنع السباق في نفس الـ tick)
   const submitLockRef = useRef(false);
@@ -3104,6 +3135,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           const v = data[key];
           if (v !== undefined && v !== null && String(node.value) !== String(v)) node.value = v;
         });
+        // 🛡️ درع خط السير: مهمة محفوظة عليها مسارات + الفورم مبعتش ولا مسار + مفيش مسح مقصود ⇒ ارفض
+        if ((currentMissionData?.routes?.length > 0) && allRoutes.length === 0 && !clearDetailsRef.current) {
+          return setCustomAlert('⚠️ خط السير فاضي في الاستمارة رغم إن المهمة عليها مسارات محفوظة!\nلو عايز تحذفه فعلاً اضغط زرار «لا يوجد خط سير» أولاً — ولو ده غلط اعمل Refresh وافتح الاستمارة تاني.');
+        }
         const fieldStatusNode = el('f_mission_field_status');
         if (fieldStatusNode) {
           fieldStatusNode.value = (data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة';
@@ -3115,6 +3150,34 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         }
       });
   }, [liveMissionEvents, isModalOpen, currentMissionData]);
+
+    // 📤 محرك إعادة الإرسال: عند فتح الصفحة + عند رجوع النت + كل 20 ثانية
+  const retryOutbox = useCallback(async () => {
+    const queued = readOutbox();
+    if (!queued.length) return;
+    const token = getStoredAccessToken();
+    if (!token) return;
+    for (const item of queued) {
+      try {
+        // 1) لو طلعت للسيرفر فعلاً قبل ما النت يقطع → مش هنكررها
+        const chk = await fetch(`${BASE}/api/missions/by-idempotency/${encodeURIComponent(item.key)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (chk.ok && (await chk.json().catch(() => ({}))).exists) { removeFromOutbox(item.key); continue; }
+        // 2) إعادة الإرسال بنفس المفتاح — السيرفر بيمنع التكرار بذاته
+        const r = await fetch(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
+        if (r.ok) removeFromOutbox(item.key);
+        else if (r.status >= 400 && r.status < 500) removeFromOutbox(item.key); // مرفوضة منطقياً — محاولة تانية مش هتنفع
+      } catch { /* الشبكة لسه واقفة — نسيبها في الطابور */ }
+    }
+    refreshPending();
+  }, []);
+
+  useEffect(() => {
+    retryOutbox();
+    window.addEventListener('online', retryOutbox);
+    const t = setInterval(retryOutbox, 20000);
+    return () => { window.removeEventListener('online', retryOutbox); clearInterval(t); };
+  }, [retryOutbox]);
+
 
   // 🆕 ساعات العمل الحية: نحدّث دورياً كل 15 ثانية بينما النافذة مفتوحة والمهمة نشطة.
   // تعتمد على refs ثابتة فقط (mission_id/status/isModalOpen) فلا يستطيع إعادة جدولة نفسه أبداً.
@@ -3363,6 +3426,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     const token = sessionStorage.getItem('access_token');
     inFlightMissionRef.current = missionId;
     currentMissionIdRef.current = missionId;
+    clearDetailsRef.current = false; // 🛡️ كل فتح جديد يبدأ بـ «مفيش مسح مقصود»    
     // 💡 فتح فوري: المودال يظهر بسكلتون فوراً ثم تُحقن البيانات — بدون انتظار الشبكة
     setModalError(null);
     setIsModalLoading(true);
@@ -3533,7 +3597,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
     if (beneficiariesSheet.length > 0) sheets.push({ name: 'إحصائيات المستفيدين', ...gridFromRows(beneficiariesSheet) });
-    try { await exportWorkbook(sheets, `السجل_الشامل_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook(sheets, `السجل_الشامل_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
@@ -3581,12 +3645,26 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       row++;
     };
 
-    // ── العنوان: اسم الاستمارة + كود الاستمارة + تاريخ الإنشاء ──
-    const formName = text(detail.mission_name);
-    const formCode = detail.mission_code;
-    put(0, formName || 'استمارة مهمة'); span(0, TOTAL - 1); row++;
-    const created = (detail.creation_datetime || detail.created_at) ? formatDateTime(detail.creation_datetime || detail.created_at) : '';
-    put(0, `كود الاستمارة: ${formCode || '—'}${created ? `   |   تاريخ الإنشاء: ${created}` : ''}`); span(0, TOTAL - 1); row++;
+    // ── العنوان: اسم الاستمارة + كود الاستمارة + تاريخ المهمة ──
+const formName = text(detail.mission_name);
+const formCode = detail.mission_code;
+put(0, formName || 'استمارة مهمة');
+span(0, TOTAL - 1);
+row++;
+
+const missionDate = detail.exit_date || detail.departure_date;
+const missionDateText = missionDate ? formatDateTime(missionDate) : '';
+
+put(
+  0,
+  `كود الاستمارة: ${formCode || '—'}${
+    missionDateText ? `   |   تاريخ المهمة: ${missionDateText}` : ''
+  }`
+);
+span(0, TOTAL - 1);
+row++;
+
+
 
     // 1) البيانات الأساسية للمهمة
     section('البيانات الأساسية للمهمة');
@@ -3596,7 +3674,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     field('مكان المهمة', detail.mission_location);
     field('حالة العملية الميدانية', detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة');
     field('مسؤول المهمة', detail.responsible_person);
-    field('تاريخ إنشاء المهمة', created || '—');
+    field('تاريخ المهمة', missionDateText || '—');
     field('مصدر البلاغ', detail.data_source);
 
     // 2) التواريخ والتوقيتات
@@ -3710,13 +3788,16 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // ── تصدير مصنّف منسّق (RTL · تمركز · حدود · رأس #cbcbcb) مع الحفاظ على دمج الخلايا ──
     // اسم الملف = اسم الاستمارة كما هو (مع إزالة محارف غير صالحة فقط)
     const rawName = text(detail.mission_name).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
+    // 📅 اسم الملف بتاريخ المهمة (مش تاريخ اليوم) — الصيغة YYYY-MM-DD من تاريخ المهمة نفسه
+    const missionFileDate = String(missionDate || '').slice(0, 10) || todayFileDate();
     try { await exportWorkbook([{
       name: 'الاستمارة',
       header: aoa[0] || [],
       rows: aoa.slice(1),
       merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
       widths: Array.from({ length: TOTAL }, (_, i) => (i === 0 ? 16 : 15)),
-    }], `${rawName}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الاستمارة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+
+    }], `${rawName}_${missionFileDate}.xlsx`); setCustomAlert("تم تصدير الاستمارة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
@@ -3915,7 +3996,8 @@ const actualCompletionTime =
          notes: finalNotes,
          internal_notes: sysNotes,
          team_code: document.getElementById('f_team_code')?.value || '',
-         routes: allRoutes,
+          routes: allRoutes,
+          clear_details: clearDetailsRef.current,
          vehicles: vehicles.map((_, i) => ({ driver_name: document.getElementById(`v_driver_${i}`)?.value || '', vehicle_number: document.getElementById(`v_plate_${i}`)?.value || '' })).filter(v => v.driver_name !== '' || v.vehicle_number !== ''),
          participants: participants.map((_, i) => ({
            participant_type: document.getElementById(`p_type_${i}`)?.value || 'volunteer',
@@ -3953,9 +4035,15 @@ const actualCompletionTime =
          newMissionIdempotencyKey.current = crypto.randomUUID();
        }
 
-       const isUpdate = currentMissionData !== null;
-       const url = isUpdate ? `https://eoc-system-b12f.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system-b12f.vercel.app/api/missions';
-       const method = isUpdate ? 'PUT' : 'POST';
+               const isUpdate = currentMissionData !== null;
+        const url = isUpdate ? `https://eoc-system-b12f.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system-b12f.vercel.app/api/missions';
+        const method = isUpdate ? 'PUT' : 'POST';
+        const ikey = newMissionIdempotencyKey.current;
+
+        // 📤 نسجل الاستمارة في الطابور المحلي قبل الإرسال — لو فشل أي حاجة تفضل هنا وتتبعت لوحدها
+        enqueueOutbox({ key: ikey, method: method, url: url, payload: { ...missionData, idempotency_key: ikey } });
+        refreshPending();
+
 
        const res = await fetch(url, {
          method: method,
@@ -3964,11 +4052,15 @@ const actualCompletionTime =
            'Authorization': `Bearer ${token}`,
            'Idempotency-Key': newMissionIdempotencyKey.current
          },
-         body: JSON.stringify(missionData)
+          body: JSON.stringify({ ...missionData, idempotency_key: ikey })
        });
-       if (res.ok) {
-         // Success: clear the idempotency key so next submit gets a new key
-         newMissionIdempotencyKey.current = null;
+               if (res.ok) {
+          // ✅ وصلت للسيرفر — نشيلها من طابور الإرسال المحلي
+          removeFromOutbox(ikey);
+          refreshPending();
+          // Success: clear the idempotency key so next submit gets a new key
+          newMissionIdempotencyKey.current = null;
+
          // 💾 نجاح الحفظ — يُغلق مودال الاستبيان (تظهر القطاعات المشتقة عند إعادة فتح المهمة).
          setEntryDialog(null);
          setDaysPicker(null);
@@ -3977,8 +4069,14 @@ const actualCompletionTime =
          const rd = await res.json().catch(() => ({}));
          setCustomAlert(isUpdate ? "تم تحديث المهمة بنجاح!" : "تم إنشاء المهمة بنجاح!");
          return { ok: true, mission_id: rd.mission_id };
-       } else {
-         // Error: keep the idempotency key for retry (idempotent if server actually committed)
+               } else {
+          // 🚫 رفض منطقي من السيرفر (4xx = بيانات/صلاحيات) — إعادة الإرسال مش هتنفع: نشيلها من الطابور
+          // (5xx/504 = سيرفر أو شبكة ← تفضل في الطابور وتتبعت تلقائياً)
+          if (res.status >= 400 && res.status < 500) {
+            removeFromOutbox(ikey);
+          }
+          refreshPending();
+          // Error: keep the idempotency key for retry (idempotent if server actually committed)
          // ✅ Fix: res.json() throws when server returns non-JSON (504 HTML, Vercel error page).
          //    Parse safely; fall back to text so the user always sees a meaningful message.
          const errBody = await res.json().catch(async () => {
@@ -3987,13 +4085,15 @@ const actualCompletionTime =
          const detail = errBody?.detail || `(status ${res.status})`;
          setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${detail}`);
        }
-     } catch (error) {
-       // ✅ Fix: distinguish network failure from JS error for debugging
-       const msg = error instanceof TypeError && error.message === 'Failed to fetch'
-         ? '⚠️ فشل الاتصال بالسيرفر — تحقق من اتصال الإنترنت وحاول مرة أخرى.\n(قد يكون السيرفر يأخذ وقتاً أطول من المعتاد بسبب البرد البارد)'
-         : `⚠️ خطأ غير متوقع:\n${error?.message || error}`;
-       setCustomAlert(msg);
-     }
+           } catch (error) {
+        // 🌐 فشل شبكة: الاستمارة فضلت في الطابور المحلي وستُرسل تلقائياً عند رجوع الاتصال
+        const msg = error instanceof TypeError && error.message === 'Failed to fetch'
+          ? '⚠️ فشل الاتصال بالسيرفر — الاستمارة محفوظة عندك وستُرسل تلقائياً عند رجوع الاتصال ✅'
+          : `⚠️ خطأ غير متوقع:\n${error?.message || error}`;
+        setCustomAlert(msg);
+        refreshPending();
+      }
+
      finally { setIsSubmitting(false); submitLockRef.current = false; }
   };
 
@@ -4220,6 +4320,13 @@ const completedAt =
         </div>
       </div>
 
+        {pendingSends > 0 && (
+        <button onClick={retryOutbox} className="mt-4 w-full btn-warn px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.97]">
+          ⏳ عندك {pendingSends} استمارة لسه مبعتتش — اضغط هنا لإعادة المحاولة الآن
+        </button>
+      )}
+
+
       <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
@@ -4257,7 +4364,7 @@ const completedAt =
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--ok)]">فترة المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">كود المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">التمركز (الفرع)</th>
-              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">اسم المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 min-w-[220px]">اسم المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">السيارات والسائقين</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">نوع المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مكان المهمة</th>
@@ -4496,7 +4603,7 @@ const completedAt =
               <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
                 <div className="w-full flex flex-col items-center">
                   <div className="mb-4 -mt-2">
-                    {routes.length > 0 ? (<button onClick={() => setRoutes([])} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد خط سير</button>) : (<button onClick={() => setRoutes([{ id: Date.now() }])} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل خط السير</button>)}
+                    {routes.length > 0 ? (<button onClick={() => { clearDetailsRef.current = true; setRoutes([]); }} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد خط سير</button>) : (<button onClick={() => { clearDetailsRef.current = false; setRoutes([{ id: Date.now() }]); }} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل خط السير</button>)}
                   </div>
                   <div className="w-full">
                     {routes.map((route, index) => (
@@ -5002,17 +5109,25 @@ const completedAt =
                 /* 👷 باقي الرتب */
                 <>
                   {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة */}
-                  {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
+                                    {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && (
                     <>
                       <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-[var(--ink-2)] px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ كمسودة</button>
-                      <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال إلى الجوكر</button>
+                      {isVolunteer ? (
+                        <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال إلى الجوكر</button>
+                      ) : (
+                        <>
+                          <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="btn-success px-8 py-3 md:py-2.5 rounded-xl text-sm shadow-[0_0_18px_var(--ok-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">اعتماد المهمة (مستمرة)</button>
+                          <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="btn-accent px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
+                        </>
+                      )}
                     </>
                   )}
+
                   
                   {/* 2. الإداري (الجوكر والمشرف) لو الاستمارة قيد المراجعة */}
                   {currentMissionData?.status === 'Under Review' && !isVolunteer && (
                     <>
-                      <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="btn-danger px-6 py-3 md:py-2.5 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للتعديل</button>
+                      <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="btn-warn px-6 py-3 md:py-2.5 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للمتطوع</button>
                       <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="btn-success px-8 py-3 md:py-2.5 rounded-xl text-sm shadow-[0_0_18px_var(--ok-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
                       <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="btn-accent px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
                     </>
@@ -5659,7 +5774,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       if (entityFilter === 'earthquake') fileName = 'سجل_لوج_الزلازل.xlsx';
       if (entityFilter === 'handover') fileName = 'سجل_لوج_تسليم_وتسلم_المشرفين.xlsx';
 
-      await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${todayFileDate()}.xlsx`);
+      await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${filterDate || todayFileDate()}.xlsx`);
       setCustomAlert("تم تصدير الأرشيف بنجاح!");
     } catch (err) {
       setCustomAlert("حدث خطأ أثناء التصدير.");
@@ -6010,7 +6125,7 @@ const [nd, setNd] = useState({
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
     }));
-    try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // تصدير خبر واحد — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -6026,7 +6141,7 @@ const [nd, setNd] = useState({
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
     }];
-    try { await exportWorkbook([{ name: 'تفاصيل الخبر', ...gridFromRows(newsRow) }], `خبر_${n.area_name || 'محلي'}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الخبر بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'تفاصيل الخبر', ...gridFromRows(newsRow) }], `خبر_${n.area_name || 'محلي'}_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الخبر بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const governorates = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
@@ -6493,21 +6608,100 @@ const visibleBranches = (
     } catch (e) { /* صامت — يظهر «—» */ }
   };
 
-  // كل تغيير (وردية/تاريخ) → نبدأ من لوح نظيف ونعيد جلب الوردية واليومي
-  useEffect(() => { touchedRef.current = new Set(); loadGrid(false); loadDaily(false); }, [shift, filterDate]);
+  // كل تغيير (وردية/تاريخ) → نحفظ أي رقم متكتب قبل التبديل (على الوردية القديمة)، وبعدين لوح نظيف وجلب جديد
+  useEffect(() => {
+    flushWeatherSave();
+    touchedRef.current = new Set();
+    loadGrid(false); loadDaily(false);
+  }, [shift, filterDate]);
+
   // تحديث لحظي: مستخدم آخر حفظ توقعات أو أنهى وردية → refetch صامت
   useEffect(() => { if (liveUpdateVersion > 0) { loadGrid(true); loadDaily(true); } }, [liveUpdateVersion]);
   // التنبيهات غير الحاجبة: تنغلق تلقائيًا بدل أن تحجب الشاشة وتدفع المستخدم لـ Refresh
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
 
+  // 💾 حفظ تلقائي فوري: كل رقم بيتحفظ في السيستم بعد توقف الكتابة بثانية — بدون زرار
+  const formValuesRef = useRef(formValues);
+  useEffect(() => { formValuesRef.current = formValues; }, [formValues]);
+  const autoSaveTimerRef = useRef(null);
+  const autoSaveSnapRef = useRef(null); // {date, shift} وقت الكتابة — يضمن إن القيمة تروح للوردية والتاريخ الصح
+
+  const flushWeatherSave = async () => {
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
+    const snap = autoSaveSnapRef.current;
+    autoSaveSnapRef.current = null;
+    if (!snap) return;
+    if (submitLockRef.current) { autoSaveSnapRef.current = snap; autoSaveTimerRef.current = setTimeout(flushWeatherSave, 800); return; } // في حفظ شغال → نأجّل
+    const dirtyRows = [...touchedRef.current]
+      .map(bid => ({ branch_id: bid, shift: snap.shift, ...(formValuesRef.current[bid] || {}) }))
+      .filter(r => WEATHER_METRICS.some(m => {
+        const v = formValuesRef.current[r.branch_id] || {};
+        return (v[`${m.key}_min`] !== '' && v[`${m.key}_min`] != null) || (v[`${m.key}_max`] !== '' && v[`${m.key}_max`] != null);
+      }));
+    if (!dirtyRows.length) return;
+    touchedRef.current = new Set();
+    submitLockRef.current = true;
+    setSavingWeather(true);
+    const token = sessionStorage.getItem('access_token');
+    const bodyRows = dirtyRows.map(r => {
+      const o = { branch_id: r.branch_id, shift: r.shift };
+      WEATHER_METRICS.forEach(m => {
+        WEATHER_METRIC_FIELDS(m).forEach(f => {
+          const v = r[f];
+          o[f] = (v !== '' && v != null) ? Number(v) : null;
+        });
+      });
+      return o;
+    });
+    try {
+      const res = await fetch(`${BASE}/api/weather/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ date: snap.date, shift: snap.shift, rows: bodyRows }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) { loadDaily(true); return; }
+      setCustomAlert(data.detail || (lang === 'ar' ? 'تعذر الحفظ التلقائي — جرّب تاني' : 'Autosave failed'));
+    } catch (e) {
+      setCustomAlert(lang === 'ar' ? 'تعذر الحفظ التلقائي — تأكد من الاتصال' : 'Autosave failed');
+    } finally {
+      submitLockRef.current = false;
+      setSavingWeather(false);
+    }
+  };
+
   const setCell = (bid, field, value) => {
     touchedRef.current.add(bid);
     setFormValues(prev => ({ ...prev, [bid]: { ...(prev[bid] || {}), [field]: value } }));
+    // 🕐 نستنى توقف الكتابة ثانية واحدة وبعدها نحفظ — عشان سرعة الكتابة متبقاش طلبات كتير
+    autoSaveSnapRef.current = { date: filterDate, shift };
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(flushWeatherSave, 1000);
   };
+
   const cellVal = (bid, field) => {
     const v = (formValues[bid] || {})[field];
     return v ?? '';
   };
+
+  // ⌨️ تنقّل بين الخلايا بالأسهم زي جوجل شيت (شبكة: صفوف المحافظات × أعمدة الصغرى/العظمى)
+  const weatherGridKeyDown = (e, row, col) => {
+    const cols = WEATHER_METRICS.length * 2;
+    let r = row, c = col;
+    if (e.key === 'ArrowDown' || e.key === 'Enter') r = row + 1;       // تحت
+    else if (e.key === 'ArrowUp') r = row - 1;                          // فوق
+    else if (e.key === 'ArrowLeft') c = col + 1;                        // شمال = الخلية التالية (RTL)
+    else if (e.key === 'ArrowRight') c = col - 1;                       // يمين = الخلية السابقة
+    else return;
+    e.preventDefault(); // نمنع سلوك input الرقمي (الزوادة/النقصان) — التنقل هو المطلوب
+    if (r < 0 || r >= visibleBranches.length || c < 0 || c >= cols) return; // نوقف عند الحواف زي الشيت
+    requestAnimationFrame(() => {
+      const target = document.getElementById(`wcell_${r}_${c}`);
+      if (target) { target.focus(); if (target.select) target.select(); }
+    });
+  };
+
+  
   const govLabel = (b) => (b.id === 19
     ? (lang === 'ar' ? 'القاهرة (المركز العام)' : 'Cairo (General HQ)')
     : b.name);
@@ -6792,7 +6986,7 @@ const visibleBranches = (
         ) : visibleBranches.length === 0 ? (
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar" style={{ pointerEvents: savingWeather ? 'none' : undefined, opacity: savingWeather ? 0.6 : 1 }}>
+          <div className="overflow-x-auto custom-scrollbar" style={{ opacity: savingWeather ? 0.85 : 1 }}>
             <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-[var(--muted-2)]">
                 <tr>
@@ -6813,13 +7007,13 @@ const visibleBranches = (
                 </tr>
               </thead>
               <tbody>
-                {visibleBranches.map(b => (
+                {visibleBranches.map((b, rowIdx) => (
                   <tr key={b.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
                     <td className="p-2 font-bold text-[var(--ink)] whitespace-nowrap">{govLabel(b)}</td>
-                    {WEATHER_METRICS.map(m => (
+                    {WEATHER_METRICS.map((m, mIdx) => (
                       <Fragment key={m.key}>
-                        <td className="p-2"><input type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_min`)} onChange={e => setCell(b.id, `${m.key}_min`, e.target.value)} className={cellCls} placeholder="—" /></td>
-                        <td className="p-2"><input type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_max`)} onChange={e => setCell(b.id, `${m.key}_max`, e.target.value)} className={cellCls} placeholder="—" /></td>
+                        <td className="p-2"><input id={`wcell_${rowIdx}_${mIdx * 2}`} type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_min`)} onChange={e => setCell(b.id, `${m.key}_min`, e.target.value)} onKeyDown={e => weatherGridKeyDown(e, rowIdx, mIdx * 2)} className={cellCls} placeholder="—" /></td>
+                        <td className="p-2"><input id={`wcell_${rowIdx}_${mIdx * 2 + 1}`} type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_max`)} onChange={e => setCell(b.id, `${m.key}_max`, e.target.value)} onKeyDown={e => weatherGridKeyDown(e, rowIdx, mIdx * 2 + 1)} className={cellCls} placeholder="—" /></td>
                       </Fragment>
                     ))}
                   </tr>
@@ -6830,9 +7024,9 @@ const visibleBranches = (
         )}
         <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
           <span className="text-xs text-[var(--muted)]">{T('عدد المحافظات المرئية', 'Visible governorates')}: <b className="text-[var(--ink)]">{visibleBranches.length}</b> {scopeRegionLabel && !isGlobalWeather ? `(${T('نطاق ' + scopeRegionLabel, 'Region ' + scopeRegionLabel)})` : ''}</span>
-          <button type="button" onClick={handleSave} disabled={savingWeather} className="btn-accent px-8 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed">
-            {savingWeather ? T('جاري الحفظ...', 'Saving…') : T(`حفظ توقعات الوردية`, 'Save Shift Forecast')}
-          </button>
+          <span className={`ops-chip shrink-0 ${savingWeather ? 'text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]' : 'text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]'}`}>
+            <span className="live-dot" /> {savingWeather ? T('جارٍ الحفظ…', 'Saving…') : T('الحفظ تلقائي ✓', 'Autosave on ✓')}
+          </span>
         </div>
       </div>
 
@@ -6922,6 +7116,21 @@ const EMPTY_SHIFT_MATRIX = () => {
   HANDOVER_SHIFTS.forEach(s => HANDOVER_DEPTS.forEach(d => { m[`${s.key}_${d.key}`] = 0; }));
   return m;
 };
+
+const normalizeShiftMatrix = (raw) => {
+  let source = raw;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source.trim()); }
+    catch {
+      source = {};
+      for (const match of String(source || raw).matchAll(/['"]([^'"]+)['"]\s*:\s*(-?\d+(?:\.\d+)?)/g)) source[match[1]] = match[2];
+    }
+  }
+  if (!source || typeof source !== 'object' || Array.isArray(source)) source = {};
+  const empty = EMPTY_SHIFT_MATRIX();
+  return Object.fromEntries(Object.keys(empty).map(key => [key, source[key] ?? 0]));
+};
+
 const HANDOVER_SHIFT_AR = { night: 'وردة الليل', morning: 'وردة الصباح', evening: 'وردة المساء' };
 const HANDOVER_DEPT_AR = { relief: 'الإغاثة', youth: 'الشباب والمتطوعين', resources: 'تنمية الموارد', case: 'إدارة الحالات' };
 const splitIssuesText = (text) => { const arr = String(text || '').split('\n').map(s => s.trim()).filter(Boolean); return arr.length ? arr : ['']; };
@@ -7034,7 +7243,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       issuesList: splitIssuesText(rec.issues_text),
       tetra_count: rec.tetra_count || 0,
       huawei_count: rec.huawei_count || 0,
-      shift_matrix: { ...EMPTY_SHIFT_MATRIX(), ...(rec.shift_matrix || {}) },
+      shift_matrix: normalizeShiftMatrix(rec.shift_matrix),
       followUpsList: splitIssuesText(rec.follow_ups_text),
     });
   };
@@ -7074,13 +7283,20 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     setNotice(null);
   };
 
-  const onMatrixChange = (s, d, val) => {
-    setForm(prev => ({ ...prev, shift_matrix: { ...prev.shift_matrix, [`${s}_${d}`]: val === '' ? '' : Math.max(0, Number(val)) } }));
-  };
+const onMatrixChange = (s, d, val) => {
+  setForm(prev => ({
+    ...prev,
+    shift_matrix: {
+      ...prev.shift_matrix,
+      [`${s}_${d}`]: val
+    }
+  }));
+};
+
 
   const resetMatrix = () => setForm(prev => ({ ...prev, shift_matrix: EMPTY_SHIFT_MATRIX() }));
 
-  const sumMatrix = (m) => { const mm = { ...EMPTY_SHIFT_MATRIX(), ...(m || {}) }; return Object.values(mm).reduce((a, b) => a + (Number(b) || 0), 0); };
+  const sumMatrix = (m) => { const mm = normalizeShiftMatrix(m); return Object.values(mm).reduce((a, b) => a + (Number(b) || 0), 0); };
   const shiftTotal = (sk) => HANDOVER_DEPTS.reduce((a, d) => a + (Number(form.shift_matrix[`${sk}_${d.key}`]) || 0), 0);
   const deptTotal = (dk) => HANDOVER_SHIFTS.reduce((a, s) => a + (Number(form.shift_matrix[`${s.key}_${dk}`]) || 0), 0);
   const matrixTotal = HANDOVER_SHIFTS.reduce((a, s) => a + shiftTotal(s.key), 0);
@@ -7103,7 +7319,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
       huawei_count: normalize(form.huawei_count),
       issues_text: joinIssuesList(issuesList),
       follow_ups_text: joinIssuesList(followUpsList),
-      shift_matrix: Object.fromEntries(Object.entries(form.shift_matrix || {}).map(([k, v]) => [k, normalize(v)])),
+      shift_matrix: (() => { const clean = {}; HANDOVER_SHIFTS.forEach(s => HANDOVER_DEPTS.forEach(d => { clean[`${s.key}_${d.key}`] = normalize(form.shift_matrix[`${s.key}_${d.key}`]); })); return clean; })(),
     };
     const url = editingId ? `${BASE}/api/handovers/${editingId}` : `${BASE}/api/handovers`;
     const method = editingId ? 'PUT' : 'POST';
@@ -7205,7 +7421,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
   const downloadSingle = async (rec) => {
     await auditDownload('single', rec.handover_id);
-    try { await exportWorkbook([{ name: T('تسليم', 'Handover'), ...gridFromRows([matrixToExportRow(rec)]) }], `تسليم_تسلم_مشرفين_${rec.handover_date}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير التسليم بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: T('تسليم', 'Handover'), ...gridFromRows([matrixToExportRow(rec)]) }], `تسليم_تسلم_مشرفين_${rec.handover_date}_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير التسليم بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const downloadAll = async () => {
@@ -7213,7 +7429,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
     if (!handovers.length) { setNotice(T('لا توجد تسليمات مسجلة بعد', 'No handovers recorded yet')); return; }
     // 📌 السجل الشامل: تبويب واحد يجمع كل سجلات الأيام (بدلاً من تبويب مستقل لكل يوم).
     const allRows = handovers.map(r => matrixToExportRow(r));
-    try { await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   if (!canAccess) {
@@ -7638,7 +7854,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "اسم مدخل الخبر": d.data_entry_name || '',
       "ملاحظات": d.notes || ''
     }));
-    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 💡 تصدير الكارثة الفردية — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -7661,7 +7877,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "اسم مدخل الخبر": d.data_entry_name || '',
       "ملاحظات": d.notes || ''
     }];
-    try { await exportWorkbook([{ name: 'تفاصيل الكارثة', ...gridFromRows(disasterRow) }], `كارثة_${d.country || 'عالمية'}_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الكارثة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'تفاصيل الكارثة', ...gridFromRows(disasterRow) }], `كارثة_${d.country || 'عالمية'}_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الكارثة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 💡 الإحصائيات تتحدث مع الفلتر
@@ -7917,7 +8133,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 }
 
 
-function EarthquakesView({ isOwner, isSupervisor, lang = 'ar', focusTarget = null }) {
+function EarthquakesView({ isOwner, isSupervisor, isJoker, lang = 'ar', focusTarget = null }) {
   const [activeEqTab, setActiveEqTab] = useState('all'); 
   const [globalEqs, setGlobalEqs] = useState([]);
   const [egyptEqs, setEgyptEqs] = useState([]);
@@ -8157,13 +8373,13 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleExportGlobalEqs = async () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
     const eqRows = filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    try { await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleExportEgyptEqs = async () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
     const eqRows = filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    try { await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
@@ -8308,7 +8524,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                       <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                         <div className="flex justify-center gap-1.5">
                           <button onClick={() => handleEditGlobal(eq)} className="icon-btn" title="فتح التعديل"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => setEqToDelete({ kind: 'global', id: eq.eq_id })} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
+                          {(isOwner || isSupervisor || isJoker) && <button onClick={() => setEqToDelete({ kind: 'global', id: eq.eq_id })} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
@@ -8344,7 +8560,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                       <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                         <div className="flex justify-center gap-1.5">
                           <button onClick={() => handleEditEgypt(eq)} className="icon-btn" title="فتح التعديل"><EyeIcon /></button>
-                          {(isOwner || isSupervisor) && <button onClick={() => setEqToDelete({ kind: 'egypt', id: eq.eq_id })} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
+                          {(isOwner || isSupervisor || isJoker) && <button onClick={() => setEqToDelete({ kind: 'egypt', id: eq.eq_id })} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon/></button>}
                         </div>
                       </td>
                     </tr>
@@ -8877,9 +9093,8 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         }
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && isObject(data) && data.status === 'success') {
-        if (setCustomAlert) setCustomAlert(T("🚀 تم إطلاق مهمة استخبارات الطقس بنجاح عبر GitHub Actions. ستظهر النتائج خلال دقيقة إلى دقيقتين.", "Weather intelligence workflow triggered successfully. Results will appear in 1-2 minutes."));
+      if (res.ok) {
+        if (setCustomAlert) setCustomAlert(T("تم بدء تشغيل تحليل الطقس — التنفيذ جارٍ في GitHub Actions.", "Weather analysis started — execution is running in GitHub Actions."));
       } else {
         if (setCustomAlert) setCustomAlert(T("تعذر تشغيل مهمة استخبارات الطقس.", "Weather intelligence analysis could not be started."));
       }
@@ -9813,7 +10028,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     }));
-    try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleDeleteAiNews = (id) => {
@@ -10701,7 +10916,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "عدد ساعات آخر مهمة": fmtHours(p.last_mission_hours, lang),
       "إجمالي الساعات": fmtHours(p.total_hours, lang)
     }));
-    try { await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
