@@ -1981,23 +1981,25 @@ def get_mission_by_idempotency(
     mission_code: Optional[str] = None,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    """🛡️ مرآة الـ Outbox: مطابقة بالمفتاح أو بكود المهمة — يعترف بالاستمارة مهما كان شكل وصولها"""
     if not get_current_user_id(credentials.credentials):
         raise HTTPException(status_code=401)
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT mission_id, mission_code, status FROM missions
-                WHERE idempotency_key = %s
-                   OR (%s IS NOT NULL AND mission_code = %s)
-                LIMIT 1
-            """, (idempotency_key, mission_code, mission_code))
+            if mission_code:
+                cursor.execute(
+                    "SELECT mission_id, mission_code, status FROM missions WHERE idempotency_key = %s OR mission_code = %s LIMIT 1",
+                    (idempotency_key, mission_code)
+                )
+            else:
+                cursor.execute(
+                    "SELECT mission_id, mission_code, status FROM missions WHERE idempotency_key = %s LIMIT 1",
+                    (idempotency_key,)
+                )
             row = cursor.fetchone()
             return {"exists": bool(row), "mission_id": row[0] if row else None, "status": row[2] if row else None}
     finally:
         connection.close()
-
 
 @app.post("/api/missions")
 def create_mission(
