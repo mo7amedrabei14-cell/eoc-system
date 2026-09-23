@@ -1257,21 +1257,11 @@ const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: الت�
     alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
     border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
   };
-  sheets.forEach(({ name, header = [], rows = [], merges = [], fills = [] }) => {
+  sheets.forEach(({ name, header = [], rows = [], merges = [] }) => {
     const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true }] });
     if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
     rows.forEach((r) => ws.addRow(r).eachCell((c) => Object.assign(c, cellStyle)));
     merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
-    // 🎨 Fill Color اختياري لكل ورقة: [{ header, value, argb }] — يلوّن خلفية الخلايا التي قيمتها تطابق تماماً
-    fills.forEach(({ header: fillHeader, value: fillValue, argb }) => {
-      const colIdx = header.indexOf(fillHeader);
-      if (colIdx === -1) return;
-      rows.forEach((r, ri) => {
-        if (String(r[colIdx]) === String(fillValue)) {
-          ws.getRow(ri + 2).getCell(colIdx + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb } };
-        }
-      });
-    });
     // 📐 True Excel AutoFit — يُطبَّق دائماً على كل ورقة: أعرض محتوى غير مدمج في العمود هو عرضه النهائي.
     //    القياس دائماً بخط Calibri 11pt العادي (نموذج Excel)، ثم width = (pixels − 5) / MDW = pixels / 7.
     const mergedCells = new Set(merges.flatMap(([c1, r1, c2, r2]) => {
@@ -3227,8 +3217,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const res = await fetch(`${BASE}/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) {
         clearStoredAuth();
-        setUserData(null);
-        navigate('/');
+        // جلسة منتهية: إعادة توجيه كاملة لصفحة الدخول (لا يوجد navigate في هذا المكوّن)
+        window.location.assign('/');
         return;
       }
       if (res.ok) setMissionsList(await res.json());
@@ -3857,7 +3847,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       });
     });
 
-    const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet), fills: [{ header: 'تصنيف المهمة', value: 'مفتوحة', argb: 'FF86D1E6' }] }];
+    const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
     if (beneficiariesSheet.length > 0) sheets.push({ name: 'إحصائيات المستفيدين', ...gridFromRows(beneficiariesSheet) });
     try { await exportWorkbook(sheets, `السجل_الشامل_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
@@ -4442,9 +4432,8 @@ row++;
       'مكتملة (تمت المراجعة من إدارة الشباب)': { text: 'مكتملة (تمت المراجعة من إدارة الشباب)', color: 'text-[var(--info)] bg-[var(--info-soft)] border-[var(--info)]/20' },
       'Returned': { text: 'إرجاع للمتطوع', color: 'text-[var(--warn)] bg-[var(--warn-soft)] border-[var(--warn)]/20' },
       'Cancelled': { text: 'ملغاة', color: 'text-[var(--accent)] bg-[var(--danger-soft)] border-[var(--accent)]/20' },
-      // 🟦 حالة «Open» بتعبئة خلفية (Fill Color) سماوية #86D1E6 — لون الخط يبقى كما هو بدون تغيير
-      'Open': { text: translate('مفتوحة', lang), color: 'bg-[#86D1E6] border-[#86D1E6]' },
-      'مفتوحة': { text: translate('مفتوحة', lang), color: 'bg-[#86D1E6] border-[#86D1E6]' },
+      // 🔵 حالة «Open» بلون السماء الصريح المطلوب
+      'Open': { text: 'Open', color: 'text-[#86D1E6]' },
     };
     const s = statuses[status] || statuses['Draft'];
     return <span className={`badge ${s.color}`}>{s.text}</span>;
@@ -4755,7 +4744,7 @@ const completedAt =
               <tr key={`mission-${m.mission_id}`} id={`focus-row-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'} ${String(focusedRowId) === String(m.mission_id) ? ' focus-row' : ''}`}>
                 <td data-label="تاريخ الإنشاء" className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
                 <td data-label="تاريخ المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
-                <td data-label="تصنيف المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[#86D1E6] text-[var(--ink)] border-[#86D1E6]' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
+                <td data-label="تصنيف المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
                 <td data-label="فترة المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60">
                   <div className="inline-flex items-center gap-2 bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] font-mono text-[11px] whitespace-nowrap">
                     <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : (m.created_at ? formatDateTime(m.created_at) : 'غير مسجل')}</span>
@@ -4841,7 +4830,7 @@ const completedAt =
                   </div>
                   <h3 className="text-lg font-bold">تعذر فتح الاستمارة</h3>
                   <p className="text-sm text-[var(--muted)]">فشل تحميل بيانات الاستمارة من السيرفر.</p>
-                  <p className="text-xs text-[var(--faint)]">{translate('تم إبقاء الاستمارة مفتوحة — أعد المحاولة أو تواصل مع المالك.', language)}</p>
+                  <p className="text-xs text-[var(--faint)]">{translate('تم إبقاء الاستمارة مفتوحة — أعد المحاولة أو تواصل مع المالك.', lang)}</p>
                   <div className="flex items-center justify-center gap-2">
                     {modalError.status === 0 ? (
                       <span className="text-xs text-[var(--faint)]">خطأ في الاتصال بالخادم</span>
@@ -6206,8 +6195,12 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       
       // بنفلتر البيانات اللي جاية من السيرفر قبل التصدير بناءً على الفلاتر اللي اليوزر مختارها
       // (القسم + التاريخ المحدد — نفس فلاتر الجدول المعروض تماماً؛ بدون فلتر تاريخ → كل السجلات)
+      // نفس فلاتر الجدول المعروض تماماً: القسم (مع منطق تبويب "النظام" = أي سجل بلا قسم معروف)
+      // + التاريخ المحدد (بدون فلتر تاريخ → كامل الأرشيف من قاعدة البيانات)
       const logsToExport = allLogs.filter(log =>
-        (entityFilter === 'all' || log.entity_type === entityFilter)
+        (entityFilter === 'all'
+          || log.entity_type === entityFilter
+          || (entityFilter === 'system' && !['mission', 'local_news', 'global_disaster', 'earthquake', 'ai_news', 'handover'].includes(log.entity_type)))
         && (!filterDate || String(log.created_at || '').slice(0, 10) === filterDate)
       );
       if (logsToExport.length === 0) { setCustomAlert(filterDate ? "لا توجد سجلات في هذا اليوم لتصديرها." : "لا توجد سجلات لهذا القسم لتصديرها."); return; }
@@ -7644,8 +7637,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
 
     const logoutDueToInactivity = () => {
       clearStoredAuth();
-      setUserData(null);
-      navigate('/');
+      // خروج تلقائي بسبب عدم النشاط: إعادة توجيه كاملة (لا يوجد setUserData/navigate في هذا المكوّن)
+      window.location.assign('/');
       setCustomAlert("تم تسجيل خروجك تلقائيًا بسبب عدم النشاط.");
     };
 
@@ -10525,7 +10518,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     const sourceList = filterDate ? dateFilteredNews : aiNewsList;
     if (sourceList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
     const aiNewsRows = sourceList.map(n => ({
-      "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
+      "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وقت رصد الخبر": n.observed_at ? formatDateTime(n.observed_at) : '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     }));
@@ -10859,6 +10852,7 @@ const totalAiCountries = new Set(
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-purple-500/30">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)]">وقت الرصد</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-purple-400">نوع الخبر</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المحافظة</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[250px]">وصف الحادث</th>
@@ -10872,6 +10866,7 @@ const totalAiCountries = new Set(
                  return (
                 <tr key={n.id} id={`focus-row-${n.id}`} className={`group hover:bg-[var(--surface-hover)]${String(focusedRowId) === String(n.id) ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
+                  <td data-label="وقت الرصد" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-mono text-xs">{n.observed_at ? formatDateTime(n.observed_at) : '—'}</td>
                   <td data-label="نوع الخبر" className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                     {n.news_type}
                     {aiData && aiData.severity && <span className="block mt-1 bg-[var(--danger-soft)] text-[var(--accent)] px-2 py-0.5 rounded text-[10px] w-max">خطورة: {aiData.severity}/10</span>}
@@ -10900,7 +10895,7 @@ const totalAiCountries = new Set(
                   </td>
                 </tr>
               )
-              }) : <tr><td colSpan="6" className="p-8 text-center text-[var(--faint)] font-bold">لا توجد أخبار مطابقة...</td></tr>}
+              }) : <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)] font-bold">لا توجد أخبار مطابقة...</td></tr>}
             </tbody>
           </table>
         </div>
@@ -10955,6 +10950,7 @@ const totalAiCountries = new Set(
                   <FormGroup label="نوع الخبر"><StyledInput disabled value={form.news_type} className="text-purple-400 font-bold" /></FormGroup>
                   <FormGroup label="المحافظة (الفرع)"><StyledInput disabled value={form.governorate} /></FormGroup>
                   <FormGroup label="ناشر الخبر"><StyledInput disabled value={form.news_publisher} /></FormGroup>
+                  <FormGroup label="وقت رصد الخبر (تاريخ ووقت الرصد)"><StyledInput disabled value={form.observed_at ? formatDateTime(form.observed_at) : ''} className="font-mono" /></FormGroup>
                   <div className="md:col-span-3"><FormGroup label="وصف الحادث (الملخص)"><textarea readOnly value={form.incident_description} className="w-full bg-[var(--surface-4)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none text-[var(--ink-2)]" rows="2"></textarea></FormGroup></div>
                   <FormGroup label="اسم المستشفى"><StyledInput readOnly value={form.hospital_name} /></FormGroup>
                   <FormGroup label="عدد المصابين"><StyledInput readOnly value={form.injured_count} className="text-[var(--data)] font-bold" /></FormGroup>

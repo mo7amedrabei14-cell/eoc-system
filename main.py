@@ -3946,7 +3946,7 @@ def update_volunteer_room_notes(
         connection.close()
 
 @app.get("/api/audit-logs")
-def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizationCredentials = Depends(security)):
+def get_audit_logs(skip: int = 0, limit: int = 0, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
@@ -3963,8 +3963,8 @@ def get_audit_logs(skip: int = 0, limit: int = 300, credentials: HTTPAuthorizati
                 SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
-                ORDER BY l.created_at DESC LIMIT %s OFFSET %s;
-            """, (limit, skip))
+                ORDER BY l.created_at DESC" + (" LIMIT %s OFFSET %s" if limit and limit > 0 else " OFFSET %s") + ";
+            """, ((limit, skip) if limit and limit > 0 else (skip,)))
             rows = cursor.fetchall()
             # 🎯 عرض/جلب الـactor في سجل النظام بشكل سليم (إصلاح "مستخدم محذوف" عند المالك):
             #    - الاسم الرباعي إن وُجد، وإلا نستعين بـ username كبديل.
@@ -5300,6 +5300,20 @@ class AINewsModel(BaseModel):
     news_updates: Optional[str] = None
     news_link: str
     data_entry_name: Optional[str] = "AI Robot"
+    # 🕐 توقيت رصد الخبر (يُظهره البوت أم يُملأ يدوياً) — لو فاضي يسجَّل وقت الحفظ بتوقيت القاهرة
+    observed_at: Optional[str] = None
+
+
+# ضمان وجود عمود توقيت الرصد (idempotent) — يمنع تعطّل البوت لو الكود نُشر قبل تشغيل ملف المايجريشن.
+# المايجريشن migrations/20260923_ai_news_observed_at.sql يبقى هو الخطوة الرسمية (فهرس + رجّع القديم).
+_AI_NEWS_SCHEMA_READY = False
+
+
+def _ensure_ai_news_observed_at(cursor):
+    global _AI_NEWS_SCHEMA_READY
+    if not _AI_NEWS_SCHEMA_READY:
+        cursor.execute("ALTER TABLE public.ai_news ADD COLUMN IF NOT EXISTS observed_at timestamp without time zone")
+        _AI_NEWS_SCHEMA_READY = True
 
 @app.get("/api/ai-news")
 def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -5346,22 +5360,34 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
     try:
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
+            _ensure_ai_news_observed_at(cursor)
             cursor.execute("""
                 INSERT INTO ai_news (
                     incident_date, incident_month, incident_description, news_type, news_publisher,
                     street_name, area_name, governorate, hospital_name, injured_count, deaths_count,
-                    news_updates, news_link, data_entry_name
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
+                    news_updates, news_link, data_entry_name, observed_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s, ''), (now() AT TIME ZONE 'Africa/Cairo'))) RETURNING id;
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
-                news.news_link, news.data_entry_name
+                news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or '')
             ))
             new_id = cursor.fetchone()[0]
 
+            # بدون لوج في audit_logs لكل خبر يرسله البوت — كانت ضوضاء غير لازمة تُغرق السجل.
+            # يبقى إشعار التحديث اللحظي في الفيد كما هو تماماً (الفاعل يظهر «نظام» عبر actor_user_id=None)،
+            # والفارق الوحيد: لا يُكتب صف في audit_logs لنشر/إرسال خبر البوت.
             try:
-                create_audit_log(cursor, user_id, "رصد خبر آلي", mission_id=None, entity_type="ai_news", entity_id=new_id, details={"action_text": f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"}, actor_user_id=None)
+                _ai_news_text = f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"
+                create_realtime_event(
+                    cursor,
+                    event_type="ai_news",
+                    action=_ai_news_text,
+                    actor_user_id=None,
+                    entity_id=new_id,
+                    details={"action_text": _ai_news_text},
+                )
             except Exception as e: pass
 
             connection.commit()
@@ -5382,17 +5408,19 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
     try:
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
+            _ensure_ai_news_observed_at(cursor)
             cursor.execute("""
                 UPDATE ai_news SET
                     incident_date=%s, incident_month=%s, incident_description=%s, news_type=%s, news_publisher=%s,
                     street_name=%s, area_name=%s, governorate=%s, hospital_name=%s, injured_count=%s, deaths_count=%s,
-                    news_updates=%s, news_link=%s, data_entry_name=%s
+                    news_updates=%s, news_link=%s, data_entry_name=%s,
+                    observed_at=COALESCE(NULLIF(%s, ''), observed_at)
                 WHERE id=%s;
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
-                news.news_link, news.data_entry_name, news_id
+                news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''), news_id
             ))
 
             try:
@@ -6175,21 +6203,25 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
                      *values, user_id),
                 )
 
-            try:
-                create_audit_log(
-                    cursor,
-                    user_id,
-                    "حفظ توقعات الطقس",
-                    mission_id=None,
-                    entity_type="weather",
-                    entity_id=None,
-                    details={
-                        "action_text": f"حفظ توقعات وردية {payload.shift} ليوم {forecast_date} لعدد {len(valid_rows)} محافظة"
-                    },
-                    realtime=(not payload.silent),
-                )
-            except Exception as e:
-                print(f"Weather audit error: {e}")
+            # 🤫 الحفظ التلقائي (silent=True) لا يُنشئ أي لوج إطلاقاً — كان يُغرق سجل النظام
+            #    بإدخال جديد مع كل رقم/قيمة تُحفظ تلقائياً. الحفظ اليدوي فقط يُسجَّل في السجل،
+            #    وحفظ التوقعات نفسه يعمل كما هو في الحالتين.
+            if not payload.silent:
+                try:
+                    create_audit_log(
+                        cursor,
+                        user_id,
+                        "حفظ توقعات الطقس",
+                        mission_id=None,
+                        entity_type="weather",
+                        entity_id=None,
+                        details={
+                            "action_text": f"حفظ توقعات وردية {payload.shift} ليوم {forecast_date} لعدد {len(valid_rows)} محافظة"
+                        },
+                        realtime=True,
+                    )
+                except Exception as e:
+                    print(f"Weather audit error: {e}")
 
             connection.commit()
             return {"message": f"تم حفظ توقعات {len(valid_rows)} محافظة بنجاح", "saved": len(valid_rows)}
