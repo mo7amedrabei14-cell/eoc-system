@@ -3959,12 +3959,19 @@ def get_audit_logs(skip: int = 0, limit: int = 0, credentials: HTTPAuthorization
     try:
         with connection.cursor() as cursor:
             # ضفنا l.entity_type عشان نفلتر بيه
-            cursor.execute("""
+            query = """
                 SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
-                ORDER BY l.created_at DESC" + (" LIMIT %s OFFSET %s" if limit and limit > 0 else " OFFSET %s") + ";
-            """, ((limit, skip) if limit and limit > 0 else (skip,)))
+                ORDER BY l.created_at DESC
+            """
+            if limit and limit > 0:
+                query += " LIMIT %s OFFSET %s"
+                params = (limit, skip)
+            else:
+                query += " OFFSET %s"
+                params = (skip,)
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             # 🎯 عرض/جلب الـactor في سجل النظام بشكل سليم (إصلاح "مستخدم محذوف" عند المالك):
             #    - الاسم الرباعي إن وُجد، وإلا نستعين بـ username كبديل.
@@ -3989,7 +3996,7 @@ def get_audit_logs(skip: int = 0, limit: int = 0, credentials: HTTPAuthorization
             ]
     except Exception as e:
         print(f"Error fetching audit logs: {e}")
-        return []
+        raise HTTPException(status_code=500, detail="تعذر تحميل سجل النظام")
     finally:
         connection.close()
 
@@ -4050,7 +4057,7 @@ def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(securit
             ]
     except Exception as e:
         print(f"Error fetching live updates: {e}")
-        return []
+        raise HTTPException(status_code=500, detail="تعذر تحميل التحديثات الحية")
     finally:
         connection.close()
 
@@ -5423,10 +5430,6 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
                 news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''), news_id
             ))
 
-            try:
-                create_audit_log(cursor, user_id, "تحديث خبر آلي", mission_id=None, entity_type="ai_news", entity_id=news_id, details={"action_text": f"تم تحديث بيانات رصد الذكاء الاصطناعي للخبر رقم {news_id}"}, actor_user_id=None)
-            except Exception as e: pass
-
             connection.commit()
             return {"message": "تم التحديث بنجاح"}
     except Exception as e:
@@ -5498,9 +5501,6 @@ def delete_ai_news(news_id: int, credentials: HTTPAuthorizationCredentials = Dep
     try:
         with connection.cursor() as cursor:
             cursor.execute("DELETE FROM ai_news WHERE id = %s", (news_id,))
-            try:
-                create_audit_log(cursor, user_id, "حذف خبر آلي", mission_id=None, entity_type="ai_news", entity_id=news_id, details={"action_text": f"تم حذف الرصد الآلي رقم {news_id}"})
-            except Exception as e: pass
             connection.commit()
             return {"message": "تم الحذف بنجاح"}
     except Exception as e:
@@ -6208,20 +6208,18 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
             #    وحفظ التوقعات نفسه يعمل كما هو في الحالتين.
             if not payload.silent:
                 try:
-                    create_audit_log(
+                    create_realtime_event(
                         cursor,
-                        user_id,
-                        "حفظ توقعات الطقس",
-                        mission_id=None,
-                        entity_type="weather",
+                        event_type="weather",
+                        action="حفظ توقعات الطقس",
+                        actor_user_id=user_id,
                         entity_id=None,
                         details={
                             "action_text": f"حفظ توقعات وردية {payload.shift} ليوم {forecast_date} لعدد {len(valid_rows)} محافظة"
                         },
-                        realtime=True,
                     )
                 except Exception as e:
-                    print(f"Weather audit error: {e}")
+                    print(f"Weather realtime error: {e}")
 
             connection.commit()
             return {"message": f"تم حفظ توقعات {len(valid_rows)} محافظة بنجاح", "saved": len(valid_rows)}
