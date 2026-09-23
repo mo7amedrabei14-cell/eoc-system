@@ -3792,7 +3792,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       "عدد المتطوعين": m.vol_count || 0,
       "عدد الغير متطوعين": m.non_vol_count || 0,
       "إجمالي المشاركين": m.total_participants || 0,
-      "كود الفريق": m.team_codes || "-",
+      // 🏷️ «كود الفريق» يقرأ من حقل «كود الفريق/الإدارة» في الاستمارة نفسها (missions.team_code)
+      //    — وليس من تجميع أكواد المشاركين (team_codes) الذي كان يُظهر «-» رغم وجود قيمة في الحقل.
+      "كود الفريق": m.team_code || m.team_codes || "-",
       "مسئول المهمة": m.responsible_person,
       "اسم السائق": m.drivers || "لا يوجد",
       "رقم السيارة": m.plates || "لا يوجد",
@@ -3801,19 +3803,31 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     }));
 
     const beneficiariesSheet = [];
+    // 📋 كل المهمات تظهر في ورقة المستفيدين — حتى التي بلا مستفيدين
+    //    (حقول المستفيدين تُترَك فارغة) — نفس مجموعة المهام في ورقة المهام تماماً.
     dayFilteredMissions.forEach(m => {
-      if (m.beneficiaries && m.beneficiaries.length > 0) {
-        m.beneficiaries.forEach(b => {
-          beneficiariesSheet.push({
-            "كود المهمة": m.mission_code,
-            "تصنيف المستفيدين": b.category_name,
-            "الرقم (المباشر)": b.direct_count,
-            "المستفيدين غير المباشر": b.indirect_count,
-            "اسم الاستمارة": m.mission_name,
-            "التاريخ": formatDateTime(m.created_at)
-          });
+      const hasBeneficiaries = m.beneficiaries && m.beneficiaries.length > 0;
+      if (!hasBeneficiaries) {
+        beneficiariesSheet.push({
+          "كود المهمة": m.mission_code,
+          "تصنيف المستفيدين": "",
+          "الرقم (المباشر)": "",
+          "المستفيدين غير المباشر": "",
+          "اسم الاستمارة": m.mission_name,
+          "التاريخ": formatDateTime(m.created_at)
         });
+        return;
       }
+      m.beneficiaries.forEach(b => {
+        beneficiariesSheet.push({
+          "كود المهمة": m.mission_code,
+          "تصنيف المستفيدين": b.category_name,
+          "الرقم (المباشر)": b.direct_count,
+          "المستفيدين غير المباشر": b.indirect_count,
+          "اسم الاستمارة": m.mission_name,
+          "التاريخ": formatDateTime(m.created_at)
+        });
+      });
     });
 
     const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
