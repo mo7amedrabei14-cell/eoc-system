@@ -1227,20 +1227,22 @@ const gridFromRows = (objs) => {
   return { header, rows: objs.map(o => header.map(h => (o[h] === undefined || o[h] === null ? '' : o[h]))) };
 };
 
-// 📏 AutoFit: حساب عرض كل عمود تلقائياً من أطول محتوى فيه (عربي = عرض 2 لكل حرف كحد أقصى).
-// يحاكي «AutoFit Column Width» في Excel: العنوان عريض يُحسب بوزن أكبر، وحد أدنى 9 وحدات.
-const autoFitWidths = (header = [], rows = []) => {
-  const text = (v) => (v === undefined || v === null ? '' : String(v));
-  const weight = header.map(() => 0);
-  header.forEach((h, i) => { weight[i] = Math.max(weight[i], text(h).length + 2); }); // العنوان عريض → +2
-  rows.forEach((r) => r.forEach((v, i) => { if (i < weight.length) weight[i] = Math.max(weight[i], text(v).length); }));
-  // الأحرف العربية أعرض قليلاً من اللاتينية: نضاعف وزن الأحرف غير اللاتينية مع سقف 60
-  return weight.map((w) => Math.min(60, Math.max(9, Math.ceil(w * 1.6))));
+// 📏 True Excel AutoFit Column Width — نفس نتيجة «Home → Format → AutoFit Column Width» تماماً.
+// 1) يقيس عرض النص المرئي لكل خلية عبر Canvas بخط Calibri 11pt (≈14.67px @96dpi) كما يعرضه Excel فعلياً.
+// 2) يطبّق نموذج Microsoft الرسمي: pixels = 7 × chars + 5 → width = (pixels − 5) / MDW (قطع لأقرب 1/256)،
+//    حيث MDW = عرض الخانة «0» بخط Calibri 11 = 7px (الخط العادي، لا العريض — تماماً كنموذج AutoFit في Excel).
+// 3) الخلايا المدمجة مستثناة من القياس كما في Excel نفسه، والأعمدة الفارغة تبقى بعرض Excel الافتراضي 8.43.
+const cellTextPx = (value) => {
+  if (value === undefined || value === null || value === '') return 0;
+  if (!cellTextPx.ctx) cellTextPx.ctx = document.createElement('canvas').getContext('2d');
+  cellTextPx.ctx.font = '14.67px "Calibri", Arial, sans-serif'; // Calibri 11pt @96dpi
+  return cellTextPx.ctx.measureText(String(value)).width;
 };
 
-// 📦 تصدير مصنّف Excel منسّق — sheets: [{name, header, rows, merges?, widths?}]
-// العرض تلقائي (AutoFit) ما لم تُمرَّر widths صريحة (يستخدمها تصدير الاستمارة الفردية فقط).
-const exportWorkbook = async (sheets, fileName, wrapText = true) => {
+// 📦 تصدير مصنّف Excel منسّق — sheets: [{name, header, rows, merges?}] — العرض AutoFit حقيقي دائماً
+// 📐 ثابت على كل التصديرات في النظام: تعطيل التفاف النص (Wrap Text) لكل الخلايا + AutoFit تلقائي للأعمدة.
+// (البارامتر الثالث أُهمل لضمان التوافق — التفاف النص معطّل دائماً والأعمدة تتلاءم مع المحتوى تلقائياً.)
+const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: التفاف النص معطل دائماً */) => {
   const ExcelJS = await import('exceljs');
   const wb = new ExcelJS.Workbook();
   wb.created = new Date();
@@ -1248,20 +1250,45 @@ const exportWorkbook = async (sheets, fileName, wrapText = true) => {
   const headerStyle = {
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } },
     font: { bold: true },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
     border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
   };
   const cellStyle = {
-    alignment: { horizontal: 'center', vertical: 'center', wrapText },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
     border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
   };
-  sheets.forEach(({ name, header = [], rows = [], merges = [], widths }) => {
+  sheets.forEach(({ name, header = [], rows = [], merges = [], fills = [] }) => {
     const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true }] });
     if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
     rows.forEach((r) => ws.addRow(r).eachCell((c) => Object.assign(c, cellStyle)));
     merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
-    if (widths) ws.columns = widths.map((w) => ({ width: w }));
-    else if (header.length) ws.columns = autoFitWidths(header, rows);
+    // 🎨 Fill Color اختياري لكل ورقة: [{ header, value, argb }] — يلوّن خلفية الخلايا التي قيمتها تطابق تماماً
+    fills.forEach(({ header: fillHeader, value: fillValue, argb }) => {
+      const colIdx = header.indexOf(fillHeader);
+      if (colIdx === -1) return;
+      rows.forEach((r, ri) => {
+        if (String(r[colIdx]) === String(fillValue)) {
+          ws.getRow(ri + 2).getCell(colIdx + 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb } };
+        }
+      });
+    });
+    // 📐 True Excel AutoFit — يُطبَّق دائماً على كل ورقة: أعرض محتوى غير مدمج في العمود هو عرضه النهائي.
+    //    القياس دائماً بخط Calibri 11pt العادي (نموذج Excel)، ثم width = (pixels − 5) / MDW = pixels / 7.
+    const mergedCells = new Set(merges.flatMap(([c1, r1, c2, r2]) => {
+      const cells = [];
+      for (let rr = r1; rr <= r2; rr++) for (let cc = c1; cc <= c2; cc++) cells.push(`${rr}:${cc}`);
+      return cells;
+    }));
+    const colCount = rows.reduce((m, r) => Math.max(m, r.length), header.length);
+    const px = new Array(colCount).fill(0);
+    const feed = (vals, rowIdx) => vals.forEach((v, ci) => {
+      if (ci >= px.length || mergedCells.has(`${rowIdx}:${ci + 1}`)) return;
+      px[ci] = Math.max(px[ci], cellTextPx(v));
+    });
+    feed(header, 1);
+    rows.forEach((r, ri) => feed(r, ri + 2)); // الصفوف تبدأ من الصف 2 في الورقة
+    const MDW = 7; // عرض الخانة «0» بخط Calibri 11 (Microsoft: pixels = 7 × chars + 5)
+    ws.columns = px.map(p => ({ width: p === 0 ? 8.43 : Math.floor((p / MDW) * 256) / 256 }));
   });
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -3830,9 +3857,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       });
     });
 
-    const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
+    const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet), fills: [{ header: 'تصنيف المهمة', value: 'مفتوحة', argb: 'FF86D1E6' }] }];
     if (beneficiariesSheet.length > 0) sheets.push({ name: 'إحصائيات المستفيدين', ...gridFromRows(beneficiariesSheet) });
-    try { await exportWorkbook(sheets, `السجل_الشامل_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook(sheets, `السجل_الشامل_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
@@ -4030,8 +4057,6 @@ row++;
       header: aoa[0] || [],
       rows: aoa.slice(1),
       merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
-      widths: Array.from({ length: TOTAL }, (_, i) => (i === 0 ? 16 : 15)),
-
     }], `${rawName}_${missionFileDate}.xlsx`); setCustomAlert("تم تصدير الاستمارة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
@@ -4417,6 +4442,9 @@ row++;
       'مكتملة (تمت المراجعة من إدارة الشباب)': { text: 'مكتملة (تمت المراجعة من إدارة الشباب)', color: 'text-[var(--info)] bg-[var(--info-soft)] border-[var(--info)]/20' },
       'Returned': { text: 'إرجاع للمتطوع', color: 'text-[var(--warn)] bg-[var(--warn-soft)] border-[var(--warn)]/20' },
       'Cancelled': { text: 'ملغاة', color: 'text-[var(--accent)] bg-[var(--danger-soft)] border-[var(--accent)]/20' },
+      // 🟦 حالة «Open» بتعبئة خلفية (Fill Color) سماوية #86D1E6 — لون الخط يبقى كما هو بدون تغيير
+      'Open': { text: translate('مفتوحة', lang), color: 'bg-[#86D1E6] border-[#86D1E6]' },
+      'مفتوحة': { text: translate('مفتوحة', lang), color: 'bg-[#86D1E6] border-[#86D1E6]' },
     };
     const s = statuses[status] || statuses['Draft'];
     return <span className={`badge ${s.color}`}>{s.text}</span>;
@@ -4507,6 +4535,16 @@ const completedAt =
         (m.mission_type && m.mission_type.toLowerCase().includes(term))
       );
     }
+
+    // 🔝 «Open» دائماً في الأعلى — كأن البيانات مرتبة بالحالة:
+    //    Open أولاً، ثم الحالات المفتوحة (نشطة/قيد المراجعة/معتمدة/إرجاع)، والمكتملة/الملغاة في الأسفل —
+    //    كل مجموعة تحافظ على ترتيبها الزمني الأصلي.
+    const statusRank = (st) => {
+      if (st === 'Open') return 0;
+      if (['Completed', 'مكتملة', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)', 'Cancelled'].includes(st)) return 2;
+      return 1;
+    };
+    filteredMissions = [...filteredMissions].sort((a, b) => statusRank(a.status) - statusRank(b.status));
 
     return { filteredMissions, regionStats };
   }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, filterBranch, searchTerm]);
@@ -4683,7 +4721,7 @@ const completedAt =
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--ok)]">فترة المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">كود المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">التمركز (الفرع)</th>
-              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 min-w-[220px]">اسم المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 min-w-[550px]">اسم المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">السيارات والسائقين</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">نوع المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مكان المهمة</th>
@@ -4717,7 +4755,7 @@ const completedAt =
               <tr key={`mission-${m.mission_id}`} id={`focus-row-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'} ${String(focusedRowId) === String(m.mission_id) ? ' focus-row' : ''}`}>
                 <td data-label="تاريخ الإنشاء" className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
                 <td data-label="تاريخ المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
-                <td data-label="تصنيف المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/25' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
+                <td data-label="تصنيف المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className={`inline-flex px-2.5 py-1 rounded-lg text-[11px] font-bold border ${m.mission_classification === 'مفتوحة' ? 'bg-[#86D1E6] text-[var(--ink)] border-[#86D1E6]' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>{m.mission_classification || 'عادية'}</span></td>
                 <td data-label="فترة المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60">
                   <div className="inline-flex items-center gap-2 bg-[var(--surface-2)] px-2.5 py-1.5 rounded-lg border border-[var(--border)] font-mono text-[11px] whitespace-nowrap">
                     <span className="text-[var(--ok)]">من: {m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : (m.created_at ? formatDateTime(m.created_at) : 'غير مسجل')}</span>
@@ -6190,7 +6228,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       if (entityFilter === 'earthquake') fileName = 'سجل_لوج_الزلازل.xlsx';
       if (entityFilter === 'handover') fileName = 'سجل_لوج_تسليم_وتسلم_المشرفين.xlsx';
 
-      await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${filterDate || todayFileDate()}.xlsx`, false);
+      await exportWorkbook([{ name: 'الأرشيف', ...gridFromRows(excelData) }], `${fileName.replace(/\.xlsx$/i, '')}_${filterDate || todayFileDate()}.xlsx`);
       setCustomAlert("تم تصدير الأرشيف بنجاح!");
     } catch (err) {
       setCustomAlert("حدث خطأ أثناء التصدير.");
@@ -6545,7 +6583,7 @@ const [nd, setNd] = useState({
       "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
     }));
-    try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // تصدير خبر واحد — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -7236,7 +7274,7 @@ const visibleBranches = (
         'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
         'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
       }));
-      await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}.xlsx`, false);
+      await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}.xlsx`);
       setCustomAlert("تم تصدير الطقس اليومي بنجاح!");
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
@@ -7264,7 +7302,7 @@ const visibleBranches = (
       const sheets = ['morning', 'evening', 'night']
         .map(k => ({ name: SHIFT_SHEET_NAMES[k], ...gridFromRows(data.filter(r => r.shift === k).map(toLogRow)) }))
         .filter(s => s && s.rows.length > 0);
-      await exportWorkbook(sheets, `سجل_الورديات_الثلاث_${filterDate}.xlsx`, false);
+      await exportWorkbook(sheets, `سجل_الورديات_الثلاث_${filterDate}.xlsx`);
       setCustomAlert("تم تصدير سجل الورديات بنجاح!");
     } catch (e) { setCustomAlert('حدث خطأ أثناء التصدير.'); }
   };
@@ -7883,7 +7921,7 @@ const onMatrixChange = (s, d, val) => {
     // 📌 السجل الشامل: يتبع فلتر اليوم المعروض — يوم محدد → سجلات هذا اليوم فقط، بدون فلتر → كل الأيام.
     const allRows = filteredHandovers.map(r => matrixToExportRow(r));
     if (!allRows.length) { setNotice(T('لا توجد تسليمات في هذا اليوم', 'No handovers on the selected day')); return; }
-    try { await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: T('سجل تسليم وتسلم المشرفين', 'Handover Register'), ...gridFromRows(allRows) }], `السجل_الشامل_تسليمات_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   if (!canAccess) {
@@ -8315,7 +8353,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "اسم مدخل الخبر": d.data_entry_name || '',
       "ملاحظات": d.notes || ''
     }));
-    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(disasterRows) }], `سجل_الكوارث_العالمية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 💡 تصدير الكارثة الفردية — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
@@ -8834,13 +8872,13 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleExportGlobalEqs = async () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
     const eqRows = filteredGlobalEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "الشهر": eq.month || '', "الدولة": eq.country || '', "القوة بالريختر": eq.magnitude || '', "التوقيت": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "المنطقة": eq.region || '', "الحالة": eq.status || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    try { await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'الزلازل العالمية', ...gridFromRows(eqRows) }], `سجل_الزلازل_العالمية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleExportEgyptEqs = async () => {
     if (filteredEgyptEqs.length === 0) return setCustomAlert("لا توجد زلازل مصرية للتصدير حالياً.");
     const eqRows = filteredEgyptEqs.map(eq => ({ "التاريخ": formatDateTime(eq.date), "وقت الزلزال": formatTime12(eq.time), "العمق": eq.depth_km || 'KM', "القوة بالريختر": eq.magnitude || '', "المنطقة": eq.region || '', "longitude": eq.longitude || '', "Latitude": eq.latitude || '' }));
-    try { await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'زلازل مصر', ...gridFromRows(eqRows) }], `سجل_زلازل_مصر_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الزلازل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const uniqueCountriesCount = [...new Set(filteredGlobalEqs.map(e => e.country))].filter(Boolean).length;
@@ -9691,7 +9729,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         { name: T('تقييم الذكاء الاصطناعي', 'AI Operational Assessment'), ...gridFromRows(aiRows) }
       ];
 
-      await exportWorkbook(sheets, `تقرير_استخبارات_الطقس_${targetDate}.xlsx`, false);
+      await exportWorkbook(sheets, `تقرير_استخبارات_الطقس_${targetDate}.xlsx`);
       if (setCustomAlert) setCustomAlert(T("تم تصدير تقرير استخبارات الطقس الشامل بنجاح!", "Weather intelligence report exported successfully!"));
     } catch (err) {
       console.error("Export error:", err);
@@ -10491,7 +10529,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     }));
-    try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${filterDate || todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const handleDeleteAiNews = (id) => {
@@ -11379,7 +11417,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       "عدد ساعات آخر مهمة": fmtHours(p.last_mission_hours, lang),
       "إجمالي الساعات": fmtHours(p.total_hours, lang)
     }));
-    try { await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${todayFileDate()}.xlsx`, false); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook([{ name: 'القوة البشرية', ...gridFromRows(hrRows) }], `سجل_القوة_البشرية_${todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   const branchNames = [...new Set(branches.map(b => b.name === 'المركز العام' ? 'القاهرة' : b.name))];
