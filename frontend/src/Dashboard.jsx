@@ -4909,7 +4909,7 @@ row++;
                 <td data-label="نوع المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_type}</td>
                 <td data-label="مكان المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
                 <td data-label="مسؤول المهمة" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
-                <td data-label="عدد المشاركين" className="px-3 md:px-4 py-3 text-[var(--ink-2)] font-bold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.participants_count || 0}</td>
+                <td data-label="عدد المشاركين" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.total_participants || 0}</td>
                 <td data-label="مصدر البلاغ" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
                 <td data-label="تاريخ الانتهاء" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.completion_date)}</td>
                 <td data-label="الحالة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><StatusBadge status={m.status} /></td>
