@@ -473,7 +473,7 @@ const ENGLISH_UI = {
   'البحيرة': 'Beheira',
   'مطروح': 'Matrouh',
   'الإسماعيلية': 'Ismailia',
-  'بورسعيد': 'Port Said',
+  'بور سعيد': 'Port Said',
   'السويس': 'Suez',
   'شمال سيناء': 'North Sinai',
   'جنوب سيناء': 'South Sinai',

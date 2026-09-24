@@ -43,7 +43,7 @@ VALUES
     ('السويس',        'Suez',          29.9737, 32.5263, NULL, NULL),
     ('الشرقية',       'Sharqia',       30.5877, 31.5023, NULL, NULL),
     ('الإسماعيلية',   'Ismailia',      30.5971, 32.2725, NULL, NULL),
-    ('بورسعيد',       'Port Said',     31.2565, 32.2839, NULL, NULL),
+    ('بور سعيد',       'Port Said',     31.2565, 32.2839, NULL, NULL),
     ('المنوفية',      'Monufia',       30.5526, 31.0090, NULL, NULL),
     ('الغربية',       'Gharbia',       30.7833, 31.0033, NULL, NULL),
     ('الدقهلية',      'Dakahlia',      31.0364, 31.3807, NULL, NULL),
