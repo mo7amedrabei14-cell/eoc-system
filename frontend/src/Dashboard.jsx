@@ -3233,6 +3233,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 🛡️ تسلسل الطلبات: آخر طلب فقط يحق له كتابة القائمة — الرد القديم المتأخر يُهمَل.
   const missionsFetchSeqRef = useRef(0);
 
+  const [missionsLoaded, setMissionsLoaded] = useState(false); // 🛡️ «لا توجد مهام» لا تُعرض قبل نجاح الجلب فعلاً
+
   const fetchMissions = async (silent = false, _retried = 0) => {
     const seq = ++missionsFetchSeqRef.current;
     if (!silent) setIsLoading(true);
@@ -3263,6 +3265,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         // 🛡️ رد طلب قديم (انطلق قبل طلب أحدث ووصل بعده) ⇒ يُهمَل ولا يمسح القائمة
         if (seq !== missionsFetchSeqRef.current) return;
         setMissionsList(data);
+        setMissionsLoaded(true);
       }
     } catch {
       // 🛡️ فشل اتصال: نفس سياسة إعادة المحاولة — الصفحة لا تُظهر «لا مهام» بسبب انقطاع عابر
@@ -4862,7 +4865,7 @@ row++;
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
+            {(isLoading || !missionsLoaded) ? (
               <tr>
                 <td colSpan="16" className="p-6">
                   <div className="space-y-3 animate-fade-in">

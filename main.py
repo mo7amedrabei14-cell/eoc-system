@@ -4338,9 +4338,11 @@ def get_audit_logs(skip: int = 0, limit: int = 0, credentials: HTTPAuthorization
         with connection.cursor() as cursor:
             # ضفنا l.entity_type عشان نفلتر بيه
             query = """
-                SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type
+                SELECT l.audit_id, l.user_id, u.full_name, u.username, l.action, l.details, l.created_at, l.entity_type,
+                       l.entity_id, m.mission_code, m.mission_name
                 FROM audit_logs l
                 LEFT JOIN users u ON l.user_id = u.user_id
+                LEFT JOIN missions m ON l.entity_type = 'mission' AND m.mission_id = l.entity_id
                 ORDER BY l.created_at DESC
             """
             if limit and limit > 0:
@@ -4363,11 +4365,30 @@ def get_audit_logs(skip: int = 0, limit: int = 0, credentials: HTTPAuthorization
                 if r[1] is not None:
                     return f"مستخدم #{r[1]}"
                 return "غير محدد"
+
+            # 🏷️ إثراء موحّد: كود الاستمارة في نص كل لوج يخص مهمة — بدون فتح التفاصيل
+            def _details_with_code(r):
+                _d = r[5].get("action_text", str(r[5])) if isinstance(r[5], dict) else str(r[5] or "")
+                if r[7] != 'mission':
+                    return _d
+                if r[9]:
+                    _code = str(r[9]).strip()
+                    if not _code.startswith('#'):
+                        _code = '#' + _code
+                    if _code in _d:
+                        return _d
+                    _name = str(r[10]).strip() if r[10] else ''
+                    _tag = f"{_code} — {_name}" if _name else _code
+                    return f"{_d} — [{_tag}]" if _d else f"[{_tag}]"
+                if r[8]:
+                    return f"{_d} — [استمارة #{r[8]} (محذوفة)]" if _d else f"[استمارة #{r[8]} (محذوفة)]"
+                return _d
+
             return [
                 {
                     "log_id": r[0], "user_id": r[1], "full_name": _actor_name(r),
                     "action": r[4],
-                    "details": r[5].get("action_text", str(r[5])) if isinstance(r[5], dict) else str(r[5] or ""),
+                    "details": _details_with_code(r),
                     "created_at": r[6].strftime("%Y-%m-%d %H:%M:%S") if r[6] else "",
                     "entity_type": r[7]
                 } for r in rows
