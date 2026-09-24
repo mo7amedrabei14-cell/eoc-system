@@ -8082,7 +8082,7 @@ const onMatrixChange = (s, d, val) => {
         <StatCard title={T('إجمالي التسليمات', 'Total Handovers')} value={handovers.length} color="text-white" borderHighlight />
         <StatCard title={T('آخر تسليم', 'Latest Handover')} value={handovers[0] ? fmtDate(handovers[0].handover_date) : '—'} color="text-[var(--accent)]" />
         <StatCard title={T('إجمالي أفراد الورديات', 'Total Shift Personnel')} value={handovers.reduce((a, r) => a + sumMatrix(r.shift_matrix), 0)} color="text-[var(--ok)]" />
-        <StatCard title={T('إجمالي الأجهزة', 'Total Devices')} value={handovers.reduce((a, r) => a + (r.tetra_count || 0) + (r.huawei_count || 0), 0)} color="text-purple-400" />
+        <StatCard title={T('أجهزة المركز (آخر تسليم)', 'Devices (Latest Handover)')} value={handovers[0] ? (handovers[0].tetra_count || 0) + (handovers[0].huawei_count || 0) : 0} color="text-purple-400" />
       </div>
 
       <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col">

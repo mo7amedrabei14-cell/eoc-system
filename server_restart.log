@@ -6000,3 +6000,552 @@ INFO:     127.0.0.1:59623 - "GET /api/realtime/events?after_id=5030&limit=100 HT
 INFO:     127.0.0.1:53184 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:61930 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:57177 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64313 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62728 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52739 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56113 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53887 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49821 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59366 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60419 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63252 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61145 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50606 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51836 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65062 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60023 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61963 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56504 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61283 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51924 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61396 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60075 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50989 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61798 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53986 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64503 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53083 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60082 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64327 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51968 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57945 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51085 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56636 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65200 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57361 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61767 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52045 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64671 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62646 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55948 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64191 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57649 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61417 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50325 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65132 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55843 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64891 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56775 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55070 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51104 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59665 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56675 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59002 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57129 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64526 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51838 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62680 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50014 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53038 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55554 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59759 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64761 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57809 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62591 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60080 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61216 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63311 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50844 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62593 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51799 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61297 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52952 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55622 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64935 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53237 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57800 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51159 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65213 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62159 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58115 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54530 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60511 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62638 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60056 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61609 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58431 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51521 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65108 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57025 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63119 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52459 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60867 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51081 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59905 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53014 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58975 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60020 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50130 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59499 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49879 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59427 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59432 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59431 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59433 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55847 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56605 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57322 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54148 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56852 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54710 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63240 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53660 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60701 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56194 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64695 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64643 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63514 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54189 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62090 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62093 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62092 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59790 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62094 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51351 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56615 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63789 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64974 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54759 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52462 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59911 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49678 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58633 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58784 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61554 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58150 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49683 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49679 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49681 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49684 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50342 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58773 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49674 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54643 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55251 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60333 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55502 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50754 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49882 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60521 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57809 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57368 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62250 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53503 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58470 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53501 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53505 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64665 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50526 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55196 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53777 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64663 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52311 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62835 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54749 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64069 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57742 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50081 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57767 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62092 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63305 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56454 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56449 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56450 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56455 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63793 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50708 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64837 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60620 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54242 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60888 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58400 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58132 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65507 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64799 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49696 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49697 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51903 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62986 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55309 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55313 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55310 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55314 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55306 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50342 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64692 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59139 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63656 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58458 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52312 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56677 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58456 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56109 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50644 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54231 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53473 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59453 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59458 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59457 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59460 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54879 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59452 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59418 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59919 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55599 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60011 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58676 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56565 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56567 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55098 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58714 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50980 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58715 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58094 - "GET /api/audit-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61198 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54523 - "GET /api/audit-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64161 - "GET /api/audit-logs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60147 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53718 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59126 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63527 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57528 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54951 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56296 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56751 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54690 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50718 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53236 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49678 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59416 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63895 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60132 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52766 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54721 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62830 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61937 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52237 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64404 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64541 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59605 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57696 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55879 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60141 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58762 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52677 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58706 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64264 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54479 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61953 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63399 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63782 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57359 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60371 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57070 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64664 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62926 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55844 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65268 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64526 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60216 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56943 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53518 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61159 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50749 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54945 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57698 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57017 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55756 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56570 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59762 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57733 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51988 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63724 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59149 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56824 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65504 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59127 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59911 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63374 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63477 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60413 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 570, in idempotency_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 1281, in handle
+    await super().handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 280, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 4439, in get_realtime_events
+    # (\u0641\u0639\u0644 \u0645\u0633\u062c\u0651\u0644 \u0628\u0644\u0627 \u0641\u0627\u0639\u0644) \u0646\u0639\u0631\u0636 "\u063a\u064a\u0631 \u0645\u062d\u062f\u062f" \u0628\u062f\u0644 \u0627\u0644\u0648\u0635\u0641 \u0627\u0644\u0645\u0636\u0644\u0650\u0651\u0644 "\u0645\u0633\u062a\u062e\u062f\u0645 \u0645\u062d\u0630\u0648\u0641".
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\auth.py", line 151, in get_user_role
+    connection = get_connection()
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\db.py", line 11, in get_connection
+    return psycopg.connect(
+           ~~~~~~~~~~~~~~~^
+        os.getenv("DATABASE_URL"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        keepalives_count=5,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psycopg\connection.py", line 122, in connect
+    raise last_ex.with_traceback(None)
+psycopg.errors.ConnectionTimeout: connection timeout expired
+INFO:     127.0.0.1:52301 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 570, in idempotency_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 1281, in handle
+    await super().handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 280, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 4447, in get_realtime_events
+    return "\u063a\u064a\u0631 \u0645\u062d\u062f\u062f"
+     ^^^^^^^^^^^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\db.py", line 11, in get_connection
+    return psycopg.connect(
+           ~~~~~~~~~~~~~~~^
+        os.getenv("DATABASE_URL"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        keepalives_count=5,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psycopg\connection.py", line 122, in connect
+    raise last_ex.with_traceback(None)
+psycopg.errors.ConnectionTimeout: connection timeout expired
+INFO:     127.0.0.1:60354 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62494 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49859 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54097 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51492 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60574 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65424 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63318 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59398 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54836 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57798 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52698 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62902 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61322 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64899 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59431 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61600 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51424 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64162 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65228 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57278 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60407 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63442 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60737 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54647 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55934 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60516 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50622 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51300 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50394 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60540 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57601 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55228 - "GET /api/realtime/events?after_id=5031&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59004 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59006 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59005 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59008 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62878 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59003 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50269 - "GET /api/global-disasters HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59002 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51186 - "GET /api/earthquakes/egypt HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62876 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61724 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60738 - "GET /api/earthquakes/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55958 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61722 - "GET /api/weather/daily?date=2026-09-24 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50052 - "GET /api/local-news HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64989 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56375 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65381 - "GET /api/realtime/events?after_id=5035&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61719 - "GET /api/realtime/events?after_id=5035&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56918 - "GET /api/realtime/events?after_id=5035&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57477 - "GET /api/handovers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59259 - "GET /api/handovers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57038 - "GET /api/realtime/events?after_id=5035&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63369 - "GET /api/realtime/events?after_id=5035&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60719 - "GET /api/realtime/events?after_id=5035&limit=100 HTTP/1.1" 200 OK
