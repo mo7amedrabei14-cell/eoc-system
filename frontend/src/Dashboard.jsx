@@ -2606,7 +2606,16 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
     if (!isFinished) {
       return createdAt <= filterDate;
     }
-        const completedAt = missionClosedDay(m);
+    // 🎯 مطابقة تماماً لمنطق MissionsView (useMemo في سجل المتابعة): المكتملة تُعرض
+    //    يوم إغلاقها الفعلي (completion_date)، وليس يوم closed_at الذي يُحدَّث عند أي
+    //    مزامنة حية/إعادة فتح. closed_at يحمل تاريخ المزامنة ≠ تاريخ الإغلاق الفعلي،
+    //    وبالتالي يُعدّ المهمة «مكتملة اليوم» حتى لو أُغلقت_days_ ago — ما يضخّم العدد.
+    const storedCompletedAt = (m.completion_date && m.completion_date !== '-')
+      ? String(m.completion_date).split(/[ T]/)[0]
+      : null;
+    const completedAt = (storedCompletedAt && storedCompletedAt >= createdAt)
+      ? storedCompletedAt
+      : createdAt;
 
     if (isCompleted && completedAt) {
       return completedAt === filterDate;
@@ -2622,9 +2631,11 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   const YOUTH_REVIEWED_STATUS = 'Completed (Reviewed by Youth Administration)';
   const YOUTH_REVIEWED_STATUS_AR = 'مكتملة (تمت المراجعة من إدارة الشباب)';
   const isFinishedStatus = (st) => ['Completed', 'Cancelled', YOUTH_REVIEWED_STATUS, YOUTH_REVIEWED_STATUS_AR].includes(st);
-  const activeDaily = dailyMissions.filter(m => m.mission_classification !== 'مفتوحة' && !isFinishedStatus(m.status)).length;
-  const activeOpen = dailyMissions.filter(m => m.mission_classification === 'مفتوحة' && !isFinishedStatus(m.status)).length;
-  const completedMissions = dailyMissions.filter(m => m.status === 'Completed').length;
+  // 🎯 نشطة = غير مكتملة/ملغاة (same isFinishedStatus as MissionsView statusFilter='active')
+//    — لا يُستبعد بالتصنيف: المهمة المفتوحة المُعتمدّة (Approved) هي «نشطة» بالفعل،
+//      وفرزها هنا بـ !== 'فتحة' كان يُخفي 5 من أصل 6 مهام نشطة اليوم.
+const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).length;
+  const completedMissions = dailyMissions.filter(m => isFinishedStatus(m.status)).length;
   const totalNews = dailyNews.length;
   const activeNews = dailyNews.filter(n => n.is_field_response).length;
   
@@ -3215,15 +3226,23 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); 
   // 🔎 بحث باسم المشارك/المتطوع — فلتر قراءة فقط يُطبَّق على السيرفر (mission_participants)
   const [participantSearch, setParticipantSearch] = useState(''); 
+  // 🛡️ المرجع الحي للعبَر: كل منادي fetchMissions (المؤقت/التحديث اللحظي) يقرأ من هنا —
+  //    لا إغلاق قديم يرسل الطلب بلا participant_name فيمحو نتيجة البحث بعد ثوانٍ.
+  const participantSearchRef = useRef('');
+  participantSearchRef.current = participantSearch;
+  // 🛡️ تسلسل الطلبات: آخر طلب فقط يحق له كتابة القائمة — الرد القديم المتأخر يُهمَل.
+  const missionsFetchSeqRef = useRef(0);
 
-  const fetchMissions = async (silent = false) => {
+  const fetchMissions = async (silent = false, _retried = 0) => {
+    const seq = ++missionsFetchSeqRef.current;
     if (!silent) setIsLoading(true);
     const token = getStoredAccessToken();
     try {
-      // 🔎 فلتر اسم المشارك/المتطوع (قراءة فقط): يُمرَّر للسيرفر ليُطبَّق في SQL
-      //    فوق العلاقة الفعلية mission_participants — لا تحميل لكل المشاركين في الواجهة.
-      const pUrl = participantSearch.trim()
-        ? `${BASE}/api/missions?participant_name=${encodeURIComponent(participantSearch.trim())}`
+      // 🔎 فلتر اسم المشارك/المتطوع (قراءة فقط): يُمرَّر للسيرفر ليُطبَّق في SQL.
+      //    🛡️ القراءة من المرجع الحي: المؤقتات والتحديثات اللحظية لا تمحو نتائج البحث.
+      const pTerm = (participantSearchRef.current || '').trim();
+      const pUrl = pTerm
+        ? `${BASE}/api/missions?participant_name=${encodeURIComponent(pTerm)}`
         : `${BASE}/api/missions`;
       const res = await fetch(pUrl, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) {
@@ -3232,11 +3251,29 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         window.location.assign('/');
         return;
       }
-      if (res.ok) setMissionsList(await res.json());
+      // 🛡️ فشل شبكة/سيرفر (مثل 500 لحظي): إعادة محاولة تلقائية حتى 4 مرات —
+      //    لا «لا توجد مهام» 10 ثوانٍ عند فتح الصفحة بسبب خطأ عابر
+      if (!res.ok && _retried < 4) {
+        await new Promise(r => setTimeout(r, 900 * (_retried + 1)));
+        if (seq !== missionsFetchSeqRef.current) return; // طلب أحدث حل محلنا
+        return fetchMissions(silent, _retried + 1);
+      }
+      if (res.ok) {
+        const data = await res.json();
+        // 🛡️ رد طلب قديم (انطلق قبل طلب أحدث ووصل بعده) ⇒ يُهمَل ولا يمسح القائمة
+        if (seq !== missionsFetchSeqRef.current) return;
+        setMissionsList(data);
+      }
     } catch {
+      // 🛡️ فشل اتصال: نفس سياسة إعادة المحاولة — الصفحة لا تُظهر «لا مهام» بسبب انقطاع عابر
+      if (_retried < 4) {
+        await new Promise(r => setTimeout(r, 900 * (_retried + 1)));
+        if (seq !== missionsFetchSeqRef.current) return;
+        return fetchMissions(silent, _retried + 1);
+      }
       // Keep the Dashboard shell mounted when mission data is unavailable.
     }
-    finally { if (!silent) setIsLoading(false); }
+    finally { if (!silent) setIsLoading(false); } // التصفير دائماً للطلبات غير الصامتة — لا هيكل تحميل عالق
   };
 
   useEffect(() => { fetchMissions(); }, []);
@@ -3301,7 +3338,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         setModalError(null);
         setCurrentMissionData(data);
         triggerFormGlow();
-        setFieldStatus((data.field_operation_status || (data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة'));
+        setFieldStatus((data.field_operation_status || ((data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة')));
         const el = (id) => document.getElementById(id);
         const idMap = {
           f_mission_name: 'mission_name', f_mission_code: 'mission_code', f_team_code: 'team_code',
@@ -4175,8 +4212,11 @@ row++;
   // السيرفر يدمج الحقول المختصة فقط، وخط السير/المستفيدون/المشاركون/حالة العملية
   // الميدانية تبقى كما هي مخزَّنة (قاعدة: الحقل لا يتغير لمجرد تغيّر حقل آخر).
   const runMissionStatusTransition = async (targetStatus) => {
-    if (submitLockRef.current || isSubmitting) return;
-    if (!currentMissionData?.mission_id) return; // مهمة جديدة: الحفظ الأول كامل فقط
+    // 🛡️ القفل المتزامن (submitLockRef / isSubmitting) يُ manages من قبل المُnadِر
+    //    (handleSubmit) قبل المكالمة — تكرار الفحص هنا كان يُعَقَّل كل إجراء سير عمل
+    //    بشكل تام (القيمة تكون true بالفعل فيرجع undefined ويُهمَل handleSubmit بدون تنبيه).
+    //    لم يُحذَّف إلا الفحص المكرر؛ بقية المنطق (ال,currentMissionData, الإرسال) سليمة.
+    if (!currentMissionData?.mission_id) return; // mission جديدة: الحفظ الأول كامل فقط
     submitLockRef.current = true;
     setIsSubmitting(true);
     try {
@@ -4528,7 +4568,7 @@ row++;
   const { filteredMissions, regionStats } = useMemo(() => {
     let baseMissions = missionsList;
 
-    // 🚨 حائط الصد: المتطوع مقفول عليه إقليمه فقط
+    // 🚨 حائط الصد: المتطوع مقفول عليه إقليمه فقط (RBAC — يبقى مفعّلاً دائماً حتى أثناء البحث)
     if (isVolunteer) {
       baseMissions = baseMissions.filter(m => {
         const missionRegion = regionMap[normalizeName(m.branch)] || 'hq';
@@ -4536,48 +4576,55 @@ row++;
       });
     }
 
-    if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
-    else if (missionViewType === 'daily') baseMissions = baseMissions.filter(m => m.mission_classification !== 'مفتوحة');
+    // 🔎 أثناء البحث بالمشارك: نتخطى كل فلاتر العرض (التصنيف/التاريخ/الحالة/الإقليم/الفرع/البحث السريع)
+    //    داخلياً — النتيجة = كل مهام المشارك بغضّ الفلاتر الظاهرة، والفلاتر نفسها تبقى كما هي على
+    //    الصفحة دون تغيير، وعند مسح الاسم يعود العرض الطبيعي (يوم اليوم) فوراً.
+    const searchingParticipant = participantSearch.trim() !== '';
 
-    if (filterDate) {
-       baseMissions = baseMissions.filter(m => {
-          const createdAt = (m.created_at && m.created_at !== '-')
+    if (!searchingParticipant) {
+      if (missionViewType === 'open') baseMissions = baseMissions.filter(m => m.mission_classification === 'مفتوحة');
+      else if (missionViewType === 'daily') baseMissions = baseMissions.filter(m => m.mission_classification !== 'مفتوحة');
+
+      if (filterDate) {
+         baseMissions = baseMissions.filter(m => {
+            const createdAt = (m.created_at && m.created_at !== '-')
   ? String(m.created_at).split(/[ T]/)[0]
   : ((m.creation_datetime && m.creation_datetime !== '-')
     ? String(m.creation_datetime).split(/[ T]/)[0]
     : '');
 
-          const isCompleted = ['Completed', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status);
-          const isCancelled = m.status === 'Cancelled';
-          const isFinished = isCompleted || isCancelled;
-          // Active missions persist across all days after creation until completed/cancelled
-          if (!isFinished) {
-             return createdAt <= filterDate;
-          }
-          const storedCompletedAt = (m.completion_date && m.completion_date !== '-')
+            const isCompleted = ['Completed', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status);
+            const isCancelled = m.status === 'Cancelled';
+            const isFinished = isCompleted || isCancelled;
+            // Active missions persist across all days after creation until completed/cancelled
+            if (!isFinished) {
+               return createdAt <= filterDate;
+            }
+            const storedCompletedAt = (m.completion_date && m.completion_date !== '-')
   ? String(m.completion_date).split(/[ T]/)[0]
   : null;
 
-// حماية للبيانات القديمة التي تحمل تاريخ إغلاق أقدم من إنشاء السجل
-const completedAt =
-  storedCompletedAt && storedCompletedAt >= createdAt
-    ? storedCompletedAt
-    : createdAt;
+  // حماية للبيانات القديمة التي تحمل تاريخ إغلاق أقدم من إنشاء السجل
+  const completedAt =
+    storedCompletedAt && storedCompletedAt >= createdAt
+      ? storedCompletedAt
+      : createdAt;
 
-          if (isCompleted && completedAt) {
-             return completedAt === filterDate;
-          }
-          // Cancelled without completion_date: show on creation date only
-          return createdAt === filterDate;
-       });
+            if (isCompleted && completedAt) {
+               return completedAt === filterDate;
+            }
+            // Cancelled without completion_date: show on creation date only
+            return createdAt === filterDate;
+         });
+      }
+
+      // 🔒 الفلاتر: نشطة / مكتملة (كل الصيغ) / تمت مراجعتها من إدارة الشباب (الحالة الجديدة فقط)
+      if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
+      else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
+      else if (statusFilter === 'youth_reviewed') baseMissions = baseMissions.filter(m => ['Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
     }
 
-    // 🔒 الفلاتر: نشطة / مكتملة (كل الصيغ) / تمت مراجعتها من إدارة الشباب (الحالة الجديدة فقط)
-    if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
-    else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
-    else if (statusFilter === 'youth_reviewed') baseMissions = baseMissions.filter(m => ['Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
-
-    // 💡 إحصائيات الأقاليم
+    // 💡 إحصائيات الأقاليم — أثناء البحث بالمشارك تُحسب على نتائج البحث (كل التواريخ)
     const regionStats = {
       total: baseMissions.length,
       hq: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'hq').length,
@@ -4586,10 +4633,11 @@ const completedAt =
       saeed: baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === 'saeed').length,
     };
 
-    let filteredMissions = activeRegionTab !== 'all' ? baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === activeRegionTab) : baseMissions;
+    let filteredMissions = (!searchingParticipant && activeRegionTab !== 'all') ? baseMissions.filter(m => (regionMap[normalizeName(m.branch)] || 'hq') === activeRegionTab) : baseMissions;
 
     // 🆕 فلتر الفروع — بعد فلتر الإقليم، نفس معادلة «القاهرة ↔ المركز العام» في HomeView
-    const selectedBranch = filterBranch === 'all' ? null : filterBranch;
+    //    (يُتجاهل أثناء البحث بالمشارك — النتائج عبر كل الفروع)
+    const selectedBranch = (!searchingParticipant && filterBranch !== 'all') ? filterBranch : null;
     if (selectedBranch) {
       filteredMissions = filteredMissions.filter(m => {
         const mb = String(m.branch || '').trim();
@@ -4599,7 +4647,7 @@ const completedAt =
       });
     }
 
-    if (searchTerm.trim() !== '') {
+    if (searchTerm.trim() !== '' && !searchingParticipant) {
       const term = searchTerm.toLowerCase();
       filteredMissions = filteredMissions.filter(m =>
         (m.mission_name && m.mission_name.toLowerCase().includes(term)) ||
@@ -4620,7 +4668,7 @@ const completedAt =
     filteredMissions = [...filteredMissions].sort((a, b) => statusRank(a.status) - statusRank(b.status));
 
     return { filteredMissions, regionStats };
-  }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, filterBranch, searchTerm]);
+  }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, filterBranch, searchTerm, participantSearch]);
 
   const getCreationDate = () => {
     if (currentMissionData && currentMissionData.created_at) { return String(currentMissionData.created_at).split(' ')[0]; }
@@ -4806,6 +4854,7 @@ const completedAt =
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">نوع المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مكان المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مسؤول المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">عدد المشاركين</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مصدر البلاغ</th>
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ الانتهاء</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">الحالة</th>
@@ -4815,7 +4864,7 @@ const completedAt =
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="15" className="p-6">
+                <td colSpan="16" className="p-6">
                   <div className="space-y-3 animate-fade-in">
                     {[0,1,2,3,4].map(i => (
                       <div key={i} className="flex items-center gap-3 px-2">
@@ -4860,6 +4909,7 @@ const completedAt =
                 <td data-label="نوع المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_type}</td>
                 <td data-label="مكان المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
                 <td data-label="مسؤول المهمة" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
+                <td data-label="عدد المشاركين" className="px-3 md:px-4 py-3 text-[var(--ink-2)] font-bold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.participants_count || 0}</td>
                 <td data-label="مصدر البلاغ" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
                 <td data-label="تاريخ الانتهاء" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.completion_date)}</td>
                 <td data-label="الحالة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><StatusBadge status={m.status} /></td>
@@ -4872,7 +4922,7 @@ const completedAt =
                 </td>
               </tr>
             )) : (
-              <tr><td colSpan="15"><div className="empty-state"><div className="empty-state-icon">📋</div><p className="text-sm font-semibold text-[var(--muted)]">لا توجد مهام مطابقة</p></div></td></tr>
+              <tr><td colSpan="16"><div className="empty-state"><div className="empty-state-icon">📋</div><p className="text-sm font-semibold text-[var(--muted)]">لا توجد مهام مطابقة</p></div></td></tr>
             )}
           </tbody>
         </table>
@@ -11619,7 +11669,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
               ) : filteredHR.length === 0 ? (
                 <tr><td colSpan={10} className="p-8 text-center text-[var(--muted)]">لا توجد بيانات مطابقة.</td></tr>
               ) : filteredHR.map((person, index) => (
-                <tr key={person.id || person.membership_number || index} className={`transition-colors duration-300 ${person.active_mission ? 'hr-active-row' : ''} hover:bg-[var(--surface-2)]`}>
+                <tr key={`hr-${index}-${person.membership_number || person.full_name || 'row'}`} className={`transition-colors duration-300 ${person.active_mission ? 'hr-active-row' : ''} hover:bg-[var(--surface-2)]`}>
                   <td data-label="م" className="p-4 text-center">{index + 1}</td>
                   <td data-label="الاسم" className="p-4 font-semibold">{person.full_name}</td>
                   <td data-label="رقم العضوية / الصفة" className="p-4">{person.membership_number}</td>

@@ -1994,7 +1994,8 @@ def get_missions(
                     (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
                     (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
                     m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date,
-                    m.team_code, m.creation_datetime, m.closed_at
+                    m.team_code, m.creation_datetime, m.closed_at,
+                    (SELECT COUNT(*) FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.roster_active = true) as participants_count
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
@@ -2057,6 +2058,7 @@ def get_missions(
                     "team_code": (r[20] or "") if len(r) > 20 else "",
                     "creation_datetime": str(r[21]) if len(r) > 21 and r[21] else "-",
                     "closed_at": str(r[22]) if len(r) > 22 and r[22] else "-",
+                    "participants_count": r[23] if len(r) > 23 else 0,
                     "beneficiaries": beneficiaries_dict.get(m_id, []),
                     "vehicles_info": f"{r[9] or ''} ({r[10] or ''})" if r[9] else "لا توجد سيارات" 
                 })
@@ -2957,6 +2959,29 @@ def update_mission_status(
                     "UPDATE mission_participants SET return_status = %s WHERE mission_id = %s AND roster_active = true;",
                     (new_return_status, mission_id),
                 )
+
+            # إغلاق كل الجلسات المفتوحة عند إنهاء المهمة
+            if data.status in ('Completed', 'مكتملة'):
+                comp_dt = (
+                    dt_from_parts(data.completion_date, data.completion_time)
+                    or dt_from_parts(row[2], row[3])
+                    or datetime.now(ZoneInfo('Africa/Cairo')).replace(tzinfo=None)
+                )
+
+                cursor.execute("""
+                    UPDATE mission_participant_sessions
+                    SET end_dt = %s,
+                        check_out_time = %s
+                    WHERE mission_id = %s
+                      AND end_dt IS NULL
+                """, (comp_dt, comp_dt.strftime('%H:%M'), mission_id))
+
+                cursor.execute("""
+                    UPDATE mission_participants
+                    SET return_status = 'تم انتهاء مهمتة'
+                    WHERE mission_id = %s
+                      AND roster_active = TRUE
+                """, (mission_id,))
 
             # 🛡️ عقد العلامة: إذا صارت الحالة مكتملة والملاحظات بلا علامة — تُضاف؛
             #    إذا كانت العلامة مكتملة والحالة الجديدة ليست مكتملة (إعادة فتح) — تُسقَط.
@@ -5986,8 +6011,10 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                        branch_id, participant_type, participant_position,
                        volunteer_id, return_status, start_from_mission, roster_active
                 FROM mission_participants
-                WHERE full_name IS NOT NULL AND TRIM(full_name) <> ''
+                WHERE full_name IS NOT NULL
+                  AND TRIM(full_name) <> ''
                   AND participant_type IN ('volunteer', 'non_volunteer')
+                  AND roster_active = TRUE
             """)
             part_cols = [d[0] for d in cursor.description]
             participants = [dict(zip(part_cols, r)) for r in cursor.fetchall()]
@@ -6102,7 +6129,9 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     )
                     if not is_active and p.get('return_status') == 'مازال بالمهمة' and not segments:
                         is_active = True
-                    if is_active and mission_status not in ('Cancelled', 'Draft', 'Returned'):
+                    # 🛡️ «ف مهمة حالياً» لا يُمنح أبداً من مهمة منتهية — حتى لو شريحة
+                    #    مفتوحة (انضمام بلا انفصال) أو return_status قديمة «مازال بالمهمة»
+                    if is_active and mission_status not in ('Cancelled', 'Draft', 'Returned', 'Completed', 'مكتملة', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'):
                         active_missions[k] = {
                             'mission_id': mid,
                             'mission_code': md.get('mission_code', ''),
