@@ -112,6 +112,9 @@ def ensure_schema():
 
             # ── 3) أعمدة تكميلية + ترحيل صفة غير المتطوع (idempotent)
             cursor.execute("ALTER TABLE missions ADD COLUMN IF NOT EXISTS team_code VARCHAR(100) DEFAULT '';")
+                        # 🆕 بالكات الاستمارة المتكررة (أيام/سجلات إدارية + بالكات إدارة الشباب والتطوع)
+            cursor.execute("ALTER TABLE missions ADD COLUMN IF NOT EXISTS form_blocks JSONB;")
+
             cursor.execute("ALTER TABLE mission_participants ADD COLUMN IF NOT EXISTS participant_position VARCHAR(100);")
             cursor.execute("""
                 UPDATE mission_participants
@@ -971,6 +974,9 @@ class MissionCreate(BaseModel):
     vehicles: Optional[List[VehicleModel]] = None
     beneficiaries: Optional[List[BeneficiaryModel]] = None
     eoc_staff: Optional[List[EOCStaffModel]] = None
+        # 🆕 بالكات الاستمارة المتكررة: {"admin":[{id,title,staff}], "volunteer":[{id,title,rows}]}
+    form_blocks: Optional[Dict[str, Any]] = None
+
 
     # حالة العملية الميدانية (مكتملة/نشطة) — عمود حقيقي في قاعدة البيانات،
     # ومصدر الحقيقة الوحيد: لا يُستنتج من نص الملاحظات أبداً.
@@ -2293,6 +2299,21 @@ def create_mission(
             for staff in mission.eoc_staff:
                 cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
 
+            # 🆕 حفظ بالكات الاستمارة المتكررة (أيام/سجلات) — مسار التعديل (PUT)
+            if mission.form_blocks is not None:
+                cursor.execute(
+                    "UPDATE missions SET form_blocks = %s WHERE mission_id = %s",
+                    (Jsonb(mission.form_blocks), mission_id),
+                )
+
+                        # 🆕 البالكات المتكررة — تُخزَّن كما هي (mmع البالكات الأولى المكرَّرة في الجداول القديمة)
+            if mission.form_blocks is not None:
+                cursor.execute(
+                    "UPDATE missions SET form_blocks = %s WHERE mission_id = %s",
+                    (Jsonb(mission.form_blocks), mission_id),
+                )
+
+
             # 💡 تسجيل اللوج
             try:
                 create_audit_log(cursor, user_id, "إنشاء مهمة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم إنشاء استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission_code}"})
@@ -2818,6 +2839,13 @@ def update_mission(
 
             for staff in mission.eoc_staff:
                 cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
+
+            # 🆕 حفظ بالكات الاستمارة المتكررة (أيام/سجلات) — مسار التعديل (PUT)
+            if mission.form_blocks is not None:
+                cursor.execute(
+                    "UPDATE missions SET form_blocks = %s WHERE mission_id = %s",
+                    (Jsonb(mission.form_blocks), mission_id),
+                )
 
             # 💡 تسجيل اللوج + 🛡️ رؤية تغيّر التفاصيل: أعداد خطوط السير/المركبات/
             #    المستفيدين قبل وبعد الحفظ — أي تصفية غير مقصودة تصبح مكشوفة فوراً في السجل.
@@ -4007,6 +4035,16 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
             ]
             mission_data["volunteer_room_reviewer_name"] = mission_data.get("volunteer_room_reviewer_name") or ""
 
+            # 🆕 form_blocks: تُقرأ من القاعدة كنص JSON صحيح (SELECT * بيحوّلها لنص بايثون بقوس مفرد ≠ JSON)
+            try:
+                cursor.execute("SELECT form_blocks::text FROM missions WHERE mission_id = %s", (mission_id,))
+                _fb_raw = cursor.fetchone()[0]
+                mission_data["form_blocks"] = json.loads(_fb_raw) if _fb_raw else None
+            except Exception as e:
+                print(f"form_blocks read error: {e}")
+                mission_data["form_blocks"] = None
+
+
             return mission_data
     except Exception as e:
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء جلب التفاصيل")
@@ -4144,6 +4182,8 @@ class VolunteerRoomNoteRowModel(BaseModel):
 class VolunteerRoomNotesRequest(BaseModel):
     rows: List[VolunteerRoomNoteRowModel] = []
     reviewer_name: Optional[str] = None
+    # 🆕 بالكات الأيام بعناوينها — تُخزَّن في missions.form_blocks
+    blocks: Optional[List[Dict[str, Any]]] = None
 
 
 def _mission_exists(cursor, mission_id: int):
@@ -4324,6 +4364,14 @@ def update_volunteer_room_notes(
                 "UPDATE missions SET volunteer_room_reviewer_name = %s WHERE mission_id = %s",
                 (_clean(data.reviewer_name), mission_id),
             )
+
+                        # 🆕 بالكات الأيام — تُخزَّن في form_blocks مع الحفاظ على الجزء الإداري
+            if data.blocks is not None:
+                cursor.execute(
+                    "UPDATE missions SET form_blocks = jsonb_set(COALESCE(form_blocks, '{}'::jsonb), '{volunteer}', %s::jsonb, true) WHERE mission_id = %s",
+                    (json.dumps(data.blocks, ensure_ascii=False), mission_id),
+                )
+
 
             try:
                 create_audit_log(

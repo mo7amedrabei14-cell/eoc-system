@@ -14493,3 +14493,267 @@ INFO:     127.0.0.1:54355 - "GET /api/realtime/events?after_id=5215&limit=100 HT
 INFO:     127.0.0.1:54181 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:58743 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:58053 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58416 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54392 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51577 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49831 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56895 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60892 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54692 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62970 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65440 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52999 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50523 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61269 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53375 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53941 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56257 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57821 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65149 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50395 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54192 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56806 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60516 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61045 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61923 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61043 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49991 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64378 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52580 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60075 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54838 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62923 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59224 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54272 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54275 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58658 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53329 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60030 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60028 - "GET /api/branches/locations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60027 - "GET /api/realtime/events?init=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60029 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61725 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60031 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60026 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54403 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57189 - "GET /api/dashboard/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52257 - "GET /api/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62404 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62387 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57539 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53846 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51051 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56875 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51792 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62985 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61023 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65455 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59214 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52753 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 570, in idempotency_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 1281, in handle
+    await super().handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 280, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 4439, in get_realtime_events
+    is_privileged = bool(role) and role["role_name"].upper() in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "\u0627\u0644\u0645\u0627\u0644\u0643"]
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\auth.py", line 151, in get_user_role
+    connection = get_connection()
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\db.py", line 11, in get_connection
+    return psycopg.connect(
+           ~~~~~~~~~~~~~~~^
+        os.getenv("DATABASE_URL"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        keepalives_count=5,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psycopg\connection.py", line 100, in connect
+    attempts = conninfo_attempts(params)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psycopg\_conninfo_attempts.py", line 55, in conninfo_attempts
+    raise last_exc
+psycopg.OperationalError: failed to resolve host 'eoc-postgres-eoc-db.l.aivencloud.com': [Errno 11001] getaddrinfo failed
+INFO:     127.0.0.1:60939 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        self.scope, self.receive, self.send
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 570, in idempotency_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 1281, in handle
+    await super().handle(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\routing.py", line 280, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\anyio\_backends\_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\main.py", line 4439, in get_realtime_events
+    is_privileged = bool(role) and role["role_name"].upper() in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "\u0627\u0644\u0645\u0627\u0644\u0643"]
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\auth.py", line 151, in get_user_role
+    connection = get_connection()
+  File "C:\Users\mo7am\OneDrive\Work\EOC System\db.py", line 11, in get_connection
+    return psycopg.connect(
+           ~~~~~~~~~~~~~~~^
+        os.getenv("DATABASE_URL"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        keepalives_count=5,
+        ^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psycopg\connection.py", line 100, in connect
+    attempts = conninfo_attempts(params)
+  File "C:\Users\mo7am\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\psycopg\_conninfo_attempts.py", line 55, in conninfo_attempts
+    raise last_exc
+psycopg.OperationalError: failed to resolve host 'eoc-postgres-eoc-db.l.aivencloud.com': [Errno 11001] getaddrinfo failed
+INFO:     127.0.0.1:54311 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58303 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64782 - "GET /api/realtime/events?after_id=5215&limit=100 HTTP/1.1" 200 OK
