@@ -4521,8 +4521,13 @@ def get_realtime_events(
                     LEFT JOIN users u ON e.actor_user_id = u.user_id
                     WHERE e.event_id > %s
                       AND e.actor_user_id IS DISTINCT FROM %s
-                      AND e.target_user_id = %s
-                      AND e.details @> %s::jsonb
+                      AND (
+                            (
+                              e.target_user_id = %s
+                              AND e.details @> %s::jsonb
+                            )
+                            OR e.event_type = 'system_refresh'
+                          )
                     ORDER BY e.event_id ASC
                     LIMIT %s;
                     """,
