@@ -2824,7 +2824,7 @@ def update_mission(
                 _ben_after = cursor.fetchone()[0]
                 _counts_note = f" — التفاصيل: خط سير {_routes_before}→{_routes_after}, مركبات {_veh_before}→{_veh_after}, مستفيدون {_ben_before}→{_ben_after}"
                 _audit_action = "حفظ تعديلات بدون إجراء" if save_only else "تحديث/مراجعة"
-                create_audit_log(cursor, user_id, _audit_action, mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» (كود: {mission.mission_code or '—'}) — الحالة: {mission.status}{_counts_note}"})
+                create_audit_log(cursor, user_id, _audit_action, mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission.mission_code or '—'} — الحالة: {mission.status}{_counts_note}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
 
@@ -3021,7 +3021,7 @@ def update_mission_status(
             try:
                 create_audit_log(
                     cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id,
-                    details={"action_text": f"إجراء حالة: {previous_status or '—'} ← {data.status}"},
+                    details={"action_text": (f"تم تغيير حالة استمارة «{mission_name or 'بدون اسم'}» "f"من «{previous_status or '—'}» إلى «{data.status}»")},
                 )
             except Exception as e:
                 print(f"Audit Error: {e}")
@@ -4542,7 +4542,7 @@ def get_realtime_events(
                               e.target_user_id = %s
                               AND e.details @> %s::jsonb
                             )
-                            OR e.event_type = 'system_refresh'
+                            OR e.event_type IN ('system_refresh', 'local_news', 'global_disaster')
                           )
                     ORDER BY e.event_id ASC
                     LIMIT %s;
@@ -4787,9 +4787,15 @@ def create_local_news(news: LocalNewsModel, credentials: HTTPAuthorizationCreden
 
             # 💡 تسجيل اللوج الخاص بالأخبار فقط (مفصول عن المهام)
             try:
-                create_audit_log(cursor, user_id, "إنشاء خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"})
+                create_audit_log(cursor, user_id, "إضافة خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
+
+            # 📡 بث لحظي — كروت الداشبورد (ومنها حساب إدارة الشباب) تتحدث من نفسها
+            try:
+                create_realtime_event(cursor, event_type="local_news", action="رصد خبر محلي", actor_user_id=user_id, entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"})
+            except Exception:
+                pass
 
             connection.commit()
             return {"message": "تم حفظ الخبر بنجاح", "news_id": news_id}
@@ -5331,6 +5337,11 @@ def create_global_disaster(disaster: GlobalDisasterModel, credentials: HTTPAutho
             # تسجيل اللوج الخاص بالكوارث العالمية
             try:
                 create_audit_log(cursor, user_id, "رصد كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام برصد كارثة جديدة ({disaster.disaster_type}) في: {disaster.country}"})
+            except Exception as e: pass
+
+            # 📡 بث لحظي — كروت الداشبورد (ومنها حساب إدارة الشباب) تتحدث من نفسها
+            try:
+                create_realtime_event(cursor, event_type="global_disaster", action="رصد كارثة عالمية", actor_user_id=user_id, entity_id=disaster_id, details={"action_text": f"قام برصد كارثة جديدة ({disaster.disaster_type}) في: {disaster.country}"})
             except Exception as e: pass
 
             connection.commit()

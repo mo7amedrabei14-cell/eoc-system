@@ -950,6 +950,8 @@ function localizeActionSuffix(value) {
   if (typeof value !== 'string' || !value) return value;
   const PAIRS = [
     ['قام بإنشاء استمارة جديدة بكود: ', 'Created a new form with code: '],
+    ['تم تعديل استمارة «', 'Updated form “'],
+    ['تم تغيير حالة استمارة «', 'Changed status of form “'],
     ['قام بتحديث الاستمارة أو تغيير حالتها إلى: ', 'Updated the form or changed its status to: '],
     ['قام بحذف الاستمارة رقم ', 'Deleted form #'],
     ['قام بإضافة خبر محلي جديد في منطقة: ', 'Added local news in area: '],
@@ -1699,7 +1701,9 @@ if (e.event_type === 'system_refresh') {
         weather: prev.weather || e.event_type === 'weather',
       }));
 
-      // وميض صف المهمة المتغيّرة + تغذية أحداث المهام لفصل الـ modal
+      // 🔇 الأخبار المحلية والكوارث العالمية: إشارة تحديث صامتة — كروت الداشبورد تتحدث + نقطة القائمة، بدون توست أو جرس
+      if (e.event_type === 'local_news' || e.event_type === 'global_disaster') return;
+
       if (e.event_type === 'mission' && e.mission_id) {
         const ts = Date.now();
         setPulseMissions(prev => [
@@ -2601,7 +2605,8 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
       setGlobalEqs(gEqs);
       setEgyptEqs(eEqs);
     });
-  }, []);
+    // 🔄 يعاد السحب مع أي حدث لحظي يخص البيانات المعروضة — الأرقام تتحدث من نفسها
+  }, [liveUpdateVersion.missions, liveUpdateVersion.local_news, liveUpdateVersion.global_disasters, liveUpdateVersion.earthquakes]);
 
   // 🌤️ سحب الطقس اليومي: عند تغيير تاريخ الفلتر أو عند وصول تحديث لحظي للطقس
   useEffect(() => {
@@ -2804,16 +2809,16 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         {dailyWeather.length === 0 ? (
           <p className="text-[var(--muted)] text-sm">{lang === 'ar' ? 'لا توجد توقعات جوية موثقة بعد لهذا اليوم.' : 'No weather forecasts recorded for today yet.'}</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {weatherHighlights.map((m, i) => (
-              <div key={m.key} className="kpi-card card-surface p-3.5 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[var(--muted)] font-bold text-xs md:text-sm">{lang === 'ar' ? m.ar : m.en}</h4>
-                  <span className="text-[var(--faint)] font-bold text-[10px]">{m.unit}</span>
+              <div key={m.key} className="kpi-card card-surface p-4 md:p-5 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[170px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-[var(--muted)] font-bold text-sm md:text-base">{lang === 'ar' ? m.ar : m.en}</h4>
+                  <span className="text-[var(--faint)] font-bold text-xs">{m.unit}</span>
                 </div>
-                <div className="text-xs md:text-sm font-bold leading-relaxed">
+                <div className="text-sm md:text-base font-bold leading-relaxed">
                   <p className="text-[var(--ink)] break-words">{lang === 'ar' ? 'العظمى' : 'Max'}: {m.maxRow ? `${m.maxRow.branch_name} (${m.maxRow[`${m.key}_max`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
-                  <p className="text-[var(--muted)] break-words mt-1">{lang === 'ar' ? 'الصغرى' : 'Min'}: {m.minRow ? `${m.minRow.branch_name} (${m.minRow[`${m.key}_min`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
+                  <p className="text-[var(--muted)] break-words mt-1.5">{lang === 'ar' ? 'الصغرى' : 'Min'}: {m.minRow ? `${m.minRow.branch_name} (${m.minRow[`${m.key}_min`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
                 </div>
               </div>
             ))}
