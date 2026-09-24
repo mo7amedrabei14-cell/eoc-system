@@ -1483,7 +1483,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   to   { opacity: 1; transform: none; }
 }
 
-.animate-fade-in-up { animation: fade-in-up 0.5s var(--ease-out) both; }
+.animate-fade-in-up { animation: fade-in-up 0.5s var(--ease-out) backwards; }
 .animate-fade-in { animation: fade-in 0.3s var(--ease-out) both; }
 .animate-modal-in { animation: modal-in 0.42s var(--ease-spring) both; }
 .animate-scale-pop { animation: scale-pop 0.3s var(--ease-spring) both; }
@@ -1491,7 +1491,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 .animate-float-slow { animation: float-slow 5s var(--ease-out) infinite; }
 
 /* دخول متتابع (stagger) — مجرد تأخير تصاعدي على العناصر المباشرة */
-.stagger > * { animation: fade-in-up 0.5s var(--ease-out) both; }
+.stagger > * { animation: fade-in-up 0.5s var(--ease-out) backwards; }
 .stagger > *:nth-child(1) { animation-delay: 0.03s; }
 .stagger > *:nth-child(2) { animation-delay: 0.08s; }
 .stagger > *:nth-child(3) { animation-delay: 0.13s; }
@@ -1837,7 +1837,6 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* ─────────────── 18e-1) 3D Tilt cards (Lightswind tilt-parallax) ──────── */
 .tilt-card {
   transform-style: preserve-3d;
-  will-change: transform;
   transition: transform 0.22s var(--ease-out), box-shadow 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
 }
 @media (hover: none) { .tilt-card { transition: none; } }
