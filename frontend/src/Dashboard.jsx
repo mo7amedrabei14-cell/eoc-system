@@ -4375,7 +4375,7 @@ row++;
            ...((hasDayGroups || joinLeaveEntries.length > 0) ? { assigned_days: participants[i]?.assigned_days || [] } : {}),
            // 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر البداية المخططة (افتراضي TRUE)
             // 🔒 إلزامي: مشارك عليه انضمام ⇒ يُرسَل TRUE دائماً مهما كانت قيمة البوكس
-            start_from_mission: (participants[i]?.assigned_days || []).some(d => String(d || '').startsWith('JL:J:')) || participants[i]?.start_from_mission !== false
+            start_from_mission: (participants[i]?.assigned_days || []).some(d => String(d || '').startsWith('JL:J:') || String(d || '').startsWith('JL:L:')) || participants[i]?.start_from_mission !== false
          })).filter(p => p.full_name !== ''),
          beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
          eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== ''),
@@ -5168,17 +5168,19 @@ const completedAt =
                                 للمشارك ⇒ البوكس يتحول TRUE ويُقفل (غير قابل للإلغاء) — على هذا المشارك فقط. */}
                             {(() => {
                               const hasJoinAssigned = (p.assigned_days || []).some(d => String(d || '').startsWith('JL:J:'));
-                              const forcedChecked = hasJoinAssigned ? true : (p.start_from_mission !== false);
+                              const hasLeaveAssigned = (p.assigned_days || []).some(d => String(d || '').startsWith('JL:L:'));
+                              const isJlLocked = hasJoinAssigned || hasLeaveAssigned;
+                              const forcedChecked = isJlLocked ? true : (p.start_from_mission !== false);
                               return (
                                 <label
-                                  className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap ${hasJoinAssigned ? 'text-[var(--info)] cursor-not-allowed' : `cursor-pointer select-none ${forcedChecked ? 'text-[var(--info)]' : 'text-[var(--muted-2)]'}`}`}
-                                  title={hasJoinAssigned ? 'مُقفل تلقائياً: المشارك عليه انضمام ⇒ يُحسب من بداية المهمة دائماً' : 'يُحسب من بداية المهمة (بدل بداية مساره المحدد) — للمالك/المشرف'}
+                                  className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap ${isJlLocked ? 'text-[var(--info)] cursor-not-allowed' : `cursor-pointer select-none ${forcedChecked ? 'text-[var(--info)]' : 'text-[var(--muted-2)]'}`}`}
+                                  title={isJlLocked ? 'مُقفل تلقائياً: المشارك عليه انضمام أو انفصال ⇒ يُحسب من بداية المهمة دائماً' : 'يُحسب من بداية المهمة (بدل بداية مساره المحدد) — للمالك/المشرف'}
                                 >
                                   <input
                                     type="checkbox"
                                     checked={forcedChecked}
-                                    disabled={hasJoinAssigned}
-                                    onChange={(e) => { if (hasJoinAssigned) return; const newP = [...participants]; newP[index].start_from_mission = e.target.checked; setParticipants(newP); bumpValidation(); }}
+                                    disabled={isJlLocked}
+                                    onChange={(e) => { if (isJlLocked) return; const newP = [...participants]; newP[index].start_from_mission = e.target.checked; setParticipants(newP); bumpValidation(); }}
                                     className="accent-[var(--accent)]"
                                   />
                                   من بداية المهمة
@@ -5621,7 +5623,7 @@ const completedAt =
               )}
 
               
-              {/* 👑 المالك (God Mode) */}
+              {/* 👑 المالك (God Mode) — كل الأزرار ظاهرة دائماً بغض النظر عن حالة الاستمارة */}
               {isOwner ? (
                 <>
                   <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-[var(--ink-2)] px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">مسودة</button>
@@ -5629,6 +5631,7 @@ const completedAt =
                   <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="btn-warn px-6 py-3 md:py-2.5 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للمتطوع</button>
                   <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="btn-success px-8 py-3 md:py-2.5 rounded-xl text-sm shadow-[0_0_18px_var(--ok-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
                   <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="btn-accent px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إنهاء وإغلاق المهمة</button>
+                  {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Completed')} disabled={isSubmitting} className="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ التعديلات (وهي مقفولة)</button>}
                   {currentMissionData?.status === 'Completed' && <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(234,88,12,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إلغاء الإغلاق (إعادة فتح)</button>}
                 </>
               ) : (
