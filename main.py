@@ -10,6 +10,7 @@ from psycopg.types.json import Jsonb
 from datetime import date, time, datetime, timedelta
 from psycopg.errors import UniqueViolation
 import json
+import re
 
 # ملفات المشروع الخاصة بيك
 from audit import create_audit_log
@@ -146,6 +147,31 @@ def ensure_schema():
             cursor.execute("""
                 ALTER TABLE missions
                     ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP WITHOUT TIME ZONE;
+            """)
+            # ── 5.ب) حالة العملية الميدانية كعمود حقيقي (الإصلاح الجذري لانعكاس
+            #    «مكتملة → نشطة»): العمود هو مصدر الحقيقة الوحيد، ويرافق نفس
+            #    migration 20260924 (index + backfill + CHECK + trigger حارس).
+            cursor.execute("""
+                ALTER TABLE missions
+                    ADD COLUMN IF NOT EXISTS field_operation_status VARCHAR(20);
+            """)
+            cursor.execute("""
+                UPDATE missions
+                SET field_operation_status = CASE
+                        WHEN notes ~ '\\[حالة الميدان:\\s*مكتملة\\]' THEN 'مكتملة'
+                        WHEN notes ~ '\\[حالة الميدان:' THEN 'نشطة'
+                        ELSE 'نشطة'
+                    END
+                WHERE field_operation_status IS NULL;
+            """)
+
+            # ── 5.ج) عقد العلامة القديمة (توافق خلفي): مهام مكتملة بلا علامة في
+            #    الملاحظات تُرمَّم لمرة واحدة (IS NULL حارس — لا مساس بالمُرمَّمة سابقاً)
+            cursor.execute("""
+                UPDATE missions
+                SET notes = '[حالة الميدان: مكتملة]' || COALESCE(chr(10) || notes, '')
+                WHERE status IN ('Completed', 'مكتملة')
+                  AND (notes IS NULL OR notes NOT LIKE '[حالة الميدان:%%');
             """)
 
             # backfill لمرة واحدة (حارس IS NULL يحمي تعديلات المالك من الكتابة فوقها)
@@ -938,21 +964,56 @@ class MissionCreate(BaseModel):
     # كود الفريق/الإدارة على مستوى المهمة (حقل مستقل عن المشاركين)
     team_code: Optional[str] = None
 
+    # 🛡️ قاعدة عدم الإفساد: أي قسم/حقل مفقود من الحمولة (None) يبقى مخزَّناً كما هو —
+    #    لا يُفرَّغ خط سير ولا مركبات ولا مستفيدون ولا موظفون لمجرد إجراء حالة.
+    #    القيمة الصريحة (حتى القائمة الفارغة) تُكتب كما هي: المسح يبقى فعل المستخدم المقصود فقط.
+    routes: Optional[List[RouteModel]] = None
+    vehicles: Optional[List[VehicleModel]] = None
+    beneficiaries: Optional[List[BeneficiaryModel]] = None
+    eoc_staff: Optional[List[EOCStaffModel]] = None
+
+    # حالة العملية الميدانية (مكتملة/نشطة) — عمود حقيقي في قاعدة البيانات،
+    # ومصدر الحقيقة الوحيد: لا يُستنتج من نص الملاحظات أبداً.
+    field_operation_status: Optional[str] = None
+
+    # 🛡️ المشاركون وكتالوج الانضمام/الانفصال: None = لم يُرسَلا في هذه الحفظة
+    #    (حفظ جزئي) ⇒ يبقى المخزَّن كما هو دون أي حذف أو إخفاء (roster_active).
+    participants: Optional[List[ParticipantModel]] = None
+    join_leave_entries: Optional[List[JoinLeaveEntryModel]] = None
+
     # مفتاح الحماية من الإرسال المكرر (double-submit): يُرسَل أيضاً في ترويسة
     # Idempotency-Key، لكن يُخزَّن في قاعدة البيانات ضمن صف المهمة. كان مفقوداً
     # من النموذج بينما كان الكود يقرأ mission.idempotency_key → AttributeError → 500.
     idempotency_key: Optional[str] = None
 
-    routes: List[RouteModel] = []
-        # 🛡️ علم المسح المقصود: true فقط لما المستخدم يدوس «لا يوجد خط سير» عمداً
+    # 🛡️ علم المسح المقصود: true فقط لما المستخدم يدوس «لا يوجد خط سير» عمداً
     clear_details: bool = False
 
-    vehicles: List[VehicleModel] = []
-    participants: List[ParticipantModel] = []
-    beneficiaries: List[BeneficiaryModel] = []
-    eoc_staff: List[EOCStaffModel] = []
-    # 🆕 سجلات الانضمام/الانفصال (فئة مستقلة) — تُسنَد للمشاركين عبر picker الأيام
-    join_leave_entries: List[JoinLeaveEntryModel] = []
+
+# ── حالة العملية الميدانية: عمود حقيقي + علامة داخل الملاحظات (توافق خلفي) ──
+# العمود field_operation_status هو مصدر الحقيقة الوحيد. دوال الجسر تُبقي الملاحظات
+# متوافقة مع العلامة القديمة «[حالة الميدان: …]» التي كانت تُخزَّن فيها القيمة سابقاً.
+_MARKER_RE = re.compile(r"^\s*\[حالة الميدان:[^\]]*\]\s*", re.IGNORECASE)
+
+
+def notes_marker_value(notes):
+    """يقرأ قيمة حالة العملية الميدانية من علامة الملاحظات القديمة (أو None)."""
+    m = re.search(r"\[حالة الميدان:\s*([^\]]+)\]", notes or "")
+    if not m:
+        return None
+    v = m.group(1).strip()
+    return v or None
+
+
+def strip_field_status_marker(notes):
+    """يشيل علامة الحالة من نص الملاحظات (القيمة تسكن في العمود وحده)."""
+    return _MARKER_RE.sub("", notes or "")
+
+
+def sync_notes_marker(notes, field_status):
+    """عقد الحفظ الموحّد: الملاحظات تُخزَّن بلا علامة، والعمود يحمل القيمة الفعلية.
+    استدعاءات قديمة ترسل العلامة تُقبل — تُستخرج قيمتها ولا تتكرر أبداً."""
+    return strip_field_status_marker(notes)
 
 
 # =============================================================================
@@ -963,6 +1024,8 @@ def validate_mission_required_fields(mission):
     """
     تتأكد من وجود كل الحقول الإلزامية في المهمة وتعيد قائمة بأسماء الناقص منها.
     فارغة ([]) = المهمة سليمة. تُستخدم في POST و PUT معاً.
+    🛡️ الحمولة الجزئية: الأقسام غير المُرسَلة (None) تُتحقَّق سلبياً — التحقق
+    يقع على ما أرسله العميل فعلاً، والمخزَّن في القاعدة هو المصدر لما لم يُرسَل.
     """
     def val(v):
         return v is not None and str(v).strip() != ""
@@ -972,24 +1035,26 @@ def validate_mission_required_fields(mission):
         missing.append("تاريخ المهمة")
     if not val(getattr(mission, "departure_time", None)):
         missing.append("ساعة التحرك / البدء")
-    if not any(val(p.full_name) for p in (mission.participants or [])):
-        missing.append("إضافة مشارك واحد على الأقل")
 
-    # 🆕 صفة المشارك إلزامية لكل مشارك غير متطوع (المتطوع يُعرف برقم العضوية فقط)
-    for i, p in enumerate(mission.participants or []):
-        if p.participant_type == "non_volunteer" and \
-                not val(getattr(p, "participant_position", None)):
-            missing.append(f"صفة المشارك (غير المتطوع: {p.full_name or ('مشارك ' + str(i + 1))})")
+    if mission.participants is not None:
+        if not any(val(p.full_name) for p in mission.participants):
+            missing.append("إضافة مشارك واحد على الأقل")
 
-    staff_map = {s.role_name: s.staff_name for s in (mission.eoc_staff or [])}
-    for role, label in [("مسؤول المتابعة", "مسؤول المتابعة (قائد العملية)"),
-                        ("المشرف", "المشرف"),
-                        ("الجوكر", "الجوكر"),
-                        ("معبئ الاستمارة", "معبئ الاستمارة")]:
-        if not val(staff_map.get(role)):
-            missing.append(label)
+        # 🆕 صفة المشارك إلزامية لكل مشارك غير متطوع (المتطوع يُعرف برقم العضوية فقط)
+        for i, p in enumerate(mission.participants):
+            if p.participant_type == "non_volunteer" and \
+                    not val(getattr(p, "participant_position", None)):
+                missing.append(f"صفة المشارك (غير المتطوع: {p.full_name or ('مشارك ' + str(i + 1))})")
+
+    if mission.eoc_staff is not None:
+        staff_map = {s.role_name: s.staff_name for s in mission.eoc_staff}
+        for role, label in [("مسؤول المتابعة", "مسؤول المتابعة (قائد العملية)"),
+                            ("المشرف", "المشرف"),
+                            ("الجوكر", "الجوكر"),
+                            ("معبئ الاستمارة", "معبئ الاستمارة")]:
+            if not val(staff_map.get(role)):
+                missing.append(label)
     return missing
-
 
 def validate_mission_completion(mission):
     """
@@ -1897,7 +1962,10 @@ def compute_working_hours(mission_data, mission_status, segments, assigned_days,
 
 
 @app.get("/api/missions")
-def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def get_missions(
+    participant_name: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
@@ -1906,6 +1974,13 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if not role: raise HTTPException(status_code=403)
 
     role_name = role["role_name"]
+    # 🔎 بحث باسم المشارك/المتطوع (فلتر قراءة فقط):
+    #    مطابقة جزئية غير حساسة لحالة الأحرف ضد mission_participants.full_name.
+    #    يُطبَّق شرط EXISTS داخل مكان الفلترة الإقليمية نفسه (WHERE الفرعي) — لا يُغيّر
+    #    المنطق ولا العدّادات، ولا يكرر المهمة مهما تطابق أكثر من مشارك (EXISTS = true/false).
+    #    فارغ/غير مُرسَل ⇒ لا تأثير إطلاقاً (الاستعلام كما كان تماماً).
+    p_search = (participant_name or "").strip()
+    p_search_like = f"%{p_search}%" if p_search else None
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
@@ -1924,18 +1999,35 @@ def get_missions(credentials: HTTPAuthorizationCredentials = Depends(security)):
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
             """
             
+            # 🔎 فلتر اسم المشارك (قراءة فقط): EXISTS داخل المكان الإقليمي نفسه —
+            #    لا يكرر المهمة (EXISTS منطقية)، ولا يلمس العدّادات أو أي منطق آخر.
+            participant_filter = """
+                AND EXISTS (
+                    SELECT 1 FROM mission_participants pf
+                    WHERE pf.mission_id = m.mission_id
+                      AND pf.full_name ILIKE %s
+                )
+            """
             if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"] or is_youth_role(role):
                 # 🆕 التاريخ المعياري لترتيب سجل المهام هو «تاريخ/وقت إنشاء المهمة» (creation_datetime)
                 #    — لا «تاريخ المهمة» (exit_date) ولا created_at. fallback: created_at (قديم بلا تاريخ إنشاء)
-                query = base_query + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
-                cursor.execute(query)
+                if p_search_like:
+                    query = base_query + " WHERE 1=1" + participant_filter + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
+                    cursor.execute(query, (p_search_like,))
+                else:
+                    query = base_query + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
+                    cursor.execute(query)
             else:
                 user_branches = get_user_branches(user_id)
                 branch_ids = [b["branch_id"] for b in user_branches]
                 if not branch_ids: return []
                 # 💡 الإصلاح الأول: استخدام = ANY(%s) بدل IN %s
-                query = base_query + " WHERE m.branch_id = ANY(%s) ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
-                cursor.execute(query, (branch_ids,))
+                if p_search_like:
+                    query = base_query + " WHERE m.branch_id = ANY(%s)" + participant_filter + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
+                    cursor.execute(query, (branch_ids, p_search_like))
+                else:
+                    query = base_query + " WHERE m.branch_id = ANY(%s) ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
+                    cursor.execute(query, (branch_ids,))
                 
             rows = cursor.fetchall()
             
@@ -2052,9 +2144,9 @@ def create_mission(
                     data_source, status, exit_date, departure_date, arrival_date, return_date, completion_date,
                     start_time, departure_time, arrival_time, completion_time, injured_count,
                     indirect_beneficiaries_total, notes, internal_notes, idempotency_key, team_code, creation_datetime,
-                    closed_at
+                    field_operation_status, closed_at
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     CASE WHEN %s IN ('Completed', 'مكتملة') THEN (now() AT TIME ZONE 'Africa/Cairo') ELSE NULL END
                 ) RETURNING mission_id;
             """, (
@@ -2068,6 +2160,7 @@ def create_mission(
                 ikey,
                 mission.team_code if mission.team_code is not None else "",
                 creation_dt_val,
+                (mission.field_operation_status or '').strip() or None,
                 mission.status
             ))
 
@@ -2139,6 +2232,7 @@ def create_mission(
                 cursor.executemany("""
                     INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
                     VALUES (%s, %s, %s)
+                    ON CONFLICT ON CONSTRAINT uq_mpi_participant_group DO NOTHING
                 """, day_rows)
             # 🆕 اتساق الحالة الآلية مع الرادار: مشارك كل فتراته مغلقة ⇒ انتهت مهمته
             for pid, part in inserted_participants:
@@ -2238,6 +2332,12 @@ def update_mission(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     idempotency_key_header: Optional[str] = Header(None),
 ):
+    """
+    🛡️ قاعدة سلامة البيانات (جذرية): الاستمارة تُحفظ فقط مما أرسله المستخدم فعلاً.
+    أي قيمة لا تظهر في الحمولة (مفقودة=None) تبقى مخزَّنة كما هي — لا يُفرَّغ أي حقل
+    (خط السير/المركبات/المستفيدون/الموظفون/حالة العملية الميدانية…) لمجرد إجراء
+    حالة (إرسال للجوكر/اعتماد/إنهاء). الإمساح المقصود الوحيد: clear_details=true.
+    """
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
@@ -2279,11 +2379,24 @@ def update_mission(
             # 🆕 تاريخ/وقت الإنشاء: لقطة ثابتة لا تتجدد أبداً — «تغيير القيمة» فعل مالك
             #    فقط (403 لغير المالك). إعادة إرسال نفس القيمة من غير المالك = ليس تغييراً.
             cur_db_cd = None
-            cd_row = cursor.execute("SELECT creation_datetime, status FROM missions WHERE mission_id = %s", (mission_id,)).fetchone()
+            cur_db_notes = None
+            cur_db_fs = None
+            cd_row = cursor.execute("SELECT creation_datetime, status, notes, field_operation_status FROM missions WHERE mission_id = %s", (mission_id,)).fetchone()
             if cd_row:
                 cur_db_cd = cd_row[0]
+                cur_db_notes = cd_row[2]
+                cur_db_fs = cd_row[3]
             # 🆕 الحالة السابقة قبل التحديث — تُستخدم لمنع إشعارات المراجعة المكررة
             _previous_mission_status = cd_row[1] if cd_row else None
+            # 🛡️ عدادات التفاصيل قبل الحفظ — تُطبع في اللوج (قبل → بعد) لكشف أي تصفية
+            cursor.execute("""
+                SELECT
+                    (SELECT count(*) FROM mission_itineraries WHERE mission_id = %s),
+                    (SELECT count(*) FROM mission_vehicles WHERE mission_id = %s),
+                    (SELECT count(*) FROM mission_beneficiaries WHERE mission_id = %s)
+            """, (mission_id, mission_id, mission_id))
+            _counts_row = cursor.fetchone()
+            _routes_before, _veh_before, _ben_before = _counts_row[0], _counts_row[1], _counts_row[2]
             req_cd = parse_dt_input(mission.creation_datetime) if mission.creation_datetime else None
             cd_change = bool(req_cd) and (cur_db_cd is None or req_cd != cur_db_cd)
             cd_value = None  # COALESCE يحافظ على القديم لو لم يُطلب تغيير
@@ -2301,6 +2414,7 @@ def update_mission(
                     arrival_time=%s, completion_time=%s, injured_count=%s, indirect_beneficiaries_total=%s,
                     notes=%s, internal_notes=%s,
                     team_code=%s,
+                    field_operation_status = COALESCE(%s, field_operation_status),
                     closed_at = CASE
                         WHEN %s IN ('Completed', 'مكتملة')
                          AND COALESCE(status, '') NOT IN ('Completed', 'مكتملة')
@@ -2321,14 +2435,50 @@ def update_mission(
                 none_if_empty(mission.return_date), none_if_empty(mission.completion_date),
                 none_if_empty(mission.start_time), none_if_empty(mission.departure_time), none_if_empty(mission.arrival_time),
                 none_if_empty(mission.completion_time),
-                mission.injured_count, mission.indirect_beneficiaries_total, mission.notes, mission.internal_notes,
+                mission.injured_count, mission.indirect_beneficiaries_total,
+                sync_notes_marker(mission.notes, mission.field_operation_status), mission.internal_notes,
                 mission.team_code if mission.team_code is not None else "",
+                (mission.field_operation_status or '').strip() or notes_marker_value(mission.notes) or notes_marker_value(cur_db_notes),
                 mission.status,
                 ikey,
                 none_if_empty(mission.mission_code),
                 cd_value,
                 mission_id
             ))
+
+            # 🛡️ عقد العلامة (توافق خلفي): لو القيمة الجديدة «مكتملة» والملاحظات المخزَّنة
+            #    بلا علامة، تُعاد العلامة ليعرضها أي عميل قديم كما اعتاد — والعمود هو المرجع.
+            _new_fs = (mission.field_operation_status or '').strip() or notes_marker_value(mission.notes) or None
+            if _new_fs:
+                cursor.execute(
+                    """
+                    UPDATE missions
+                    SET notes = CASE
+                            WHEN notes IS NULL OR notes NOT LIKE '[حالة الميدان:%%'
+                            THEN '[حالة الميدان: ' || %s || ']' || COALESCE(chr(10) || notes, '')
+                            ELSE notes
+                        END
+                    WHERE mission_id = %s;
+                    """,
+                    (_new_fs, mission_id),
+                )
+
+            # 🛡️ عقد العلامة (توافق خلفي): لو القيمة الجديدة «مكتملة» والملاحظات المخزَّنة
+            #    بلا علامة، تُعاد العلامة ليعرضها أي عميل قديم كما اعتاد — والعمود هو المرجع.
+            _new_fs = (mission.field_operation_status or '').strip() or None
+            if _new_fs:
+                cursor.execute(
+                    """
+                    UPDATE missions
+                    SET notes = CASE
+                            WHEN notes IS NULL OR notes NOT LIKE '[حالة الميدان:%%'
+                            THEN '[حالة الميدان: ' || %s || ']' || COALESCE(chr(10) || notes, '')
+                            ELSE notes
+                        END
+                    WHERE mission_id = %s;
+                    """,
+                    (_new_fs, mission_id),
+                )
             if cursor.rowcount == 0:
                 raise HTTPException(status_code=404, detail="المهمة غير موجودة أو تم حذفها")
 
@@ -2382,6 +2532,27 @@ def update_mission(
             # 🛡️ حماية من المسح بالغلط: لو الطلب جاي ومصفوفات التفاصيل فاضية
             #   (خلل شبكة/حفظ مسودة) من غير «مسح مقصود» → نحتفظ بالبيانات القديمة كما هي.
             #   المسح الحقيقي يحصل فقط لو فيه بيانات جديدة، أو المستخدم ضغط «لا يوجد خط سير» (clear_details).
+            # ── التفاصيل (خط سير/مركبات/مستفيدون/موظفون): تُستبدَل فقط إذا أرسل
+            #    العميل القسم فعلاً (ليس None). الحمولة التي تُغيّر الحالة فقط لا
+            #    تحمل القسم ⇒ لا DELETE ولا إعادة إدراج — البيانات تبقى كما هي.
+            #    (routes=None خلفياً = استمارة قديمة ترسل كل شيء — السلوك السابق.)
+            sent_details = {
+                "routes": mission.routes is not None,
+                "vehicles": mission.vehicles is not None,
+                "beneficiaries": mission.beneficiaries is not None,
+                "eoc_staff": mission.eoc_staff is not None,
+                "join_leave_entries": mission.join_leave_entries is not None,
+                "participants": mission.participants is not None,
+            }
+            if mission.routes is None:
+                mission.routes = []
+            if mission.vehicles is None:
+                mission.vehicles = []
+            if mission.beneficiaries is None:
+                mission.beneficiaries = []
+            if mission.eoc_staff is None:
+                mission.eoc_staff = []
+
             if len(mission.routes) > 0 or mission.clear_details:
                 cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
                 cursor.execute("DELETE FROM mission_participant_itineraries WHERE mission_id = %s", (mission_id,))
@@ -2389,7 +2560,8 @@ def update_mission(
                 cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             if len(mission.beneficiaries) > 0 or mission.clear_details:
                 cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
-            cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
+            if sent_details["eoc_staff"]:
+                cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
 
             # 3. إدخال التفاصيل الجديدة بعد التعديل
             for route in mission.routes:
@@ -2400,7 +2572,9 @@ def update_mission(
 
             # 🆕 كتالوج الانضمام/الانفصال: upsert في مكانه (يُحافَظ على entry_id =
             #    provenance ثابت للشرائح المشتقة)، وحذف ما لم يُرسَل بتنظيف صريح.
-            _sync_jl_catalog(cursor, mission_id, mission.join_leave_entries)
+            #    🛡️ الحمولة الجزئية (لم يُرسَل الكتالوج) تُبقي الكتالوج المخزَّن كما هو.
+            if sent_details["join_leave_entries"]:
+                _sync_jl_catalog(cursor, mission_id, mission.join_leave_entries or [])
 
             # المشاركون: UPsert بالصف (هوية + فترة الإسناد) — الصف المتبقي بفترته
             #   يُحدَّث في مكانه (تبقى segments المسجلة كما هي)، وفترة جديدة لنفس
@@ -2421,7 +2595,7 @@ def update_mission(
             kept_pids = []
             pending_open = set()  # idents أُدرج لها صف فترة مفتوحة (JOIN بلا LEAVE) في هذه الحفظة
             new_participants = []  # (participant_id, part) for day linking
-            for part in dedupe_participants(mission.participants):
+            for part in (dedupe_participants(mission.participants) if mission.participants is not None else []):
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
 
@@ -2530,38 +2704,59 @@ def update_mission(
 
             # ── من أُزيلوا من الاستمارة (كل الصفوف عبر الهويات — صف بلا مطابقة بفترته):
             #    بلا segments ⇒ حذف نهائي؛ وله segments ⇒ يُخفى ويبقى سجله للرادار والـ HR
-            stale_ids = [r["participant_id"]
-                         for rows in existing_by_ident.values()
-                         for r in rows
-                         if r["participant_id"] not in kept_pids and not r.get("has_segments")]
-            if stale_ids:
-                cursor.execute("DELETE FROM mission_participants WHERE participant_id = ANY(%s)", (stale_ids,))
-            if kept_pids:
-                cursor.execute("""
-                    UPDATE mission_participants SET roster_active = false
-                    WHERE mission_id = %s AND roster_active = true
-                      AND participant_id <> ALL(%s);
-                """, (mission_id, kept_pids))
+            #    🛡️ حارس الحمولة الجزئية: لو لم يُرسَل المشاركون أصلاً (None) فلا يُعدَّل
+            #    الرستر المخزَّن بأي شكل — لا حذف ولا إخفاء. (reinserted_idents يبقى فارغاً،
+            #    لذا هذا الحارس يمنع أيضاً الإخفاء الجماعي عبر roster_active=false.)
+            if sent_details.get("participants", True) and mission.participants is not None:
+                stale_ids = [r["participant_id"]
+                             for rows in existing_by_ident.values()
+                             for r in rows
+                             if r["participant_id"] not in kept_pids and not r.get("has_segments")]
+                if stale_ids:
+                    cursor.execute("DELETE FROM mission_participants WHERE participant_id = ANY(%s)", (stale_ids,))
+                if kept_pids:
+                    cursor.execute("""
+                        UPDATE mission_participants SET roster_active = false
+                        WHERE mission_id = %s AND roster_active = true
+                          AND participant_id <> ALL(%s);
+                    """, (mission_id, kept_pids))
 
-            # 🆕 تخصيص الأيام/الخطوط للمشارك (متعدد) — أي مهمة لها مجموعات:
-            #    المشارك يرث ساعات المجموعة المخصصة. (لا يُقيَّد بالتصنيف — المحرك موحّد)
-            day_rows = []
+            # 🆕 تخصيص الأيام/الخطوط — مزامنة كاملة: حذف المُلغى + إدراج الجديد (لا تكرار)
             for pid, part in new_participants:
-                for day_title in (part.assigned_days or []):
-                    day_rows.append((pid, mission_id, day_title))
-            if day_rows:
-                cursor.executemany("""
-                    INSERT INTO mission_participant_itineraries (participant_id, mission_id, itinerary_group)
-                    VALUES (%s, %s, %s)
-                """, day_rows)
+                wanted = list(dict.fromkeys(
+                    str(d).strip()
+                    for d in (part.assigned_days or [])
+                    if d is not None and str(d).strip()
+                ))
+                if wanted:
+                    cursor.execute("""
+                        DELETE FROM mission_participant_itineraries
+                        WHERE participant_id = %s AND mission_id = %s
+                          AND NOT (itinerary_group = ANY(%s))
+                    """, (pid, mission_id, wanted))
+                else:
+                    cursor.execute("""
+                        DELETE FROM mission_participant_itineraries
+                        WHERE participant_id = %s AND mission_id = %s
+                    """, (pid, mission_id))
+                for day_title in wanted:
+                    cursor.execute("""
+                        INSERT INTO mission_participant_itineraries
+                            (participant_id, mission_id, itinerary_group)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT ON CONSTRAINT uq_mpi_participant_group DO NOTHING
+                    """, (pid, mission_id, day_title))
 
             # 🆕 إعادة اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (كل الحالات — يُعاد
             #    حسابه عند الحفظ تماماً مثل المسارات). يُستدعى قبل حظر الإغلاق التلقائي
             #    حتى يُغلق الأخير أي segment مشتقّ مفتوح لمهمة مكتملة.
-            materialize_jl_segments(
-                cursor, mission_id, _jl_mission_row(cursor, mission_id),
-                user_id=user_id,
-            )
+            #    🛡️ الحمولة الجزئية (لا كتالوج ولا مشاركون مُرسَلين) تخطّي الاشتقاق نهائياً —
+            #    الشرائح المخزَّنة مصانة كما هي (الكليانة: أقل تدخل = أقل خطر).
+            if sent_details["join_leave_entries"] or sent_details["participants"]:
+                materialize_jl_segments(
+                    cursor, mission_id, _jl_mission_row(cursor, mission_id),
+                    user_id=user_id,
+                )
 
             # ── الإغلاق التلقائي للمشاركة عند انتهاء المهمة (متطلب حتمي، حل جذري) ──
             #    عند تحويل المهمة إلى 'Completed' كان أي حضور مسجَّل عبر JOIN (segment
@@ -2601,9 +2796,17 @@ def update_mission(
             for staff in mission.eoc_staff:
                 cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
 
-            # 💡 تسجيل اللوج
+            # 💡 تسجيل اللوج + 🛡️ رؤية تغيّر التفاصيل: أعداد خطوط السير/المركبات/
+            #    المستفيدين قبل وبعد الحفظ — أي تصفية غير مقصودة تصبح مكشوفة فوراً في السجل.
             try:
-                create_audit_log(cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» (كود: {mission.mission_code or '—'}) — الحالة: {mission.status}"})
+                cursor.execute("SELECT count(*) FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+                _routes_after = cursor.fetchone()[0]
+                cursor.execute("SELECT count(*) FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
+                _veh_after = cursor.fetchone()[0]
+                cursor.execute("SELECT count(*) FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
+                _ben_after = cursor.fetchone()[0]
+                _counts_note = f" — التفاصيل: خط سير {_routes_before}→{_routes_after}, مركبات {_veh_before}→{_veh_after}, مستفيدون {_ben_before}→{_ben_after}"
+                create_audit_log(cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» (كود: {mission.mission_code or '—'}) — الحالة: {mission.status}{_counts_note}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
 
@@ -2655,6 +2858,156 @@ class EndParticipationRequest(BaseModel):
     """إنهاء مشاركة واحد أو أكثر (bulk) — مهمات مفتوحة/نشطة."""
     participant_ids: List[int] = []
     client_now: Optional[str] = None  # ساعة العميل المحلية — إطار زمني لإنهاء المشاركة
+
+class MissionStatusUpdate(BaseModel):
+    """تبديل حالة سير العمل فقط — لا يعيد كتابة أي حقل بيانات آخر.
+    الحقول الاختيارية تُدمج داخل السيرفر (فارغ = احتفظ بالمخزَّن)."""
+    status: str
+    field_operation_status: Optional[str] = None
+    notes: Optional[str] = None
+    internal_notes: Optional[str] = None
+    completion_date: Optional[str] = None
+    completion_time: Optional[str] = None
+    return_status: Optional[str] = None  # تم انتهاء مهمتة / مازال بالمهمة
+    idempotency_key: Optional[str] = None
+
+
+@app.post("/api/missions/{mission_id}/status")
+def update_mission_status(
+    mission_id: int,
+    data: MissionStatusUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    🎯 إجراءات سير العمل (إرسال للجوكر/اعتماد/إنهاء/إرجاع/إعادة فتح) من نقطة واحدة
+    جذرية: UPDATE مُقيد بأعمدة سير العمل فقط. خط السير والمركبات والمستفيدون
+    والمشاركون والتواريخ وحالة العملية الميدانية لا تُمسّ مطلقاً هنا — حتى لو
+    جاء الحمولة قديماً أو ناقصاً (قاعدة: الحقل لا يتغير لمجرد تغيّر حقل آخر).
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    if is_youth_role(get_user_role(user_id)):
+        raise HTTPException(status_code=403, detail="حساب إدارة الشباب للعرض فقط — التعديل يتم عبر إجراء المراجعة المخصص")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status, mission_name, completion_date, completion_time FROM missions WHERE mission_id = %s", (mission_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+            previous_status, mission_name = row[0], row[1]
+
+            # قاعدة الإنهاء (#6) على المسار المختصر: الإغلاق يتطلب تاريخ انتهاء
+            # وساعة انتهاء (المُرسَلة الآن أو المخزَّنة سابقاً).
+            if data.status in ('Completed', 'مكتملة'):
+                comp_date = none_if_empty_str(data.completion_date) or row[2]
+                comp_time = none_if_empty_str(data.completion_time) or row[3]
+                if not (comp_date and comp_time):
+                    raise HTTPException(status_code=400, detail="لا يمكن إنهاء وإغلاق المهمة إلا بعد إدخال تاريخ الانتهاء وساعة الانتهاء معاً.")
+
+            if data.idempotency_key:
+                cursor.execute(
+                    "SELECT 1 FROM missions WHERE mission_id = %s AND idempotency_key = %s;",
+                    (mission_id, data.idempotency_key),
+                )
+                if cursor.fetchone():
+                    return {"message": "تم تحديث المهمة بنجاح", "status": previous_status}
+
+            # الحالة الفعلية مصدرها قاعدة البيانات دائماً — النموذج لا يفرض شيئاً على الموجود
+            new_return_status = (data.return_status or '').strip() or None
+
+            cursor.execute(
+                """
+                UPDATE missions SET
+                    status = %s,
+                    field_operation_status = COALESCE(%s, field_operation_status),
+                    notes = COALESCE(%s, notes),
+                    internal_notes = COALESCE(%s, internal_notes),
+                    completion_date = COALESCE(%s, completion_date),
+                    completion_time = COALESCE(%s, completion_time),
+                    closed_at = CASE
+                        WHEN %s IN ('Completed', 'مكتملة')
+                         AND COALESCE(status, '') NOT IN ('Completed', 'مكتملة', %s)
+                        THEN (now() AT TIME ZONE 'Africa/Cairo')
+                        ELSE closed_at
+                    END,
+                    idempotency_key = COALESCE(%s, idempotency_key)
+                WHERE mission_id = %s;
+                """,
+                (
+                    data.status,
+                    none_if_empty_str(data.field_operation_status),
+                    (sync_notes_marker(data.notes, None) or '').strip() or None,
+                    # النص الصريح (حتى "") يُكتب: الاعتماد يمسح ملاحظات الإرجاع؛
+                    # None = احتفظ بالمخزَّن.
+                    data.internal_notes if data.internal_notes is None else data.internal_notes.strip(),
+                    none_if_empty_str(data.completion_date),
+                    none_if_empty_str(data.completion_time),
+                    data.status,
+                    data.status,
+                    data.idempotency_key,
+                    mission_id,
+                ),
+            )
+            if new_return_status:
+                cursor.execute(
+                    "UPDATE mission_participants SET return_status = %s WHERE mission_id = %s AND roster_active = true;",
+                    (new_return_status, mission_id),
+                )
+
+            # 🛡️ عقد العلامة: إذا صارت الحالة مكتملة والملاحظات بلا علامة — تُضاف؛
+            #    إذا كانت العلامة مكتملة والحالة الجديدة ليست مكتملة (إعادة فتح) — تُسقَط.
+            cursor.execute(
+                """
+                UPDATE missions
+                SET notes = CASE
+                        WHEN status IN ('Completed', 'مكتملة')
+                             AND (notes IS NULL OR notes NOT LIKE '[حالة الميدان:%%')
+                            THEN '[حالة الميدان: مكتملة]' || COALESCE(chr(10) || notes, '')
+                        WHEN status NOT IN ('Completed', 'مكتملة')
+                             AND notes LIKE '[حالة الميدان: مكتملة]%%'
+                            THEN substr(notes, length('[حالة الميدان: مكتملة]') + 1)
+                        ELSE notes
+                    END
+                WHERE mission_id = %s;
+                """,
+                (mission_id,),
+            )
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id,
+                    details={"action_text": f"إجراء حالة: {previous_status or '—'} ← {data.status}"},
+                )
+            except Exception as e:
+                print(f"Audit Error: {e}")
+            try:
+                notify_youth_of_completion(cursor, mission_id, mission_name, user_id, previous_status=previous_status)
+            except Exception as e:
+                print(f"Youth completion notify error: {e}")
+
+            connection.commit()
+            return {"message": "تم تحديث المهمة بنجاح", "status": data.status}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء تحديث الحالة: {str(e)}")
+    finally:
+        connection.close()
+
+
+def none_if_empty_str(val):
+    """فارغ ⇒ None (يبقى العمود كما هو عبر COALESCE) — غير فارغ يُكتب فعلاً."""
+    if val is None:
+        return None
+    val = str(val).strip()
+    return val if val != "" else None
+
 
 @app.post("/api/missions/{mission_id}/end-participation")
 def end_participation(

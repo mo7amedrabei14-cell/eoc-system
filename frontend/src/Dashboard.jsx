@@ -3033,6 +3033,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // 📤 عداد الاستمارات العالقة + علم المسح المقصود (للتعديل رقم 6 كمان)
   const [pendingSends, setPendingSends] = useState(readOutbox().length);
   const [outboxRetrying, setOutboxRetrying] = useState(false);
+  // 🛡️ حالة العملية الميدانية — React state حقيقية (عمود حقيقي في قاعدة البيانات،
+  // مصدر الحقيقة الوحيد: data.field_operation_status). لن يُقلَب إلى «نشطة» لمجرد
+  // إجراء حالة أو مزامنة حيّة — القيمة تُقرأ من الـ state لا من الـ DOM.
+  const [fieldStatus, setFieldStatus] = useState('نشطة');
   const refreshPending = () => setPendingSends(readOutbox().length);
   const clearDetailsRef = useRef(false);
 
@@ -3209,12 +3213,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     && customItineraries.some(ci => String(ci.title || '').trim() !== '');
   const [statusFilter, setStatusFilter] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState(''); 
+  // 🔎 بحث باسم المشارك/المتطوع — فلتر قراءة فقط يُطبَّق على السيرفر (mission_participants)
+  const [participantSearch, setParticipantSearch] = useState(''); 
 
   const fetchMissions = async (silent = false) => {
     if (!silent) setIsLoading(true);
     const token = getStoredAccessToken();
     try {
-      const res = await fetch(`${BASE}/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } });
+      // 🔎 فلتر اسم المشارك/المتطوع (قراءة فقط): يُمرَّر للسيرفر ليُطبَّق في SQL
+      //    فوق العلاقة الفعلية mission_participants — لا تحميل لكل المشاركين في الواجهة.
+      const pUrl = participantSearch.trim()
+        ? `${BASE}/api/missions?participant_name=${encodeURIComponent(participantSearch.trim())}`
+        : `${BASE}/api/missions`;
+      const res = await fetch(pUrl, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) {
         clearStoredAuth();
         // جلسة منتهية: إعادة توجيه كاملة لصفحة الدخول (لا يوجد navigate في هذا المكوّن)
@@ -3229,6 +3240,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   };
 
   useEffect(() => { fetchMissions(); }, []);
+
+  // 🔎 بحث باسم المشارك/المتطوع — إعادة جلب من السيرفر بعد توقف الكتابة (read-only filter، لا يلمس أي منطق آخر)
+  useEffect(() => {
+    const t = setTimeout(() => { fetchMissions(true); }, 350);
+    return () => clearTimeout(t);
+  }, [participantSearch]);
 
   // 🎯 تتبّع إشعار المهام: ننزل إلى الصف المستهدف ونومّضه دون لمس فلاتر المستخدم الحالية.
   //    لو الصف غير ظاهر في العرض الحالي (فلتر/بحث) أو سلعة محذوفة → تُفتح الصفحة فقط (سقوط آمن).
@@ -3284,6 +3301,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         setModalError(null);
         setCurrentMissionData(data);
         triggerFormGlow();
+        setFieldStatus((data.field_operation_status || (data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة'));
         const el = (id) => document.getElementById(id);
         const idMap = {
           f_mission_name: 'mission_name', f_mission_code: 'mission_code', f_team_code: 'team_code',
@@ -3308,10 +3326,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         // 🛡️ (كان هنا ReferenceError على allRoutes — متغير غير معرّف في نطاق المفعّل — يُسقط
         //    المزامنة الحية بالكامل كلما وصل حدث حي). المزامنة هنا قراءة فقط: بيانات السيرفر
         //    تتضمن routes أصلاً ولا يوجد أي مسار لحذفها.
-        const fieldStatusNode = el('f_mission_field_status');
-        if (fieldStatusNode) {
-          fieldStatusNode.value = (data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة';
-        }
+        // 🛡️ حالة العملية الميدانية: تُقرأ من العمود الحقيقي في الـ state — لا تُلمَس
+        //    أثناء المزامنة الحية (لا انقلاب «مكتملة → نشطة» تحت قدم المستخدم)
         // 🆕 ملاحظات غرفة التطوع: تحديث القسم من السيرفر فقط لو ما فيش تعديلات محلية غير محفوظة
         if (!volunteerRoomDirtyRef.current) {
           setVolunteerRoomRows((data.volunteer_room_notes && data.volunteer_room_notes.length > 0)
@@ -3321,8 +3337,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         }
         const notesNode = el('f_notes');
         if (notesNode && data.notes) {
-          const cleaned = String(data.notes).replace(/^\[حالة الميدان:[^\]]*\]\s*/, '');
-          if (String(notesNode.value) !== cleaned) notesNode.value = cleaned;
+          if (String(notesNode.value) !== String(data.notes)) notesNode.value = String(data.notes);
         }
       });
   }, [liveMissionEvents, isModalOpen, currentMissionData]);
@@ -3612,6 +3627,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setMissionName('');
     setMainRouteTitle('خط السير الأساسي');
     setMissionClass('عادية');
+    setFieldStatus('نشطة'); // مهمة جديدة تبدأ «نشطة» — تغييرها فعل مستخدم صريح فقط
     setRoutes([{ id: Date.now() }]);
     setCustomItineraries([]);
     setVehicles([{ id: Date.now() }]);
@@ -3650,6 +3666,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         timelineTouchedRef.current = new Set();
         setMissionName(data.mission_name || '');
         setMissionClass(data.mission_classification || 'عادية');
+        // 🛡️ حالة العملية الميدانية: من العمود الحقيقي (مع قراءة العلامة القديمة احتياطاً)
+        setFieldStatus(data.field_operation_status || ((data.notes || '').includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة'));
         // 🆕 تاريخ الإنشاء يبقى كما هو على إعادة الفتح (لا يُلتقط من جديد أبداً)
         setCreationDateTime(data.creation_datetime || data.created_at || '');
         
@@ -3924,7 +3942,7 @@ row++;
     field('التمركز / الفرع', branchName(detail.branch_id));
     field('نوع المهمة', detail.mission_type);
     field('مكان المهمة', detail.mission_location);
-    field('حالة العملية الميدانية', detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة');
+    field('حالة العملية الميدانية', detail.field_operation_status || (detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة'));
     field('مسؤول المهمة', detail.responsible_person);
     field('تاريخ المهمة', missionDateText || '—');
     field('مصدر البلاغ', detail.data_source);
@@ -4152,6 +4170,56 @@ row++;
   // 🆕 تعليم قسم ملاحظات غرفة التطوع كمتغيّر عند أي تحرير (يُحفظ مع الحفظ)
   const markVolunteerRoomDirty = () => { volunteerRoomDirtyRef.current = true; };
 
+  // 🎯 نقطة واحدة لكل إجراءات سير العمل (إرسال للجوكر/اعتماد/إنهاء/إرجاع/إعادة فتح):
+  // تغيّر حالة المهمة في نقطة مستقلة لا تُعيد كتابة بيانات الاستمارة إطلاقاً —
+  // السيرفر يدمج الحقول المختصة فقط، وخط السير/المستفيدون/المشاركون/حالة العملية
+  // الميدانية تبقى كما هي مخزَّنة (قاعدة: الحقل لا يتغير لمجرد تغيّر حقل آخر).
+  const runMissionStatusTransition = async (targetStatus) => {
+    if (submitLockRef.current || isSubmitting) return;
+    if (!currentMissionData?.mission_id) return; // مهمة جديدة: الحفظ الأول كامل فقط
+    submitLockRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      // ما كتبه المستخدم فعلاً في الحقول المرتبطة بالإجراء يُدمَج في السيرفر
+      // (فارغ = احتفظ بالمخزَّن) — أما باقي البيانات فلا تُرسَل أصلاً ولا تُمسّ.
+      const typedNotes = document.getElementById('f_notes')?.value;
+      // تاريخ/ساعة الانتهاء: القيمة المحرَّرة أو المخزَّنة (مصانة من أي فراغ عرضي)
+      const typedCompDate = document.getElementById('f_completion_date')?.value || currentMissionData?.completion_date || null;
+      const typedCompTime = document.getElementById('f_completion_time')?.value || currentMissionData?.completion_time || null;
+      const res = await fetch(`${BASE}/api/missions/${currentMissionData.mission_id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          status: targetStatus,
+          field_operation_status: (fieldStatus === 'مكتملة' || fieldStatus === 'نشطة') ? fieldStatus : null,
+          notes: (typedNotes ?? '').trim() !== '' ? typedNotes : null,
+          completion_date: typedCompDate,
+          completion_time: typedCompTime,
+          internal_notes: targetStatus === 'Returned'
+            ? (document.getElementById('f_internal_notes')?.value || null)
+            : '', // الاعتماد/الإغلاق يمسحان أسباب الإرجاع (نفس السلوك المعتاد)
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${body?.detail || `(status ${res.status})`}`);
+        return { ok: false };
+      }
+      setCustomAlert('تم تحديث حالة المهمة بنجاح!');
+      return { ok: true, mission_id: currentMissionData.mission_id };
+    } catch (error) {
+      const msg = error instanceof TypeError && error.message === 'Failed to fetch'
+        ? '⚠️ فشل الاتصال بالسيرفر — حاول مرة أخرى.'
+        : `⚠️ خطأ غير متوقع:\n${error?.message || error}`;
+      setCustomAlert(msg);
+      return { ok: false };
+    } finally {
+      setIsSubmitting(false);
+      submitLockRef.current = false;
+    }
+  };
+
   const handleSubmit = async (submitStatus) => {
      // 📋 متطلب الحقول الإلزامية: أي إجراء يغيّر حالة المهمة (حفظ/إرسال/اعتماد/إنهاء)
      // ممنوع ما دام حقل إلزامي ناقص — ما عدا "الإرجاع" (قرار رافض للسوبرفايزر يعمل دائماً).
@@ -4246,15 +4314,13 @@ row++;
          });
        });
 
-       const fieldStatus = document.getElementById('f_mission_field_status')?.value || 'نشطة الآن';
-       
+       let generalNotes = document.getElementById('f_notes')?.value || '';
+       const fieldStatusSafe = (fieldStatus === 'مكتملة' || fieldStatus === 'نشطة') ? fieldStatus : 'نشطة';
+
        // 🚨 التعديل الأول: منع إنهاء المهمة لو الحالة الميدانية لم تنتهي
-       if (submitStatus === 'Completed' && fieldStatus !== 'مكتملة') {
+       if (submitStatus === 'Completed' && fieldStatusSafe !== 'مكتملة') {
          return setCustomAlert("عفواً! لا يمكن إنهاء وإغلاق المهمة إلا بعد تغيير 'حالة العملية الميدانية' في الاستمارة إلى (مكتملة).");
        }
-
-       let generalNotes = document.getElementById('f_notes')?.value || '';
-       let finalNotes = `[حالة الميدان: ${fieldStatus}]\n` + generalNotes;
 
        let sysNotes = document.getElementById('f_internal_notes')?.value || '';
        if (['Under Review', 'Approved', 'Completed'].includes(submitStatus)) {
@@ -4285,7 +4351,9 @@ row++;
          arrival_time: timelineFieldValue('f_arrival_time', 'arrival_time'),
         completion_time: timelineFieldValue('f_completion_time', 'completion_time'),
          injured_count: 0, indirect_beneficiaries_total: 0,
-         notes: finalNotes,
+         notes: generalNotes,
+         // 🛡️ حالة العملية الميدانية تُرسل صراحةً (عمود حقيقي) — لا تُستنتج من الملاحظات
+         field_operation_status: fieldStatusSafe,
          internal_notes: sysNotes,
          team_code: document.getElementById('f_team_code')?.value || '',
           routes: allRoutes,
@@ -4341,6 +4409,22 @@ row++;
         const url = isUpdate ? `${BASE}/api/missions/${currentMissionData.mission_id}` : `${BASE}/api/missions`;
         const method = isUpdate ? 'PUT' : 'POST';
         const ikey = newMissionIdempotencyKey.current;
+
+        // 🎯 التحويل الجذري لإجراءات سير العمل: الاستمارة الموجودة يُغيَّر حالتها فقط
+        //    عبر نقطة الحالة المستقلة — لا إعادة كتابة كاملة للبيانات، ولا مسح لحالة
+        //    العملية الميدانية أو أي تفاصيل. (الإرجاع يبقى على الحفظ الكامل ليشمل
+        //    ملاحظات الإرجاع والمسح المقصود)
+        if (isUpdate && submitStatus !== 'Draft' && submitStatus !== 'Returned') {
+          const r = await runMissionStatusTransition(submitStatus);
+          if (r?.ok) {
+            newMissionIdempotencyKey.current = null;
+            setEntryDialog(null);
+            setDaysPicker(null);
+            setIsModalOpen(false);
+            fetchMissions();
+          }
+          return;
+        }
 
         // 📤 نسجل الاستمارة في الطابور المحلي قبل الإرسال — لو فشل أي حاجة تفضل هنا وتتبعت لوحدها
         enqueueOutbox({ key: ikey, method: method, url: url, payload: { ...missionData, idempotency_key: ikey } });
@@ -4679,6 +4763,13 @@ const completedAt =
         {searchTerm && <button onClick={() => setSearchTerm('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
 
+      {/* 🔎 بحث باسم المشارك/المتطوع — نفس الستايل والسلوك، RTL كامل، لا يغيّر أي فلتر موجود */}
+      <div className="mt-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
+        <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+        <input type="text" placeholder="بحث باسم المشارك أو المتطوع في المهام..." value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
+        {participantSearch && <button onClick={() => setParticipantSearch('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
+      </div>
+
       {!isVolunteer && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[var(--surface-week)] border-b border-[var(--border)] shrink-0">
         <StatCard title="إجمالي المهام" value={regionStats.total} color="text-[var(--ink)]" borderHighlight />
@@ -4881,7 +4972,7 @@ const completedAt =
                   <FormGroup label="نوع المهمة"><StyledInput id="f_mission_type" defaultValue={currentMissionData?.mission_type || ''} /></FormGroup>
                   <FormGroup label="مكان المهمة"><StyledInput id="f_mission_location" defaultValue={currentMissionData?.mission_location || ''} /></FormGroup>
                   <FormGroup label="حالة العملية الميدانية">
-                    <StyledSelect id="f_mission_field_status" defaultValue={currentMissionData?.notes?.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة'}>
+                    <StyledSelect id="f_mission_field_status" value={fieldStatus} onChange={(e) => setFieldStatus(e.target.value)}>
                       <option value="نشطة">نشطة (لم تنتهي بعد)</option>
                       <option value="مكتملة">مكتملة (تم الانتهاء)</option>
                     </StyledSelect>
@@ -5509,7 +5600,7 @@ const completedAt =
                   <FormGroup label="الملاحظات والتحديثات (متاحة للجميع)">
                     <textarea 
                       id="f_notes" 
-                      defaultValue={currentMissionData?.notes?.replace(/\[حالة الميدان: .*?\]\n?/g, '') || ''} 
+                      defaultValue={currentMissionData?.notes || ''} 
                       rows="4" 
                       className="w-full bg-[var(--surface-4)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl p-3 text-sm outline-none resize-none shadow-inner" 
                       placeholder="اكتب هنا أي ملاحظات إضافية، تحديثات ميدانية متاحة للغرفة..."
