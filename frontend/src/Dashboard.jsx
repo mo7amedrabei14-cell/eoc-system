@@ -99,7 +99,7 @@ const clearStoredAuth = () => {
   }
 };
 
-const YOUTH_ALLOWED_TABS = ['home', 'missions', 'human_resources'];
+const YOUTH_ALLOWED_TABS = ['missions', 'human_resources'];
 const isYouthRole = (userRole) => String(userRole || '').trim().toUpperCase() === 'READ_ONLY_MISSIONS';
 
 const getRoleFlags = (user) => {
@@ -118,7 +118,7 @@ const getRoleFlags = (user) => {
 const getDefaultTab = (user, requestedTab = null) => {
   const flags = getRoleFlags(user);
   if (flags.isYouth) {
-    return requestedTab && YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'home';
+return requestedTab && YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'missions';
   }
   if (requestedTab === 'weather_intel' && flags.weatherEligible) return 'weather_intel';
   const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole);
@@ -127,7 +127,7 @@ const getDefaultTab = (user, requestedTab = null) => {
 
 const getRequestedTab = (requestedTab, user) => {
   const flags = getRoleFlags(user);
-  if (flags.isYouth) return YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'home';
+if (flags.isYouth) return YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'missions';
   const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole);
   return requestedTab === 'weather_intel' && flags.weatherEligible
     ? 'weather_intel'
@@ -1902,7 +1902,8 @@ if (e.event_type === 'system_refresh') {
   }, [activeTab]);
   // 💡 3. دالة الانتقال الذكية (بتفتح الصفحة، تقفل الموبايل، وتمسح الإشعار)
   const handleNavigation = (tabName) => {
-    setActiveTab(tabName);
+  if (isYouth && tabName === 'home') tabName = 'missions';
+  setActiveTab(tabName);
     setNewUpdates(prev => ({ ...prev, [tabName]: false })); // إخفاء النقطة الحمراء بعد قراءة التحديث
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
@@ -1974,7 +1975,9 @@ if (e.event_type === 'system_refresh') {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'home': return <MemoHomeView branches={branchesList} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
+      case 'home':
+  if (isYouth) return <MemoMissionsView branches={branchesList} isYouth={isYouth} />;
+  return <MemoHomeView branches={branchesList} liveUpdateVersion={liveUpdateVersion} lang={language} weatherEligible={weatherEligible} />;
       case 'ai_news': return <MemoAINewsMonitorView branches={branchesList} isOwner={isOwner} lang={language} focusTarget={focusTarget} />;
       case 'weather': return <MemoWeatherForecastView branches={branchesList} isOwner={isOwner} isJoker={isJoker} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.weather} />;
       case 'weather_intel': return weatherEligible
@@ -2003,7 +2006,7 @@ if (e.event_type === 'system_refresh') {
     {
       titleAr: 'الوحدات التشغيلية', titleEn: 'Operations',
       items: [
-        ...((isOwner || isSupervisor || isJoker || isYouth) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات الغرفة', en: 'Operations Overview' }] : []),
+        ...((isOwner || isSupervisor || isJoker) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات الغرفة', en: 'Operations Overview' }] : []),
         ...(!isYouth ? [{ id: 'ai_news', icon: <AIIcon />, ar: 'رصد الذكاء الاصطناعي', en: 'AI Monitoring', update: newUpdates.ai_news }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
@@ -2229,7 +2232,6 @@ if (e.event_type === 'system_refresh') {
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
             {/* 🔒 حساب إدارة الشباب (yveoc): 3 صفحات فقط — مؤشرات الغرفة، المهام، القوة البشرية */}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
-            {isYouth && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
@@ -2811,7 +2813,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {weatherHighlights.map((m, i) => (
-              <div key={m.key} className="kpi-card card-surface p-4 md:p-5 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[170px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
+              <div key={m.key} className="kpi-card card-surface p-4 md:p-5 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[150px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-[var(--muted)] font-bold text-sm md:text-base">{lang === 'ar' ? m.ar : m.en}</h4>
                   <span className="text-[var(--faint)] font-bold text-xs">{m.unit}</span>

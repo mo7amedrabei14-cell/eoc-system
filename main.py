@@ -986,12 +986,11 @@ class MissionCreate(BaseModel):
     # من النموذج بينما كان الكود يقرأ mission.idempotency_key → AttributeError → 500.
     idempotency_key: Optional[str] = None
 
-    # 🛡️ علم المسح المقصود: true فقط لما المستخدم يدوس «لا يوجد خط سير» عمداً
+    # 🛡️ علم المسح المقصود
+    clear_details: bool = False
 
-    # 💾 «حفظ التعديلات بدون إجراء»: يتخطى فحوص الحقول الإلزامية وقاعدة الإنهاء —
-    #    حفظ بيانات فقط، والحالة الحالية تُثبَّت من القاعدة (لا تغيير إجراء إطلاقاً).
+    # 💾 حفظ البيانات بدون تغيير إجراء أو حالة
     action: Optional[str] = None
-
 
 # ── حالة العملية الميدانية: عمود حقيقي + علامة داخل الملاحظات (توافق خلفي) ──
 # العمود field_operation_status هو مصدر الحقيقة الوحيد. دوال الجسر تُبقي الملاحظات
@@ -2012,7 +2011,14 @@ def get_missions(
                       AND pf.full_name ILIKE %s
                 )
             """
-            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"] or is_youth_role(role):
+            if (
+                role_name.upper() in [
+                    "OWNER", "MANAGER", "ADMIN", "SUPERVISOR",
+                    "JOKER", "OPERATION", "مشرف", "جوكر",
+                    "المالك", "أوبريشن"
+                ]
+                or is_youth_role(role)
+            ):
                 # 🆕 التاريخ المعياري لترتيب سجل المهام هو «تاريخ/وقت إنشاء المهمة» (creation_datetime)
                 #    — لا «تاريخ المهمة» (exit_date) ولا created_at. fallback: created_at (قديم بلا تاريخ إنشاء)
                 if p_search_like:
@@ -4723,14 +4729,14 @@ def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)
                 FROM local_news n 
                 LEFT JOIN branches b ON n.branch_id = b.branch_id
             """
-            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن"]:
+            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن", "READ_ONLY_MISSIONS"]:
                 query = base_query + " ORDER BY n.created_at DESC;"
                 cursor.execute(query)
             else:
                 user_branches = get_user_branches(user_id)
                 branch_ids = [b["branch_id"] for b in user_branches]
                 if not branch_ids: return []
-                query = base_query + " WHERE n.branch_id = ANY(%s) ORDER BY n.created_at DESC;"
+                query = base_query + " WHERE (n.branch_id = ANY(%s) OR n.branch_id IS NULL) ORDER BY n.created_at DESC;"
                 cursor.execute(query, (branch_ids,))
                 
             rows = cursor.fetchall()
