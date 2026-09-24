@@ -1802,6 +1802,30 @@ if (e.event_type === 'system_refresh') {
     return () => clearInterval(t);
   }, []);
 
+    // 🔄 كروت الصفحة الرئيسية بتتحدث لوحدها: أي حدث مهمة (إضافة/تعديل/إجراء حالة)
+  //    بيطلق event في قناة الريال تايم ⇒ liveUpdateVersion.missions يزيد ⇒
+  //    نعيد سحب /api/dashboard/stats بعد 700ms (debounce لتجميع الأحداث المتتالية).
+  useEffect(() => {
+    if (!userData || liveUpdateVersion.missions === 0) return;
+    const timer = setTimeout(async () => {
+      try {
+        const token = getStoredAccessToken();
+        if (!token) return;
+        const res = await fetch(`${BASE}/api/dashboard/stats`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const statsData = await res.json().catch(() => null);
+          if (statsData && typeof statsData === 'object' && !Array.isArray(statsData)) {
+            setDashboardStats(prev => ({ ...prev, ...statsData }));
+          }
+        }
+      } catch {
+        // فشل عابر: آخر رقم يفضل ظاهر — المحاولة الجاية من الحدث اللي بعده
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [liveUpdateVersion.missions, userData]);
+
+
   useEffect(() => {
     const auth = getStoredAuth();
     if (!auth?.user || !auth?.token) {
@@ -4268,7 +4292,7 @@ row++;
      // 📋 متطلب الحقول الإلزامية: أي إجراء يغيّر حالة المهمة (حفظ/إرسال/اعتماد/إنهاء)
      // ممنوع ما دام حقل إلزامي ناقص — ما عدا "الإرجاع" (قرار رافض للسوبرفايزر يعمل دائماً).
      // الفحص قبل القفل المتزامن حتى لا يعلق القفل عند العودة المبكرة.
-     if (submitStatus !== 'Returned') {
+      if (submitStatus !== 'Returned' && submitStatus !== 'SaveEditsOnly') {
        // 📌 العنوان الإلزامي للأيام/خطوط السير المخصصة: أي يوم مخصص بلا عنوان يمنع
        //    الحفظ/الإرسال/الاعتماد/الإنهاء — العنوان يُحرَّر الحقول فيه. بدون أي يوم
        //    مخصص لا يوجد شرط (خط السير الأساسي لا يتطلب عنواناً). استثناء "الإرجاع"
@@ -4382,7 +4406,8 @@ row++;
          mission_location: document.getElementById('f_mission_location')?.value || '',
          responsible_person: document.getElementById('f_responsible_person')?.value || '',
          data_source: document.getElementById('f_data_source')?.value || '',
-         status: submitStatus,
+          status: submitStatus === 'SaveEditsOnly' ? (currentMissionData?.status || 'Draft') : submitStatus,
+          action: submitStatus === 'SaveEditsOnly' ? 'save_edits_only' : null,
          // 🛡️ التواريخ/الأوقات: الحقل الذي لم يحرّره المستخدم (غير مسجَّل في timelineTouchedRef)
          //    يحتفظ بآخر قيمته المحفوظة لو قرأ فارغاً — لا يُكتب فوقه null أبداً (State Preservation).
          exit_date: timelineFieldValue('f_exit_date', 'exit_date'),
@@ -4458,7 +4483,7 @@ row++;
         //    عبر نقطة الحالة المستقلة — لا إعادة كتابة كاملة للبيانات، ولا مسح لحالة
         //    العملية الميدانية أو أي تفاصيل. (الإرجاع يبقى على الحفظ الكامل ليشمل
         //    ملاحظات الإرجاع والمسح المقصود)
-        if (isUpdate && submitStatus !== 'Draft' && submitStatus !== 'Returned') {
+        if (isUpdate && !['Draft', 'Returned', 'SaveEditsOnly'].includes(submitStatus)) {
           const r = await runMissionStatusTransition(submitStatus);
           if (r?.ok) {
             newMissionIdempotencyKey.current = null;
@@ -5674,6 +5699,11 @@ row++;
               {/* 🆕 إجراء المراجعة — حساب إدارة الشباب (yveoc) والمالك على المهمة المكتملة فقط */}
               {(isYouth || isOwner) && ['Completed', 'مكتملة'].includes(currentMissionData?.status) && (
                 <button onClick={handleYouthReview} disabled={isSubmitting} className="bg-purple-600 hover:bg-purple-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(147,51,234,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تمت المراجعة من إدارة الشباب</button>
+              )}
+
+              {/* 💾 حفظ التعديلات بدون إجراء — قيد المراجعة / مُرجَعة / معتمدة فقط — بلا مسودة ولا إنشاء ولا مكتملة */}
+              {currentMissionData && !isVolunteer && !isYouth && ['Under Review', 'Returned', 'Approved'].includes(currentMissionData.status) && (
+                <button onClick={() => handleSubmit('SaveEditsOnly')} disabled={isSubmitting} className="bg-slate-600 hover:bg-slate-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(100,116,139,0.3)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ التعديلات بدون إجراء</button>
               )}
 
               

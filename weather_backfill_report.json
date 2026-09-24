@@ -1,12 +1,12 @@
 {
   "report_version": 1,
-  "generated_at": "2026-09-22T04:21:53.340948+03:00",
+  "generated_at": "2026-09-24T11:09:16.210135+03:00",
   "database_source_of_truth": true,
   "canonical_identity": "weather_locations.id",
   "data_source": "era5-archive",
   "configured_range": {
     "start": "1996-01-01",
-    "end": "2026-09-21"
+    "end": "2026-09-23"
   },
   "expected_location_count": 27,
   "actual_location_count": 27,
@@ -17,7 +17,7 @@
     "locations_with_remaining_gaps": 0,
     "locations_with_errors": 0,
     "rows_existing_before": 302994,
-    "rows_inserted": 0,
+    "rows_inserted": 54,
     "rows_skipped_existing": 0,
     "http_429_count": 0
   },
@@ -26,541 +26,676 @@
       "location_id": 1,
       "name_ar": "القاهرة",
       "name_en": "Cairo",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.109787+03:00",
-      "finished_at": "2026-09-22T04:21:53.340678+03:00",
+      "started_at": "2026-09-24T11:07:21.067299+03:00",
+      "finished_at": "2026-09-24T11:09:16.209944+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 2,
       "name_ar": "الجيزة",
       "name_en": "Giza",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.121376+03:00",
-      "finished_at": "2026-09-22T04:21:53.340707+03:00",
+      "started_at": "2026-09-24T11:07:25.148108+03:00",
+      "finished_at": "2026-09-24T11:09:16.209972+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 3,
       "name_ar": "الإسكندرية",
       "name_en": "Alexandria",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.127789+03:00",
-      "finished_at": "2026-09-22T04:21:53.340712+03:00",
+      "started_at": "2026-09-24T11:07:28.470487+03:00",
+      "finished_at": "2026-09-24T11:09:16.209978+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 4,
       "name_ar": "المنيا",
       "name_en": "Minya",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.133594+03:00",
-      "finished_at": "2026-09-22T04:21:53.340716+03:00",
+      "started_at": "2026-09-24T11:07:32.187579+03:00",
+      "finished_at": "2026-09-24T11:09:16.209983+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 5,
       "name_ar": "أسيوط",
       "name_en": "Assiut",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.138749+03:00",
-      "finished_at": "2026-09-22T04:21:53.340720+03:00",
+      "started_at": "2026-09-24T11:07:35.460158+03:00",
+      "finished_at": "2026-09-24T11:09:16.209989+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 6,
       "name_ar": "سوهاج",
       "name_en": "Sohag",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.144649+03:00",
-      "finished_at": "2026-09-22T04:21:53.340724+03:00",
+      "started_at": "2026-09-24T11:07:38.716947+03:00",
+      "finished_at": "2026-09-24T11:09:16.209993+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 7,
       "name_ar": "قنا",
       "name_en": "Qena",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.150989+03:00",
-      "finished_at": "2026-09-22T04:21:53.340728+03:00",
+      "started_at": "2026-09-24T11:07:42.082768+03:00",
+      "finished_at": "2026-09-24T11:09:16.210028+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 8,
       "name_ar": "الأقصر",
       "name_en": "Luxor",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.156990+03:00",
-      "finished_at": "2026-09-22T04:21:53.340732+03:00",
+      "started_at": "2026-09-24T11:07:46.895222+03:00",
+      "finished_at": "2026-09-24T11:09:16.210047+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 9,
       "name_ar": "أسوان",
       "name_en": "Aswan",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.163638+03:00",
-      "finished_at": "2026-09-22T04:21:53.340736+03:00",
+      "started_at": "2026-09-24T11:07:52.402229+03:00",
+      "finished_at": "2026-09-24T11:09:16.210055+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 19,
       "name_ar": "القليوبية",
       "name_en": "Qalyubia",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.169420+03:00",
-      "finished_at": "2026-09-22T04:21:53.340742+03:00",
+      "started_at": "2026-09-24T11:07:55.774340+03:00",
+      "finished_at": "2026-09-24T11:09:16.210061+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 20,
       "name_ar": "البحيرة",
       "name_en": "Beheira",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.175335+03:00",
-      "finished_at": "2026-09-22T04:21:53.340755+03:00",
+      "started_at": "2026-09-24T11:07:59.062058+03:00",
+      "finished_at": "2026-09-24T11:09:16.210064+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 21,
       "name_ar": "مطروح",
       "name_en": "Matrouh",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.182348+03:00",
-      "finished_at": "2026-09-22T04:21:53.340768+03:00",
+      "started_at": "2026-09-24T11:08:02.417927+03:00",
+      "finished_at": "2026-09-24T11:09:16.210067+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 22,
       "name_ar": "شمال سيناء",
       "name_en": "North Sinai",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.188004+03:00",
-      "finished_at": "2026-09-22T04:21:53.340779+03:00",
+      "started_at": "2026-09-24T11:08:07.148751+03:00",
+      "finished_at": "2026-09-24T11:09:16.210070+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 23,
       "name_ar": "جنوب سيناء",
       "name_en": "South Sinai",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.194463+03:00",
-      "finished_at": "2026-09-22T04:21:53.340789+03:00",
+      "started_at": "2026-09-24T11:08:13.395086+03:00",
+      "finished_at": "2026-09-24T11:09:16.210074+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 24,
       "name_ar": "السويس",
       "name_en": "Suez",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.200941+03:00",
-      "finished_at": "2026-09-22T04:21:53.340800+03:00",
+      "started_at": "2026-09-24T11:08:21.822475+03:00",
+      "finished_at": "2026-09-24T11:09:16.210079+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 25,
       "name_ar": "الشرقية",
       "name_en": "Sharqia",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.207069+03:00",
-      "finished_at": "2026-09-22T04:21:53.340812+03:00",
+      "started_at": "2026-09-24T11:08:27.731184+03:00",
+      "finished_at": "2026-09-24T11:09:16.210084+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 26,
       "name_ar": "الإسماعيلية",
       "name_en": "Ismailia",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.213973+03:00",
-      "finished_at": "2026-09-22T04:21:53.340827+03:00",
+      "started_at": "2026-09-24T11:08:33.103657+03:00",
+      "finished_at": "2026-09-24T11:09:16.210089+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 27,
-      "name_ar": "بور سعيد",
+      "name_ar": "بورسعيد",
       "name_en": "Port Said",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.219890+03:00",
-      "finished_at": "2026-09-22T04:21:53.340839+03:00",
+      "started_at": "2026-09-24T11:08:36.396706+03:00",
+      "finished_at": "2026-09-24T11:09:16.210094+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 28,
       "name_ar": "المنوفية",
       "name_en": "Monufia",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.225663+03:00",
-      "finished_at": "2026-09-22T04:21:53.340850+03:00",
+      "started_at": "2026-09-24T11:08:40.165585+03:00",
+      "finished_at": "2026-09-24T11:09:16.210098+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 29,
       "name_ar": "الغربية",
       "name_en": "Gharbia",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.232732+03:00",
-      "finished_at": "2026-09-22T04:21:53.340862+03:00",
+      "started_at": "2026-09-24T11:08:44.208371+03:00",
+      "finished_at": "2026-09-24T11:09:16.210102+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 30,
       "name_ar": "الدقهلية",
       "name_en": "Dakahlia",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.238564+03:00",
-      "finished_at": "2026-09-22T04:21:53.340873+03:00",
+      "started_at": "2026-09-24T11:08:47.952943+03:00",
+      "finished_at": "2026-09-24T11:09:16.210106+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 31,
       "name_ar": "كفر الشيخ",
       "name_en": "Kafr El-Sheikh",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.244250+03:00",
-      "finished_at": "2026-09-22T04:21:53.340883+03:00",
+      "started_at": "2026-09-24T11:08:51.764979+03:00",
+      "finished_at": "2026-09-24T11:09:16.210110+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 32,
       "name_ar": "دمياط",
       "name_en": "Damietta",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.250973+03:00",
-      "finished_at": "2026-09-22T04:21:53.340894+03:00",
+      "started_at": "2026-09-24T11:08:55.356263+03:00",
+      "finished_at": "2026-09-24T11:09:16.210114+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 33,
       "name_ar": "بني سويف",
       "name_en": "Beni Suef",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.256694+03:00",
-      "finished_at": "2026-09-22T04:21:53.340905+03:00",
+      "started_at": "2026-09-24T11:08:58.729718+03:00",
+      "finished_at": "2026-09-24T11:09:16.210118+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 34,
       "name_ar": "الفيوم",
       "name_en": "Fayoum",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.265167+03:00",
-      "finished_at": "2026-09-22T04:21:53.340916+03:00",
+      "started_at": "2026-09-24T11:09:02.106003+03:00",
+      "finished_at": "2026-09-24T11:09:16.210123+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 35,
       "name_ar": "الوادي الجديد",
       "name_en": "New Valley",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.271361+03:00",
-      "finished_at": "2026-09-22T04:21:53.340928+03:00",
+      "started_at": "2026-09-24T11:09:05.489217+03:00",
+      "finished_at": "2026-09-24T11:09:16.210127+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     },
     {
       "location_id": 36,
       "name_ar": "البحر الأحمر",
       "name_en": "Red Sea",
-      "requested_ranges": [],
+      "requested_ranges": [
+        {
+          "start_date": "2026-09-22",
+          "end_date": "2026-09-23"
+        }
+      ],
       "rows_existing_before": 11222,
-      "rows_inserted": 0,
+      "rows_inserted": 2,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": null,
-      "latest_archive_date": null,
+      "last_successful_date": "2026-09-23",
+      "latest_archive_date": "2026-09-23",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-22T04:21:52.276958+03:00",
-      "finished_at": "2026-09-22T04:21:53.340938+03:00",
+      "started_at": "2026-09-24T11:09:08.975533+03:00",
+      "finished_at": "2026-09-24T11:09:16.210131+03:00",
       "status": "completed",
-      "missing_days_before": 0,
+      "missing_days_before": 2,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-21"
+      "remaining_latest_record_date": "2026-09-23"
     }
   ]
 }

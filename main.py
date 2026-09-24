@@ -987,7 +987,10 @@ class MissionCreate(BaseModel):
     idempotency_key: Optional[str] = None
 
     # 🛡️ علم المسح المقصود: true فقط لما المستخدم يدوس «لا يوجد خط سير» عمداً
-    clear_details: bool = False
+
+    # 💾 «حفظ التعديلات بدون إجراء»: يتخطى فحوص الحقول الإلزامية وقاعدة الإنهاء —
+    #    حفظ بيانات فقط، والحالة الحالية تُثبَّت من القاعدة (لا تغيير إجراء إطلاقاً).
+    action: Optional[str] = None
 
 
 # ── حالة العملية الميدانية: عمود حقيقي + علامة داخل الملاحظات (توافق خلفي) ──
@@ -2355,12 +2358,15 @@ def update_mission(
     ikey = mission.idempotency_key or idempotency_key_header or None
 
     # 🛡️ الحقول الإلزامية + قاعدة الإنهاء — تُفرض في السيرفر قبل أي PROCESS للطلب
-    missing_required = validate_mission_required_fields(mission)
-    if missing_required:
-        raise HTTPException(status_code=400, detail="الحقول الإلزامية التالية مطلوبة: " + "،".join(missing_required))
-    completion_error = validate_mission_completion(mission)
-    if completion_error:
-        raise HTTPException(status_code=400, detail=completion_error)
+    # 💾 «حفظ التعديلات بدون إجراء»: بلا أي فحص إجراء — الحالة بتتثبت من القاعدة تحت.
+    save_only = (getattr(mission, 'action', None) == 'save_edits_only')
+    if not save_only:
+        missing_required = validate_mission_required_fields(mission)
+        if missing_required:
+            raise HTTPException(status_code=400, detail="الحقول الإلزامية التالية مطلوبة: " + "،".join(missing_required))
+        completion_error = validate_mission_completion(mission)
+        if completion_error:
+            raise HTTPException(status_code=400, detail=completion_error)
 
     connection = get_connection()
     try:
@@ -2390,6 +2396,15 @@ def update_mission(
                 cur_db_fs = cd_row[3]
             # 🆕 الحالة السابقة قبل التحديث — تُستخدم لمنع إشعارات المراجعة المكررة
             _previous_mission_status = cd_row[1] if cd_row else None
+
+                        # 💾 حفظ بدون إجراء: مسموح فقط (قيد المراجعة / مُرجَعة / معتمدة) — الحالة تُثبَّت من القاعدة
+            if save_only:
+                if not cd_row:
+                    raise HTTPException(status_code=404, detail="المهمة غير موجودة أو تم حذفها")
+                if cd_row[1] not in ('Under Review', 'Returned', 'Approved'):
+                    raise HTTPException(status_code=400, detail="حفظ التعديلات بدون إجراء متاح فقط للاستمارات (قيد المراجعة / مُرجَعة / معتمدة).")
+                mission.status = cd_row[1]
+
             # 🛡️ عدادات التفاصيل قبل الحفظ — تُطبع في اللوج (قبل → بعد) لكشف أي تصفية
             cursor.execute("""
                 SELECT
@@ -2808,7 +2823,8 @@ def update_mission(
                 cursor.execute("SELECT count(*) FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
                 _ben_after = cursor.fetchone()[0]
                 _counts_note = f" — التفاصيل: خط سير {_routes_before}→{_routes_after}, مركبات {_veh_before}→{_veh_after}, مستفيدون {_ben_before}→{_ben_after}"
-                create_audit_log(cursor, user_id, "تحديث/مراجعة", mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» (كود: {mission.mission_code or '—'}) — الحالة: {mission.status}{_counts_note}"})
+                _audit_action = "حفظ تعديلات بدون إجراء" if save_only else "تحديث/مراجعة"
+                create_audit_log(cursor, user_id, _audit_action, mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» (كود: {mission.mission_code or '—'}) — الحالة: {mission.status}{_counts_note}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
 
@@ -5777,7 +5793,7 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                     incident_date, incident_month, incident_description, news_type, news_publisher,
                     street_name, area_name, governorate, hospital_name, injured_count, deaths_count,
                     news_updates, news_link, data_entry_name, observed_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s, ''), (now() AT TIME ZONE 'Africa/Cairo'))) RETURNING id;
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s::text, '')::timestamp, (now() AT TIME ZONE 'Africa/Cairo'))) RETURNING id;
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
@@ -5825,7 +5841,7 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
                     incident_date=%s, incident_month=%s, incident_description=%s, news_type=%s, news_publisher=%s,
                     street_name=%s, area_name=%s, governorate=%s, hospital_name=%s, injured_count=%s, deaths_count=%s,
                     news_updates=%s, news_link=%s, data_entry_name=%s,
-                    observed_at=COALESCE(NULLIF(%s, ''), observed_at)
+                    observed_at=COALESCE(NULLIF(%s::text, '')::timestamp, observed_at)
                 WHERE id=%s;
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
@@ -6157,7 +6173,9 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                         is_active = True
                     # 🛡️ «ف مهمة حالياً» لا يُمنح أبداً من مهمة منتهية — حتى لو شريحة
                     #    مفتوحة (انضمام بلا انفصال) أو return_status قديمة «مازال بالمهمة»
-                    if is_active and mission_status not in ('Cancelled', 'Draft', 'Returned', 'Completed', 'مكتملة', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'):
+                if is_active and mission_status not in ('Cancelled', 'Draft', 'Returned',
+                    'Completed', 'مكتملة', 'Completed (Reviewed by Youth Administration)',
+                    'مكتملة (تمت المراجعة من إدارة الشباب)'):
                         active_missions[k] = {
                             'mission_id': mid,
                             'mission_code': md.get('mission_code', ''),
@@ -7730,3 +7748,57 @@ def force_refresh_system(
 
     finally:
         connection.close()
+
+# ═══════════════════════════════════════════════════════════════════
+# 🛠️ باكفيل لمرة واحدة: إعادة اشتقاق شرائح المشاركة لكل مهمة فيها
+#    انضمام/انفصال (داتا قديمة بلا sessions ⇒ ساعات صفرية).
+#    لا يغيّر start_from_mission ولا يطلق أحداثاً ولا إشعارات.
+#    ⚠️ موضع في نهاية الملف عمداً — بعد تعريف materialize_jl_segments
+#    و _jl_mission_row حتى يكونا متاحين وقت التشغيل.
+# ═══════════════════════════════════════════════════════════════════
+
+def run_jl_sessions_backfill():
+    key = "jl_sessions_backfill_v1"
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS system_backfills (
+                    backfill_key VARCHAR(150) PRIMARY KEY,
+                    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            cursor.execute("SELECT 1 FROM system_backfills WHERE backfill_key = %s", (key,))
+            if cursor.fetchone():
+                return
+            cursor.execute("""
+                SELECT DISTINCT mission_id
+                FROM mission_participant_itineraries
+                WHERE itinerary_group LIKE 'JL:%'
+                ORDER BY mission_id
+            """)
+            mission_ids = [row[0] for row in cursor.fetchall()]
+            for mid in mission_ids:
+                try:
+                    materialize_jl_segments(
+                        cursor, mid, _jl_mission_row(cursor, mid),
+                        user_id=None, fire_events=False,
+                    )
+                except Exception as e:
+                    print(f"JL backfill: skip mission {mid}: {e}")
+            cursor.execute(
+                "INSERT INTO system_backfills (backfill_key) VALUES (%s) ON CONFLICT (backfill_key) DO NOTHING",
+                (key,),
+            )
+            connection.commit()
+            print(f"JL sessions backfill: {len(mission_ids)} missions re-derived")
+    except Exception as e:
+        connection.rollback()
+        print(f"JL sessions backfill failed (will retry next boot): {e}")
+    finally:
+        connection.close()
+
+try:
+    run_jl_sessions_backfill()
+except Exception as e:
+    print(f"JL sessions backfill error: {e}")
