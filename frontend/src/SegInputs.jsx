@@ -793,7 +793,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
         const h24 = +m[4], mm = pad(+m[5]);
         const ap = h24 < 12 ? 'AM' : 'PM';
         const hh = pad(h24 % 12 || 12);
-        setSegs([pad(+m[2]), pad(+m[3]), m[1], hh, mm, ap]);
+        setSegs([pad(+m[3]), pad(+m[2]), m[1], hh, mm, ap]);
       } else setSegs(['','','','','','AM']);
       setMachine(s);
     }

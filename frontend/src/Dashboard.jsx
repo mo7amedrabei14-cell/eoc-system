@@ -3827,7 +3827,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         //    تبقى المهمة نفسها مهما نما خط سيرها (بلا تصنيف). 'خط السير الأساسي'
         //    يذهب لمحرّره البسيط (من/إلى + تواريخ كاملة)؛ والباقي لمجموعات مخصصة.
         //    تحويل backend date/time → datetime-local للـ RouteCard UI
-        const combineDateTime = (date, time) => (date && time ? `${date}T${time}` : '');
+        // ⏰ الوقت من السيرفر بييجي بثواني (08:00:00) — نبعته HH:MM بس (نفس صيغة datetime-local)
+        const combineDateTime = (date, time) => (date && time ? `${date}T${String(time).slice(0, 5)}` : '');
         if (data.routes && data.routes.length > 0) {
           const mainR = data.routes.filter(r => r.group_title === 'خط السير الأساسي');
           const customR = data.routes.filter(r => r.group_title !== 'خط السير الأساسي');
@@ -4634,22 +4635,10 @@ row++;
         const method = isUpdate ? 'PUT' : 'POST';
         const ikey = newMissionIdempotencyKey.current;
 
-        // 🎯 التحويل الجذري لإجراءات سير العمل: الاستمارة الموجودة يُغيَّر حالتها فقط
-        //    عبر نقطة الحالة المستقلة — لا إعادة كتابة كاملة للبيانات، ولا مسح لحالة
-        //    العملية الميدانية أو أي تفاصيل. (الإرجاع يبقى على الحفظ الكامل ليشمل
-        //    ملاحظات الإرجاع والمسح المقصود)
-        if (isUpdate && !['Draft', 'Returned', 'SaveEditsOnly'].includes(submitStatus)) {
-          const r = await runMissionStatusTransition(submitStatus);
-          if (r?.ok) {
-            newMissionIdempotencyKey.current = null;
-            setEntryDialog(null);
-            setDaysPicker(null);
-            setIsModalOpen(false);
-            fetchMissions();
-          }
-          return;
-        }
-
+        // 🆕 كل الإجراءات (إرسال للجوكر / تم مراجعة المهمة / إنهاء وإغلاق / إرجاع /
+        //    حفظ بدون إجراء) تمر عبر الحفظ الكامل للاستمارة: تغيير الحالة + حفظ كل
+        //    التعديلات في طلب واحد — فلا تضيع أي تعديلات غير محفوظة عند أي زر.
+        //    (الإغلاق الوحيد الذي لا يحفظ = إغلاق المودال بدون ضغط أي زر.)
         // 📤 نسجل الاستمارة في الطابور المحلي قبل الإرسال — لو فشل أي حاجة تفضل هنا وتتبعت لوحدها
         enqueueOutbox({ key: ikey, method: method, url: url, payload: { ...missionData, idempotency_key: ikey } });
         refreshPending();
