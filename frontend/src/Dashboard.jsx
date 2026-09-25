@@ -44,6 +44,26 @@ const missionClosedDay = (m) => {
   return (closedDay && closedDay >= created) ? closedDay : created;
 };
 
+// 🔢 رقم يوم المهمة (عرض فقط): اليوم 1 = يوم الإنشاء بلا لاحقة، وبعده -2، -3 … حتى الإغلاق.
+//    لا يلمس mission_code في القاعدة ولا الأوديت ولا الاستمارة المطبوعة/المفردة.
+const missionDayNumber = (m, asOfDate) => {
+  // ✋ اللاحقة للمهام تصنيفها «مفتوحة» بس — أي تصنيف تاني ⇒ بدون أي لاحقة
+  if (String(m.mission_classification || '').trim() !== 'مفتوحة') return 1;
+  const dayOf = (v) => (v && v !== '-') ? String(v).split(/[ T]/)[0] : null;
+  const created = dayOf(m.created_at) || dayOf(m.creation_datetime);
+  if (!created) return 1;
+  const finished = ['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status);
+  const asOf = asOfDate || (finished ? (dayOf(m.closed_at) || dayOf(m.completion_date)) : null) || new Date().toLocaleDateString('en-CA');
+  const a = Date.parse(`${created}T00:00:00Z`);
+  const b = Date.parse(`${asOf}T00:00:00Z`);
+  if (isNaN(a) || isNaN(b)) return 1;
+  const diff = Math.round((b - a) / 86400000) + 1;   // فرق أيام تقويمية (آمن مع التوقيت الصيفي)
+  return diff < 1 ? 1 : diff;
+};
+const missionCodeWithDay = (m, asOfDate) => {
+  const day = missionDayNumber(m, asOfDate);
+  return day > 1 ? `${m.mission_code}-${day}` : (m.mission_code || '');
+};
 
 
 const getBrowserStorages = () => {
@@ -4109,10 +4129,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         })
       : filteredMissions;
     if (dayFilteredMissions.length === 0) { setCustomAlert("لا توجد مهام لتصديرها."); return; }
-    const missionsSheet = [...dayFilteredMissions]
-      .sort((a, b) => String(b.creation_datetime || b.created_at || '').localeCompare(String(a.creation_datetime || a.created_at || '')))
-      .map(m => ({
-      "كود المهمة": m.mission_code,
+    const missionsSheet = dayFilteredMissions.map(m => ({
+      "كود المهمة": missionCodeWithDay(m, filterDate),
       "تصنيف المهمة": m.mission_classification || "عادية",
       "تاريخ الإنشاء (السيرفر)": formatDateTime(m.created_at),
       "تاريخ المهمة (الفعلي)": m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : "غير مسجل",
@@ -4137,7 +4155,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       const hasBeneficiaries = m.beneficiaries && m.beneficiaries.length > 0;
       if (!hasBeneficiaries) {
         beneficiariesSheet.push({
-          "كود المهمة": m.mission_code,
+          "كود المهمة": missionCodeWithDay(m, filterDate),
           "تصنيف المستفيدين": "",
           "الرقم (المباشر)": "",
           "المستفيدين غير المباشر": "",
@@ -4148,7 +4166,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       }
       m.beneficiaries.forEach(b => {
         beneficiariesSheet.push({
-          "كود المهمة": m.mission_code,
+          "كود المهمة": missionCodeWithDay(m, filterDate),
           "تصنيف المستفيدين": b.category_name,
           "الرقم (المباشر)": b.direct_count,
           "المستفيدين غير المباشر": b.indirect_count,
@@ -4966,7 +4984,7 @@ row++;
       filteredMissions = filteredMissions.filter(m =>
         (m.mission_name && m.mission_name.toLowerCase().includes(term)) ||
         (m.mission_location && m.mission_location.toLowerCase().includes(term)) ||
-        (m.mission_code && m.mission_code.toLowerCase().includes(term)) ||
+        (missionCodeWithDay(m, filterDate).toLowerCase().includes(term)) ||
         (m.mission_type && m.mission_type.toLowerCase().includes(term))
       );
     }
@@ -5215,7 +5233,7 @@ row++;
                     <span className={isFinishedStatus(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {isFinishedStatus(m.status) ? (m.completion_date !== '-' && m.completion_date ? formatDateTime(m.completion_date) : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
                 </td>
-                <td data-label="كود المهمة" className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_code}</td>
+                <td data-label="كود المهمة" className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{missionCodeWithDay(m, filterDate)}</td>
                 <td data-label="التمركز (الفرع)" className="px-3 md:px-4 py-3 font-semibold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.branch}</td>
                 <td data-label="اسم المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60 min-w-[180px] max-w-[280px]">
                   <button
