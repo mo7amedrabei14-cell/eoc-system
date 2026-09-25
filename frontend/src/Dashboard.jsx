@@ -2910,7 +2910,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {weatherHighlights.map((m, i) => (
-              <div key={m.key} className="kpi-card card-surface p-4 md:p-5 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[150px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
+              <div key={m.key} className="kpi-card card-surface p-4 md:p-6 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[185px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-[var(--muted)] font-bold text-sm md:text-base">{lang === 'ar' ? m.ar : m.en}</h4>
                   <span className="text-[var(--faint)] font-bold text-xs">{m.unit}</span>
