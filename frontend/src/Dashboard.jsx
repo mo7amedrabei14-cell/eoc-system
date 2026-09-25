@@ -3148,14 +3148,14 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [volunteerRoomReviewer, setVolunteerRoomReviewer] = useState('');
   const volunteerRoomDirtyRef = useRef(false);
   // 🆕 البالكات المتكررة: كل بالك له عنوان، وكل صف معرَّف بالبالك اللي ينتمي له
-  const [volunteerBlocks, setVolunteerBlocks] = useState([{ id: 'v1', title: '', reviewer: '' }]);
+  const [volunteerBlocks, setVolunteerBlocks] = useState([{ id: 'v1', title: '', reviewer: '', observer: '' }]);
   const [adminBlocks, setAdminBlocks] = useState([{ id: 'a1', title: '', staff: {} }]);
   const newBlockId = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const addVolunteerRoomRow = (blockId = 'v1') => setVolunteerRoomRows(prev => [...prev, { id: Date.now() + Math.random(), blockId, note_date: '', membership_number: '', member_name: '', note_text: '' }]);
   const addVolunteerBlock = () => {
     markVolunteerRoomDirty();
     const id = newBlockId('v');
-    setVolunteerBlocks(prev => [...prev, { id, title: '', reviewer: '' }]);
+    setVolunteerBlocks(prev => [...prev, { id, title: '', reviewer: '', observer: '' }]);
     setVolunteerRoomRows(prev => [...prev, { id: Date.now() + Math.random(), blockId: id, note_date: '', membership_number: '', member_name: '', note_text: '' }]);
   };
   const removeVolunteerBlock = (id) => {
@@ -3163,17 +3163,19 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setVolunteerBlocks(prev => prev.filter(b => b.id !== id));
     setVolunteerRoomRows(prev => prev.filter(r => r.blockId !== id));
   };
-  const addAdminBlock = () => setAdminBlocks(prev => [...prev, { id: newBlockId('a'), title: '', staff: {} }]);
-  const removeAdminBlock = (id) => setAdminBlocks(prev => prev.filter(b => b.id !== id));
+  const addAdminBlock = () => { setAdminBlocks(prev => [...prev, { id: newBlockId('a'), title: '', staff: {} }]); bumpValidation(); };
+  const removeAdminBlock = (id) => { setAdminBlocks(prev => prev.filter(b => b.id !== id)); bumpValidation(); };
   const setAdminStaffField = (id, field, value) => setAdminBlocks(prev => prev.map(b => b.id === id ? { ...b, staff: { ...(b.staff || {}), [field]: value } } : b));
   const setBlockTitle = (setter) => (id, title) => setter(prev => prev.map(b => b.id === id ? { ...b, title } : b));
   const setBlockReviewer = (id, reviewer) => setVolunteerBlocks(prev => prev.map(b => b.id === id ? { ...b, reviewer } : b));
+  const setBlockObserver = (id, observer) => setVolunteerBlocks(prev => prev.map(b => b.id === id ? { ...b, observer } : b));
   const volunteerBlocksPayload = () => {
-    const src = volunteerBlocks.length > 0 ? volunteerBlocks : [{ id: 'v1', title: '', reviewer: '' }];
+    const src = volunteerBlocks.length > 0 ? volunteerBlocks : [{ id: 'v1', title: '', reviewer: '', observer: '' }];
     return src.map(b => ({
       id: b.id,
       title: b.title || '',
       reviewer: b.reviewer || null,
+      observer: b.observer || null,
       rows: volunteerRoomRows.filter(r => (r.blockId || src[0].id) === b.id).map(r => ({
         note_date: r.note_date || null,
         membership_number: r.membership_number || null,
@@ -3463,7 +3465,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           })();
           const _volB = (_fb && Array.isArray(_fb.volunteer) && _fb.volunteer.length > 0) ? _fb.volunteer : null;
           if (_volB) {
-            setVolunteerBlocks(_volB.map((b, i) => ({ id: b.id || `v${i + 1}`, title: b.title || '', reviewer: b.reviewer || '' })));
+            setVolunteerBlocks(_volB.map((b, i) => ({ id: b.id || `v${i + 1}`, title: b.title || '', reviewer: b.reviewer || '', observer: b.observer || '' })));
             const _flat = [];
             _volB.forEach((b, i) => (b.rows || []).forEach((r, j) => _flat.push({
               id: Date.now() + i * 1000 + j,
@@ -3475,7 +3477,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             })));
             setVolunteerRoomRows(_flat);
           } else {
-            setVolunteerBlocks([{ id: 'v1', title: '', reviewer: data.volunteer_room_reviewer_name || '' }]);
+            setVolunteerBlocks([{ id: 'v1', title: '', reviewer: data.volunteer_room_reviewer_name || '', observer: '' }]);
             setVolunteerRoomRows((data.volunteer_room_notes && data.volunteer_room_notes.length > 0)
               ? data.volunteer_room_notes.map((n, i) => ({ id: n.note_id ?? (Date.now() + i), blockId: 'v1', note_date: n.note_date || '', membership_number: n.membership_number || '', member_name: n.member_name || '', note_text: n.note_text || '' }))
               : []);
@@ -3790,7 +3792,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // 🆕 مهمة جديدة: القسم يبدأ فاضي (بالك واحد) وبلا عناوين
     setVolunteerRoomRows([]);
     setVolunteerRoomReviewer('');
-    setVolunteerBlocks([{ id: 'v1', title: '', reviewer: '' }]);
+    setVolunteerBlocks([{ id: 'v1', title: '', reviewer: '', observer: '' }]);
     setAdminBlocks([{ id: 'a1', title: '', staff: {} }]);
     volunteerRoomDirtyRef.current = false;
     loadAllVolunteers(); // 🆕 كل الفروع (#6)
@@ -3871,7 +3873,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         })();
         const _volB = (_fb && Array.isArray(_fb.volunteer) && _fb.volunteer.length > 0) ? _fb.volunteer : null;
         if (_volB) {
-          setVolunteerBlocks(_volB.map((b, i) => ({ id: b.id || `v${i + 1}`, title: b.title || '', reviewer: b.reviewer || '' })));
+          setVolunteerBlocks(_volB.map((b, i) => ({ id: b.id || `v${i + 1}`, title: b.title || '', reviewer: b.reviewer || '', observer: b.observer || '' })));
           const _flat = [];
           _volB.forEach((b, i) => (b.rows || []).forEach((r, j) => _flat.push({
             id: Date.now() + i * 1000 + j,
@@ -3923,7 +3925,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // 🆕 البالك الأول (الأصلي) يقرأ من DOM كما هو — والبالكات الإضافية (أيام/سجلات) على state
   const adminFieldProps = (blk, bi, field, legacyId) => (bi === 0
     ? { id: legacyId, defaultValue: getStaff(field), onChange: bumpValidation }
-    : { id: `${legacyId}__${blk.id}`, value: (blk.staff && blk.staff[field]) || '', onChange: (e) => setAdminStaffField(blk.id, field, e.target.value) });
+    : { id: `${legacyId}__${blk.id}`, value: (blk.staff && blk.staff[field]) || '', onChange: (e) => { setAdminStaffField(blk.id, field, e.target.value); bumpValidation(); } });
 
   const confirmDeleteMission = async () => {
     if (!missionToDelete) return;
@@ -4263,7 +4265,16 @@ row++;
         const _rows = (blk.rows || []).filter(r => r && (r.note_date || r.membership_number || r.member_name || r.note_text));
         _rows.forEach((r, ri) => dataRow([ri + 1, r.note_date || '', r.membership_number || '', r.member_name || '', r.note_text || '']));
         if (_rows.length === 0) emptyRow('لا توجد ملاحظات مسجلة');
-        if (blk.reviewer) field('اسم مراجع الاستمارة', blk.reviewer);
+        // 🆕 اسم راصد الاستمارة + اسم مراجع الاستمارة جنب بعض في نفس السطر (نفس شكل الاستمارة)
+        const _obs = text(blk.observer || '');
+        const _rev = text(blk.reviewer || '');
+        if (_obs || _rev) {
+          put(0, 'اسم راصد الاستمارة'); span(0, 2);
+          put(3, _obs); span(3, 5);
+          put(6, 'اسم مراجع الاستمارة'); span(6, 8);
+          put(9, _rev); span(9, TOTAL - 1);
+          row++;
+        }
       });
     }
 
@@ -4313,16 +4324,41 @@ row++;
       (p.participant_type || 'volunteer') === 'non_volunteer' &&
       !String(document.getElementById(`p_position_${i}`)?.value || '').trim());
     if (positionMissing) missing.push('field_participant_position');
-    if (!v('eoc_leader')) missing.push('field_leader');
-    if (!v('eoc_supervisor')) missing.push('field_supervisor');
-    if (!v('eoc_joker')) missing.push('field_joker');
-    if (!v('eoc_filler')) missing.push('field_filler');
+    // 🆕 الإلزام على **كل** بلوكات الهيكل الإداري: الأول من الـ DOM، والإضافية من حالة React
+    const REQUIRED_ADMIN = [
+      ['مسؤول المتابعة', 'eoc_leader', 'field_leader'],
+      ['المشرف', 'eoc_supervisor', 'field_supervisor'],
+      ['الجوكر', 'eoc_joker', 'field_joker'],
+      ['معبئ الاستمارة', 'eoc_filler', 'field_filler'],
+    ];
+    (adminBlocks || []).forEach((blk, bi) => {
+      REQUIRED_ADMIN.forEach(([role, legacyId, key]) => {
+        const filled = bi === 0 ? v(legacyId) : String((blk.staff && blk.staff[role]) || '').trim();
+        if (!filled) missing.push(`${key}__${bi}`);
+      });
+    });
     if (status === 'Completed') {
       if (!v('f_completion_date')) missing.push('field_completion_date');
       if (!v('f_completion_time')) missing.push('field_completion_time');
     }
     return missing;
   };
+
+    // 🆕 اسم الحقل الناقص + اسم البلوك (اليوم الأول / اليوم الثاني...) في رسالة التنبيه
+  const adminMissingLabel = (key) => {
+    const m = /^(field_leader|field_supervisor|field_joker|field_filler)__(\d+)$/.exec(String(key));
+    if (!m) return null;
+    const roleAr = {
+      field_leader: 'مسؤول المتابعة (قائد العملية)',
+      field_supervisor: 'المشرف',
+      field_joker: 'الجوكر',
+      field_filler: 'معبئ الاستمارة',
+    }[m[1]] || m[1];
+    const bi = Number(m[2]);
+    const t = String((adminBlocks[bi] || {}).title || '').trim();
+    return `${roleAr} — (${t || (bi > 0 ? `سجل إداري ${bi + 1}` : 'الهيكل الإداري')})`;
+  };
+
 
   // 🔄 إعادة الحساب الفوري للحقول الناقصة بعد أي تعديل (بعد أول محاولة مرفوضة فقط)
   useEffect(() => {
@@ -4462,7 +4498,7 @@ row++;
          setAttemptStatus(submitStatus);
          setMissingFields(missing);
          setCustomAlert('⚠️ لا يمكن إتمام هذه العملية — يُرجى استكمال الحقول الإلزامية التالية:\n\n' +
-           missing.map(k => `• ${FIELD_LABELS[k] || k}`).join('\n'));
+            missing.map(k => `• ${FIELD_LABELS[k] || adminMissingLabel(k) || k}`).join('\n'));
          return;
        }
      }
@@ -4791,7 +4827,7 @@ row++;
 
       // 🔒 الفلاتر: نشطة / مكتملة (كل الصيغ) / تمت مراجعتها من إدارة الشباب (الحالة الجديدة فقط)
       if (statusFilter === 'active') baseMissions = baseMissions.filter(m => !['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
-      else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'Cancelled', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
+      else if (statusFilter === 'completed') baseMissions = baseMissions.filter(m => ['Completed', 'مكتملة', 'Cancelled'].includes(m.status));
       else if (statusFilter === 'youth_reviewed') baseMissions = baseMissions.filter(m => ['Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status));
     }
 
@@ -5716,15 +5752,15 @@ row++;
                         )}
                       </div>
                       <div className="bg-[var(--surface-4)] p-4 rounded-xl border border-[var(--accent)]/30 shadow-[0_0_15px_rgba(199,0,0,0.05)] w-full">
-                        <FormGroup required={bi === 0} label="مسؤول المتابعة (قائد العملية)" invalid={bi === 0 && requiredTouched && missingFields.includes('field_leader')}>
-                          <StyledInput {...adminFieldProps(blk, bi, 'مسؤول المتابعة', 'eoc_leader')} placeholder="الاسم ورقم الهاتف..." className={`bg-[var(--surface-3)] text-lg font-bold ${bi === 0 && requiredTouched && missingFields.includes('field_leader') ? 'field-invalid' : ''}`} />
+                        <FormGroup required label="مسؤول المتابعة (قائد العملية)" invalid={requiredTouched && missingFields.includes(`field_leader__${bi}`)}>
+                          <StyledInput {...adminFieldProps(blk, bi, 'مسؤول المتابعة', 'eoc_leader')} placeholder="الاسم ورقم الهاتف..." className={`bg-[var(--surface-3)] text-lg font-bold ${requiredTouched && missingFields.includes(`field_leader__${bi}`) ? 'field-invalid' : ''}`} />
                         </FormGroup>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <FormGroup required={bi === 0} label="المشرف" invalid={bi === 0 && requiredTouched && missingFields.includes('field_supervisor')}><StyledInput {...adminFieldProps(blk, bi, 'المشرف', 'eoc_supervisor')} placeholder="الاسم..." className={bi === 0 && requiredTouched && missingFields.includes('field_supervisor') ? 'field-invalid' : ''} /></FormGroup>
+                        <FormGroup required label="المشرف" invalid={requiredTouched && missingFields.includes(`field_supervisor__${bi}`)}><StyledInput {...adminFieldProps(blk, bi, 'المشرف', 'eoc_supervisor')} placeholder="الاسم..." className={requiredTouched && missingFields.includes(`field_supervisor__${bi}`) ? 'field-invalid' : ''} /></FormGroup>
                         <FormGroup label="المشرف المراجع"><StyledInput {...adminFieldProps(blk, bi, 'المشرف المراجع', 'eoc_reviewer')} placeholder="الاسم..." /></FormGroup>
-                        <FormGroup required={bi === 0} label="الجوكر" invalid={bi === 0 && requiredTouched && missingFields.includes('field_joker')}><StyledInput {...adminFieldProps(blk, bi, 'الجوكر', 'eoc_joker')} placeholder="الاسم..." className={bi === 0 && requiredTouched && missingFields.includes('field_joker') ? 'field-invalid' : ''} /></FormGroup>
-                        <FormGroup required={bi === 0} label="معبئ الاستمارة" invalid={bi === 0 && requiredTouched && missingFields.includes('field_filler')}><StyledInput {...adminFieldProps(blk, bi, 'معبئ الاستمارة', 'eoc_filler')} placeholder="الاسم..." className={bi === 0 && requiredTouched && missingFields.includes('field_filler') ? 'field-invalid' : ''} /></FormGroup>
+                        <FormGroup required label="الجوكر" invalid={requiredTouched && missingFields.includes(`field_joker__${bi}`)}><StyledInput {...adminFieldProps(blk, bi, 'الجوكر', 'eoc_joker')} placeholder="الاسم..." className={requiredTouched && missingFields.includes(`field_joker__${bi}`) ? 'field-invalid' : ''} /></FormGroup>
+                        <FormGroup required label="معبئ الاستمارة" invalid={requiredTouched && missingFields.includes(`field_filler__${bi}`)}><StyledInput {...adminFieldProps(blk, bi, 'معبئ الاستمارة', 'eoc_filler')} placeholder="الاسم..." className={requiredTouched && missingFields.includes(`field_filler__${bi}`) ? 'field-invalid' : ''} /></FormGroup>
                         <FormGroup label="مستكمل الاستمارة"><StyledInput {...adminFieldProps(blk, bi, 'مستكمل الاستمارة', 'eoc_completer')} placeholder="الاسم..." /></FormGroup>
                         <FormGroup label="مراجع الاستمارة"><StyledInput {...adminFieldProps(blk, bi, 'مراجع الاستمارة', 'eoc_final_reviewer')} placeholder="الاسم..." /></FormGroup>
                       </div>
@@ -5736,7 +5772,7 @@ row++;
               {/* 🆕 ملاحظات غرفة التطوع — بالكات (أيام/سجلات) متكررة بعناوين؛ تحريرها لإدارة الشباب والمالك */}
               <SectionCard className={canEditVolunteerRoom ? 'youth-notes-escape' : ''} title="ملاحظات غرفة التطوع" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>} actionBtn={canEditVolunteerRoom ? (<button type="button" onClick={addVolunteerBlock} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة سجل ملاحظات (يوم / سجل)</button>) : null}>
                 <div className="space-y-5">
-                  {(volunteerBlocks.length > 0 ? volunteerBlocks : [{ id: 'v1', title: '', reviewer: '' }]).map((blk) => {
+                  {(volunteerBlocks.length > 0 ? volunteerBlocks : [{ id: 'v1', title: '', reviewer: '', observer: '' }]).map((blk) => {
                     const rows = volunteerRoomRows.filter(r => (r.blockId || 'v1') === blk.id);
                     return (
                       <div key={blk.id} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 md:p-4 space-y-3">
@@ -5771,9 +5807,12 @@ row++;
                           <button type="button" onClick={() => { markVolunteerRoomDirty(); addVolunteerRoomRow(blk.id); }} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة صف</button>
                         )}
 
-                        {/* 🆕 مراجع الاستمارة جوه البالك نفسه (لكل يوم مراجعه) */}
-                        <div className="pt-2 border-t border-[var(--border)]">
-                          <FormGroup label="اسم مراجع الاستمارة:" className="md:w-96">
+                        {/* 🆕 اسم راصد الاستمارة + اسم مراجع الاستمارة جنب بعض (جوه كل بالك) */}
+                        <div className="pt-2 border-t border-[var(--border)] grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormGroup label="اسم راصد الاستمارة:">
+                            <StyledInput value={blk.observer || ''} onChange={(e) => { markVolunteerRoomDirty(); setBlockObserver(blk.id, e.target.value); }} placeholder="الاسم..." className="bg-[var(--surface-3)]" disabled={!canEditVolunteerRoom} />
+                          </FormGroup>
+                          <FormGroup label="اسم مراجع الاستمارة:">
                             <StyledInput value={blk.reviewer || ''} onChange={(e) => { markVolunteerRoomDirty(); setBlockReviewer(blk.id, e.target.value); }} placeholder="الاسم..." className="bg-[var(--surface-3)]" disabled={!canEditVolunteerRoom} />
                           </FormGroup>
                         </div>
