@@ -2865,7 +2865,8 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[var(--muted-2)] text-base font-bold">إجمالي الأخبار المرصودة</p>
+
+              <p className="text-[var(--muted-2)] text-lg font-bold">إجمالي الأخبار المرصودة</p>
               <p className="text-5xl font-black text-white mt-2">{aiTotalNews.toLocaleString()}</p>
             </div>
             <div className="bg-purple-500/10 text-purple-400 p-3.5 rounded-xl">
@@ -2880,7 +2881,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[var(--muted-2)] text-base font-bold">الدول المرصودة</p>
+              <p className="text-[var(--muted-2)] text-lg font-bold">الدول المرصودة</p>
               <p className="text-5xl font-black text-white mt-2">{aiTotalCountries.toLocaleString()}</p>
             </div>
             <div className="bg-purple-500/10 text-purple-400 p-3.5 rounded-xl">
@@ -3339,7 +3340,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 2. خريطة الأقاليم بناءً على الأسماء الموحدة
   const regionMap = {
     'المركزالعام': 'hq', 'القاهره': 'hq', 'الجيزه': 'hq', 'القليوبيه': 'hq', 'البحيره': 'hq', 'الاسكندريه': 'hq', 'مرسيمطروح': 'hq', 'مطروح': 'hq',
-    'الاسماعيليه': 'canal', 'بور سعيد': 'canal', 'السويس': 'canal', 'شمالسيناء': 'canal', 'جنوبسيناء': 'canal', 'الشرقيه': 'canal',
+    'الاسماعيليه': 'canal', 'بورسعيد': 'canal', 'السويس': 'canal', 'شمالسيناء': 'canal', 'جنوبسيناء': 'canal', 'الشرقيه': 'canal',
     'الغربيه': 'delta', 'الدقهليه': 'delta', 'كفرالشيخ': 'delta', 'المنوفيه': 'delta', 'دمياط': 'delta',
     'الفيوم': 'saeed', 'بنيسويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الواديالجديد': 'saeed', 'البحرالاحمر': 'saeed'
   };
@@ -3377,6 +3378,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     (branches || []).forEach(b => {
       const region = regionMap[normalizeName(b.name)] || 'hq';
       if (!byRegion[region].some(x => x.id === b.id)) byRegion[region].push(b);
+    });
+    // 🆕 داخل كل إقليم: فرع المركز العام (القاهرة) أولاً، ثم باقي المحافظات أبجدياً
+    const hqFirst = (b) => (['القاهره', 'المركزالعام'].includes(normalizeName(b.name)) ? 0 : 1);
+    Object.keys(byRegion).forEach(r => {
+      byRegion[r] = byRegion[r].slice().sort((a, b) =>
+        hqFirst(a) - hqFirst(b) || String(a.name).localeCompare(String(b.name), 'ar')
+      );
     });
     return byRegion;
   }, [branches]);
@@ -4101,7 +4109,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         })
       : filteredMissions;
     if (dayFilteredMissions.length === 0) { setCustomAlert("لا توجد مهام لتصديرها."); return; }
-    const missionsSheet = dayFilteredMissions.map(m => ({
+    const missionsSheet = [...dayFilteredMissions]
+      .sort((a, b) => String(b.creation_datetime || b.created_at || '').localeCompare(String(a.creation_datetime || a.created_at || '')))
+      .map(m => ({
       "كود المهمة": m.mission_code,
       "تصنيف المهمة": m.mission_classification || "عادية",
       "تاريخ الإنشاء (السيرفر)": formatDateTime(m.created_at),
@@ -4961,15 +4971,24 @@ row++;
       );
     }
 
-    // 🔝 «Open» دائماً في الأعلى — كأن البيانات مرتبة بالحالة:
-    //    Open أولاً، ثم الحالات المفتوحة (نشطة/قيد المراجعة/معتمدة/إرجاع)، والمكتملة/الملغاة في الأسفل —
-    //    كل مجموعة تحافظ على ترتيبها الزمني الأصلي.
-    const statusRank = (st) => {
-      if (st === 'Open') return 0;
-      if (['Completed', 'مكتملة', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)', 'Cancelled'].includes(st)) return 2;
-      return 1;
+    // 🔝 ترتيب سجل المهام:
+    //    1) «المفتوحة» = تصنيف المهمة (mission_classification === 'مفتوحة') أولاً — مش حالة المهمة.
+    //    2) ثم إقليم المركز العام: فرع المركز العام (القاهرة) أولاً، ثم باقي محافظات الإقليم.
+    //    3) ثم القنال، ثم الدلتا، ثم الصعيد.
+    //    4) وداخل كل إقليم: الأحدث إنشاءً أولاً (تاريخ/وقت إنشاء المهمة) — القيم نفسها لا تتغير أبداً.
+    const regionRank = (branchName) => {
+      const n = normalizeName(branchName);
+      if (n === 'القاهره' || n === 'المركزالعام') return 0; // فرع المركز العام
+      const r = regionMap[n] || 'hq';
+      return r === 'hq' ? 1 : r === 'canal' ? 2 : r === 'delta' ? 3 : 4;
     };
-    filteredMissions = [...filteredMissions].sort((a, b) => statusRank(a.status) - statusRank(b.status));
+    const classRank = (m) => (String(m.mission_classification || '').trim() === 'مفتوحة' ? 0 : 1);
+    filteredMissions = [...filteredMissions].sort((a, b) =>
+      classRank(a) - classRank(b) ||
+      regionRank(a.branch) - regionRank(b.branch) ||
+      String(b.creation_datetime || b.created_at || '').localeCompare(String(a.creation_datetime || a.created_at || '')) ||
+      String(b.mission_id).localeCompare(String(a.mission_id))
+    );
 
     return { filteredMissions, regionStats };
   }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, filterBranch, searchTerm, participantSearch]);
