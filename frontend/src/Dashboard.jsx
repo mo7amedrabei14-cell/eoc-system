@@ -9,6 +9,7 @@ import L from 'leaflet';
 import { normTime, formatTime12, formatDateTime12 } from './timeutils';
 import { SegDateField, SegTimeField, SegDateTimeField } from './SegInputs';
 import { translate } from './i18n.js';
+import { classifyActivity } from './activityMap';
 
 // 🔧 Module-level API base. Must be declared here (module scope), NOT inside a
 // component's effect: MissionsView's live modal-sync effect fetches
@@ -1250,6 +1251,15 @@ const gridFromRows = (objs) => {
   return { header, rows: objs.map(o => header.map(h => (o[h] === undefined || o[h] === null ? '' : o[h]))) };
 };
 
+// 📏 قياس بخط Calibri 11 Bold — صف العناوين عريض في إكسل فلازم يُقاس بخطه العريض
+const cellTextPxBold = (value) => {
+  if (value === undefined || value === null || value === '') return 0;
+  if (!cellTextPxBold.ctx) cellTextPxBold.ctx = document.createElement('canvas').getContext('2d');
+  cellTextPxBold.ctx.font = 'bold 14.67px "Calibri", Arial, sans-serif';
+  return cellTextPxBold.ctx.measureText(String(value)).width;
+};
+
+
 // 📏 True Excel AutoFit Column Width — نفس نتيجة «Home → Format → AutoFit Column Width» تماماً.
 // 1) يقيس عرض النص المرئي لكل خلية عبر Canvas بخط Calibri 11pt (≈14.67px @96dpi) كما يعرضه Excel فعلياً.
 // 2) يطبّق نموذج Microsoft الرسمي: pixels = 7 × chars + 5 → width = (pixels − 5) / MDW (قطع لأقرب 1/256)،
@@ -1294,14 +1304,15 @@ const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: الت�
     }));
     const colCount = rows.reduce((m, r) => Math.max(m, r.length), header.length);
     const px = new Array(colCount).fill(0);
-    const feed = (vals, rowIdx) => vals.forEach((v, ci) => {
+    const feed = (vals, rowIdx, measure = cellTextPx) => vals.forEach((v, ci) => {
       if (ci >= px.length || mergedCells.has(`${rowIdx}:${ci + 1}`)) return;
-      px[ci] = Math.max(px[ci], cellTextPx(v));
+      px[ci] = Math.max(px[ci], measure(v));
     });
-    feed(header, 1);
-    rows.forEach((r, ri) => feed(r, ri + 2)); // الصفوف تبدأ من الصف 2 في الورقة
+    feed(header, 1, cellTextPxBold);            // 🅱️ العناوين بخط عريض
+    rows.forEach((r, ri) => feed(r, ri + 2));   // الصفوف تبدأ من الصف 2 في الورقة
     const MDW = 7; // عرض الخانة «0» بخط Calibri 11 (Microsoft: pixels = 7 × chars + 5)
-    ws.columns = px.map(p => ({ width: p === 0 ? 8.43 : Math.floor((p / MDW) * 256) / 256 }));
+    const PAD = 3; // حجز حواف الخلية — يمنع ملامسة النص للحد ولنقص الحروف
+    ws.columns = px.map(p => ({ width: p === 0 ? 8.43 : Math.ceil(((p + PAD) / MDW) * 256) / 256 }));
   });
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -4105,7 +4116,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       setCustomAlert("حدث خطأ أثناء الاتصال بالسيرفر.");
     }
   };
-  const handleExportTableExcel = async () => {
+
+    // 🆕 اختيار تصدير السجل الشامل: بالتصنيفات (الأعمدة الخمسة) أم بدونها
+  const [showExportChoice, setShowExportChoice] = useState(false);
+
+
+  const handleExportTableExcel = async (withCategories = true) => {
     // 🆕 التصدير يعتمد على نفس فلترة الجدول المعروض تماماً:
     // فلترت على تاريخ معيّن → يُصدّر هذا اليوم فقط. بدون فلتر → كل السجلات.
     // نفس معادلة dailyMissions (المهام النشطة تبقى ظاهرة حتى تاريخ الفلتر، المكتملة تظهر يوم إغلاقها فقط).
@@ -4134,6 +4150,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       "تصنيف المهمة": m.mission_classification || "عادية",
       "تاريخ الإنشاء (السيرفر)": formatDateTime(m.created_at),
       "تاريخ المهمة (الفعلي)": m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : "غير مسجل",
+      ...(withCategories ? (() => { const c = classifyActivity(m.mission_name); return { "تصنيف النشاط": c[0], "نوع النشاط": c[1], "تفاصيل النشاط": c[2], "النوع": c[3], "اسم النوع": c[4] }; })() : {}),
       "اسم المهمة": m.mission_name,
       "عدد المتطوعين": m.vol_count || 0,
       "عدد الغير متطوعين": m.non_vol_count || 0,
@@ -5102,7 +5119,7 @@ row++;
             {isOwner && (
               <button
                 type="button"
-                onClick={handleExportTableExcel}
+                onClick={() => setShowExportChoice(true)}
                 data-tip={lang === 'ar' ? 'تصدير جدول Excel الحالي' : 'Export current table to Excel'}
                 className="action-btn action-btn--ok flex-1 sm:flex-none"
               >
@@ -6143,6 +6160,15 @@ row++;
         title="تصدير الاستمارة"
         onCancel={() => setDownloadTarget(null)}
         onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); handleExportSingleMission(rec); }}
+      />
+            {/* 🆕 نافذة اختيار: تحميل السجل الشامل بالتصنيفات أم بدونها */}
+      <ExportChoiceModal
+        show={showExportChoice}
+        title="تنزيل السجل الشامل"
+        message="تحب تنزّل السجل بالتصنيفات (تصنيف النشاط / نوع النشاط / تفاصيل النشاط / النوع / اسم النوع) ولا بدونها؟"
+        onCancel={() => setShowExportChoice(false)}
+        onWithCategories={() => { setShowExportChoice(false); handleExportTableExcel(true); }}
+        onWithoutCategories={() => { setShowExportChoice(false); handleExportTableExcel(false); }}
       />
     </div>
   );
@@ -11475,6 +11501,28 @@ const totalAiCountries = new Set(
     </div>
   );
 }
+// 🧩 اختيار تصدير السجل الشامل — بالتصنيفات (تصنيف/نوع/تفاصيل النشاط + النوع + اسم النوع) أو بدونها
+function ExportChoiceModal({ show, title = 'تنزيل السجل الشامل', message, onCancel, onWithCategories, onWithoutCategories }) {
+  if (!show) return null;
+  return createPortal(
+    <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
+      <div className="pointer-events-auto w-full max-w-lg bg-[var(--surface-3)] border border-[var(--accent)]/50 rounded-2xl p-5 shadow-xl animate-fade-in-up" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 0 20px var(--accent-soft)' }}>
+        <div className="flex items-center gap-3 mb-2">
+          <svg className="w-6 h-6 shrink-0 text-[var(--ok)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+          <span className="flex-1 text-base font-bold text-white">{title}</span>
+          <button onClick={onCancel} className="shrink-0 text-[var(--muted)] hover:text-white text-lg leading-none font-bold" aria-label="إغلاق">✕</button>
+        </div>
+        <p className="text-sm text-[var(--muted-2)] mb-4 pe-9 leading-relaxed">{message}</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button onClick={onWithCategories} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-[var(--ok)] hover:brightness-110 active:scale-[0.97] shadow-[0_8px_28px_-6px_color-mix(in_srgb,_var(--ok)_55%,_transparent)] transition-all">بالتصنيفات</button>
+          <button onClick={onWithoutCategories} className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors">بدون تصنيفات</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 
 // 💡 نافذة تأكيد موحّدة لعمليات الحذف
 // 📥 مُؤكِّد تنزيل سجل فردي — نافذة تأكيد محايدة وودّية بإطار وزر أخضر (var(--ok) — لون فعل التحميل):
@@ -11489,6 +11537,7 @@ function DownloadConfirmModal({
   confirmLabel = 'نعم',
   cancelLabel = 'إلغاء',
 }) {
+  
   if (!show) return null;
 
   return createPortal(
