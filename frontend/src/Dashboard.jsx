@@ -2910,14 +2910,14 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {weatherHighlights.map((m, i) => (
-              <div key={m.key} className="kpi-card card-surface p-4 md:p-6 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[185px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
+              <div key={m.key} className="kpi-card card-surface p-4 md:p-6 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[200px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-[var(--muted)] font-bold text-sm md:text-base">{lang === 'ar' ? m.ar : m.en}</h4>
-                  <span className="text-[var(--faint)] font-bold text-xs">{m.unit}</span>
+                  <h4 className="text-[var(--muted)] font-bold text-lg md:text-xl">{lang === 'ar' ? m.ar : m.en}</h4>
+                  <span className="text-[var(--faint)] font-bold text-[15px]">{m.unit}</span>
                 </div>
-                <div className="text-sm md:text-base font-bold leading-relaxed">
+                <div className="text-lg md:text-xl font-bold leading-relaxed">
                   <p className="text-[var(--ink)] break-words">{lang === 'ar' ? 'العظمى' : 'Max'}: {m.maxRow ? `${m.maxRow.branch_name} (${m.maxRow[`${m.key}_max`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
-                  <p className="text-[var(--muted)] break-words mt-1.5">{lang === 'ar' ? 'الصغرى' : 'Min'}: {m.minRow ? `${m.minRow.branch_name} (${m.minRow[`${m.key}_min`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
+                  <p className="text-[var(--muted)] break-words mt-2.5">{lang === 'ar' ? 'الصغرى' : 'Min'}: {m.minRow ? `${m.minRow.branch_name} (${m.minRow[`${m.key}_min`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
                 </div>
               </div>
             ))}
