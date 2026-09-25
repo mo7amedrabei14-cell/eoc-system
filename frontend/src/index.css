@@ -1364,7 +1364,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 .kpi-card { box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.045); }
 .kpi-sub {
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   color: var(--muted);
   font-weight: 700;
   display: inline-flex;
