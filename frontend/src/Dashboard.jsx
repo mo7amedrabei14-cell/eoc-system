@@ -121,14 +121,14 @@ const getDefaultTab = (user, requestedTab = null) => {
 return requestedTab && YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'missions';
   }
   if (requestedTab === 'weather_intel' && flags.weatherEligible) return 'weather_intel';
-  const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole);
+  const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف', 'JOKER', 'جوكر'].includes(flags.userRole);
   return isLeader ? 'home' : 'missions';
 };
 
 const getRequestedTab = (requestedTab, user) => {
   const flags = getRoleFlags(user);
 if (flags.isYouth) return YOUTH_ALLOWED_TABS.includes(requestedTab) ? requestedTab : 'missions';
-  const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف'].includes(flags.userRole);
+  const isLeader = user?.is_global_admin || ['OWNER', 'المالك', 'MANAGER', 'SUPERVISOR', 'ADMIN', 'مشرف', 'JOKER', 'جوكر'].includes(flags.userRole);
   return requestedTab === 'weather_intel' && flags.weatherEligible
     ? 'weather_intel'
     : (isLeader ? 'home' : 'missions');
