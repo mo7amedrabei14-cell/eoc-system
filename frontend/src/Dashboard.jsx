@@ -2796,39 +2796,39 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-base">المهام اليومية (نشطة)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><AlertIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">المهام اليومية (نشطة)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><AlertIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={activeDaily} /></p>
             <span className="kpi-sub"><span className="live-dot" /> نشطة الآن</span>
           </div>
         </TiltCard>
                 <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-base">المهام المكتملة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><CheckIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">المهام المكتملة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><CheckIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={completedMissions} /></p>
             <span className="kpi-sub">تم الانتهاء</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-base">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-[var(--ai)] bg-[var(--ai-soft)] border border-[var(--ai)]/20 shrink-0"><NewsIcon/></div></div>
-          <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalNews} /></p><span className="text-sm font-bold text-[var(--ai)] mb-1.5">(<CountUp value={activeNews} className="!text-sm !text-[var(--ai)] font-bold" /> استجابة)</span></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-[var(--ai)] bg-[var(--ai-soft)] border border-[var(--ai)]/20 shrink-0"><NewsIcon/></div></div>
+          <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalNews} /></p><span className="text-base font-bold text-[var(--ai)] mb-1.5">(<CountUp value={activeNews} className="!text-base !text-[var(--ai)] font-bold" /> استجابة)</span></div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface border-l-4 border-l-[var(--accent)] p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-base">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalGlobalDisasters} /></p>
             <span className="kpi-sub">الرصد العالمي</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-base">الزلازل العالمية (اليوم)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--danger-soft)] border border-[var(--accent)]/20 shrink-0"><EarthquakeIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">الزلازل العالمية (اليوم)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--danger-soft)] border border-[var(--accent)]/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={globalEqsToday} /></p>
             <span className="kpi-sub">خلال 24 ساعة</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-base">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><EarthquakeIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalEgyptEqs} /></p>
             <span className="kpi-sub">خلال 24 ساعة</span>
@@ -2840,13 +2840,13 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
       <div className="bg-[var(--surface-4)] border border-purple-500/30 rounded-3xl p-5 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h3 className="text-2xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> استخبارات الذكاء الاصطناعي (OSINT)</h3>
-          <p className="text-[var(--muted-2)] text-base mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
+          <p className="text-[var(--muted-2)] text-lg mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
         </div>
         <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
           <div className="flex flex-col gap-1 w-full md:w-auto">
             <div className="flex items-center gap-2">
               <span className="relative flex h-3.5 w-3.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--ok)] opacity-75"></span><span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[var(--ok)]"></span></span>
-              <span className="text-sm font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
+              <span className="text-base font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
             </div>
             <div className="flex items-center gap-1.5 mt-1 border-t border-[var(--border)] pt-1">
               <svg className="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -11150,7 +11150,7 @@ const totalAiCountries = new Set(
           <div className="flex items-center justify-between">
 
             <div>
-              <p className="text-[var(--muted-2)] text-base font-bold">
+              <p className="text-[var(--muted-2)] text-lg font-bold">
                 إجمالي الأخبار المرصودة
               </p>
 
@@ -11184,7 +11184,7 @@ const totalAiCountries = new Set(
           <div className="flex items-center justify-between">
 
             <div>
-              <p className="text-[var(--muted-2)] text-base font-bold">
+              <p className="text-[var(--muted-2)] text-lg font-bold">
                 الدول المرصودة
               </p>
 

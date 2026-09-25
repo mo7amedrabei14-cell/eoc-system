@@ -1573,7 +1573,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   gap: 0.4rem;
   padding: 0.5rem 0.95rem;
   border-radius: calc(var(--radius) - 3px);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--muted);
   cursor: pointer;
