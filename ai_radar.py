@@ -352,7 +352,7 @@ def send_report(article, ai_data):
         "deaths_count": deaths,
         "news_updates": tactical_report,
         "news_link": article["link"],
-        "data_entry_name": "OSINT God-Mode AI"
+        "data_entry_name": "OSINT  AI"
     }
 
     try:
@@ -379,7 +379,7 @@ def run_ai_scanner():
         return
 
     gemini_calls_today = 0
-    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT God-Mode)...")
+    print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT )...")
     now_utc = datetime.utcnow()
 
     # Phase 1: Scan all RSS feeds in parallel (fast, no API calls)

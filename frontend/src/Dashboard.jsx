@@ -412,8 +412,8 @@ const ENGLISH_UI = {
   'القوة (ريختر) - إلزامي': 'Magnitude (Richter) - required',
   'العمق (سيتم إضافة KM آلياً)': 'Depth (KM added automatically)',
   'مثال: 10': 'Example: 10',
-  'استعلامات الذكاء الاصطناعي (OSINT God-Mode)': 'AI intelligence (OSINT God-Mode)',
-  'استخبارات الذكاء الاصطناعي (OSINT God-Mode)': 'AI intelligence (OSINT God-Mode)',
+  'استعلامات الذكاء الاصطناعي (OSINT)': 'AI intelligence (OSINT)',
+  'استخبارات الذكاء الاصطناعي (OSINT)': 'AI intelligence (OSINT)',
   'رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.': 'Live tactical monitoring and strategic analysis of social media and news sites.',
   'الروبوت نشط (دوريات المسح تعمل)': 'Robot active (scanning patrols running)',
   'آخر فحص:': 'Last scan:',
@@ -2591,6 +2591,34 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   const [filterDate, setFilterDate] = useState(getLocalDate());
   // 🌤️ الطقس اليومي المجمّع (قراءة فقط) — يتحدّث تلقائياً مع أي حفظ/إنهاء توقعات
   const [dailyWeather, setDailyWeather] = useState([]);
+    // 🤖 أرقام بوت الأخبار (رصد الذكاء الاصطناعي) — نفس داتا صفحة الرصد
+  const [aiNewsList, setAiNewsList] = useState([]);
+
+
+    // 🤖 كارد بوت الأخبار: آخر فحص للـ workflow (GitHub Actions) — نفس منطق صفحة الرصد
+  const [lastRunTime, setLastRunTime] = useState('جاري التحقق...');
+  useEffect(() => {
+    const fetchLastRun = async () => {
+      try {
+        const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/runs?per_page=1');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.workflow_runs && data.workflow_runs.length > 0) {
+            const dateObj = new Date(data.workflow_runs[0].updated_at);
+            const nowD = new Date();
+            const isToday = dateObj.getDate() === nowD.getDate() && dateObj.getMonth() === nowD.getMonth();
+            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const dayStr = isToday ? 'اليوم' : formatDateTime(`${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`);
+            setLastRunTime(`${dayStr}، الساعة ${formattedTime}`);
+          } else { setLastRunTime('لا توجد بيانات'); }
+        } else { setLastRunTime('غير متاح'); }
+      } catch (e) { setLastRunTime('غير متاح'); }
+    };
+    fetchLastRun();
+    const interval = setInterval(fetchLastRun, 300000); // ⏱️ كل 5 دقايق (حماية من rate-limit جيت هاب)
+    return () => clearInterval(interval);
+  }, []);
+
 
   useEffect(() => {
     const token = sessionStorage.getItem('access_token');
@@ -2599,16 +2627,18 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
       fetch(`${BASE}/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
       fetch(`${BASE}/api/global-disasters`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
       fetch(`${BASE}/api/earthquakes/global`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`${BASE}/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
-    ]).then(([missionsData, newsData, globalData, gEqs, eEqs]) => {
+      fetch(`${BASE}/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch(`${BASE}/api/ai-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
+    ]).then(([missionsData, newsData, globalData, gEqs, eEqs, aiNewsData]) => {
       setMissions(missionsData);
       setNews(newsData);
       setGlobalDisasters(globalData);
       setGlobalEqs(gEqs);
       setEgyptEqs(eEqs);
+      setAiNewsList(Array.isArray(aiNewsData) ? aiNewsData : []);
     });
     // 🔄 يعاد السحب مع أي حدث لحظي يخص البيانات المعروضة — الأرقام تتحدث من نفسها
-  }, [liveUpdateVersion.missions, liveUpdateVersion.local_news, liveUpdateVersion.global_disasters, liveUpdateVersion.earthquakes]);
+  }, [liveUpdateVersion.missions, liveUpdateVersion.local_news, liveUpdateVersion.global_disasters, liveUpdateVersion.earthquakes, liveUpdateVersion.ai_news]);
 
   // 🌤️ سحب الطقس اليومي: عند تغيير تاريخ الفلتر أو عند وصول تحديث لحظي للطقس
   useEffect(() => {
@@ -2674,6 +2704,14 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
   const totalGlobalDisasters = dailyDisasters.length;
   const globalEqsToday = dailyGlobalEqs.length;
   const totalEgyptEqs = dailyEgyptEqs.length;
+
+  // 🤖 أرقام كارد البوت — مقيّدة بتاريخ الفلتر فقط (بدون فلتر الفرع)
+  const dailyAiNews = filterDate
+    ? aiNewsList.filter(n => n.incident_date === filterDate)
+    : aiNewsList;
+  const aiTotalNews = dailyAiNews.length;
+  const aiTotalCountries = new Set(dailyAiNews.map(n => n.governorate).filter(Boolean)).size;
+
 
   // 🕐 ساعة العمليات الحية + حالة تشغيلية مشتقة من البيانات الراسخة (لا منطق جديد)
   const [now, setNow] = useState(() => new Date());
@@ -2797,6 +2835,65 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
           </div>
         </TiltCard>
       </div>
+
+            {/* 🤖 كارد بوت الأخبار (استخبارات الذكاء الاصطناعي) — نفس شكل وألوان صفحة الرصد */}
+      <div className="bg-[var(--surface-4)] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> استخبارات الذكاء الاصطناعي (OSINT)</h3>
+          <p className="text-[var(--muted-2)] text-sm mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
+        </div>
+        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
+          <div className="flex flex-col gap-1 w-full md:w-auto">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--ok)] opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--ok)]"></span></span>
+              <span className="text-xs font-bold text-green-400">الروبوت نشط (دوريات المسح تعمل)</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 border-t border-[var(--border)] pt-1">
+              <svg className="w-3 h-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span className="text-[10px] text-[var(--muted-2)] font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
+            </div>
+          </div>
+          <div className="hidden md:block w-px h-8 bg-white/10"></div>
+          <img src="https://github.com/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/badge.svg" alt="AI Status Badge" className="h-5 mr-auto md:mr-0" />
+        </div>
+      </div>
+
+            {/* 📊 إحصائيات بوت الأخبار — تحت الكارد مباشرة (نفس ألوان وصفحة الرصد) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+
+        {/* إجمالي الأخبار المرصودة */}
+        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[var(--muted-2)] text-sm font-bold">إجمالي الأخبار المرصودة</p>
+              <p className="text-4xl font-black text-white mt-2">{aiTotalNews.toLocaleString()}</p>
+            </div>
+            <div className="bg-purple-500/10 text-purple-400 p-3 rounded-xl">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12m2-8h2v8a2 2 0 01-2 2h-2M7 8h6M7 12h6M7 16h4" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* الدول المرصودة */}
+        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[var(--muted-2)] text-sm font-bold">الدول المرصودة</p>
+              <p className="text-4xl font-black text-white mt-2">{aiTotalCountries.toLocaleString()}</p>
+            </div>
+            <div className="bg-purple-500/10 text-purple-400 p-3 rounded-xl">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+                <path strokeLinecap="round" strokeWidth={1.8} d="M3 12h18M12 3c2.2 2.5 3.4 5.5 3.4 9s-1.2 6.5-3.4 9c-2.2-2.5-3.4-5.5-3.4-9S9.8 5.5 12 3z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
 
       {/* 🌤️ بطاقة الطقس اليومي — فوق الخريطة مباشرة، تتحدّث لحظياً مع أي حفظ توقعات */}
       {weatherEligible && (<div className="card-surface p-4 md:p-6 animate-fade-in-up">
@@ -11025,7 +11122,7 @@ const totalAiCountries = new Set(
       {/* الهيدر ومؤشرات العمل */}
       <div className="bg-[var(--surface-4)] border border-purple-500/30 rounded-3xl p-5 shadow-[0_0_20px_rgba(168,85,247,0.1)] animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> استخبارات الذكاء الاصطناعي (OSINT God-Mode)</h3>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2"><AIIcon className="text-purple-500 animate-pulse"/> استخبارات الذكاء الاصطناعي (OSINT)</h3>
           <p className="text-[var(--muted-2)] text-sm mt-2">رصد تكتيكي حي وتحليل استراتيجي من السوشيال ميديا والمواقع الإخبارية.</p>
         </div>
         <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-4 shadow-inner shrink-0 flex-wrap md:flex-nowrap w-full md:w-auto">
