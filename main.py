@@ -8,11 +8,12 @@ from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
 from datetime import date, time, datetime, timedelta, timezone
-from psycopg.errors import UniqueViolation
+from psycopg.errors import OperationalError, UniqueViolation
 import json
 import os
 import re
 import threading
+import traceback
 import uuid
 
 # ملفات المشروع الخاصة بيك
@@ -60,6 +61,24 @@ def validate_clear_confirmation(data: ClearAllRequest):
         )
 
 
+# 🧾 إصدار بنية القاعدة: بأي تعديل على ensure_schema نرفع الرقم ⇒ يُعاد تشغيله
+#    مرة واحدة فقط، وكل الإقلاعات بعده تتخطاه فوراً (شوف المسار السريع تحت).
+SCHEMA_VERSION = "2026-09-27.1"
+
+
+def _schema_version_matches(cursor) -> bool:
+    """هل البنية مُعلَّمة بنفس الإصدار الحالي؟ (أي شك/فشل ⇒ False = نكمل المسار الكامل)"""
+    try:
+        cursor.execute("SELECT to_regclass('public.schema_meta');")
+        if not cursor.fetchone()[0]:
+            return False
+        cursor.execute("SELECT value FROM schema_meta WHERE key = 'version';")
+        row = cursor.fetchone()
+        return bool(row) and str(row[0]) == SCHEMA_VERSION
+    except Exception:
+        return False
+
+
 def ensure_schema():
     """
     🛡️ تهيئة البنية الآمنة (idempotent) عند كل تشغيل — بدون الحاجة لتشغيل
@@ -70,10 +89,21 @@ def ensure_schema():
       كل حفظ مهمة كان يفشل 500 لأن الـ middleware يقرأه في كل طلب كتابة.
     - missions.team_code / mission_participants.participant_position + نقل
       الصفة التاريخية لغير المتطوع (مطابق لملف 20260906).
-    كل أمر آمن للإعادة (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+    كل أمر آمن للإعادة (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS)، وفوق كده فيه
+    مسار سريع: لو البنية معلَّمة بإصدار SCHEMA_VERSION الحالي ⇒ خروج فورياً بلا DDL.
     """
     connection = get_connection()
     try:
+        # ⚡ مسار سريع (إصلاح جذري لضغط الاتصالات): كل cold start على Vercel كان
+        #    بيشغّل عشرات أوامر DDL على اتصال كامل المدة. في عاصفة تشغيلات، ده
+        #    بيسحب اتصالات القاعدة لحد ما ترفض كل اتصال جديد:
+        #    FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute
+        #    (وهو اللي كان بيتحوّل لـ 500/504 والواجهة تعرضه كأنه مشكلة CORS).
+        #    بالتخطي هنا، الإقلاع البارد بقى استعلام واحد خفيف بلا أي DDL.
+        with connection.cursor() as cursor:
+            if _schema_version_matches(cursor):
+                print(f"ensure_schema: skipped — البنية بالفعل على الإصدار {SCHEMA_VERSION}")
+                return
         with connection.cursor() as cursor:
             # ── 1) فيد الأحداث اللحظية (Realtime Events)
             cursor.execute("""
@@ -510,6 +540,19 @@ def ensure_schema():
                     ('visibility.degraded_m',         '5000',         'm',    'حدّ الرؤية الضعيفة — مفعّل فقط عند توفّر حقل رؤية فعلي (ERA5 لا يوفره)')
                 ON CONFLICT (key) DO NOTHING;
             """)
+            # 🏷️ نكتب الإصدار في *آخر* خطوة (بعد نجاح كل الأوامر) ⇒ لو أي أمر فشل
+            #    ما تتعلّمش البنية أبداً كجاهزة، فتُعاد المحاولة كاملة في التشغيلة الجاية.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS schema_meta (
+                    key        TEXT PRIMARY KEY,
+                    value      TEXT NOT NULL,
+                    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                INSERT INTO schema_meta (key, value, updated_at) VALUES ('version', %s, now())
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now();
+            """, (SCHEMA_VERSION,))
         connection.commit()
     except Exception as e:
         print(f"ensure_schema error (will retry on next boot): {e}")
@@ -562,6 +605,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🛡️ ردود الأخطاء لازم تعدّي من CORS middleware
+# ─────────────────────────────────────────────────────────────────────────────
+# الحكاية الحقيقية: لما ينفجر استثناء غير معالج، بلاتفورم Vercel بيرد *بنفسه*
+# (Internal Server Error 500) — ورد البلاتفورم مافيهوش أي ترويسة CORS. النتيجة إن
+# المتصفح يقول «blocked by CORS policy: No 'Access-Control-Allow-Origin' header»
+# والمشكلة الحقيقية (قاعدة بيانات مشغولة/واقعة) تختفي تماماً، ويتوه المدير في
+# مطاردة إعدادات CORS وهي سليمة. المعالجين دول يرجّعوا الرد من داخل التطبيق ⇒
+# يعدّي من CORSMiddleware ⇒ الترويسات موجودة + رسالة مفهومة + كود حالة صح.
+@app.exception_handler(OperationalError)
+async def _db_unavailable_handler(request: Request, exc: OperationalError):
+    """قاعدة البيانات مش متاحة/وصلت حد الاتصالات ⇒ 503 (خطأ مؤقت يُعاد) مش 500 صامت."""
+    print(f"DB unavailable: {str(exc)[:300]}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "قاعدة البيانات مشغولة أو غير متاحة لحظياً — أعد المحاولة بعد لحظات."},
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    """أي استثناء غير معالج ⇒ JSON بترويسات CORS (مش رد البلاتفورم الأعمى)."""
+    print("Unhandled error:")
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "خطأ غير متوقع في السيرفر — العملية لم تُنفَّذ، جرّب تاني."},
+    )
 
 
 @app.middleware("http")

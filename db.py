@@ -1,18 +1,81 @@
 import os
+import time
 import psycopg
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_connection():
-    # Keepalives + connect timeout: prevents cold/startup stalls that surface as
-    # Vercel gateway timeouts / HTML 504, which the frontend shows as "server connection error".
-    # No pooling (Vercel serverless must not hold connections across invocations).
-    return psycopg.connect(
-        os.getenv("DATABASE_URL"),
-        connect_timeout=10,
-        keepalives=1,
-        keepalives_idle=30,
-        keepalives_interval=10,
-        keepalives_count=5,
-    )
+# ─────────────────────────────────────────────────────────────────────────────
+# 🔌 أخطاء الاتصال «العابرة» — اللي يستحق نعيد المحاولة عليها
+# ─────────────────────────────────────────────────────────────────────────────
+# أهمها: "remaining connection slots are reserved" — يعني القاعدة وصلت حد
+# الاتصالات (اتصالات متسربة أو عاصفة cold start على Vercel). قبل كده كان أي خطأ
+# زي ده يطلع 500 للمستخدم على طول؛ وبلاتفورم Vercel بيرد بنفسه *بدون* ترويسات
+# CORS، فالمتصفح يقول «CORS policy» والمشكلة الحقيقية تختفي تماماً.
+# ملاحظة: مش بنعيد المحاولة على أخطاء البرمجة/الصلاحيات — دي مش تتحسن بالإعادة.
+_RETRYABLE_MARKERS = (
+    "remaining connection slots",          # القاعدة وصلت حد الاتصالات
+    "too many clients",
+    "too many connections",
+    "the database system is starting up",
+    "connection refused",
+    "could not connect",
+    "connection timed out",
+    "timeout expired",
+    "server closed the connection unexpectedly",
+    "terminating connection due to administrator command",
+    "ssl connection has been closed",
+    "connection reset by peer",
+)
+
+# ⏱️ ميزانية محدودة: نعيد المحاولة في إطار زمني صغير حتى لا نتجاوز مهلة الاستضافة.
+CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+MAX_ATTEMPTS = int(os.getenv("DB_CONNECT_RETRIES", "3"))
+RETRY_BUDGET_S = float(os.getenv("DB_CONNECT_BUDGET_S", "7"))
+BASE_DELAY_S = float(os.getenv("DB_CONNECT_BASE_DELAY_S", "0.35"))
+
+
+def _is_retryable(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in _RETRYABLE_MARKERS)
+
+
+def get_connection(max_attempts: int = None, budget_s: float = None):
+    """اتصال قاعدة البيانات — مع إعادة محاولة قصيرة عند الأخطاء العابرة.
+
+    Keepalives + connect timeout: prevents cold/startup stalls that surface as
+    Vercel gateway timeouts / HTML 504, which the frontend shows as "server connection error".
+    No pooling (Vercel serverless must not hold connections across invocations).
+
+    إعادة المحاولة هنا بتحوّل *التعثّر اللحظي* (القاعدة في لحظة ضغط/عاصفة تشغيلات
+    فاتحة اتصالات) من خطأ 500 فوراً ⇒ استنى أجزاء من الثانية ووصل. ميزانية وقتية
+    مؤقتة (budget_s) تضمن إننا ما نتجاوزش مهلة الاستضافة لو القاعدة واقعة فعلاً.
+    """
+    attempts = MAX_ATTEMPTS if max_attempts is None else max_attempts
+    budget = RETRY_BUDGET_S if budget_s is None else budget_s
+    started = time.monotonic()
+    attempt = 0
+
+    while True:
+        attempt += 1
+        try:
+            return psycopg.connect(
+                os.getenv("DATABASE_URL"),
+                connect_timeout=CONNECT_TIMEOUT,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=5,
+            )
+        except psycopg.OperationalError as exc:
+            elapsed = time.monotonic() - started
+            delay = BASE_DELAY_S * (2 ** (attempt - 1))
+            can_retry = (
+                attempt < attempts
+                and _is_retryable(exc)
+                and (elapsed + delay) < budget
+            )
+            if not can_retry:
+                raise
+            print(f"db: connect attempt {attempt} failed ({str(exc)[:90]}) — retrying in {delay:.2f}s")
+            time.sleep(delay)
