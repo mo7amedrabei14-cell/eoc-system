@@ -10,24 +10,34 @@ import { normTime, formatTime12, formatDateTime12 } from './timeutils';
 import { SegDateField, SegTimeField, SegDateTimeField } from './SegInputs';
 import { translate } from './i18n.js';
 import { classifyActivity } from './activityMap';
+// 🩺 حارس السيرفر: نبضة حقيقية على /api/health + شاشة الوقوع الحاجبة
+import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serverHealth';
+// 💾 المسودات المحلية: أي استمارة مفتوحة بتتسجّل على جهاز المستخدم قبل الإرسال
+import { useFormDraft, DraftRestoreBar, DraftSavedHint } from './drafts';
+import { captureFields, applyFieldsWhenReady } from './draftsStore';
 
-// 🔧 Module-level API base. Must be declared here (module scope), NOT inside a
-// component's effect: MissionsView's live modal-sync effect fetches
-// `${BASE}/api/missions/...` from its own scope, and a local `const BASE`
-// inside Dashboard's radar effect caused `ReferenceError: BASE is not defined`
-// → React 18 unmounts the whole tree (no error boundary) → blank page.
-// 💡 API base: Vite dev server uses the proxy to localhost:8000 (vite.config.js) —
-// production keeps the deployed URL. Override with VITE_API_BASE if needed.
-const BASE = import.meta.env.VITE_API_BASE !== undefined
-  ? import.meta.env.VITE_API_BASE
-  : (import.meta.env.DEV ? '' : 'https://eoc-system-b12f.vercel.app');
+// 🔧 Module-level API base (frontend/src/apiBase.js) — module scope كما كان، لأن
+// MissionsView's live modal-sync effect بيجيب `${BASE}/api/missions/...` من نطاقه
+// الخاص: `const BASE` جوّه مكوّن سبق وسبّب `ReferenceError: BASE is not defined`
+// → React بيفكّ الشجرة كلها (مفيش error boundary) → صفحة بيضاء.
+import { BASE } from './apiBase';
 
-// 📤 Outbox: أي استمارة بيتحفظ محلياً قبل الإرسال — لو الإرسال فشل تفضل هنا وبتتعاد تلقائياً
-const MISSION_OUTBOX_KEY = 'eoc_mission_outbox_v1';
-const readOutbox = () => { try { return JSON.parse(localStorage.getItem(MISSION_OUTBOX_KEY) || '[]'); } catch { return []; } };
-const writeOutbox = (items) => { try { localStorage.setItem(MISSION_OUTBOX_KEY, JSON.stringify(items)); } catch {} };
-const enqueueOutbox = (item) => writeOutbox([...readOutbox().filter(x => x.key !== item.key), item]);
-const removeFromOutbox = (key) => writeOutbox(readOutbox().filter(x => x.key !== key));
+// 📤 الطابور المحلي + أرشيف المرفوضات + مخزن الطقس المعلّق:
+//    المنطق ده كله مطلوع لملف نقي قابل للاختبار — frontend/src/outbox.js
+//    واختباراته في src/__tests__/outbox.test.js (وأهمها: 401 لا يمسح الاستمارة)
+import {
+  enqueueOutbox,
+  removeFromOutbox,
+  readOutbox,
+  readRejected,
+  archiveRejectedOutbox,
+  restoreRejectedToOutbox,
+  dropRejected,
+  markOutboxAuthBlocked,
+  clearOutboxAuthBlocked,
+  loadWeatherPending,
+  saveWeatherPending,
+} from './outbox';
 
 // 🗓️ اليوم اللي المهمة تظهر فيه بعد الإنهاء = closed_at من السيرفر (وقت الإغلاق الفعلي)
 // مع fallback للبيانات القديمة على completion_date، وحماية لو أقدم من الإنشاء.
@@ -1659,6 +1669,24 @@ useEffect(() => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 🩺 حارس السيرفر: نبضة حقيقية على /api/health — مفيش أي اعتماد على
+  // `navigator.onLine` وحده: لو النت شغال والسيرفر واقع (أو القاعدة واقعة)
+  // تظهر شاشة كبيرة حاجبة بتقول الحقيقة + تعليمات الرستر و Ctrl+Shift+R.
+  const serverHealth = useServerHealth();
+  const serverWasBlockedRef = useRef(false);
+  // 📤 عدد الاستمارات المعلقة محلياً (لعرضه في شاشة الوقوع: "الشغل بتاعك محفوظ")
+  const [outboxCount, setOutboxCount] = useState(() => readOutbox().length);
+  useEffect(() => { setOutboxCount(readOutbox().length); }, [serverHealth.phase, serverHealth.checkedAt, serverHealth.incident]);
+  // 🔔 لحظة رجوع السيرفر: نطلق حدث واحد كل الوحدات بتسمعه (الطابور المحلي + شبكة الطقس)
+  //    فتعيد الإرسال فوراً بدل انتظار المؤقت (20 ثانية).
+  useEffect(() => {
+    const wasBlocked = serverWasBlockedRef.current;
+    serverWasBlockedRef.current = serverHealth.blocking;
+    if (wasBlocked && !serverHealth.blocking) {
+      window.dispatchEvent(new CustomEvent('eoc:server-recovered'));
+    }
+  }, [serverHealth.blocking]);
   const lastEventIdRef = useRef(null);        // watermark تصاعدي
   const seenEventIdsRef = useRef(new Set());  // حماية من أي تكرار أثناء إعادة المحاولة
   const pollInFlightRef = useRef(false);      // لا تداخل بين الطلبات
@@ -2479,6 +2507,10 @@ if (e.event_type === 'system_refresh') {
 
 </header>
 
+        {/* 🩺 حارس السيرفر: شاشة حاجبة عند وقوع السيرفر/القاعدة + شريط عند الرجوع */}
+        <ServerDownOverlay health={serverHealth} lang={language} pendingForms={outboxCount} />
+        <ServerRecoveryBanner health={serverHealth} lang={language} />
+
         {/* 📶 شريط حالة الاتصال — يظهر فقط عند انقطاع النت أو لحظة عودة الاتصال */}
         {(!isOnline || justReconnected) && (
           <div
@@ -2827,42 +2859,42 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">المهام اليومية (نشطة)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><AlertIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">المهام اليومية (نشطة)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><AlertIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={activeDaily} /></p>
-            <span className="kpi-sub"><span className="live-dot" /> نشطة الآن</span>
+            <span className="kpi-sub kpi-sub-lg"><span className="live-dot" /> نشطة الآن</span>
           </div>
         </TiltCard>
                 <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">المهام المكتملة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><CheckIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">المهام المكتملة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><CheckIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={completedMissions} /></p>
-            <span className="kpi-sub">تم الانتهاء</span>
+            <span className="kpi-sub kpi-sub-lg">تم الانتهاء</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-[var(--ai)] bg-[var(--ai-soft)] border border-[var(--ai)]/20 shrink-0"><NewsIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-[var(--ai)] bg-[var(--ai-soft)] border border-[var(--ai)]/20 shrink-0"><NewsIcon/></div></div>
           <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalNews} /></p><span className="text-base font-bold text-[var(--ai)] mb-1.5">(<CountUp value={activeNews} className="!text-base !text-[var(--ai)] font-bold" /> استجابة)</span></div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface border-l-4 border-l-[var(--accent)] p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">الكوارث العالمية</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><GlobalWorldIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalGlobalDisasters} /></p>
-            <span className="kpi-sub">الرصد العالمي</span>
+            <span className="kpi-sub kpi-sub-lg">الرصد العالمي</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">الزلازل العالمية (اليوم)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--danger-soft)] border border-[var(--accent)]/20 shrink-0"><EarthquakeIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">الزلازل العالمية (اليوم)</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--danger-soft)] border border-[var(--accent)]/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={globalEqsToday} /></p>
-            <span className="kpi-sub">خلال 24 ساعة</span>
+            <span className="kpi-sub kpi-sub-lg">خلال 24 ساعة</span>
           </div>
         </TiltCard>
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
-          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-lg">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><EarthquakeIcon/></div></div>
+          <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalEgyptEqs} /></p>
-            <span className="kpi-sub">خلال 24 ساعة</span>
+            <span className="kpi-sub kpi-sub-lg">خلال 24 ساعة</span>
           </div>
         </TiltCard>
       </div>
@@ -3205,11 +3237,20 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // 📤 عداد الاستمارات العالقة + علم المسح المقصود (للتعديل رقم 6 كمان)
   const [pendingSends, setPendingSends] = useState(readOutbox().length);
   const [outboxRetrying, setOutboxRetrying] = useState(false);
+  // 🗄️ الاستمارات اللي السيرفر رفضها (بياناتها محفوظة عند صاحبها — مش ممسوحة)
+  const [rejectedList, setRejectedList] = useState(() => readRejected());
+  const [rejectedOpen, setRejectedOpen] = useState(false);
+  // 🔐 استمارات معلقة بسبب انتهاء الجلسة (تحتاج الدخول من جديد ثم تُرسل لوحدها)
+  const [authBlockedCount, setAuthBlockedCount] = useState(() => readOutbox().filter(x => x.authBlocked).length);
   // 🛡️ حالة العملية الميدانية — React state حقيقية (عمود حقيقي في قاعدة البيانات،
   // مصدر الحقيقة الوحيد: data.field_operation_status). لن يُقلَب إلى «نشطة» لمجرد
   // إجراء حالة أو مزامنة حيّة — القيمة تُقرأ من الـ state لا من الـ DOM.
   const [fieldStatus, setFieldStatus] = useState('نشطة');
-  const refreshPending = () => setPendingSends(readOutbox().length);
+  const refreshPending = () => {
+    const queue = readOutbox();
+    setPendingSends(queue.length);
+    setAuthBlockedCount(queue.filter(x => x.authBlocked).length);
+  };
   const clearDetailsRef = useRef(false);
 
   // 🔒 قفل إرسال لحظي (متزامن): يمنع أي ضغطة مزدوجة / Enter متكرر أثناء تنفيذ mutation
@@ -3630,7 +3671,50 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       });
   }, [liveMissionEvents, isModalOpen, currentMissionData]);
 
-    // 📤 محرك إعادة الإرسال: عند فتح الصفحة + عند رجوع النت + كل 20 ثانية
+    // 💾 ── المسودة المحلية لاستمارة المهمة ──
+  //    الغرض: الشباب بيملأوا الاستمارة (وفيها مشاركون/خطوط سير/مستفيدون) وبعدين
+  //    الكهرباء تقطع أو الجهاز يقفل أو السيرفر يوقع ⇒ يرجعوا يكتبوا كل حاجة من الأول.
+  //    الحل: كل ثانية ونصف نسجّل كل حقول الاستمارة (DOM + حالات الصفوف) على جهاز
+  //    المستخدم، وعند إعادة الفتح بنعرض زرار استرجاع واحد. تُنضّف بعد الحفظ الناجح.
+  const missionDraftScope = currentMissionData?.mission_id ? `m${currentMissionData.mission_id}` : 'new';
+  const missionDraft = useFormDraft({
+    form: 'mission',
+    scope: missionDraftScope,
+    // لا نسجّل مسودة أثناء التحميل/فشل الفتح (الحقول لسه ما وصلتش)
+    enabled: isModalOpen && !isModalLoading && !modalError,
+    capture: () => ({
+      dom: captureFields(formBodyRef.current),
+      state: {
+        missionName, creationDateTime, fieldStatus, mainRouteTitle,
+        routes, customItineraries, joinLeaveEntries,
+        participants, beneficiaries, vehicles,
+        volunteerBlocks, volunteerRoomRows, adminBlocks, volunteerRoomReviewer,
+      },
+    }),
+    apply: async (payload) => {
+      const st = payload?.state || {};
+      const asList = (v) => (Array.isArray(v) && v.length ? v : null);
+      const p = asList(st.participants); if (p) setParticipants(p.map((row, i) => ({ ...row, id: row.id ?? i + 1 })));
+      const b = asList(st.beneficiaries); if (b) setBeneficiaries(b.map((row, i) => ({ ...row, id: row.id ?? i + 1 })));
+      const v = asList(st.vehicles); if (v) setVehicles(v.map((row, i) => ({ ...row, id: row.id ?? i + 1 })));
+      const rt = asList(st.routes); if (rt) setRoutes(rt);
+      if (Array.isArray(st.customItineraries)) setCustomItineraries(st.customItineraries);
+      if (Array.isArray(st.joinLeaveEntries)) setJoinLeaveEntries(st.joinLeaveEntries);
+      if (asList(st.volunteerBlocks)) setVolunteerBlocks(st.volunteerBlocks);
+      if (Array.isArray(st.volunteerRoomRows)) setVolunteerRoomRows(st.volunteerRoomRows);
+      if (asList(st.adminBlocks)) setAdminBlocks(st.adminBlocks);
+      if (typeof st.volunteerRoomReviewer === 'string') setVolunteerRoomReviewer(st.volunteerRoomReviewer);
+      if (typeof st.missionName === 'string') setMissionName(st.missionName);
+      if (typeof st.creationDateTime === 'string') setCreationDateTime(st.creationDateTime);
+      if (typeof st.mainRouteTitle === 'string') setMainRouteTitle(st.mainRouteTitle);
+      if (st.fieldStatus === 'مكتملة' || st.fieldStatus === 'نشطة') setFieldStatus(st.fieldStatus);
+      // حقول الـ DOM: ننتظر رسم الصفوف الديناميكية ثم نطبّق القيم (أفضل جهد، بلا أعطال)
+      await applyFieldsWhenReady(formBodyRef.current, payload?.dom || {});
+      setCustomAlert('تم استرجاع المسودة المحفوظة — راجع البيانات ثم اضغط حفظ.');
+    },
+  });
+
+  // 📤 محرك إعادة الإرسال: عند فتح الصفحة + عند رجوع النت + كل 20 ثانية
   // 🔒 حارس تداخل: جولة شغالة (طلب متعلق مثلاً) مانعة أي جولة توازيها
   const retryInFlightRef = useRef(false);
   const retryOutbox = useCallback(async () => {
@@ -3639,6 +3723,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (!queued.length) return;
     const token = getStoredAccessToken();
     if (!token) return;
+    // ✅ فيه توكن صالح ⇒ أي علامة «جلسة منتهية» قديمة بتُلغى ونعيد المحاولة فعلياً
+    clearOutboxAuthBlocked();
     retryInFlightRef.current = true;
     setOutboxRetrying(true);
     // ⏱️ أي طلب متعلق في السيرفر يُقطع بعد 30 ثانية بدل ما يجمد الحلقة للأبد
@@ -3662,13 +3748,25 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           // 1) وصلت من قبل؟ نعترف ونشيلها فوراً
           if (await checkMirror(item)) { removeFromOutbox(item.key); continue; }
           // 2) إعادة الإرسال بنفس المفتاح — السيرفر بيمنع التكرار بذاته
-          const r = await fetch(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
-          if (r.ok || (r.status >= 400 && r.status < 500)) { removeFromOutbox(item.key); continue; }
-          // 3) 5xx/خطأ شبكة — ممكن السيرفر يكون حفظ والرد ضاع: نسأل تاني قبل ما نحكم
+          //    (وبمهلة 30 ثانية: طلب متعلق عمره ما يوقف الحلقة كلها)
+          const r = await fetchWithTimeout(item.url, { method: item.method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Idempotency-Key': item.key }, body: JSON.stringify(item.payload) });
+          if (r.ok) { removeFromOutbox(item.key); continue; }
+          // 3) 🔐 جلسة منتهية / صلاحيات: سبب مؤقت مش رفض للبيانات ⇒ تفضل في الطابور
+          if (r.status === 401 || r.status === 403) { markOutboxAuthBlocked(item.key, r.status); continue; }
+          // 4) 🗄️ رفض منطقي (400/409/422 …): إعادة الإرسال مش هتنفع — بتتنقل للأرشيف
+          //    ببياناتها الكاملة بدل ما تُمسح (ده كان أكبر مصدر لضياع الاستمارات).
+          if (r.status >= 400 && r.status < 500) {
+            const errBody = await r.json().catch(async () => {
+              try { return { detail: await r.text() }; } catch { return {}; }
+            });
+            archiveRejectedOutbox(item.key, { status: r.status, detail: errBody?.detail || `HTTP ${r.status}` });
+            continue;
+          }
+          // 5) 5xx/خطأ شبكة — ممكن السيرفر يكون حفظ والرد ضاع: نسأل تاني قبل ما نحكم
           if (await checkMirror(item)) removeFromOutbox(item.key);
         } catch {
           // الشبكة واقعة — آخر فحص قبل ما نسيبها في الطابور
-          try { if (await checkMirror(item)) removeFromOutbox(item.key); } catch {}
+          try { if (await checkMirror(item)) removeFromOutbox(item.key); } catch { /* ignore */ }
         }
       }
       refreshPending(); // ✅ مزامنة نهائية دايماً — العداد عمره ما يفضل قديم
@@ -3681,9 +3779,23 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   useEffect(() => {
     retryOutbox();
     window.addEventListener('online', retryOutbox);
+    // 🩺 رجوع السيرفر (بعد انقطاع حقيقي) ⇒ إرسال فوري بدل انتظار الدورة الجاية
+    window.addEventListener('eoc:server-recovered', retryOutbox);
     const t = setInterval(retryOutbox, 20000);
-    return () => { window.removeEventListener('online', retryOutbox); clearInterval(t); };
+    return () => {
+      window.removeEventListener('online', retryOutbox);
+      window.removeEventListener('eoc:server-recovered', retryOutbox);
+      clearInterval(t);
+    };
   }, [retryOutbox]);
+
+  // 🗄️ لو السيرفر رفض استمارة خلال جلسة العمل: نعرضها فوراً لصاحبها في اللوحة
+  useEffect(() => {
+    const onOutboxChanged = () => { refreshPending(); setRejectedList(readRejected()); };
+    window.addEventListener('eoc:outbox-changed', onOutboxChanged);
+    setRejectedList(readRejected());
+    return () => window.removeEventListener('eoc:outbox-changed', onOutboxChanged);
+  }, []);
 
 
   // 🆕 ساعات العمل الحية: نحدّث دورياً كل 15 ثانية بينما النافذة مفتوحة والمهمة نشطة.
@@ -3736,7 +3848,20 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
   const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
   const removeRoute = (id) => setRoutes(routes.filter(r => r.id !== id));
-  const addCustomItinerary = () => setCustomItineraries([...customItineraries, { id: Date.now(), title: '', routes: [{ id: Date.now() }] }]);
+  // 🆔 هوية خط السير المخصص — مصدر واحد للاسم يُستخدم في *كل* مكان (منتقي المشاركة + الحفظ).
+  //    الباج اللي بتصلّحه: المنتقي كان بيحسب الاسم من الشاشة مع احتياطي «يوم N» (رقم الترتيب!)
+  //    والحفظ بيسجّل الاسم من الحالة مع احتياطي «خط سير مخصص» ⇒ الإسناد يتخزن باسم مختلف عن
+  //    الخط المحفوظ، ولما يُضاف خط جديد يتغيّر ترتيب الأرقام فيروح إسناد المشاركين القدام على
+  //    الخط الجديد. دلوقتي: اسم واحد من الحالة، ولا قراءة من الشاشة، ولا رقم ترتيب داخل الاسم.
+  const customItineraryTitle = (ci) => String((ci && ci.title) || '').trim() || 'خط سير مخصص';
+  // ✍️ خط سير جديد ياخد اسماً فعلياً من أول لحظة (كان title: '' ⇒ اسم مؤقت/مبهم)
+  const addCustomItinerary = () => setCustomItineraries(prev => {
+    const used = new Set((prev || []).map(c => String((c && c.title) || '').trim()).filter(Boolean));
+    let n = (prev || []).length + 1;
+    let title = `خط سير مخصص ${n}`;
+    while (used.has(title)) { n += 1; title = `خط سير مخصص ${n}`; }
+    return [...(prev || []), { id: Date.now(), title, routes: [{ id: Date.now() }] }];
+  });
   const removeCustomItinerary = (id) => setCustomItineraries(customItineraries.filter(c => c.id !== id));
   const addRouteToCustom = (customId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: [...c.routes, { id: Date.now() }] } : c));
   const removeRouteFromCustom = (customId, routeId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: c.routes.filter(r => r.id !== routeId) } : c));
@@ -4702,7 +4827,7 @@ row++;
        customItineraries.forEach((ci) => {
          ci.routes.forEach((r) => {
            if (hasRouteData(r)) allRoutes.push({
-             group_title: ci.title || 'خط سير مخصص',
+             group_title: customItineraryTitle(ci),
              route_from: r.route_from || null,
              route_to: r.route_to || '',
              departure_date: r.departure_date || null,
@@ -4835,6 +4960,8 @@ row++;
           // ✅ وصلت للسيرفر — نشيلها من طابور الإرسال المحلي
           removeFromOutbox(ikey);
           refreshPending();
+          // 💾 الحفظ نجح فعلاً ⇒ المسودة المحلية مالهاش لزوم (مفيش أي خطر فقد بيانات)
+          missionDraft.clear();
           // Success: clear the idempotency key so next submit gets a new key
           newMissionIdempotencyKey.current = null;
 
@@ -4866,20 +4993,29 @@ row++;
          setCustomAlert(isUpdate ? "تم تحديث المهمة بنجاح!" : "تم إنشاء المهمة بنجاح!");
          return { ok: true, mission_id: rd.mission_id };
                } else {
-          // 🚫 رفض منطقي من السيرفر (4xx = بيانات/صلاحيات) — إعادة الإرسال مش هتنفع: نشيلها من الطابور
-          // (5xx/504 = سيرفر أو شبكة ← تفضل في الطابور وتتبعت تلقائياً)
-          if (res.status >= 400 && res.status < 500) {
-            removeFromOutbox(ikey);
-          }
-          refreshPending();
-          // Error: keep the idempotency key for retry (idempotent if server actually committed)
          // ✅ Fix: res.json() throws when server returns non-JSON (504 HTML, Vercel error page).
          //    Parse safely; fall back to text so the user always sees a meaningful message.
          const errBody = await res.json().catch(async () => {
            try { return { detail: await res.text() }; } catch { return {}; }
          });
-         const detail = errBody?.detail || `(status ${res.status})`;
-         setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${detail}`);
+          const errDetail = errBody?.detail || `(status ${res.status})`;
+          // 🔐 جلسة منتهية/صلاحيات (401/403): الاستمارة *تفضل* في الطابور وتتبعت لوحدها
+          //    بعد الدخول من جديد — قبل كده كانت تمسح فتضيع كتابة الشباب بالكامل.
+          if (res.status === 401 || res.status === 403) {
+            markOutboxAuthBlocked(ikey, res.status);
+            setCustomAlert(`🔐 انتهت صلاحية الجلسة (${res.status}) — الاستمارة محفوظة عندك ومش هتضيع.\nسجّل الدخول من جديد وستُرسل تلقائياً.\n\n${errDetail}`);
+            refreshPending();
+            return; // المفتاح يبقى كما هو — الإرسال يُستأنف من الطابور
+          }
+          // 🗄️ رفض منطقي آخر (400/409/422 …): إعادة الإرسال مش هتنفع — لكن البيانات
+          //    تتنقل للأرشيف كاملة بدل ما تُمسح، وتظهر لصاحبها ليتصرف فيها بنفسه.
+          if (res.status >= 400 && res.status < 500) {
+            archiveRejectedOutbox(ikey, { status: res.status, detail: errDetail });
+          }
+          // (5xx/504 = سيرفر أو شبكة ← تفضل في الطابور وتتبعت تلقائياً)
+          refreshPending();
+          // Error: keep the idempotency key for retry (idempotent if server actually committed)
+         setCustomAlert(`🚫 تنبيه رقابي من السيرفر:\n\n${errDetail}`);
        }
            } catch (error) {
         // 🌐 فشل شبكة: الاستمارة فضلت في الطابور المحلي وستُرسل تلقائياً عند رجوع الاتصال
@@ -5162,6 +5298,70 @@ row++;
         </button>
       )}
 
+      {/* 🔐 استمارات معلقة بسببsession منتهية: الطابور سليم، بس محتاج دخول من جديد */}
+      {authBlockedCount > 0 && (
+        <div className="mt-3 rounded-2xl border border-[var(--accent)]/40 bg-[var(--danger-soft)] px-4 py-3 text-xs font-bold text-[var(--ink-2)] leading-relaxed">
+          🔐 عندك {authBlockedCount} استمارة محفوظة عندك ومستنية انتهاء الجلسة — سجّل الخروج والدخول من جديد، وهتتبعت لوحدها فوراً. البيانات محفوظة مش ناقصة حاجة.
+        </div>
+      )}
+
+      {/* 🗄️ المرفوضات: كانت *تُمسح* زمان — دلوقتي بتظهر هنا ببياناتها كاملة */}
+      {rejectedList.length > 0 && (
+        <div className="mt-3 rounded-2xl border border-[var(--warn)]/45 bg-[var(--warn-soft)] px-4 py-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-xs font-bold text-[var(--ink-2)] leading-relaxed">
+              🗄️ فيه {rejectedList.length} استمارة السيرفر رفضها — <b>بياناتها محفوظة عندك</b> وما اتمسحتش. راجعها ونزّلها أو رجّعها للطابور.
+            </span>
+            <button type="button" onClick={() => setRejectedOpen(o => !o)} className="btn-ghost px-3 py-1.5 rounded-xl text-xs font-bold shrink-0">
+              {rejectedOpen ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
+            </button>
+          </div>
+          {rejectedOpen && (
+            <div className="mt-3 space-y-2">
+              {rejectedList.map(item => (
+                <div key={item.key} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="min-w-0 text-[11px] leading-relaxed text-[var(--muted)]">
+                    <div className="font-bold text-[var(--ink)] text-xs truncate">
+                      {item.payload?.mission_name || 'مهمة بدون اسم'}
+                      {item.payload?.mission_code ? ` — ${item.payload.mission_code}` : ''}
+                    </div>
+                    <div>سبب الرفض: {item.detail || `HTTP ${item.status}`}</div>
+                    <div>تاريخ الرفض: {formatDateTime(item.archivedAt)}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // 📥 تنزيل نسخة JSON كاملة — الشباب يقدر يسترجع منها أي خانة
+                        try {
+                          const blob = new Blob([JSON.stringify(item.payload, null, 2)], { type: 'application/json' });
+                          const a = document.createElement('a');
+                          a.href = URL.createObjectURL(blob);
+                          a.download = `استمارة_مرفوضة_${item.payload?.mission_code || item.key.slice(0, 8)}.json`;
+                          a.click();
+                          setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+                        } catch { setCustomAlert('تعذر تنزيل النسخة.'); }
+                      }}
+                      className="btn-ghost px-3 py-1.5 rounded-xl text-[11px] font-bold"
+                    >📥 تنزيل نسخة</button>
+                    <button
+                      type="button"
+                      onClick={() => { restoreRejectedToOutbox(item.key); setRejectedList(readRejected()); refreshPending(); setCustomAlert('تم إرجاع الاستمارة للطابور — هتتبعت تلقائياً.'); }}
+                      className="btn-warn px-3 py-1.5 rounded-xl text-[11px] font-bold"
+                    >↩️ إرجاع للطابور</button>
+                    <button
+                      type="button"
+                      onClick={() => { dropRejected(item.key); setRejectedList(readRejected()); }}
+                      className="btn-ghost px-3 py-1.5 rounded-xl text-[11px] font-bold text-[var(--accent)]"
+                    >🗑️ حذف من الأرشيف</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
 
       <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -5298,6 +5498,8 @@ row++;
                   <h2 className="text-lg font-bold">توثيق مهمة ميدانية</h2>
                 </div>
                 {currentMissionData && <StatusBadge status={currentMissionData.status} />}
+                {/* 💾 إشارة حية إن كتابة المستخدم محفوظة على جهازه لحد ما الحفظ يوصل للسيرفر */}
+                <DraftSavedHint savedAt={missionDraft.savedAt} lang={lang} />
               </div>
               <button onClick={() => setIsModalOpen(false)} className="icon-btn icon-btn-danger"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
@@ -5347,6 +5549,15 @@ row++;
               </div>
             ) : (
             <div ref={formBodyRef} className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${isYouthFormLocked ? 'youth-form-locked' : ''}`}>
+
+              {/* 💾 مسودة محفوظة على الجهاز من جلسة سابقة (كهرباء/قفل/سقوط سيرفر) */}
+              <DraftRestoreBar
+                pending={missionDraft.pending}
+                onRestore={missionDraft.restore}
+                onDiscard={missionDraft.discard}
+                lang={lang}
+                label={currentMissionData?.mission_code || (lang === 'en' ? 'new mission' : 'مهمة جديدة')}
+              />
 
               <div className="card-surface p-6 flex flex-col md:flex-row items-end gap-4">
                 <div className="flex-1 w-full">
@@ -5791,10 +6002,9 @@ row++;
                 if (!dp) return null;
                 // Build list of all available route options: basic routes + custom itineraries
                 const basicRouteOption = routes.length > 0 ? 'خط السير الأساسي' : null;
-                const customOptions = customItineraries.map((ci, ciIndex) => {
-                  const ciTitle = document.getElementById(`r_title_${ci.id}`)?.value || ci.title || `يوم ${ciIndex + 1}`;
-                  return ciTitle;
-                });
+                // 🆔 نفس دالة الاسم المستخدمة في الحفظ بالحرف — مافيش قراءة من الشاشة
+                //    ومافيش احتياطي برقم الترتيب (كان سبب انتقال الإسناد لخط تاني).
+                const customOptions = customItineraries.map((ci) => customItineraryTitle(ci));
                 const allOptions = [basicRouteOption, ...customOptions].filter(Boolean);
 
                 return (
@@ -5904,7 +6114,7 @@ row++;
                       </div>
                       <div className="bg-[var(--surface-4)] p-4 rounded-xl border border-[var(--accent)]/30 shadow-[0_0_15px_rgba(199,0,0,0.05)] w-full">
                         <FormGroup required label="مسؤول المتابعة (قائد العملية)" invalid={requiredTouched && missingFields.includes(`field_leader__${bi}`)}>
-                          <StyledInput {...adminFieldProps(blk, bi, 'مسؤول المتابعة', 'eoc_leader')} placeholder="الاسم ورقم الهاتف..." className={`bg-[var(--surface-3)] text-lg font-bold ${requiredTouched && missingFields.includes(`field_leader__${bi}`) ? 'field-invalid' : ''}`} />
+                          <StyledInput {...adminFieldProps(blk, bi, 'مسؤول المتابعة', 'eoc_leader')} maxLength={1000} placeholder="الاسم ورقم الهاتف..." className={`bg-[var(--surface-3)] text-lg font-bold ${requiredTouched && missingFields.includes(`field_leader__${bi}`) ? 'field-invalid' : ''}`} />
                         </FormGroup>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -6850,6 +7060,16 @@ const [nd, setNd] = useState({
     hospital_name: '', injured_count: 0, deaths_count: 0, news_updates: '', news_link: '', data_entry_name: '', notes: ''
   });
 
+  // 💾 مسودة محلية لنموذج الخبر: كل ثانية ونصف تتسجّل على الجهاز — لو الصفحة
+  //    اتقفلت أو النت/السيرفر قطع، البيانات ترجع بضغطة واحدة بدل ما تتكتب من الأول.
+  const newsDraft = useFormDraft({
+    form: 'local_news',
+    scope: nd.news_id ? `n${nd.news_id}` : 'new',
+    enabled: isModalOpen,
+    capture: () => nd,
+    apply: (payload) => setNd(prev => ({ ...prev, ...payload })),
+  });
+
   useEffect(() => { fetchNews(); }, []);
 
   const [focusedRowId, setFocusedRowId] = useState(null);
@@ -6996,6 +7216,7 @@ const [nd, setNd] = useState({
       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) {
   setIsModalOpen(false);
+  newsDraft.clear(); // 💾 الحفظ نجح ⇒ المسودة المحلية مالهاش لزوم
   fetchNews();
   setCustomAlert(
     nd.news_id
@@ -7235,6 +7456,7 @@ const [nd, setNd] = useState({
             </div>
 
             <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${savingNews ? 'opacity-60 pointer-events-none' : ''}`} inert={savingNews}>
+              <DraftRestoreBar pending={newsDraft.pending} onRestore={newsDraft.restore} onDiscard={newsDraft.discard} label={nd.news_id ? 'الخبر الحالي' : 'خبر جديد'} />
 
               <SectionCard title="1. بيانات الخبر الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -7568,9 +7790,22 @@ const visibleBranches = (
 
   // كل تغيير (وردية/تاريخ) → نحفظ أي رقم متكتب قبل التبديل (على الوردية القديمة)، وبعدين لوح نظيف وجلب جديد
   useEffect(() => {
-    flushWeatherSave();
+    flushRef.current();
     touchedRef.current = new Set();
-    loadGrid(false); loadDaily(false);
+    loadGrid(false).then(() => {
+      // 🧷 لو فيه أرقام معلقة لسه ما اتأكدش حفظها لنفس الوردية/التاريخ: نرجّعها
+      //    للمعروض بدل ما تختفي — الشغل يفضل قدام صاحبه لحد ما السيرفر يأكد.
+      const pending = pendingRowsRef.current[`${filterDate}|${shift}`];
+      if (!pending) return;
+      Object.keys(pending).forEach(bid => touchedRef.current.add(Number(bid)));
+      setFormValues(prev => {
+        const merged = { ...prev };
+        Object.entries(pending).forEach(([bid, vals]) => { merged[bid] = { ...(merged[bid] || {}), ...vals }; });
+        return merged;
+      });
+    });
+    loadDaily(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shift, filterDate]);
 
   // تحديث لحظي: مستخدم آخر حفظ توقعات أو أنهى وردية → refetch صامت
@@ -7584,57 +7819,132 @@ const visibleBranches = (
   const autoSaveTimerRef = useRef(null);
   const autoSaveSnapRef = useRef(null); // {date, shift} وقت الكتابة — يضمن إن القيمة تروح للوردية والتاريخ الصح
 
-  const flushWeatherSave = async () => {
+  // 🧷 مخزن «اللي لسه متحفظش»: { "التاريخ|الوردية": { branchId: { field: value } } }
+  //    بنية + localStorage: الأرقام ملك المستخدم لحد ما السيرفر يأكد الحفظ.
+  const pendingRowsRef = useRef(loadWeatherPending());
+  const [pendingWeatherCount, setPendingWeatherCount] = useState(() => Object.values(loadWeatherPending()).reduce((n, g) => n + Object.keys(g || {}).length, 0));
+  const countPending = (store) => Object.values(store || {}).reduce((n, g) => n + Object.keys(g || {}).length, 0);
+  // الكتابة على localStorage مؤجّلة 300ms (الحالة في الـ ref فورية): الكتابة
+  // المتزامنة مع كل ضغطة زر في شبكة 27 محافظة كانت تسبب تقطيعاً في الكتابة.
+  const pendingWriteTimerRef = useRef(null);
+  const persistPending = (next) => {
+    pendingRowsRef.current = next;
+    setPendingWeatherCount(countPending(next));
+    if (pendingWriteTimerRef.current) clearTimeout(pendingWriteTimerRef.current);
+    pendingWriteTimerRef.current = setTimeout(() => {
+      saveWeatherPending(pendingRowsRef.current);
+    }, 300);
+  };
+  const putPending = (date, shiftKey, bid, field, value) => {
+    const gk = `${date}|${shiftKey}`;
+    const store = pendingRowsRef.current || {};
+    const group = store[gk] || {};
+    persistPending({ ...store, [gk]: { ...group, [bid]: { ...(group[bid] || {}), [field]: value } } });
+  };
+  const dropPending = (date, shiftKey, branchIds) => {
+    const gk = `${date}|${shiftKey}`;
+    const store = pendingRowsRef.current || {};
+    const group = store[gk];
+    if (!group) return;
+    const nextGroup = { ...group };
+    branchIds.forEach(bid => { delete nextGroup[String(bid)]; });
+    const next = { ...store };
+    if (Object.keys(nextGroup).length) next[gk] = nextGroup; else delete next[gk];
+    persistPending(next);
+  };
+
+  /** رفع المجموعات المعلقة: مجموعة (تاريخ|وردية) كل مرة في طلب واحد.
+   *  - `retryAll` = جولة إعادة محاولة شاملة (كل التواريخ/الورديات المعلقة).
+   *  - الحذف من المخزن يحدث *بعد* تأكيد السيرفر فقط — لا فقد بيانات في أي حالة. */
+  const flushWeatherSave = async ({ retryAll = false } = {}) => {
     if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     const snap = autoSaveSnapRef.current;
     autoSaveSnapRef.current = null;
-    if (!snap) return;
-    if (submitLockRef.current) { autoSaveSnapRef.current = snap; autoSaveTimerRef.current = setTimeout(flushWeatherSave, 800); return; } // في حفظ شغال → نأجّل
-    const dirtyRows = [...touchedRef.current]
-      .map(bid => ({ branch_id: bid, shift: snap.shift, ...(formValuesRef.current[bid] || {}) }))
-      .filter(r => WEATHER_METRICS.some(m => {
-        const v = formValuesRef.current[r.branch_id] || {};
-        return (v[`${m.key}_min`] !== '' && v[`${m.key}_min`] != null) || (v[`${m.key}_max`] !== '' && v[`${m.key}_max`] != null);
-      }));
-    if (!dirtyRows.length) return;
-    touchedRef.current = new Set();
+    if (!snap && !retryAll) return;
+    if (submitLockRef.current) { autoSaveSnapRef.current = snap || autoSaveSnapRef.current; autoSaveTimerRef.current = setTimeout(() => flushRef.current({ retryAll }), 800); return; } // في حفظ شغال → نأجّل
+    const groups = Object.entries(pendingRowsRef.current)
+      .filter(([gk]) => (retryAll || !snap ? true : gk === `${snap.date}|${snap.shift}`))
+      .map(([gk, rowsByBranch]) => { const [date, shiftKey] = gk.split('|'); return { date, shift: shiftKey, rowsByBranch }; });
+    if (!groups.length) return;
     submitLockRef.current = true;
     setSavingWeather(true);
     const token = sessionStorage.getItem('access_token');
-    const bodyRows = dirtyRows.map(r => {
-      const o = { branch_id: r.branch_id, shift: r.shift };
-      WEATHER_METRICS.forEach(m => {
-        WEATHER_METRIC_FIELDS(m).forEach(f => {
-          const v = r[f];
-          o[f] = (v !== '' && v != null) ? Number(v) : null;
+    let savedCount = 0;
+    let failedGroups = 0;
+    for (const group of groups) {
+      const bodyRows = Object.entries(group.rowsByBranch || {})
+        .map(([bid, row]) => {
+          const o = { branch_id: Number(bid), shift: group.shift };
+          WEATHER_METRICS.forEach(m => WEATHER_METRIC_FIELDS(m).forEach(f => {
+            const v = row[f];
+            o[f] = (v !== '' && v != null) ? Number(v) : null;
+          }));
+          return o;
+        })
+        .filter(r => WEATHER_METRICS.some(m => r[`${m.key}_min`] != null || r[`${m.key}_max`] != null));
+      if (!bodyRows.length) { dropPending(group.date, group.shift, Object.keys(group.rowsByBranch || {})); continue; }
+      try {
+        const res = await fetch(`${BASE}/api/weather/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ date: group.date, shift: group.shift, rows: bodyRows, silent: true }),
         });
-      });
-      return o;
-    });
-    try {
-      const res = await fetch(`${BASE}/api/weather/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ date: snap.date, shift: snap.shift, rows: bodyRows, silent: true }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) { loadDaily(true); return; }
-      setCustomAlert(data.detail || (lang === 'ar' ? 'تعذر الحفظ التلقائي — جرّب تاني' : 'Autosave failed'));
-    } catch (e) {
-      setCustomAlert(lang === 'ar' ? 'تعذر الحفظ التلقائي — تأكد من الاتصال' : 'Autosave failed');
-    } finally {
-      submitLockRef.current = false;
-      setSavingWeather(false);
+        if (res.ok) {
+          // ✅ تأكيد الحفظ فقط حينها نمسحها من المخزن المحلي
+          const savedIds = bodyRows.map(r => String(r.branch_id));
+          dropPending(group.date, group.shift, savedIds);
+          savedCount += savedIds.length;
+          touchedRef.current = new Set([...touchedRef.current].filter(bid => !savedIds.includes(String(bid))));
+        } else {
+          failedGroups += 1;
+        }
+      } catch { failedGroups += 1; }
     }
+    submitLockRef.current = false;
+    setSavingWeather(false);
+    if (savedCount) loadDaily(true);
+    if (failedGroups) setCustomAlert(lang === 'ar'
+      ? '⚠️ فيه أرقام لسه ما اتأكدش حفظها — هي محفوظة عندك وستُعاد تلقائياً أول ما الاتصال يرجع.'
+      : '⚠️ Some values are not confirmed yet — kept on your device and will be retried automatically.');
   };
+  // 🪞 مرجع حي لدالة الحفظ (المؤقتات بتستخدم آخر نسخة دايماً بلا مشاكل إغلاق قديم)
+  const flushRef = useRef(flushWeatherSave);
+  flushRef.current = flushWeatherSave;
+
+  // 🔁 إعادة المحاولة تلقائياً: كل 30 ثانية + عند رجوع النت/السيرفر + لحظة مغادرة الصفحة
+  useEffect(() => {
+    // ✍️ كتابة فورية على القرص — تُنادى لحظة مغادرة الصفحة (قبل ما يتبخر المؤقت المؤجل)
+    const flushToDisk = () => {
+      if (pendingWriteTimerRef.current) clearTimeout(pendingWriteTimerRef.current);
+      saveWeatherPending(pendingRowsRef.current);
+    };
+    const retry = () => { if (countPending(pendingRowsRef.current)) flushRef.current({ retryAll: true }); };
+    const onLeave = () => { flushToDisk(); retry(); };
+    retry();
+    const t = setInterval(retry, 30000);
+    window.addEventListener('online', retry);
+    window.addEventListener('eoc:server-recovered', retry);
+    window.addEventListener('pagehide', onLeave);
+    document.addEventListener('visibilitychange', onLeave);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('online', retry);
+      window.removeEventListener('eoc:server-recovered', retry);
+      window.removeEventListener('pagehide', onLeave);
+      document.removeEventListener('visibilitychange', onLeave);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setCell = (bid, field, value) => {
     touchedRef.current.add(bid);
     setFormValues(prev => ({ ...prev, [bid]: { ...(prev[bid] || {}), [field]: value } }));
+    // 🧷 نسجّلها محلياً فوراً — من هنا الشغل مش ممكن يضيع مهما حصل
+    putPending(filterDate, shift, bid, field, value);
     // 🕐 نستنى توقف الكتابة ثانية واحدة وبعدها نحفظ — عشان سرعة الكتابة متبقاش طلبات كتير
     autoSaveSnapRef.current = { date: filterDate, shift };
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(flushWeatherSave, 1000);
+    autoSaveTimerRef.current = setTimeout(() => flushRef.current(), 1000);
   };
 
   const cellVal = (bid, field) => {
@@ -7985,6 +8295,11 @@ const visibleBranches = (
           <span className={`ops-chip shrink-0 ${savingWeather ? 'text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]' : 'text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]'}`}>
             <span className="live-dot" /> {savingWeather ? T('جارٍ الحفظ…', 'Saving…') : T('الحفظ تلقائي ✓', 'Autosave on ✓')}
           </span>
+          {pendingWeatherCount > 0 && (
+            <span className="ops-chip shrink-0 text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]" title={T('أرقام محفوظة على جهازك ولسه ما اتأكدش حفظها على السيرفر — هتتبعت تلقائياً', 'Values kept on your device and not yet confirmed on the server — will be retried automatically')}>
+              🧷 {T(`${pendingWeatherCount} لسه متحفظش`, `${pendingWeatherCount} pending`)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -8120,6 +8435,15 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   const formDirtyRef = useRef(false);
   const [notice, setNotice] = useState(null);
   const [form, setForm] = useState(() => emptyForm(todayStr()));
+  // 💾 مسودة محلية لسجل التسليم والتسلم — سجل واحد لكل يوم، وكتابته بتضيع لو
+  //    الصفحة اتقفلت أو الاتصال قطع، فبنحفظه تلقائياً على جهاز المشرف.
+  const handoverDraft = useFormDraft({
+    form: 'handover',
+    scope: editingId ? `h${editingId}` : (form.handover_date || 'new'),
+    enabled: modalOpen,
+    capture: () => form,
+    apply: (payload) => { formDirtyRef.current = true; setForm(prev => ({ ...prev, ...payload })); },
+  });
   // 🗑️ نافذة تأكيد الحذف المخصصة (بدلاً من confirm الجاهزة في المتصفح)
   const [deleteTarget, setDeleteTarget] = useState(null);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
@@ -8310,6 +8634,7 @@ const onMatrixChange = (s, d, val) => {
             setEditingId(rec.handover_id);
             setModalOpen(false);
             setNotice(null);
+            handoverDraft.clear(); // 💾 وصل للسيرفر فعلاً ⇒ المسودة انتهت مهمتها
             fetchHandovers();
             setCustomAlert("يوجد سجل لهذا التاريخ — تم تحديثه بمدخلاتك بنجاح!");
             setSaving(false);
@@ -8325,6 +8650,7 @@ const onMatrixChange = (s, d, val) => {
       if (!res.ok) { setNotice(T('فشل الحفظ', 'Save failed')); setSaving(false); submitLockRef.current = false; return; }
       setModalOpen(false);
       setNotice(null);
+      handoverDraft.clear(); // 💾 الحفظ نجح ⇒ المسودة المحلية مالهاش لزوم
       fetchHandovers();
       setCustomAlert(editingId ? "تم تحديث سجل التسليم بنجاح!" : "تم إنشاء سجل التسليم بنجاح!");
     } catch (error) {
@@ -8549,6 +8875,7 @@ const onMatrixChange = (s, d, val) => {
             </div>
 
             <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${saving ? 'opacity-60 pointer-events-none' : ''}`} inert={saving}>
+              <DraftRestoreBar pending={handoverDraft.pending} onRestore={handoverDraft.restore} onDiscard={handoverDraft.discard} lang={lang} label={form.handover_date || ''} />
               {notice && <div className="rounded-xl bg-[var(--warn-soft)] text-[var(--warn)] px-4 py-3 text-sm font-bold border border-[var(--warn)]/25">{notice}</div>}
 
               <SectionCard title={T('التاريخ', 'Date')} icon={<HandoverIcon />}>
@@ -8756,6 +9083,15 @@ const [clearAllCode, setClearAllCode] = useState('');
     disaster_id: null, incident_date: getLocalDate(), incident_month: '', news_title: '', country: '', disaster_type: '', affected_areas: '', at_risk_areas: '', source_name: '', injured_count: 0, deaths_count: 0, missing_count: 0, national_societies_interventions: '', news_link: '', news_updates: '', data_entry_name: '', notes: ''
   });
 
+  // 💾 مسودة محلية لكارثة عالمية (نفس منطق الأخبار المحلية)
+  const disasterDraft = useFormDraft({
+    form: 'global_disasters',
+    scope: gd.disaster_id ? `d${gd.disaster_id}` : 'new',
+    enabled: isModalOpen,
+    capture: () => gd,
+    apply: (payload) => setGd(prev => ({ ...prev, ...payload })),
+  });
+
   const fetchDisasters = async () => {
     setIsLoading(true);
     const token = sessionStorage.getItem('access_token');
@@ -8818,7 +9154,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setSavingDisaster(true);
     try {
       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { setIsModalOpen(false); fetchDisasters(); setCustomAlert(gd.disaster_id ? "تم تحديث الكارثة بنجاح!" : "تم إضافة الكارثة بنجاح!"); }
+      if (res.ok) { setIsModalOpen(false); disasterDraft.clear(); fetchDisasters(); setCustomAlert(gd.disaster_id ? "تم تحديث الكارثة بنجاح!" : "تم إضافة الكارثة بنجاح!"); }
       else { setCustomAlert("حدث خطأ في الاتصال بالسيرفر! لم يتم الحفظ."); }
     } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); }
     finally {
@@ -9041,6 +9377,7 @@ const [clearAllCode, setClearAllCode] = useState('');
             </div>
 
             <div className={`p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 ${savingDisaster ? 'opacity-60 pointer-events-none' : ''}`} inert={savingDisaster}>
+              <DraftRestoreBar pending={disasterDraft.pending} onRestore={disasterDraft.restore} onDiscard={disasterDraft.discard} label={gd.disaster_id ? 'الكارثة الحالية' : 'كارثة جديدة'} />
               <SectionCard title="بيانات الكارثة الأساسية" icon={<AlertIcon />}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormGroup label="التاريخ"><SegDateField value={gd.incident_date} onChange={e => setGd({...gd, incident_date: e.target.value})} className="field" /></FormGroup>
@@ -9164,6 +9501,22 @@ const [clearAllCode, setClearAllCode] = useState('');
   
   const [gForm, setGForm] = useState({ eq_id: null, date: getLocalDate(), time: '', country: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
   const [eForm, setEForm] = useState({ eq_id: null, date: getLocalDate(), time: '', magnitude: '', depth_km: '', region: '', longitude: '', latitude: '' });
+
+  // 💾 مسودتين محليتين للزلازل (عالمي + مصر) — إن قطع الاتصال أو قفل الجهاز
+  const globalEqDraft = useFormDraft({
+    form: 'earthquakes_global',
+    scope: gForm.eq_id ? `q${gForm.eq_id}` : 'new',
+    enabled: isGlobalModalOpen,
+    capture: () => gForm,
+    apply: (payload) => setGForm(prev => ({ ...prev, ...payload })),
+  });
+  const egyptEqDraft = useFormDraft({
+    form: 'earthquakes_egypt',
+    scope: eForm.eq_id ? `q${eForm.eq_id}` : 'new',
+    enabled: isEgyptModalOpen,
+    capture: () => eForm,
+    apply: (payload) => setEForm(prev => ({ ...prev, ...payload })),
+  });
 
   const fetchEarthquakes = async () => {
     setIsLoading(true);
@@ -9323,8 +9676,13 @@ const [clearAllCode, setClearAllCode] = useState('');
     const url = gForm.eq_id ? `${BASE}/api/earthquakes/global/${gForm.eq_id}` : `${BASE}/api/earthquakes/global`;
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
-      else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
+      if (res.ok) { globalEqDraft.clear(); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
+      else {
+        // ↺ المودال بيتقفل فوراً عند الضغط على «حفظ» — فلو السيرفر رفض لازم يفتح
+        //   تاني فوراً حتى لا يعيد المستخدم كتابة الرصد من الأول.
+        setIsGlobalModalOpen(true);
+        setCustomAlert("⚠️ السيرفر رفض التعديل — لم يُحفظ شيء، والبيانات ظاهرة أمامك لإعادة المحاولة.");
+      }
     } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
     finally { eqSubmitLockRef.current = false; }
   };
@@ -9349,8 +9707,11 @@ const [clearAllCode, setClearAllCode] = useState('');
     const url = eForm.eq_id ? `${BASE}/api/earthquakes/egypt/${eForm.eq_id}` : `${BASE}/api/earthquakes/egypt`;
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
-      if (res.ok) { fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
-      else { setCustomAlert("⚠️ السيرفر رفض التعديل! لو إنت شغال على اللينك اللايف، اتأكد إنك رفعت ملف main_2.py الجديد على Vercel."); }
+      if (res.ok) { egyptEqDraft.clear(); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); }
+      else {
+        setIsEgyptModalOpen(true); // ↺ نفس منطق الرصد العالمي: لا فقد كتابة
+        setCustomAlert("⚠️ السيرفر رفض التعديل — لم يُحفظ شيء، والبيانات ظاهرة أمامك لإعادة المحاولة.");
+      }
     } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
     finally { eqSubmitLockRef.current = false; }
   };
@@ -9578,6 +9939,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+              <DraftRestoreBar pending={globalEqDraft.pending} onRestore={globalEqDraft.restore} onDiscard={globalEqDraft.discard} label={gForm.eq_id ? 'الرصد الحالي' : 'رصد جديد'} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <FormGroup label="التاريخ"><SegDateField value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
                 <FormGroup label="التوقيت"><SegTimeField className="field" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
@@ -9609,6 +9971,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <h2 className="text-lg font-bold text-white mb-0 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+              <DraftRestoreBar pending={egyptEqDraft.pending} onRestore={egyptEqDraft.restore} onDiscard={egyptEqDraft.discard} label={eForm.eq_id ? 'الرصد الحالي' : 'رصد جديد'} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <FormGroup label="التاريخ"><SegDateField value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
                 <FormGroup label="التوقيت"><SegTimeField className="field" value={eForm.time} onChange={e => setEForm({...eForm, time: e.target.value})} /></FormGroup>

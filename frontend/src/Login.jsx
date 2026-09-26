@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BASE } from './apiBase';
+// 🩺 حارس السيرفر: لو السيرفر واقع، صفحة الدخول نفسها تقول الحقيقة بدل رسالة
+// "تعذر الاتصال" العامة — والتلميذ يشوف تعليمات الرستر و Ctrl+Shift+R فوراً.
+import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serverHealth';
+import { checkServerHealth } from './serverHealthCore';
 
 /* ─────────────────────────────────────────────────────────────
    أيقونات داخلية خفيفة (SVG) بنفس لغة النظام
@@ -81,6 +86,8 @@ export default function Login() {
   // الافتتاحية تعمل دائمًا عند كل Refresh بدون أي استثناء.
   const [openingCeremony, setOpeningCeremony] = useState(true);
   const usernameRef = useRef(null);
+  // 🩺 مراقبة السيرفر الحقيقية (نبضة /api/health كل 20 ثانية)
+  const serverHealth = useServerHealth();
 
   useEffect(() => {
     if (!openingCeremony) return undefined;
@@ -231,12 +238,23 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://eoc-system-b12f.vercel.app/token', {
+      // 🩺 نبضة فورية مع كل محاولة دخول: فشل النبضة = السيرفر واقع فعلاً، فالرسالة
+      //    تكون "السيرفر مش شغال" بدل "بيانات الدخول غلط" (اللي كانت بتضلّل الناس).
+      const health = await checkServerHealth({ timeoutMs: 8000 });
+      if (!health.reachable) {
+        setErrorMsg(language === 'ar'
+          ? '🚫 السيرفر مش شغال دلوقتي (مش مشكلة في بياناتك) — رستر السيرفر ثم اضغط Ctrl+Shift+R.'
+          : '🚫 The server is down right now (not your credentials) — restart it, then press Ctrl+Shift+R.');
+        setIsLoading(false);
+        return;
+      }
+      const response = await fetch(`${BASE}/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ username, password }),
       });
-      const data = await response.json();
+      // ✅ قراءة آمنة: لو السيرفر رجّع HTML (504 من بوابة الاستضافة) ما نقعش في خطأ غامض
+      const data = await response.json().catch(() => ({}));
       if (response.ok) {
         // نفس منطق تحديد الأونر المستخدم بالظبط في لوحة التحكم (Dashboard.jsx)
         const userRole = (data.user?.role || '').toUpperCase();
@@ -253,11 +271,17 @@ export default function Login() {
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('user', JSON.stringify(data.user));
         navigate('/dashboard');
+      } else if (response.status >= 500) {
+        setErrorMsg(language === 'ar'
+          ? `🚫 السيرفر رد بخطأ (${response.status}) — جرّب تاني، ولو تكرر رستر السيرفر ثم اضغط Ctrl+Shift+R.`
+          : `🚫 Server error (${response.status}) — retry, and if it persists restart the server then press Ctrl+Shift+R.`);
       } else {
         setErrorMsg(language === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid login credentials');
       }
     } catch (err) {
-      setErrorMsg(language === 'ar' ? 'تعذر الاتصال بالخادم المركزي' : 'Unable to connect to the central server');
+      setErrorMsg(language === 'ar'
+        ? 'تعذر الاتصال بالخادم المركزي — تأكد من الشبكة، ولو الشبكة تمام رستر السيرفر واضغط Ctrl+Shift+R.'
+        : 'Unable to reach the central server — check your network; if that is fine, restart the server and press Ctrl+Shift+R.');
     } finally {
       setIsLoading(false);
     }
@@ -348,6 +372,9 @@ export default function Login() {
       className="relative min-h-screen bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
+      {/* 🩺 شاشة وقوع السيرفر — تظهر على صفحة الدخول نفسها (أول مكان بيوصل له الشباب) */}
+      <ServerDownOverlay health={serverHealth} lang={language} />
+      <ServerRecoveryBanner health={serverHealth} lang={language} />
       {/* 🔐 تجربة OTP: خط طبيعي → مدار تحميل → علامة نجاح، بدون تغيير منطق التحقق. */}
       <style>{`
         .otp-orbit-zone.is-checking {

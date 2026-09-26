@@ -7,10 +7,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
-from datetime import date, time, datetime, timedelta
+from datetime import date, time, datetime, timedelta, timezone
 from psycopg.errors import UniqueViolation
 import json
+import os
 import re
+import threading
+import uuid
 
 # ملفات المشروع الخاصة بيك
 from audit import create_audit_log
@@ -135,6 +138,12 @@ def ensure_schema():
             cursor.execute("ALTER TABLE mission_participant_sessions ADD COLUMN IF NOT EXISTS end_dt TIMESTAMP;")
             # الإصلاح الجذري لـ 500: session_date لم يعد إلزامياً (آمن للإعادة)
             cursor.execute("ALTER TABLE mission_participant_sessions ALTER COLUMN session_date DROP NOT NULL;")
+
+            # ── 4-ب) خانة «مسؤول المتابعة» تقبل لحد 1000 حرف (كانت VARCHAR(150))
+            #    (مطابق لـ migrations/20260927_eoc_staff_name_1000.sql — idempotent)
+            #    السبب: نفس الخانة بتاخد الاسم + رقم الهاتف + ملاحظات المتابعة، و150
+            #    حرف كانت بتقصّ النص ⇒ أو رفض من السيرفر أو ضياع جزء من الكلام.
+            cursor.execute("ALTER TABLE mission_eoc_staff ALTER COLUMN staff_name TYPE VARCHAR(1000);")
 
             # ── 5) بداية المهمة (checkbox) + تاريخ/وقت إنشاء المهمة
             #    (مطابق لـ migrations/20260909_mission_start_creation_datetime.sql —
@@ -508,12 +517,40 @@ def ensure_schema():
         connection.close()
 
 
-# 🚀 تهيئة فورية عند أول تشغيل لأي worker (Vercel serverless) — آمن للإعادة
-# ولا يكسر الإقلاع لو القاعدة لحظةً ما غير متاحة (يُحاول في التشغيل التالي).
-try:
-    ensure_schema()
-except Exception as e:
-    print(f"Startup schema bootstrap failed: {e}")
+# 🆔 هوية التشغيلة + وقت الإقلاع: الواجهة بتقارنهم بين نبضتين — لو الاتصال بانقطع
+#    ورجع بهوية جديدة يبقى السيرفر قام من جديد فعلاً ⇒ نطلب تحديث كامل (Ctrl+Shift+R).
+#    (قبل كده كان مفيش أي مؤشر حقيقي: الواجهة كانت بتعتمد على navigator.onLine بس،
+#     فالسيرفر الواقع كان بيبان للناس "شغال" — وده اللي كان بيضيع الاستمارات.)
+BOOT_ID = uuid.uuid4().hex
+BOOT_STARTED_AT = datetime.now(timezone.utc)
+APP_REVISION = os.getenv("VERCEL_GIT_COMMIT_SHA") or os.getenv("APP_REVISION") or "dev"
+_schema_ready = threading.Event()
+_schema_error: Dict[str, Optional[str]] = {"message": None}
+
+
+def _bootstrap_schema_in_background():
+    """يفحص/يجهّز بنية القاعدة في الخلفية بدل الإقلاع الحاجب.
+
+    تهيئة المخطط كانت بتشتغل متزامنة عند الاستيراد (عشرات أوامر DDL على Neon)،
+    فأول طلب بعد أي cold start كان بيستنى لحد ما Vercel يقفل الدالة بـ 504 —
+    والتزامن ده هو مصدر كبير من "السيرفر مش مستقر". دلوقتي أي طلب (وأولهم
+    /api/health) يرد فوراً، والبنية تلتئم في الخلفية.
+    """
+    try:
+        ensure_schema()
+        _schema_error["message"] = None
+    except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
+        _schema_error["message"] = str(e)[:200]
+        print(f"Startup schema bootstrap failed: {e}")
+    finally:
+        _schema_ready.set()
+
+
+threading.Thread(
+    target=_bootstrap_schema_in_background,
+    name="eoc-schema-bootstrap",
+    daemon=True,
+).start()
 
 
 app = FastAPI(title="EOC System", version="1.0.0")
@@ -639,7 +676,48 @@ app.include_router(branches.router)
 
 @app.get("/")
 def root():
-    return {"system": "EOC System", "status": "online"}
+    return {"system": "EOC System", "status": "online", "boot_id": BOOT_ID}
+
+
+@app.get("/api/health")
+def health():
+    """🩺 نبضة السيرفر — بدون مصادقة، بدون كتابة، وبدون انتظار تهيئة المخطط.
+
+    دي مصدر الحقيقة الوحيد اللي الواجهة بتعرف بيه إن السيرفر *فعلاً* شغال:
+    - `status: online`  = السيرفر والقاعدة تمام.
+    - `status: degraded`= السيرفر مردود بس القاعدة واقعية ⇒ كل عمليات الحفظ
+      هتفشل فعلاً (وده اللي كان بيبان للناس "شغال وهو مش شغال").
+    - لا يرد خالص = السيرفر نفسه واقع/بيعمل رستر.
+    `boot_id` بيتغير مع كل تشغيلة، فبه نعرف الرستر ونطلب Ctrl+Shift+R.
+    """
+    db_ok = False
+    db_error = None
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1;")
+                cursor.fetchone()
+            db_ok = True
+        finally:
+            connection.close()
+    except Exception as e:
+        db_error = str(e)[:200]
+
+    now = datetime.now(timezone.utc)
+    return {
+        "status": "online" if db_ok else "degraded",
+        "service": "EOC System",
+        "boot_id": BOOT_ID,
+        "revision": APP_REVISION,
+        "started_at": BOOT_STARTED_AT.isoformat(),
+        "uptime_seconds": round((now - BOOT_STARTED_AT).total_seconds(), 1),
+        "server_time": now.isoformat(),
+        "cairo_time": datetime.now(ZoneInfo("Africa/Cairo")).isoformat(),
+        "database": {"ok": db_ok, "error": db_error},
+        "schema_ready": _schema_ready.is_set(),
+        "schema_error": _schema_error["message"],
+    }
 
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
