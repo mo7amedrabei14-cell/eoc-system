@@ -1,4 +1,4 @@
-"""Probe dev neondb state for the integration test setup (read-only + shows counts)."""
+"""Probe dev Aiven DB state for the integration test setup (read-only + shows counts)."""
 import sys
 
 sys.path.insert(0, r"C:\Users\mo7am\OneDrive\Work\EOC System")

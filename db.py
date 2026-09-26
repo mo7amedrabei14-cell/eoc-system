@@ -2,6 +2,7 @@ import os
 import time
 import psycopg
 from dotenv import load_dotenv
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 load_dotenv()
 
@@ -17,6 +18,9 @@ _RETRYABLE_MARKERS = (
     "remaining connection slots",          # القاعدة وصلت حد الاتصالات
     "too many clients",
     "too many connections",
+    "no more connections allowed",          # PgBouncer (pooler بتاع Aiven) وصل سقفه
+    "server login has been failing",        # الـpooler مش قادر يسجّل دخول
+    "pgbouncer",
     "the database system is starting up",
     "connection refused",
     "could not connect",
@@ -34,6 +38,58 @@ MAX_ATTEMPTS = int(os.getenv("DB_CONNECT_RETRIES", "3"))
 RETRY_BUDGET_S = float(os.getenv("DB_CONNECT_BUDGET_S", "7"))
 BASE_DELAY_S = float(os.getenv("DB_CONNECT_BASE_DELAY_S", "0.35"))
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 🌊 Aiven: الاتصال المباشر ولا الـpooler؟
+# ─────────────────────────────────────────────────────────────────────────────
+# Aiven بتوفّر PgBouncer على منفذ مستقل عن الاتصال المباشر (الافتراضي 21581،
+# وممكن يتغيّر من الكونسول ⇒ DB_POOLER_PORT). الـpooler هو الحل الموصى به مع
+# الـserverless: كل طلب بيفتح اتصال جديد والقاعدة ليها سقف اتصالات صغير،
+# فالـpooler بيلمّهم في اتصالات قليلة بدل ما نستهلك السقف كله.
+# ⚠️ لكن PgBouncer (وضع transaction) مبيسمحش بالـprepared statements، وpsycopg
+# بيجهّز الاستعلام تلقائياً بعد 5 استخدامات ⇒ أخطاء متقطعة غامضة. فبنكتشف
+# الـpooler ونطفي التجهيز تلقائياً — مش محتاج تعدّل أي مكان تاني في الكود.
+_raw_pooler_port = os.getenv("DB_POOLER_PORT")
+POOLER_PORT = ("21581" if _raw_pooler_port is None else _raw_pooler_port.strip())
+_TRUE_VALUES = ("1", "true", "yes", "on")
+
+
+def _is_pooled(url: str) -> bool:
+    """هل الاتصال رايح للـpooler؟ (باراميتر صريح / منفذ Aiven / مضيف فيه pooler)"""
+    if not url:
+        return False
+    if (os.getenv("DB_VIA_POOLER") or "").strip().lower() in _TRUE_VALUES:
+        return True
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    params = {k.lower(): (v or "") for k, v in parse_qsl(parsed.query or "", keep_blank_values=True)}
+    if params.get("pgbouncer", "").lower() in _TRUE_VALUES or params.get("pooler", "").lower() in _TRUE_VALUES:
+        return True
+    if "pooler" in (parsed.hostname or "").lower():
+        return True
+    return bool(POOLER_PORT) and bool(parsed.port) and str(parsed.port) == POOLER_PORT
+
+
+def _clean_dsn(url: str) -> str:
+    """يشيل باراميترات الـpooler من الرابط — libpq مايعرفهاش وهترفض الاتصال."""
+    if not url:
+        return url
+    try:
+        parsed = urlparse(url)
+        params = parse_qsl(parsed.query or "", keep_blank_values=True)
+    except Exception:
+        return url
+    kept = [(k, v) for k, v in params if k.lower() not in ("pgbouncer", "pooler")]
+    if len(kept) == len(params):
+        return url
+    return urlunparse(parsed._replace(query=urlencode(kept)))
+
+
+def _pooler_kwargs(url: str) -> dict:
+    """إعدادات psycopg الإضافية المطلوبة لما يكون الاتصال على الـpooler."""
+    return {"prepare_threshold": None} if _is_pooled(url) else {}
+
 
 def _is_retryable(exc: Exception) -> bool:
     message = str(exc).lower()
@@ -45,7 +101,9 @@ def get_connection(max_attempts: int = None, budget_s: float = None):
 
     Keepalives + connect timeout: prevents cold/startup stalls that surface as
     Vercel gateway timeouts / HTML 504, which the frontend shows as "server connection error".
-    No pooling (Vercel serverless must not hold connections across invocations).
+    Aiven: لو الرابط على منفذ الـpooler (PgBouncer) بنطفي الـprepared statements
+    تلقائياً — لأن الـserverless مبيسمحش بإمساك اتصال بين الطلبات، والـpooler هو
+    البديل الصحيح (وبنغلق الاتصال بنهاية كل طلب زي ما إحنا).
 
     إعادة المحاولة هنا بتحوّل *التعثّر اللحظي* (القاعدة في لحظة ضغط/عاصفة تشغيلات
     فاتحة اتصالات) من خطأ 500 فوراً ⇒ استنى أجزاء من الثانية ووصل. ميزانية وقتية
@@ -60,7 +118,8 @@ def get_connection(max_attempts: int = None, budget_s: float = None):
         attempt += 1
         try:
             return psycopg.connect(
-                os.getenv("DATABASE_URL"),
+                _clean_dsn(os.getenv("DATABASE_URL")),
+                **_pooler_kwargs(os.getenv("DATABASE_URL")),
                 connect_timeout=CONNECT_TIMEOUT,
                 keepalives=1,
                 keepalives_idle=30,

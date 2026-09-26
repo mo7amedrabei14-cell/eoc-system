@@ -5,9 +5,14 @@ that causes 'المتطوع في مهمة حاليًا' after LEAVE.
 """
 import requests, json, psycopg2, os, sys
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()  # بيانات الاتصال من .env (Aiven) — مفيش أي سر مكتوب في الكود
 
 BASE = "http://127.0.0.1:8099"
-DB_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_Z2dEz2Y8o6k1@ep-wispy-rain-a5ememel-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require")
+DB_URL = os.getenv("DATABASE_URL")
+if not DB_URL:
+    raise SystemExit("DATABASE_URL غير موجود — حدّده في .env (اتصال Aiven) ثم أعد التشغيل")
 
 # ── 1. Login (OAuth2 form data) ──
 print("=" * 70)

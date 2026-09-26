@@ -82,7 +82,7 @@ def _schema_version_matches(cursor) -> bool:
 def ensure_schema():
     """
     🛡️ تهيئة البنية الآمنة (idempotent) عند كل تشغيل — بدون الحاجة لتشغيل
-    ملفات migration يدوياً على قاعدة Neon (السبب الجذري لانقطاع الإشعارات:
+    ملفات migration يدوياً على قاعدة Aiven (السبب الجذري لانقطاع الإشعارات:
     جدول realtime_events لم يكن موجوداً على اللوحة الحية).
     - realtime_events + فهارسها (قناة الإشعارات اللحظية) — create_realtime_event
     - idempotency_keys (الحماية من الإرسال المكرر في الـ middleware) — بدونه
@@ -574,7 +574,7 @@ _schema_error: Dict[str, Optional[str]] = {"message": None}
 def _bootstrap_schema_in_background():
     """يفحص/يجهّز بنية القاعدة في الخلفية بدل الإقلاع الحاجب.
 
-    تهيئة المخطط كانت بتشتغل متزامنة عند الاستيراد (عشرات أوامر DDL على Neon)،
+    تهيئة المخطط كانت بتشتغل متزامنة عند الاستيراد (عشرات أوامر DDL على Aiven)،
     فأول طلب بعد أي cold start كان بيستنى لحد ما Vercel يقفل الدالة بـ 504 —
     والتزامن ده هو مصدر كبير من "السيرفر مش مستقر". دلوقتي أي طلب (وأولهم
     /api/health) يرد فوراً، والبنية تلتئم في الخلفية.

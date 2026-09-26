@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Task C — FINAL runtime + UI verification (هم-check حي على نفس الـ API الذي تستهلكه الواجهة).
-يُشغّل خادوم uvicorn حقيقياً على Neon ويتحقق من نقاط القبول السبع:
+يُشغّل خادوم uvicorn حقيقياً على Aiven ويتحقق من نقاط القبول السبع:
   1) ساعات مباشرة تتزايد بدون تحديث/إعادة تحميل، وتتجمد عند الإنهاء (بخط سير وبلا خط سير)
   2) خط السير: من/إلى حقول منفصلة + تواريخ/ساعات كاملة الجهتين + المبيت 23:00→03:00 = 4س
   3) مهمة بلا خط سير: لا واجهة خط سير زائدة، المشارك يرث جدول المهمة، انضمام/انفصال سليمان
@@ -179,7 +179,7 @@ def main_r():
     else:
         print("SERVER FAILED TO START")
         return 2
-    print(f"✔ Server up on {API} (Neon live)\n")
+    print(f"✔ Server up on {API} (Aiven live)\n")
 
     depA = now_naive() - datetime.timedelta(hours=3)   # انطلقتا قبل 3 ساعات
     Apid, Apname, Pb1name, Pb2name = None, "TEST_RT_P_A", "TEST_RT_P_B1", "TEST_RT_P_B2"
@@ -374,7 +374,7 @@ def cleanup():
 
 if __name__ == "__main__":
     print("═" * 70)
-    print(" جولة التحقق الحي النهائية — Task C (uvicorn حقيقي + Neon)")
+    print(" جولة التحقق الحي النهائية — Task C (uvicorn حقيقي + Aiven)")
     print("═" * 70)
     code = 0
     try:

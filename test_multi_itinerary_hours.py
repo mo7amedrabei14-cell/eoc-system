@@ -12,7 +12,7 @@ Scenarios:
   D) end_cap: clips latest end to mission completion
   E) compute_working_hours: segments-first still dominates assigned_span
 
-Requirements: working Neon DB (like test_jl_redesign). Cleanup deletes TEST_MIH_* rows.
+Requirements: working Aiven DB (like test_jl_redesign). Cleanup deletes TEST_MIH_* rows.
 """
 import sys
 import datetime as dt

@@ -196,12 +196,12 @@ const REASON_COPY = {
     ar: {
       title: 'السيرفر شغال بس قاعدة البيانات واقعة',
       body: 'السيرفر مردود، لكن قاعدة البيانات لا تستجيب — يعني كل عمليات الحفظ هتفشل فعلاً، فالشاشة دلوقتي مضلِّلة.',
-      step: 'راجع اتصال Neon/قاعدة البيانات أو رستر السيرفر، وبعدها اضغط Ctrl + Shift + R.',
+      step: 'راجع اتصال قاعدة البيانات (Aiven) أو رستر السيرفر، وبعدها اضغط Ctrl + Shift + R.',
     },
     en: {
       title: 'Server is up but the database is down',
       body: 'The API answers, yet the database is not responding — every save will fail, so the screen would be misleading.',
-      step: 'Check the Neon/database connection or restart the server, then press Ctrl + Shift + R.',
+      step: 'Check the database (Aiven) connection or restart the server, then press Ctrl + Shift + R.',
     },
   },
 };

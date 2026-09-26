@@ -1,11 +1,13 @@
 import psycopg
 from psycopg.types.json import Jsonb
 import os
+from dotenv import load_dotenv
+
+load_dotenv()  # مفيش أي بيانات اتصال مكتوبة في الكود — كلها من .env (Aiven)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    # fallback to the one in .env
-    DATABASE_URL = "postgresql://neondb_owner:npg_9fBljI0GONbX@ep-wispy-star-b2qjtn71.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+    raise SystemExit("DATABASE_URL غير موجود — حدّده في .env (اتصال Aiven) ثم أعد التشغيل")
 
 def create_table():
     with psycopg.connect(DATABASE_URL) as conn:

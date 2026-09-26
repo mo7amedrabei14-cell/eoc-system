@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Draft JOIN/LEAVE lifecycle — end-to-end against a real uvicorn (live, Neon).
+Draft JOIN/LEAVE lifecycle — end-to-end against a real uvicorn (live, Aiven).
 covers the redesign: participation is driven by the entry CATALOG
 (mission_join_leave_entries) + participant assignment (JL:J:<title>/JL:L:<title>),
 materialized into tagged mission_participant_sessions only while Draft.
@@ -137,7 +137,7 @@ def main_r():
         print("SERVER NOT UP")
         return 1
 
-    print(f"✔ Server up on {API} (Neon live)\n")
+    print(f"✔ Server up on {API} (Aiven live)\n")
 
     # تنظيف أي مهمات مسودة يتيمة من جولات سابقة (فشل متصادم)
     _conn0 = get_connection()

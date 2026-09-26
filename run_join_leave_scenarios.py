@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-التحقق المستهدف من ظاهرة JOIN/LEAVE (البجين) — 8 سيناريوهات ضد uvicorn حقيقي (Neon).
+التحقق المستهدف من ظاهرة JOIN/LEAVE (البجين) — 8 سيناريوهات ضد uvicorn حقيقي (Aiven).
 
   Bug 1: انفصال مشارك (A) يجب ألا يَقفل/يؤثر على B (نشط) أو C (جديد).
   Bug 2: الانفصال ينعكس بعد إتمام المهمة — النشطة تُحسم من شريحة مفتوحة (end_dt IS NULL)
@@ -176,7 +176,7 @@ def main_r():
     else:
         print("SERVER FAILED TO START")
         return 2
-    print(f"✔ Server up on {API} (Neon live)\n")
+    print(f"✔ Server up on {API} (Aiven live)\n")
 
     # تنظيف أي مهام يتيمة من جولة سابقة فاشلة
     _conn0 = get_connection()

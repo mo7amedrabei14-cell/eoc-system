@@ -12232,7 +12232,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
     const token = sessionStorage.getItem('access_token');
     try {
       // fix #10 (live-HR): نفس إطار ساعات كل استعلام حي — ساعة العميل المحلية (مصر).
-      // غيابها يجعل خلفية HR تُحسب بـLOCALTIMESTAMP (GMT على خادم Neon) فينقلب الفرق
+      // غيابها يجعل خلفية HR تُحسب بـLOCALTIMESTAMP (GMT على خادم Aiven) فينقلب الفرق
       // مع التواريخ المحلية المخزنة (naive مصر) ويعرض ساعات مهمة نشطة ≈ 0.
       const res = await fetch(`${BASE}/api/human-resources?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {

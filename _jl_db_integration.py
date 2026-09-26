@@ -1,4 +1,4 @@
-"""JOIN/LEAVE integration test on the dev neondb — drives the REAL endpoints.
+"""JOIN/LEAVE integration test on the dev Aiven database — drives the REAL endpoints.
 Prereq: migration 20260912_jl_leave_closes_session.sql applied (3 unique indexes dropped).
 
 Scenarios (from the approved plan):

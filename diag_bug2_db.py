@@ -7,8 +7,13 @@ Part B: Reproduce LEAVE via the EXACT SQL the /leave endpoint runs (main.py:2038
 Part C: Run the EXACT radar query (main.py:730-757) and show which condition fires.
 """
 import os, psycopg2
+from dotenv import load_dotenv
 
-DB_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_Z2dEz2Y8o6k1@ep-wispy-rain-a5ememel-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require")
+load_dotenv()  # بيانات الاتصال من .env (Aiven) — مفيش أي سر مكتوب في الكود
+
+DB_URL = os.getenv("DATABASE_URL")
+if not DB_URL:
+    raise SystemExit("DATABASE_URL غير موجود — حدّده في .env (اتصال Aiven) ثم أعد التشغيل")
 conn = psycopg2.connect(DB_URL)
 conn.autocommit = True
 cur = conn.cursor()

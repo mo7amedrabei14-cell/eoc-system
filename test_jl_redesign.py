@@ -11,7 +11,7 @@ Three layers:
   C) compute_working_hours honors requirement C: a roster-only participant
      with no route / no JOIN / no «من بداية المهمة» ⇒ 0 hours.
 
-Requirements: working Neon DB (like test_db.py). Cleanup deletes TEST_JLR_* rows.
+Requirements: working Aiven DB (like test_db.py). Cleanup deletes TEST_JLR_* rows.
 """
 import sys
 import datetime as dt
