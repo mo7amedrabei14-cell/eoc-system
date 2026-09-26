@@ -12,9 +12,21 @@ from psycopg.errors import OperationalError, UniqueViolation
 import json
 import os
 import re
+import sys
 import threading
 import traceback
 import uuid
+
+# 🈯 على ويندوز، لما الطرفية تكون موجهة لملف (زي تشغيل محلي مع سجل) بيثبّت ترميز
+#    cp1252، فأي print عربي يقع بـ UnicodeEncodeError ويبوّظ السجل — ده كان بيطبع
+#    "ensure_schema error" وهو ناجح فعلاً (والخطأ كان من السطر اللي قبله مباشرة).
+#    تثبيت الترميز مرة واحدة هنا يمنع سقوط أي سجل عربي (المنشور Linux/UTF-8 أصلاً).
+for _out_stream in (sys.stdout, sys.stderr):
+    try:
+        _out_stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+del _out_stream
 
 # ملفات المشروع الخاصة بيك
 from audit import create_audit_log
