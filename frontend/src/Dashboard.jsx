@@ -10642,20 +10642,17 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
   const kpiHazardsCount = assessmentsData.reduce((acc, a) => acc + (a.hazards || []).length, 0);
   const kpiAnomaliesCount = assessmentsData.reduce((acc, a) => {
   const anomValues = Object.values(a.anomalies || {});
+    return acc + anomValues.filter(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class)).length;
+  }, 0);
     // 🚩 محافظات بها إشارات مخاطر (مرتبة بالأكثر إشارات)
   const kpiHazardLocations = assessmentsData
     .map(a => ({
-      name: isAr
-        ? (a.location_name_ar || a.location_name_en || '—')
-        : (a.location_name_en || a.location_name_ar || '—'),
+      name: a.location_name_ar || a.location_name_en || '—',
       count: (a.hazards || []).length,
     }))
     .filter(x => x.count > 0)
     .sort((a, b) => b.count - a.count);
 
-
-    return acc + anomValues.filter(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class)).length;
-  }, 0);
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
