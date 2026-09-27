@@ -10641,7 +10641,19 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
   const kpiTotalLocations = assessmentsData.length;
   const kpiHazardsCount = assessmentsData.reduce((acc, a) => acc + (a.hazards || []).length, 0);
   const kpiAnomaliesCount = assessmentsData.reduce((acc, a) => {
-    const anomValues = Object.values(a.anomalies || {});
+  const anomValues = Object.values(a.anomalies || {});
+    // 🚩 محافظات بها إشارات مخاطر (مرتبة بالأكثر إشارات)
+  const kpiHazardLocations = assessmentsData
+    .map(a => ({
+      name: isAr
+        ? (a.location_name_ar || a.location_name_en || '—')
+        : (a.location_name_en || a.location_name_ar || '—'),
+      count: (a.hazards || []).length,
+    }))
+    .filter(x => x.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+
     return acc + anomValues.filter(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class)).length;
   }, 0);
 
@@ -10794,7 +10806,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
       </div>
 
       {/* 3. كروت الإحصاءات السريعة (KPIs) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-[var(--muted)]">{T('المواقع المغطاة', 'Monitored Locations')}</p>
@@ -10820,6 +10832,33 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-black">📈</div>
         </div>
       </div>
+      
+              <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-[var(--muted)]">{T('محافظات بها مخاطر', 'Governorates with Hazards')}</p>
+            <h4 className={`text-2xl font-black mt-1 ${kpiHazardLocations.length > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              {kpiHazardLocations.length}
+            </h4>
+            {kpiHazardLocations.length === 0 ? (
+              <p className="text-[10px] text-[var(--faint)] mt-0.5">{T('لا توجد إشارات مخاطر مرصودة', 'No hazard alerts detected')}</p>
+            ) : (
+              <>
+                <div className="mt-1.5 flex flex-wrap gap-1 max-h-[68px] overflow-y-auto custom-scrollbar pe-1">
+                  {kpiHazardLocations.map((h, i) => (
+                    <span key={`${h.name}-${i}`} title={h.name}
+                      className="inline-flex items-center gap-1 max-w-[9.5rem] px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-950/50 text-red-300 border border-red-800/50">
+                      <span className="truncate">{h.name}</span>
+                      <span className="shrink-0 font-mono opacity-80">{h.count}</span>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[10px] text-[var(--faint)] mt-1">{T('إجمالي الإشارات:', 'Total signals:')} {kpiHazardsCount}</p>
+              </>
+            )}
+          </div>
+          <div className="w-10 h-10 shrink-0 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-xl">🚩</div>
+        </div>
+
 
       {/* 4. حالة API المرئية مع الاحتفاظ بالبيانات التي تم جلبها بنجاح */}
       {apiError && !isLoading && (
