@@ -1365,7 +1365,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!customAlert) return undefined;
-    const timeout = setTimeout(() => setCustomAlert(null), 4000);
+    const timeout = setTimeout(() => setCustomAlert(null), 16000);
     return () => clearTimeout(timeout);
   }, [customAlert]);
 
@@ -3215,7 +3215,7 @@ function BranchesAndInventoryView({ branches }) {
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isYouth = false, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -5635,9 +5635,8 @@ row++;
               </SectionCard>
 
               <SectionCard title="التواريخ والتوقيتات" className="pt-6 pb-10 md:pt-7 md:pb-12" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
-                {/* 💡 الموبايل: عمود واحد حتى لا تتزاحم حقول التاريخ/الوقت (كانت 3 أعمدة دائمة)؛
-                    سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
-                      <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
+                {/* 💡 3 أعمدة: صف التواريخ (المهمة/الوصول/الانتهاء) وصف الساعات (البدء/الوصول/الانتهاء) — والموبايل عمود واحد */}
+                      <div className="grid w-full grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
                   {/* تواريخ */}
                   <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || ''} onChange={() => { bumpValidation(); touchTimeline('f_exit_date'); }} /></FormGroup>
                   <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || ''} onChange={() => touchTimeline('f_arrival_date')} /></FormGroup>
@@ -6870,7 +6869,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   }, []);
 
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
 
   // 🔄 سجل النظام يتحدث لحظياً (silent refetch) عند أي تغيير حقيقي في الـ DB
   const isFirstAuditLive = useRef(true);
@@ -7042,7 +7041,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer, 
   const [filterType, setFilterType] = useState('all');
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
@@ -7645,6 +7644,72 @@ const W_FINISH_REGIONS = [
   { region: 'saeed', label: 'Operation.Upper' },
 ];
 
+// 🌦️ شريط تحذير الوردية — ثابت في مكانه، بينوّر ويطفي لجذب الانتباه
+//     حدود الورديات بتوقيت مصر (عدّلها من هنا لو اتغيرت)
+const WEATHER_SHIFT_BOUNDS = { morningStart: 8 * 60, eveningStart: 15 * 60 + 30, nightStart: 23 * 60 + 55 };
+
+const cairoShiftNow = () => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+    const pick = (t) => parts.find(p => p.type === t)?.value || '00';
+    const mins = (Number(pick('hour')) % 24) * 60 + Number(pick('minute'));
+    const b = WEATHER_SHIFT_BOUNDS;
+    if (mins >= b.morningStart && mins < b.eveningStart) return 'morning';
+    if (mins >= b.eveningStart && mins < b.nightStart) return 'evening';
+    return 'night';
+  } catch { return null; }
+};
+
+const SHIFT_NAME = {
+  morning: { ar: 'وردية الصباح', en: 'Morning Shift' },
+  evening: { ar: 'وردية المساء', en: 'Evening Shift' },
+  night:   { ar: 'وردية الليل',  en: 'Night Shift' },
+};
+
+function WeatherShiftWarning({ shift, onFix, lang = 'ar' }) {
+  const [nowShift, setNowShift] = useState(() => cairoShiftNow());
+  useEffect(() => {
+    const t = setInterval(() => setNowShift(cairoShiftNow()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!nowShift || shift === nowShift) return null;
+  const L = (ar, en) => (lang === 'ar' ? ar : en);
+  const key = lang === 'ar' ? 'ar' : 'en';
+
+  return (
+    <div className="weather-shift-warn relative overflow-hidden rounded-2xl border-2 px-4 py-3 flex flex-wrap items-center gap-3"
+      style={{ borderColor: 'rgba(255,176,32,0.65)', background: 'linear-gradient(90deg, rgba(255,176,32,0.16), rgba(255,176,32,0.04))' }}>
+      <style>{`
+        @keyframes wsw-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,176,32,0.40); } 50% { box-shadow: 0 0 28px 6px rgba(255,176,32,0.26); } }
+        @keyframes wsw-blink { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.2; transform: scale(0.86); } }
+        @keyframes wsw-sweep { 0% { transform: translateX(-140%) skewX(-18deg); } 100% { transform: translateX(320%) skewX(-18deg); } }
+        .weather-shift-warn { animation: wsw-pulse 1.8s ease-in-out infinite; }
+        .weather-shift-warn .wsw-icon { animation: wsw-blink 1.05s steps(1,end) infinite; }
+        .weather-shift-warn .wsw-sweep { animation: wsw-sweep 2.6s ease-in-out infinite; }
+      `}</style>
+
+      <span className="wsw-sweep pointer-events-none absolute inset-y-0 w-16 rounded-full bg-white/15 blur-md" />
+      <span className="wsw-icon text-2xl leading-none shrink-0">⚠️</span>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black text-[var(--warn)]">
+          {L('وردية غير صحيحة — الوقت الحالي: ', 'Wrong shift — current: ')}{SHIFT_NAME[nowShift]?.[key] || nowShift}
+        </p>
+        <p className="text-[11px] text-[var(--muted)] mt-0.5">
+          {L('إنت فاتح: ', 'You have open: ')}{SHIFT_NAME[shift]?.[key] || shift}
+          {L(' — بدّل للوردية الصح قبل ما تدخل الأرقام.', ' — switch to the correct shift before entering values.')}
+        </p>
+      </div>
+
+      <button type="button" onClick={onFix} className="btn-warn text-xs font-black px-3 py-2 rounded-xl shrink-0">
+        {L('بدّل للوردية الصح', 'Switch to correct shift')}
+      </button>
+    </div>
+  );
+}
+
+
 function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang = 'ar', liveUpdateVersion = 0 }) {
   // 🌤️ صلاحيات مستقلة: لا نستخدم isVolunteer هنا (دور «أوبريشن» أهونها يفتح الطقس)
   const weatherEligible = !['VOLUNTEER', 'متطوع'].includes(userRole);
@@ -7656,7 +7721,30 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
   // فلاتر الأدوات الأربعة: (1) الوردية (2) التاريخ
-  const [shift, setShift] = useState('night');
+  // 🕐 دقائق الوقت الحالية بتوقيت مصر (مش توقيت جهاز المستخدم)
+  const cairoMinutesNow = () => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Cairo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const pick = (t) => parts.find((p) => p.type === t)?.value || '00';
+    const hh = Number(pick('hour')) % 24;
+    const mm = Number(pick('minute'));
+    return hh * 60 + mm;
+  };
+
+  // 🌅 الوردية تلقائيًا بتوقيت مصر:
+  //    12:00 ص → 08:00 ص = ليل | 08:00 ص → 03:30 م = صباح | 03:30 م → 11:55 م = مساء
+  const getCairoShift = () => {
+    const minutes = cairoMinutesNow();
+    if (minutes >= 8 * 60 && minutes < 15 * 60 + 30) return 'morning';
+    if (minutes >= 15 * 60 + 30 && minutes < 23 * 60 + 55) return 'evening';
+    return 'night';
+  };
+
+  const [shift, setShift] = useState(getCairoShift());
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [rows, setRows] = useState([]);            // توقعات الوردية المختارة (من السيرفر)
   const [formValues, setFormValues] = useState({}); // {branchId: {metric_min: '', ...}}
@@ -7811,7 +7899,7 @@ const visibleBranches = (
   // تحديث لحظي: مستخدم آخر حفظ توقعات أو أنهى وردية → refetch صامت
   useEffect(() => { if (liveUpdateVersion > 0) { loadGrid(true); loadDaily(true); } }, [liveUpdateVersion]);
   // التنبيهات غير الحاجبة: تنغلق تلقائيًا بدل أن تحجب الشاشة وتدفع المستخدم لـ Refresh
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
 
   // 💾 حفظ تلقائي فوري: كل رقم بيتحفظ في السيستم بعد توقف الكتابة بثانية — بدون زرار
   const formValuesRef = useRef(formValues);
@@ -7937,6 +8025,42 @@ const visibleBranches = (
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 🔄 وردية الوقت الحالية (بتوقيت مصر) — بتتحدّث لوحدها لما الوقت يعدّي الحد
+  const [timeShift, setTimeShift] = useState(getCairoShift());
+  const shiftAutoWarnedRef = useRef(null);
+  useEffect(() => {
+    const tick = () => {
+      const target = getCairoShift();
+      if (target === timeShift) return;   // الوقت لسه في نفس الوردية
+
+      setTimeShift(target);               // الوردية الزمنية اتغيّرت → نحدّث شريط التنبيه
+
+      const gk = `${filterDate}|${shift}`;
+      const group = (pendingRowsRef.current || {})[gk] || {};
+      const hasUnconfirmed = Object.keys(group).length > 0;
+      const isEditing = touchedRef.current.size > 0;
+
+      if (hasUnconfirmed || isEditing) {
+        // ✋ فيه شغل لسه مش متأكد — منقلبش الصفحة على اللي بيكتب، ننبّهه مرة واحدة
+        if (shiftAutoWarnedRef.current !== target) {
+          shiftAutoWarnedRef.current = target;
+          const label = target === 'morning' ? 'وردية الصباح' : target === 'evening' ? 'وردية المساء' : 'وردية الليل';
+          setCustomAlert(lang === 'ar'
+            ? `⏰ الوقت اتغير لـ${label} — خلّص اللي بتكتبه وهنحوّل الصفحة لوحدها`
+            : 'Shift time changed — finish your entry and the page will switch automatically');
+        }
+        return;
+      }
+
+      shiftAutoWarnedRef.current = null;
+      setShift(target);   // التبديل بيحفظ أي حاجة معلقة الأول، فمفيش حاجة بتضيع
+    };
+    tick();
+    const t = setInterval(tick, 30000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shift, filterDate, timeShift]);
 
   const setCell = (bid, field, value) => {
     touchedRef.current.add(bid);
@@ -8165,6 +8289,21 @@ const visibleBranches = (
               </button>
             ))}
           </div>
+          {/* ⚠️ تنبيه: الوردية المفتوحة مش وردية الوقت الحالي (بتوقيت مصر) */}
+          {shift !== timeShift && (
+            <button
+              type="button"
+              onClick={() => setShift(timeShift)}
+              className="ops-chip shrink-0 text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)] hover:brightness-110"
+              title={T('اضغط للتحويل لوردية الوقت الحالي', 'Click to switch to the current shift')}
+            >
+              ⚠️ {T('فاتح وردية غلط — الوقت الحالي:', 'Wrong shift — current:')}{' '}
+              {T(
+                timeShift === 'morning' ? 'صباح' : timeShift === 'evening' ? 'مساء' : 'ليل',
+                timeShift === 'morning' ? 'Morning' : timeShift === 'evening' ? 'Evening' : 'Night'
+              )}
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <span className="px-2 text-xs font-bold text-[var(--muted)] whitespace-nowrap">{T('التاريخ:', 'Date:')}</span>
             <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
@@ -8221,6 +8360,8 @@ const visibleBranches = (
           )}
           </div>
       </div>
+
+      <WeatherShiftWarning shift={shift} onFix={() => setShift(cairoShiftNow())} lang={lang} />
 
       {/* — ملخص دورة التوقعات — */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -8457,7 +8598,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   // ما تتعرّف أصلاً - يعني كل عملية ناجحة كانت بتوقع بعدها بخطأ (ReferenceError) بيقطع
   // تنفيذ باقي الكود (زي إعادة تحميل البيانات) وبيتحوّل غلط لرسالة "فشل الاتصال بالخادم".
   const [customAlert, setCustomAlert] = useState(null);
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
   // Auto-logout timeout (8 hours of inactivity)
   useEffect(() => {
     const timeoutDuration = 8 * 60 * 60 * 1000; // 8 hours
@@ -9049,7 +9190,13 @@ const onMatrixChange = (s, d, val) => {
 // ==========================================
 function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer, focusTarget = null }) {
   // 💡 1. تعريف دوال التاريخ في أول الشاشة عشان الكل يشوفها بدون تكرار
-  const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const getLocalDate = () => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date());
+    const pick = (t) => parts.find((p) => p.type === t)?.value || '';
+    return `${pick('year')}-${pick('month')}-${pick('day')}`;
+  };
   const getMonthName = (dateStr) => {
     if (!dateStr) return '';
     const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -9067,7 +9214,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer, focu
   const [disasterToDelete, setDisasterToDelete] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
@@ -9478,7 +9625,7 @@ function EarthquakesView({ isOwner, isSupervisor, isJoker, lang = 'ar', focusTar
   const [isLoading, setIsLoading] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
   
@@ -11249,7 +11396,7 @@ function AINewsMonitorView({ branches, isOwner, lang = 'ar', focusTarget = null 
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
@@ -11970,178 +12117,83 @@ function DangerConfirmModal({
   );
 }
 
-// 🌌 تنبيه الإجراءات الفضائي — (Glowing Edge & Pulse Burst) - الحجم الأكبر والأكثر تفاعلية
+// 🎯 تنبيه الإجراءات المميز — «بطاقة القيادة» (Command Card)
+//    شكل مختلف تمامًا عن الإشعارات المعتادة: زاوية مقصوصة + لسان لون على الجنب
+//    + مربع أيقونة + وسم الحالة + نص الرسالة + شريط وقت طويل يكفي للقراءة.
+// 🎯 تنبيه الإجراءات — نسخة الموشن: دخول 3D + إطار مضيء بيلف + لمعة بتمر + أيقونة بتنفجر
 function ActionToast({ message, onClose }) {
   if (!message) return null;
 
-  // الذكاء الاصطناعي لحساب وقت القراءة
-  const wordCount = message.split(/\s+/).length;
-  const smartDuration = Math.min(Math.max(wordCount * 350 + 3500, 3500), 8000); 
+  const words = String(message).trim().split(/\s+/).filter(Boolean).length;
+  // ⏱️ وقت القراءة: كلمة ≈ 450 مللي + 8 ثوان أساس — بحد أدنى 9 وأقصى 16 ثانية
+  const smartDuration = Math.min(Math.max(words * 450 + 8000, 9000), 16000);
 
-  // التعرف التلقائي
   const isError = /تعذر|فشل|خطأ|غير صحيح|لا يمكن|مرفوض|ممنوع|not found|failed|error/i.test(message);
-  
-  // ألوان مشعة (Cyber/Neon Vibes)
-  const themeColor = isError ? '#ff2a2a' : '#00e676'; 
-  const themeSoft = isError ? 'rgba(255, 42, 42, 0.2)' : 'rgba(0, 230, 118, 0.2)';
+  const isWarn = !isError && /تنبيه|احترس|تحذير|ناقص|لسه|متبقي|مؤقت|غير مطابق|لازم/.test(message);
+  const tone = isError
+    ? { color: '#ff4d4d', soft: 'rgba(255,77,77,0.16)', label: 'حدث خطأ', mark: '✕' }
+    : isWarn
+      ? { color: '#ffb020', soft: 'rgba(255,176,32,0.16)', label: 'تنبيه', mark: '!' }
+      : { color: '#22c55e', soft: 'rgba(34,197,94,0.16)', label: 'تم بنجاح', mark: '✓' };
 
   return createPortal(
     <>
       <style>{`
-        /* 1. دخول 3D عميق مع بلور */
-        @keyframes ultra-enter {
-          0% { opacity: 0; transform: translateY(-40px) scale(0.85) rotateX(-20deg); filter: blur(20px); }
-          70% { transform: translateY(4px) scale(1.02) rotateX(5deg); filter: blur(0); }
-          100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); filter: blur(0); }
+        @keyframes eocx-in {
+          0%   { opacity: 0; transform: perspective(900px) translateY(-46px) rotateX(-26deg) scale(0.9); filter: blur(10px); }
+          65%  { opacity: 1; transform: perspective(900px) translateY(6px) rotateX(4deg) scale(1.02); filter: blur(0); }
+          100% { opacity: 1; transform: perspective(900px) translateY(0) rotateX(0) scale(1); filter: blur(0); }
         }
+        @keyframes eocx-border { to { transform: rotate(360deg); } }
+        @keyframes eocx-sweep { 0% { transform: translateX(-140%) skewX(-18deg); } 100% { transform: translateX(260%) skewX(-18deg); } }
+        @keyframes eocx-ring { 0% { transform: scale(0.65); opacity: 0.85; } 100% { transform: scale(2.3); opacity: 0; } }
+        @keyframes eocx-icon-pop { 0% { transform: scale(0.4) rotate(-20deg); } 70% { transform: scale(1.18) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
+        @keyframes eocx-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+        @keyframes eocx-breathe {
+          0%,100% { box-shadow: 0 24px 55px -20px rgba(0,0,0,0.9), 0 0 0 0 ${tone.color}00; }
+          50%     { box-shadow: 0 24px 55px -20px rgba(0,0,0,0.9), 0 0 30px 4px ${tone.color}40; }
+        }
+        @keyframes eocx-text { 0% { opacity: 0; transform: translateY(12px); } 100% { opacity: 1; transform: translateY(0); } }
 
-        /* 2. دوران الضوء على الإطار */
-        @keyframes border-spin {
-          100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        /* 3. رسم الأيقونة */
-        @keyframes draw-path {
-          to { stroke-dashoffset: 0; }
-        }
-
-        /* 4. انفجار النور حوالين الأيقونة أول ما تظهر */
-        @keyframes ring-burst {
-          0% { transform: scale(0.5); opacity: 0.8; border-width: 4px; }
-          100% { transform: scale(2.5); opacity: 0; border-width: 0px; }
-        }
-
-        /* 5. دخول النص (Slide & Fade) */
-        @keyframes text-slide-up {
-          0% { opacity: 0; transform: translateY(10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 6. شريط الوقت الذكي */
-        @keyframes smart-progress {
-          from { transform: scaleX(1); }
-          to { transform: scaleX(0); }
-        }
-
-        .ultra-toast-wrapper {
-          animation: ultra-enter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-          perspective: 1200px;
-          --toast-theme: ${themeColor};
-        }
-
-        .border-spinner {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 300%;
-          height: 300%;
-          background: conic-gradient(from 0deg, transparent 0%, transparent 70%, var(--toast-theme) 100%);
-          transform: translate(-50%, -50%) rotate(0deg);
-          animation: border-spin 3s linear infinite;
-        }
-
-        .svg-draw-path {
-          stroke-dasharray: 40;
-          stroke-dashoffset: 40;
-          animation: draw-path 0.7s cubic-bezier(0.65, 0, 0.35, 1) 0.3s forwards;
-        }
-
-        .burst-ring {
-          animation: ring-burst 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) 0.3s forwards;
-        }
-
-        .text-reveal {
-          opacity: 0;
-          animation: text-slide-up 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s forwards;
-        }
-
-        .ultra-toast-wrapper:hover .smart-bar,
-        .ultra-toast-wrapper:hover .border-spinner {
-          animation-play-state: paused;
-        }
-        
-        .ultra-toast-wrapper:hover .inner-capsule {
-          transform: scale(1.01);
-          box-shadow: 0 20px 40px -10px rgba(0,0,0,0.7), 0 0 30px ${themeSoft};
-        }
+        .eocx-card { animation: eocx-in 0.62s cubic-bezier(0.18, 0.95, 0.22, 1.02) forwards, eocx-breathe 2.6s ease-in-out 0.7s infinite; }
+        .eocx-frame { position: absolute; inset: -60%; background: conic-gradient(from 0deg, transparent 0 62%, ${tone.color} 78%, transparent 92%); animation: eocx-border 4.5s linear infinite; }
+        .eocx-sweep { animation: eocx-sweep 3.2s ease-in-out 1s infinite; }
+        .eocx-ring { animation: eocx-ring 1.1s cubic-bezier(0.1, 0.85, 0.3, 1) 0.25s infinite; }
+        .eocx-icon { animation: eocx-icon-pop 0.6s cubic-bezier(0.2, 1.4, 0.35, 1) 0.15s both; }
+        .eocx-text { animation: eocx-text 0.5s ease-out 0.3s both; }
       `}</style>
 
-      <div className="pointer-events-none fixed inset-x-0 top-8 z-[9999] flex justify-center px-4">
-        <div className="ultra-toast-wrapper">
-          
-          {/* الكبسولة الخارجية (للإطار المضيء) - زودنا الـ Padding هنا سنة */}
-          <div className="pointer-events-auto relative rounded-full p-[1.5px] overflow-hidden shadow-2xl">
-            
-            {/* الضوء اللي بيلف */}
-            <div className="border-spinner pointer-events-none" />
+      <div className="pointer-events-none fixed inset-x-0 top-5 z-[9999] flex justify-center px-4">
+        <div className="eocx-card pointer-events-auto relative w-full max-w-[600px] overflow-hidden" style={{ borderRadius: '20px' }}>
+          <span className="eocx-frame pointer-events-none" />
 
-            {/* الكبسولة الداخلية (الخلفية الداكنة) - كبرنا الـ Padding العمودي والأفقي */}
-            <div
-              className="inner-capsule relative flex items-center gap-4 rounded-full pl-2 pr-5 py-2.5 transition-all duration-300"
-              style={{
-                background: 'rgba(12, 12, 15, 0.95)',
-                backdropFilter: 'blur(20px)',
-                minWidth: '320px',
-                maxWidth: 'calc(100vw - 2rem)',
-              }}
-            >
-              {/* الأيقونة بحركاتها المبهرة */}
-              <div className="relative flex shrink-0 items-center justify-center w-11 h-11 rounded-full">
-                {/* هالة النور اللي بتنفجر للخارج */}
-                <div 
-                  className="burst-ring absolute inset-0 rounded-full border-solid pointer-events-none"
-                  style={{ borderColor: themeColor }}
-                />
-                
-                {/* خلفية الأيقونة الخفيفة */}
-                <div 
-                  className="absolute inset-0 rounded-full opacity-20"
-                  style={{ background: `radial-gradient(circle, ${themeColor} 0%, transparent 70%)` }}
-                />
+          <div className="relative m-[2px] overflow-hidden" style={{ borderRadius: '18px', background: 'linear-gradient(135deg, rgba(18,18,24,0.985), rgba(9,9,13,0.985))', backdropFilter: 'blur(20px)' }}>
+            <span className="absolute inset-y-0 right-0 w-[6px]" style={{ background: `linear-gradient(180deg, ${tone.color}, ${tone.color}44)` }} />
+            <span className="eocx-sweep pointer-events-none absolute inset-y-0 w-24" style={{ background: `linear-gradient(90deg, transparent, ${tone.color}22, transparent)` }} />
 
-                {/* رسم الـ SVG */}
-                {isError ? (
-                  <svg className="w-6 h-6 relative z-10" style={{ color: themeColor, filter: `drop-shadow(0 0 6px ${themeColor})` }} fill="none" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.2" />
-                    <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" className="svg-draw-path" />
-                  </svg>
-                ) : (
-                  <svg className="w-7 h-7 relative z-10" style={{ color: themeColor, filter: `drop-shadow(0 0 6px ${themeColor})` }} fill="none" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.2" />
-                    <path d="M8 12.5l3 3 5-6" stroke="currentColor" className="svg-draw-path" />
-                  </svg>
-                )}
+            <div className="relative flex items-start gap-4 px-5 py-4">
+              <div className="relative shrink-0 flex items-center justify-center w-12 h-12">
+                <span className="eocx-ring absolute inset-0 rounded-2xl border-2" style={{ borderColor: tone.color }} />
+                <span className="eocx-icon relative flex items-center justify-center w-12 h-12 rounded-2xl text-xl font-black"
+                  style={{ background: tone.soft, color: tone.color, border: `1px solid ${tone.color}66` }}>{tone.mark}</span>
               </div>
 
-              {/* النص - حجمه كبر سنة وبقى بيدخل من تحت لفوق بنعومة */}
-              <div className="text-reveal relative flex-1 py-1.5 text-[15.5px] font-semibold tracking-wide text-zinc-100 whitespace-pre-wrap leading-relaxed">
-                {message}
+              <div className="min-w-0 flex-1">
+                <div className="eocx-text flex items-center gap-2 mb-1">
+                  <span className="text-[11px] font-black" style={{ color: tone.color, letterSpacing: '0.14em' }}>{tone.label}</span>
+                  <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${tone.color}77, transparent)` }} />
+                </div>
+                <div className="eocx-text text-[15.5px] font-semibold leading-relaxed text-zinc-100 whitespace-pre-wrap">{message}</div>
               </div>
 
-              {/* زر الإغلاق */}
-              <button
-                onClick={onClose}
-                className="text-reveal relative shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
-                aria-label="إغلاق"
-              >
-                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <button onClick={onClose} aria-label="إغلاق"
+                className="relative shrink-0 -mt-1 flex items-center justify-center w-8 h-8 rounded-xl text-zinc-500 hover:text-white hover:bg-white/10 transition-colors">
+                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
+            </div>
 
-              {/* شريط الوقت الذكي المدمج في الكيرف السفلي */}
-              <div className="absolute bottom-0 inset-x-6 h-[2px] bg-transparent pointer-events-none overflow-hidden rounded-t-full">
-                <div
-                  className="smart-bar h-full w-full"
-                  style={{ 
-                    backgroundColor: themeColor,
-                    boxShadow: `0 0 10px ${themeColor}, 0 0 20px ${themeColor}`,
-                    transformOrigin: 'right',
-                    animation: `smart-progress ${smartDuration}ms linear forwards`
-                  }}
-                />
-              </div>
-
+            <div className="relative h-[3px] w-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="h-full w-full" style={{ background: `linear-gradient(90deg, ${tone.color}, ${tone.color}88)`, transformOrigin: 'right', animation: `eocx-bar ${smartDuration}ms linear forwards` }} />
             </div>
           </div>
         </div>
@@ -12150,6 +12202,7 @@ function ActionToast({ message, onClose }) {
     document.body
   );
 }
+
 
 // 💡 أيقونات
 const AIIcon = ({ className = "", ...props }) => <svg {...props} className={`w-5 h-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h.01M15 9h.01" /></svg>;
@@ -12194,7 +12247,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
   useEffect(() => { fetchHR(); }, [fetchHR]);
 
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 4000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
 
   // تحديث لحظي صامت: لو أي مهمة اتغيرت في النظام، ينعكس في "في مهمة حاليًا" فوراً
   useEffect(() => {
