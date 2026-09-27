@@ -7872,11 +7872,13 @@ const visibleBranches = (
     let savedCount = 0;
     let failedGroups = 0;
     for (const group of groups) {
+      const isCurrentView = (group.date === filterDate && group.shift === shift);
       const bodyRows = Object.entries(group.rowsByBranch || {})
         .map(([bid, row]) => {
+          const shown = isCurrentView ? { ...(formValuesRef.current[Number(bid)] || {}), ...row } : row;
           const o = { branch_id: Number(bid), shift: group.shift };
           WEATHER_METRICS.forEach(m => WEATHER_METRIC_FIELDS(m).forEach(f => {
-            const v = row[f];
+            const v = shown[f];
             o[f] = (v !== '' && v != null) ? Number(v) : null;
           }));
           return o;
