@@ -35,6 +35,15 @@ from db import get_connection
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
 
+
+# 📡 إرسال حدث لحظي — نفس نمط مسارات الإضافة بالظبط: لا يُفسد العملية لو فشل
+def _emit_live(cursor, **kwargs):
+    try:
+        create_realtime_event(cursor, **kwargs)
+    except Exception:
+        pass
+
+
 from auth import (
     authenticate_user,
     create_access_token,
@@ -5060,6 +5069,8 @@ def update_local_news(news_id: int, news: LocalNewsModel, credentials: HTTPAutho
             except Exception as e:
                 print(f"Audit Error: {e}")
 
+            _emit_live(cursor, event_type="local_news", action="تحديث خبر محلي", actor_user_id=user_id, entity_id=news_id, details={"action_text": f"قام بتحديث خبر محلي في منطقة: {news.area_name or 'غير محدد'}"})
+
             connection.commit()
             return {"message": "تم تحديث الخبر بنجاح"}
             
@@ -5105,6 +5116,8 @@ def clear_all_local_news(
                 }
             )
 
+            _emit_live(cursor, event_type="local_news", action="مسح جميع الأخبار المحلية", actor_user_id=user_id, entity_id=None, details={"action_text": f"قام المالك بمسح جميع الأخبار المحلية. عدد السجلات: {deleted_count}"})
+
             connection.commit()
 
             return {
@@ -5138,6 +5151,8 @@ def delete_local_news(news_id: int, credentials: HTTPAuthorizationCredentials = 
                 create_audit_log(cursor, user_id, "حذف خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بحذف الخبر رقم {news_id} نهائياً"})
             except Exception as e:
                 print(f"Audit Error: {e}")
+
+            _emit_live(cursor, event_type="local_news", action="حذف خبر محلي", actor_user_id=user_id, entity_id=news_id, details={"action_text": f"قام بحذف الخبر رقم {news_id} نهائياً"})
 
             connection.commit()
             return {"message": "تم حذف الخبر بنجاح"}
@@ -5598,6 +5613,8 @@ def update_global_disaster(disaster_id: int, disaster: GlobalDisasterModel, cred
                 create_audit_log(cursor, user_id, "تحديث كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام بتحديث بيانات كارثة ({disaster.disaster_type}) في: {disaster.country}"})
             except Exception as e: pass
 
+            _emit_live(cursor, event_type="global_disaster", action="تعديل كارثة عالمية", actor_user_id=user_id, entity_id=disaster_id, details={"action_text": f"قام بتحديث بيانات كارثة ({disaster.disaster_type}) في: {disaster.country}"})
+
             connection.commit()
             return {"message": "تم التحديث بنجاح"}
     except Exception as e:
@@ -5642,6 +5659,8 @@ def clear_all_global_disasters(
                 }
             )
 
+            _emit_live(cursor, event_type="global_disaster", action="مسح جميع الكوارث العالمية", actor_user_id=user_id, entity_id=None, details={"action_text": f"قام المالك بمسح جميع الكوارث العالمية. عدد السجلات: {deleted_count}"})
+
             connection.commit()
 
             return {
@@ -5672,6 +5691,7 @@ def delete_global_disaster(disaster_id: int, credentials: HTTPAuthorizationCrede
             try:
                 create_audit_log(cursor, user_id, "حذف كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام بحذف رصد الكارثة رقم {disaster_id} نهائياً"})
             except Exception as e: pass
+            _emit_live(cursor, event_type="global_disaster", action="حذف كارثة عالمية", actor_user_id=user_id, entity_id=disaster_id, details={"action_text": f"قام بحذف رصد الكارثة رقم {disaster_id} نهائياً"})
             connection.commit()
             return {"message": "تم الحذف بنجاح"}
     except Exception as e:
@@ -5730,6 +5750,7 @@ def add_global_eqs_bulk(eqs: List[GlobalEqModel], credentials: HTTPAuthorization
                 """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude))
             try: create_audit_log(cursor, user_id, "رفع سجل زلازل", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"قام برفع ملف زلازل عالمية يحتوي على {len(eqs)} سجل"})
             except Exception: pass
+            _emit_live(cursor, event_type="earthquake", action="رفع سجل زلازل", actor_user_id=user_id, entity_id=None, details={"action_text": f"تم رفع ملف زلازل عالمية يحتوي على {len(eqs)} سجل"})
             connection.commit()
             return {"message": f"تم إضافة {len(eqs)} زلزال بنجاح"}
     except Exception as e:
@@ -5753,6 +5774,7 @@ def add_global_eq(eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials =
             eq_id = cursor.fetchone()[0]
             try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})
             except Exception: pass
+            _emit_live(cursor, event_type="earthquake", action="إضافة زلزال عالمي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})
             connection.commit()
             return {"message": "تم الإضافة"}
     except Exception as e:
@@ -5772,6 +5794,7 @@ def delete_global_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Dep
     try:
         with connection.cursor() as cursor:
             cursor.execute("DELETE FROM global_earthquakes WHERE eq_id = %s", (eq_id,))
+            _emit_live(cursor, event_type="earthquake", action="حذف زلزال عالمي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"قام بحذف زلزال عالمي رقم {eq_id}"})
             connection.commit()
             return {"message": "تم الحذف"}
     finally:
@@ -5804,6 +5827,7 @@ def add_egypt_eq(eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = D
             eq_id = cursor.fetchone()[0]
             try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})
             except Exception: pass
+            _emit_live(cursor, event_type="earthquake", action="إضافة زلزال محلي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})
             connection.commit()
             return {"message": "تم الإضافة"}
     except Exception as e:
@@ -5823,6 +5847,7 @@ def delete_egypt_eq(eq_id: int, credentials: HTTPAuthorizationCredentials = Depe
     try:
         with connection.cursor() as cursor:
             cursor.execute("DELETE FROM egypt_earthquakes WHERE eq_id = %s", (eq_id,))
+            _emit_live(cursor, event_type="earthquake", action="حذف زلزال محلي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"قام بحذف زلزال محلي (مصر) رقم {eq_id}"})
             connection.commit()
             return {"message": "تم الحذف"}
     finally:
@@ -5842,6 +5867,7 @@ def update_global_eq(eq_id: int, eq: GlobalEqModel, credentials: HTTPAuthorizati
             """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude, eq_id))
             try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})
             except Exception: pass
+            _emit_live(cursor, event_type="earthquake", action="تعديل زلزال عالمي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})
             connection.commit()
             return {"message": "تم التعديل"}
     except Exception as e:
@@ -5864,6 +5890,7 @@ def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorization
             """, (eq.date, eq.time, eq.magnitude, eq.depth_km, eq.region, eq.longitude, eq.latitude, eq_id))
             try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال محلي (مصر) بقوة {eq.magnitude}"})
             except Exception: pass
+            _emit_live(cursor, event_type="earthquake", action="تعديل زلزال محلي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال محلي (مصر) بقوة {eq.magnitude}"})
             connection.commit()
             return {"message": "تم التعديل"}
     except Exception as e:
@@ -5916,6 +5943,8 @@ def clear_all_earthquakes(
                     )
                 }
             )
+
+            _emit_live(cursor, event_type="earthquake", action="مسح جميع الزلازل", actor_user_id=user_id, entity_id=None, details={"action_text": f"قام المالك بمسح جميع سجلات الزلازل. الإجمالي: {total_count}"})
 
             connection.commit()
 

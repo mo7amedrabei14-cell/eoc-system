@@ -1365,7 +1365,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!customAlert) return undefined;
-    const timeout = setTimeout(() => setCustomAlert(null), 16000);
+    const timeout = setTimeout(() => setCustomAlert(null), 7000);
     return () => clearTimeout(timeout);
   }, [customAlert]);
 
@@ -1759,10 +1759,7 @@ if (e.event_type === 'system_refresh') {
         handover: prev.handover || e.event_type === 'handover',
         weather: prev.weather || e.event_type === 'weather',
       }));
-
-      // 🔇 الأخبار المحلية والكوارث العالمية: إشارة تحديث صامتة — كروت الداشبورد تتحدث + نقطة القائمة، بدون توست أو جرس
-      if (e.event_type === 'local_news' || e.event_type === 'global_disaster') return;
-
+      
       if (e.event_type === 'mission' && e.mission_id) {
         const ts = Date.now();
         setPulseMissions(prev => [
@@ -2043,9 +2040,9 @@ if (e.event_type === 'system_refresh') {
         ? <WeatherIntelErrorBoundary><MemoWeatherIntelView branches={branchesList} isOwner={isOwner} userRole={userRole} lang={language} setCustomAlert={setCustomAlert} /></WeatherIntelErrorBoundary>
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
       case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isYouth={isYouth} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
-      case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
-      case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} />;
-      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} lang={language} focusTarget={focusTarget} />;
+      case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.local_news} />;
+      case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.global_disasters} />;
+      case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} lang={language} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.earthquakes} />;
       case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} />;
       case 'handover': return (isOwner || isSupervisor)
         ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} focusTarget={focusTarget} />
@@ -3215,7 +3212,7 @@ function BranchesAndInventoryView({ branches }) {
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isYouth = false, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -6869,7 +6866,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   }, []);
 
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
 
   // 🔄 سجل النظام يتحدث لحظياً (silent refetch) عند أي تغيير حقيقي في الـ DB
   const isFirstAuditLive = useRef(true);
@@ -7027,7 +7024,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
 // ==========================================
 // 6. شاشة الأخبار المحلية (نظام التقييم والاستجابة)
 // ==========================================
-function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer, focusTarget = null }) {
+function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer, focusTarget = null, liveUpdateVersion = 0 }) {
   const [newsList, setNewsList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -7041,7 +7038,7 @@ function LocalNewsView({ branches, isOwner, isSupervisor, isJoker, isVolunteer, 
   const [filterType, setFilterType] = useState('all');
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
@@ -7071,6 +7068,14 @@ const [nd, setNd] = useState({
 
   useEffect(() => { fetchNews(); }, []);
 
+  // 🔄 تحديث لحظي: إضافة/تعديل من مستخدم آخر تنعكس فورًا بدون الخروج من الصفحة
+  const isFirstLiveNewsRef = useRef(true);
+  useEffect(() => {
+    if (isFirstLiveNewsRef.current) { isFirstLiveNewsRef.current = false; return; }
+    fetchNews(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveUpdateVersion]);
+
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'local_news' || focusTarget.id == null) return;
@@ -7089,13 +7094,13 @@ const [nd, setNd] = useState({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTarget?.nonce]);
 
-  const fetchNews = async () => {
-    setIsLoading(true);
+  const fetchNews = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch(`${BASE}/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setNewsList(await res.json());
-    } catch (err) {} finally { setIsLoading(false); }
+    } catch (err) {} finally { if (!silent) setIsLoading(false); }
   };
 
   const getMinutesDiff = (start, end) => {
@@ -7899,7 +7904,7 @@ const visibleBranches = (
   // تحديث لحظي: مستخدم آخر حفظ توقعات أو أنهى وردية → refetch صامت
   useEffect(() => { if (liveUpdateVersion > 0) { loadGrid(true); loadDaily(true); } }, [liveUpdateVersion]);
   // التنبيهات غير الحاجبة: تنغلق تلقائيًا بدل أن تحجب الشاشة وتدفع المستخدم لـ Refresh
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
 
   // 💾 حفظ تلقائي فوري: كل رقم بيتحفظ في السيستم بعد توقف الكتابة بثانية — بدون زرار
   const formValuesRef = useRef(formValues);
@@ -8598,7 +8603,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   // ما تتعرّف أصلاً - يعني كل عملية ناجحة كانت بتوقع بعدها بخطأ (ReferenceError) بيقطع
   // تنفيذ باقي الكود (زي إعادة تحميل البيانات) وبيتحوّل غلط لرسالة "فشل الاتصال بالخادم".
   const [customAlert, setCustomAlert] = useState(null);
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
   // Auto-logout timeout (8 hours of inactivity)
   useEffect(() => {
     const timeoutDuration = 8 * 60 * 60 * 1000; // 8 hours
@@ -9188,7 +9193,7 @@ const onMatrixChange = (s, d, val) => {
 // ==========================================
 // 7. شاشة الكوارث العالمية (Global Disasters)
 // ==========================================
-function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer, focusTarget = null }) {
+function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer, focusTarget = null, liveUpdateVersion = 0 }) {
   // 💡 1. تعريف دوال التاريخ في أول الشاشة عشان الكل يشوفها بدون تكرار
   const getLocalDate = () => {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -9214,7 +9219,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer, focu
   const [disasterToDelete, setDisasterToDelete] = useState(null);
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
   // 🔒 قفل النموذج أثناء الحفظ لمنع الضغط المزدوج وإرسال طلبات متكررة
@@ -9241,16 +9246,24 @@ const [clearAllCode, setClearAllCode] = useState('');
     apply: (payload) => setGd(prev => ({ ...prev, ...payload })),
   });
 
-  const fetchDisasters = async () => {
-    setIsLoading(true);
+  const fetchDisasters = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     const token = sessionStorage.getItem('access_token');
     try {
       const res = await fetch(`${BASE}/api/global-disasters`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setDisasters(await res.json());
-    } catch (err) {} finally { setIsLoading(false); }
+    } catch (err) {} finally { if (!silent) setIsLoading(false); }
   };
 
   useEffect(() => { fetchDisasters(); }, []);
+
+  // 🔄 تحديث لحظي بدون الخروج من الصفحة
+  const isFirstLiveDisasterRef = useRef(true);
+  useEffect(() => {
+    if (isFirstLiveDisasterRef.current) { isFirstLiveDisasterRef.current = false; return; }
+    fetchDisasters(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveUpdateVersion]);
 
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
@@ -9618,14 +9631,14 @@ const [clearAllCode, setClearAllCode] = useState('');
 }
 
 
-function EarthquakesView({ isOwner, isSupervisor, isJoker, lang = 'ar', focusTarget = null }) {
+function EarthquakesView({ isOwner, isSupervisor, isJoker, lang = 'ar', focusTarget = null, liveUpdateVersion = 0 }) {
   const [activeEqTab, setActiveEqTab] = useState('all'); 
   const [globalEqs, setGlobalEqs] = useState([]);
   const [egyptEqs, setEgyptEqs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
   
@@ -9667,18 +9680,26 @@ const [clearAllCode, setClearAllCode] = useState('');
     apply: (payload) => setEForm(prev => ({ ...prev, ...payload })),
   });
 
-  const fetchEarthquakes = async () => {
-    setIsLoading(true);
+  const fetchEarthquakes = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     const token = sessionStorage.getItem('access_token');
     try {
       const resG = await fetch(`${BASE}/api/earthquakes/global`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (resG.ok) setGlobalEqs(await resG.json());
       const resE = await fetch(`${BASE}/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (resE.ok) setEgyptEqs(await resE.json());
-    } catch (err) {} finally { setIsLoading(false); }
+    } catch (err) {} finally { if (!silent) setIsLoading(false); }
   };
 
   useEffect(() => { fetchEarthquakes(); }, []);
+
+  // 🔄 تحديث لحظي بدون الخروج من الصفحة
+  const isFirstLiveEqRef = useRef(true);
+  useEffect(() => {
+    if (isFirstLiveEqRef.current) { isFirstLiveEqRef.current = false; return; }
+    fetchEarthquakes(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveUpdateVersion]);
 
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
@@ -11396,7 +11417,7 @@ function AINewsMonitorView({ branches, isOwner, lang = 'ar', focusTarget = null 
   const [filterDate, setFilterDate] = useState(getLocalDate());
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
   const [isScanning, setIsScanning] = useState(false);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
@@ -12121,80 +12142,273 @@ function DangerConfirmModal({
 //    شكل مختلف تمامًا عن الإشعارات المعتادة: زاوية مقصوصة + لسان لون على الجنب
 //    + مربع أيقونة + وسم الحالة + نص الرسالة + شريط وقت طويل يكفي للقراءة.
 // 🎯 تنبيه الإجراءات — نسخة الموشن: دخول 3D + إطار مضيء بيلف + لمعة بتمر + أيقونة بتنفجر
+// 🎯 تنبيه الإجراءات — «Orbit Deck»: حلقة مدارية + شعاع علوي + هالة + وسوم
+//    نفس الوظائف تمامًا (3 حالات، إغلاق تلقائي، وقفة بالماوس، إغلاق يدوي) — التصميم بس اللي اتغيّر.
+//    الحركة كلها transform/opacity فقط ⇒ 60fps. (وفق ui-ux-pro-max)
+const ACTION_TOAST_LIFETIME = 15000;   // ⏱️ مدة بقاء التنبيه
+const ACTION_TOAST_EXIT_MS = 400;      // 🚪 مدة حركة الخروج (≈61% من حركة الدخول)
+const ACTION_TOAST_TONES = {
+  error: { c: '#ff6262', soft: 'rgba(255,98,98,0.13)', glow: 'rgba(255,98,98,0.42)', edge: 'rgba(255,98,98,0.38)', label: 'حدث خطأ', mark: '✕' },
+  warn:  { c: '#ffb43a', soft: 'rgba(255,180,58,0.13)', glow: 'rgba(255,180,58,0.40)', edge: 'rgba(255,180,58,0.36)', label: 'تنبيه',   mark: '!' },
+  ok:    { c: '#31e08d', soft: 'rgba(49,224,141,0.13)', glow: 'rgba(49,224,141,0.40)', edge: 'rgba(49,224,141,0.36)', label: 'تم بنجاح', mark: '✓' },
+};
+
 function ActionToast({ message, onClose }) {
+  const [paused, setPaused] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const remainRef = useRef(ACTION_TOAST_LIFETIME);
+  const deadlineRef = useRef(Date.now() + ACTION_TOAST_LIFETIME);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const close = () => {
+    setLeaving(true);
+    setTimeout(() => { if (onCloseRef.current) onCloseRef.current(); }, ACTION_TOAST_EXIT_MS);
+  };
+
+  // ♻️ رسالة جديدة ⇒ العد من الأول وحالة الدخول من الأول
+  useEffect(() => {
+    remainRef.current = ACTION_TOAST_LIFETIME;
+    deadlineRef.current = Date.now() + ACTION_TOAST_LIFETIME;
+    setLeaving(false);
+    setPaused(false);
+  }, [message]);
+
+  // ⏱️ إغلاق تلقائي — والماوس فوق التنبيه يوقف العد (عشان تقرا براحتك)
+  useEffect(() => {
+    if (paused || leaving) return undefined;
+    deadlineRef.current = Date.now() + remainRef.current;
+    const t = setTimeout(close, remainRef.current);
+    return () => { clearTimeout(t); remainRef.current = Math.max(0, deadlineRef.current - Date.now()); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused, leaving, message]);
+
   if (!message) return null;
 
-  const words = String(message).trim().split(/\s+/).filter(Boolean).length;
-  // ⏱️ وقت القراءة: كلمة ≈ 450 مللي + 8 ثوان أساس — بحد أدنى 9 وأقصى 16 ثانية
-  const smartDuration = Math.min(Math.max(words * 450 + 8000, 9000), 16000);
+  const text = String(message);
+  const isError = /تعذر|فشل|خطأ|غير صحيح|لا يمكن|مرفوض|ممنوع|not found|failed|error/i.test(text);
+  const isWarn = !isError && /تنبيه|احترس|تحذير|ناقص|لسه|متبقي|مؤقت|غير مطابق|لازم/i.test(text);
+  const tone = isError ? ACTION_TOAST_TONES.error : isWarn ? ACTION_TOAST_TONES.warn : ACTION_TOAST_TONES.ok;
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const headline = lines[0] || text;
+  const detail = lines.slice(1).join(' ');
+  const isArabic = /[\u0600-\u06FF]/.test(text);
 
-  const isError = /تعذر|فشل|خطأ|غير صحيح|لا يمكن|مرفوض|ممنوع|not found|failed|error/i.test(message);
-  const isWarn = !isError && /تنبيه|احترس|تحذير|ناقص|لسه|متبقي|مؤقت|غير مطابق|لازم/.test(message);
-  const tone = isError
-    ? { color: '#ff4d4d', soft: 'rgba(255,77,77,0.16)', label: 'حدث خطأ', mark: '✕' }
-    : isWarn
-      ? { color: '#ffb020', soft: 'rgba(255,176,32,0.16)', label: 'تنبيه', mark: '!' }
-      : { color: '#22c55e', soft: 'rgba(34,197,94,0.16)', label: 'تم بنجاح', mark: '✓' };
+  // 🕐 وقت التنبيه بتوقيت مصر — أرقام مبوبة عشان العرض ما يقفزش
+  let stamp = '';
+  try {
+    stamp = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  } catch { stamp = ''; }
 
   return createPortal(
     <>
       <style>{`
-        @keyframes eocx-in {
-          0%   { opacity: 0; transform: perspective(900px) translateY(-46px) rotateX(-26deg) scale(0.9); filter: blur(10px); }
-          65%  { opacity: 1; transform: perspective(900px) translateY(6px) rotateX(4deg) scale(1.02); filter: blur(0); }
-          100% { opacity: 1; transform: perspective(900px) translateY(0) rotateX(0) scale(1); filter: blur(0); }
+        /* ── كل الحركات: transform / opacity فقط (مفيش reflow) ── */
+        @keyframes eoc-in {
+          0%   { opacity: 0; transform: translateY(-22px) scale(0.94); }
+          62%  { opacity: 1; transform: translateY(2px) scale(1.008); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes eocx-border { to { transform: rotate(360deg); } }
-        @keyframes eocx-sweep { 0% { transform: translateX(-140%) skewX(-18deg); } 100% { transform: translateX(260%) skewX(-18deg); } }
-        @keyframes eocx-ring { 0% { transform: scale(0.65); opacity: 0.85; } 100% { transform: scale(2.3); opacity: 0; } }
-        @keyframes eocx-icon-pop { 0% { transform: scale(0.4) rotate(-20deg); } 70% { transform: scale(1.18) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
-        @keyframes eocx-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-        @keyframes eocx-breathe {
-          0%,100% { box-shadow: 0 24px 55px -20px rgba(0,0,0,0.9), 0 0 0 0 ${tone.color}00; }
-          50%     { box-shadow: 0 24px 55px -20px rgba(0,0,0,0.9), 0 0 30px 4px ${tone.color}40; }
+        @keyframes eoc-out {
+          0%   { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-14px) scale(0.97); }
         }
-        @keyframes eocx-text { 0% { opacity: 0; transform: translateY(12px); } 100% { opacity: 1; transform: translateY(0); } }
+        @keyframes eoc-aura  { 0%,100% { opacity: .48; transform: translate3d(-2%,-2%,0) scale(1); } 50% { opacity: .92; transform: translate3d(2%,2%,0) scale(1.07); } }
+        @keyframes eoc-beam  { 0%,40% { transform: translateX(-115%); } 100% { transform: translateX(115%); } }
+        @keyframes eoc-orbit { to { transform: rotate(360deg); } }
+        @keyframes eoc-halo  { 0% { opacity:.85; transform: scale(.72); } 100% { opacity:0; transform: scale(1.5); } }
+        @keyframes eoc-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+        @keyframes eoc-rail  { 0%,100% { opacity:.45; } 50% { opacity:1; } }
+        @keyframes eoc-rise  { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes eoc-pop   { from { opacity:0; transform: scale(.7); } to { opacity:1; transform: scale(1); } }
+        @keyframes eoc-bar   { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+        @keyframes eoc-draw  { to { stroke-dashoffset: 0; } }
 
-        .eocx-card { animation: eocx-in 0.62s cubic-bezier(0.18, 0.95, 0.22, 1.02) forwards, eocx-breathe 2.6s ease-in-out 0.7s infinite; }
-        .eocx-frame { position: absolute; inset: -60%; background: conic-gradient(from 0deg, transparent 0 62%, ${tone.color} 78%, transparent 92%); animation: eocx-border 4.5s linear infinite; }
-        .eocx-sweep { animation: eocx-sweep 3.2s ease-in-out 1s infinite; }
-        .eocx-ring { animation: eocx-ring 1.1s cubic-bezier(0.1, 0.85, 0.3, 1) 0.25s infinite; }
-        .eocx-icon { animation: eocx-icon-pop 0.6s cubic-bezier(0.2, 1.4, 0.35, 1) 0.15s both; }
-        .eocx-text { animation: eocx-text 0.5s ease-out 0.3s both; }
+        .eoc-t-host { animation: eoc-in 0.62s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .eoc-t-host.is-leaving { animation: eoc-out 0.38s cubic-bezier(0.55, 0, 0.68, 0.19) both; pointer-events: none; }
+        .eoc-t-host.is-paused .eoc-t-loop { animation-play-state: paused; }
+
+        .eoc-t-aura {
+          position: absolute; inset: -34% -12% -40% -12%; z-index: 0; pointer-events: none;
+          background:
+            radial-gradient(40% 55% at 24% 42%, var(--eoc-glow), transparent 72%),
+            radial-gradient(36% 50% at 80% 58%, var(--eoc-glow), transparent 74%);
+          filter: blur(30px);
+          animation: eoc-aura 8s ease-in-out infinite;
+        }
+
+        .eoc-t-card {
+          position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 14px;
+          padding: 15px 16px 17px; border-radius: 20px; overflow: hidden;
+          background: linear-gradient(168deg, rgba(26,27,34,0.94) 0%, rgba(10,10,14,0.97) 100%);
+          border: 1px solid rgba(255,255,255,0.07);
+          box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset,
+                      0 26px 52px -22px rgba(0,0,0,0.95),
+                      0 0 44px -12px var(--eoc-glow);
+          backdrop-filter: blur(20px) saturate(1.3);
+          transform: translateZ(0);
+          transition: transform 0.24s cubic-bezier(0.22,1,0.36,1), box-shadow 0.24s ease, border-color 0.24s ease;
+        }
+        .eoc-t-host:hover .eoc-t-card {
+          transform: translateY(-3px);
+          border-color: var(--eoc-edge);
+          box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset,
+                      0 34px 64px -24px rgba(0,0,0,0.98),
+                      0 0 62px -10px var(--eoc-glow);
+        }
+        .eoc-t-host:active .eoc-t-card { transform: translateY(-1px) scale(0.995); }
+
+        .eoc-t-beam {
+          position: absolute; top: 0; inset-inline: 0; height: 2px; z-index: 4; pointer-events: none;
+          background: linear-gradient(90deg, transparent, var(--eoc-c), transparent);
+          transform: translateX(-115%);
+          animation: eoc-beam 4.6s cubic-bezier(0.4, 0, 0.6, 1) 0.5s infinite;
+        }
+
+        .eoc-t-rail {
+          position: absolute; inset-inline-start: 0; top: 14%; bottom: 14%; width: 3px;
+          border-radius: 999px; pointer-events: none;
+          background: linear-gradient(180deg, transparent, var(--eoc-c), transparent);
+          box-shadow: 0 0 18px var(--eoc-c);
+          animation: eoc-rail 3s ease-in-out infinite;
+        }
+
+        .eoc-t-orb {
+          position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%;
+          display: grid; place-items: center; color: var(--eoc-c);
+          background: radial-gradient(circle at 50% 30%, var(--eoc-soft), rgba(255,255,255,0.015) 70%);
+          box-shadow: inset 0 0 16px -4px var(--eoc-glow), 0 0 0 1px rgba(255,255,255,0.05);
+          animation: eoc-float 3.8s ease-in-out infinite;
+        }
+        .eoc-t-orb-halo {
+          position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+          border: 1.5px solid var(--eoc-c);
+          animation: eoc-halo 2.4s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+        }
+        .eoc-t-orb-ring {
+          position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
+          border: 1px dashed var(--eoc-edge);
+          animation: eoc-orbit 7s linear infinite;
+        }
+        .eoc-t-orb-ring::after {
+          content: ''; position: absolute; top: -3px; inset-inline-start: 50%;
+          width: 6px; height: 6px; margin-inline-start: -3px; border-radius: 50%;
+          background: var(--eoc-c);
+          box-shadow: 0 0 12px var(--eoc-c), 0 0 22px var(--eoc-c);
+        }
+        .eoc-t-svg { width: 20px; height: 20px; position: relative; z-index: 1; filter: drop-shadow(0 0 7px var(--eoc-c)); }
+        .eoc-t-draw { stroke-dasharray: 44; stroke-dashoffset: 44; animation: eoc-draw 0.62s cubic-bezier(0.65, 0, 0.35, 1) 0.22s forwards; }
+
+        .eoc-t-body { min-width: 0; flex: 1 1 auto; }
+        .eoc-t-meta { display: flex; align-items: center; gap: 8px; }
+        .eoc-t-chip {
+          display: inline-flex; align-items: center; line-height: 1;
+          font-size: 10px; font-weight: 900; letter-spacing: 0.05em;
+          padding: 5px 10px; border-radius: 8px;
+          color: var(--eoc-c); background: var(--eoc-soft); border: 1px solid var(--eoc-edge);
+          animation: eoc-pop 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) 0.09s both;
+        }
+        .eoc-t-time {
+          font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+          color: rgba(255,255,255,0.34);
+          font-variant-numeric: tabular-nums; font-feature-settings: 'tnum';
+          animation: eoc-pop 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) 0.13s both;
+        }
+        .eoc-t-head {
+          margin: 9px 0 0; font-size: 15px; font-weight: 800; line-height: 1.6; color: #f4f5f9;
+          white-space: pre-wrap; overflow-wrap: anywhere;
+          animation: eoc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.13s both;
+        }
+        .eoc-t-sub {
+          margin: 6px 0 0; font-size: 12.5px; font-weight: 600; line-height: 1.75;
+          color: rgba(255,255,255,0.5);
+          white-space: pre-wrap; overflow-wrap: anywhere;
+          animation: eoc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.175s both;
+        }
+
+        .eoc-t-x {
+          position: relative; flex: none; width: 32px; height: 32px; border-radius: 10px;
+          display: grid; place-items: center; cursor: pointer;
+          color: rgba(255,255,255,0.42); background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.32s cubic-bezier(0.22,1,0.36,1);
+        }
+        .eoc-t-x::after { content: ''; position: absolute; inset: -7px; border-radius: 14px; }
+        .eoc-t-x:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: var(--eoc-edge); transform: rotate(90deg); }
+        .eoc-t-x:active { transform: scale(0.9); }
+
+        .eoc-t-bar {
+          position: absolute; inset-inline: 0; bottom: 0; height: 3px; z-index: 5;
+          background: rgba(255,255,255,0.07); overflow: hidden;
+        }
+        .eoc-t-bar > i {
+          display: block; height: 100%; width: 100%;
+          background: linear-gradient(90deg, var(--eoc-c), rgba(255,255,255,0.85));
+          box-shadow: 0 0 14px var(--eoc-c);
+          animation-name: eoc-bar; animation-timing-function: linear; animation-fill-mode: both;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .eoc-t-host, .eoc-t-host.is-leaving, .eoc-t-aura, .eoc-t-beam, .eoc-t-rail,
+          .eoc-t-orb, .eoc-t-orb-halo, .eoc-t-orb-ring, .eoc-t-draw,
+          .eoc-t-chip, .eoc-t-time, .eoc-t-head, .eoc-t-sub, .eoc-t-bar > i {
+            animation: none !important;
+          }
+          .eoc-t-chip, .eoc-t-time, .eoc-t-head, .eoc-t-sub { opacity: 1 !important; transform: none !important; }
+        }
       `}</style>
 
-      <div className="pointer-events-none fixed inset-x-0 top-5 z-[9999] flex justify-center px-4">
-        <div className="eocx-card pointer-events-auto relative w-full max-w-[600px] overflow-hidden" style={{ borderRadius: '20px' }}>
-          <span className="eocx-frame pointer-events-none" />
+      <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
+        <div
+          className={`eoc-t-host pointer-events-auto relative w-full ${leaving ? 'is-leaving' : ''} ${paused ? 'is-paused' : ''}`}
+          style={{ maxWidth: 620, '--eoc-c': tone.c, '--eoc-soft': tone.soft, '--eoc-glow': tone.glow, '--eoc-edge': tone.edge }}
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="eoc-t-aura eoc-t-loop" aria-hidden="true" />
 
-          <div className="relative m-[2px] overflow-hidden" style={{ borderRadius: '18px', background: 'linear-gradient(135deg, rgba(18,18,24,0.985), rgba(9,9,13,0.985))', backdropFilter: 'blur(20px)' }}>
-            <span className="absolute inset-y-0 right-0 w-[6px]" style={{ background: `linear-gradient(180deg, ${tone.color}, ${tone.color}44)` }} />
-            <span className="eocx-sweep pointer-events-none absolute inset-y-0 w-24" style={{ background: `linear-gradient(90deg, transparent, ${tone.color}22, transparent)` }} />
+          <div className="eoc-t-card" dir={isArabic ? 'rtl' : 'ltr'}>
+            <span className="eoc-t-beam eoc-t-loop" aria-hidden="true" />
+            <span className="eoc-t-rail eoc-t-loop" aria-hidden="true" />
 
-            <div className="relative flex items-start gap-4 px-5 py-4">
-              <div className="relative shrink-0 flex items-center justify-center w-12 h-12">
-                <span className="eocx-ring absolute inset-0 rounded-2xl border-2" style={{ borderColor: tone.color }} />
-                <span className="eocx-icon relative flex items-center justify-center w-12 h-12 rounded-2xl text-xl font-black"
-                  style={{ background: tone.soft, color: tone.color, border: `1px solid ${tone.color}66` }}>{tone.mark}</span>
+            <span className="eoc-t-orb">
+              <span className="eoc-t-orb-halo eoc-t-loop" aria-hidden="true" />
+              <span className="eoc-t-orb-ring eoc-t-loop" aria-hidden="true" />
+              <svg className="eoc-t-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round">
+                {tone.mark === '✕' && <path className="eoc-t-draw" d="M6.5 6.5l11 11M17.5 6.5l-11 11" />}
+                {tone.mark === '!' && <path className="eoc-t-draw" d="M12 5.5v8.2" />}
+                {tone.mark === '!' && <circle cx="12" cy="18" r="1.35" fill="currentColor" stroke="none" />}
+                {tone.mark === '✓' && <path className="eoc-t-draw" d="M5 12.6l4.6 4.6L19 7.2" />}
+              </svg>
+            </span>
+
+            <div className="eoc-t-body">
+              <div className="eoc-t-meta">
+                <span className="eoc-t-chip">{tone.label}</span>
+                {stamp && <span className="eoc-t-time">{stamp}</span>}
               </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="eocx-text flex items-center gap-2 mb-1">
-                  <span className="text-[11px] font-black" style={{ color: tone.color, letterSpacing: '0.14em' }}>{tone.label}</span>
-                  <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${tone.color}77, transparent)` }} />
-                </div>
-                <div className="eocx-text text-[15.5px] font-semibold leading-relaxed text-zinc-100 whitespace-pre-wrap">{message}</div>
-              </div>
-
-              <button onClick={onClose} aria-label="إغلاق"
-                className="relative shrink-0 -mt-1 flex items-center justify-center w-8 h-8 rounded-xl text-zinc-500 hover:text-white hover:bg-white/10 transition-colors">
-                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+              <p className="eoc-t-head">{headline}</p>
+              {detail && <p className="eoc-t-sub">{detail}</p>}
             </div>
 
-            <div className="relative h-[3px] w-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <div className="h-full w-full" style={{ background: `linear-gradient(90deg, ${tone.color}, ${tone.color}88)`, transformOrigin: 'right', animation: `eocx-bar ${smartDuration}ms linear forwards` }} />
-            </div>
+            <button type="button" className="eoc-t-x" onClick={close} aria-label="إغلاق">
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+                <path d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <span className="eoc-t-bar">
+              <i
+                className="eoc-t-loop"
+                style={{
+                  animationDuration: `${ACTION_TOAST_LIFETIME}ms`,
+                  animationPlayState: paused ? 'paused' : 'running',
+                  transformOrigin: isArabic ? 'right' : 'left',
+                }}
+              />
+            </span>
           </div>
         </div>
       </div>
@@ -12247,7 +12461,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
   useEffect(() => { fetchHR(); }, [fetchHR]);
 
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
-  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 16000); return () => clearTimeout(t); }, [customAlert]);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
 
   // تحديث لحظي صامت: لو أي مهمة اتغيرت في النظام، ينعكس في "في مهمة حاليًا" فوراً
   useEffect(() => {
