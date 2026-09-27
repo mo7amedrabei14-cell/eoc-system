@@ -10169,7 +10169,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
       }
     });
 
-    return assessmentList;
+    return Array.from(byLocation.values());
   };
   const normalizeAiAssessmentJson = (value) => {
     let source = normalizeObject(value);
@@ -10495,7 +10495,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           [T('الموقع', 'Location')]: locationName(a),
           [T('التاريخ المستهدف', 'Target Date')]: a.target_date,
           [T('تاريخ التنبؤ', 'Forecast Date')]: fc.forecast_date || '',
-          [T('آخر تاريخ مرصود', 'Latest Observed Date')]: currentRun?.latest_observed_date || '',
           [T('معرف لقطة التوقع', 'Forecast Snapshot ID')]: fc.id ?? a.forecast_snapshot_id ?? '',
           [T('الحرارة العظمى (°م)', 'Max Temp (°C)')]: fc.tmax ?? '',
           [T('الحرارة الصغرى (°م)', 'Min Temp (°C)')]: fc.tmin ?? '',
@@ -10563,33 +10562,10 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         });
       });
 
-      // 4. ورقة تقييمات الذكاء الاصطناعي التشغيلية
-      const aiRows = assessmentsData.map(a => {
-        const json = a.ai_assessment_json || {};
-        return {
-          [T('الموقع', 'Location')]: locationName(a),
-          [T('التاريخ المستهدف', 'Target Date')]: a.target_date,
-          [T('تاريخ التنبؤ', 'Forecast Date')]: a.forecast?.forecast_date || '',
-          [T('آخر تاريخ مرصود', 'Latest Observed Date')]: currentRun?.latest_observed_date || '',
-          [T('معرف لقطة التوقع', 'Forecast Snapshot ID')]: a.forecast?.id ?? a.forecast_snapshot_id ?? '',
-          [T('مزود الذكاء الاصطناعي', 'AI Provider')]: formatAiProvider(a.ai_provider || currentRun?.source_meta?.ai_provider),
-          [T('نموذج الذكاء الاصطناعي', 'AI Model')]: a.ai_model || currentRun?.source_meta?.ai_model || '',
-          [T('حالة التقييم', 'AI Status')]: a.ai_status || 'skipped',
-          [T('خطأ التقييم', 'AI Error')]: a.ai_error || '',
-          [T('ملخص الأحوال الجوية', 'Weather Summary')]: json.weather_summary || '',
-          [T('المقارنة بالسياق التاريخي', 'Historical Comparison')]: json.historical_comparison || '',
-          [T('الشذوذ الإحصائي', 'Significant Anomalies')]: json.significant_anomalies || '',
-          [T('الآثار التشغيلية', 'Operational Implications')]: json.operational_implications || '',
-          [T('توصيات المراقبة والمتابعة', 'Recommended Monitoring')]: json.recommended_monitoring || '',
-          [T('التقرير الكامل الخام', 'Full Raw Text')]: a.ai_assessment || ''
-        };
-      });
-
       const sheets = [
         { name: T('توقعات الطقس', 'Forecasts'), ...gridFromRows(forecastRows) },
         { name: T('الخط المرجعي التاريخي', 'Historical Baseline'), ...gridFromRows(statsRows) },
-        { name: T('تكرار العتبات', 'Threshold Frequencies'), ...gridFromRows(freqRows) },
-        { name: T('تقييم الذكاء الاصطناعي', 'AI Operational Assessment'), ...gridFromRows(aiRows) }
+        { name: T('تكرار العتبات', 'Threshold Frequencies'), ...gridFromRows(freqRows) }
       ];
 
       await exportWorkbook(sheets, `تقرير_استخبارات_الطقس_${targetDate}.xlsx`);
@@ -10657,9 +10633,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         const anomValues = Object.values(a.anomalies || {});
         return anomValues.some(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class));
       }
-      if (activeFilterTab === 'ai') {
-        return a.ai_status === 'success' && a.ai_assessment_json;
-      }
       return true;
     });
   }, [assessmentsData, activeFilterTab]);
@@ -10671,21 +10644,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     const anomValues = Object.values(a.anomalies || {});
     return acc + anomValues.filter(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class)).length;
   }, 0);
-  const kpiAiSuccessCount = assessmentsData.filter(a => a.ai_status === 'success').length;
-
-  // تنسيق نصوص الذكاء الاصطناعي لتلوين وسوم الأدلة
-  const renderFormattedAIText = (text) => {
-    const safeTextValue = safeText(text);
-    if (!safeTextValue) return null;
-    const parts = safeTextValue.split(/(\[(?:توقعات|تاريخي|إحصائي|تشغيلي)\])/g);
-    return parts.map((part, idx) => {
-      if (part === '[توقعات]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-mono">[توقعات]</span>;
-      if (part === '[تاريخي]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">[تاريخي]</span>;
-      if (part === '[إحصائي]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">[إحصائي]</span>;
-      if (part === '[تشغيلي]') return <span key={idx} className="inline-block px-1.5 py-0.5 mx-1 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">[تشغيلي]</span>;
-      return <span key={idx}>{part}</span>;
-    });
-  };
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -10807,9 +10765,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <button type="button" onClick={() => setActiveFilterTab('anomalies')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeFilterTab === 'anomalies' ? 'bg-amber-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
               📈 {T('الشذوذ الإحصائي', 'Anomalies')} ({kpiAnomaliesCount})
             </button>
-            <button type="button" onClick={() => setActiveFilterTab('ai')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeFilterTab === 'ai' ? 'bg-purple-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
-              🤖 {T('تقييم الذكاء الاصطناعي', 'AI Assessment')} ({kpiAiSuccessCount})
-            </button>
           </div>
         </div>
       </div>
@@ -10833,10 +10788,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <span className="inline-flex items-center gap-1.5 bg-indigo-900/40 px-2.5 py-1 rounded-lg border border-indigo-700/50">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
               {T('المنهجية: استيفاء خطي للمئينات (P10/P25/P75/P90) · نافذة ±3 أيام · حد أدنى N=20', 'Methodology: Linear percentiles (P10/P25/P75/P90) · ±3d window · min N=20')}
-            </span>
-            <span className="inline-flex items-center gap-1.5 bg-emerald-900/40 px-2.5 py-1 rounded-lg border border-emerald-700/50">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              {T(`المحلل: ${analystLabel} (استرشادي لغرفة العمليات)`, `AI Analyst: ${analystLabel} (Advisory)`)}
             </span>
           </div>
         </div>
@@ -10867,14 +10818,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <p className="text-[10px] text-[var(--faint)] mt-0.5">{T('انحراف عن النطاق المعتاد (P25-P75)', 'Deviation from P25-P75')}</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-black">📈</div>
-        </div>
-        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-[var(--muted)]">{T('حالة التحليل الذكي', 'AI Assessment Status')}</p>
-            <h4 className="text-2xl font-black text-purple-400 mt-1">{kpiAiSuccessCount}/{kpiTotalLocations}</h4>
-            <p className="text-[10px] text-[var(--faint)] mt-0.5">{analystLabel}</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl font-black">🤖</div>
         </div>
       </div>
 
@@ -10937,7 +10880,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             const fc = item.forecast || {};
             const stats = item.statistics || [];
             const freqs = item.frequencies || [];
-            const latestObservedDate = currentRun?.latest_observed_date || '';
             const assessmentAnalystLabel = getAnalystLabel({
               ai_provider: item.ai_provider || currentRun?.source_meta?.ai_provider,
               ai_model: item.ai_model || currentRun?.source_meta?.ai_model,
@@ -10961,7 +10903,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                       <p className="text-xs text-[var(--muted)] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <span>{T('التاريخ المستهدف:', 'Target Date:')} <strong className="text-[var(--ink)]">{item.target_date}</strong></span>
                         <span>{T('تاريخ التنبؤ:', 'Forecast Date:')} <strong className="text-[var(--ink)]">{fc.forecast_date || '—'}</strong></span>
-                        <span>{T('آخر تاريخ مرصود:', 'Latest Observed Date:')} <strong className="text-[var(--ink)]">{latestObservedDate || '—'}</strong></span>
                         {fc.fetched_at && <span className="text-[11px] text-[var(--faint)]">({T('تم الجلب:', 'Fetched:')} {new Date(fc.fetched_at).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })})</span>}
                       </p>
                     </div>
@@ -11117,78 +11058,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                       </div>
                     </div>
                   )}
-
-                  {/* د) التقييم التشغيلي للذكاء الاصطناعي (AI Operational Assessment) */}
-                  <div className="bg-gradient-to-br from-purple-950/20 via-[var(--surface-2)] to-indigo-950/20 rounded-2xl border border-purple-800/40 p-4 md:p-6 space-y-4">
-                    <div className="flex items-center justify-between flex-wrap gap-2 border-b border-purple-800/30 pb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center justify-center font-black">🤖</div>
-                        <div>
-                          <h4 className="text-sm font-extrabold text-[var(--ink)] flex items-center gap-2">{T('التقييم التشغيلي لغرفة العمليات', 'EOC Operational Weather Assessment')}</h4>
-                          <p className="text-[10px] text-[var(--muted)]">{T('تحليل آلي استرشادي مبني على الأدلة دون تكهنات', 'Evidence-based AI assessment with strict operational guidance')}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono bg-purple-900/40 text-purple-300 border border-purple-700/50 px-2.5 py-0.5 rounded-full">{assessmentAnalystLabel}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.ai_status === 'success' ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50' : item.ai_status === 'skipped' ? 'bg-amber-950/40 text-amber-300 border border-amber-700/50' : 'bg-red-900/40 text-red-300 border border-red-700/50'}`}>
-                          {item.ai_status === 'success' ? T('مكتمل بنجاح', 'Generated') : item.ai_status === 'skipped' ? T('مُتخطى', 'Skipped') : T('تعذر التوليد', 'Failed')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {item.ai_status === 'error' ? (
-                      <div className="bg-red-950/30 border border-red-800/40 rounded-xl p-4 text-xs text-red-300 flex items-start gap-2.5">
-                        <span className="text-base">⚠️</span>
-                        <div>
-                          <p className="font-bold">{T('تعذر توليد التقييم الذكي لهذا الموقع في هذا التشغيل.', 'AI operational assessment could not be generated for this location.')}</p>
-                          <p className="text-[11px] text-red-400 mt-0.5">{item.ai_error || T('يرجى الاعتماد على الإحصاءات والجداول الرقمية المباشرة أعلاه.', 'Please rely on the numerical statistics and baseline tables above.')}</p>
-                        </div>
-                      </div>
-                    ) : item.ai_status === 'skipped' ? (
-                      <div className="bg-amber-950/25 border border-amber-800/35 rounded-xl p-4 text-xs text-amber-300 flex items-start gap-2.5">
-                        <span className="text-base">ℹ️</span>
-                        <div>
-                          <p className="font-bold">{T('لم يُطلب توليد تقييم ذكي لهذا الموقع في هذا التشغيل.', 'AI operational assessment was not requested for this location.')}</p>
-                          <p className="text-[11px] text-amber-400 mt-0.5">{T('النتائج الحتمية والإحصاءات الرقمية المباشرة أعلاه مكتملة.', 'Deterministic results and direct numerical statistics above remain available.')}</p>
-                        </div>
-                      </div>
-                    ) : !aiJson ? (
-                      <div className="bg-red-950/30 border border-red-800/40 rounded-xl p-4 text-xs text-red-300 flex items-start gap-2.5">
-                        <span className="text-base">⚠️</span>
-                        <div>
-                          <p className="font-bold">{T('تعذر توليد التقييم الذكي لهذا الموقع في هذا التشغيل.', 'AI operational assessment could not be generated for this location.')}</p>
-                          <p className="text-[11px] text-red-400 mt-0.5">{item.ai_error || T('يرجى الاعتماد على الإحصاءات والجداول الرقمية المباشرة أعلاه.', 'Please rely on the numerical statistics and baseline tables above.')}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
-                          <h5 className="font-bold text-purple-300 mb-1.5 flex items-center gap-1.5 text-xs">🌤️ {T('1. ملخص الأحوال الجوية المتوقعة', '1. Weather Summary')}</h5>
-                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.weather_summary)}</p>
-                        </div>
-                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
-                          <h5 className="font-bold text-blue-300 mb-1.5 flex items-center gap-1.5 text-xs">🏛️ {T('2. المقارنة بالسياق التاريخي', '2. Historical Context Comparison')}</h5>
-                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.historical_comparison)}</p>
-                        </div>
-                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
-                          <h5 className="font-bold text-amber-300 mb-1.5 flex items-center gap-1.5 text-xs">📈 {T('3. الشذوذ الإحصائي البارز', '3. Significant Statistical Anomalies')}</h5>
-                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.significant_anomalies)}</p>
-                        </div>
-                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20">
-                          <h5 className="font-bold text-red-300 mb-1.5 flex items-center gap-1.5 text-xs">🚨 {T('4. الآثار والتبعات التشغيلية', '4. Operational Implications')}</h5>
-                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.operational_implications)}</p>
-                        </div>
-                        <div className="bg-[var(--surface-1)]/70 p-3.5 rounded-xl border border-purple-800/20 md:col-span-2">
-                          <h5 className="font-bold text-emerald-300 mb-1.5 flex items-center gap-1.5 text-xs">📋 {T('5. توصيات المتابعة الميدانية', '5. Recommended Field Monitoring')}</h5>
-                          <p className="text-[var(--ink)] leading-relaxed text-[11px]">{renderFormattedAIText(aiJson.recommended_monitoring)}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-2 text-[10px] text-[var(--faint)] border-t border-purple-800/20">
-                      {T('إخلاء مسؤولية: هذا التحليل أداة مساعدة رقمية لغرفة العمليات ولا يحل محل التحذيرات الرسمية للهيئة العامة للأرصاد الجوية.', 'Disclaimer: This analysis is an operational advisory tool and does not replace official meteorological warnings.')}
-                    </div>
-                  </div>
                 </div>
               </div>
             );
