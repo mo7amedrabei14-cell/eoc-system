@@ -5637,7 +5637,7 @@ row++;
               <SectionCard title="التواريخ والتوقيتات" className="pt-6 pb-10 md:pt-7 md:pb-12" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
                 {/* 💡 الموبايل: عمود واحد حتى لا تتزاحم حقول التاريخ/الوقت (كانت 3 أعمدة دائمة)؛
                     سطح المكتب يبقى 3 أعمدة تماماً كما هو عبر sm:grid-cols-3 (≥640px) */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
                   {/* تواريخ */}
                   <FormGroup className="items-center text-center" required label="تاريخ المهمة" invalid={requiredTouched && missingFields.includes('field_exit_date')}><SegDateField className={`field text-center ${requiredTouched && missingFields.includes('field_exit_date') ? 'field-invalid' : ''}`} id="f_exit_date" defaultValue={currentMissionData?.exit_date || ''} onChange={() => { bumpValidation(); touchTimeline('f_exit_date'); }} /></FormGroup>
                   <FormGroup className="items-center text-center" label="تاريخ الوصول"><SegDateField className="field text-center" id="f_arrival_date" defaultValue={currentMissionData?.arrival_date || ''} onChange={() => touchTimeline('f_arrival_date')} /></FormGroup>
@@ -10828,9 +10828,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-black">📈</div>
         </div>
-      </div>
-      
-              <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-start justify-between gap-3">
+        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-[var(--muted)]">{T('محافظات بها مخاطر', 'Governorates with Hazards')}</p>
             <h4 className={`text-2xl font-black mt-1 ${kpiHazardLocations.length > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -10855,6 +10853,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           </div>
           <div className="w-10 h-10 shrink-0 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-xl">🚩</div>
         </div>
+      </div>
 
 
       {/* 4. حالة API المرئية مع الاحتفاظ بالبيانات التي تم جلبها بنجاح */}
