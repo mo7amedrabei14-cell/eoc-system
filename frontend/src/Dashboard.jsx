@@ -10653,6 +10653,29 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     .filter(x => x.count > 0)
     .sort((a, b) => b.count - a.count);
 
+      // 🌡️/🌧️ الكارت الرابع: أعلى قيمة متوقعة لليوم المستهدف (الفترة الحارة = حرارة · الممطرة = أمطار)
+  const kpiTargetMonth = Number(String(targetDate || '').slice(5, 7)) || 0;
+  const kpiIsHotSeason = kpiTargetMonth >= 5 && kpiTargetMonth <= 10;   // مايو → أكتوبر
+  const kpiPeak = (() => {
+    const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v))) ? null : Number(v);
+    const metrics = kpiIsHotSeason
+      ? [{ key: 'tmax', unit: '°C', label: T('أعلى حرارة متوقعة', 'Highest Expected Temp'), decimals: 1 }]
+      : [
+        { key: 'precip_prob_pct', unit: '%', label: T('أعلى نسبة أمطار متوقعة', 'Highest Rain Probability'), decimals: 0 },
+        { key: 'precip_mm', unit: isAr ? 'مم' : 'mm', label: T('أعلى كمية أمطار متوقعة', 'Highest Expected Rainfall'), decimals: 1 },
+      ];
+    for (const m of metrics) {
+      const rows = assessmentsData
+        .map(a => ({ value: num((a.forecast || {})[m.key]), name: a.location_name_ar || a.location_name_en || '—' }))
+        .filter(r => r.value !== null)
+        .sort((x, y) => (y.value - x.value) || x.name.localeCompare(y.name));
+      if (rows.length) {
+        const value = m.decimals ? Math.round(rows[0].value * 10) / 10 : Math.round(rows[0].value);
+        return { ...m, value, name: rows[0].name };
+      }
+    }
+    return null;
+  })();
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -10828,7 +10851,23 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-black">📈</div>
         </div>
-        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-start justify-between gap-3">
+        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-[var(--muted)]">
+              {kpiPeak ? kpiPeak.label : (kpiIsHotSeason ? T('أعلى حرارة متوقعة', 'Highest Expected Temp') : T('أعلى نسبة أمطار متوقعة', 'Highest Rain Probability'))}
+            </p>
+            <h4 className={`text-2xl font-black mt-1 ${kpiIsHotSeason ? 'text-red-400' : 'text-cyan-400'}`}>
+              {kpiPeak ? `${kpiPeak.value}${kpiPeak.unit}` : '—'}
+            </h4>
+            <p className="text-[10px] text-[var(--faint)] mt-0.5 truncate" title={kpiPeak?.name || ''}>
+              {kpiPeak ? `📍 ${kpiPeak.name}` : T('لا توجد بيانات لهذا التاريخ', 'No data for this date')}
+            </p>
+          </div>
+          <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-xl ${kpiIsHotSeason ? 'bg-red-500/10 text-red-400' : 'bg-cyan-500/10 text-cyan-400'}`}>{kpiIsHotSeason ? '🌡️' : '🌧️'}</div>
+        </div>
+      </div>
+
+      <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-[var(--muted)]">{T('محافظات بها مخاطر', 'Governorates with Hazards')}</p>
             <h4 className={`text-2xl font-black mt-1 ${kpiHazardLocations.length > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -10853,8 +10892,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           </div>
           <div className="w-10 h-10 shrink-0 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-xl">🚩</div>
         </div>
-      </div>
-
 
       {/* 4. حالة API المرئية مع الاحتفاظ بالبيانات التي تم جلبها بنجاح */}
       {apiError && !isLoading && (
