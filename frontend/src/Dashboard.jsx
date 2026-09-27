@@ -4320,7 +4320,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     const sheets = [{ name: 'المهام الشاملة', ...gridFromRows(missionsSheet) }];
     if (beneficiariesSheet.length > 0) sheets.push({ name: 'إحصائيات المستفيدين', ...gridFromRows(beneficiariesSheet) });
-    try { await exportWorkbook(sheets, `السجل_الشامل_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try { await exportWorkbook(sheets, `السجل_الشامل_للمهام_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل للمهام بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
@@ -5245,7 +5245,7 @@ row++;
             <button
               type="button"
               onClick={() => setIsTableExpanded(true)}
-              data-tip={lang === 'ar' ? 'عرض السجل الشامل بملء الشاشة' : 'Open full-screen log'}
+              data-tip={lang === 'ar' ? 'عرض السجل الشامل للمهام بملء الشاشة' : 'Open full-screen missions log'}
               className="action-btn action-btn--info flex-1 sm:flex-none"
             >
               <EyeIcon />
@@ -6374,8 +6374,8 @@ row++;
             {/* 🆕 نافذة اختيار: تحميل السجل الشامل بالتصنيفات أم بدونها */}
       <ExportChoiceModal
         show={showExportChoice}
-        title="تنزيل السجل الشامل"
-        message="تحب تنزّل السجل بالتصنيفات (تصنيف النشاط / نوع النشاط / تفاصيل النشاط / النوع / اسم النوع) ولا بدونها؟"
+        title="تنزيل السجل الشامل للمهام"
+        message="تحب تنزّل السجل الشامل للمهام بالتصنيفات (تصنيف النشاط / نوع النشاط / تفاصيل النشاط / النوع / اسم النوع) ولا بدونها؟"
         onCancel={() => setShowExportChoice(false)}
         onWithCategories={() => { setShowExportChoice(false); handleExportTableExcel(true); }}
         onWithoutCategories={() => { setShowExportChoice(false); handleExportTableExcel(false); }}
@@ -11806,7 +11806,7 @@ const totalAiCountries = new Set(
   );
 }
 // 🧩 اختيار تصدير السجل الشامل — بالتصنيفات (تصنيف/نوع/تفاصيل النشاط + النوع + اسم النوع) أو بدونها
-function ExportChoiceModal({ show, title = 'تنزيل السجل الشامل', message, onCancel, onWithCategories, onWithoutCategories }) {
+function ExportChoiceModal({ show, title = 'تنزيل السجل الشامل للمهام', message, onCancel, onWithCategories, onWithoutCategories }) {
   if (!show) return null;
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
