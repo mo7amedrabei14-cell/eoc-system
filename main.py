@@ -84,6 +84,10 @@ def validate_clear_confirmation(data: ClearAllRequest):
 
 # 🧾 إصدار بنية القاعدة: بأي تعديل على ensure_schema نرفع الرقم ⇒ يُعاد تشغيله
 #    مرة واحدة فقط، وكل الإقلاعات بعده تتخطاه فوراً (شوف المسار السريع تحت).
+# ⚠️ لا نرفع الإصدار لإضافة جدول حالة العمل — ترقية الإصدار تعيد تشغيل كتلة الـ DDL
+#    الضخمة (فيها CREATE INDEX على جدول الأحداث اللحظية) على قاعدة عليها حركة،
+#    فتحجز أقفالاً ثقيلة توقف البث اللحظي مؤقتاً. جدول حالة العمل يُنشأ بمستوى خفيف
+#    خاص به (ensure_workspace_schema) يعمل مع كل إقلاع بتكلفة إغلاق–فتح واحدة (كاش).
 SCHEMA_VERSION = "2026-09-27.1"
 
 
@@ -581,6 +585,50 @@ def ensure_schema():
         connection.close()
 
 
+def ensure_workspace_schema():
+    """☁️ بنية «حالة العمل على السيرفر» (مسودات الاستمارات + الإرسال المعلّق).
+
+    الجذر: كانت المسودات وطابور الإرسال محفوظة في localStorage على الجهاز وحده ⇒
+    مع أكثر من 7 أجهزة لنفس الحساب، أي جهاز لا يرى شغل غيره، وضياع الجهاز = ضياع
+    العمل. الآن السيرفر هو المصدر، وهذه الجداول هي بيته.
+
+    ⚠️ تُنشأ منفصلة عن ensure_schema وبتكلفة خفيفة: ترقية إصدار الـ ensure_schema
+    كانت تُعيد تشغيل كل الـ DDL الثقيل (مع أقفال حاجزة على جدول الأحداث اللحظية)،
+    وهذه الخطوة تفحص وجود الجدول فقط وتُنشئه إن غاب.
+    """
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT to_regclass('public.user_workspace_items');")
+            if cursor.fetchone()[0] is None:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS user_workspace_items (
+                        item_id     BIGSERIAL PRIMARY KEY,
+                        user_id     INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                        kind        VARCHAR(20) NOT NULL CHECK (kind IN ('draft', 'pending_save')),
+                        scope       VARCHAR(250) NOT NULL,
+                        payload     JSONB NOT NULL,
+                        meta        JSONB,
+                        updated_at  TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    );
+                """)
+                cursor.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_workspace_user_kind_scope
+                        ON user_workspace_items (user_id, kind, scope);
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_workspace_user_kind
+                        ON user_workspace_items (user_id, kind);
+                """)
+                connection.commit()
+                print("workspace schema: user_workspace_items created")
+    except Exception as e:
+        connection.rollback()
+        print(f"ensure_workspace_schema error (will retry next boot): {e}")
+    finally:
+        connection.close()
+
+
 # 🆔 هوية التشغيلة + وقت الإقلاع: الواجهة بتقارنهم بين نبضتين — لو الاتصال بانقطع
 #    ورجع بهوية جديدة يبقى السيرفر قام من جديد فعلاً ⇒ نطلب تحديث كامل (Ctrl+Shift+R).
 #    (قبل كده كان مفيش أي مؤشر حقيقي: الواجهة كانت بتعتمد على navigator.onLine بس،
@@ -602,6 +650,7 @@ def _bootstrap_schema_in_background():
     """
     try:
         ensure_schema()
+        ensure_workspace_schema()   # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
         _schema_error["message"] = None
     except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
         _schema_error["message"] = str(e)[:200]
@@ -1015,9 +1064,12 @@ def get_branches_locations(credentials: HTTPAuthorizationCredentials = Depends(s
 
 
 class RouteModel(BaseModel):
-    group_title: str
+    # 🆔 هوية الصف في قاعدة البيانات — تُقرأ من GET /api/missions/{id} ويُعاد إرسالها
+    #    مع كل حفظ، فيُحدَّث الصف *في مكانه* ولا يُحذف ويُعاد إدراجه. غيابها = صف جديد.
+    itinerary_id: Optional[int] = None
+    group_title: Optional[str] = None
     route_from: Optional[str] = None  # من (نقطة الانطلاق)
-    route_to: str                     # إلى (الوجهة)
+    route_to: Optional[str] = None    # إلى (الوجهة)
     departure_time: Optional[str] = None
     arrival_time: Optional[str] = None
     # 🆕 تواريخ كاملة لكل يوم/مسار (مهمات مفتوحة) — دعم المبيت overnight
@@ -1053,7 +1105,9 @@ class ParticipantModel(BaseModel):
     # 🆕 فترات المشاركة — للمهمات المفتوحة كحساب فعلي، وللعادية كتجاوز (خروج مبكر)
     participation_periods: List[PeriodModel] = []
     # 🆕 الأيام المخصصة للمشارك (متعدد) — مهمات مفتوحة فقط: يرث المشارك ساعات اليوم افتراضياً
-    assigned_days: List[str] = []
+    #    🛡️ None = القسم لم يُرسَل في هذه الحفظة ⇒ الإسنادات المخزَّنة تبقى كما هي
+    #    (كان الافتراضي [] فيُمْسح إسناد الأيام لمجرد أن الحمولة لم تحمله).
+    assigned_days: Optional[List[str]] = None
     # 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر بداية المشاركة المخططة
     #    (TRUE = بداية المهمة، FALSE = بداية المسار المسند). الافتراضي في القاعدة TRUE.
     start_from_mission: bool = True
@@ -1163,6 +1217,10 @@ class MissionCreate(BaseModel):
     # Idempotency-Key، لكن يُخزَّن في قاعدة البيانات ضمن صف المهمة. كان مفقوداً
     # من النموذج بينما كان الكود يقرأ mission.idempotency_key → AttributeError → 500.
     idempotency_key: Optional[str] = None
+
+    # 🛡️ حذف صريح لصفوف خط سير بعينها (زر الحذف في الواجهة) — لا يُحذف أي صف لم يُطلَب
+    #    حذفه صراحةً هنا أو عبر clear_details، فحِفظٌ ناقص لا يمحو ما هو مخزَّن أبداً.
+    deleted_route_ids: Optional[List[int]] = None
 
     # 🛡️ علم المسح المقصود
     clear_details: bool = False
@@ -1955,6 +2013,118 @@ def _emit_jl_event(cursor, mission_id, user_id, pd):
     except Exception as e:
         print(f"Audit Error (JL): {e}")
 
+# 🧾 سجل التعديلات: لقطة أعداد + بصمات تفاصيل المهمة (قبل/بعد).
+#    البصمة (md5) تكشف التعديل جوه صفوف موجودة حتى لو العدد ما اتغيرش.
+DETAILS_SNAPSHOT_SQL = """
+    SELECT
+        (SELECT count(*) FROM mission_itineraries WHERE mission_id = %s),
+        (SELECT count(*) FROM mission_vehicles WHERE mission_id = %s),
+        (SELECT count(*) FROM mission_participants WHERE mission_id = %s AND roster_active = true),
+        (SELECT count(*) FROM mission_eoc_staff WHERE mission_id = %s),
+        (SELECT md5(COALESCE(string_agg(x, '§' ORDER BY x), '')) FROM (
+            SELECT COALESCE(group_title,'') || '|' || COALESCE(route_from,'') || '|' || COALESCE(route_to,'') || '|' ||
+                   COALESCE(departure_date::text,'') || '|' || COALESCE(departure_time::text,'') || '|' ||
+                   COALESCE(arrival_date::text,'') || '|' || COALESCE(arrival_time::text,'') AS x
+            FROM mission_itineraries WHERE mission_id = %s
+        ) r),
+        (SELECT md5(COALESCE(string_agg(x, '§' ORDER BY x), '')) FROM (
+            SELECT COALESCE(driver_name,'') || '|' || COALESCE(vehicle_number,'') AS x
+            FROM mission_vehicles WHERE mission_id = %s
+        ) v),
+        (SELECT md5(COALESCE(string_agg(x, '§' ORDER BY x), '')) FROM (
+            SELECT COALESCE(full_name,'') || '|' || COALESCE(membership_number,'') || '|' ||
+                   COALESCE(participant_position,'') || '|' || COALESCE(team_name,'') AS x
+            FROM mission_participants WHERE mission_id = %s AND roster_active = true
+        ) p)
+"""
+
+
+def details_snapshot(cursor, mission_id):
+    """7 قيم: أعداد (خط سير · مركبات · مشاركون · فريق الغرفة) ثم بصمات الثلاثة الأولى."""
+    return cursor.execute(DETAILS_SNAPSHOT_SQL, (mission_id,) * 7).fetchone()
+
+
+# 🏷️ الحقول اللي تهم الشباب في سجل التعديلات
+_MISSION_FIELD_LABELS = (
+    ('mission_name', 'اسم المهمة'),
+    ('mission_classification', 'تصنيف المهمة'),
+    ('mission_type', 'نوع المهمة'),
+    ('mission_location', 'مكان المهمة'),
+    ('responsible_person', 'مسؤول المهمة'),
+    ('data_source', 'مصدر البلاغ'),
+    ('exit_date', 'تاريخ المهمة'),
+    ('arrival_date', 'تاريخ الوصول'),
+    ('completion_date', 'تاريخ الانتهاء'),
+    ('departure_time', 'ساعة التحرك'),
+    ('arrival_time', 'ساعة الوصول'),
+    ('completion_time', 'ساعة الانتهاء'),
+    ('team_code', 'كود الفريق'),
+    ('field_operation_status', 'حالة العملية الميدانية'),
+)
+
+# عدد │ بصمة │ مفرد │ مثنى │ 3–10 │ 11+ │ صيغة الإضافة │ صيغة الحذف │ اسم القسم
+_DETAILS_SECTIONS = (
+    (0, 4, 'مسار', 'مسارين', 'مسارات', 'مساراً', 'إلى خط السير', 'من خط السير', 'خط السير'),
+    (1, 5, 'مركبة', 'مركبتين', 'مركبات', 'مركبة', 'إلى المركبات', 'من المركبات', 'المركبات'),
+    (2, 6, 'مشارك', 'مشاركين', 'مشاركين', 'مشاركاً', 'إلى قائمة المشاركين', 'من قائمة المشاركين', 'المشاركين'),
+    (3, None, 'عضو', 'عضوين', 'أعضاء', 'عضواً', 'إلى فريق إدارة الغرفة', 'من فريق إدارة الغرفة', 'فريق إدارة الغرفة'),
+)
+
+
+def _clean_text(value):
+    """تطبيع قبل المقارنة: الفاضي/الشرطة = بلا قيمة، وشيل علامة حالة الميدان من الملاحظات."""
+    s = '' if value is None else str(value).strip()
+    s = re.sub(r'^\[حالة الميدان:[^\]]*\]\s*', '', s)
+    return '' if s in ('', '-') else s
+
+
+def _arabic_count(n, one, two, few, many):
+    if n == 1:
+        return one
+    if n == 2:
+        return two
+    if 3 <= n <= 10:
+        return f'{n} {few}'
+    return f'{n} {many}'
+
+
+def describe_mission_edits(mission, before, branch_names=None):
+    """قائمة عربي بحقول المهمة اللي اتغيرت فعلاً (فاضية = بدون تغييرات)."""
+    branch_names = branch_names or {}
+    items = []
+    for key, label in _MISSION_FIELD_LABELS:
+        new_v = _clean_text(getattr(mission, key, None))
+        old_v = _clean_text(before.get(key))
+        if new_v != old_v:
+            items.append(f'{label}: من «{old_v or "فاضي"}» إلى «{new_v or "فاضي"}»')
+    if _clean_text(getattr(mission, 'notes', None)) != _clean_text(before.get('notes')):
+        items.append('الملاحظات العامة')
+    if _clean_text(getattr(mission, 'internal_notes', None)) != _clean_text(before.get('internal_notes')):
+        items.append('الملاحظات الداخلية')
+    old_bid = _clean_text(before.get('branch_id'))
+    new_bid = _clean_text(getattr(mission, 'branch_id', None))
+    if old_bid != new_bid:
+        old_name = before.get('branch_name') or branch_names.get(old_bid) or old_bid
+        new_name = branch_names.get(new_bid) or new_bid
+        items.append(f'التمركز (الفرع): من «{old_name or "فاضي"}» إلى «{new_name or "فاضي"}»')
+    return items
+
+
+def describe_details_edits(det_before, det_after):
+    """قائمة عربي لتغييرات التفاصيل (مسارات/مركبات/مشاركون/فريق الغرفة)."""
+    items = []
+    if not det_before or not det_after:
+        return items
+    for idx, fp, one, two, few, many, to_p, from_p, label in _DETAILS_SECTIONS:
+        b, a = (det_before[idx] or 0), (det_after[idx] or 0)
+        if a > b:
+            items.append(f'إضافة {_arabic_count(a - b, one, two, few, many)} {to_p}')
+        elif a < b:
+            items.append(f'حذف {_arabic_count(b - a, one, two, few, many)} {from_p}')
+        elif fp is not None and b > 0 and det_before[fp] != det_after[fp]:
+            items.append(f'تعديل بيانات {label}')
+    return items
+
 
 def mission_end_dt(mission_data):
     """نهاية المهمة — completion ثم arrival."""
@@ -2532,6 +2702,113 @@ def create_mission(
     finally:
         connection.close()
 
+# ── 🛣️ مصالحة خط السير (Reconciling upsert) ──────────────────────────────────
+# الجذر الأصلي لضياع خط السير: الحفظ كان «حذف كل الصفوف ثم إعادة إدراج ما تحمله
+# الحمولة فقط» ⇒ أي حمولة ناقصة/قديمة/مكرَّرة (أو حالة واجهة فقدت صفوفها) كانت
+# تمحو المسارات المسجَّلة في قاعدة البيانات نهائياً بلا أي أثر.
+# القاعدة الجديدة (ملكية المستخدم للبيانات):
+#   • صف يحمل itinerary_id ⇒ يُحدَّث في مكانه (نفس الهوية، لا حذف ولا إعادة إدراج).
+#   • صف بلا id يطابق صفاً مخزَّناً بنفس المحتوى ⇒ يُحدَّث في مكانه (توافق خلفي).
+#   • أي صف آخر ⇒ يُدرَج كصف جديد (إضافة فقط).
+#   • الحذف لا يحدث إلا بطلب صريح: deleted_route_ids (زر الحذف) أو clear_details.
+
+def _route_norm(value, cut=0):
+    """تطبيع قيمة لمقارنة البصمة (None/مسافات/ثواني الوقت تُوحَّد)."""
+    s = '' if value is None else str(value).strip()
+    return s[:cut] if cut else s
+
+
+def _route_fingerprint(group_title, route_from, route_to, departure_date, departure_time, arrival_date, arrival_time):
+    """بصمة محتوى الصف — للتعرف على الصف المخزَّن نفسه في الحمولات بلا معرّفات."""
+    return (
+        _route_norm(group_title) or 'خط السير الأساسي',
+        _route_norm(route_from),
+        _route_norm(route_to),
+        _route_norm(departure_date, 10),
+        _route_norm(departure_time, 5),
+        _route_norm(arrival_date, 10),
+        _route_norm(arrival_time, 5),
+    )
+
+
+def _sync_mission_routes(cursor, mission_id, routes, deleted_ids=None, clear_details=False):
+    """مصالحة صفوف mission_itineraries في مكانها — بلا أي حذف غير صريح."""
+    def none_if_empty(val): return val if val != "" else None
+
+    incoming = list(routes or [])
+
+    # 1) حذف صريح بمعرّف الصف (زر الحذف في الواجهة) — مع تنظيف إسناد الأيام لنفس المجموعة
+    explicit_ids = [int(i) for i in (deleted_ids or []) if i is not None]
+    if explicit_ids:
+        cursor.execute(
+            "SELECT DISTINCT group_title FROM mission_itineraries WHERE mission_id = %s AND itinerary_id = ANY(%s)",
+            (mission_id, explicit_ids),
+        )
+        dropped_titles = [r[0] for r in cursor.fetchall() if r[0]]
+        cursor.execute(
+            "DELETE FROM mission_itineraries WHERE mission_id = %s AND itinerary_id = ANY(%s)",
+            (mission_id, explicit_ids),
+        )
+        if dropped_titles:
+            cursor.execute(
+                "DELETE FROM mission_participant_itineraries WHERE mission_id = %s AND itinerary_group = ANY(%s)",
+                (mission_id, dropped_titles),
+            )
+
+    # 2) مسح مقصود كامل («لا يوجد خط سير») — فعل مستخدم صريح
+    if clear_details and not incoming:
+        cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+        return
+
+    # 3) لقطة المخزَّن (للمطابقة بالهوية أو بالبصمة)
+    cursor.execute(
+        """SELECT itinerary_id, group_title, route_from, route_to, departure_date, departure_time,
+                  arrival_date, arrival_time
+           FROM mission_itineraries WHERE mission_id = %s ORDER BY itinerary_id""",
+        (mission_id,),
+    )
+    stored = cursor.fetchall()
+    by_id = {r[0]: r for r in stored}
+    by_fp = {_route_fingerprint(*r[1:]): r[0] for r in stored}
+    used_ids = set()
+
+    for route in incoming:
+        fp = _route_fingerprint(
+            route.group_title, route.route_from, route.route_to,
+            route.departure_date, route.departure_time, route.arrival_date, route.arrival_time,
+        )
+        target_id = None
+        if route.itinerary_id and route.itinerary_id in by_id and route.itinerary_id not in used_ids:
+            target_id = route.itinerary_id
+        elif fp in by_fp and by_fp[fp] not in used_ids:
+            target_id = by_fp[fp]
+
+        if target_id is not None:
+            cursor.execute(
+                """UPDATE mission_itineraries SET
+                       group_title=%s, route_from=%s, route_to=%s, departure_time=%s,
+                       arrival_time=%s, departure_date=%s, arrival_date=%s
+                   WHERE itinerary_id=%s AND mission_id=%s""",
+                (_route_norm(route.group_title) or 'خط السير الأساسي', none_if_empty(route.route_from or ''), route.route_to or '',
+                 none_if_empty(route.departure_time or ''), none_if_empty(route.arrival_time or ''),
+                 none_if_empty(route.departure_date or ''), none_if_empty(route.arrival_date or ''),
+                 target_id, mission_id),
+            )
+            used_ids.add(target_id)
+        else:
+            cursor.execute(
+                """INSERT INTO mission_itineraries
+                       (mission_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING itinerary_id""",
+                (mission_id, _route_norm(route.group_title) or 'خط السير الأساسي', none_if_empty(route.route_from or ''), route.route_to or '',
+                 none_if_empty(route.departure_time or ''), none_if_empty(route.arrival_time or ''),
+                 none_if_empty(route.departure_date or ''), none_if_empty(route.arrival_date or '')),
+            )
+            used_ids.add(cursor.fetchone()[0])
+
+    # 4) أي صف مخزَّن لم يُذكر في الحمولة يبقى محفوظاً كما هو — لا حذف ضمني إطلاقاً.
+
+
 @app.put("/api/missions/{mission_id}")
 def update_mission(
     mission_id: int,
@@ -2591,13 +2868,32 @@ def update_mission(
             cur_db_cd = None
             cur_db_notes = None
             cur_db_fs = None
-            cd_row = cursor.execute("SELECT creation_datetime, status, notes, field_operation_status FROM missions WHERE mission_id = %s", (mission_id,)).fetchone()
+            # 🧾 لقطة «قبل»: الحالة + الملاحظات + حقول المهمة + اسم الفرع
+            _SNAP_FIELDS = ['mission_name', 'mission_classification', 'branch_id', 'mission_type', 'mission_location',
+                            'responsible_person', 'data_source', 'exit_date', 'departure_date', 'arrival_date',
+                            'return_date', 'completion_date', 'start_time', 'departure_time', 'arrival_time',
+                            'completion_time', 'team_code', 'internal_notes', 'branch_name']
+            cd_row = cursor.execute("""
+                SELECT creation_datetime, status, notes, field_operation_status,
+                       m.mission_name, m.mission_classification, m.branch_id, m.mission_type, m.mission_location,
+                       m.responsible_person, m.data_source, m.exit_date, m.departure_date, m.arrival_date,
+                       m.return_date, m.completion_date, m.start_time, m.departure_time, m.arrival_time,
+                       m.completion_time, m.team_code, m.internal_notes,
+                       (SELECT b.branch_name FROM branches b WHERE b.branch_id = m.branch_id)
+                FROM missions m WHERE mission_id = %s
+            """, (mission_id,)).fetchone()
+            _before = {}
             if cd_row:
                 cur_db_cd = cd_row[0]
+                _before = dict(zip(_SNAP_FIELDS, cd_row[4:]))
+                _before['notes'] = cd_row[2]
                 cur_db_notes = cd_row[2]
                 cur_db_fs = cd_row[3]
             # 🆕 الحالة السابقة قبل التحديث — تُستخدم لمنع إشعارات المراجعة المكررة
             _previous_mission_status = cd_row[1] if cd_row else None
+
+            # 🧾 لقطة «قبل» لأعداد وبصمات التفاصيل — قبل أي حذف/إعادة كتابة تحت
+            _det_before = details_snapshot(cursor, mission_id)
 
                         # 💾 حفظ بدون إجراء: مسموح فقط (قيد المراجعة / مُرجَعة / معتمدة) — الحالة تُثبَّت من القاعدة
             if save_only:
@@ -2607,15 +2903,6 @@ def update_mission(
                     raise HTTPException(status_code=400, detail="حفظ التعديلات بدون إجراء متاح فقط للاستمارات (قيد المراجعة / مُرجَعة / معتمدة).")
                 mission.status = cd_row[1]
 
-            # 🛡️ عدادات التفاصيل قبل الحفظ — تُطبع في اللوج (قبل → بعد) لكشف أي تصفية
-            cursor.execute("""
-                SELECT
-                    (SELECT count(*) FROM mission_itineraries WHERE mission_id = %s),
-                    (SELECT count(*) FROM mission_vehicles WHERE mission_id = %s),
-                    (SELECT count(*) FROM mission_beneficiaries WHERE mission_id = %s)
-            """, (mission_id, mission_id, mission_id))
-            _counts_row = cursor.fetchone()
-            _routes_before, _veh_before, _ben_before = _counts_row[0], _counts_row[1], _counts_row[2]
             req_cd = parse_dt_input(mission.creation_datetime) if mission.creation_datetime else None
             cd_change = bool(req_cd) and (cur_db_cd is None or req_cd != cur_db_cd)
             cd_value = None  # COALESCE يحافظ على القديم لو لم يُطلب تغيير
@@ -2772,9 +3059,15 @@ def update_mission(
             if mission.eoc_staff is None:
                 mission.eoc_staff = []
 
-            if len(mission.routes) > 0 or mission.clear_details:
-                cursor.execute("DELETE FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
-                cursor.execute("DELETE FROM mission_participant_itineraries WHERE mission_id = %s", (mission_id,))
+            if len(mission.routes) > 0 or mission.clear_details or getattr(mission, 'deleted_route_ids', None):
+                # 🛡️ مصالحة في المكان بدل حذف-وإعادة-إدراج: الصف المحفوظ لا يُحذف ولا
+                #    تُمسّ هويته إلا بطلب صريح (deleted_route_ids أو clear_details).
+                #    (سابقاً: DELETE لكل صفوف المهمة + إعادة إدراج ما تحمله الحمولة فقط
+                #     ⇒ أي حمولة ناقصة كانت تمحو المسارات نهائياً)
+                _sync_mission_routes(
+                    cursor, mission_id, mission.routes,
+                    getattr(mission, 'deleted_route_ids', None), mission.clear_details,
+                )
             if len(mission.vehicles) > 0 or mission.clear_details:
                 cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             if len(mission.beneficiaries) > 0 or mission.clear_details:
@@ -2783,8 +3076,7 @@ def update_mission(
                 cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
 
             # 3. إدخال التفاصيل الجديدة بعد التعديل
-            for route in mission.routes:
-                cursor.execute("INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);", (mission_id, route.group_title, none_if_empty(route.route_from), route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time), none_if_empty(route.departure_date), none_if_empty(route.arrival_date)))
+            # 🛡️ خط السير أُدرِج/حُدِّث في مكانه داخل _sync_mission_routes أعلاه (لا إدراج مكرر).
 
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
@@ -2926,7 +3218,12 @@ def update_mission(
             #    🛡️ حارس الحمولة الجزئية: لو لم يُرسَل المشاركون أصلاً (None) فلا يُعدَّل
             #    الرستر المخزَّن بأي شكل — لا حذف ولا إخفاء. (reinserted_idents يبقى فارغاً،
             #    لذا هذا الحارس يمنع أيضاً الإخفاء الجماعي عبر roster_active=false.)
-            if sent_details.get("participants", True) and mission.participants is not None:
+            #    🛡️ حارس الرستر: قائمة مشاركين *غير فارغة* فقط تصلح الرستر. القائمة
+            #    الفارغة (فقدان حالة في الواجهة أو حمولة قديمة) لا تحذف ولا تُخفي أي
+            #    مشارك — الإزالة المقصودة تحدث صفاً بصف في نموذج يحمل باقي الصفوف،
+            #    والمسح الكامل لا يكون إلا بـ clear_details (طلب صريح).
+            has_participant_rows = bool(mission.participants) or mission.clear_details
+            if sent_details.get("participants", True) and mission.participants is not None and has_participant_rows:
                 stale_ids = [r["participant_id"]
                              for rows in existing_by_ident.values()
                              for r in rows
@@ -2942,6 +3239,10 @@ def update_mission(
 
             # 🆕 تخصيص الأيام/الخطوط — مزامنة كاملة: حذف المُلغى + إدراج الجديد (لا تكرار)
             for pid, part in new_participants:
+                # 🛡️ assigned_days = None ⇐ القسم لم يُرسَل في هذه الحفظة ⇒ لا تُمسّ
+                #    إسنادات الأيام المخزَّنة (كان الافتراضي [] فيُمحى الإسناد صامتاً).
+                if getattr(part, 'assigned_days', None) is None:
+                    continue
                 wanted = list(dict.fromkeys(
                     str(d).strip()
                     for d in (part.assigned_days or [])
@@ -3022,21 +3323,30 @@ def update_mission(
                     (Jsonb(mission.form_blocks), mission_id),
                 )
 
-            # 💡 تسجيل اللوج + 🛡️ رؤية تغيّر التفاصيل: أعداد خطوط السير/المركبات/
-            #    المستفيدين قبل وبعد الحفظ — أي تصفية غير مقصودة تصبح مكشوفة فوراً في السجل.
+            # 💡 تسجيل اللوج + 🧾 سجل التعديلات: «قبل/بعد» بلغة تقول الشخص عمل إيه بالظبط
             try:
-                cursor.execute("SELECT count(*) FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
-                _routes_after = cursor.fetchone()[0]
-                cursor.execute("SELECT count(*) FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
-                _veh_after = cursor.fetchone()[0]
-                cursor.execute("SELECT count(*) FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
-                _ben_after = cursor.fetchone()[0]
-                _counts_note = f" — التفاصيل: خط سير {_routes_before}→{_routes_after}, مركبات {_veh_before}→{_veh_after}, مستفيدون {_ben_before}→{_ben_after}"
+                _det_after = details_snapshot(cursor, mission_id)
+                _branch_names = {}
+                if _clean_text(_before.get('branch_id')) != _clean_text(mission.branch_id):
+                    _ids = [str(x) for x in (_before.get('branch_id'), mission.branch_id)
+                            if x is not None and str(x).strip() != '']
+                    if _ids:
+                        _branch_names = dict(cursor.execute(
+                            "SELECT branch_id::text, branch_name FROM branches WHERE branch_id::text = ANY(%s)",
+                            (_ids,)).fetchall())
+                _changes = (describe_mission_edits(mission, _before, _branch_names)
+                            + describe_details_edits(_det_before, _det_after))
+                if _changes:
+                    _line = " · ".join(_changes[:5])
+                    if len(_changes) > 5:
+                        _line += f" (+{len(_changes) - 5} تغيير آخر)"
+                    _changes_note = f" — التعديلات: {_line}"
+                else:
+                    _changes_note = " — بدون أي تعديل في البيانات"
                 _audit_action = "حفظ تعديلات بدون إجراء" if save_only else "تحديث/مراجعة"
-                create_audit_log(cursor, user_id, _audit_action, mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission.mission_code or '—'} — الحالة: {mission.status}{_counts_note}"})
+                create_audit_log(cursor, user_id, _audit_action, mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission.mission_code or '—'} — الحالة: {mission.status}{_changes_note}", "changes": _changes[:20]})
             except Exception as e:
                 print(f"Audit Error: {e}")
-
             # إشعار المتطوعين المربوطين بحسابات: من أُبقوا + من أُزيلوا من الاستمارة
             try:
                 notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, participant_user_ids)
@@ -4122,8 +4432,17 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
             for k, v in mission_data.items():
                 if v is not None and not isinstance(v, (str, int, float, bool)): mission_data[k] = str(v)
             
-            cursor.execute("SELECT group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
-            mission_data["routes"] = [{"group_title": r[0], "route_from": r[1] or "", "route_to": r[2], "departure_time": str(r[3]) if r[3] else "", "arrival_time": str(r[4]) if r[4] else "", "departure_date": str(r[5]) if r[5] else "", "arrival_date": str(r[6]) if r[6] else ""} for r in cursor.fetchall()]
+            # 🆔 itinerary_id يُعاد للواجهة فتحفظ الصف *بهويته الحقيقية* وترسله معها
+            #    (تحديث في المكان)، والعنوان الفارغ/NULL يُعرض كـ «خط السير الأساسي»
+            #    (توافق خلفي: أي صف قديم بلا عنوان كان يظهر كمجموعة باسم null).
+            cursor.execute("SELECT itinerary_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date FROM mission_itineraries WHERE mission_id = %s ORDER BY itinerary_id", (mission_id,))
+            mission_data["routes"] = [{
+                "itinerary_id": r[0],
+                "group_title": (r[1] if (r[1] and str(r[1]).strip()) else 'خط السير الأساسي'),
+                "route_from": r[2] or "", "route_to": r[3] or "",
+                "departure_time": str(r[4]) if r[4] else "", "arrival_time": str(r[5]) if r[5] else "",
+                "departure_date": str(r[6]) if r[6] else "", "arrival_date": str(r[7]) if r[7] else ""
+            } for r in cursor.fetchall()]
 
             cursor.execute("SELECT driver_name, vehicle_number FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             mission_data["vehicles"] = [{"driver_name": r[0], "vehicle_number": r[1]} for r in cursor.fetchall()]
@@ -6651,8 +6970,18 @@ class WeatherRowModel(BaseModel):
             values.append(getattr(self, max_col))
         return values
 
+    def provided_metrics(self):
+        """أسماء الأعمدة التي أرسلها العميل فعلاً في هذه الحمولة — فقط هى ما يُكتب.
+        العمود الغائب من الحمولة *لا يُلمَس* في قاعدة البيانات (يُحتفظ بقيمته المخزَّنة)،
+        والعمود المُرسَل بـ null يُفرَّغ صراحةً (فعل المستخدم: مسح الخلية).
+        الجذر: الحفظ كان يكتب كل الأعمدة الـ 12 دائماً، فأي قيمة غير موجودة محلياً
+        (شبكة لم تُحمَّل/تحديث لحظي/جهاز آخر) كانت تُكتب NULL وتمحو توقعات محفوظة."""
+        came = getattr(self, 'model_fields_set', set())
+        return [c for pair in WEATHER_METRIC_COLS for c in pair if c in came]
+
     def is_empty(self):
-        return all(v is None for v in self.metric_flat_values())
+        provided = self.provided_metrics()
+        return (not provided) or all(getattr(self, c) is None for c in provided)
 
 
 class WeatherBatchModel(BaseModel):
@@ -6864,29 +7193,28 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
     try:
         with connection.cursor() as cursor:
             for row in valid_rows:
-                values = row.metric_flat_values()
+                # 🛡️ حفظ جزئي: تُكتب أعمدة الوردية التي أرسلها العميل فقط. أي عمود غائب
+                #    عن الحمولة يبقى بقيمته المخزَّنة (COALESCE غير مطلوب — العمود لا يُذكر
+                #    أصلاً في جملة UPDATE) — فلا يمحو حفظ خانة واحدة باقي قياسات المحافظة.
+                provided = row.provided_metrics()
+                if not provided:
+                    continue
+                cols = ["forecast_date", "shift", "branch_id", *provided, "entered_by", "updated_at"]
+                values = [forecast_date, payload.shift, row.branch_id,
+                          *[getattr(row, c) for c in provided], user_id]
+                placeholders = ", ".join(["%s"] * len(values)) + ", (now() AT TIME ZONE 'Africa/Cairo')"
+                assignments = ", ".join([f"{c}=EXCLUDED.{c}" for c in provided])
                 cursor.execute(
-                    """
-                    INSERT INTO weather_forecasts
-                        (forecast_date, shift, branch_id,
-                         temp_min, temp_max, wind_min, wind_max, rain_min, rain_max,
-                         humidity_min, humidity_max, clouds_min, clouds_max, aqi_min, aqi_max,
-                         entered_by, updated_at)
-                    VALUES (%s, %s, %s, %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, %s,
-                            (now() AT TIME ZONE 'Africa/Cairo'))
+                    f"""
+                    INSERT INTO weather_forecasts ({', '.join(cols)})
+                    VALUES ({placeholders})
                     ON CONFLICT (forecast_date, shift, branch_id)
                     DO UPDATE SET
-                        temp_min=EXCLUDED.temp_min, temp_max=EXCLUDED.temp_max,
-                        wind_min=EXCLUDED.wind_min, wind_max=EXCLUDED.wind_max,
-                        rain_min=EXCLUDED.rain_min, rain_max=EXCLUDED.rain_max,
-                        humidity_min=EXCLUDED.humidity_min, humidity_max=EXCLUDED.humidity_max,
-                        clouds_min=EXCLUDED.clouds_min, clouds_max=EXCLUDED.clouds_max,
-                        aqi_min=EXCLUDED.aqi_min, aqi_max=EXCLUDED.aqi_max,
+                        {assignments},
                         entered_by=EXCLUDED.entered_by,
                         updated_at=(now() AT TIME ZONE 'Africa/Cairo');
                     """,
-                    (forecast_date, payload.shift, row.branch_id,
-                     *values, user_id),
+                    tuple(values),
                 )
 
             # 🤫 الحفظ التلقائي (silent=True) لا يُنشئ أي لوج إطلاقاً — كان يُغرق سجل النظام
@@ -8008,6 +8336,142 @@ def force_refresh_system(
 
     finally:
         connection.close()
+
+# ═══════════════════════════════════════════════════════════════════
+# 💾 حالة العمل على السيرفر (Workspace) — مسودات الاستمارات + طابور الإرسال
+# ═══════════════════════════════════════════════════════════════════
+# الجذر: كل ما كان «شغل غير مُرسَل» كان يعيش في متصفح جهاز واحد ⇒ مع أكثر من
+# جهاز لنفس الحساب، أي جهاز لا يرى شغل غيره، وضياع الجهاز = ضياع العمل.
+# هنا يُحفظ الشغل على السيرفر لكل مستخدم (مسودات + إرسالات معلّقة)، فأي جهاز
+# يسجل الدخول يرى *نفس* آخر حالة محفوظة ويُكمل من حيث توقف غيره.
+
+class WorkspaceItemModel(BaseModel):
+    kind: str                                   # 'draft' | 'pending_save'
+    scope: str                                  # مفتاح النطاق (مهمة/نموذج/يوم-وردية)
+    payload: Dict[str, Any]                     # محتوى الاستمارة كما هو
+    meta: Optional[Dict[str, Any]] = None       # بيانات مساعدة (طريقة/رابط/خطأ…)
+
+WORKSPACE_KINDS = ('draft', 'pending_save')
+WORKSPACE_DRAFT_RETENTION_DAYS = 7
+
+
+def _workspace_kind(value):
+    kind = (value or '').strip().lower()
+    if kind not in WORKSPACE_KINDS:
+        raise HTTPException(status_code=400, detail="نوع حالة العمل غير معروف (draft / pending_save)")
+    return kind
+
+
+@app.get("/api/workspace")
+def list_workspace(kind: Optional[str] = None, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """حالة العمل المحفوظة على السيرفر للمستخدم الحالي (يقرأها أي جهاز يسجّل بنفس الحساب)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    kind = _workspace_kind(kind) if kind else None
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            if kind:
+                cursor.execute(
+                    """SELECT kind, scope, payload, meta, updated_at FROM user_workspace_items
+                       WHERE user_id = %s AND kind = %s ORDER BY updated_at DESC""",
+                    (user_id, kind),
+                )
+            else:
+                cursor.execute(
+                    """SELECT kind, scope, payload, meta, updated_at FROM user_workspace_items
+                       WHERE user_id = %s ORDER BY updated_at DESC""",
+                    (user_id,),
+                )
+            return [
+                {
+                    "kind": r[0],
+                    "scope": r[1],
+                    "payload": r[2],
+                    "meta": r[3],
+                    "updated_at": str(r[4]) if r[4] else "",
+                }
+                for r in cursor.fetchall()
+            ]
+    finally:
+        connection.close()
+
+
+@app.put("/api/workspace")
+def upsert_workspace(data: WorkspaceItemModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """حفظ/تحديث حالة عمل على السيرفر (مسودة استمارة أو إرسال معلّق)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    kind = _workspace_kind(data.kind)
+    scope = (data.scope or '').strip()
+    if not scope:
+        raise HTTPException(status_code=400, detail="نطاق حالة العمل مطلوب")
+    scope = scope[:250]
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO user_workspace_items (user_id, kind, scope, payload, meta, updated_at)
+                VALUES (%s, %s, %s, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
+                ON CONFLICT (user_id, kind, scope)
+                DO UPDATE SET
+                    payload = EXCLUDED.payload,
+                    meta = EXCLUDED.meta,
+                    updated_at = (now() AT TIME ZONE 'Africa/Cairo');
+                """,
+                (user_id, kind, scope, Jsonb(data.payload or {}), Jsonb(data.meta) if data.meta is not None else None),
+            )
+            if kind == 'draft':
+                # 🧹 تقليم المسودات القديمة (لا تُترك تنمو بلا حد على السيرفر)
+                cursor.execute(
+                    """DELETE FROM user_workspace_items
+                       WHERE user_id = %s AND kind = 'draft'
+                         AND updated_at < (now() AT TIME ZONE 'Africa/Cairo') - (%s || ' days')::interval""",
+                    (user_id, str(WORKSPACE_DRAFT_RETENTION_DAYS)),
+                )
+            connection.commit()
+            return {"message": "تم حفظ حالة العمل على السيرفر", "kind": kind, "scope": scope}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"تعذر حفظ حالة العمل: {str(e)}")
+    finally:
+        connection.close()
+
+
+@app.delete("/api/workspace")
+def delete_workspace(kind: str, scope: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """حذف حالة عمل محفوظة (بعد حفظ ناجح أو تسليم الإرسال المعلّق)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    kind = _workspace_kind(kind)
+    scope = (scope or '').strip()
+    if not scope:
+        raise HTTPException(status_code=400, detail="نطاق حالة العمل مطلوب")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM user_workspace_items WHERE user_id = %s AND kind = %s AND scope = %s",
+                (user_id, kind, scope),
+            )
+            connection.commit()
+            return {"message": "تم الحذف", "deleted": cursor.rowcount}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"تعذر حذف حالة العمل: {str(e)}")
+    finally:
+        connection.close()
+
 
 # ═══════════════════════════════════════════════════════════════════
 # 🛠️ باكفيل لمرة واحدة: إعادة اشتقاق شرائح المشاركة لكل مهمة فيها

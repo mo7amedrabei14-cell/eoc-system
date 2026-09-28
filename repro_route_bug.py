@@ -51,7 +51,7 @@ try:
         "departure_time": "08:00",
         "start_time": None, "return_date": None, "arrival_date": None, "arrival_time": None,
         "completion_date": None, "completion_time": None, "departure_date": None,
-        "notes": "[حالة الميدان: نشطة الآن]\n",
+        "notes": "[حالة الميدان: نشطة]\n",
         "internal_notes": "",
         "team_code": "",
         "creation_datetime": "2026-09-25T08:00",
@@ -161,16 +161,24 @@ try:
     ok("date-only route PUT 200", r.status_code == 200, r.text[:200] if r.status_code != 200 else "")
     r = client.get(f"/api/missions/{MID}", headers=HDR)
     detail3 = r.json()
-    ok("date-only route stored (2 rows)", len(detail3.get("routes", [])) == 2,
+    # 🛡️ الحفظ *يضيف* الصف الجديد ولا يمحو القديم: الصفوف الثلاثة المحفوظة تبقى
+    #    + صف «تواريخ فقط» يُدرَج = 4 صفوف (قبل الإصلاح كان الحفظ يستبدل فيضيع المحفوظ).
+    stored_titles = {(x["group_title"], x["route_from"], x["route_to"]) for x in detail3.get("routes", [])}
+    ok("stored routes kept after adding a date-only row",
+       {("خط السير الأساسي", "القاهرة", "الإسكندرية"),
+        ("خط السير الأساسي", "الإسكندرية", "دمنهور"),
+        ("تحركات اليوم الأول", "دمنهور", "كفر الشيخ")} <= stored_titles,
+       str(sorted(stored_titles)))
+    ok("date-only route stored (added, nothing lost)", len(detail3.get("routes", [])) == 4,
        f"got {len(detail3.get('routes', []))}")
-    # resave AGAIN via empty payload → date-only row must also survive (backend shield)
+    # resave AGAIN via empty payload → كل الصفوف تبقى (درع السيرفر)
     resave4 = dict(resave3)
     resave4["routes"] = []
     resave4["idempotency_key"] = "repro-routes-dateonly-empty-" + os.urandom(8).hex()
     r = client.put(f"/api/missions/{MID}", json=resave4, headers=HDR)
     cur.execute("SELECT COUNT(*) FROM mission_itineraries WHERE mission_id=%s", (MID,))
     n = cur.fetchone()[0]
-    ok("date-only route survives empty-payload save", n == 2, f"rows={n}")
+    ok("date-only route survives empty-payload save", n == 4, f"rows={n}")
 
     # ── 6) INTENTIONAL clear still works: clear_details=True wipes routes ──
     resave5 = dict(resave3)

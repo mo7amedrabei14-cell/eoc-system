@@ -37,6 +37,8 @@ import {
   clearOutboxAuthBlocked,
   loadWeatherPending,
   saveWeatherPending,
+  syncOutboxFromServer,
+  syncWeatherPendingFromServer,
 } from './outbox';
 
 // 🔔 محرّك الإشعارات اللحظية: نبرة/أيقونة/تسمية/عمر كل نوع حدث + ساعة الوقفة
@@ -3346,6 +3348,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [mainRouteTitle, setMainRouteTitle] = useState('خط السير الأساسي');
   const [routes, setRoutes] = useState([{ id: 1 }]); 
   const [customItineraries, setCustomItineraries] = useState([]);
+  // 🆔 معرفات صفوف خط السير التي حذفها المستخدم بزرار الحذف صراحةً في هذه الجلسة —
+  //    تُرسل في الحفظ كـ deleted_route_ids. السيرفر لا يحذف أي صف محفوظ إلا بهذا
+  //    الطلب الصريح (أو «لا يوجد خط سير»)، فأي حمولة ناقصة لا تمحو خط سير محفوظاً.
+  const deletedRouteIdsRef = useRef(new Set());
   const [vehicles, setVehicles] = useState([{ id: 1 }]);
   const [participants, setParticipants] = useState([{ id: 1 }]);
   const [beneficiaries, setBeneficiaries] = useState([{ id: 1 }]);
@@ -3778,7 +3784,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const retryInFlightRef = useRef(false);
   const retryOutbox = useCallback(async () => {
     if (retryInFlightRef.current) return;
-    const queued = readOutbox();
+    // ☁️ الطابور مصدره السيرفر: نسحب شغل بقية الأجهزة لنفس الحساب ثم نسلمه.
+    //    (كان الطابور محلياً على جهاز واحد فقط ⇒ ضياع الجهاز = ضياع شغل غير مُرسَل)
+    const queued = await syncOutboxFromServer();
     if (!queued.length) return;
     const token = getStoredAccessToken();
     if (!token) return;
@@ -3906,7 +3914,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   }, []); // deps ثابتة → يعمل مرة واحدة ويقرأ القيم الحية من refs
 
   const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
-  const removeRoute = (id) => setRoutes(routes.filter(r => r.id !== id));
+  const removeRoute = (id) => {
+    const row = routes.find(r => r.id === id);
+    if (row?.itinerary_id != null) deletedRouteIdsRef.current.add(Number(row.itinerary_id));
+    setRoutes(routes.filter(r => r.id !== id));
+  };
   // 🆔 هوية خط السير المخصص — مصدر واحد للاسم يُستخدم في *كل* مكان (منتقي المشاركة + الحفظ).
   //    الباج اللي بتصلّحه: المنتقي كان بيحسب الاسم من الشاشة مع احتياطي «يوم N» (رقم الترتيب!)
   //    والحفظ بيسجّل الاسم من الحالة مع احتياطي «خط سير مخصص» ⇒ الإسناد يتخزن باسم مختلف عن
@@ -3923,7 +3935,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   });
   const removeCustomItinerary = (id) => setCustomItineraries(customItineraries.filter(c => c.id !== id));
   const addRouteToCustom = (customId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: [...c.routes, { id: Date.now() }] } : c));
-  const removeRouteFromCustom = (customId, routeId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: c.routes.filter(r => r.id !== routeId) } : c));
+  const removeRouteFromCustom = (customId, routeId) => {
+    const row = (customItineraries.find(c => c.id === customId)?.routes || []).find(r => r.id === routeId);
+    if (row?.itinerary_id != null) deletedRouteIdsRef.current.add(Number(row.itinerary_id));
+    setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: c.routes.filter(r => r.id !== routeId) } : c));
+  };
   const updateCustomTitle = (customId, newTitle) => {
     // 🆕 إعادة تسمية يوم/خط سير مخصص — تُرحَّل القيمة القديمة في إسنادات المشاركين
     //    (assigned_days) إلى الجديدة فوراً (نفس نمط renameEntry للكتالوج) كي يظل
@@ -4101,6 +4117,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     inFlightMissionRef.current = null;   // تجاهل أي استجابة مهمة قادمة متأخرة
     currentMissionIdRef.current = null;
     clearDetailsRef.current = false; // 🛡️ مهمة جديدة تبدأ بلا «مسح مقصود» — لا تتسرب من جلسة سابقة
+    deletedRouteIdsRef.current = new Set(); // 🛡️ لا نتسرب حذف صف من مهمة سابقة
     setModalError(null);
     setCurrentMissionData(null);
     timelineTouchedRef.current = new Set();
@@ -4136,6 +4153,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     inFlightMissionRef.current = missionId;
     currentMissionIdRef.current = missionId;
     clearDetailsRef.current = false; // 🛡️ كل فتح جديد يبدأ بـ «مفيش مسح مقصود»    
+    deletedRouteIdsRef.current = new Set(); // 🛡️ الحذف الصريح يبدأ من جديد مع كل فتح
     // 💡 فتح فوري: المودال يظهر بسكلتون فوراً ثم تُحقن البيانات — بدون انتظار الشبكة
     setModalError(null);
     setIsModalLoading(true);
@@ -4161,9 +4179,13 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         //    تحويل backend date/time → datetime-local للـ RouteCard UI
         // ⏰ الوقت من السيرفر بييجي بثواني (08:00:00) — نبعته HH:MM بس (نفس صيغة datetime-local)
         const combineDateTime = (date, time) => (date && time ? `${date}T${String(time).slice(0, 5)}` : '');
+        // 🛡️ العنوان الأساسي يُعرَف بقيمته وبغيابه معاً: أي صف بعنوان NULL/فارغ هو
+        //    «خط السير الأساسي» — صف قديم بلا عنوان كان يسقط في مجموعة مخصصة باسم
+        //    «null» فيختفي من قسمه ويُفسد هوية اليوم المرتبط به.
+        const isMainGroupTitle = (t) => { const s = String(t == null ? '' : t).trim(); return s === '' || s === 'خط السير الأساسي'; };
         if (data.routes && data.routes.length > 0) {
-          const mainR = data.routes.filter(r => r.group_title === 'خط السير الأساسي');
-          const customR = data.routes.filter(r => r.group_title !== 'خط السير الأساسي');
+          const mainR = data.routes.filter(r => isMainGroupTitle(r.group_title));
+          const customR = data.routes.filter(r => !isMainGroupTitle(r.group_title));
           setRoutes(mainR.length ? mainR.map((r, i) => ({
             id: i,
             ...r,
@@ -4497,12 +4519,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     // 2) التواريخ والتوقيتات
     band('التواريخ والتوقيتات');
     table([
-      { t: 'تاريخ المهمة', w: 2 }, { t: 'تاريخ الخروج', w: 1 }, { t: 'تاريخ الوصول', w: 2 },
-      { t: 'تاريخ العودة', w: 1 }, { t: 'تاريخ الانتهاء', w: 2 }, { t: 'ساعة البدء', w: 1 },
-      { t: 'ساعة التحرك', w: 1 }, { t: 'ساعة الوصول', w: 1 }, { t: 'ساعة الانتهاء', w: 1 },
+      { t: 'تاريخ المهمة', w: 2 }, { t: 'تاريخ الوصول', w: 2 }, { t: 'تاريخ الانتهاء', w: 2 },
+      { t: 'ساعة التحرك', w: 2 }, { t: 'ساعة الوصول', w: 2 }, { t: 'ساعة الانتهاء', w: 2 },
     ], [[
-      dateT(detail.exit_date), dateT(detail.departure_date), dateT(detail.arrival_date), dateT(detail.return_date),
-      dateT(detail.completion_date), tm12(detail.start_time), tm12(detail.departure_time), tm12(detail.arrival_time), tm12(detail.completion_time),
+      dateT(detail.exit_date || detail.departure_date), dateT(detail.arrival_date), dateT(detail.completion_date),
+      tm12(detail.departure_time || detail.start_time), tm12(detail.arrival_time), tm12(detail.completion_time),
     ]]);
 
     // 3) تفاصيل خط السير الأساسي
@@ -4904,28 +4925,24 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        // 🛡️ الصف يُرسَل لو فيه أي بيانات (من/إلى أو مواعيد) — صف بتواريخ فقط
        //    (من/إلى فاضيين) مسار حقيقي محفوظ ولا يُسقَط وإلا ضاع عند إعادة الحفظ.
        const hasRouteData = (r) => !!(r.route_from || r.route_to || r.departure_date || r.departure_time || r.arrival_date || r.arrival_time);
+       // 🆔 صف محفوظ يُرسَل بمعرّفه (itinerary_id) فيُحدَّث في *مكانه* على السيرفر —
+       //    لا حذف ولا إعادة إدراج، ومحتوى الحمولة لا يقرر مصير صف لم تحمله.
+       const routePayload = (r, groupTitle) => ({
+         ...(r.itinerary_id != null ? { itinerary_id: Number(r.itinerary_id) } : {}),
+         group_title: groupTitle,
+         route_from: r.route_from || null,
+         route_to: r.route_to || '',
+         departure_date: r.departure_date || null,
+         departure_time: r.departure_time || null,
+         arrival_date: r.arrival_date || null,
+         arrival_time: r.arrival_time || null
+       });
        routes.forEach((r) => {
-         if (hasRouteData(r)) allRoutes.push({
-           group_title: 'خط السير الأساسي',
-           route_from: r.route_from || null,
-           route_to: r.route_to || '',
-           departure_date: r.departure_date || null,
-           departure_time: r.departure_time || null,
-           arrival_date: r.arrival_date || null,
-           arrival_time: r.arrival_time || null
-         });
+         if (hasRouteData(r)) allRoutes.push(routePayload(r, 'خط السير الأساسي'));
        });
        customItineraries.forEach((ci) => {
-         ci.routes.forEach((r) => {
-           if (hasRouteData(r)) allRoutes.push({
-             group_title: customItineraryTitle(ci),
-             route_from: r.route_from || null,
-             route_to: r.route_to || '',
-             departure_date: r.departure_date || null,
-             departure_time: r.departure_time || null,
-             arrival_date: r.arrival_date || null,
-             arrival_time: r.arrival_time || null
-           });
+         (ci.routes || []).forEach((r) => {
+           if (hasRouteData(r)) allRoutes.push(routePayload(r, customItineraryTitle(ci)));
          });
        });
 
@@ -4973,6 +4990,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
          internal_notes: sysNotes,
          team_code: document.getElementById('f_team_code')?.value || '',
           routes: allRoutes,
+          // 🗑️ الحذف الصريح فقط: معرفات الصفوف المحفوظة التي حذفها المستخدم بزرار الحذف
+          deleted_route_ids: [...deletedRouteIdsRef.current],
           clear_details: clearDetailsRef.current,
          vehicles: vehicles.map((_, i) => ({ driver_name: document.getElementById(`v_driver_${i}`)?.value || '', vehicle_number: document.getElementById(`v_plate_${i}`)?.value || '' })).filter(v => v.driver_name !== '' || v.vehicle_number !== ''),
          participants: participants.map((_, i) => ({
@@ -4988,7 +5007,9 @@ const [isModalOpen, setIsModalOpen] = useState(false);
            stay_type: document.getElementById(`p_stay_${i}`)?.value || 'ذهاب وعودة',
            // 🔧 أيام/مجموعات متعددة — أي مهمة لها مجموعات فعلية أو لها كتالوج انضمام/انفصال
            //    (مفاتيح JL:* تُرسَل حرفياً — مصدر الحقيقة للمشاركة; تُفصل أمامياً عند العرض)
-           ...((hasDayGroups || joinLeaveEntries.length > 0) ? { assigned_days: participants[i]?.assigned_days || [] } : {}),
+           // 🛡️ تُرسَل الأيام المخزَّنة دائماً (فلا تُمحى بسبب حقل لم يُرسَل)، والقسم غير
+           //    النشط بلا أيام مخزَّنة يُترك غائباً تماماً ⇒ السيرفر يحتفظ بالمخزَّن.
+           ...((hasDayGroups || joinLeaveEntries.length > 0 || (participants[i]?.assigned_days || []).length > 0) ? { assigned_days: participants[i]?.assigned_days || [] } : {}),
            // 🆕 «يُحسب من بداية المهمة» — مفتاح نقي على مصدر البداية المخططة (افتراضي TRUE)
             // 🔒 إلزامي: مشارك عليه انضمام ⇒ يُرسَل TRUE دائماً مهما كانت قيمة البوكس
             start_from_mission: (participants[i]?.assigned_days || []).some(d => String(d || '').startsWith('JL:J:') || String(d || '').startsWith('JL:L:')) || participants[i]?.start_from_mission !== false
@@ -7742,6 +7763,16 @@ const W_BRANCH_ID_TO_REGION = {
   17: 'delta', 14: 'delta', 31: 'delta', 21: 'delta', 27: 'delta',
   18: 'saeed', 24: 'saeed', 22: 'saeed', 7: 'saeed', 28: 'saeed', 30: 'saeed', 10: 'saeed', 6: 'saeed', 23: 'saeed', 11: 'saeed',
 };
+
+const wKey = (s) => String(s || '')
+  .replace(/[أإآٱا]/g, 'ا').replace(/[يىئ]/g, 'ي').replace(/[ةه]/g, 'ه')
+  .replace(/[\s\u0640\u200c\u200e\u200f\-_–—.()/\\]+/g, '').trim();
+const wRegionByName = (() => {
+  const out = {};
+  Object.entries(W_REGION_NAME_MAP).forEach(([k, v]) => { out[wKey(k)] = v; });
+  return out;
+})();
+
 // خريطة الأقاليم باسم المحافظة الموحّد (قاهرة/مركز عام = نفس nطاق «المركز العام»)
 const W_REGION_NAME_MAP = {
   'المركزالعام': 'hq', 'القاهره': 'hq', 'الجيزه': 'hq', 'القليوبيه': 'hq', 'البحيره': 'hq', 'الاسكندريه': 'hq', 'مرسيمطروح': 'hq', 'مطروح': 'hq',
@@ -7886,14 +7917,15 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   else if (wUsername.includes('canal')) userRegion = 'canal';
   else if (wUsername.includes('upper') || wUsername.includes('saeed')) userRegion = 'saeed';
   else if (W_BRANCH_ID_TO_REGION[wBranchId]) userRegion = W_BRANCH_ID_TO_REGION[wBranchId];
-  else if (W_REGION_NAME_MAP[wNormalize(wBranchName)]) userRegion = W_REGION_NAME_MAP[wNormalize(wBranchName)];
+  else if (wRegionByName[wNormalize(wBranchName)]) userRegion = wRegionByName[wNormalize(wBranchName)];
   // وإلا يبقى 'hq' (المركز العام / غير محدد)
 
   // — فروع كل إقليم (محتسبة من الأسماء والرموز) ثم المحافظات الظاهرة للمستخدم
   const wRegionBranches = useMemo(() => {
     const byRegion = { hq: [], canal: [], delta: [], saeed: [] };
     (branches || []).forEach(b => {
-      const region = W_REGION_NAME_MAP[wNormalize(b.name)] || W_BRANCH_ID_TO_REGION[b.id] || 'hq';
+      const region = W_BRANCH_ID_TO_REGION[Number(b.id)] || wRegionByName[wNormalize(b.name)] || 'hq';
+      if (!W_BRANCH_ID_TO_REGION[Number(b.id)] && !wRegionByName[wNormalize(b.name)]) console.warn('⚠️ فرع غير مصنّف في أي إقليم:', b.id, '—', b.name);
       if (!byRegion[region].some(x => x.id === b.id)) byRegion[region].push(b);
     });
     return byRegion;
@@ -8015,8 +8047,8 @@ const visibleBranches = (
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
 
   // 💾 حفظ تلقائي فوري: كل رقم بيتحفظ في السيستم بعد توقف الكتابة بثانية — بدون زرار
-  const formValuesRef = useRef(formValues);
-  useEffect(() => { formValuesRef.current = formValues; }, [formValues]);
+  // (أُزيل formValuesRef: لم يعد الحفظ يخلط قيم الحفظ اللحظي مع القيم المعروضة —
+  //  يُرسل ما لمّسه المستخدم فقط، فلا تُكتب قيم فارغة فوق بيانات محفوظة على السيرفر)
   const autoSaveTimerRef = useRef(null);
   const autoSaveSnapRef = useRef(null); // {date, shift} وقت الكتابة — يضمن إن القيمة تروح للوردية والتاريخ الصح
 
@@ -8073,13 +8105,16 @@ const visibleBranches = (
     let savedCount = 0;
     let failedGroups = 0;
     for (const group of groups) {
-      const isCurrentView = (group.date === filterDate && group.shift === shift);
+      // 🛡️ حفظ جزئي بالحرف: تُرسَل *الخلايا التي لمّسها المستخدم فقط* (مخزن pending)،
+      //    ولا تُرسَل أي خانة لم تُلمَس إطلاقاً ⇒ السيرفر يحفظ عليها قيمتها المخزَّنة.
+      //    (سابقاً كان الصف يُرسَل كاملاً بقيم formValues المحلية، فأي خانة غير محمَّلة
+      //     محلياً تُكتب NULL وتمحو توقعات محفوظة — «الطقس يُمسح تلقائياً».)
       const bodyRows = Object.entries(group.rowsByBranch || {})
         .map(([bid, row]) => {
-          const shown = isCurrentView ? { ...(formValuesRef.current[Number(bid)] || {}), ...row } : row;
           const o = { branch_id: Number(bid), shift: group.shift };
           WEATHER_METRICS.forEach(m => WEATHER_METRIC_FIELDS(m).forEach(f => {
-            const v = shown[f];
+            if (!(f in (row || {}))) return;      // لم تُلمَس ⇒ لا تُرسَل (ولا تُمحى)
+            const v = row[f];
             o[f] = (v !== '' && v != null) ? Number(v) : null;
           }));
           return o;
@@ -8122,9 +8157,17 @@ const visibleBranches = (
       saveWeatherPending(pendingRowsRef.current);
     };
     const retry = () => { if (countPending(pendingRowsRef.current)) flushRef.current({ retryAll: true }); };
+    // ☁️ خلايا معلّقة من جهاز آخر لنفس الحساب: نجيبها من السيرفر ونسلّم حفظها من هنا
+    const syncFromServer = async () => {
+      const merged = await syncWeatherPendingFromServer();
+      pendingRowsRef.current = merged;
+      setPendingWeatherCount(countPending(merged));
+      if (countPending(merged)) retry();
+    };
     const onLeave = () => { flushToDisk(); retry(); };
     retry();
-    const t = setInterval(retry, 30000);
+    syncFromServer();
+    const t = setInterval(() => { retry(); syncFromServer(); }, 30000);
     window.addEventListener('online', retry);
     window.addEventListener('eoc:server-recovered', retry);
     window.addEventListener('pagehide', onLeave);
@@ -8215,15 +8258,14 @@ const visibleBranches = (
 
   const handleSave = async () => {
     if (submitLockRef.current) return;
-    // فقط المحافظات الملموسة (touched) والتي بها ≥1 قيمة
+    // فقط المحافظات الملموسة (touched) والتي بها ≥1 قيمة — ومن الخلايا الملموسة وحدها
+    // 🛡️ (نفس قاعدة الحفظ اللحظي: الخلية غير الملموسة لا تُرسَل فلا تُمحى قيمتها المخزَّنة)
+    const pendingGrid = pendingRowsRef.current[`${filterDate}|${shift}`] || {};
     const dirtyRows = visibleBranches
-      .filter(b => touchedRef.current.has(b.id))
-      .map(b => ({ branch_id: b.id, shift, ...(formValues[b.id] || {}) }))
-      .filter(r => Object.keys(r).some(k => k.endsWith('_min') || k.endsWith('_max'))
-        && WEATHER_METRICS.some(m => {
-          const v = (formValues[r.branch_id] || {});
-          return (v[`${m.key}_min`] !== '' && v[`${m.key}_min`] != null) || (v[`${m.key}_max`] !== '' && v[`${m.key}_max`] != null);
-        }));
+      .filter(b => touchedRef.current.has(b.id) && pendingGrid[b.id])
+      .map(b => ({ branch_id: b.id, shift, ...(pendingGrid[b.id] || {}) }))
+      .filter(r => WEATHER_METRICS.some(m =>
+        (r[`${m.key}_min`] !== '' && r[`${m.key}_min`] != null) || (r[`${m.key}_max`] !== '' && r[`${m.key}_max`] != null)));
     if (!dirtyRows.length) {
       return setCustomAlert(lang === 'ar' ? 'لا توجد قيم جديدة لحفظها — أدخل قيماً في الخلايا أولاً.' : 'Nothing to save — enter values first.');
     }

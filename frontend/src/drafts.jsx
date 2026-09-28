@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
    ───────────────────────────────────────────────────────────────────────────── */
 
 import { draftKey, hasContent, readDraft, saveDraft, clearDraft } from './draftsStore';
+import { fetchWorkspace, saveWorkspace, deleteWorkspace } from './workspace';
 
 // ملاحظة معمارية: الدوال النقية (captureFields / applyFields / applyFieldsWhenReady /
 // listDrafts / pruneDrafts) بتُستورد مباشرةً من './draftsStore' في أماكن استخدامها،
@@ -28,8 +29,11 @@ export function useFormDraft({
   capture,
   apply,
   intervalMs = 1500,
+  serverSyncMs = 8000,
 }) {
   const key = draftKey(form, scope);
+  // ☁️ نطاق المسودة على السيرفر — نفس المفتاح من أي جهاز/متصفح لنفس الحساب
+  const serverScope = `${form}${scope ? `:${scope}` : ''}`;
   const [pending, setPending] = useState(null);   // مسودة من جلسة سابقة (تنتظر قرار المستخدم)
   const [savedAt, setSavedAt] = useState(null);   // آخر حفظ تلقائي في هذه الجلسة
   const captureRef = useRef(capture);
@@ -46,24 +50,62 @@ export function useFormDraft({
     keyRef.current = key;
   });
 
-  // 🔎 عند فتح الاستمارة (أو تغيّر النطاق: مهمة/خبر آخر) نبحث عن مسودة محفوظة
+  // ☁️ رفع مُهدَّأ للسيرفر: الحفظ المحلي يحدث فوراً، والرفع كل serverSyncMs
+  //    (حتى لا نغرق القاعدة بكتابة كل 1.5 ثانية لكل جهاز).
+  const lastPushRef = useRef(0);
+  const pendingPushRef = useRef(null);
+  // نطاق السيرفر في مرجع حي (القيم بتتقرأ من دوال مؤجلة: مؤقت/إغلاق الصفحة)
+  const serverScopeRef = useRef(serverScope);
+  const pushServer = useCallback((payload, { force = false, keepalive = false } = {}) => {
+    const now = Date.now();
+    pendingPushRef.current = { payload, keepalive };
+    if (!force && now - lastPushRef.current < serverSyncMs) return;
+    lastPushRef.current = now;
+    const job = pendingPushRef.current;
+    pendingPushRef.current = null;
+    if (job) saveWorkspace({ kind: 'draft', scope: serverScopeRef.current, payload: job.payload, keepalive: job.keepalive });
+  }, [serverSyncMs]);
+  const pushServerRef = useRef(pushServer);
+  // ✍️ مزامنة «أحدث قيمة» بعد الرسم (نفس نمط بقية المراجع في الهوك)
   useEffect(() => {
-    if (!enabled) return;
-    const found = readDraft(key);
-    // التعطيل موضعي ومقصود: القراءة هنا من مخزن خارجي (localStorage) عند تغيّر
-    // المفتاح، مش اشتقاق حالة من الـ props — فمفيش داعي لإعادة الحساب كل رسم.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPending(found && hasContent(found.payload) ? found : null);
-    setSavedAt(null);
-  }, [key, enabled]);
+    serverScopeRef.current = serverScope;
+    pushServerRef.current = pushServer;
+  });
 
-  const saveNow = useCallback(() => {
+  // 🔎 عند فتح الاستمارة (أو تغيّر النطاق: مهمة/خبر آخر) نبحث عن مسودة محفوظة:
+  //    السيرفر أولاً (فهو من يحمل شغل بقية الأجهزة)، والمخزن المحلي احتياطي
+  //    للانقطاع أو حين لا توجد جلسة/شبكة.
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let cancelled = false;
+    (async () => {
+      // التفريغ داخل جسم دالة غير متزامنة (مش متزامناً أثناء الـ effect)
+      setPending(null);
+      setSavedAt(null);
+      const local = readDraft(key);
+      const remote = await fetchWorkspace('draft');
+      if (cancelled) return;
+      const item = (remote || []).find(x => x && x.scope === serverScope);
+      const remoteDraft = item && hasContent(item.payload)
+        ? { payload: item.payload, savedAt: Date.parse(item.updated_at) || 0, fromServer: true }
+        : null;
+      // الأحدث يفوز: لا ندهس شغلاً محلياً أحدث لم يُرفع بعد
+      const chosen = (remoteDraft && (!local || (remoteDraft.savedAt || 0) >= (local.savedAt || 0)))
+        ? remoteDraft
+        : (local && hasContent(local.payload) ? local : remoteDraft);
+      setPending(chosen || null);
+    })();
+    return () => { cancelled = true; };
+  }, [key, serverScope, enabled]);
+
+  const saveNow = useCallback((opts = {}) => {
     if (!enabledRef.current) return null;
     let payload;
     try { payload = captureRef.current?.(); } catch { payload = null; }
     if (!hasContent(payload)) return null;
-    saveDraft(keyRef.current, payload);
+    saveDraft(keyRef.current, payload);        // نسخة محلية: احتياطي الانقطاع
     setSavedAt(Date.now());
+    pushServerRef.current?.(payload, opts);    // ☁️ الحفظ الحقيقي: على السيرفر
     return payload;
   }, []);
 
@@ -71,7 +113,8 @@ export function useFormDraft({
     if (!enabled) return undefined;
     const timer = setInterval(saveNow, intervalMs);   // الحفظ الدوري أثناء الكتابة
     const flush = () => { if (document.visibilityState !== 'visible') saveNow(); };
-    const onHide = () => saveNow();                   // قفل التاب/الجهاز — آخر فرصة قبل الفقد
+    // 🚪 قفل التاب/الجهاز: حفظ محلي فوري + رفع أخير بـ keepalive (آخر فرصة قبل الفقد)
+    const onHide = () => saveNow({ force: true, keepalive: true });
     document.addEventListener('visibilitychange', flush);
     window.addEventListener('pagehide', onHide);
     return () => {
@@ -92,8 +135,18 @@ export function useFormDraft({
     return true;
   }, [pending]);
 
-  const discard = useCallback(() => { clearDraft(keyRef.current); setPending(null); }, []);
-  const clear = useCallback(() => { clearDraft(keyRef.current); setPending(null); setSavedAt(null); }, []);
+  // 🗑️ الحذف يشمل السيرفر أيضاً — فلا تظهر مسودة ملغاة على جهاز آخر
+  const discard = useCallback(() => {
+    clearDraft(keyRef.current);
+    deleteWorkspace({ kind: 'draft', scope: serverScopeRef.current });
+    setPending(null);
+  }, []);
+  const clear = useCallback(() => {
+    clearDraft(keyRef.current);
+    deleteWorkspace({ kind: 'draft', scope: serverScopeRef.current });
+    setPending(null);
+    setSavedAt(null);
+  }, []);
 
   return { key, pending, savedAt, hasDraft: !!pending, restore, discard, clear, saveNow };
 }
@@ -111,9 +164,9 @@ export function DraftRestoreBar({ pending, onRestore, onDiscard, lang = 'ar', la
   const T = (ar, en) => (lang === 'en' ? en : ar);
   return (
     <div className="draft-restore-bar" dir={lang === 'en' ? 'ltr' : 'rtl'} role="status">
-      <span className="draft-restore-icon" aria-hidden="true">💾</span>
+      <span className="draft-restore-icon" aria-hidden="true">☁️</span>
       <span className="draft-restore-text">
-        <b>{T('فيه مسودة محفوظة على الجهاز', 'A saved draft exists on this device')}</b>
+        <b>{T('فيه مسودة محفوظة على السيرفر', 'A saved draft exists on the server')}</b>
         {label ? ` — ${label}` : ''}
         {' · '}
         {T('آخر حفظ', 'saved')}: {formatDraftTime(pending.savedAt)}
@@ -135,8 +188,8 @@ export function DraftSavedHint({ savedAt, lang = 'ar' }) {
   if (!savedAt) return null;
   const T = (ar, en) => (lang === 'en' ? en : ar);
   return (
-    <span className="draft-saved-hint" title={T('نسخة محلية على جهازك — مش هتضيع لو الاتصال قطع', 'Local copy on your device — safe even if the connection drops')}>
-      💾 {T('محفوظ عندك', 'saved locally')}
+    <span className="draft-saved-hint" title={T('محفوظة على السيرفر — متاحة من أي جهاز ولن تضيع لو الاتصال قطع', 'Saved on the server — available from any device, safe if the connection drops')}>
+      ☁️ {T('محفوظة على السيرفر', 'saved on server')}
     </span>
   );
 }
