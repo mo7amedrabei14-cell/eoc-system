@@ -1306,40 +1306,59 @@ const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: الت�
   const wb = new ExcelJS.Workbook();
   wb.created = new Date();
   wb.creator = 'EOC System';
-  const headerStyle = {
-    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } },
-    font: { bold: true },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
-    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
-  };
-  const cellStyle = {
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
-    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } },
-  };
-  sheets.forEach(({ name, header = [], rows = [], merges = [] }) => {
-    const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true }] });
+
+  const thin = { style: 'thin' };
+  const bd = { top: thin, bottom: thin, left: thin, right: thin };
+  const center = { horizontal: 'center', vertical: 'center', wrapText: false };
+  // 🎨 الأنماط القديمة زي ما هي + أنماط الفورم (اختيارية: لا تأثر على أي تصدير قديم)
+  const headerStyle  = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } }, font: { bold: true }, alignment: center, border: bd };
+  const cellStyle    = { alignment: center, border: bd };
+  const titleStyle   = { font: { bold: true, size: 14 }, alignment: center, border: bd };
+  const sectionStyle = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } }, font: { bold: true, size: 11 }, alignment: center, border: bd };
+  const labelStyle   = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } }, font: { bold: true }, alignment: center, border: bd };
+  const pickStyle = (k) => k === 'title' ? titleStyle : k === 'section' ? sectionStyle : k === 'label' ? labelStyle : k === 'head' ? headerStyle : cellStyle;
+  // الخلية تبقى قيمة عادية، أو كائن { v, k } لما نحتاج نمط مختلف جوه نفس الصف
+  const cellSpec = (s) => (s && typeof s === 'object' && !Array.isArray(s) && 'v' in s) ? s : { v: s, k: null };
+
+  sheets.forEach((sheet) => {
+    const { name, header = [], rows = [], merges = [], widths = null, showGridLines = true } = sheet;
+    const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true, showGridLines: showGridLines !== false }] });
     if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
-    rows.forEach((r) => ws.addRow(r).eachCell((c) => Object.assign(c, cellStyle)));
+
+    // 🧩 الصف سليم كـ Array (التصديرات القديمة) أو كـ { cells, kind } (الفورم)
+    const plain = rows.map((r) => {
+      const arr = Array.isArray(r) ? r : (r && Array.isArray(r.cells) ? r.cells : []);
+      const rowKind = (!Array.isArray(r) && r && r.kind) ? r.kind : null;
+      return { arr, rowKind, values: arr.map((s) => cellSpec(s).v) };
+    });
+    plain.forEach(({ arr, rowKind, values }) => {
+      ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
+        Object.assign(c, pickStyle(cellSpec(arr[col - 1]).k || rowKind));
+      });
+    });
     merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
-    // 📐 True Excel AutoFit — يُطبَّق دائماً على كل ورقة: أعرض محتوى غير مدمج في العمود هو عرضه النهائي.
-    //    القياس دائماً بخط Calibri 11pt العادي (نموذج Excel)، ثم width = (pixels − 5) / MDW = pixels / 7.
+
+    // 📐 العرض: مُمرَّر (نماذج الفورم) أو AutoFit تلقائي (كل التصديرات القديمة زي ما هي)
+    if (Array.isArray(widths) && widths.length) { ws.columns = widths.map((w) => ({ width: w })); return; }
+
     const mergedCells = new Set(merges.flatMap(([c1, r1, c2, r2]) => {
       const cells = [];
       for (let rr = r1; rr <= r2; rr++) for (let cc = c1; cc <= c2; cc++) cells.push(`${rr}:${cc}`);
       return cells;
     }));
-    const colCount = rows.reduce((m, r) => Math.max(m, r.length), header.length);
+    const colCount = plain.reduce((m, p) => Math.max(m, p.values.length), header.length);
     const px = new Array(colCount).fill(0);
     const feed = (vals, rowIdx, measure = cellTextPx) => vals.forEach((v, ci) => {
       if (ci >= px.length || mergedCells.has(`${rowIdx}:${ci + 1}`)) return;
       px[ci] = Math.max(px[ci], measure(v));
     });
     feed(header, 1, cellTextPxBold);            // 🅱️ العناوين بخط عريض
-    rows.forEach((r, ri) => feed(r, ri + 2));   // الصفوف تبدأ من الصف 2 في الورقة
-    const MDW = 7; // عرض الخانة «0» بخط Calibri 11 (Microsoft: pixels = 7 × chars + 5)
-    const PAD = 3; // حجز حواف الخلية — يمنع ملامسة النص للحد ولنقص الحروف
+    plain.forEach((p, ri) => feed(p.values, ri + 2));
+    const MDW = 7;  // عرض الخانة «0» بخط Calibri 11
+    const PAD = 3;  // حجز حواف الخلية
     ws.columns = px.map(p => ({ width: p === 0 ? 8.43 : Math.ceil(((p + PAD) / MDW) * 256) / 256 }));
   });
+
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
@@ -4373,14 +4392,11 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     try { await exportWorkbook(sheets, `السجل_الشامل_للمهام_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل الشامل للمهام بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
-  // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
-  // (نفس الأقسام والترتيب والجداول)، واسم الملف هو اسم الاستمارة.
-  // يُستدعى من زر التنزيل في صف الجدول: يجلب تفاصيل المهمة الكاملة (مع المسارات) ثم يُصدّر.
-  // 🛡️ قاعدة التصدير: أي صف فيه أي بيانات (من/إلى/تاريخ/وقت) = مسار حقيقي يُصدَّر.
-  //    لا يُسقَط أي مسار، ولا يوجد أي حدّ لعدد الصفوف — الملف يطابق الاستمارة بالكامل.
+  // 🆕 تصدير الاستمارة — «الفورم هو الفورم»: نفس التقسيم والترتيب والشبكة اللي على الشاشة.
+  //    شيت واحد RTL على شبكة 12 عمود: بانر عنوان · باند لكل قسم · حقول (تسمية | قيمة)
+  //    ٣ حقول في الصف · وجداول بنفس أعمدة الاستمارة. بلا إسقاط أي صف وبلا أي حدّ للعدد.
   const handleExportSingleMission = async (m) => {
     const text = (v) => (v === undefined || v === null ? '' : String(v));
-    const val = (v) => (v === undefined || v === null ? '' : v);
     const dateT = (v) => (v ? formatDateTime(v) : '—');
     const tm12 = (v) => (v ? formatTime12(v) : '—');
     const branchName = (id) => {
@@ -4394,7 +4410,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       return s ? s.staff_name : '';
     };
 
-    // 🔄 جلب تفاصيل المهمة (نفس نقطة handleViewMission) — المسارات والأسطول والمشاركون تأتي هنا
+    // 🔄 تفاصيل المهمة الكاملة (المسارات · الأسطول · المشاركون · البالكات · كتالوج الانضمام)
     let detail = m || {};
     let fetched = false;
     if (m && m.mission_id) {
@@ -4402,183 +4418,177 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         const token = sessionStorage.getItem('access_token');
         const res = await fetch(`${BASE}/api/missions/${m.mission_id}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) { detail = await res.json(); fetched = true; }
-      } catch (e) { /* نُبقي بيانات الصف الحالية عند فشل الشبكة */ }
+      } catch (e) { /* نُبقي بيانات الصف عند فشل الشبكة */ }
     }
-    // 🛡️ لو التفاصيل ماجاتش من السيرفر: لا نصدّر ملف ناقص في صمت — نبلّغ ونخرج.
+    // 🛡️ لو التفاصيل ماجاتش: لا نصدر ملف ناقص في صمت
     if (m && m.mission_id && !fetched) {
       setCustomAlert("تعذر تحميل تفاصيل المهمة — لم يتم التصدير. أعد المحاولة أو افتح المهمة ثم صدّرها.");
       return;
     }
 
+    // ── شبكة الفورم: 12 عمود ──
+    const COLS = 12;
     const aoa = [];
     const merges = [];
     let row = 0;
-    const TOTAL = 12; // أعمدة A:L
-    const put = (c, v) => { if (!aoa[row]) aoa[row] = []; aoa[row][c] = v; };
-    const span = (from, to) => { if (to > from) merges.push({ s: { r: row, c: from }, e: { r: row, c: to } }); };
-    const section = (title) => { put(0, title); span(0, TOTAL - 1); row++; };
-    const headerRow = (cols) => { cols.forEach((v, i) => put(i, v)); row++; };
-    const dataRow = (cells) => { cells.forEach((v, i) => put(i, val(v))); row++; };
-    const emptyRow = (msg) => { put(0, msg); span(0, TOTAL - 1); row++; };
-    const field = (label, value) => {
-      put(0, label); span(0, 2);
-      put(3, text(value)); span(3, TOTAL - 1);
-      row++;
+    const cell = (c, v, k) => { if (!aoa[row]) aoa[row] = []; aoa[row][c] = k ? { v, k } : v; };
+    const merge = (from, to) => { if (to > from) merges.push({ s: { r: row, c: from }, e: { r: row, c: to } }); };
+    const next = () => { row++; };
+    const band = (title) => { cell(0, title, 'section'); merge(0, COLS - 1); next(); };
+    // ثلاثة حقول في الصف — كل حقل: تسمية على عمودين + قيمة على عمودين
+    const fields = (pairs) => {
+      for (let i = 0; i < pairs.length; i += 3) {
+        pairs.slice(i, i + 3).forEach(([label, value], j) => {
+          const c = j * 4;
+          cell(c, label, 'label'); merge(c, c + 1);
+          cell(c + 2, text(value)); merge(c + 2, c + 3);
+        });
+        next();
+      }
     };
+    const fieldWide = (label, value) => { cell(0, label, 'label'); merge(0, 2); cell(3, text(value)); merge(3, COLS - 1); next(); };
+    // جدول بنفس أعمدة الاستمارة: cols = [{ t, w }] ومجموع w = 12
+    const table = (cols, rowsData) => {
+      let c = 0;
+      cols.forEach(col => { cell(c, col.t, 'head'); merge(c, c + col.w - 1); c += col.w; });
+      next();
+      (rowsData || []).forEach(cells => {
+        let cc = 0;
+        cols.forEach((col, i) => { cell(cc, cells[i] === undefined || cells[i] === null ? '' : cells[i]); merge(cc, cc + col.w - 1); cc += col.w; });
+        next();
+      });
+    };
+    const note = (msg) => { cell(0, msg, 'label'); merge(0, COLS - 1); next(); };
 
-    // ✅ «مسار حقيقي» = أي بيانات (من/إلى/تاريخ/وقت) — نفس شرط الحفظ بالحرف
+    // ✅ أي صف فيه أي بيانات = مسار حقيقي (نفس شرط الحفظ بالحرف) — بلا إسقاط
     const routeHasData = (r) => !!(r && (r.route_from || r.route_to || r.departure_date || r.departure_time || r.arrival_date || r.arrival_time));
-    // ✅ الأساسي = العنوان المعتمد + أي مسار قديم بلا عنوان (legacy) — مش بيضيع في قسم المخصص
-    const isMainRoute = (r) => {
-      const g = String((r && r.group_title) || '').trim();
-      return g === '' || g === 'خط السير الأساسي';
-    };
+    // ✅ الأساسي = العنوان المعتمد + أي مسار قديم بلا عنوان (legacy)
+    const isMainRoute = (r) => { const g = String((r && r.group_title) || '').trim(); return g === '' || g === 'خط السير الأساسي'; };
     const routeCells = (groupLabel, r) => [groupLabel, r.route_from || '', r.route_to || '',
-      r.departure_date ? dateT(r.departure_date) : '—',
-      r.departure_time ? tm12(r.departure_time) : '—',
-      r.arrival_date ? dateT(r.arrival_date) : '—',
-      r.arrival_time ? tm12(r.arrival_time) : '—'];
-    const ROUTE_HEADER = ['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول'];
-
-    // ── العنوان: اسم الاستمارة + كود الاستمارة + تاريخ المهمة ──
-    const formName = text(detail.mission_name);
-    const formCode = detail.mission_code;
-    put(0, formName || 'استمارة مهمة');
-    span(0, TOTAL - 1);
-    row++;
+      r.departure_date ? dateT(r.departure_date) : '—', r.departure_time ? tm12(r.departure_time) : '—',
+      r.arrival_date ? dateT(r.arrival_date) : '—', r.arrival_time ? tm12(r.arrival_time) : '—'];
+    const ROUTE_COLS = [
+      { t: 'المجموعة', w: 2 }, { t: 'من', w: 2 }, { t: 'إلى (الوجهة)', w: 2 }, { t: 'تاريخ التحرك', w: 2 },
+      { t: 'ساعة التحرك', w: 1 }, { t: 'تاريخ الوصول', w: 2 }, { t: 'ساعة الوصول', w: 1 },
+    ];
 
     const missionDate = detail.exit_date || detail.departure_date;
     const missionDateText = missionDate ? formatDateTime(missionDate) : '';
-    put(0, `كود الاستمارة: ${formCode || '—'}${missionDateText ? `   |   تاريخ المهمة: ${missionDateText}` : ''}`);
-    span(0, TOTAL - 1);
-    row++;
+    const statusAr = detail.status ? ({ Draft: 'مسودة', Active: 'نشطة', 'Under Review': 'قيد المراجعة', Approved: 'معتمدة وفي انتظار الانتهاء', Completed: 'مكتملة (تم انتهاء المهمة)', Returned: 'إرجاع للمتطوع (يوجد أخطاء)', Cancelled: 'ملغاة' }[detail.status] || 'جديدة') : 'جديدة';
+    const fieldStatusText = detail.field_operation_status || (detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة');
+
+    // ── بانر العنوان ──
+    cell(0, text(detail.mission_name) || 'استمارة مهمة', 'title'); merge(0, COLS - 1); next();
+    cell(0, `كود الاستمارة: ${detail.mission_code || '—'}   |   تاريخ المهمة: ${missionDateText || '—'}   |   ${statusAr}`); merge(0, COLS - 1); next();
 
     // 1) البيانات الأساسية للمهمة
-    section('البيانات الأساسية للمهمة');
-    field('تصنيف المهمة', detail.mission_classification);
-    field('التمركز / الفرع', branchName(detail.branch_id));
-    field('نوع المهمة', detail.mission_type);
-    field('مكان المهمة', detail.mission_location);
-    field('حالة العملية الميدانية', detail.field_operation_status || (detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة'));
-    field('مسؤول المهمة', detail.responsible_person);
-    field('تاريخ المهمة', missionDateText || '—');
-    field('مصدر البلاغ', detail.data_source);
-
-    // 2) التواريخ والتوقيتات
-    section('التواريخ والتوقيتات');
-    headerRow(['تاريخ المهمة', 'تاريخ الخروج', 'تاريخ الوصول', 'تاريخ العودة', 'تاريخ الانتهاء', 'ساعة البدء', 'ساعة التحرك', 'ساعة الوصول', 'ساعة الانتهاء']);
-    dataRow([
-      dateT(detail.exit_date), dateT(detail.departure_date), dateT(detail.arrival_date),
-      dateT(detail.return_date), dateT(detail.completion_date),
-      tm12(detail.start_time), tm12(detail.departure_time), tm12(detail.arrival_time), tm12(detail.completion_time),
+    band('البيانات الأساسية للمهمة');
+    fields([
+      ['تصنيف المهمة', detail.mission_classification],
+      ['التمركز / الفرع', branchName(detail.branch_id)],
+      ['نوع المهمة', detail.mission_type],
+      ['مكان المهمة', detail.mission_location],
+      ['حالة العملية الميدانية', fieldStatusText],
+      ['مسؤول المهمة', detail.responsible_person],
+      ['تاريخ المهمة', missionDateText || '—'],
+      ['مصدر البلاغ', detail.data_source],
     ]);
 
-    // 3) تفاصيل خط السير الأساسي — كل صف فيه أي بيانات يُصدَّر (بدون أي إسقاط)
-    section('تفاصيل خط السير الأساسي');
-    headerRow(ROUTE_HEADER);
-    const allRoutes = Array.isArray(detail.routes) ? detail.routes : [];
-    let routeCount = 0;
-    allRoutes.filter(isMainRoute).forEach((r) => {
-      if (!routeHasData(r)) return;
-      routeCount++;
-      dataRow(routeCells('خط السير الأساسي', r));
-    });
-    // احتياطي: مهمة مالهاش صفوف مسار محفوظة لكن حقولها (الخروج/الوصول) مليانة ⇒ نعرضها
-    if (!routeCount && [detail.departure_date, detail.departure_time, detail.arrival_date, detail.arrival_time].some(Boolean)) {
-      dataRow(['خط السير الأساسي (من حقول المهمة)', detail.mission_location || '', '',
-        detail.departure_date ? dateT(detail.departure_date) : '—',
-        detail.departure_time ? tm12(detail.departure_time) : '—',
-        detail.arrival_date ? dateT(detail.arrival_date) : '—',
-        detail.arrival_time ? tm12(detail.arrival_time) : '—']);
-      routeCount++;
-    }
-    if (!routeCount) emptyRow('لا توجد مسارات مسجلة');
+    // 2) التواريخ والتوقيتات
+    band('التواريخ والتوقيتات');
+    table([
+      { t: 'تاريخ المهمة', w: 2 }, { t: 'تاريخ الخروج', w: 1 }, { t: 'تاريخ الوصول', w: 2 },
+      { t: 'تاريخ العودة', w: 1 }, { t: 'تاريخ الانتهاء', w: 2 }, { t: 'ساعة البدء', w: 1 },
+      { t: 'ساعة التحرك', w: 1 }, { t: 'ساعة الوصول', w: 1 }, { t: 'ساعة الانتهاء', w: 1 },
+    ], [[
+      dateT(detail.exit_date), dateT(detail.departure_date), dateT(detail.arrival_date), dateT(detail.return_date),
+      dateT(detail.completion_date), tm12(detail.start_time), tm12(detail.departure_time), tm12(detail.arrival_time), tm12(detail.completion_time),
+    ]]);
 
-    // 4) الأيام / خطوط السير المخصصة — كل مجموعة بعنوانها حتى لو فاضية
-    section('الأيام / خطوط السير المخصصة');
-    headerRow(ROUTE_HEADER);
+    // 3) تفاصيل خط السير الأساسي
+    band('تفاصيل خط السير الأساسي');
+    const allRoutes = Array.isArray(detail.routes) ? detail.routes : [];
+    const mainRows = [];
+    allRoutes.filter(isMainRoute).forEach(r => { if (routeHasData(r)) mainRows.push(routeCells('خط السير الأساسي', r)); });
+    if (mainRows.length === 0 && [detail.departure_date, detail.departure_time, detail.arrival_date, detail.arrival_time].some(Boolean)) {
+      mainRows.push(['خط السير الأساسي (من حقول المهمة)', detail.mission_location || '', '',
+        detail.departure_date ? dateT(detail.departure_date) : '—', detail.departure_time ? tm12(detail.departure_time) : '—',
+        detail.arrival_date ? dateT(detail.arrival_date) : '—', detail.arrival_time ? tm12(detail.arrival_time) : '—']);
+    }
+    table(ROUTE_COLS, mainRows);
+    if (mainRows.length === 0) note('لا توجد مسارات مسجلة');
+
+    // 4) الأيام / خطوط السير المخصصة
+    band('الأيام / خطوط السير المخصصة');
     const customGroups = {};
-    // (أ) عناوين المجموعات من السيرفر (لو متاحة) — عشان الأيام الفاضية تبان برضه
     (Array.isArray(detail.itineraries) ? detail.itineraries : []).forEach(it => {
       const t = String((it && (it.group_title || it.title)) || '').trim();
       if (t && t !== 'خط السير الأساسي' && !customGroups[t]) customGroups[t] = [];
     });
-    // (ب) المسارات المخصصة نفسها
     allRoutes.filter(r => !isMainRoute(r)).forEach(r => {
       const t = String((r && r.group_title) || '').trim() || 'خط سير مخصص';
       if (!customGroups[t]) customGroups[t] = [];
       customGroups[t].push(r);
     });
-    let custCount = 0;
+    const customRows = [];
     Object.keys(customGroups).forEach(title => {
       const rows = customGroups[title].filter(routeHasData);
-      if (rows.length === 0) { dataRow([title, '—', '—', '—', '—', '—', '—']); custCount++; return; }
-      rows.forEach(r => { custCount++; dataRow(routeCells(title, r)); });
+      if (rows.length === 0) customRows.push([title, '—', '—', '—', '—', '—', '—']);
+      else rows.forEach(r => customRows.push(routeCells(title, r)));
     });
-    if (!custCount) emptyRow('لا توجد أيام / خطوط سير مخصصة');
+    table(ROUTE_COLS, customRows);
+    if (customRows.length === 0) note('لا توجد أيام / خطوط سير مخصصة');
 
-    // 5) السيارات والسائقين (أسطول المهمة)
-    section('السيارات والسائقين (أسطول المهمة)');
-    headerRow(['اسم السائق', 'رقم السيارة']);
-    let vCount = 0;
-    (detail.vehicles || []).forEach(v => {
-      if (!v.driver_name && !v.vehicle_number) return;
-      vCount++;
-      dataRow([v.driver_name || '', v.vehicle_number || '']);
-    });
-    if (!vCount) emptyRow('لا توجد سيارات');
+    // 5) السيارات والسائقين
+    band('السيارات والسائقين (أسطول المهمة)');
+    table([{ t: 'اسم السائق', w: 6 }, { t: 'رقم السيارة', w: 6 }],
+      (detail.vehicles || []).filter(v => v.driver_name || v.vehicle_number).map(v => [v.driver_name || '', v.vehicle_number || '']));
 
-    // 6) القوة البشرية والمشاركون (نفس أعمدة جدول الاستمارة)
-    section('القوة البشرية والمشاركين');
-    headerRow(['م', 'النوع', 'الاسم', 'رقم العضوية', 'صفة المشارك', 'الفريق', 'الساعات', 'خطوط السير / انضمام-انفصال', 'الفرع']);
-    let pCount = 0;
-    (detail.participants || []).forEach((p) => {
+    // 6) القوة البشرية والمشاركين (نفس أعمدة جدول الاستمارة)
+    band('القوة البشرية والمشاركين');
+    const participantRows = [];
+    (detail.participants || []).forEach(p => {
       if (!p.full_name) return;
-      pCount++;
-      const typeAr = p.participant_type === 'non_volunteer' ? 'غير متطوع' : 'متطوع';
-      // 🔓 فكّ مفاتيح JL:* بدل طبعها خام في الملف
       const { routes: routeDays, events } = splitAssignedDays(p.assigned_days);
       const evTxt = events.map(ev => `${ev.kind === 'join' ? 'انضمام' : 'انفصال'}: ${ev.title}`).join(' + ');
       const days = [routeDays.join(' + '), evTxt].filter(Boolean).join(' + ') || '—';
-      const wh = p.working_hours != null ? fmtHours(p.working_hours, lang) : '—';
-      dataRow([pCount, typeAr, p.full_name, p.participation_role || '', p.participant_position || '', p.team_name || '', wh, days, branchName(p.branch_id)]);
+      participantRows.push([
+        participantRows.length + 1,
+        p.participant_type === 'non_volunteer' ? 'غير متطوع' : 'متطوع',
+        p.full_name, p.participation_role || '', p.participant_position || '', p.team_name || '',
+        p.working_hours != null ? fmtHours(p.working_hours, lang) : '—', days, branchName(p.branch_id),
+      ]);
     });
-    if (!pCount) emptyRow('لا يوجد مشاركون');
+    table([
+      { t: 'م', w: 1 }, { t: 'النوع', w: 1 }, { t: 'الاسم', w: 2 }, { t: 'رقم العضوية', w: 1 },
+      { t: 'صفة المشارك', w: 1 }, { t: 'الفريق', w: 1 }, { t: 'الساعات', w: 1 },
+      { t: 'خطوط السير / انضمام-انفصال', w: 2 }, { t: 'الفرع', w: 2 },
+    ], participantRows);
+    if (participantRows.length === 0) note('لا يوجد مشاركون');
 
-    // 6.b) كتالوج الانضمام / الانفصال — سجلات المهمة والمتنسبون إليها
-    section('انضمام / انفصال');
-    headerRow(['العنوان', 'النوع', 'التاريخ والوقت', 'المتنسبون إليه']);
+    // 7) انضمام / انفصال
+    band('انضمام / انفصال');
     const jlEntries = Array.isArray(detail.join_leave_entries) ? detail.join_leave_entries : [];
-    if (jlEntries.length) {
-      jlEntries.forEach(e => {
-        const k = jlKey(e.kind, e.title);
+    table([{ t: 'العنوان', w: 3 }, { t: 'النوع', w: 2 }, { t: 'التاريخ والوقت', w: 3 }, { t: 'المتنسبون إليه', w: 4 }],
+      jlEntries.map(e => {
         const assignedTo = (detail.participants || [])
-          .filter(p => (p.assigned_days || []).includes(k))
+          .filter(p => (p.assigned_days || []).includes(jlKey(e.kind, e.title)))
           .map(p => p.full_name || 'مشارك').join(' + ');
-        dataRow([e.title || '', e.kind === 'join' ? 'انضمام' : 'انفصال', e.dt || '', assignedTo || '—']);
-      });
-    } else {
-      emptyRow('لا توجد سجلات انضمام أو انفصال');
-    }
+        return [e.title || '', e.kind === 'join' ? 'انضمام' : 'انفصال', e.dt || '', assignedTo || '—'];
+      }));
+    if (jlEntries.length === 0) note('لا توجد سجلات انضمام أو انفصال');
 
-    // 7) كود الفريق/الإدارة
-    section('كود الفريق/الإدارة');
-    field('كود الفريق/الإدارة', detail.team_code);
+    // 8) كود الفريق/الإدارة
+    band('كود الفريق/الإدارة');
+    fields([['كود الفريق/الإدارة', detail.team_code]]);
 
-    // 8) إحصائيات المستفيدين
-    section('إحصائيات المستفيدين');
-    headerRow(['تصنيف المستفيدين', 'مستفيدين (مباشر)', 'مستفيدين (غير مباشر)']);
-    let bCount = 0;
-    (detail.beneficiaries || []).forEach(b => {
-      if (!b.category_name) return;
-      bCount++;
-      dataRow([b.category_name, b.direct_count, b.indirect_count]);
-    });
-    if (!bCount) emptyRow('لا توجد إحصائيات مسجلة');
+    // 9) إحصائيات المستفيدين
+    band('إحصائيات المستفيدين');
+    table([{ t: 'تصنيف المستفيدين', w: 6 }, { t: 'مستفيدين (مباشر)', w: 3 }, { t: 'مستفيدين (غير مباشر)', w: 3 }],
+      (detail.beneficiaries || []).filter(b => b.category_name).map(b => [b.category_name, b.direct_count, b.indirect_count]));
 
-    // 9) فريق إدارة الغرفة (الهيكل الإداري) — كل البالكات (الأيام/السجلات) بعناوينها
-    section('فريق إدارة الغرفة (الهيكل الإداري)');
-    headerRow(['المسؤولية', 'الاسم']);
+    // 10) فريق إدارة الغرفة (الهيكل الإداري) — كل البالكات بعناوينها
+    band('فريق إدارة الغرفة (الهيكل الإداري)');
     const EOC_ROLES = [
       ['مسؤول المتابعة (قائد العملية)', 'مسؤول المتابعة'],
       ['المشرف', 'المشرف'],
@@ -4588,7 +4598,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       ['مستكمل الاستمارة', 'مستكمل الاستمارة'],
       ['مراجع الاستمارة', 'مراجع الاستمارة'],
     ];
-    // 🆕 قراءة البالكات المتكررة (كائن أو نص JSON — احتياط لو رد كنص)
+    // 🆕 قراءة البالكات المتكررة (كائن أو نص JSON)
     const _fb = (() => {
       const raw = detail.form_blocks;
       if (!raw) return null;
@@ -4598,59 +4608,51 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     const _adminBlocks = (_fb && Array.isArray(_fb.admin) && _fb.admin.length > 0) ? _fb.admin : null;
     if (_adminBlocks) {
       _adminBlocks.forEach((blk, bi) => {
-        put(0, text(blk.title) || `سجل ${bi + 1}`); span(0, TOTAL - 1); row++; // سطر عنوان السجل/اليوم
-        EOC_ROLES.forEach(([label, role]) => dataRow([label, text((blk.staff || {})[role] || '')]));
+        cell(0, text(blk.title) || `سجل ${bi + 1}`, 'label'); merge(0, COLS - 1); next();
+        table([{ t: 'المسؤولية', w: 6 }, { t: 'الاسم', w: 6 }],
+          EOC_ROLES.map(([label, role]) => [label, text((blk.staff || {})[role] || '')]));
       });
     } else {
-      // احتياطي للمهام القديمة اللي مالهاش بالكات في form_blocks
-      EOC_ROLES.forEach(([label, role]) => dataRow([label, staffName(role)]));
+      table([{ t: 'المسؤولية', w: 6 }, { t: 'الاسم', w: 6 }], EOC_ROLES.map(([label, role]) => [label, staffName(role)]));
     }
 
-    // 9.b) ملاحظات غرفة التطوع — كل البالكات بعناوينها وصفوفها ومراجعها
+    // 11) ملاحظات غرفة التطوع
     const _volBlocks = (_fb && Array.isArray(_fb.volunteer) && _fb.volunteer.length > 0) ? _fb.volunteer : null;
     const _legacyNotes = detail.volunteer_room_notes || [];
     if (_volBlocks || _legacyNotes.length > 0) {
-      section('ملاحظات غرفة التطوع');
+      band('ملاحظات غرفة التطوع');
       const _blocksToWrite = _volBlocks || [{ id: 'v1', title: '', reviewer: detail.volunteer_room_reviewer_name || '', rows: _legacyNotes }];
       _blocksToWrite.forEach((blk, bi) => {
         const bt = text(blk.title);
-        if (bt) { put(0, bt); span(0, TOTAL - 1); row++; }
-        else if (_blocksToWrite.length > 1) { put(0, `سجل ${bi + 1}`); span(0, TOTAL - 1); row++; }
-        headerRow(['#', 'التاريخ', 'رقم العضوية', 'اسم العضو', 'الملاحظة']);
+        if (bt || _blocksToWrite.length > 1) { cell(0, bt || `سجل ${bi + 1}`, 'label'); merge(0, COLS - 1); next(); }
         const _rows = (blk.rows || []).filter(r => r && (r.note_date || r.membership_number || r.member_name || r.note_text));
-        _rows.forEach((r, ri) => dataRow([ri + 1, r.note_date || '', r.membership_number || '', r.member_name || '', r.note_text || '']));
-        if (_rows.length === 0) emptyRow('لا توجد ملاحظات مسجلة');
-        // 🆕 اسم راصد الاستمارة + اسم مراجع الاستمارة جنب بعض في نفس السطر (نفس شكل الاستمارة)
-        const _obs = text(blk.observer || '');
-        const _rev = text(blk.reviewer || '');
-        if (_obs || _rev) {
-          put(0, 'اسم راصد الاستمارة'); span(0, 2);
-          put(3, _obs); span(3, 5);
-          put(6, 'اسم مراجع الاستمارة'); span(6, 8);
-          put(9, _rev); span(9, TOTAL - 1);
-          row++;
-        }
+        table([
+          { t: '#', w: 1 }, { t: 'التاريخ', w: 2 }, { t: 'رقم العضوية', w: 2 }, { t: 'اسم العضو', w: 2 }, { t: 'الملاحظة', w: 5 },
+        ], _rows.map((r, ri) => [ri + 1, r.note_date || '', r.membership_number || '', r.member_name || '', r.note_text || '']));
+        if (_rows.length === 0) note('لا توجد ملاحظات مسجلة');
+        fields([['اسم راصد الاستمارة', text(blk.observer || '')], ['اسم مراجع الاستمارة', text(blk.reviewer || '')]]);
       });
     }
 
-    // 10) الحالة والملاحظات العامة
-    section('الحالة والملاحظات العامة');
-    const statusAr = detail.status ? ({ Draft: 'مسودة', Active: 'نشطة', 'Under Review': 'قيد المراجعة', Approved: 'معتمدة وفي انتظار الانتهاء', Completed: 'مكتملة (تم انتهاء المهمة)', Returned: 'إرجاع للمتطوع (يوجد أخطاء)', Cancelled: 'ملغاة' }[detail.status] || 'جديدة') : 'جديدة';
-    field('موقف الاستمارة إدارياً', statusAr);
-    field('سجل الميدان / ملاحظات عامة', detail.notes);
-    field('ملاحظات داخلية', detail.internal_notes);
+    // 12) الحالة والملاحظات العامة
+    band('الحالة والملاحظات العامة');
+    fields([['موقف الاستمارة إدارياً', statusAr]]);
+    fieldWide('سجل الميدان / ملاحظات عامة', detail.notes);
+    fieldWide('ملاحظات داخلية', detail.internal_notes);
 
-    // ── تصدير مصنّف منسّق (RTL · تمركز · حدود · رأس #cbcbcb) مع الحفاظ على دمج الخلايا ──
+    // ── تصدير الفورم: RTL · بلا خطوط شبكة · عروض أعمدة ثابتة · دمج خلايا محفوظ ──
     const rawName = text(detail.mission_name).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
     const missionFileDate = String(missionDate || '').slice(0, 10) || todayFileDate();
     try {
       await exportWorkbook([{
         name: 'الاستمارة',
-        header: aoa[0] || [],
-        rows: aoa.slice(1),
+        header: [],
+        rows: aoa,
         merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
+        widths: [12, 12, 13, 13, 12, 12, 13, 13, 12, 12, 13, 13],
+        showGridLines: false,
       }], `${rawName}_${missionFileDate}.xlsx`);
-      setCustomAlert(`تم تصدير الاستمارة بنجاح (${pCount} مشارك · ${routeCount} مسار أساسي · ${custCount} مجموعة مخصصة).`);
+      setCustomAlert(`تم تصدير الاستمارة بنجاح (${participantRows.length} مشارك · ${mainRows.length} مسار أساسي · ${customRows.length} صف مخصص).`);
     } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
