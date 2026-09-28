@@ -610,19 +610,25 @@ textarea.field:focus {
   animation: eoc-focus-spin 2.2s linear infinite;
 }
 
+/* ✦ «إبرة الانتباه» بدل الدوران الأبدي:
+   قبل كده كان كل حقل ناقص حواليه إطار أحمر بيلف للأبد — ٥ حقول = ٥ إطارات بتلف =
+   ضجيج بصري بلا توجيه. دلوقتي: خط 2px ثابت على حافة البداية + إطار نبرة خفيف +
+   مرور ضوء واحد عند الظهور ثم سكون تام. */
 .field-invalid {
   --eoc-focus-angle: 0deg;
   border-color: transparent !important;
-  background-image: var(--eoc-frame-fill), var(--eoc-frame-comet-invalid) !important;
-  background-origin: padding-box, border-box;
-  background-clip: padding-box, border-box;
+  background-image: var(--eoc-frame-fill), linear-gradient(var(--accent), var(--accent)), var(--eoc-frame-comet-invalid) !important;
+  background-origin: padding-box, border-box, border-box;
+  background-clip: padding-box, border-box, border-box;
   background-repeat: no-repeat;
+  background-size: 100% 100%, 3px 100%, 100% 100%;
+  background-position: 0 0, right center, 0 0;
   box-shadow:
-    0 0 0 1px var(--accent-glow),
-    0 0 12px -2px var(--accent-glow),
-    0 0 26px -4px var(--accent-glow) !important;
-  animation: eoc-focus-spin 2.2s linear infinite;
+    0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent),
+    0 10px 26px -20px var(--accent-glow) !important;
+  animation: eoc-focus-spin .95s linear 1;
 }
+[dir="ltr"] .field-invalid { background-position: 0 0, left center, 0 0; }
 
 /* حقل إلزامي ناقص + مُركَّز في آنٍ واحد: التحقق (الأحمر) يبقى مسيطرًا
    على التركيز العادي — اختيارية (0,3,1) تتفوق على كل ما سبق. */
@@ -630,13 +636,35 @@ input.field:focus.field-invalid,
 select.field:focus.field-invalid,
 textarea.field:focus.field-invalid {
   border-color: transparent !important;
-  background-image: var(--eoc-frame-fill), var(--eoc-frame-comet-invalid) !important;
+  background-image: var(--eoc-frame-fill), linear-gradient(var(--accent), var(--accent)), var(--eoc-frame-comet-invalid) !important;
+  background-size: 100% 100%, 3px 100%, 100% 100%;
+  background-position: 0 0, right center, 0 0;
   box-shadow:
-    0 0 0 1px var(--accent-glow),
-    0 0 12px -2px var(--accent-glow),
-    0 0 26px -4px var(--accent-glow) !important;
-  animation: eoc-focus-spin 2.2s linear infinite;
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 18px -4px var(--accent-glow) !important;
+  animation: none;
 }
+[dir="ltr"] input.field:focus.field-invalid,
+[dir="ltr"] select.field:focus.field-invalid,
+[dir="ltr"] textarea.field:focus.field-invalid { background-position: 0 0, left center, 0 0; }
+
+/* ── ①-ب حالة الخمول — «سطح حي» حتى لما مفيش إشعارات ──────────────
+   الإشعارات بتوصل في نفس المكان، فالمكان نفسه بيفضل متنفّس بنقطة هادئة
+   توضّح إن النظام شغال ومستني — من غير أي تفاعل ولا إزعاج. */
+@keyframes liv-idle-dot { 0%,100% { opacity:.4; transform: scale(.9); } 50% { opacity:1; transform: scale(1.15); } }
+/* === LIVE idle: a soft "Live Surface" pill that breathes when the stream is quiet ===
+   Reads as the system being alive and listening, not as an empty state. */
+.liv-idle { display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:999px;
+  background:
+    radial-gradient(120% 140% at 0% 50%, color-mix(in srgb, var(--ok) 22%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface-2) 88%, transparent);
+  border:1px solid color-mix(in srgb, var(--ok) 26%, var(--border));
+  box-shadow: 0 8px 24px -18px rgba(0,0,0,.8), 0 0 24px -18px color-mix(in srgb, var(--ok) 40%, transparent);
+  animation: liv-idle-rise .6s var(--sp-snap) both; }
+@keyframes liv-idle-rise { 0% { opacity:0; transform: translateY(6px) scale(.94); } 100% { opacity:1; transform:none; } }
+.liv-idle i { width:6px; height:6px; border-radius:999px; background: var(--ok); box-shadow: 0 0 9px var(--ok); animation: liv-idle-dot 2.4s ease-in-out infinite; }
+.liv-idle b { font-size:9.5px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; color: var(--muted); }
+
 
 /* حقل القائمة (select) يحتفظ بسهمه أثناء التركيز/الحالة الإلزامية/التوليفة */
 select.field:focus,
@@ -1201,26 +1229,27 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 @keyframes toast-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* ── عدّاد الطابور «+N إشعارات أخرى» (F7) ── */
+/* === STACK chip: a compact pill that fans the queued stream ===
+   Glows softly while there is backlog; the trailing dot is the live pulse. */
 .toast-stack-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.45rem 0.95rem;
+  padding: 0.42rem 0.9rem;
   border-radius: 999px;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 900;
   color: var(--ink);
-  background: var(--glass);
-  border: 1px solid var(--border-strong);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow-1);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--surface) 70%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border-strong));
+  box-shadow: 0 8px 22px -14px var(--accent), var(--shadow-1);
   cursor: pointer;
   transform-origin: center top;
   transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
               border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
-  animation: toast-in 0.4s var(--ease-out) backwards;
-}
+  animation: chip-in .42s var(--sp-snap) backwards; }
+@keyframes chip-in { 0% { opacity:0; transform: translateY(8px) scale(.9); } 100% { opacity:1; transform:none; } }
 .toast-stack-chip::before {
   content: "";
   width: 7px;
@@ -1228,77 +1257,128 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   border-radius: 999px;
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent-glow);
-}
-.toast-stack-chip:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong)); box-shadow: var(--shadow-2); }
+  animation: liv-pulse 1.5s ease-in-out infinite; }
+.toast-stack-chip:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong)); box-shadow: 0 14px 30px -16px var(--accent), var(--shadow-2); }
+.toast-stack-chip:active { transform: scale(0.96); }
+
 .toast-stack-chip:active { transform: scale(0.97); }
 
 /* ── شريحة «إغلاق الكل» (F7) — تظهر عند وجود إشعارين مرئيين فأكثر ── */
+/* === CLOSE-ALL: a quiet pill that clears the whole stream ===
+   Sits at the top of the stack; its icon rotates on hover like a closing shutter. */
 .toast-close-all {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.32rem 0.75rem;
+  padding: 0.3rem 0.72rem;
   border-radius: 999px;
   font-size: 0.68rem;
   font-weight: 800;
   color: var(--muted);
-  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 58%, transparent);
   border: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   cursor: pointer;
   transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
-              background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
-}
-.toast-close-all:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--accent-softer); }
+              background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+.toast-close-all:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: var(--accent-softer); }
+.toast-close-all:active { transform: scale(0.96); }
+
 .toast-close-all:active { transform: scale(0.96); }
 
 /* قائمة الإشعارات — مدعومة RTL عبر logical properties */
 /* معتمة بالكامل: --glass كان شبه شفاف + backdrop blur فكان يظهر ما خلفه من المحتوى.
    source of truth: الخلفية المعتمة من الألوان الفعلية للسمة (غامق/فاتح) بدون أي alpha. */
+/* === NOTIF dropdown: a focused glass panel rising on a hinge ===
+   Opens with a clip-path iris bloom + rise; each row is a thin streak whose left
+   edge carries the event tone, so the list reads as a timeline, not a list. */
 .notif-dropdown {
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 96%, #000), var(--surface));
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-3);
-  animation: dropdown-in 0.34s var(--ease-spring);
-  transform-origin: top start;
-  will-change: transform, opacity;
+  border-radius: 18px;
+  box-shadow: 0 30px 70px -30px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.03) inset;
+  animation: notif-drop 0.46s var(--sp-snap) both;
+  transform-origin: top center;
+  will-change: transform, opacity, clip-path;
 }
-[dir="rtl"] .notif-dropdown { transform-origin: top right; }
+[dir="rtl"] .notif-dropdown { transform-origin: top center; }
+@keyframes notif-drop { 0% { opacity:0; clip-path: circle(0 at 50% 0); transform: translateY(-14px) scale(.96); } 60% { opacity:1; } 100% { opacity:1; clip-path: circle(130% at 50% 0); transform:none; } }
 .notif-item {
+  position: relative;
+  padding: 11px 16px 11px 14px;
   transition: background-color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+  border-radius: 12px;
+}
+.notif-item::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--ni-c, var(--accent));
+  box-shadow: 0 0 10px -2px var(--ni-c, var(--accent));
+  opacity: 0;
+  transition: opacity .25s ease;
 }
 .notif-item:hover { background: var(--surface-hover); }
-/* خروج سلس + دخول متتابع للعناصر */
-.notif-dropdown-close { animation: dropdown-out 0.18s var(--ease-out) forwards; }
-.notif-item-in { animation: fade-in-up 0.32s var(--ease-out) both; }
+.notif-item:hover::before, .notif-item.is-unread::before { opacity: 1; }
+.notif-item.is-unread { background: color-mix(in srgb, var(--ni-c, var(--accent)) 10%, var(--surface-hover)); }
+.notif-item.is-unread::after {
+  content: "";
+  position: absolute;
+  inset-block: 50%;
+  inset-inline-end: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: var(--ni-c, var(--accent));
+  box-shadow: 0 0 8px var(--ni-c, var(--accent));
+}
+/* smooth exit + staggered entry for items */
+.notif-dropdown-close { animation: notif-drop-out 0.2s var(--sp-drop) forwards; }
+.notif-item-in { animation: notif-row-in 0.4s var(--sp-soft) both; }
+@keyframes notif-drop-out { 0% { opacity:1; clip-path: circle(130% at 50% 0); } 100% { opacity:0; clip-path: circle(0 at 50% 0); transform: translateY(-8px); } }
+@keyframes notif-row-in { 0% { opacity:0; transform: translateX(-8px); } 100% { opacity:1; transform:none; } }
+
 /* حلقة نارية أنيقة تدور باستمرار حول زر الجرس عند وجود إشعارات غير مقروءة.
    قوس لهبي (أصفر→برتقالي→أحمر) يشبه المذنّب يلفّ حلقة رفيعة بشكل دائري سلس،
    عبر conic-gradient + mask، بدون أي reflow (transform فقط). */
+/* NOTIF bell: a breathing corona around a live core, not a flame trail.
+   Two stacked conic rings rotate in opposite directions; the outer one breathes
+   with unread count. Colour is derived from --bell-c (set per severity by the bell). */
 .bell-ring {
   position: absolute;
-  inset: -4px;
+  inset: -5px;
   border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(255, 210, 62, 1) 0deg,
-    rgba(255, 140, 26, 1) 40deg,
-    rgba(255, 77, 77, 1) 90deg,
-    rgba(255, 77, 77, 0) 150deg
-  );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-  animation: bell-ring-spin 1.8s linear infinite;
-  filter: drop-shadow(0 0 6px rgba(255, 77, 77, 0.55));
+  background: conic-gradient(from 0deg, var(--bell-c, var(--accent)), color-mix(in srgb, var(--bell-c, var(--accent)) 14%, transparent) 58%, transparent 72%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: bell-ring-spin 3.4s linear infinite;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--bell-c, var(--accent)) 55%, transparent));
   pointer-events: none;
   will-change: transform;
+  opacity: 0.5;
 }
-
+.bell-ring::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0, var(--bell-c, var(--accent)) 36%, transparent 52%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
+  animation: bell-ring-spin 2.1s linear infinite reverse;
+}
 @keyframes bell-ring-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+/* unread count makes the corona inhale: the bell fills with each new signal */
+.bell-wrap.is-glowing .bell-ring { animation: bell-inhale 2.4s ease-in-out infinite, bell-ring-spin 2.2s linear infinite; opacity: 0.78; }
+.bell-wrap.is-glowing .bell-ring::after { animation-duration: 1.5s; }
+@keyframes bell-inhale { 0%,100% { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--bell-c, var(--accent)) 40%, transparent)); } 50% { filter: drop-shadow(0 0 13px color-mix(in srgb, var(--bell-c, var(--accent)) 72%, transparent)); } }
 @keyframes dropdown-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to   { opacity: 0; transform: translateY(-6px) scale(0.98); }
@@ -2995,167 +3075,707 @@ select.field {
   .kpi-sub-lg { font-size: 0.9375rem; }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   ★ ① liv-  الإشعارات اللحظية   ★ ② apt-  تنبيهات الإجراءات   ★ ③ apx-  نوافذ التأكيد
-   كل الحركة transform / opacity / filter فقط ⇒ 60fps · الألوان من توكنات الثيم ⇒ فاتح وغامق
-   ═══════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   نظام إشعارات EOC — الإصدار السادس
+   لوح واحد لكل الإشارات: اللحظية، ونتائج الإجراءات، ولوح التأكيد، والإلزامي.
 
-/* ── ① الإشعارات اللحظية — Live Feed ─────────────────────────────── */
-@keyframes liv-drop   { 0% { opacity:0; transform: translateY(-14px) scale(.96); filter: blur(6px); } 60% { opacity:1; transform: translateY(2px) scale(1.004); filter: blur(0); } 100% { opacity:1; transform:none; filter: blur(0); } }
-@keyframes liv-lift   { 0% { opacity:1; transform:none; } 100% { opacity:0; transform: translateY(-12px) scale(.94); filter: blur(5px); } }
-@keyframes liv-travel { 0% { transform: translateY(-110%); opacity:0; } 20%,80% { opacity:1; } 100% { transform: translateY(320%); opacity:0; } }
-@keyframes liv-eq     { 0%,100% { transform: scaleY(.30); opacity:.5; } 50% { transform: scaleY(1); opacity:1; } }
-@keyframes liv-pulse  { 0%,100% { opacity:.35; transform: scale(1); } 50% { opacity:1; transform: scale(1.4); } }
-@keyframes liv-glow   { 0%,100% { opacity:.22; } 50% { opacity:.72; } }
-@keyframes liv-rise   { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
-@keyframes liv-drain  { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+   الفكرة: لوح تقني هادئ. حاشية ملوّنة على الحافة القائدة، وحدّ علوي متدرّج،
+   وخط عمر أسفل اللوح. البنية هي اللي بتقول الأهمية، مش الألوان الصارخة.
 
-.liv-note {
-  --lv-c: var(--accent); --lv-soft: var(--accent-soft);
-  position: relative; isolation: isolate; display: flex; gap: 12px;
-  padding: 14px 16px 18px; border-radius: 18px; overflow: hidden; cursor: pointer;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 90%, var(--lv-c)), var(--surface));
-  border: 1px solid var(--border-strong);
-  box-shadow: 0 1px 0 rgba(255,255,255,.055) inset, 0 20px 40px -24px rgba(0,0,0,.85);
-  backdrop-filter: blur(16px) saturate(1.25); -webkit-backdrop-filter: blur(16px) saturate(1.25);
-  animation: liv-drop .58s cubic-bezier(.22,1,.36,1) backwards;
-  transition: transform .28s cubic-bezier(.22,1,.36,1), border-color .28s ease, box-shadow .28s ease;
+   مفيش أي ضباب أو تمويه في أي عنصر.
+   الحركة كلها على المتحوّلات والشفافية فقط.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── أولاً: رموز الحركة والوراثات المطلوبة من أجزاء أخرى في الملف ── */
+:root{
+  --nt-in: 420ms cubic-bezier(.22,1,.36,1);
+  --nt-turn: 340ms cubic-bezier(.22,1,.36,1);
+  --nt-out: 220ms cubic-bezier(.4,0,.72,.2);
+  --nt-breathe: 3.2s;
+
+  --sp-soft: cubic-bezier(.22,1,.32,1);
+  --sp-snap: cubic-bezier(.2,1.06,.3,1);
+  --sp-drop: cubic-bezier(.16,1.06,.3,1);
+  --sp-iris: cubic-bezier(.24,1,.3,1);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
 }
-.liv-note.is-ai { --lv-c: var(--ai); --lv-soft: var(--ai-soft); }
-.liv-note.is-closing { animation: liv-lift .34s cubic-bezier(.55,0,.68,.19) both; pointer-events: none; }
-.liv-note:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--lv-c) 42%, var(--border-strong)); box-shadow: 0 1px 0 rgba(255,255,255,.07) inset, 0 30px 54px -26px rgba(0,0,0,.9), 0 0 40px -16px var(--lv-c); }
-.liv-note:active { transform: translateY(-1px) scale(.995); }
+@keyframes liv-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes liv-travel{ 0%{transform:translateY(-110%);opacity:0} 22%,78%{opacity:.85} 100%{transform:translateY(320%);opacity:0} }
+@keyframes liv-notza { from{opacity:0;transform:scale(.72)} to{opacity:1;transform:scale(1)} }
+@keyframes liv-pop   { from{opacity:0;transform:scale(.86)} to{opacity:1;transform:scale(1)} }
+@keyframes liv-rise  { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+@keyframes liv-halo  { 0%{box-shadow:0 0 0 0 rgba(0,0,0,.2)} 70%,100%{box-shadow:0 0 0 9px transparent} }
+@keyframes liv-draw  { to{ stroke-dashoffset:0 } }
+@keyframes liv-label { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@keyframes nt-rise   { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
 
-.liv-spine { position: absolute; inset-inline-start: 0; inset-block: 0; width: 3px; overflow: hidden; background: color-mix(in srgb, var(--lv-c) 20%, transparent); }
-.liv-spine::after { content:""; position:absolute; inset-inline: 0; top:0; height: 34%; border-radius: 999px; background: linear-gradient(180deg, transparent, var(--lv-c), transparent); box-shadow: 0 0 14px var(--lv-c); animation: liv-travel 2.6s cubic-bezier(.4,0,.6,1) infinite; }
+/* ── ثانياً: أيقونات أنواع الأحداث (تستخدمها LiveGlyph) ── */
+.liv-glyph{ width:19px; height:19px; display:block; }
+.liv-glyph *{ stroke-dasharray:1; stroke-dashoffset:1; animation: liv-draw 680ms cubic-bezier(.65,0,.35,1) 150ms both; }
+.liv-glyph-core{ animation: liv-pulse 2.8s ease-in-out infinite; }
 
-.liv-aura { position:absolute; inset:0; z-index:0; border-radius: inherit; pointer-events:none; background: radial-gradient(110% 90% at 6% 0%, var(--lv-soft), transparent 62%); animation: liv-glow 4.2s ease-in-out infinite; }
+/* ── ثالثاً: اللوح الأساسي ── */
+.sig-note{
+  --sig-c: var(--info);
+  --nt-side: left;
+  position:relative; isolation:isolate; overflow:hidden;
+  display:flex; align-items:center; gap:13px;
+  width:min(100%, 620px);
+  padding:12px 15px 13px 16px;
+  border-radius:11px;
+  cursor:pointer; outline:none;
+  background: var(--surface-2);
+  border:1px solid color-mix(in srgb, var(--sig-c) 28%, var(--border-strong));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 20px 40px -30px rgba(0,0,0,.92);
+  animation: nt-in var(--nt-in) backwards;
+  transition: transform var(--nt-turn), border-color var(--nt-turn),
+              box-shadow var(--nt-turn), background-color var(--nt-turn);
+}
+[dir="rtl"] .sig-note{ --nt-side: right; }
+:root[data-theme="light"] .sig-note{
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 34px -28px rgba(15,20,35,.34);
+}
+.sig-note--major{ width:min(100%, 640px); }
 
-.liv-beacon { position: relative; z-index:1; flex:none; width: 36px; height: 36px; border-radius: 13px; display:flex; align-items:center; justify-content:center; gap:3px; background: var(--lv-soft); border: 1px solid color-mix(in srgb, var(--lv-c) 30%, transparent); }
-.liv-beacon i { display:block; width: 3px; height: 15px; border-radius: 999px; background: var(--lv-c); box-shadow: 0 0 8px var(--lv-c); animation: liv-eq 1.15s ease-in-out infinite; }
-.liv-beacon i:nth-child(2) { height: 19px; animation-delay:.18s; }
-.liv-beacon i:nth-child(3) { animation-delay:.36s; }
+@keyframes nt-in{
+  0%  { opacity:0; transform: translateY(-11px) scale(.988); }
+  100%{ opacity:1; transform: translateY(0) scale(1); }
+}
+@keyframes nt-out{
+  0%  { opacity:1; transform: translateY(0) scale(1); }
+  100%{ opacity:0; transform: translateY(-7px) scale(.994); }
+}
 
-.liv-body { position: relative; z-index:1; min-width:0; flex:1 1 auto; }
-.liv-top { display:flex; align-items:center; gap:8px; }
-.liv-kicker { font-size:10px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; color: var(--lv-c); animation: liv-rise .45s cubic-bezier(.22,1,.36,1) .04s both; }
-.liv-kicker::before { content:""; display:inline-block; width:5px; height:5px; border-radius:999px; background: var(--lv-c); box-shadow:0 0 8px var(--lv-c); margin-inline-end:6px; vertical-align:middle; animation: liv-pulse 1.6s ease-in-out infinite; }
-.liv-actor { font-size:11.5px; font-weight:800; color: var(--ink-2); animation: liv-rise .45s cubic-bezier(.22,1,.36,1) .09s both; }
-.liv-x { margin-inline-start:auto; flex:none; width:26px; height:26px; border-radius:9px; display:grid; place-items:center; color: var(--faint); background: transparent; border:1px solid transparent; cursor:pointer; transition: color .2s, background .2s, border-color .2s, transform .3s cubic-bezier(.22,1,.36,1); }
-.liv-x:hover { color: var(--ink); background: var(--surface-hover); border-color: var(--border); transform: rotate(90deg); }
-.liv-act { margin: 8px 0 0; display:inline-block; padding: 4px 9px; border-radius:8px; font-size:11.5px; font-weight:800; color: var(--lv-c); background: var(--lv-soft); border:1px solid color-mix(in srgb, var(--lv-c) 28%, transparent); animation: liv-rise .45s cubic-bezier(.22,1,.36,1) .13s both; }
-.liv-details { margin: 8px 0 0; font-size:12.5px; font-weight:600; line-height:1.7; color: var(--ink-2); overflow-wrap:anywhere; animation: liv-rise .5s cubic-bezier(.22,1,.36,1) .18s both; }
-.liv-track { position:absolute; inset-inline: 16px; bottom:7px; height:3px; border-radius:999px; overflow:hidden; background: color-mix(in srgb, var(--lv-c) 16%, transparent); z-index:1; }
-.liv-fill { display:block; height:100%; width:100%; border-radius:999px; background: linear-gradient(90deg, var(--lv-c), color-mix(in srgb, var(--lv-c) 40%, transparent)); transform-origin: right; animation: liv-drain 9s linear forwards; }
-[dir="ltr"] .liv-fill { transform-origin: left; }
+/* الحاشية القائدة: شريط نبرة بيتنفّس ببطء */
+.sig-note::before{
+  content:""; position:absolute; inset-inline-start:0; inset-block:0; width:4px; z-index:3;
+  pointer-events:none;
+  background: var(--sig-c);
+  animation: nt-breathe var(--nt-breathe) ease-in-out infinite;
+}
+@keyframes nt-breathe{
+  0%,100%{ opacity:.62; }
+  50%    { opacity:1; }
+}
 
-/* ── ② تنبيهات الإجراءات — Prism Slab ───────────────────────────── */
-@keyframes apt-open  { 0% { opacity:0; transform: translateY(-18px) scale(.86); filter: blur(8px); } 55% { opacity:1; transform: translateY(3px) scale(1.012); filter: blur(0); } 100% { opacity:1; transform:none; filter: blur(0); } }
-@keyframes apt-shut  { 0% { opacity:1; transform:none; clip-path: inset(0 0 0 0 round 20px); } 100% { opacity:0; transform: translateY(-8px) scale(.94); clip-path: inset(46% 0 46% 0 round 20px); } }
-@keyframes apt-prism { 0% { transform: translateX(-130%); } 60%,100% { transform: translateX(130%); } }
-@keyframes apt-tick  { 0%,100% { opacity:.20; transform: scaleY(.55); } 50% { opacity:1; transform: scaleY(1); } }
-@keyframes apt-hex   { 0%,100% { filter: drop-shadow(0 0 4px var(--ap-c)); opacity:.9; } 50% { filter: drop-shadow(0 0 14px var(--ap-c)); opacity:1; } }
-@keyframes apt-draw  { to { stroke-dashoffset: 0; } }
+/* الحدّ العلوي المتدرّج: بصمة اللوح التقني */
+.sig-note{
+  background-image:
+    linear-gradient(to var(--nt-side), color-mix(in srgb, var(--sig-c) 70%, transparent), transparent 46%);
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: top var(--nt-side);
+}
 
-.apt-host { --ap-c: var(--ok); --ap-soft: var(--ok-soft); position: relative; width:100%; animation: apt-open .62s cubic-bezier(.22,1,.36,1) both; }
-.apt-host.is-leaving { animation: apt-shut .3s cubic-bezier(.6,0,.75,.25) both; pointer-events:none; }
-.apt-host.is-paused .apt-cells i { animation-play-state: paused; }
+/* لمعة واحدة تمرّ على السطح لحظة الوصول */
+.sig-note::after{
+  content:""; position:absolute; inset:0; border-radius:inherit; z-index:2;
+  pointer-events:none;
+  background: linear-gradient(102deg, transparent 40%, color-mix(in srgb, var(--sig-c) 20%, transparent) 50%, transparent 60%);
+  opacity:0;
+  animation: nt-sheen 880ms cubic-bezier(.3,0,.2,1) 150ms both;
+}
+@keyframes nt-sheen{
+  0%  { opacity:0; transform: translateX(-26%); }
+  24% { opacity:.85; }
+  100%{ opacity:0; transform: translateX(26%); }
+}
 
-.apt-slab { position: relative; display:flex; align-items:center; gap: 15px; padding: 16px 18px 26px; border-radius: 20px; overflow: hidden;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 86%, var(--ap-c)), var(--surface));
-  border: 1px solid color-mix(in srgb, var(--ap-c) 26%, var(--border-strong));
-  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 26px 50px -26px rgba(0,0,0,.9), 0 0 46px -20px var(--ap-c);
-  backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
-  transition: border-color .26s ease, box-shadow .26s ease; }
-.apt-host:hover .apt-slab { border-color: color-mix(in srgb, var(--ap-c) 55%, var(--border-strong)); }
+/* المرور: رفعة هادئة وحدّ أوضح */
+.sig-note:hover, .sig-note:focus-visible{
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--sig-c) 58%, var(--border-strong));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 26px 48px -28px rgba(0,0,0,.95);
+}
+.sig-note:active{ transform: translateY(-1px) scale(.997); }
 
-.apt-prism { position:absolute; top:0; inset-inline:0; height:3px; opacity:.9;
-  background: linear-gradient(90deg, transparent, var(--ap-c), color-mix(in srgb, var(--ap-c) 30%, #fff), var(--ap-c), transparent); }
-.apt-prism::after { content:""; position:absolute; top:0; bottom:0; width:38%; border-radius:999px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.95), transparent); animation: apt-prism 2.8s cubic-bezier(.4,0,.6,1) .35s infinite; }
+/* الإغلاق */
+.sig-note.is-closing{ animation: nt-out var(--nt-out) both; pointer-events:none; }
+.sig-note.is-closing::after{ animation:none; opacity:0; }
 
-.apt-hex { position:relative; flex:none; width:46px; height:46px; display:grid; place-items:center; color: var(--ap-c); }
-.apt-hex-bg { position:absolute; inset:0; width:46px; height:46px; }
-.apt-hex-glyph { position:relative; width:21px; height:21px; animation: apt-hex 2.6s ease-in-out infinite; }
-.apt-draw { stroke-dasharray: 46; stroke-dashoffset: 46; animation: apt-draw .6s cubic-bezier(.65,0,.35,1) .26s forwards; }
+/* أشكال النوع: البنية تتغيّر مع درجة الأهمية */
+.sig-shape-plate::before{
+  background: repeating-linear-gradient(180deg,
+    var(--sig-c) 0 6px, transparent 6px 11px);
+  animation:none; opacity:.9;
+}
+.sig-shape-frame::before{ width:6px; animation-duration:2.4s; }
+.sig-shape-frame{
+  border-color: color-mix(in srgb, var(--sig-c) 46%, var(--border-strong));
+}
+.sig-shape-seal::before{
+  inset-inline:16px; inset-block:auto; bottom:0; height:2px; width:auto;
+  opacity:.45; animation:none;
+}
 
-.apt-meter { flex:none; display:flex; flex-direction:column; gap:3px; padding-inline-end: 10px; border-inline-end: 1px solid var(--border); align-self: center; }
-.apt-meter i { display:block; width:3px; height:7px; border-radius:999px; background: var(--ap-c); animation: apt-tick 1.5s ease-in-out infinite; }
-.apt-meter i:nth-child(1) { animation-delay:0s; } .apt-meter i:nth-child(2) { animation-delay:.12s; }
-.apt-meter i:nth-child(3) { animation-delay:.24s; } .apt-meter i:nth-child(4) { animation-delay:.36s; } .apt-meter i:nth-child(5) { animation-delay:.48s; }
+/* ── رابعاً: بلاطة الأيقونة ── */
+.sig-seed{
+  position:relative; z-index:1; flex:none;
+  width:38px; height:38px; border-radius:10px;
+  display:grid; place-items:center; color:var(--sig-c);
+  background: color-mix(in srgb, var(--sig-c) 13%, transparent);
+  border:1px solid color-mix(in srgb, var(--sig-c) 30%, transparent);
+  animation: nt-rise 480ms var(--nt-in) 50ms backwards;
+}
+.sig-shape-frame .sig-seed{
+  width:42px; height:42px; border-radius:9px;
+  border-width:1.5px;
+  border-color: color-mix(in srgb, var(--sig-c) 52%, transparent);
+}
+.sig-shape-seal .sig-seed{ border-radius:50%; }
+.sig-shape-seal .sig-seed::after{
+  content:""; position:absolute; inset:-3px; border-radius:inherit; pointer-events:none;
+  background: conic-gradient(from -90deg, var(--sig-c) calc(var(--nt-p) * 1%), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.1px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.1px));
+  animation: nt-seal 560ms var(--nt-turn) 140ms both;
+}
+@property --nt-p{ syntax:'<number>'; inherits:false; initial-value:0 }
+@keyframes nt-seal{ from{ --nt-p:0 } 80%{ --nt-p:100 } to{ --nt-p:100 } }
 
-.apt-body { min-width:0; flex:1 1 auto; }
-.apt-meta { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-.apt-chip { font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color: var(--ap-c); padding:3px 8px; border-radius:7px; background: var(--ap-soft); border:1px solid color-mix(in srgb, var(--ap-c) 30%, transparent); }
-.apt-time { margin-inline-start:auto; font-size:10.5px; font-weight:700; color: var(--faint); font-variant-numeric: tabular-nums; }
-.apt-head { margin:0; font-size:15.5px; font-weight:800; line-height:1.55; color: var(--ink); white-space:pre-wrap; overflow-wrap:anywhere; animation: liv-rise .5s cubic-bezier(.22,1,.36,1) .10s both; }
-.apt-sub { margin:5px 0 0; font-size:13px; font-weight:600; line-height:1.7; color: var(--muted); white-space:pre-wrap; overflow-wrap:anywhere; animation: liv-rise .5s cubic-bezier(.22,1,.36,1) .16s both; }
+/* ── خامساً: النص ── */
+.sig-body{ position:relative; z-index:1; min-width:0; flex:1 1 auto; }
+.sig-top{ display:flex; align-items:center; gap:8px; }
+.sig-kicker{
+  font-size:9.5px; font-weight:900; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--sig-c);
+  animation: nt-rise 440ms var(--nt-in) 70ms backwards;
+}
+.sig-age{
+  margin-inline-start:auto; font-size:10.5px; font-weight:700; color:var(--faint);
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+  animation: nt-rise 440ms var(--nt-in) 110ms backwards;
+}
+.sig-x{
+  flex:none; width:27px; height:27px; border-radius:8px; display:grid; place-items:center;
+  color:var(--faint); background:transparent; border:0; cursor:pointer;
+  transition: color 170ms, background-color 170ms, transform 300ms cubic-bezier(.22,1,.36,1);
+}
+.sig-x:hover{ color:var(--ink); background: var(--surface-hover); transform: rotate(90deg); }
+.sig-act{
+  margin:4px 0 0; font-size:14.5px; font-weight:800; letter-spacing:-.01em; line-height:1.5;
+  color:var(--ink); overflow-wrap:anywhere;
+  animation: nt-rise 500ms var(--nt-in) 110ms backwards;
+}
+.sig-note--major .sig-act{ font-size:15px; }
+.sig-detail{
+  margin:4px 0 0; font-size:12px; font-weight:600; line-height:1.7;
+  color:var(--muted); overflow-wrap:anywhere;
+}
+.sig-actor{ font-size:12px; font-weight:800; color:var(--ink-2); }
+.sig-monogram{
+  display:inline-grid; place-items:center; min-width:20px; height:18px; padding:0 5px;
+  margin-inline-end:6px; border-radius:5px;
+  font-size:9.5px; font-weight:900; color:var(--sig-c);
+  background: color-mix(in srgb, var(--sig-c) 15%, transparent);
+}
 
-.apt-x { flex:none; width:32px; height:32px; border-radius:10px; display:grid; place-items:center; color: var(--faint); background: var(--surface-hover); border:1px solid var(--border); cursor:pointer; transition: color .2s, background .2s, transform .34s cubic-bezier(.22,1,.36,1); }
-.apt-x:hover { color: var(--ink); background: color-mix(in srgb, var(--ap-c) 14%, var(--surface-hover)); transform: rotate(90deg); }
+/* الطبقة اللي بتتوسّع وتنطوي لوحدها */
+.sig-more{
+  max-height:0; opacity:0; overflow:hidden;
+  transition: max-height var(--nt-turn), opacity var(--nt-turn);
+}
+.sig-note.is-open .sig-more{ max-height:150px; opacity:1; }
+.sig-more-row{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+.sig-note--live:not(.is-open) .sig-act{
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 
-.apt-cells { position:absolute; inset-inline: 18px; bottom:10px; height:4px; display:flex; gap:3px; z-index:2; }
-.apt-cells i { flex:1 1 0; border-radius:999px; background: var(--ap-c); opacity:.9; transform-origin: right; animation-name: liv-drain; animation-timing-function: linear; animation-fill-mode: forwards; }
-[dir="ltr"] .apt-cells i { transform-origin: left; }
+/* مؤشّر الأهمية: ثلاث شرطات أسفل الطرف الآخر */
+.sig-force{
+  position:absolute; inset-inline-end:15px; bottom:11px; z-index:3;
+  pointer-events:none; display:flex; align-items:flex-end; gap:3px;
+  transform-origin: var(--nt-side);
+}
+.sig-force i{
+  display:block; width:3px; border-radius:1.5px;
+  background: color-mix(in srgb, var(--sig-c) 22%, transparent);
+}
+.sig-force i:nth-child(1){ height:4px; }
+.sig-force i:nth-child(2){ height:7px; }
+.sig-force i:nth-child(3){ height:10px; }
+.sig-note--f0 .sig-force{ display:none; }
+.sig-note--f1 .sig-force i:nth-child(1),
+.sig-note--f2 .sig-force i:nth-child(-n+2),
+.sig-note--f3 .sig-force i{ background: var(--sig-c); }
 
-/* ── ③ نوافذ التأكيد — Aperture Dialog ─────────────────────────── */
-@keyframes apx-fade  { from { opacity:0; } to { opacity:1; } }
-@keyframes apx-in    { 0% { opacity:0; transform: translateY(14px) scale(.94); filter: blur(10px); } 62% { opacity:1; transform: translateY(-2px) scale(1.008); filter: blur(0); } 100% { opacity:1; transform:none; filter: blur(0); } }
-@keyframes apx-out   { 0% { opacity:1; transform:none; filter: blur(0); } 100% { opacity:0; transform: translateY(8px) scale(.96); filter: blur(8px); } }
-@keyframes apx-brk   { 0% { opacity:0; transform: scale(.55); } 65% { opacity:1; transform: scale(1.05); } 100% { opacity:.8; transform: scale(1); } }
-@keyframes apx-ring  { to { transform: rotate(360deg); } }
-@keyframes apx-throb { 0%,100% { opacity:.5; } 50% { opacity:1; } }
-@keyframes apx-sheen { 0% { transform: translateX(-130%); } 100% { transform: translateX(130%); } }
+/* خط العمر أسفل اللوح */
+.sig-thread{
+  position:absolute; inset-inline:0; bottom:0; height:2px; z-index:4;
+  background: var(--sig-c); opacity:.5;
+  transform-origin: var(--nt-side);
+  animation: nt-thread var(--sig-life, 6000ms) linear both;
+}
+@keyframes nt-thread{ from{ transform:scaleX(1) } to{ transform:scaleX(0) } }
 
-.apx-layer { position: fixed; inset: 0; z-index: 9998; display:grid; place-items:center; padding: 20px; }
-.apx-layer.is-leaving { animation: apx-out .24s cubic-bezier(.55,0,.68,.19) both; }
-.apx-scrim { position:absolute; inset:0; background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,.52), rgba(0,0,0,.84)); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); animation: apx-fade .3s ease both; }
+/* الوقفة عند المرور: كل الحركات بتتجمّد */
+.sig-note.is-paused .sig-thread{ animation-play-state: paused; }
+.sig-note.is-paused::before{ animation-play-state: paused; opacity:1; }
+.sig-note.is-paused{ border-color: color-mix(in srgb, var(--sig-c) 50%, var(--border-strong)); }
 
-.apx-panel { --apx-c: var(--accent); position: relative; width:100%; max-width: 470px; padding: 24px 24px 20px; border-radius: 24px; overflow: hidden;
-  background: linear-gradient(180deg, var(--surface-2), var(--surface));
-  border: 1px solid var(--border-strong);
-  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 40px 90px -30px rgba(0,0,0,.95), 0 0 60px -30px var(--apx-c);
-  animation: apx-in .52s cubic-bezier(.22,1,.36,1) both; }
-.apx-calm  .apx-panel { --apx-c: var(--ok); }
-.apx-danger .apx-panel { --apx-c: var(--accent); }
-.apx-panel::before { content:""; position:absolute; inset-inline:0; top:0; height:3px; background: linear-gradient(90deg, transparent, var(--apx-c), transparent); }
-.apx-panel::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow: inset 0 0 70px -34px var(--apx-c); }
-.apx-danger .apx-panel::after { animation: apx-throb 3.4s ease-in-out infinite; }
+/* ── سادساً: النبرات ── */
+.sig-tone-info   { --sig-c: var(--info); }
+.sig-tone-accent { --sig-c: var(--accent); }
+.sig-tone-warn   { --sig-c: var(--warn); }
+.sig-tone-ok     { --sig-c: var(--ok); }
+.sig-tone-data   { --sig-c: var(--data); }
+.sig-tone-ai     { --sig-c: var(--ai); }
+.sig-tone-danger { --sig-c: var(--accent); }
+.sig-tone-export { --sig-c: #0ea5e9; }
+.sig-tone-purge  { --sig-c: var(--accent); }
 
-.apx-bracket { position:absolute; width:18px; height:18px; opacity:0; border:0 solid color-mix(in srgb, var(--apx-c) 62%, transparent); animation: apx-brk .5s cubic-bezier(.2,1.4,.4,1) both; }
-.apx-b1 { top:11px; inset-inline-start:11px; border-top-width:2px; border-inline-start-width:2px; border-start-start-radius:9px; animation-delay:.06s; }
-.apx-b2 { top:11px; inset-inline-end:11px;   border-top-width:2px; border-inline-end-width:2px;   border-start-end-radius:9px;   animation-delay:.12s; }
-.apx-b3 { bottom:11px; inset-inline-start:11px; border-bottom-width:2px; border-inline-start-width:2px; border-end-start-radius:9px; animation-delay:.18s; }
-.apx-b4 { bottom:11px; inset-inline-end:11px;   border-bottom-width:2px; border-inline-end-width:2px;   border-end-end-radius:9px;   animation-delay:.24s; }
+/* ── سابعاً: الرصيف العلوي اللي بتظهر فيه كل الإشارات ── */
+.sig-loom, .sig-dock-layer{
+  position:fixed; top:12px; inset-inline:0; z-index:9999; pointer-events:none;
+  display:flex; flex-direction:column; align-items:center; gap:9px;
+  padding-inline:14px;
+}
+@media (max-width:640px){
+  .sig-loom, .sig-dock-layer{ top:8px; padding-inline:10px; gap:8px; }
+  .sig-note{ width:100%; padding:12px 14px 14px 15px; }
+  .sig-note--major{ width:100%; }
+}
+.sig-loom > .sig-note, .sig-dock-layer > .sig-note{ pointer-events:auto; flex:none; }
+.contents{ display: contents; }
 
-.apx-head { display:flex; align-items:center; gap:12px; }
-.apx-mark { position:relative; width:46px; height:46px; flex:none; display:grid; place-items:center; color: var(--apx-c);
-  background: color-mix(in srgb, var(--apx-c) 12%, transparent); border:1px solid color-mix(in srgb, var(--apx-c) 25%, transparent); border-radius:999px; }
-.apx-mark::before { content:""; position:absolute; inset:-5px; border-radius:999px; border:1.5px dashed color-mix(in srgb, var(--apx-c) 45%, transparent); animation: apx-ring 10s linear infinite; }
-.apx-title { flex:1 1 auto; min-width:0; margin:0; font-size:17px; font-weight:900; letter-spacing:-.01em; color: var(--ink); }
-.apx-msg { margin:12px 0 0; font-size:13.5px; font-weight:600; line-height:1.85; color: var(--ink-2); overflow-wrap:anywhere; }
+.sig-tally{
+  align-self:center; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+  padding:7px 14px; border-radius:9px; font-size:11.5px; font-weight:900;
+  color:var(--ink-2); background: var(--surface-3);
+  border:1px solid var(--border-strong);
+  animation: nt-rise 460ms var(--nt-in) backwards;
+  transition: transform 260ms cubic-bezier(.22,1,.36,1), color 170ms, border-color 170ms;
+}
+.sig-tally-n{
+  display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 5px;
+  border-radius:5px; font-size:11px; font-weight:900;
+  color:var(--accent); background: var(--accent-soft);
+}
+.sig-tally:hover{
+  transform:translateY(-1.5px); color:var(--ink);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border-strong));
+}
+.sig-dismiss-all{
+  align-self:center; display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  padding:6px 13px; border-radius:9px; font-size:11px; font-weight:900;
+  color:var(--muted); background: var(--surface-3); border:1px solid var(--border);
+  transition: transform 260ms cubic-bezier(.22,1,.36,1), color 170ms, border-color 170ms;
+}
+.sig-dismiss-all:hover{ color:var(--ink); border-color:var(--border-strong); transform:translateY(-1.5px); }
 
-.apx-actions { display:flex; gap:10px; margin-top:20px; }
-.apx-btn { position:relative; overflow:hidden; flex:1 1 0; padding:12px 16px; border-radius:14px; font-size:13.5px; font-weight:800; cursor:pointer; border:1px solid transparent;
-  transition: transform .22s cubic-bezier(.22,1,.36,1), background-color .22s, border-color .22s, box-shadow .22s, filter .22s; }
-.apx-btn:active { transform: scale(.975); }
-.apx-btn-ghost { color: var(--ink-2); background: var(--surface-3); border-color: var(--border); }
-.apx-btn-ghost:hover { background: var(--surface-4); color: var(--ink); }
-.apx-btn-main { color:#fff; background: linear-gradient(180deg, color-mix(in srgb, var(--apx-c) 90%, #fff), var(--apx-c)); box-shadow: 0 12px 32px -12px color-mix(in srgb, var(--apx-c) 65%, transparent); }
-.apx-btn-main:hover { filter: brightness(1.08); }
-.apx-btn-main::after { content:""; position:absolute; top:0; bottom:0; width:45%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent); transform: translateX(-130%); }
-.apx-btn-main:hover::after { animation: apx-sheen .85s cubic-bezier(.3,0,.2,1); }
-.apx-btn:disabled { opacity:.45; cursor:not-allowed; filter: grayscale(.35); }
+/* ── ثامناً: لوح التأكيد ── */
+.sig-veil-layer{
+  position:fixed; inset:0; z-index:9998; pointer-events:none;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:12px 14px 24px;
+}
+@media (max-width:640px){ .sig-veil-layer{ padding:8px 10px 20px; } }
+.sig-veil{
+  position:absolute; inset:0; pointer-events:auto;
+  background: rgba(0,0,0,.45);
+  animation: nt-fade 240ms ease-out both;
+}
+@keyframes nt-fade{ from{opacity:0} to{opacity:1} }
+.sig-veil-layer.is-leaving .sig-veil{ animation: nt-fade 160ms ease-in reverse both; }
 
-.apx-code { width:100%; margin-top:14px; padding:12px 14px; text-align:center; letter-spacing:.4em; font-size:14px; font-weight:800; color: var(--ink); background: var(--surface-3); border:1px solid var(--border); border-radius:14px; outline:none; transition: border-color .2s, box-shadow .2s; }
-.apx-code:focus { border-color: color-mix(in srgb, var(--apx-c) 55%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--apx-c) 18%, transparent); }
+.sig-dock{
+  --sig-c: var(--accent);
+  position:relative; z-index:1; pointer-events:auto; outline:none;
+  width:100%; max-width:530px; border-radius:14px; overflow:hidden;
+  background: var(--surface-2);
+  background-image:
+    linear-gradient(to left, color-mix(in srgb, var(--sig-c) 70%, transparent), transparent 46%);
+  background-repeat:no-repeat;
+  background-size:100% 1px;
+  border:1px solid color-mix(in srgb, var(--sig-c) 42%, var(--border-strong));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 34px 74px -36px rgba(0,0,0,.94);
+  animation: nt-unroll var(--nt-in) backwards;
+}
+:root[data-theme="light"] .sig-dock{
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 30px 60px -38px rgba(15,20,35,.36);
+}
+@keyframes nt-unroll{
+  0%  { opacity:0; clip-path: inset(0 0 22% 0 round 14px); transform: translateY(-16px) scale(.99); }
+  100%{ opacity:1; clip-path: inset(0 0 0 0 round 14px); transform: translateY(0) scale(1); }
+}
+.sig-veil-layer.is-leaving .sig-dock{ animation: nt-out var(--nt-out) both; }
 
-@media (prefers-reduced-motion: reduce) {
-  .liv-note, .liv-note.is-closing, .liv-spine::after, .liv-beacon i, .liv-kicker::before, .liv-aura, .liv-fill,
-  .liv-kicker, .liv-actor, .liv-act, .liv-details,
-  .apt-host, .apt-host.is-leaving, .apt-prism::after, .apt-meter i, .apt-hex-glyph, .apt-draw, .apt-head, .apt-sub, .apt-cells i,
-  .apx-layer, .apx-scrim, .apx-panel, .apx-bracket, .apx-mark::before, .apx-btn-main::after, .apx-danger .apx-panel::after {
-    animation: none !important; transition: none !important;
+.sig-dock-spine{
+  position:absolute; inset-inline-start:0; inset-block:0; width:4px; z-index:3;
+  background: var(--sig-c);
+  animation: nt-breathe var(--nt-breathe) ease-in-out infinite;
+}
+.sig-dock-head{ display:flex; align-items:center; gap:13px; padding:19px 19px 0 20px; }
+.sig-dock-mark{
+  position:relative; flex:none; width:42px; height:42px; border-radius:11px;
+  display:grid; place-items:center; color:var(--sig-c);
+  background: color-mix(in srgb, var(--sig-c) 13%, transparent);
+  border:1px solid color-mix(in srgb, var(--sig-c) 30%, transparent);
+  animation: nt-rise 480ms var(--nt-in) 60ms backwards;
+}
+.sig-dock-mark svg{ width:20px; height:20px; }
+.sig-dock-kicker{
+  display:block; font-size:9.5px; font-weight:900; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--sig-c);
+  animation: nt-rise 440ms var(--nt-in) 100ms backwards;
+}
+.sig-dock-title{
+  margin:2px 0 0; font-size:16.5px; font-weight:900; letter-spacing:-.012em;
+  line-height:1.45; color:var(--ink);
+  animation: nt-rise 480ms var(--nt-in) 120ms backwards;
+}
+.sig-dock-msg{
+  position:relative; margin:14px 19px 0 20px; padding:13px 15px; border-radius:10px;
+  font-size:13px; font-weight:600; line-height:1.9; color:var(--ink-2);
+  overflow-wrap:anywhere;
+  background: var(--surface-3); border:1px solid var(--border);
+  animation: nt-rise 500ms var(--nt-in) 150ms backwards;
+}
+.sig-dock > :not(.sig-dock-head):not(.sig-dock-actions):not(.sig-dock-spine){ margin-inline:20px; }
+.sig-dock-actions{
+  display:flex; gap:10px; margin-top:17px; padding:14px 19px 16px 20px;
+  background: var(--surface-3);
+  border-top:1px solid var(--border);
+}
+
+.sig-btn{
+  flex:1 1 0; min-height:44px; padding:11px 18px; border-radius:10px;
+  font-family:inherit; font-size:13.5px; font-weight:900; cursor:pointer;
+  border:1px solid transparent;
+  transition: background-color 190ms, border-color 190ms, filter 190ms,
+              transform 170ms cubic-bezier(.22,1,.36,1), box-shadow 190ms;
+}
+.sig-btn:active{ transform: scale(.98); }
+.sig-btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--sig-c) 30%, transparent); }
+.sig-btn-ghost{ color:var(--ink-2); background: var(--surface-4); border-color: var(--border); }
+.sig-btn-ghost:hover{ background: var(--surface-hover); color: var(--ink); }
+.sig-btn-main{
+  color:#fff; background: var(--sig-c);
+  box-shadow: 0 12px 26px -15px color-mix(in srgb, var(--sig-c) 70%, transparent);
+}
+.sig-btn-main:hover{ filter:brightness(1.1); transform:translateY(-1.5px); }
+.sig-btn:disabled{ opacity:.45; cursor:not-allowed; }
+@keyframes nt-spin{ to{ transform: rotate(360deg) } }
+.sig-working{ display:inline-flex; align-items:center; gap:8px; }
+.sig-spin{
+  flex:none; width:11px; height:11px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.35); border-top-color:#fff;
+  animation: nt-spin .7s linear infinite;
+}
+
+.sig-slot{
+  width:calc(100% - 39px); margin-top:13px; padding:14px; text-align:center;
+  letter-spacing:.5em; font-size:15px; font-weight:900; color:var(--ink);
+  font-variant-numeric:tabular-nums;
+  background: var(--surface-3);
+  border:1px dashed color-mix(in srgb, var(--sig-c) 42%, var(--border-strong));
+  border-radius:10px; outline:none;
+  transition: border-color 190ms, box-shadow 190ms, background-color 190ms;
+}
+.sig-slot::placeholder{ letter-spacing:0; font-size:12px; font-weight:700; color:var(--faint); }
+.sig-slot:focus{
+  border-style:solid;
+  border-color: color-mix(in srgb, var(--sig-c) 62%, transparent);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sig-c) 14%, transparent);
+}
+
+.sig-choice-grid{ display:grid; gap:9px; margin-top:15px; }
+.sig-choice-card{
+  display:flex; align-items:center; gap:12px; text-align:start; cursor:pointer;
+  padding:13px 14px; border-radius:10px; font-family:inherit;
+  background: var(--surface-3); border:1px solid var(--border);
+  transition: transform 260ms cubic-bezier(.22,1,.36,1), border-color 190ms,
+              background-color 190ms, box-shadow 260ms;
+}
+.sig-choice-card:hover{
+  transform:translateY(-2px); background: var(--surface-4);
+  border-color: color-mix(in srgb, var(--info) 48%, var(--border-strong));
+  box-shadow: 0 18px 34px -26px rgba(0,0,0,.9);
+}
+.sig-choice-card:focus-visible{ outline:none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--info) 26%, transparent); }
+.sig-choice-icon{
+  flex:none; width:38px; height:38px; border-radius:9px;
+  display:grid; place-items:center; color:var(--info);
+  background: var(--info-soft);
+  border:1px solid color-mix(in srgb, var(--info) 28%, transparent);
+}
+.sig-choice-title{ display:block; font-size:13.5px; font-weight:900; color:var(--ink); }
+.sig-choice-desc{ display:block; margin-top:2px; font-size:11.5px; font-weight:600; line-height:1.6; color:var(--muted); }
+.sig-choice-badge{
+  flex:none; margin-inline-start:auto; padding:3px 9px; border-radius:6px;
+  font-size:9.5px; font-weight:900; color:var(--info);
+  background: var(--info-soft);
+  border:1px solid color-mix(in srgb, var(--info) 30%, transparent);
+}
+.sig-choice-badge--subtle{ color:var(--muted-2); background: var(--surface-hover); border-color: var(--border); }
+
+/* ── تاسعاً: الحقول الإلزامية ── */
+.sig-req{ position:relative; }
+.sig-req.is-open{ padding-inline-start:11px; }
+.sig-req.is-open::before{
+  content:""; position:absolute; inset-inline-start:0; top:4px; bottom:0; width:3px;
+  border-radius:2px; background: var(--accent);
+  animation: nt-rise 380ms var(--nt-in) backwards;
+}
+.sig-req-head{
+  display:flex; align-items:center; gap:6px; padding-inline:3px;
+  font-size:12px; font-weight:800; color: var(--muted);
+  transition: color 200ms;
+}
+.sig-req.is-open .sig-req-head{ color: var(--accent); }
+.sig-req-needle{
+  flex:none; width:11px; height:11px; color:var(--accent);
+  animation: nt-rise 380ms var(--nt-in) backwards;
+}
+.sig-req-flag{
+  display:inline-flex; align-items:center; margin-inline-start:4px; padding:2px 8px;
+  border-radius:5px; font-size:9.5px; font-weight:900; color: var(--accent);
+  background: var(--accent-soft);
+  border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.sig-req-star{ color: var(--accent); font-size:13px; line-height:1; }
+.sig-req.is-open > .field{
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+/* ── عاشراً: تحذير الوردية ── */
+.wsw-card{
+  --wsw-c: var(--warn);
+  position:relative; overflow:hidden; display:flex; flex-wrap:wrap;
+  align-items:center; gap:14px;
+  padding:14px 16px; border-radius:12px;
+  background: var(--surface-2);
+  background-image: linear-gradient(to left, color-mix(in srgb, var(--wsw-c) 70%, transparent), transparent 46%);
+  background-repeat:no-repeat; background-size:100% 1px;
+  border:1px solid color-mix(in srgb, var(--wsw-c) 42%, var(--border-strong));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 20px 40px -30px rgba(0,0,0,.92);
+  animation: nt-in var(--nt-in) backwards;
+}
+.wsw-card::before{
+  content:""; position:absolute; inset-inline-start:0; inset-block:9px; width:4px;
+  border-radius:2px;
+  background: repeating-linear-gradient(180deg, var(--wsw-c) 0 6px, transparent 6px 11px);
+  animation: nt-breathe var(--nt-breathe) ease-in-out infinite;
+}
+.wsw-rail{ display:none; }
+.wsw-mark{
+  position:relative; z-index:1; flex:none; width:38px; height:38px; border-radius:10px;
+  display:grid; place-items:center; color:var(--wsw-c);
+  background: color-mix(in srgb, var(--wsw-c) 13%, transparent);
+  border:1px solid color-mix(in srgb, var(--wsw-c) 32%, transparent);
+}
+.wsw-mark svg{ width:20px; height:20px; }
+.wsw-body{ position:relative; z-index:1; min-width:0; flex:1 1 auto; }
+.wsw-title{
+  margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  font-size:13px; font-weight:900; color:var(--wsw-c);
+}
+.wsw-tag{
+  padding:2px 8px; border-radius:5px; font-size:9.5px; font-weight:900;
+  background: color-mix(in srgb, var(--wsw-c) 16%, transparent);
+  border:1px solid color-mix(in srgb, var(--wsw-c) 34%, transparent);
+}
+.wsw-sub{ margin:4px 0 0; font-size:11.5px; font-weight:600; line-height:1.7; color:var(--muted); }
+.wsw-cta{
+  position:relative; z-index:1; flex:none; display:inline-flex; align-items:center; gap:7px;
+  padding:9px 14px; border-radius:9px; font-size:12.5px; font-weight:900;
+  color:#241803; cursor:pointer;
+  background: var(--wsw-c);
+  border:1px solid color-mix(in srgb, var(--wsw-c) 62%, #000);
+  box-shadow: 0 12px 26px -18px color-mix(in srgb, var(--wsw-c) 70%, transparent);
+  transition: transform 260ms cubic-bezier(.22,1,.36,1), filter 190ms;
+}
+.wsw-cta:hover{ transform:translateY(-1.5px); filter:brightness(1.08); }
+.wsw-cta:active{ transform:scale(.98); }
+.wsw-cta:focus-visible{ outline:none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--wsw-c) 32%, transparent); }
+.wsw-draw{ stroke-dasharray:60; stroke-dashoffset:0; }
+.wsw-dot{ animation: liv-pulse 1.4s ease-in-out infinite; }
+.ops-chip-warn{ --wsw-c: var(--warn); }
+.ops-chip-warn-icon{ flex:none; color: var(--warn); }
+
+/* ── حادي عشر: تنظيف ── */
+.toast-stack-chip, .toast-close-all{ display:none !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   طبقة الحياة + شبكة الأمان + احترام تقليل الحركة
+   كل كود الإشعارات الجديد بعد آخر تعديل، في مكان واحد.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── السطح: تدرّج أعمق بدل اللون المسطح ── */
+.sig-note{
+  border-radius:13px;
+  background:
+    radial-gradient(135% 250% at 100% 0%, color-mix(in srgb, var(--sig-c) 17%, transparent), transparent 58%),
+    linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,0) 54%),
+    var(--surface-2);
+  animation: nt-in var(--nt-in) backwards, nt-glow 5s ease-in-out 700ms infinite;
+}
+:root[data-theme="light"] .sig-note{
+  background:
+    radial-gradient(135% 250% at 100% 0%, color-mix(in srgb, var(--sig-c) 12%, transparent), transparent 58%),
+    linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,0) 54%),
+    var(--surface);
+  animation: nt-in var(--nt-in) backwards, nt-glow-light 5s ease-in-out 700ms infinite;
+}
+
+/* ── التنفّس: الهالة بتفتح وتقفل ── */
+@keyframes nt-glow{
+  0%,100%{
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 20px 40px -30px rgba(0,0,0,.92);
   }
-  .liv-kicker, .liv-actor, .liv-act, .liv-details, .apt-head, .apt-sub { opacity:1 !important; transform:none !important; filter:none !important; }
-  .apx-bracket { opacity:.8 !important; transform:none !important; }
+  50%{
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12),
+                0 24px 48px -28px rgba(0,0,0,.92),
+                0 0 44px -12px color-mix(in srgb, var(--sig-c) 60%, transparent);
+  }
+}
+@keyframes nt-glow-light{
+  0%,100%{
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 18px 34px -28px rgba(15,20,35,.34);
+  }
+  50%{
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.95),
+                0 22px 40px -26px rgba(15,20,35,.34),
+                0 0 36px -12px color-mix(in srgb, var(--sig-c) 45%, transparent);
+  }
+}
+
+/* ── الحاشية: نور ماشي عليها + بتفتح وتقفل ── */
+.sig-note::before{
+  width:4px;
+  background:
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--sig-c) 92%, #fff), transparent) 0 -40% / 100% 34% no-repeat,
+    var(--sig-c);
+  animation: nt-bar-breathe var(--nt-breathe) ease-in-out infinite,
+             nt-bar-flow 3.4s cubic-bezier(.45,0,.55,1) 400ms infinite;
+}
+@keyframes nt-bar-breathe{ 0%,100%{ opacity:.62 } 50%{ opacity:1 } }
+@keyframes nt-bar-flow{ 0%{ background-position: 0 -40% } 100%{ background-position: 0 140% } }
+
+/* ── أشكال النوع: لازم تتكتب بعد القاعدة اللي فوق عشان تفضل شغالة ── */
+.sig-shape-plate::before{
+  width:4px; opacity:.92;
+  background: repeating-linear-gradient(180deg, var(--sig-c) 0 6px, transparent 6px 11px);
+  animation: nt-bar-breathe var(--nt-breathe) ease-in-out infinite;
+}
+.sig-shape-frame::before{
+  width:7px; opacity:1;
+  background:
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--sig-c) 92%, #fff), transparent) 0 -40% / 100% 30% no-repeat,
+    var(--sig-c);
+  animation: nt-bar-breathe 2.4s ease-in-out infinite,
+             nt-bar-flow 2.2s cubic-bezier(.45,0,.55,1) 200ms infinite;
+}
+.sig-shape-seal::before{
+  inset-inline:16px; inset-block:auto; bottom:0; height:2px; width:auto; opacity:.55;
+  background: var(--sig-c);
+  animation: none;
+}
+
+/* ── اللمعة: أقوى لحظة الوصول، وبتتكرر عند المرور ── */
+.sig-note::after{
+  background: linear-gradient(102deg, transparent 34%, color-mix(in srgb, var(--sig-c) 30%, transparent) 50%, transparent 66%);
+  animation: nt-sheen 1100ms cubic-bezier(.3,0,.2,1) 130ms both;
+}
+@keyframes nt-sheen{
+  0%  { opacity:0; transform: translateX(-34%); }
+  20% { opacity:1; }
+  100%{ opacity:0; transform: translateX(34%); }
+}
+
+/* ── بلاطة الأيقونة: هالة بتكبر وتصغر ── */
+.sig-seed::before{
+  content:""; position:absolute; inset:-7px; border-radius:inherit;
+  pointer-events:none; z-index:-1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--sig-c) 48%, transparent), transparent 74%);
+  animation: nt-aura 2.8s ease-in-out infinite;
+}
+@keyframes nt-aura{
+  0%,100%{ opacity:.22; transform: scale(.9); }
+  50%    { opacity:.95; transform: scale(1.1); }
+}
+
+/* ── المرور ── */
+.sig-note:hover, .sig-note:focus-visible{
+  transform: translateY(-4px) scale(1.004);
+  border-color: color-mix(in srgb, var(--sig-c) 62%, var(--border-strong));
+}
+.sig-note:hover::after, .sig-note:focus-visible::after{
+  animation: nt-sheen 900ms cubic-bezier(.3,0,.2,1);
+}
+
+/* ── لحظة فتح التفاصيل ── */
+.sig-note.is-open{
+  border-color: color-mix(in srgb, var(--sig-c) 46%, var(--border-strong));
+}
+.sig-note.is-open .sig-more{
+  transition: max-height 420ms cubic-bezier(.22,1,.36,1), opacity 260ms ease;
+}
+.sig-more > div{ animation: nt-rise 460ms cubic-bezier(.22,1,.36,1) both; }
+
+/* ── لوح التأكيد: نفس الحياة ── */
+.sig-dock{
+  border-radius:16px;
+  background:
+    radial-gradient(150% 140% at 100% 0%, color-mix(in srgb, var(--sig-c) 15%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 42%),
+    var(--surface-2);
+  animation: nt-unroll var(--nt-in) backwards, nt-glow 5.4s ease-in-out 900ms infinite;
+}
+:root[data-theme="light"] .sig-dock{
+  background:
+    radial-gradient(150% 140% at 100% 0%, color-mix(in srgb, var(--sig-c) 11%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,0) 42%),
+    var(--surface);
+  animation: nt-unroll var(--nt-in) backwards, nt-glow-light 5.4s ease-in-out 900ms infinite;
+}
+.sig-dock-spine{
+  width:4px;
+  background:
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--sig-c) 92%, #fff), transparent) 0 -40% / 100% 34% no-repeat,
+    var(--sig-c);
+  animation: nt-bar-breathe var(--nt-breathe) ease-in-out infinite,
+             nt-bar-flow 3.4s cubic-bezier(.45,0,.55,1) 300ms infinite;
+}
+.sig-dock-mark::before{
+  content:""; position:absolute; inset:-7px; border-radius:inherit;
+  pointer-events:none; z-index:-1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--sig-c) 48%, transparent), transparent 74%);
+  animation: nt-aura 3s ease-in-out infinite;
+}
+
+/* ── الوقوف على اللوح: كل الحركة تتجمّد ── */
+.sig-note.is-paused, .sig-note.is-paused::before, .sig-note.is-paused::after,
+.sig-note.is-paused .sig-seed::before{
+  animation-play-state: paused;
+}
+
+/* ── شبكة أمان: لا ضباب في أي عنصر من عناصر الإشعارات ── */
+.sig-note, .sig-note *, .sig-dock, .sig-dock *, .sig-veil,
+.sig-tally, .sig-dismiss-all, .wsw-card, .wsw-card *{
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ── احترام تقليل الحركة ── */
+@media (prefers-reduced-motion: reduce){
+  .sig-note, .sig-note *, .sig-note::before, .sig-note::after,
+  .sig-dock, .sig-dock *, .sig-dock-spine, .sig-veil,
+  .sig-tally, .sig-dismiss-all, .sig-req::before, .sig-choice-card,
+  .wsw-card, .wsw-card::before, .liv-glyph *,
+  .sig-seed, .sig-seed::before, .sig-dock-mark, .sig-dock-mark::before, .sig-thread{
+    animation: none !important;
+    transition: none !important;
+  }
+  .sig-note::after{ opacity:0 !important; }
+  .sig-seed::before, .sig-dock-mark::before{ opacity:.3 !important; }
+  .sig-more{ max-height:200px !important; opacity:1 !important; }
+  .sig-note, .sig-note *, .sig-dock, .sig-dock *{ opacity:1 !important; }
+  .sig-note, .sig-dock{ transform:none !important; clip-path:none !important; }
+  .sig-thread{ transform:none !important; opacity:.35 !important; }
+  .sig-shape-seal .sig-seed::after{ --nt-p:100 !important; }
 }

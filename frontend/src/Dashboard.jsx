@@ -39,6 +39,22 @@ import {
   saveWeatherPending,
 } from './outbox';
 
+// 🔔 محرّك الإشعارات اللحظية: نبرة/أيقونة/تسمية/عمر كل نوع حدث + ساعة الوقفة
+//    المنطق كله في frontend/src/liveToast.js (نقي ومختبَر في src/__tests__/liveToast.test.js)
+import {
+  notifyVisual,
+  notifyLabel,
+  formatEventAge,
+  pauseToastClock,
+  resumeToastClock,
+  shouldExpireToast,
+  shouldPurgeToast,
+  logicalEventKey,
+  shouldSuppressDuplicate,
+  rememberEventKey,
+  initialsFrom,
+} from './liveToast';
+
 // 🗓️ اليوم اللي المهمة تظهر فيه بعد الإنهاء = closed_at من السيرفر (وقت الإغلاق الفعلي)
 // مع fallback للبيانات القديمة على completion_date، وحماية لو أقدم من الإنشاء.
 const missionClosedDay = (m) => {
@@ -1488,12 +1504,20 @@ useEffect(() => {
   // - dismissToast/closeAllToasts تضيف حالة closing فتلعب أنيميشن الخروج ثم يحذفه عدّاد
   //   التنظيف المركزي بعد TOAST_EXIT_MS — لا timers متضاربة، لا تكرار عمليات حذف.
   const MAX_VISIBLE_TOASTS = 1;
-  const TOAST_LIFETIME_MS = 9000;
-  const TOAST_EXIT_MS = 320;
+  const TOAST_LIFETIME_MS = 6000;
+  // أنيميشن الخروج: انقضاء طبيعي 0.34s (liv-out) · إغلاق يدوي 0.4s (liv-roll)
+  // الحذف النهائي بعد 420ms حتى تكتمل الحركة بلا قطع
+  const TOAST_EXIT_MS = 260;
 
-  const dismissToast = (id) => {
-    setToasts(prev => prev.map(t => t.id === id ? { ...t, closing: true, closingAt: Date.now() } : t));
+  // reason: 'user' (إغلاق بإيد المستخدم ⇒ خروج سريع حاسم) أو 'timeout' (انقضاء طبيعي ⇒ انزلاق ناعم)
+  const dismissToast = (id, reason = 'user') => {
+    setToasts(prev => prev.map(t => t.id === id ? { ...t, closing: true, closingAt: Date.now(), exit: reason } : t));
   };
+
+  // ⏸️ وقفة حقيقية عند مرور الماوس: نُخزّن اللحظة، والعدّاد المركزي يتخطّى الموقوف،
+  //    وعند الرجوع نُزيح shownAt بمقدار الوقفة ⇒ الوقت المتبقي لا ينقص أبدًا.
+  const pauseToast = (id) => setToasts(prev => prev.map(t => (t.id === id ? pauseToastClock(t) : t)));
+  const resumeToast = (id) => setToasts(prev => prev.map(t => (t.id === id ? resumeToastClock(t) : t)));
 
   const closeAllToasts = () => {
     setToasts(prev => prev.map(t => t.closing ? t : { ...t, closing: true, closingAt: Date.now() }));
@@ -1520,13 +1544,14 @@ useEffect(() => {
         let mutated = false;
         const next = [];
         for (const t of prev) {
-          if (t.closing) {
-            // انتهاء أنيميشن الخروج → حذف نهائي (لا نفتح عدّاد 9 ثوانٍ جديد على المغلق)
-            if (now - (t.closingAt ?? 0) >= TOAST_EXIT_MS) { mutated = true; continue; }
-            next.push(t);
+          // انتهاء أنيميشن الخروج → حذف نهائي (لا نفتح عدّاد 9 ثوانٍ جديد على المغلق)
+          if (shouldPurgeToast(t, now, TOAST_EXIT_MS)) { mutated = true; continue; }
+          // انقضاء العمر (لا يحدث أبدًا وهو موقوف بالماوس)
+          if (shouldExpireToast(t, now, TOAST_LIFETIME_MS)) {
+            mutated = true;
+            next.push({ ...t, closing: true, closingAt: now, exit: 'timeout' });
             continue;
           }
-          if (t.shownAt && now - t.shownAt >= TOAST_LIFETIME_MS) { mutated = true; next.push({ ...t, closing: true, closingAt: now }); continue; }
           next.push(t);
         }
         return mutated ? next : prev;
@@ -1689,7 +1714,8 @@ useEffect(() => {
   }, [serverHealth.blocking]);
   const lastEventIdRef = useRef(null);        // watermark تصاعدي
   const seenEventIdsRef = useRef(new Set());  // حماية من أي تكرار أثناء إعادة المحاولة
-  const recentFpRef = useRef({});             // 🛡️ بصمة الحدث — تمنع الإشعار المكرر لو السيرفر سجّل نفس الحدث مرتين
+  // 🛡️ خريطة «الأحداث المنطقية اللي اتعرّضت» — تمنع الإشعار المكرر (نفس الحركة بمعرّفين مختلفين)
+  const recentKeysRef = useRef(new Map());
   const pollInFlightRef = useRef(false);      // لا تداخل بين الطلبات
   const pollBackoffRef = useRef(4000);        // backoff لإعادة الاتصال
   const realtimeUnmountedRef = useRef(false);
@@ -1709,20 +1735,15 @@ useEffect(() => {
       if (seenEventIdsRef.current.has(e.event_id)) return;
       seenEventIdsRef.current.add(e.event_id);
 
-      // 🛡️ نفس الفعل بنفس الفاعل خلال 8 ثوانٍ ⇒ السيرفر كرّره، نعرضه مرة واحدة
-      const fp = [
-        e.event_type,
-        e.actor_name || '',
-        e.action || '',
-        e.entity_id ?? '',
-        typeof e.details === 'object' ? JSON.stringify(e.details || {}) : String(e.details || ''),
-      ].join('|');
+      // 🛡️ نفس الفاعل + نفس الإجراء + نفس رقم السجل خلال 8 ثوانٍ ⇒ السيرفر كرّر الحدث
+      //    شرط entity_id مش فاضي — عشان ما يمنعش رصدين حقيقيين مختلفين
+      // 🛡️ تكرار الأحداث: مفتاح منطقي واحد يشمل التوست وليستة الجرس معًا
+      //    (النوع + السجل + الفاعل + نص الحركة بعد التطبيع) ⇒ «إضافة زلزال»
+      //    و«إضافة زلزال محلي» لنفس السجل = نفس الحركة ⇒ إشعار واحد فقط.
       const nowTs = Date.now();
-      if (recentFpRef.current[fp] && nowTs - recentFpRef.current[fp] < 8000) return;
-      recentFpRef.current[fp] = nowTs;
-      for (const k of Object.keys(recentFpRef.current)) {
-        if (nowTs - recentFpRef.current[k] > 30000) delete recentFpRef.current[k];
-      }
+      const eventKey = logicalEventKey(e);
+      if (shouldSuppressDuplicate(recentKeysRef.current, eventKey, nowTs)) return;
+      rememberEventKey(recentKeysRef.current, eventKey, nowTs);
 if (e.event_type === 'system_refresh') {
   setCustomAlert('سيتم تحديث النظام خلال ثانيتين...');
 
@@ -1806,9 +1827,12 @@ if (e.event_type === 'system_refresh') {
         // ⏱️ انقضاء الموجة يُدار مركزيًا عبر shownAt (لا يوجد timer خاص بكل توست)
       }].slice(-40));
 
-      const noticeId = `n-${e.event_id}`;
+      // نفس المفتاح المنطقي ⇒ لا يظهر في الجرس مرتين، ولا يتضاعف عدّاد غير المقروء
+      const noticeId = `n-${eventKey}`;
+      let inserted = false;
       setNotifications(prev => {
         if (prev.some(n => n.id === noticeId)) return prev;
+        inserted = true;
         return [{
           id: noticeId,
           eventId: e.event_id,
@@ -1822,7 +1846,7 @@ if (e.event_type === 'system_refresh') {
           read: false,
         }, ...prev].slice(0, 40);
       });
-      setUnreadCount(prev => prev + 1);
+      if (inserted) setUnreadCount(prev => prev + 1);
     };
 
     const poll = async () => {
@@ -2156,63 +2180,57 @@ if (e.event_type === 'system_refresh') {
       {/* 💡 الثيم الآن عبر data-theme + نظام CSS تصميمي واحد في index.css (light=طبقات بيضاء/ألوان حيادية، dark=أسطح عميقة) */}
 
       
-      {/* 💡 4. طابور الإشعارات (يدعم إشعارات النظام العادية وإشعارات الذكاء الاصطناعي البنفسجية) */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 w-[min(94vw,640px)] pointer-events-none">
+      {/* ◈ منطقة الوعي — نَوْل الإشارة: الإشارة بتدخل بذرة وبتتنسج للخارج */}
+      <div id="sig-top-rail" className="sig-loom">
         {visibleLiveCount >= 2 && (
-          <button
-            type="button"
-            onClick={closeAllToasts}
-            className="toast-close-all pointer-events-auto self-center"
-            title={language === 'en' ? 'Dismiss all visible notifications' : 'إغلاق كل الإشعارات الظاهرة'}
-          >
+          <button type="button" onClick={closeAllToasts} className="sig-dismiss-all pointer-events-auto"
+            title={language === 'en' ? 'Dismiss all visible notifications' : 'إغلاق كل الإشعارات الظاهرة'}>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" /></svg>
             {language === 'en' ? 'Close all' : 'إغلاق الكل'}
           </button>
         )}
-        {[...visibleToasts, ...closingToasts].map(toastItem => (
-          <div
-            key={toastItem.id}
-            onClick={() => { dismissToast(toastItem.id); handleNotificationOpen(toastItem); }}
-            className={`liv-note pointer-events-auto ${toastItem.closing ? 'is-closing' : ''} ${toastItem.isAi ? 'is-ai' : ''}`}
-            role="status"
-          >
-            <span className="liv-spine" aria-hidden="true" />
-            <span className="liv-aura" aria-hidden="true" />
 
-            <span className="liv-beacon" aria-hidden="true"><i /><i /><i /></span>
+        {[...visibleToasts, ...closingToasts].map(toastItem => {
+          const vis = notifyVisual(toastItem.event_type);
+          const age = formatEventAge(toastItem.created_at, language);
+          const shape = vis.tone === 'warn' ? 'sig-shape-plate'
+            : vis.tone === 'accent' ? 'sig-shape-frame'
+            : vis.tone === 'ok' ? 'sig-shape-seal'
+            : '';
+          const force = vis.tone === 'accent' ? 3 : (vis.tone === 'warn' || vis.tone === 'ai') ? 2 : vis.tone === 'ok' ? 0 : 1;
+          const headline = toastItem.isAi
+            ? (language === 'en' ? 'New AI signal detected' : 'الذكاء الاصطناعي وجد خبراً جديداً')
+            : toastItem.action;
+          return (
+            <SignalNote
+              key={toastItem.id}
+              item={toastItem}
+              tone={vis.tone}
+              shape={shape}
+              force={force}
+              glyph={<LiveGlyph kind={vis.kind} />}
+              monogram={initialsFrom(toastItem.user)}
+              age={age}
+              kicker={notifyLabel(toastItem.event_type, language)}
+              headline={headline}
+              detail={toastItem.details ? localizeMissionDetails(toastItem.details, language) : ''}
+              lifeMs={TOAST_LIFETIME_MS}
+              isAi={toastItem.isAi}
+              paused={Boolean(toastItem.pausedAt)}
+              onDismiss={() => dismissToast(toastItem.id, 'user')}
+              onOpen={() => handleNotificationOpen(toastItem)}
+              onPause={() => pauseToast(toastItem.id)}
+              onResume={() => resumeToast(toastItem.id)}
+              language={language}
+            />
+          );
+        })}
 
-            <div className="liv-body">
-              <div className="liv-top">
-                <span className="liv-kicker">{toastItem.isAi ? 'رصد آلي' : (language === 'en' ? 'Live update' : 'تحديث لحظي')}</span>
-                {!toastItem.isAi && <span className="liv-actor">{toastItem.user}</span>}
-                <button
-                  onClick={(e) => { e.stopPropagation(); dismissToast(toastItem.id); }}
-                  aria-label={language === 'en' ? 'Dismiss notification' : 'إغلاق الإشعار'}
-                  className="liv-x"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-
-              <p className="liv-act">
-                {toastItem.isAi
-                  ? (language === 'en' ? 'New AI signal detected' : 'الذكاء الاصطناعي وجد خبراً جديداً')
-                  : <>{language === 'en' ? 'Action: ' : 'إجراء: '}{toastItem.action}</>}
-              </p>
-              {toastItem.details && <p className="liv-details">{localizeMissionDetails(toastItem.details, language)}</p>}
-            </div>
-
-            <span className="liv-track" aria-hidden="true"><i className="liv-fill" /></span>
-          </div>
-        ))}
         {queuedCount > 0 && (
-          <button
-            type="button"
-            onClick={flowNextQueued}
-            className="toast-stack-chip pointer-events-auto self-center"
-            title={language === 'en' ? 'Show next queued notifications' : 'إظهار الإشعارات التالية في الطابور'}
-          >
-            {language === 'en' ? `+${queuedCount} more notifications` : `+${queuedCount} إشعارات أخرى`}
+          <button type="button" onClick={flowNextQueued} className="sig-tally pointer-events-auto"
+            title={language === 'en' ? 'Show next queued notifications' : 'إظهار الإشعارات التالية في الطابور'}>
+            <span className="sig-tally-n">{queuedCount}</span>
+            {language === 'en' ? 'more signals' : 'إشارات أخرى'}
           </button>
         )}
       </div>
@@ -3902,7 +3920,17 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     }
   };
   const addVehicle = () => setVehicles([...vehicles, { id: Date.now() }]);
-  const addParticipant = () => setParticipants([...participants, { id: Date.now() }]);
+  // 🧮 سقف المشاركين في الاستمارة الواحدة
+  const MAX_MISSION_PARTICIPANTS = 1000;
+  const addParticipant = () => {
+    if (participants.length >= MAX_MISSION_PARTICIPANTS) {
+      setCustomAlert(`وصلت للحد الأقصى: ${MAX_MISSION_PARTICIPANTS} اسم في الاستمارة الواحدة.`);
+      return;
+    }
+    setParticipants(prev => prev.length >= MAX_MISSION_PARTICIPANTS
+      ? prev
+      : [...prev, { id: `${Date.now()}-${Math.random()}` }]);
+  };
   const addBeneficiary = () => setBeneficiaries([...beneficiaries, { id: Date.now() }]);
   const removeVehicle = (id) => setVehicles(vehicles.filter(v => v.id !== id));
   const removeParticipant = (id) => setParticipants(participants.filter(p => p.id !== id));
@@ -4348,6 +4376,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   // 🆕 تصدير الاستمارة — ملف Excel منسّق يعكس تصميم وتقسيم الاستمارة داخل النظام
   // (نفس الأقسام والترتيب والجداول)، واسم الملف هو اسم الاستمارة.
   // يُستدعى من زر التنزيل في صف الجدول: يجلب تفاصيل المهمة الكاملة (مع المسارات) ثم يُصدّر.
+  // 🛡️ قاعدة التصدير: أي صف فيه أي بيانات (من/إلى/تاريخ/وقت) = مسار حقيقي يُصدَّر.
+  //    لا يُسقَط أي مسار، ولا يوجد أي حدّ لعدد الصفوف — الملف يطابق الاستمارة بالكامل.
   const handleExportSingleMission = async (m) => {
     const text = (v) => (v === undefined || v === null ? '' : String(v));
     const val = (v) => (v === undefined || v === null ? '' : v);
@@ -4366,12 +4396,18 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     // 🔄 جلب تفاصيل المهمة (نفس نقطة handleViewMission) — المسارات والأسطول والمشاركون تأتي هنا
     let detail = m || {};
+    let fetched = false;
     if (m && m.mission_id) {
       try {
         const token = sessionStorage.getItem('access_token');
         const res = await fetch(`${BASE}/api/missions/${m.mission_id}?client_now=${encodeURIComponent(clientNowLocal())}`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) detail = await res.json();
+        if (res.ok) { detail = await res.json(); fetched = true; }
       } catch (e) { /* نُبقي بيانات الصف الحالية عند فشل الشبكة */ }
+    }
+    // 🛡️ لو التفاصيل ماجاتش من السيرفر: لا نصدّر ملف ناقص في صمت — نبلّغ ونخرج.
+    if (m && m.mission_id && !fetched) {
+      setCustomAlert("تعذر تحميل تفاصيل المهمة — لم يتم التصدير. أعد المحاولة أو افتح المهمة ثم صدّرها.");
+      return;
     }
 
     const aoa = [];
@@ -4390,26 +4426,32 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       row++;
     };
 
+    // ✅ «مسار حقيقي» = أي بيانات (من/إلى/تاريخ/وقت) — نفس شرط الحفظ بالحرف
+    const routeHasData = (r) => !!(r && (r.route_from || r.route_to || r.departure_date || r.departure_time || r.arrival_date || r.arrival_time));
+    // ✅ الأساسي = العنوان المعتمد + أي مسار قديم بلا عنوان (legacy) — مش بيضيع في قسم المخصص
+    const isMainRoute = (r) => {
+      const g = String((r && r.group_title) || '').trim();
+      return g === '' || g === 'خط السير الأساسي';
+    };
+    const routeCells = (groupLabel, r) => [groupLabel, r.route_from || '', r.route_to || '',
+      r.departure_date ? dateT(r.departure_date) : '—',
+      r.departure_time ? tm12(r.departure_time) : '—',
+      r.arrival_date ? dateT(r.arrival_date) : '—',
+      r.arrival_time ? tm12(r.arrival_time) : '—'];
+    const ROUTE_HEADER = ['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول'];
+
     // ── العنوان: اسم الاستمارة + كود الاستمارة + تاريخ المهمة ──
-const formName = text(detail.mission_name);
-const formCode = detail.mission_code;
-put(0, formName || 'استمارة مهمة');
-span(0, TOTAL - 1);
-row++;
+    const formName = text(detail.mission_name);
+    const formCode = detail.mission_code;
+    put(0, formName || 'استمارة مهمة');
+    span(0, TOTAL - 1);
+    row++;
 
-const missionDate = detail.exit_date || detail.departure_date;
-const missionDateText = missionDate ? formatDateTime(missionDate) : '';
-
-put(
-  0,
-  `كود الاستمارة: ${formCode || '—'}${
-    missionDateText ? `   |   تاريخ المهمة: ${missionDateText}` : ''
-  }`
-);
-span(0, TOTAL - 1);
-row++;
-
-
+    const missionDate = detail.exit_date || detail.departure_date;
+    const missionDateText = missionDate ? formatDateTime(missionDate) : '';
+    put(0, `كود الاستمارة: ${formCode || '—'}${missionDateText ? `   |   تاريخ المهمة: ${missionDateText}` : ''}`);
+    span(0, TOTAL - 1);
+    row++;
 
     // 1) البيانات الأساسية للمهمة
     section('البيانات الأساسية للمهمة');
@@ -4431,42 +4473,47 @@ row++;
       tm12(detail.start_time), tm12(detail.departure_time), tm12(detail.arrival_time), tm12(detail.completion_time),
     ]);
 
-    // 3) تفاصيل خط السير الأساسي
+    // 3) تفاصيل خط السير الأساسي — كل صف فيه أي بيانات يُصدَّر (بدون أي إسقاط)
     section('تفاصيل خط السير الأساسي');
-    headerRow(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
-    const allRoutes = detail.routes || [];
+    headerRow(ROUTE_HEADER);
+    const allRoutes = Array.isArray(detail.routes) ? detail.routes : [];
     let routeCount = 0;
-    allRoutes.filter(r => r.group_title === 'خط السير الأساسي').forEach((r) => {
-      if (!r.route_from && !r.route_to) return;
+    allRoutes.filter(isMainRoute).forEach((r) => {
+      if (!routeHasData(r)) return;
       routeCount++;
-      dataRow(['خط السير الأساسي', r.route_from, r.route_to,
-        r.departure_date ? dateT(r.departure_date) : '—',
-        r.departure_time ? tm12(r.departure_time) : '—',
-        r.arrival_date ? dateT(r.arrival_date) : '—',
-        r.arrival_time ? tm12(r.arrival_time) : '—']);
+      dataRow(routeCells('خط السير الأساسي', r));
     });
+    // احتياطي: مهمة مالهاش صفوف مسار محفوظة لكن حقولها (الخروج/الوصول) مليانة ⇒ نعرضها
+    if (!routeCount && [detail.departure_date, detail.departure_time, detail.arrival_date, detail.arrival_time].some(Boolean)) {
+      dataRow(['خط السير الأساسي (من حقول المهمة)', detail.mission_location || '', '',
+        detail.departure_date ? dateT(detail.departure_date) : '—',
+        detail.departure_time ? tm12(detail.departure_time) : '—',
+        detail.arrival_date ? dateT(detail.arrival_date) : '—',
+        detail.arrival_time ? tm12(detail.arrival_time) : '—']);
+      routeCount++;
+    }
     if (!routeCount) emptyRow('لا توجد مسارات مسجلة');
 
-    // 4) الأيام / خطوط السير المخصصة
+    // 4) الأيام / خطوط السير المخصصة — كل مجموعة بعنوانها حتى لو فاضية
     section('الأيام / خطوط السير المخصصة');
-    headerRow(['المجموعة', 'من', 'إلى (الوجهة)', 'تاريخ التحرك', 'ساعة التحرك', 'تاريخ الوصول', 'ساعة الوصول']);
+    headerRow(ROUTE_HEADER);
     const customGroups = {};
-    allRoutes.filter(r => r.group_title !== 'خط السير الأساسي').forEach(r => {
-      const t = r.group_title || '—';
+    // (أ) عناوين المجموعات من السيرفر (لو متاحة) — عشان الأيام الفاضية تبان برضه
+    (Array.isArray(detail.itineraries) ? detail.itineraries : []).forEach(it => {
+      const t = String((it && (it.group_title || it.title)) || '').trim();
+      if (t && t !== 'خط السير الأساسي' && !customGroups[t]) customGroups[t] = [];
+    });
+    // (ب) المسارات المخصصة نفسها
+    allRoutes.filter(r => !isMainRoute(r)).forEach(r => {
+      const t = String((r && r.group_title) || '').trim() || 'خط سير مخصص';
       if (!customGroups[t]) customGroups[t] = [];
       customGroups[t].push(r);
     });
     let custCount = 0;
     Object.keys(customGroups).forEach(title => {
-      customGroups[title].forEach(r => {
-        if (!r.route_from && !r.route_to) return;
-        custCount++;
-        dataRow([title, r.route_from, r.route_to,
-          r.departure_date ? dateT(r.departure_date) : '—',
-          r.departure_time ? tm12(r.departure_time) : '—',
-          r.arrival_date ? dateT(r.arrival_date) : '—',
-          r.arrival_time ? tm12(r.arrival_time) : '—']);
-      });
+      const rows = customGroups[title].filter(routeHasData);
+      if (rows.length === 0) { dataRow([title, '—', '—', '—', '—', '—', '—']); custCount++; return; }
+      rows.forEach(r => { custCount++; dataRow(routeCells(title, r)); });
     });
     if (!custCount) emptyRow('لا توجد أيام / خطوط سير مخصصة');
 
@@ -4481,19 +4528,38 @@ row++;
     });
     if (!vCount) emptyRow('لا توجد سيارات');
 
-    // 6) القوة البشرية والمشاركين (نفس أعمدة جدول الاستمارة)
+    // 6) القوة البشرية والمشاركون (نفس أعمدة جدول الاستمارة)
     section('القوة البشرية والمشاركين');
-    headerRow(['م', 'النوع', 'الاسم', 'رقم العضوية', 'صفة المشارك', 'الفريق', 'الساعات', 'خط السير المخصص', 'الفرع']);
+    headerRow(['م', 'النوع', 'الاسم', 'رقم العضوية', 'صفة المشارك', 'الفريق', 'الساعات', 'خطوط السير / انضمام-انفصال', 'الفرع']);
     let pCount = 0;
-    (detail.participants || []).forEach((p, i) => {
+    (detail.participants || []).forEach((p) => {
       if (!p.full_name) return;
       pCount++;
       const typeAr = p.participant_type === 'non_volunteer' ? 'غير متطوع' : 'متطوع';
-      const days = (p.assigned_days || []).join(' + ') || '—';
+      // 🔓 فكّ مفاتيح JL:* بدل طبعها خام في الملف
+      const { routes: routeDays, events } = splitAssignedDays(p.assigned_days);
+      const evTxt = events.map(ev => `${ev.kind === 'join' ? 'انضمام' : 'انفصال'}: ${ev.title}`).join(' + ');
+      const days = [routeDays.join(' + '), evTxt].filter(Boolean).join(' + ') || '—';
       const wh = p.working_hours != null ? fmtHours(p.working_hours, lang) : '—';
-      dataRow([i + 1, typeAr, p.full_name, p.participation_role || '', p.participant_position || '', p.team_name || '', wh, days, branchName(p.branch_id)]);
+      dataRow([pCount, typeAr, p.full_name, p.participation_role || '', p.participant_position || '', p.team_name || '', wh, days, branchName(p.branch_id)]);
     });
     if (!pCount) emptyRow('لا يوجد مشاركون');
+
+    // 6.b) كتالوج الانضمام / الانفصال — سجلات المهمة والمتنسبون إليها
+    section('انضمام / انفصال');
+    headerRow(['العنوان', 'النوع', 'التاريخ والوقت', 'المتنسبون إليه']);
+    const jlEntries = Array.isArray(detail.join_leave_entries) ? detail.join_leave_entries : [];
+    if (jlEntries.length) {
+      jlEntries.forEach(e => {
+        const k = jlKey(e.kind, e.title);
+        const assignedTo = (detail.participants || [])
+          .filter(p => (p.assigned_days || []).includes(k))
+          .map(p => p.full_name || 'مشارك').join(' + ');
+        dataRow([e.title || '', e.kind === 'join' ? 'انضمام' : 'انفصال', e.dt || '', assignedTo || '—']);
+      });
+    } else {
+      emptyRow('لا توجد سجلات انضمام أو انفصال');
+    }
 
     // 7) كود الفريق/الإدارة
     section('كود الفريق/الإدارة');
@@ -4540,7 +4606,7 @@ row++;
       EOC_ROLES.forEach(([label, role]) => dataRow([label, staffName(role)]));
     }
 
-        // 9.b) ملاحظات غرفة التطوع — كل البالكات بعناوينها وصفوفها ومراجعها
+    // 9.b) ملاحظات غرفة التطوع — كل البالكات بعناوينها وصفوفها ومراجعها
     const _volBlocks = (_fb && Array.isArray(_fb.volunteer) && _fb.volunteer.length > 0) ? _fb.volunteer : null;
     const _legacyNotes = detail.volunteer_room_notes || [];
     if (_volBlocks || _legacyNotes.length > 0) {
@@ -4575,16 +4641,17 @@ row++;
     field('ملاحظات داخلية', detail.internal_notes);
 
     // ── تصدير مصنّف منسّق (RTL · تمركز · حدود · رأس #cbcbcb) مع الحفاظ على دمج الخلايا ──
-    // اسم الملف = اسم الاستمارة كما هو (مع إزالة محارف غير صالحة فقط)
     const rawName = text(detail.mission_name).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
-    // 📅 اسم الملف بتاريخ المهمة (مش تاريخ اليوم) — الصيغة YYYY-MM-DD من تاريخ المهمة نفسه
     const missionFileDate = String(missionDate || '').slice(0, 10) || todayFileDate();
-    try { await exportWorkbook([{
-      name: 'الاستمارة',
-      header: aoa[0] || [],
-      rows: aoa.slice(1),
-      merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
-    }], `${rawName}_${missionFileDate}.xlsx`); setCustomAlert("تم تصدير الاستمارة بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+    try {
+      await exportWorkbook([{
+        name: 'الاستمارة',
+        header: aoa[0] || [],
+        rows: aoa.slice(1),
+        merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
+      }], `${rawName}_${missionFileDate}.xlsx`);
+      setCustomAlert(`تم تصدير الاستمارة بنجاح (${pCount} مشارك · ${routeCount} مسار أساسي · ${custCount} مجموعة مخصصة).`);
+    } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
@@ -6405,11 +6472,26 @@ row++;
   );
 }
 
-const FormGroup = ({ label, className = "", required = false, invalid = false, children }) => (<div className={`flex flex-col gap-1.5 w-full ${className}`}><div className={`flex items-center gap-1 px-1 text-xs font-bold ${invalid ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}><span>{label}</span>{required && <span className="text-[var(--accent)] text-sm leading-none">*</span>}{invalid && <span className="text-[10px] font-bold text-[var(--accent)]">إلزامي</span>}</div>{children}</div>);
+// ⚠️ مجموعة حقل: الإلزامي الناقص = قوس انتباه ملتصق بالحقل نفسه (مش صف أحمر).
+const FormGroup = ({ label, className = "", required = false, invalid = false, children }) => (
+  <div className={`sig-req flex flex-col gap-1.5 w-full ${className} ${invalid ? 'is-open' : ''}`}>
+    <div className="sig-req-head">
+      {invalid && (
+        <svg className="sig-req-needle" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 2.5L7.5 6 3 9.5" />
+        </svg>
+      )}
+      <span>{label}</span>
+      {required && !invalid && <span className="sig-req-star" aria-hidden="true">*</span>}
+      {invalid && <span className="sig-req-flag">{required ? 'إلزامي' : 'يحتاج انتباهك'}</span>}
+    </div>
+    {children}
+  </div>
+);
 const StyledInput = ({ className="", ...props }) => (<input className={`field ${className}`} {...props} />);
 
 // =====================================================================
-// 🗓️ DateInput — حقل تاريخ/وقت إلزامي العرض DD/MM/YYYY (لا يعتمد على لغة المتصفح/النظام،
+// 🗓️ DateInput — حقل تاريخ/وقت إلزامي العرض DD/MM/YYYY (لا يعتمد على لغة المتصفح/النظام，
 // فلا يظهر تنسيق MM/DD/YYYY أبداً مهما كانت لغة نظام المستخدم).
 // الحقل الأصلي المخفي (المُعرَّف بالـ id) يحمل قيمة الخادم ISO (YYYY-MM-DD أو YYYY-MM-DDTHH:MM)،
 // بينما العنصر المرئي يعرض DD/MM/YYYY دائماً. النقر يفتح منتقي التاريخ الأصلي،
@@ -7708,31 +7790,30 @@ function WeatherShiftWarning({ shift, onFix, lang = 'ar' }) {
   const key = lang === 'ar' ? 'ar' : 'en';
 
   return (
-    <div className="weather-shift-warn relative overflow-hidden rounded-2xl border-2 px-4 py-3 flex flex-wrap items-center gap-3"
-      style={{ borderColor: 'rgba(255,176,32,0.65)', background: 'linear-gradient(90deg, rgba(255,176,32,0.16), rgba(255,176,32,0.04))' }}>
-      <style>{`
-        @keyframes wsw-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,176,32,0.40); } 50% { box-shadow: 0 0 28px 6px rgba(255,176,32,0.26); } }
-        @keyframes wsw-blink { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.2; transform: scale(0.86); } }
-        @keyframes wsw-sweep { 0% { transform: translateX(-140%) skewX(-18deg); } 100% { transform: translateX(320%) skewX(-18deg); } }
-        .weather-shift-warn { animation: wsw-pulse 1.8s ease-in-out infinite; }
-        .weather-shift-warn .wsw-icon { animation: wsw-blink 1.05s steps(1,end) infinite; }
-        .weather-shift-warn .wsw-sweep { animation: wsw-sweep 2.6s ease-in-out infinite; }
-      `}</style>
+    <div className="wsw-card" dir={key === 'ar' ? 'rtl' : 'ltr'} role="status" aria-live="polite">
+      <span className="wsw-rail" aria-hidden="true" />
 
-      <span className="wsw-sweep pointer-events-none absolute inset-y-0 w-16 rounded-full bg-white/15 blur-md" />
-      <span className="wsw-icon text-2xl leading-none shrink-0">⚠️</span>
+      <span className="wsw-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path className="wsw-draw" d="M12 3.4l9.2 16H2.8z" />
+          <path className="wsw-draw" d="M12 9.4v4.2" />
+          <circle className="wsw-dot" cx="12" cy="16.9" r="1.05" fill="currentColor" stroke="none" />
+        </svg>
+      </span>
 
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-black text-[var(--warn)]">
-          {L('وردية غير صحيحة — الوقت الحالي: ', 'Wrong shift — current: ')}{SHIFT_NAME[nowShift]?.[key] || nowShift}
+      <div className="wsw-body">
+        <p className="wsw-title">
+          <span className="wsw-tag">{L('وردية غير صحيحة', 'Wrong shift')}</span>
+          {L('الوقت الحالي: ', 'Current: ')}{SHIFT_NAME[nowShift]?.[key] || nowShift}
         </p>
-        <p className="text-[11px] text-[var(--muted)] mt-0.5">
+        <p className="wsw-sub">
           {L('إنت فاتح: ', 'You have open: ')}{SHIFT_NAME[shift]?.[key] || shift}
           {L(' — بدّل للوردية الصح قبل ما تدخل الأرقام.', ' — switch to the correct shift before entering values.')}
         </p>
       </div>
 
-      <button type="button" onClick={onFix} className="btn-warn text-xs font-black px-3 py-2 rounded-xl shrink-0">
+      <button type="button" onClick={onFix} className="wsw-cta">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.6h12l-2.6-2.6M20 15.4H8l2.6 2.6" /></svg>
         {L('بدّل للوردية الصح', 'Switch to correct shift')}
       </button>
     </div>
@@ -8324,10 +8405,11 @@ const visibleBranches = (
             <button
               type="button"
               onClick={() => setShift(timeShift)}
-              className="ops-chip shrink-0 text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)] hover:brightness-110"
+              className="ops-chip ops-chip-warn shrink-0 text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)] hover:brightness-110"
               title={T('اضغط للتحويل لوردية الوقت الحالي', 'Click to switch to the current shift')}
             >
-              ⚠️ {T('فاتح وردية غلط — الوقت الحالي:', 'Wrong shift — current:')}{' '}
+              <svg className="ops-chip-warn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.4l9.2 16H2.8z" /><path d="M12 9.6v4.2" /><circle cx="12" cy="16.9" r="1.05" fill="currentColor" stroke="none" /></svg>
+              {T('فاتح وردية غلط — الوقت الحالي:', 'Wrong shift — current:')}{' '}
               {T(
                 timeShift === 'morning' ? 'صباح' : timeShift === 'evening' ? 'مساء' : 'ليل',
                 timeShift === 'morning' ? 'Morning' : timeShift === 'evening' ? 'Evening' : 'Night'
@@ -12000,100 +12082,161 @@ const totalAiCountries = new Set(
     </div>
   );
 }
-// 🪟 Aperture Dialog — الهيكل الموحّد لكل نوافذ التأكيد
-//    دخول: بتفتح بضباب + 4 أقواس بتتقفل على الأركان بالتتابع.
-//    خروج: بتقفل بضباب وترجع لورا. ESC يقفل، والضغط على الخلفية يقفل.
-function ApertureDialog({ show, tone = 'danger', title, message, onClose, children, actions, maxWidth = 470 }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// ◈ لوح القرار (Decision Deck) — بديل النافذة الوسطية
+//    بيدخل من تحت، والأزرار عند الإبهام. نفس الـprops ونفس الـlogic بالحرف.
+// ─────────────────────────────────────────────────────────────────────────────
+function ApertureDialog({ show, tone = 'danger', kicker, title, message, onClose, children, actions, maxWidth = 520 }) {
   const [mounted, setMounted] = useState(show);
   const [leaving, setLeaving] = useState(false);
+  const panelRef = useRef(null);
+  const restoreRef = useRef(null);
 
   useEffect(() => {
     if (show) { setMounted(true); setLeaving(false); return undefined; }
     if (!mounted) return undefined;
     setLeaving(true);
-    const t = setTimeout(() => { setMounted(false); setLeaving(false); }, 240);
+    const t = setTimeout(() => { setMounted(false); setLeaving(false); }, 180);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show]);
 
+  // ⌨️ Esc + نقل الفوكس داخل اللوح ثم إرجاعه لمصدره عند الإغلاق
   useEffect(() => {
     if (!mounted) return undefined;
     const onKey = (e) => { if (e.key === 'Escape' && onClose) onClose(); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const prev = document.activeElement;
+    restoreRef.current = prev;
+    const t = setTimeout(() => {
+      const el = panelRef.current?.querySelector('.sig-btn-main') || panelRef.current;
+      try { el?.focus?.(); } catch { /* noop */ }
+    }, 90);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      clearTimeout(t);
+      const back = restoreRef.current;
+      if (back && back.focus) { try { back.focus(); } catch { /* noop */ } }
+    };
   }, [mounted, onClose]);
 
   if (!mounted) return null;
 
+  const toneGlyph = tone === 'danger'
+    ? <><path d="M12 3.2l9.4 16.3H2.6z" /><path d="M12 9v4.4" /><circle cx="12" cy="16.6" r="1.05" fill="currentColor" stroke="none" /></>
+    : tone === 'download'
+    ? <><path d="M12 3.5v11m0 0l4-4m-4 4l-4-4" /><path d="M4 17.5v1.5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" /></>
+    : <path d="M4.6 12.4l5 5L19.6 7" />;
+
+  const defaultKicker = tone === 'danger'
+    ? 'إجراء نهائي · لا يمكن التراجع'
+    : tone === 'download'
+    ? 'تصدير بيانات · تجهيز ملف'
+    : 'تأكيد الإجراء';
+
+  const veilTone = tone === 'danger' ? 'danger' : tone === 'download' ? 'info' : 'calm';
+
   return createPortal(
-    <div className={`apx-layer apx-${tone} ${leaving ? 'is-leaving' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
-      <div className="apx-scrim" onClick={() => onClose && onClose()} />
-      <div className="apx-panel" style={{ maxWidth }}>
-        <span className="apx-bracket apx-b1" aria-hidden="true" />
-        <span className="apx-bracket apx-b2" aria-hidden="true" />
-        <span className="apx-bracket apx-b3" aria-hidden="true" />
-        <span className="apx-bracket apx-b4" aria-hidden="true" />
-        <div className="apx-head">
-          <span className="apx-mark">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              {tone === 'danger'
-                ? <><path d="M12 3.2l9.4 16.3H2.6z" /><path d="M12 9v4.4" /><circle cx="12" cy="16.6" r="1.05" fill="currentColor" stroke="none" /></>
-                : <path d="M4.6 12.4l5 5L19.6 7" />}
+    <div className={`sig-veil-layer sig-veil-layer--${veilTone} ${leaving ? 'is-leaving' : ''}`}
+         role="alertdialog" aria-modal="true" aria-label={title}>
+      <div className="sig-veil" onClick={() => onClose && onClose()} />
+      <div ref={panelRef} className="sig-dock" style={{ maxWidth }} tabIndex={-1}>
+        <span className="sig-dock-spine" aria-hidden="true" />
+        <div className="sig-dock-head">
+          <span className="sig-dock-mark">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+              {toneGlyph}
             </svg>
           </span>
-          <h3 className="apx-title">{title}</h3>
+          <div className="sig-dock-head-text">
+            <span className="sig-dock-kicker">{kicker || defaultKicker}</span>
+            <h3 className="sig-dock-title">{title}</h3>
+          </div>
         </div>
-        {message && <p className="apx-msg">{message}</p>}
+        {message && <p className="sig-dock-msg">{message}</p>}
         {children}
-        {actions && <div className="apx-actions">{actions}</div>}
+        {actions && <div className="sig-dock-actions">{actions}</div>}
       </div>
     </div>,
     document.body
   );
 }
 
-// 🧩 اختيار تصدير السجل الشامل — بالتصنيفات أو بدونها
-function ExportChoiceModal({ show, title = 'تنزيل السجل الشامل للمهام', message, onCancel, onWithCategories, onWithoutCategories }) {
+// 🧩 اختيار تصدير السجل الشامل
+function ExportChoiceModal({ show, title = 'تصدير السجل الشامل للمهام', message, onCancel, onWithCategories, onWithoutCategories }) {
   return (
     <ApertureDialog
       show={show}
-      tone="calm"
+      tone="download"
+      kicker="تصدير بيانات · اختيار الهيكل"
       title={title}
-      message={message}
+      message={message || 'حدد هيكل التصدير المطلوب لملف إكسيل:'}
       onClose={onCancel}
-      actions={
-        <>
-          <button type="button" className="apx-btn apx-btn-ghost" onClick={onWithoutCategories}>بدون تصنيفات</button>
-          <button type="button" className="apx-btn apx-btn-main" onClick={onWithCategories}>بالتصنيفات</button>
-        </>
-      }
-    />
+      maxWidth={520}
+      actions={<button type="button" className="sig-btn sig-btn-ghost" onClick={onCancel}>إلغاء التصدير</button>}
+    >
+      <div className="sig-choice-grid">
+        <button type="button" className="sig-choice-card" onClick={onWithCategories}>
+          <div className="sig-choice-icon">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
+            </svg>
+          </div>
+          <div className="sig-choice-info">
+            <strong className="sig-choice-title">بالتصنيفات والفئات</strong>
+            <span className="sig-choice-desc">ملف منظم بشيتات وجداول شجرية مفصلة لكل فئة</span>
+          </div>
+          <span className="sig-choice-badge">مفصّل</span>
+        </button>
+
+        <button type="button" className="sig-choice-card" onClick={onWithoutCategories}>
+          <div className="sig-choice-icon">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+          </div>
+          <div className="sig-choice-info">
+            <strong className="sig-choice-title">جدول مسطح مباشر</strong>
+            <span className="sig-choice-desc">سجل شامل مسطح ومدمج بدون تفريعات إضافية</span>
+          </div>
+          <span className="sig-choice-badge sig-choice-badge--subtle">مباشر</span>
+        </button>
+      </div>
+    </ApertureDialog>
   );
 }
 
 // 📥 مُؤكِّد تنزيل سجل فردي
-function DownloadConfirmModal({ show, title = 'تنزيل السجل', message = 'هل تود تحميل هذا السجل الفردي ؟', onCancel, onConfirm, confirmLabel = 'نعم', cancelLabel = 'إلغاء' }) {
+function DownloadConfirmModal({ show, title = 'تنزيل السجل الفردي', message = 'هل تود تجهيز وتحميل هذا السجل بصيغة إكسيل؟', onCancel, onConfirm, confirmLabel = 'بدء التنزيل', cancelLabel = 'إلغاء' }) {
   return (
     <ApertureDialog
       show={show}
-      tone="calm"
+      tone="download"
+      kicker="تصدير وتجهيز ملف"
       title={title}
       message={message}
       onClose={onCancel}
       actions={
         <>
-          <button type="button" className="apx-btn apx-btn-ghost" onClick={onCancel}>{cancelLabel}</button>
-          <button type="button" className="apx-btn apx-btn-main" onClick={onConfirm}>{confirmLabel}</button>
+          <button type="button" className="sig-btn sig-btn-ghost" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" className="sig-btn sig-btn-main" onClick={onConfirm}>
+            <span className="flex items-center justify-center gap-2">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+              </svg>
+              {confirmLabel}
+            </span>
+          </button>
         </>
       }
     />
   );
 }
 
-// ⚠️ مُؤكِّد العمليات الخطيرة — نفس السلوك: زر معطّل أثناء التنفيذ + رمز تأكيد
-function DangerConfirmModal({ show, title = 'تأكيد الحذف', message, onCancel, onConfirm, confirmLabel = 'نعم، احذف الكل', confirmationCode = '', onConfirmationCodeChange, showConfirmationInput = false }) {
+// ⚠️ مُؤكِّد العمليات الخطيرة — نفس المنطق والـprops بالحرف (isProcessing + codeOk)
+function DangerConfirmModal({ show, title = 'تأكيد الحذف النهائي', message, onCancel, onConfirm, confirmLabel = 'نعم، احذف السجل', confirmationCode = '', onConfirmationCodeChange, showConfirmationInput = false }) {
   const [isProcessing, setIsProcessing] = useState(false);
-
   const codeOk = !showConfirmationInput || confirmationCode === '301014';
 
   const handleConfirm = async () => {
@@ -12101,21 +12244,21 @@ function DangerConfirmModal({ show, title = 'تأكيد الحذف', message, on
     setIsProcessing(true);
     try { await onConfirm(); } finally { setIsProcessing(false); }
   };
-
   const safeCancel = () => { if (!isProcessing) onCancel(); };
 
   return (
     <ApertureDialog
       show={show}
       tone="danger"
+      kicker="تحذير أمني · إجراء نهائي"
       title={title}
       message={message}
       onClose={safeCancel}
       actions={
         <>
-          <button type="button" className="apx-btn apx-btn-ghost" onClick={safeCancel} disabled={isProcessing}>إلغاء</button>
-          <button type="button" className="apx-btn apx-btn-main" onClick={handleConfirm} disabled={isProcessing || !codeOk}>
-            {isProcessing ? 'جاري الحذف...' : confirmLabel}
+          <button type="button" className="sig-btn sig-btn-ghost" onClick={safeCancel} disabled={isProcessing}>إلغاء</button>
+          <button type="button" className="sig-btn sig-btn-main" onClick={handleConfirm} disabled={isProcessing || !codeOk}>
+            {isProcessing ? <span className="sig-working"><i className="sig-spin" aria-hidden="true" />جاري الحذف...</span> : confirmLabel}
           </button>
         </>
       }
@@ -12129,24 +12272,165 @@ function DangerConfirmModal({ show, title = 'تأكيد الحذف', message, on
           placeholder="أدخل رمز التأكيد"
           autoComplete="new-password"
           name="clear_all_confirmation"
-          className="apx-code"
+          className="sig-slot"
         />
       )}
     </ApertureDialog>
   );
 }
 
-// 🎯 تنبيه الإجراءات — «Prism Slab»
-//    شريط بعرض محتواه في وسط فوق: خط ضوء بيمر على الحرف + أيقونة سداسي بتترسم
-//    + 5 شرطات بتولّع بالتتابع + 10 خلايا طاقة بتتفرّغ مع الوقت.
-//    نفس السلوك: 3 حالات · إغلاق تلقائي · وقفة بالماوس (توقف الخلايا كمان) · إغلاق يدوي.
-const ACTION_TOAST_LIFETIME = 15000;
-const ACTION_TOAST_EXIT_MS = 320;
-const ACTION_TOAST_TONES = {
-  error: { c: '#ff6262', soft: 'rgba(255,98,98,0.13)', label: 'حدث خطأ', mark: 'x' },
-  warn:  { c: '#ffb43a', soft: 'rgba(255,180,58,0.13)', label: 'تنبيه',   mark: '!' },
-  ok:    { c: '#31e08d', soft: 'rgba(49,224,141,0.13)', label: 'تم بنجاح', mark: 'v' },
+// 🔔 أيقونة نوع الحدث في الإشعار اللحظي — كل نوع له رمز مختلف يوضّح «إيه اللي حصل»
+//    من نظرة واحدة (مهمة/خبر/كارثة/زلزال/طقس/تسليم وردية/رصد آلي).
+//    كل شكل عليه pathLength="1" فحركة «الرسم» في CSS تطلع متساوية لكل الأيقونات.
+function LiveGlyph({ kind }) {
+  const common = {
+    className: 'liv-glyph', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true',
+  };
+  switch (kind) {
+    case 'mission': // هدف/مهمة قيد التنفيذ — "target lock": a breathing ring that draws itself,
+      // crosshairs that sweep in from the edges, and a blinking center dot that locks on.
+      // The old static crosshair read as a sniper scope; this reads as a system acquiring the target.
+      return (
+        <svg {...common} className="liv-glyph liv-glyph--mission" viewBox="0 0 24 24">
+          <circle className="liv-glyph-ring" cx="12" cy="12" r="8.4" pathLength="1" />
+          <circle className="liv-glyph-ring" cx="12" cy="12" r="5.6" pathLength="1" />
+          <path className="liv-glyph-cross" d="M12 2.6v3.4M12 18v3.4M2.6 12h3.4M18 12h3.4" pathLength="1" />
+          <circle className="liv-glyph-core" cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'news': // بثّ خبر
+      return (
+        <svg {...common}><path d="M4 5h13.4a1.6 1.6 0 0 1 1.6 1.6V18a1.8 1.8 0 0 0 1.8-1.8V8" pathLength="1" /><path d="M7 9h8M7 12.6h8M7 16.2h4.5" pathLength="1" /></svg>
+      );
+    case 'disaster': // كرة أرضية + تنبيه
+      return (
+        <svg {...common}><circle cx="12" cy="11" r="8.2" pathLength="1" /><path d="M4.4 8.4c3.4 1.6 11 1.6 15.2 0M4.4 14c3.4-1.6 11-1.6 15.2 0" pathLength="1" /><path d="M12 2.8v16.4" pathLength="1" /></svg>
+      );
+    case 'quake': // موجة زلزالية
+      return (
+        <svg {...common}><path d="M2.5 12h3l2-6 3 12 2.4-8.5 2 5H21" pathLength="1" /></svg>
+      );
+    case 'weather': // طقس: شمس وسحابة
+      return (
+        <svg {...common}><circle cx="8.6" cy="8.4" r="3.2" pathLength="1" /><path d="M8.6 2.6v1.4M3 8.4h1.4M5.6 5.4 4.6 4.4M11.6 5.4l1-1" pathLength="1" /><path d="M9.4 18.4h8.4a3.1 3.1 0 0 0 0-6.2 4.3 4.3 0 0 0-8.2 1.1 2.6 2.6 0 0 0-.2 5.1z" pathLength="1" /></svg>
+      );
+    case 'handover': // تسليم وردية: سهمان متبادلان
+      return (
+        <svg {...common}><path d="M4 8.6h12l-2.6-2.6M20 15.4H8l2.6 2.6" pathLength="1" /></svg>
+      );
+    case 'ai': // رصد آلي
+      return (
+        <svg {...common}><path d="M12 3.2l1.7 4.3 4.3 1.7-4.3 1.7L12 15.2l-1.7-4.3L6 9.2l4.3-1.7z" pathLength="1" /><path d="M18.6 16.4l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" pathLength="1" /></svg>
+      );
+    case 'audit': // سجل النظام
+      return (
+        <svg {...common}><path d="M5 4.6h14v14.8H5z" pathLength="1" /><path d="M8.4 9h7.2M8.4 12.6h7.2M8.4 16.2h4" pathLength="1" /></svg>
+      );
+    default: // تحديث لحظي عام
+      return (
+        <svg {...common}><circle cx="12" cy="12" r="3.4" pathLength="1" /><path d="M12 3v3M12 18v3M3 12h3M18 12h3" pathLength="1" /></svg>
+      );
+  }
+}
+
+// 🎯 نتائج الإجراءات — «Receipt Note» من نفس عائلة Signal Loom.
+//    نفس المنطق: 15s عمر · وقفة بالماوس · إغلاق يدوي · نفس تصنيف الرسائل بالـregex.
+const ACTION_TOAST_LIFETIME = 4500;
+const ACTION_TOAST_EXIT_MS = 200;
+
+const ACTION_SIGNALS = {
+  error:         { tone: 'danger', shape: 'frame', label: 'حدث خطأ',            force: 3 },
+  warn:          { tone: 'warn',   shape: 'plate', label: 'تنبيه',              force: 2 },
+  'delete-ok':   { tone: 'purge',  shape: 'seal',  label: 'تم الحذف النهائي',   force: 0 },
+  'download-ok': { tone: 'export', shape: 'seal',  label: 'تم التصدير والتحميل', force: 0 },
+  ok:            { tone: 'ok',     shape: 'seal',  label: 'تم بنجاح',           force: 0 },
+  info:          { tone: 'info',   shape: '',      label: 'معلومة',             force: 1 },
 };
+
+// ◈ SignalNote — سطح الإشارة الحيّ (Dynamic Island حقيقي):
+//   ① بذرة صغيرة جدًا (أيقونة بس) ② تتوسّع لوحدها لحظة وتفتح التفاصيل
+//   ③ ترجع مضغوطة على سطر واحد. المرور/الفوكس يمسكها مفتوحة.
+//   عرض بالكامل: صفر منطق أعمال — نفس الـprops ونفس الـhandlers.
+function SignalNote({
+  item, tone, shape, force, glyph, monogram, age, kicker, headline, detail,
+  lifeMs, isAi, paused, onDismiss, onOpen, onPause, onResume, language,
+}) {
+  const [phase, setPhase] = useState('seed'); // seed → open → compact
+  const openTimer = useRef(null);
+  const compactTimer = useRef(null);
+  const clearTimers = () => { clearTimeout(openTimer.current); clearTimeout(compactTimer.current); };
+
+  useEffect(() => {
+    clearTimers();
+    setPhase('seed');
+    openTimer.current = setTimeout(() => setPhase('open'), 420);
+    compactTimer.current = setTimeout(() => setPhase('compact'), 3200);
+    return clearTimers;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id]);
+
+  // ✋ المرور/الفوكس = يمسكها مفتوحة، ويسيبها = ترجع مضغوطة فورًا
+  const hold = () => { clearTimers(); setPhase('open'); if (onPause) onPause(); };
+  const release = () => { setPhase('compact'); if (onResume) onResume(); };
+
+  return (
+    <div
+      className={`sig-note sig-note--live sig-note--f${force} sig-tone-${tone} ${shape} ${isAi ? 'sig-tone-ai' : ''} ` +
+        `${item.closing ? 'is-closing' : ''} ${item.exit === 'user' ? 'is-user' : ''} ` +
+        `${paused ? 'is-paused' : ''} ${phase === 'seed' ? 'is-seed' : ''} ${phase === 'open' ? 'is-open' : ''}`}
+      style={{ '--sig-life': `${lifeMs}ms` }}
+      role="status"
+      aria-live="polite"
+      tabIndex={0}
+      title={language === 'en' ? 'Open the related screen' : 'افتح الشاشة المرتبطة'}
+      onClick={() => { if (item.closing) return; onDismiss(); onOpen(); }}
+      onPointerEnter={hold}
+      onPointerLeave={release}
+      onFocus={hold}
+      onBlur={release}
+    >
+      <span className="sig-thread" aria-hidden="true" />
+      <span className="sig-seed" aria-hidden="true">{glyph}</span>
+
+      <div className="sig-body">
+        <div className="sig-top">
+          <span className="sig-kicker">{kicker}</span>
+          <button
+            type="button"
+            className="sig-x"
+            onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+            aria-label={language === 'en' ? 'Dismiss notification' : 'إغلاق الإشعار'}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <p className="sig-act">{headline}</p>
+
+        <div className="sig-more">
+          <div>
+            {((!isAi && item.user) || age || detail) && (
+              <div className="sig-more-row">
+                {!isAi && item.user && (
+                  <span className="sig-actor">
+                    {monogram && <b className="sig-monogram" aria-hidden="true">{monogram}</b>}
+                    {item.user}
+                  </span>
+                )}
+                {age && <span className="sig-age">{age}</span>}
+              </div>
+            )}
+            {detail && <p className="sig-detail">{detail}</p>}
+          </div>
+        </div>
+      </div>
+
+      <span className="sig-force" aria-hidden="true"><i /><i /><i /></span>
+    </div>
+  );
+}
+
 
 function ActionToast({ message, onClose }) {
   const [paused, setPaused] = useState(false);
@@ -12179,70 +12463,62 @@ function ActionToast({ message, onClose }) {
   if (!message) return null;
 
   const text = String(message);
+  // نفس التصنيف القديم بالحرف — مفيش تغيير في الـlogic
   const isError = /تعذر|فشل|خطأ|غير صحيح|لا يمكن|مرفوض|ممنوع|not found|failed|error/i.test(text);
   const isWarn = !isError && /تنبيه|احترس|تحذير|ناقص|لسه|متبقي|مؤقت|غير مطابق|لازم/i.test(text);
-  const tone = isError ? ACTION_TOAST_TONES.error : isWarn ? ACTION_TOAST_TONES.warn : ACTION_TOAST_TONES.ok;
+  const isDeleteOk = !isError && !isWarn && /حذف|مسح|إزالة|تفريغ|deleted|cleared|purged|removed/i.test(text);
+  const isDownloadOk = !isError && !isWarn && !isDeleteOk && /تحميل|تصدير|تنزيل|ملف|اكسل|pdf|excel|export|download/i.test(text);
+
+  const variant = isError ? 'error' : isWarn ? 'warn' : isDeleteOk ? 'delete-ok' : isDownloadOk ? 'download-ok' : 'ok';
+  const sig = ACTION_SIGNALS[variant] || ACTION_SIGNALS.ok;
+
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   const headline = lines[0] || text;
   const detail = lines.slice(1).join(' ');
   const isArabic = /[\u0600-\u06FF]/.test(text);
-  const cellMs = Math.round(ACTION_TOAST_LIFETIME / 10);
 
   let stamp = '';
   try {
     stamp = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
   } catch { stamp = ''; }
 
+  // 🔝 كل الإشارات بتطلع في نفس الرصيف العلوي — نفس عمود الإشعارات اللحظية
+  const rail = typeof document !== 'undefined' ? document.getElementById('sig-top-rail') : null;
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-6 z-[9999] flex justify-center px-4">
+    <div className={rail ? 'contents' : 'sig-dock-layer'} role="status" aria-live={variant === 'error' ? 'assertive' : 'polite'}>
       <div
-        className={`apt-host pointer-events-auto ${leaving ? 'is-leaving' : ''} ${paused ? 'is-paused' : ''}`}
-        style={{ maxWidth: 660, '--ap-c': tone.c, '--ap-soft': tone.soft }}
+        className={`sig-note sig-note--major sig-note--f${sig.force} sig-tone-${sig.tone} ${sig.shape ? `sig-shape-${sig.shape}` : ''} pointer-events-auto ${leaving ? 'is-closing is-user' : ''} ${paused ? 'is-paused' : ''}`}
+        style={{ '--sig-life': `${ACTION_TOAST_LIFETIME}ms` }}
+        dir={isArabic ? 'rtl' : 'ltr'}
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
-        role="status"
-        aria-live="polite"
       >
-        <div className="apt-slab" dir={isArabic ? 'rtl' : 'ltr'}>
-          <span className="apt-prism" aria-hidden="true" />
+        <span className="sig-thread" aria-hidden="true" />
 
-          <span className="apt-hex">
-            <svg className="apt-hex-bg" viewBox="0 0 46 46" fill="none" aria-hidden="true">
-              <path d="M23 2.5l17.7 10.2v20.6L23 43.5 5.3 33.3V12.7z" stroke="currentColor" strokeOpacity=".45" strokeWidth="1.6" />
-              <path d="M23 6.6l14.3 8.3v16.2L23 39.4 8.7 31.1V14.9z" stroke="currentColor" strokeOpacity=".18" strokeWidth="1" />
-            </svg>
-            <svg className="apt-hex-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-              {tone.mark === 'x' && <path className="apt-draw" d="M6.6 6.6l10.8 10.8M17.4 6.6L6.6 17.4" />}
-              {tone.mark === '!' && <path className="apt-draw" d="M12 5.6v8.4" />}
-              {tone.mark === '!' && <circle cx="12" cy="18.2" r="1.35" fill="currentColor" stroke="none" />}
-              {tone.mark === 'v' && <path className="apt-draw" d="M5 12.6l4.6 4.6L19 7.2" />}
-            </svg>
-          </span>
+        <span className="sig-seed" aria-hidden="true">
+          <svg className="sig-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+            {variant === 'error' && <path d="M6.8 6.8l10.4 10.4M17.2 6.8L6.8 17.2" />}
+            {variant === 'warn' && (<><path d="M12 5.6v8.4" /><circle cx="12" cy="18.2" r="1.35" fill="currentColor" stroke="none" /></>)}
+            {(variant === 'ok' || variant === 'delete-ok' || variant === 'download-ok') && <path d="M5 12.6l4.6 4.6L19 7.2" />}
+          </svg>
+        </span>
 
-          <span className="apt-meter" aria-hidden="true"><i /><i /><i /><i /><i /></span>
-
-          <div className="apt-body">
-            <div className="apt-meta">
-              <span className="apt-chip">{tone.label}</span>
-              {stamp && <span className="apt-time">{stamp}</span>}
-            </div>
-            <p className="apt-head">{headline}</p>
-            {detail && <p className="apt-sub">{detail}</p>}
+        <div className="sig-body">
+          <div className="sig-top">
+            <span className="sig-kicker">{sig.label}</span>
+            {stamp && <span className="sig-age">{stamp}</span>}
           </div>
-
-          <button type="button" className="apt-x" onClick={close} aria-label="إغلاق">
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-
-          <span className="apt-cells" aria-hidden="true">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <i key={i} style={{ animationDuration: `${cellMs}ms`, animationDelay: `${cellMs * i}ms` }} />
-            ))}
-          </span>
+          <p className="sig-act">{headline}</p>
+          {detail && <p className="sig-detail">{detail}</p>}
         </div>
+
+        <span className="sig-force" aria-hidden="true"><i /><i /><i /></span>
+        <button type="button" className="sig-x" onClick={close} aria-label="إغلاق">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
       </div>
     </div>,
-    document.body
+    rail || document.body
   );
 }
 
@@ -12477,3 +12753,29 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
     </div>
 )}
+
+// 🛡️ شبكة أمان: أي خطأ في الرسم يعرض رسالة بدل شاشة بيضا
+export class AppErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('💥 Render crash:', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ minHeight:'100vh', display:'grid', placeItems:'center', padding:24, background:'#050505', color:'#f6f6f7', fontFamily:'inherit', textAlign:'center' }}>
+          <div style={{ maxWidth:520 }}>
+            <div style={{ fontSize:52, marginBottom:12 }}>⚠️</div>
+            <h1 style={{ fontSize:22, fontWeight:900, marginBottom:10 }}>حصل خطأ في العرض</h1>
+            <pre style={{ fontSize:12, textAlign:'start', whiteSpace:'pre-wrap', background:'#111', padding:14, borderRadius:12, color:'#ffb4b4', overflow:'auto', maxHeight:220 }}>
+              {String(this.state.error?.message || this.state.error)}
+            </pre>
+            <button onClick={() => window.location.reload()} style={{ marginTop:14, padding:'12px 22px', borderRadius:12, border:0, background:'#c70000', color:'#fff', fontWeight:900, cursor:'pointer' }}>
+              إعادة التحميل
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}

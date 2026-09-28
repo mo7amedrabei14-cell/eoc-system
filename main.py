@@ -1219,6 +1219,9 @@ def validate_mission_required_fields(mission):
     if mission.participants is not None:
         if not any(val(p.full_name) for p in mission.participants):
             missing.append("إضافة مشارك واحد على الأقل")
+        # 🧮 سقف المشاركين في الاستمارة الواحدة
+        if len(mission.participants) > 1000:
+            missing.append(f"الحد الأقصى للمشاركين 1000 اسم (أُرسل {len(mission.participants)}).")
 
         # 🆕 صفة المشارك إلزامية لكل مشارك غير متطوع (المتطوع يُعرف برقم العضوية فقط)
         for i, p in enumerate(mission.participants):

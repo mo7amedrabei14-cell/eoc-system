@@ -1,0 +1,121 @@
+@keyframes apt-band-in  { 0% { opacity:0; clip-path: inset(0 0 100% 0 round 999px); transform: translate3d(0,-24px,0); } 55% { opacity:1; } 100% { opacity:1; clip-path: inset(0 0 0 0 round 999px); transform:none; } }
+@keyframes apt-band-out { 0% { opacity:1; clip-path: inset(0 0 0 0 round 999px); } 100% { opacity:0; clip-path: inset(0 0 100% 0 round 999px); transform: translate3d(0,-10px,0); } }
+@keyframes apt-fold-in  { 0% { opacity:0; transform: perspective(1100px) rotateX(-26deg) translate3d(0,-28px,0) scaleY(.84); } 44% { opacity:1; } 64% { transform: perspective(1100px) rotateX(7deg) translate3d(0,3px,0) scaleY(1.014); } 100% { opacity:1; transform:none; } }
+@keyframes apt-fold-out { 0% { opacity:1; transform:none; } 100% { opacity:0; transform: perspective(1100px) rotateX(-18deg) translate3d(0,-20px,0) scaleY(.86); } }
+@keyframes apt-prism { 0% { transform: translateX(-130%); } 60%,100% { transform: translateX(130%); } }
+@keyframes apt-draw  { to { stroke-dashoffset: 0; } }
+@keyframes apt-flash  { 0% { opacity:0; transform: scale(.55); } 35% { opacity:.55; } 100% { opacity:0; transform: scale(1.85); } }
+@keyframes apt-beat   { 0%,100% { opacity:.28; transform: scale(1); } 50% { opacity:.85; transform: scale(1.035); } }
+@keyframes apt-bloom  { 0% { opacity:0; transform: scale(.6); } 40% { opacity:.9; } 100% { opacity:0; transform: scale(1.6); } }
+@keyframes apt-throb  { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+@keyframes apt-shimmer{ 0% { background-position: -120% 0; } 100% { background-position: 120% 0; } }
+
+.apt-host { --ap-c: var(--ok); --ap-soft: var(--ok-soft); position: relative; width:100%; }
+.apt-host--ok { animation: apt-band-in .62s var(--sp-drop) both; }
+/* ✦ SUCCESS micro-interaction: a bloom that radiates once as the check seals — proof the action finished */
+.apt-host--ok .apt-slab::before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ap-c) 55%, transparent), transparent 70%);
+  animation: apt-bloom 1.1s cubic-bezier(.2,1,.3,1) .35s 1 both; }
+.apt-host--ok.is-leaving { animation: apt-band-out .32s cubic-bezier(.55,0,.8,.3) both; pointer-events:none; }
+.apt-host--warn, .apt-host--error { animation: apt-fold-in .68s var(--sp-drop) both; }
+/* ✦ WARNING presence: a breathing glow behind the slab — severity is readable before the text */
+.apt-host--warn .apt-glow, .apt-host--error .apt-glow { animation: apt-throb 3.2s ease-in-out infinite; }
+.apt-host--error .apt-glow { animation: apt-beat 2.6s ease-in-out infinite; }
+.apt-host--warn.is-leaving, .apt-host--error.is-leaving { animation: apt-fold-out .34s cubic-bezier(.5,0,.8,.3) both; pointer-events:none; }
+.apt-host.is-paused .apt-cells i { animation-play-state: paused; }
+.apt-host.is-paused .apt-bloom { animation-play-state: paused; }
+
+.apt-slab { position: relative; display:flex; align-items:center; gap: 15px; overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), transparent 55%),
+    color-mix(in srgb, var(--surface-2) 97%, #000);
+  border: 1px solid color-mix(in srgb, var(--ap-c) 26%, var(--border-strong));
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 20px 40px -28px rgba(0,0,0,.92);
+  transition: border-color .28s ease, box-shadow .32s ease, transform .42s var(--sp-soft); }
+/* حبيبات ناعمة على السطح — نفس مادة الإشعارات والتأكيدات (لغة واحدة) */
+.apt-slab::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+  background-image: var(--grain); opacity:.05; mix-blend-mode: soft-light; }
+/* الخطير يتنفّس من جوه — الهادئ يبقى ساكن */
+.apt-host--error .apt-glow { animation: apt-beat 3.6s ease-in-out infinite; }
+/* ── (أ) Receipt Band: كبسولة رقيقة للسطور الناجحة ── */
+.apt-host--ok .apt-slab { border-radius: 999px; padding: 14px 22px 20px; }
+/* ✦ لحظة الإتمام («تم التحميل / تم الحذف»): حلقة بتكتمل ← الصح بيتختم + وميض
+   الإحساس المقصود: إيصال مختوم — مش مجرد كارت بيقول إن الحاجة خلصت. */
+@property --ap-p { syntax: '<number>'; inherits: false; initial-value: 0; }
+@keyframes apt-complete { 0% { --ap-p: 0; } 70% { --ap-p: 100; } 100% { --ap-p: 100; } }
+.apt-host--ok .apt-mark::after { content:""; position:absolute; inset:-5px; border-radius:inherit; pointer-events:none;
+  background: conic-gradient(from -90deg, var(--ap-c) calc(var(--ap-p) * 1%), color-mix(in srgb, var(--ap-c) 16%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.6px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.6px));
+  animation: apt-complete .84s var(--sp-soft) both; }
+.apt-host--ok .apt-mark::before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ap-c) 75%, transparent), transparent 72%);
+  animation: apt-flash .95s ease-out .5s 1 both; }
+.apt-host--ok .apt-draw { animation-delay: .5s; }
+/* ── (ب) Caution Slab: صفيحة حادة الأركان للتنبيهات ── */
+.apt-host--warn .apt-slab, .apt-host--error .apt-slab { border-radius: 7px; padding: 15px 20px 22px; }
+/* ✦ INFO: a calm flat slab — no glow, no throb, just a hairline tone border */
+.apt-host--info .apt-slab { border-radius: 10px; padding: 14px 20px 20px; border-color: color-mix(in srgb, var(--ap-c) 34%, var(--border-strong)); }
+.apt-host--info .apt-slab::before { content:""; position:absolute; inset-block: 0; inset-inline-start: 0; width: 4px; z-index:1; pointer-events:none;
+  background: linear-gradient(180deg, var(--ap-c), color-mix(in srgb, var(--ap-c) 30%, transparent)); }
+/* ✦ Radical: shimmer sweep on hover for every slab — reads as alive, not static */
+.apt-slab::before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ap-c) 18%, transparent), transparent);
+  background-size: 200% 100%; opacity:0; transition: opacity .3s; }
+.apt-host:hover .apt-slab::before { opacity:1; animation: apt-shimmer 1.6s ease-in-out infinite; }
+/* ✦ بصمة التنبيه: حافة نبرة كاملة على الحافة القائدة (مختلفة تمامًا عن قرص الإشعار) */
+.apt-host--warn .apt-slab::before, .apt-host--error .apt-slab::before { content:""; position:absolute; inset-block: 0; inset-inline-start: 0; width: 5px; z-index:1; pointer-events:none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ap-c) 62%, #000), var(--ap-c) 62%, color-mix(in srgb, var(--ap-c) 62%, #000)); }
+/* ✦ بدل شرائط الخطر: بلوم نبرة ناعم بيتنفّس في الركن — عمق بصري بدون أي حس gaming */
+.apt-bloom { position:absolute; inset-inline-end:-74px; top:-96px; width: 250px; height: 250px; pointer-events:none; z-index:0;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ap-c) 30%, transparent), transparent 72%);
+  animation: apt-bloom 4.4s ease-in-out infinite; }
+@keyframes apt-bloom { 0%,100% { opacity:.5; transform: scale(1); } 50% { opacity:.95; transform: scale(1.12); } }
+.apt-glow { position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:0;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--ap-c) 11%, transparent), transparent 42%); }
+.apt-host:hover .apt-slab { border-color: color-mix(in srgb, var(--ap-c) 58%, var(--border-strong)); transform: translateY(-2.5px); box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 36px 64px -28px rgba(0,0,0,.98), 0 0 58px -18px var(--ap-c); }
+.apt-prism { position:absolute; top:0; inset-inline: 14px; height:1px; opacity:.5;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ap-c) 70%, #fff), transparent); }
+.apt-prism::after { content:""; position:absolute; top:0; bottom:0; width:28%; border-radius:999px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); animation: apt-prism 4.4s cubic-bezier(.4,0,.6,1) .6s infinite; }
+
+/* ✦ العلامة: مربع حاد للتنبيهات (إيقاع editorial) وقرص للنجاح (إحساس إيصال مكتمل) */
+.apt-mark { position:relative; z-index:1; flex:none; width:44px; height:44px; border-radius:9px; display:grid; place-items:center; color: var(--ap-c);
+  background: var(--ap-soft);
+  border:1px solid color-mix(in srgb, var(--ap-c) 26%, transparent);
+  animation: liv-pop .48s var(--sp-snap) .12s backwards; }
+.apt-host--ok .apt-mark { width:44px; height:44px; border-radius:999px; }
+/* ✦ DANGER: a heavier, brighter ring — the dangerous action announces itself */
+.apt-host--error .apt-mark { width:48px; height:48px; border:2px solid color-mix(in srgb, var(--ap-c) 60%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ap-c) 14%, transparent), 0 0 22px -6px var(--ap-c); }
+.apt-mark::before { content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+.apt-glyph { position:relative; width:20px; height:20px; }
+.apt-draw { stroke-dasharray: 46; stroke-dashoffset: 46; animation: apt-draw .55s cubic-bezier(.65,0,.35,1) .24s forwards; }
+
+.apt-body { min-width:0; flex:1 1 auto; position:relative; z-index:1; }
+.apt-meta { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+.apt-chip { display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; color: var(--ap-c); padding:4px 9px; border-radius:8px; background: var(--ap-soft); border:1px solid color-mix(in srgb, var(--ap-c) 32%, transparent); }
+.apt-chip::before { content:""; width:5px; height:5px; border-radius:999px; background: var(--ap-c); box-shadow: 0 0 8px var(--ap-c); animation: liv-pulse 1.7s ease-in-out infinite; }
+.apt-time { margin-inline-start:auto; font-size:10.5px; font-weight:700; color: var(--faint); font-variant-numeric: tabular-nums; }
+.apt-head { margin:0; font-size:16px; font-weight:900; letter-spacing:-.012em; line-height:1.55; color: var(--ink); white-space:pre-wrap; overflow-wrap:anywhere; animation: liv-label .54s var(--sp-soft) .12s both; }
+.apt-host--warn .apt-head, .apt-host--error .apt-head { font-size:17px; }
+.apt-host--info .apt-head { font-size:15.5px; }
+.apt-host--error .apt-head { font-size:18px; font-weight:900; }
+.apt-sub { margin:6px 0 0; font-size:13px; font-weight:600; line-height:1.75; color: var(--muted); white-space:pre-wrap; overflow-wrap:anywhere; animation: liv-label .54s var(--sp-soft) .2s both; }
+
+.apt-x { flex:none; width:32px; height:32px; border-radius:10px; display:grid; place-items:center; color: var(--faint); background: color-mix(in srgb, var(--surface-hover) 80%, transparent); border:1px solid var(--border); cursor:pointer; z-index:1; transition: color .2s, background .2s, border-color .2s, transform .34s cubic-bezier(.22,1,.36,1); }
+.apt-x:hover { color: var(--ink); background: color-mix(in srgb, var(--ap-c) 16%, var(--surface-hover)); border-color: color-mix(in srgb, var(--ap-c) 40%, var(--border)); transform: rotate(90deg); }
+
+.apt-cells { position:absolute; inset-inline: 20px; bottom:9px; height:3px; display:flex; gap:4px; z-index:2; }
+/* في البند الناجح: سطر طاقة رفيع متصل — إيقاع مختلف عن شرائط التحذير */
+.apt-host--ok .apt-cells { inset-inline: 42px; bottom:9px; height:2.5px; gap:1px; opacity:.9; }
+.apt-host--ok .apt-cells i { border-radius:1.5px; }
+/* في التنبيهات: سطر واحد متصل يفضي بدل الشرطات المتقطعة ⇒ أنضف وأكثر فخامة */
+.apt-host--warn .apt-cells, .apt-host--error .apt-cells { inset-inline: 34px; bottom:10px; height:2.5px; gap:1px; opacity:.8; }
+.apt-host--warn .apt-cells i, .apt-host--error .apt-cells i { border-radius:1.5px; }
+.apt-cells i { flex:1 1 0; border-radius:999px; background: var(--ap-c); opacity:.85; transform-origin: right; animation-name: liv-drain; animation-timing-function: linear; animation-fill-mode: forwards; }
+[dir="ltr"] .apt-cells i { transform-origin: left; }
+
+/* ── ③ نوافذ التأكيد — Halo Sheet ───────────────────────────────
+   لوح تأكيد «فخم» بإطار نبرة رقيق + هالة خارجية ناعمة + علامة داخل حلقة تتنفّس.
+   دخول: يصعد ويستقر بثنيتين · خروج: يهبط ويذوب. الخطيرة تبقى أهدأ وأثقُل بصريًا.
+   ────────────────────────────────────────────────────────────────── */

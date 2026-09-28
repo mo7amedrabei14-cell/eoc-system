@@ -93,6 +93,10 @@
     min-width: 44px;
   }
 
+  /* أيقونات الإغلاق داخل الإشعارات/التنبيهات: هدف اللمس يفضل 44px بالكامل،
+     لكن بهوامش سالبة حتى لا تضخّم ارتفاع الصف */
+  .liv-x, .apt-x { margin-block: -9px; }
+
   /* Specific sizing adjustments */
   .icon-btn { width: 2.75rem; height: 2.75rem; }
 .action-btn--icon { width: 2.75rem; height: 2.75rem; }
