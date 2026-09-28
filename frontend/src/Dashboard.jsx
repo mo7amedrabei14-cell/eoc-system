@@ -4361,25 +4361,46 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         })
       : filteredMissions;
     if (dayFilteredMissions.length === 0) { setCustomAlert("لا توجد مهام لتصديرها."); return; }
-    const missionsSheet = dayFilteredMissions.map(m => ({
-      "كود المهمة": missionCodeWithDay(m, filterDate),
-      "تصنيف المهمة": m.mission_classification || "عادية",
-      "تاريخ الإنشاء (السيرفر)": formatDateTime(m.created_at),
-      "تاريخ المهمة (الفعلي)": m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : "غير مسجل",
-      ...(withCategories ? (() => { const c = classifyActivity(m.mission_name); return { "تصنيف النشاط": c[0], "نوع النشاط": c[1], "تفاصيل النشاط": c[2], "النوع": c[3], "اسم النوع": c[4] }; })() : {}),
-      "اسم المهمة": m.mission_name,
-      "عدد المتطوعين": m.vol_count || 0,
-      "عدد الغير متطوعين": m.non_vol_count || 0,
-      "إجمالي المشاركين": m.total_participants || 0,
-      // 🏷️ «كود الفريق» يقرأ من حقل «كود الفريق/الإدارة» في الاستمارة نفسها (missions.team_code)
-      //    — وليس من تجميع أكواد المشاركين (team_codes) الذي كان يُظهر «-» رغم وجود قيمة في الحقل.
-      "كود الفريق": m.team_code || m.team_codes || "-",
-      "مسئول المهمة": m.responsible_person,
-      "اسم السائق": m.drivers || "لا يوجد",
-      "رقم السيارة": m.plates || "لا يوجد",
-      "حالة المهمة": m.status,
-      "الفرع": m.branch
-    }));
+    // 🗂️ ترتيب الأعمدة: وضع «بالتصنيفات» بترتيب مخصص للمهام المصنفة،
+    //    ووضع «بدون تصنيفات» بنفس ترتيبه القديم بدون أي تغيير.
+    const missionsSheet = dayFilteredMissions.map(m => {
+      if (!withCategories) {
+        return {
+          "كود المهمة": missionCodeWithDay(m, filterDate),
+          "تصنيف المهمة": m.mission_classification || "عادية",
+          "تاريخ الإنشاء (السيرفر)": formatDateTime(m.created_at),
+          "تاريخ المهمة (الفعلي)": m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : "غير مسجل",
+          "اسم المهمة": m.mission_name,
+          "عدد المتطوعين": m.vol_count || 0,
+          "عدد الغير متطوعين": m.non_vol_count || 0,
+          "إجمالي المشاركين": m.total_participants || 0,
+          "كود الفريق": m.team_code || m.team_codes || "-",
+          "مسئول المهمة": m.responsible_person,
+          "اسم السائق": m.drivers || "لا يوجد",
+          "رقم السيارة": m.plates || "لا يوجد",
+          "حالة المهمة": m.status,
+          "الفرع": m.branch
+        };
+      }
+      const c = classifyActivity(m.mission_name);
+      return {
+        "كود الغرفة": m.team_code || m.team_codes || "-",
+        "مفتوحة / عادية": m.mission_classification || "عادية",
+        "التاريخ": (m.exit_date && m.exit_date !== '-') ? formatDateTime(m.exit_date) : formatDateTime(m.created_at),
+        "الفرع": m.branch,
+        "تصنيف النشاط": c[0],
+        "نوع النشاط": c[1],
+        "تفاصيل النشاط": c[2],
+        "النوع": c[3],
+        "اسم النوع": c[4],
+        "نوع الحدث": "",
+        "اسم المهمة": m.mission_name,
+        "عدد المتطوعين": m.vol_count || 0,
+        "عدد غير المتطوعين": m.non_vol_count || 0,
+        "كود المهمة": missionCodeWithDay(m, filterDate),
+        "عدد المشاركين": m.total_participants || 0
+      };
+    });
 
     const beneficiariesSheet = [];
     // 📋 كل المهمات تظهر في ورقة المستفيدين — حتى التي بلا مستفيدين
@@ -7767,12 +7788,6 @@ const W_BRANCH_ID_TO_REGION = {
 const wKey = (s) => String(s || '')
   .replace(/[أإآٱا]/g, 'ا').replace(/[يىئ]/g, 'ي').replace(/[ةه]/g, 'ه')
   .replace(/[\s\u0640\u200c\u200e\u200f\-_–—.()/\\]+/g, '').trim();
-const wRegionByName = (() => {
-  const out = {};
-  Object.entries(W_REGION_NAME_MAP).forEach(([k, v]) => { out[wKey(k)] = v; });
-  return out;
-})();
-
 // خريطة الأقاليم باسم المحافظة الموحّد (قاهرة/مركز عام = نفس nطاق «المركز العام»)
 const W_REGION_NAME_MAP = {
   'المركزالعام': 'hq', 'القاهره': 'hq', 'الجيزه': 'hq', 'القليوبيه': 'hq', 'البحيره': 'hq', 'الاسكندريه': 'hq', 'مرسيمطروح': 'hq', 'مطروح': 'hq',
@@ -7780,6 +7795,16 @@ const W_REGION_NAME_MAP = {
   'الغربيه': 'delta', 'الدقهليه': 'delta', 'كفرالشيخ': 'delta', 'المنوفيه': 'delta', 'دمياط': 'delta',
   'الفيوم': 'saeed', 'بنيسويف': 'saeed', 'المنيا': 'saeed', 'اسيوط': 'saeed', 'سوهاج': 'saeed', 'قنا': 'saeed', 'الاقصر': 'saeed', 'اسوان': 'saeed', 'الواديالجديد': 'saeed', 'البحرالاحمر': 'saeed',
 };
+
+// ⚠️ ترتيب إلزامي: wRegionByName يقرأ W_REGION_NAME_MAP وقت تحميل الوحدة (IIFE)،
+//    فأي إشارة قبل تعريف const بتضرب Temporal Dead Zone ⇒ الملف كله يفشل في التحميل
+//    والصفحة تطلع بيضاء. التعريف فوق، والبناء تحته مباشرة (قبل W_REGION_LABELS).
+const wRegionByName = (() => {
+  const out = {};
+  Object.entries(W_REGION_NAME_MAP).forEach(([k, v]) => { out[wKey(k)] = v; });
+  return out;
+})();
+
 const W_REGION_LABELS = { hq: 'المركز العام', canal: 'أقاليم القنال', delta: 'أقاليم الدلتا', saeed: 'أقاليم الصعيد' };
 // قائمة «إنهاء التوقعات» للأدوار العامة — الخيارات 1-4 = نيابةً عن إقليم، الخيار 5 = اعتماد وطني شامل
 const W_FINISH_REGIONS = [
