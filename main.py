@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
 from datetime import date, time, datetime, timedelta, timezone
 from psycopg.errors import OperationalError, UniqueViolation
+from urllib.parse import urlparse
+import hashlib
 import json
 import os
 import re
@@ -56,6 +58,10 @@ from auth import (
 )
 
 security = HTTPBearer()
+
+# 🧯 مصادقة اختيارية: بلاغات أخطاء الواجهة تُقبل أيضاً بلا جلسة (خطأ شاشة الدخول
+#    قبل وجود توكن لا بد أن يُبلَّغ أيضاً) — auto_error=False يجعل الترويسة اختيارية.
+security_optional = HTTPBearer(auto_error=False)
 
 CLEAR_ALL_CONFIRMATION_CODE = "301014"
 
@@ -629,6 +635,56 @@ def ensure_workspace_schema():
         connection.close()
 
 
+def ensure_client_errors_schema():
+    """🧯 جدول بلاغات أخطاء الواجهة (تشخيص «الشاشة البيضا») — خطوة خفيفة منفصلة.
+
+    ⚠️ لا نرفع SCHEMA_VERSION لإضافة جدول: رفعه يُعيد تشغيل كتلة الـ DDL الثقيلة
+    (CREATE INDEX على realtime_events) على قاعدة عليها حركة، فتحجز أقفالاً توقف
+    البث اللحظي مؤقتاً. نستخدم «مستوى خفيف خاص بالجدول» نفسه المستخدم في
+    ensure_workspace_schema: فحص وجود واحد + إنشاء عند الغياب.
+    """
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT to_regclass('public.client_errors');")
+            if cursor.fetchone()[0] is None:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS client_errors (
+                        error_id      BIGSERIAL PRIMARY KEY,
+                        fingerprint   VARCHAR(64)  NOT NULL,
+                        event_date    DATE         NOT NULL,
+                        occurrences   INTEGER      NOT NULL DEFAULT 1,
+                        kind          VARCHAR(40)  NOT NULL DEFAULT 'error',
+                        message       TEXT,
+                        stack         TEXT,
+                        url           VARCHAR(300),
+                        user_agent    VARCHAR(300),
+                        app_revision  VARCHAR(120),
+                        boot_id       VARCHAR(64),
+                        user_id       INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+                        first_seen    TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo'),
+                        last_seen     TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    );
+                """)
+                # تجميع بالبصمة + اليوم: صف واحد لكل خطأ مميز في اليوم (occurrences يزيد)
+                # ⇒ لا ينمو الجدول بلا حد، ومع ذلك يوضح حجم تكرار كل خطأ.
+                cursor.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_client_errors_fingerprint_day
+                        ON client_errors (fingerprint, event_date);
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_client_errors_last_seen
+                        ON client_errors (last_seen DESC);
+                """)
+                connection.commit()
+                print("client errors schema: client_errors created")
+    except Exception as e:
+        connection.rollback()
+        print(f"ensure_client_errors_schema error (will retry next boot): {e}")
+    finally:
+        connection.close()
+
+
 # 🆔 هوية التشغيلة + وقت الإقلاع: الواجهة بتقارنهم بين نبضتين — لو الاتصال بانقطع
 #    ورجع بهوية جديدة يبقى السيرفر قام من جديد فعلاً ⇒ نطلب تحديث كامل (Ctrl+Shift+R).
 #    (قبل كده كان مفيش أي مؤشر حقيقي: الواجهة كانت بتعتمد على navigator.onLine بس،
@@ -650,7 +706,8 @@ def _bootstrap_schema_in_background():
     """
     try:
         ensure_schema()
-        ensure_workspace_schema()   # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
+        ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
+        ensure_client_errors_schema()  # 🧯 جدول بلاغات أخطاء الواجهة (خفيفة منفصلة)
         _schema_error["message"] = None
     except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
         _schema_error["message"] = str(e)[:200]
@@ -8526,3 +8583,183 @@ try:
     run_jl_sessions_backfill()
 except Exception as e:
     print(f"JL sessions backfill error: {e}")
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 🧯 بلاغات أخطاء الواجهة (Client Errors) — تشخيص «الشاشة البيضا»
+# ═══════════════════════════════════════════════════════════════════
+# الجذر: أي خطأ وقت *تحميل وحدة* في الواجهة (مثل مرجع قبل تعريفه) كان يوقف
+# التطبيق كله بلا أي أثر على السيرفر — المستخدم يرى شاشة بيضا ولا أحد يعرف لماذا
+# ولا من أي جهاز. هنا الواجهة تُبلّغ (قبل الدخول أو بعده)، والبلاغ يُسجَّل على
+# السيرفر ليراه المالك من أي مكان — بدل أن يُطلب من المستخدم أن «يصوّر الشاشة».
+#
+# ⚠️ مسار تشخيصي بالكامل: (1) لا يُرجع 500 أبداً — خطأ هنا لا يجب أن يدخل
+#    الواجهة في حلقة إبلاغ؛ (2) يُقضّ كل حقل؛ (3) لا يُخزّن توكن ولا باراميترات
+#    رابط (قد تحمل بيانات) — المسار فقط بلا query؛ (4) سقف يومي للصفوف حتى لا
+#    يتحول المسار إلى وسيلة لإغراق قاعدة البيانات (وهو مسار بلا جلسة إلزامية).
+
+CLIENT_ERROR_MAX_MESSAGE = 500
+CLIENT_ERROR_MAX_STACK = 4000
+CLIENT_ERROR_MAX_ROWS_PER_DAY = 2000
+
+
+class ClientErrorModel(BaseModel):
+    message: str
+    kind: Optional[str] = None          # error | unhandledrejection | boundary | module
+    stack: Optional[str] = None
+    url: Optional[str] = None
+    user_agent: Optional[str] = None
+    app_revision: Optional[str] = None
+    boot_id: Optional[str] = None
+
+
+def _client_error_kind(value):
+    kind = (value or 'error').strip().lower()[:40]
+    return kind or 'error'
+
+
+def _client_error_fingerprint(kind, message, stack):
+    """بصمة مستقرة لنفس الخطأ (تُحسب على السيرفر لا العميل) — أساس التجميع."""
+    first_stack_line = (((stack or '').strip().splitlines() or ['']))[0]
+    seed = f"{kind}|{(message or '')[:200]}|{first_stack_line[:200]}"
+    return hashlib.sha256(seed.encode('utf-8', 'replace')).hexdigest()[:32]
+
+
+def _client_error_clean_url(raw):
+    """يبقي الأصل + المسار فقط، ويحذف الباراميترات (قد تحمل توكن/بيانات) والهاش."""
+    if not raw:
+        return None
+    try:
+        text = str(raw).strip()
+        parsed = urlparse(text)
+        base = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else ''
+        path = parsed.path or ('' if base else text)
+        clean = (base + path)[:300]
+        return clean or None
+    except Exception:
+        return None
+
+
+@app.post("/api/client-errors")
+def report_client_error(
+    payload: ClientErrorModel,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional),
+):
+    """استقبال بلاغ خطأ واجهة — يُقبل بلا جلسة أيضاً (أخطاء شاشة الدخول تُبلَّغ).
+
+    لا يرفع استثناءً للمستخدم أبداً: يرجّع ok=false بهدوء لو تعذّر التسجيل.
+    """
+    message = (payload.message or '').strip()
+    if not message:
+        return {"ok": False, "detail": "message مطلوب"}
+
+    kind = _client_error_kind(payload.kind)
+    message = message[:CLIENT_ERROR_MAX_MESSAGE]
+    stack = (payload.stack or '').strip()[:CLIENT_ERROR_MAX_STACK] or None
+    fingerprint = _client_error_fingerprint(kind, message, stack)
+
+    # 🪪 الهوية اختيارية: لو فيه توكن صالح نربط البلاغ بصاحبه، وإلا NULL (بلا رفض)
+    reporter_user_id = None
+    if credentials is not None:
+        try:
+            reporter_user_id = get_current_user_id(credentials.credentials)
+        except Exception:
+            reporter_user_id = None
+
+    connection = None
+    try:
+        connection = get_connection()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM client_errors WHERE event_date = (now() AT TIME ZONE 'Africa/Cairo')::date;"
+            )
+            if cursor.fetchone()[0] >= CLIENT_ERROR_MAX_ROWS_PER_DAY:
+                return {"ok": True, "throttled": True}
+
+            cursor.execute(
+                """
+                INSERT INTO client_errors (
+                    fingerprint, event_date, occurrences, kind, message, stack, url,
+                    user_agent, app_revision, boot_id, user_id
+                ) VALUES (
+                    %s, (now() AT TIME ZONE 'Africa/Cairo')::date, 1, %s, %s, %s, %s,
+                    %s, %s, %s, %s
+                )
+                ON CONFLICT (fingerprint, event_date) DO UPDATE SET
+                    occurrences  = client_errors.occurrences + 1,
+                    last_seen    = (now() AT TIME ZONE 'Africa/Cairo'),
+                    message      = EXCLUDED.message,
+                    stack        = COALESCE(EXCLUDED.stack, client_errors.stack),
+                    url          = COALESCE(EXCLUDED.url, client_errors.url),
+                    user_agent   = COALESCE(EXCLUDED.user_agent, client_errors.user_agent),
+                    app_revision = COALESCE(EXCLUDED.app_revision, client_errors.app_revision),
+                    boot_id      = COALESCE(EXCLUDED.boot_id, client_errors.boot_id),
+                    user_id      = COALESCE(EXCLUDED.user_id, client_errors.user_id)
+                RETURNING error_id, occurrences;
+                """,
+                (
+                    fingerprint, kind, message, stack,
+                    _client_error_clean_url(payload.url),
+                    (payload.user_agent or '')[:300] or None,
+                    (payload.app_revision or '')[:120] or None,
+                    (payload.boot_id or '')[:64] or None,
+                    reporter_user_id,
+                ),
+            )
+            row = cursor.fetchone()
+        connection.commit()
+        return {"ok": True, "error_id": row[0], "occurrences": row[1]}
+    except Exception as e:
+        try:
+            if connection is not None:
+                connection.rollback()
+        except Exception:
+            pass
+        print(f"client-errors report failed: {e}")
+        return {"ok": False}
+    finally:
+        if connection is not None:
+            connection.close()
+
+
+@app.get("/api/client-errors")
+def list_client_errors(limit: int = 100, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """آخر بلاغات أخطاء الواجهة — للمالك فقط (تشخيص ما يراه المستخدمون فعلاً)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    if not is_owner_role(get_user_role(user_id)):
+        raise HTTPException(status_code=403, detail="سجل أخطاء الواجهة متاح للمالك فقط")
+    try:
+        limit_value = max(1, min(int(limit or 100), 500))
+    except Exception:
+        limit_value = 100
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT error_id, fingerprint, event_date, occurrences, kind, message, stack, url,
+                       user_agent, app_revision, boot_id, user_id, first_seen, last_seen
+                FROM client_errors
+                ORDER BY last_seen DESC
+                LIMIT %s;
+                """,
+                (limit_value,),
+            )
+            return [
+                {
+                    "error_id": r[0], "fingerprint": r[1],
+                    "event_date": str(r[2]) if r[2] else "", "occurrences": r[3],
+                    "kind": r[4], "message": r[5], "stack": r[6], "url": r[7],
+                    "user_agent": r[8], "app_revision": r[9], "boot_id": r[10],
+                    "user_id": r[11],
+                    "first_seen": str(r[12]) if r[12] else "",
+                    "last_seen": str(r[13]) if r[13] else "",
+                }
+                for r in cursor.fetchall()
+            ]
+    finally:
+        connection.close()

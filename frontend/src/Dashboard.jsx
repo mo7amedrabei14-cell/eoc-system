@@ -4384,7 +4384,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       }
       const c = classifyActivity(m.mission_name);
       return {
-        "كود الغرفة": m.team_code || m.team_codes || "-",
+        "كود المهمة": missionCodeWithDay(m, filterDate),
         "مفتوحة / عادية": m.mission_classification || "عادية",
         "التاريخ": (m.exit_date && m.exit_date !== '-') ? formatDateTime(m.exit_date) : formatDateTime(m.created_at),
         "الفرع": m.branch,
@@ -4397,7 +4397,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         "اسم المهمة": m.mission_name,
         "عدد المتطوعين": m.vol_count || 0,
         "عدد غير المتطوعين": m.non_vol_count || 0,
-        "كود المهمة": missionCodeWithDay(m, filterDate),
+        "كود الغرفة": m.team_code || m.team_codes || "-",
         "عدد المشاركين": m.total_participants || 0
       };
     });
