@@ -10436,11 +10436,11 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {isGlobalModalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="modal-card w-full max-w-3xl h-full max-h-[95vh] flex flex-col overflow-hidden">
+          <div className="modal-card w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden">
             <div className="p-5 border-b border-[var(--border)] shrink-0">
               <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><EarthquakeIcon/> {gForm.eq_id ? 'تعديل زلزال عالمي' : 'رصد زلزال عالمي (يدوي)'}</h2>
             </div>
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+            <div className="p-6 overflow-y-auto custom-scrollbar min-h-0">
               <DraftRestoreBar pending={globalEqDraft.pending} onRestore={globalEqDraft.restore} onDiscard={globalEqDraft.discard} label={gForm.eq_id ? 'الرصد الحالي' : 'رصد جديد'} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <FormGroup label="التاريخ"><SegDateField value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
@@ -10468,11 +10468,11 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       {isEgyptModalOpen && (
         <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="modal-card w-full max-w-3xl h-full max-h-[95vh] flex flex-col overflow-hidden">
+          <div className="modal-card w-full max-w-3xl max-h-[95vh] flex flex-col overflow-hidden">
             <div className="p-5 border-b border-[var(--border)] shrink-0">
               <h2 className="text-lg font-bold text-white mb-0 flex items-center gap-2"><EarthquakeIcon/> {eForm.eq_id ? 'تعديل زلزال مصر' : 'رصد زلزال محلي (مصر)'}</h2>
             </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+            <div className="min-h-0 overflow-y-auto custom-scrollbar p-6">
               <DraftRestoreBar pending={egyptEqDraft.pending} onRestore={egyptEqDraft.restore} onDiscard={egyptEqDraft.discard} label={eForm.eq_id ? 'الرصد الحالي' : 'رصد جديد'} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <FormGroup label="التاريخ"><SegDateField value={eForm.date} onChange={e => setEForm({...eForm, date: e.target.value})} className="field" /></FormGroup>
