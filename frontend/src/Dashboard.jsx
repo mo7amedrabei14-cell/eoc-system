@@ -1851,6 +1851,19 @@ useEffect(() => {
       if (seenEventIdsRef.current.has(e.event_id)) return;
       seenEventIdsRef.current.add(e.event_id);
 
+      // 🔄 إشارة تحديث البيانات *قبل* فحص تكرار الإشعارات:
+      //    منع تكرار التوست/الجرس مسموح، لكن منع تحديث الأرقام مش مسموح.
+      setLiveUpdateVersion(prev => ({
+        ...prev,
+        missions: prev.missions + (e.event_type === 'mission' ? 1 : 0),
+        local_news: prev.local_news + (e.event_type === 'local_news' ? 1 : 0),
+        global_disasters: prev.global_disasters + (e.event_type === 'global_disaster' ? 1 : 0),
+        earthquakes: prev.earthquakes + (e.event_type === 'earthquake' ? 1 : 0),
+        ai_news: prev.ai_news + (e.event_type === 'ai_news' ? 1 : 0),
+        handover: prev.handover + (e.event_type === 'handover' ? 1 : 0),
+        weather: prev.weather + (e.event_type === 'weather' ? 1 : 0),
+      }));
+
             // 🧾 حدث سجل النظام: يحدّث شاشة السجل المفتوحة لحظياً — بلا توست ولا جرس
       if (e.event_type === 'audit') {
         setLiveUpdateVersion(prev => ({ ...prev, audit: prev.audit + 1 }));
@@ -2821,6 +2834,21 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
 
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const [filterDate, setFilterDate] = useState(getLocalDate());
+  // 🌙 بعد منتصف الليل: لو المستخدم سايب التاريخ على «اليوم»، ينقل لليوم الجديد تلقائياً
+  //    (ولو اختار تاريخ بنفسه، اختياره مبيتغيّرش)
+  const homeTodayRef = useRef(getLocalDate());
+  useEffect(() => {
+    const t = setInterval(() => {
+      const tday = getLocalDate();
+      if (tday !== homeTodayRef.current) {
+        const prevToday = homeTodayRef.current;
+        homeTodayRef.current = tday;
+        setFilterDate(prev => (prev === prevToday ? tday : prev));
+      }
+    }, 30000);
+    return () => clearInterval(t);
+  }, []);
+
   // 🌤️ الطقس اليومي المجمّع (قراءة فقط) — يتحدّث تلقائياً مع أي حفظ/إنهاء توقعات
   const [dailyWeather, setDailyWeather] = useState([]);
     // 🤖 أرقام بوت الأخبار (رصد الذكاء الاصطناعي) — نفس داتا صفحة الرصد
@@ -2852,34 +2880,39 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   }, []);
 
 
-  useEffect(() => {
+  // ════════════════════════════════════════════════════════════════════
+  // 🔄 محمّل واحد لكل أرقام الصفحة — كل نداء بيتحدّث لوحده (allSettled)
+  //    فشل نداء واحد ما يوقفش تحديث الباقي (وده كان سبب إن الأرقام تفضل قديمة)
+  // ════════════════════════════════════════════════════════════════════
+  const loadHomeIndicators = useCallback(async () => {
     const token = sessionStorage.getItem('access_token');
-    Promise.all([
-      fetch(`${BASE}/api/missions`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`${BASE}/api/local-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`${BASE}/api/global-disasters`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`${BASE}/api/earthquakes/global`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`${BASE}/api/earthquakes/egypt`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch(`${BASE}/api/ai-news`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
-    ]).then(([missionsData, newsData, globalData, gEqs, eEqs, aiNewsData]) => {
-      setMissions(missionsData);
-      setNews(newsData);
-      setGlobalDisasters(globalData);
-      setGlobalEqs(gEqs);
-      setEgyptEqs(eEqs);
-      setAiNewsList(Array.isArray(aiNewsData) ? aiNewsData : []);
-    });
-    // 🔄 يعاد السحب مع أي حدث لحظي يخص البيانات المعروضة — الأرقام تتحدث من نفسها
-  }, [liveUpdateVersion.missions, liveUpdateVersion.local_news, liveUpdateVersion.global_disasters, liveUpdateVersion.earthquakes, liveUpdateVersion.ai_news]);
+    const get = (path, pick) => fetch(`${BASE}${path}`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data != null) pick(data); })
+      .catch(() => {});
+    await Promise.allSettled([
+      get('/api/missions',           (d) => setMissions(Array.isArray(d) ? d : [])),
+      get('/api/local-news',         (d) => setNews(Array.isArray(d) ? d : [])),
+      get('/api/global-disasters',   (d) => setGlobalDisasters(Array.isArray(d) ? d : [])),
+      get('/api/earthquakes/global', (d) => setGlobalEqs(Array.isArray(d) ? d : [])),
+      get('/api/earthquakes/egypt',  (d) => setEgyptEqs(Array.isArray(d) ? d : [])),
+      get('/api/ai-news',            (d) => setAiNewsList(Array.isArray(d) ? d : [])),
+      get(`/api/weather/daily?date=${filterDate || getLocalDate()}`, (d) => setDailyWeather(Array.isArray(d) ? d : [])),
+    ]);
+  }, [filterDate]);
 
-  // 🌤️ سحب الطقس اليومي: عند تغيير تاريخ الفلتر أو عند وصول تحديث لحظي للطقس
+  // ① فتح الصفحة + ② أي حدث لحظي + ③ تغيير التاريخ — كله من نفس المكان
+  useEffect(() => { loadHomeIndicators(); }, [
+    loadHomeIndicators,
+    liveUpdateVersion.missions, liveUpdateVersion.local_news, liveUpdateVersion.global_disasters,
+    liveUpdateVersion.earthquakes, liveUpdateVersion.ai_news, liveUpdateVersion.weather,
+  ]);
+
+  // ④ شبكة أمان: تحديث صامت دوري — يضمن إن الأرقام تتحدّث حتى لو ضاع أي حدث لحظي
   useEffect(() => {
-    const token = sessionStorage.getItem('access_token');
-    const d = filterDate || getLocalDate();
-    fetch(`${BASE}/api/weather/daily?date=${d}`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setDailyWeather(data));
-  }, [filterDate, liveUpdateVersion.weather]);
+    const t = setInterval(loadHomeIndicators, 60000);
+    return () => clearInterval(t);
+  }, [loadHomeIndicators]);
 
   const filterMissionBranch = selectedBranchName; 
   const filterNewsGov = (selectedBranchName === 'المركز العام' || selectedBranchName === 'القاهرة') ? 'القاهرة' : selectedBranchName;
@@ -3853,6 +3886,14 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
     if (isFirstLiveUpdate.current) { isFirstLiveUpdate.current = false; return; }
     fetchMissions(true);
   }, [liveUpdateVersion]);
+
+    // 🛡️ شبكة أمان: تحديث صامت دوري
+  useEffect(() => {
+    const t = setInterval(() => { fetchMissions(true); }, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   // 🔄 إذا كانت تفاصيل مهمة مفتوحة حاليًا وتغيّرت من مستخدم آخر (حدث لحظي يخصّها)،
   // نعيد جلبها من السيرفر (مصدر الحقيقة) ونساندق حقول الاستمارة المعروضة — بدون أي reload.
@@ -7612,6 +7653,19 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       .catch(() => {});
   }, [liveUpdateVersion]);
 
+    // 🛡️ شبكة أمان: تحديث صامت دوري لسجل النظام
+  useEffect(() => {
+    const t = setInterval(() => {
+      const token = sessionStorage.getItem('access_token');
+      fetch(`${BASE}/api/audit-logs`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : [])
+        .then(data => { if (Array.isArray(data)) setLogs(data); })
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(t);
+  }, []);
+
+
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.full_name?.includes(searchTerm) || log.details?.includes(searchTerm);
     const matchesAction = actionFilter === 'الكل' || log.action === actionFilter;
@@ -7806,6 +7860,14 @@ const [nd, setNd] = useState({
   useEffect(() => {
     if (isFirstLiveNewsRef.current) { isFirstLiveNewsRef.current = false; return; }
     fetchNews(true);
+
+  // 🛡️ شبكة أمان: تحديث صامت دوري
+  useEffect(() => {
+    const t = setInterval(() => { fetchNews(true); }, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdateVersion]);
 
@@ -8650,6 +8712,14 @@ const visibleBranches = (
 
   // تحديث لحظي: مستخدم آخر حفظ توقعات أو أنهى وردية → refetch صامت
   useEffect(() => { if (liveUpdateVersion > 0) { loadGrid(true); loadDaily(true); } }, [liveUpdateVersion]);
+
+    // 🛡️ شبكة أمان: تحديث صامت دوري
+  useEffect(() => {
+    const t = setInterval(() => { loadGrid(true); loadDaily(true); }, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // التنبيهات غير الحاجبة: تنغلق تلقائيًا بدل أن تحجب الشاشة وتدفع المستخدم لـ Refresh
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
 
@@ -9408,6 +9478,14 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   useEffect(() => { if (canAccess) fetchHandovers(); }, [canAccess, fetchHandovers]);
   useEffect(() => { if (canAccess && liveUpdateVersion > 0) fetchHandovers(); }, [liveUpdateVersion, canAccess, fetchHandovers]);
 
+    // 🛡️ شبكة أمان: تحديث صامت دوري
+  useEffect(() => {
+    if (!canAccess) return undefined;
+    const t = setInterval(() => { fetchHandovers(); }, 60000);
+    return () => clearInterval(t);
+  }, [canAccess, fetchHandovers]);
+
+
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'handover' || focusTarget.id == null) return;
@@ -10023,6 +10101,13 @@ const [clearAllCode, setClearAllCode] = useState('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdateVersion]);
 
+  // 🛡️ شبكة أمان: تحديث صامت دوري للكوارث العالمية
+  useEffect(() => {
+    const t = setInterval(() => { fetchDisasters(true); }, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
     if (!focusTarget || focusTarget.tab !== 'global_disasters' || focusTarget.id == null) return;
@@ -10458,6 +10543,13 @@ const [clearAllCode, setClearAllCode] = useState('');
     fetchEarthquakes(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdateVersion]);
+
+  // 🛡️ شبكة أمان: تحديث صامت دوري للزلازل (عالمي + مصر)
+  useEffect(() => {
+    const t = setInterval(() => { fetchEarthquakes(true); }, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
@@ -11272,8 +11364,8 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     : '';
 
   // جلب البيانات الأساسية مع الاحتفاظ بأي بيانات نجحت قبل حدوث خطأ
-  const fetchWeatherIntelData = async () => {
-    setIsLoading(true);
+  const fetchWeatherIntelData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     setApiError(null);
     const token = getStoredAccessToken();
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -11369,6 +11461,14 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
   useEffect(() => {
     fetchWeatherIntelData();
   }, [targetDate, selectedLocationId]);
+
+    // 🛡️ شبكة أمان: تحديث صامت دوري
+  useEffect(() => {
+    const t = setInterval(() => { fetchWeatherIntelData(true); }, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   // تشغيل التحليل اليومي يدويًا (Owner Only)
   const handleTriggerRun = async () => {
@@ -13225,6 +13325,13 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
   useEffect(() => {
     if (liveUpdateVersion > 0) fetchHR(true);
   }, [liveUpdateVersion, fetchHR]);
+
+    // 🛡️ شبكة أمان: تحديث صامت دوري
+  useEffect(() => {
+    const t = setInterval(() => { fetchHR(true); }, 60000);
+    return () => clearInterval(t);
+  }, [fetchHR]);
+
 
   // 💡 وميض الصف عند تغيّر حالة "في مهمة حاليًا" لحظياً — يخبر المستخدم "إيه اللي اتغير"
   const prevActiveRef = useRef({});
