@@ -2796,6 +2796,8 @@ def create_mission(
             except Exception as e:
                 print(f"Audit Error: {e}")
 
+            _emit_live(cursor, event_type="audit", action="سجل النظام: إنشاء مهمة", actor_user_id=user_id, mission_id=mission_id, entity_id=mission_id, details={"action_text": f"تم إنشاء استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission_code}"})
+
             # 💡 إشعار المتطوعين المشاركين المربوطين بحسابات دخول (بالـ user_id لا الأسماء)
             if participant_user_ids:
                 try:
@@ -3040,10 +3042,6 @@ def update_mission(
                 cur_db_fs = cd_row[3]
             # 🆕 الحالة السابقة قبل التحديث — تُستخدم لمنع إشعارات المراجعة المكررة
             _previous_mission_status = cd_row[1] if cd_row else None
-
-            # 🧾 لقطة «قبل» لأعداد وبصمات التفاصيل — قبل أي حذف/إعادة كتابة تحت
-            _det_before = details_snapshot(cursor, mission_id)
-
                         # 💾 حفظ بدون إجراء: مسموح فقط (قيد المراجعة / مُرجَعة / معتمدة) — الحالة تُثبَّت من القاعدة
             if save_only:
                 if not cd_row:
@@ -3472,30 +3470,13 @@ def update_mission(
                     (Jsonb(mission.form_blocks), mission_id),
                 )
 
-            # 💡 تسجيل اللوج + 🧾 سجل التعديلات: «قبل/بعد» بلغة تقول الشخص عمل إيه بالظبط
+            # 💡 تسجيل اللوج (بدون تفاصيل «التعديلات»)
             try:
-                _det_after = details_snapshot(cursor, mission_id)
-                _branch_names = {}
-                if _clean_text(_before.get('branch_id')) != _clean_text(mission.branch_id):
-                    _ids = [str(x) for x in (_before.get('branch_id'), mission.branch_id)
-                            if x is not None and str(x).strip() != '']
-                    if _ids:
-                        _branch_names = dict(cursor.execute(
-                            "SELECT branch_id::text, branch_name FROM branches WHERE branch_id::text = ANY(%s)",
-                            (_ids,)).fetchall())
-                _changes = (describe_mission_edits(mission, _before, _branch_names)
-                            + describe_details_edits(_det_before, _det_after))
-                if _changes:
-                    _line = " · ".join(_changes[:5])
-                    if len(_changes) > 5:
-                        _line += f" (+{len(_changes) - 5} تغيير آخر)"
-                    _changes_note = f" — التعديلات: {_line}"
-                else:
-                    _changes_note = " — بدون أي تعديل في البيانات"
                 _audit_action = "حفظ تعديلات بدون إجراء" if save_only else "تحديث/مراجعة"
-                create_audit_log(cursor, user_id, _audit_action, mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission.mission_code or '—'} — الحالة: {mission.status}{_changes_note}", "changes": _changes[:20]})
+                create_audit_log(cursor, user_id, _audit_action, mission_id=mission_id, entity_type="mission", entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission.mission_code or '—'} — الحالة: {mission.status}"})
             except Exception as e:
                 print(f"Audit Error: {e}")
+            _emit_live(cursor, event_type="audit", action="سجل النظام: تعديل مهمة", actor_user_id=user_id, mission_id=mission_id, entity_id=mission_id, details={"action_text": f"تم تعديل استمارة «{mission.mission_name or 'بدون اسم'}» بكود: {mission.mission_code or '—'}"})
             # إشعار المتطوعين المربوطين بحسابات: من أُبقوا + من أُزيلوا من الاستمارة
             try:
                 notify_participant_accounts(cursor, mission_id, mission.mission_name, user_id, participant_user_ids)
@@ -3698,6 +3679,8 @@ def update_mission_status(
                 )
             except Exception as e:
                 print(f"Audit Error: {e}")
+
+            _emit_live(cursor, event_type="audit", action="سجل النظام: تغيير حالة مهمة", actor_user_id=user_id, mission_id=mission_id, entity_id=mission_id, details={"action_text": f"تم تغيير حالة استمارة «{mission_name or 'بدون اسم'}» من «{previous_status or '—'}» إلى «{data.status}»"})
             try:
                 notify_youth_of_completion(cursor, mission_id, mission_name, user_id, previous_status=previous_status)
             except Exception as e:

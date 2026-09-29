@@ -1766,6 +1766,13 @@ useEffect(() => {
       if (seenEventIdsRef.current.has(e.event_id)) return;
       seenEventIdsRef.current.add(e.event_id);
 
+            // 🧾 حدث سجل النظام: يحدّث شاشة السجل المفتوحة لحظياً — بلا توست ولا جرس
+      if (e.event_type === 'audit') {
+        setLiveUpdateVersion(prev => ({ ...prev, audit: prev.audit + 1 }));
+        return;
+      }
+
+
       // 🛡️ نفس الفاعل + نفس الإجراء + نفس رقم السجل خلال 8 ثوانٍ ⇒ السيرفر كرّر الحدث
       //    شرط entity_id مش فاضي — عشان ما يمنعش رصدين حقيقيين مختلفين
       // 🛡️ تكرار الأحداث: مفتاح منطقي واحد يشمل التوست وليستة الجرس معًا
@@ -3987,7 +3994,12 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const addBeneficiary = () => { setNoBenFlag(false); setBeneficiaries([...beneficiaries, { id: Date.now() }]); };
   const removeVehicle = (id) => setVehicles(vehicles.filter(v => v.id !== id));
   const removeParticipant = (id) => setParticipants(participants.filter(p => p.id !== id));
-  const removeBeneficiary = (id) => setBeneficiaries(beneficiaries.filter(b => b.id !== id));
+  const removeBeneficiary = (id) => {
+    const next = beneficiaries.filter(b => b.id !== id);
+    setBeneficiaries(next);
+    // 🚫 لو المستخدم مسح آخر صف بيده ⇒ ده مسح صريح يوصل للسيرفر
+    if (next.length === 0) setNoBenFlag(true);
+  };
 
   // 🆕 انضمام / تسجيل انفصال — قطاعات مستقلة عبر السيرفر (لا نافذة فترات يدوية)
   // ⚖️ دورة الحياة: «مسودة المهمة = مسودة المشاركة». الانضمام/الانفصال أثناء المسودة
@@ -6273,7 +6285,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                       <div className="flex-1 w-full"><FormGroup label="تصنيف المستفيدين"><StyledInput id={`b_cat_${index}`} defaultValue={ben?.category_name || ''} placeholder="ضع هنا نوع الخدمة المقدمة" className="bg-[var(--surface-3)]" /></FormGroup></div>
                       <div className="flex-1 w-full"><FormGroup label="مستفيدين (مباشر)"><StyledInput id={`b_count_${index}`} defaultValue={ben?.direct_count || ''} type="number" placeholder="0" className="bg-[var(--surface-3)]" /></FormGroup></div>
                       <div className="flex-1 w-full"><FormGroup label="مستفيدين (غير مباشر)"><StyledInput id={`b_indirect_${index}`} defaultValue={ben?.indirect_count || ''} type="number" placeholder="0" className="bg-[var(--surface-3)]" /></FormGroup></div>
-                      {beneficiaries.length > 1 && (<button onClick={() => removeBeneficiary(ben.id)} className="mb-2 p-2 text-[var(--muted-2)] hover:text-[var(--accent)] bg-[var(--surface-3)] rounded-lg border border-[var(--border)]"><TrashIcon /></button>)}
+                      {beneficiaries.length > 0 && (<button onClick={() => removeBeneficiary(ben.id)} className="mb-2 p-2 text-[var(--muted-2)] hover:text-[var(--accent)] bg-[var(--surface-3)] rounded-lg border border-[var(--border)]"><TrashIcon /></button>)}
                       </div>
                     </div>
                   ))}
