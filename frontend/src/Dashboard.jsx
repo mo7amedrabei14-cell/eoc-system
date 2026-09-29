@@ -3299,6 +3299,9 @@ const POWERBI_REFRESH_MS = 60 * 60 * 1000;   // كل ساعة
 
 function PowerBiView({ lang = 'ar' }) {
   const [nonce, setNonce] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const wrapRef = useRef(null);
+  const [frameH, setFrameH] = useState(null);
 
   // 🔄 إعادة تحميل الإطار كل ساعة — من غير ما تخرج من الصفحة
   useEffect(() => {
@@ -3306,19 +3309,41 @@ function PowerBiView({ lang = 'ar' }) {
     return () => clearInterval(t);
   }, []);
 
+  // 📐 قياس المساحة المتاحة فعليًا داخل الشاشة (هيدر + شريط حي + حواف)
+  //    ⇒ الإطار بياخد الباقي بالظبط، فمفيش سكرول لتحت، ومفيش ارتفاع محسوب بالتقريب
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const scroller = document.getElementById('main-scroll-container');
+      const bottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight;
+      const parentPad = parseFloat(getComputedStyle(el.parentElement).paddingBottom) || 0;
+      const available = bottom - el.getBoundingClientRect().top - parentPad;
+      const next = Math.max(360, Math.floor(available));
+      setFrameH(prev => (prev === next ? prev : next));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const t = setInterval(measure, 1000);   // يتظبط لو ظهر/اختفى شريط الأحداث الحية
+    return () => { window.removeEventListener('resize', measure); clearInterval(t); };
+  }, []);
+
   const src = `${POWERBI_EMBED_URL}${POWERBI_EMBED_URL.includes('?') ? '&' : '?'}t=${nonce}`;
 
+  const refreshNow = () => {
+    setSpinning(true);
+    setNonce(n => n + 1);
+    setTimeout(() => setSpinning(false), 900);
+  };
+
   return (
-    <div className="flex-1 flex flex-col p-3 md:p-5 min-h-0">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-[var(--ink)]">
-          {lang === 'ar' ? 'لوحة المؤشرات الرئيسية' : 'Dashboard'}
-        </h2>
-        <button onClick={() => setNonce(n => n + 1)} className="nav-item !w-auto px-4 py-2 text-sm">
-          {lang === 'ar' ? 'تحديث الآن' : 'Refresh'}
-        </button>
-      </div>
-      <div className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden relative" style={{ height: 'calc(100vh - 180px)', minHeight: '560px' }}>
+    <div
+      ref={wrapRef}
+      className="flex flex-col p-2 md:p-3 min-h-0"
+      style={{ height: frameH ? `${frameH}px` : '70vh' }}
+    >
+      <div className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden relative flex-1 min-h-0">
+
         <iframe
           key={nonce}
           title="Power BI Dashboard"
@@ -3327,6 +3352,29 @@ function PowerBiView({ lang = 'ar' }) {
           allowFullScreen
           loading="lazy"
         />
+
+        {/* 🔄 زر التحديث العائم — صفر مساحة من الصفحة */}
+        <button
+          onClick={refreshNow}
+          title={lang === 'ar' ? 'تحديث التقرير الآن' : 'Refresh report now'}
+          className="group absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
+                     text-[var(--ink)] bg-[var(--surface-2)]/85 backdrop-blur-md
+                     border border-[var(--border-strong)] shadow-[var(--shadow-1)]
+                     transition-all duration-200 ease-[var(--ease-out)]
+                     hover:bg-[var(--accent)] hover:text-white hover:border-[var(--accent)] hover:shadow-[var(--shadow-accent)]
+                     active:scale-95"
+        >
+          <svg
+            className={`w-3.5 h-3.5 transition-transform duration-700 ${spinning ? 'animate-spin' : ''}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+          >
+            <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+            <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+          </svg>
+          {lang === 'ar' ? 'تحديث الآن' : 'Refresh'}
+        </button>
+
       </div>
     </div>
   );
