@@ -1382,6 +1382,91 @@ const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: الت�
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
 };
 
+// ════════════════════════════════════════════════════════════════════
+// 🗜️ إضافة: بناء ملف Excel في الذاكرة + تنزيل عدة ملفات في ZIP واحد
+//    (نسخة مستقلة تماماً — exportWorkbook الأصلي مش بيتغير ولا حرف)
+// ════════════════════════════════════════════════════════════════════
+const buildWorkbookBufferZip = async (sheets) => {
+  const ExcelJS = await import('exceljs');
+  const wb = new ExcelJS.Workbook();
+  wb.created = new Date();
+  wb.creator = 'EOC System';
+
+  const thin = { style: 'thin' };
+  const bd = { top: thin, bottom: thin, left: thin, right: thin };
+  const center = { horizontal: 'center', vertical: 'center', wrapText: false };
+  const headerStyle  = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } }, font: { bold: true }, alignment: center, border: bd };
+  const cellStyle    = { alignment: center, border: bd };
+  const titleStyle   = { font: { bold: true, size: 14 }, alignment: center, border: bd };
+  const sectionStyle = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCBCBCB' } }, font: { bold: true, size: 11 }, alignment: center, border: bd };
+  const labelStyle   = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } }, font: { bold: true }, alignment: center, border: bd };
+  const pickStyle = (k) => k === 'title' ? titleStyle : k === 'section' ? sectionStyle : k === 'label' ? labelStyle : k === 'head' ? headerStyle : cellStyle;
+  const cellSpec = (s) => (s && typeof s === 'object' && !Array.isArray(s) && 'v' in s) ? s : { v: s, k: null };
+
+  sheets.forEach((sheet) => {
+    const { name, header = [], rows = [], merges = [], widths = null, showGridLines = true } = sheet;
+    const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true, showGridLines: showGridLines !== false }] });
+    if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
+
+    const plain = rows.map((r) => {
+      const arr = Array.isArray(r) ? r : (r && Array.isArray(r.cells) ? r.cells : []);
+      const rowKind = (!Array.isArray(r) && r && r.kind) ? r.kind : null;
+      return { arr, rowKind, values: arr.map((s) => cellSpec(s).v) };
+    });
+    plain.forEach(({ arr, rowKind, values }) => {
+      ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
+        Object.assign(c, pickStyle(cellSpec(arr[col - 1]).k || rowKind));
+      });
+    });
+    merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
+
+    if (Array.isArray(widths) && widths.length) { ws.columns = widths.map((w) => ({ width: w })); return; }
+
+    const mergedCells = new Set(merges.flatMap(([c1, r1, c2, r2]) => {
+      const cells = [];
+      for (let rr = r1; rr <= r2; rr++) for (let cc = c1; cc <= c2; cc++) cells.push(`${rr}:${cc}`);
+      return cells;
+    }));
+    const colCount = plain.reduce((m, p) => Math.max(m, p.values.length), header.length);
+    const px = new Array(colCount).fill(0);
+    const feed = (vals, rowIdx, measure = cellTextPx) => vals.forEach((v, ci) => {
+      if (ci >= px.length || mergedCells.has(`${rowIdx}:${ci + 1}`)) return;
+      px[ci] = Math.max(px[ci], measure(v));
+    });
+    feed(header, 1, cellTextPxBold);
+    plain.forEach((p, ri) => feed(p.values, ri + 2));
+    const MDW = 7;
+    const PAD = 3;
+    ws.columns = px.map(p => ({ width: p === 0 ? 8.43 : Math.ceil(((p + PAD) / MDW) * 256) / 256 }));
+  });
+
+  return await wb.xlsx.writeBuffer();
+};
+
+// 🗜️ تنزيل عدة ملفات Excel مجمّعة في ZIP واحد — بلا أي خدمة خارجية
+const downloadZipFile = async (files, zipName) => {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  const used = new Set();
+  files.forEach(({ name, buffer }) => {
+    let finalName = name;
+    let i = 2;
+    while (used.has(finalName)) { finalName = name.replace(/\.xlsx$/i, ` (${i}).xlsx`); i += 1; }
+    used.add(finalName);
+    zip.file(finalName, buffer);
+  });
+  // STORE: ملفات xlsx مضغوطة أصلاً ⇒ أسرع وبنفس الحجم تقريباً
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = zipName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+};
+
+
 // fix #5: عرض الساعات بالدقائق — الحساب يبقى دقيقًا (كسور داخلية)، والتحويل للدقائق عند العرض فقط.
 // أمثلة: 0.75 → "45 دقيقة"/"45 min" · 1.33 → "1س 20د"/"1h 20m" · 2.083 → "2س 05د"/"2h 05m"
 function fmtHours(hours, lang = 'ar') {
@@ -3391,9 +3476,13 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
   // 📥 نافذة تأكيد تنزيل السجل الفردي (محايدة وغير تحذيرية)
   const [downloadTarget, setDownloadTarget] = useState(null);
+  // 🗜️ إضافة: حالة التصدير المضغوط (نافذة تأكيد + شريط تقدّم + علم إلغاء)
+  const [showZipConfirm, setShowZipConfirm] = useState(false);
+  const [zipJob, setZipJob] = useState(null);
+  const zipCancelRef = useRef(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
-const [clearAllCode, setClearAllCode] = useState('');
-const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clearAllCode, setClearAllCode] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [currentMissionData, setCurrentMissionData] = useState(null);
   const [isModalLoading, setIsModalLoading] = useState(false); // فتح فوري بسكلتون ثم البيانات
@@ -4840,6 +4929,294 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
+  // ════════════════════════════════════════════════════════════════════
+  // 🗜️ إضافة: باني شيت الاستمارة للتصدير المضغوط (نفس شكل التصدير الفردي)
+  // ════════════════════════════════════════════════════════════════════
+  const buildMissionSheetForZip = (detail) => {
+    const text = (v) => (v === undefined || v === null ? '' : String(v));
+    const dateT = (v) => (v ? formatDateTime(v) : '—');
+    const tm12 = (v) => (v ? formatTime12(v) : '—');
+    const branchName = (id) => {
+      if (id == null || id === '') return '';
+      if (String(id) === '19') return 'المركز العام';
+      const b = branches.find(x => String(x.id) === String(id));
+      return b ? b.name : String(id);
+    };
+    const staffName = (role) => {
+      const s = ((detail && detail.eoc_staff) || []).find(x => x.role_name === role);
+      return s ? s.staff_name : '';
+    };
+
+    const COLS = 12;
+    const aoa = [];
+    const merges = [];
+    let row = 0;
+    const cell = (c, v, k) => { if (!aoa[row]) aoa[row] = []; aoa[row][c] = k ? { v, k } : v; };
+    const merge = (from, to) => { if (to > from) merges.push({ s: { r: row, c: from }, e: { r: row, c: to } }); };
+    const next = () => { row++; };
+    const band = (title) => { cell(0, title, 'section'); merge(0, COLS - 1); next(); };
+    const fields = (pairs) => {
+      for (let i = 0; i < pairs.length; i += 3) {
+        pairs.slice(i, i + 3).forEach(([label, value], j) => {
+          const c = j * 4;
+          cell(c, label, 'label'); merge(c, c + 1);
+          cell(c + 2, text(value)); merge(c + 2, c + 3);
+        });
+        next();
+      }
+    };
+    const fieldWide = (label, value) => { cell(0, label, 'label'); merge(0, 2); cell(3, text(value)); merge(3, COLS - 1); next(); };
+    const table = (cols, rowsData) => {
+      let c = 0;
+      cols.forEach(col => { cell(c, col.t, 'head'); merge(c, c + col.w - 1); c += col.w; });
+      next();
+      (rowsData || []).forEach(cells => {
+        let cc = 0;
+        cols.forEach((col, i) => { cell(cc, cells[i] === undefined || cells[i] === null ? '' : cells[i]); merge(cc, cc + col.w - 1); cc += col.w; });
+        next();
+      });
+    };
+    const note = (msg) => { cell(0, msg, 'label'); merge(0, COLS - 1); next(); };
+
+    const routeHasData = (r) => !!(r && (r.route_from || r.route_to || r.departure_date || r.departure_time || r.arrival_date || r.arrival_time));
+    const isMainRoute = (r) => { const g = String((r && r.group_title) || '').trim(); return g === '' || g === 'خط السير الأساسي'; };
+    const routeCells = (groupLabel, r) => [groupLabel, r.route_from || '', r.route_to || '',
+      r.departure_date ? dateT(r.departure_date) : '—', r.departure_time ? tm12(r.departure_time) : '—',
+      r.arrival_date ? dateT(r.arrival_date) : '—', r.arrival_time ? tm12(r.arrival_time) : '—'];
+    const ROUTE_COLS = [
+      { t: 'المجموعة', w: 2 }, { t: 'من', w: 2 }, { t: 'إلى (الوجهة)', w: 2 }, { t: 'تاريخ التحرك', w: 2 },
+      { t: 'ساعة التحرك', w: 1 }, { t: 'تاريخ الوصول', w: 2 }, { t: 'ساعة الوصول', w: 1 },
+    ];
+
+    const missionDate = detail.exit_date || detail.departure_date;
+    const missionDateText = missionDate ? formatDateTime(missionDate) : '';
+    const statusAr = detail.status ? ({ Draft: 'مسودة', Active: 'نشطة', 'Under Review': 'قيد المراجعة', Approved: 'معتمدة وفي انتظار الانتهاء', Completed: 'مكتملة (تم انتهاء المهمة)', Returned: 'إرجاع للمتطوع (يوجد أخطاء)', Cancelled: 'ملغاة' }[detail.status] || 'جديدة') : 'جديدة';
+    const fieldStatusText = detail.field_operation_status || (detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة');
+
+    cell(0, text(detail.mission_name) || 'استمارة مهمة', 'title'); merge(0, COLS - 1); next();
+    cell(0, `كود الاستمارة: ${detail.mission_code || '—'}   |   تاريخ المهمة: ${missionDateText || '—'}   |   ${statusAr}`); merge(0, COLS - 1); next();
+
+    band('البيانات الأساسية للمهمة');
+    fields([
+      ['تصنيف المهمة', detail.mission_classification],
+      ['التمركز / الفرع', branchName(detail.branch_id)],
+      ['نوع المهمة', detail.mission_type],
+      ['مكان المهمة', detail.mission_location],
+      ['حالة العملية الميدانية', fieldStatusText],
+      ['مسؤول المهمة', detail.responsible_person],
+      ['تاريخ المهمة', missionDateText || '—'],
+      ['مصدر البلاغ', detail.data_source],
+    ]);
+
+    band('التواريخ والتوقيتات');
+    table([
+      { t: 'تاريخ المهمة', w: 2 }, { t: 'تاريخ الوصول', w: 2 }, { t: 'تاريخ الانتهاء', w: 2 },
+      { t: 'ساعة التحرك', w: 2 }, { t: 'ساعة الوصول', w: 2 }, { t: 'ساعة الانتهاء', w: 2 },
+    ], [[
+      dateT(detail.exit_date || detail.departure_date), dateT(detail.arrival_date), dateT(detail.completion_date),
+      tm12(detail.departure_time || detail.start_time), tm12(detail.arrival_time), tm12(detail.completion_time),
+    ]]);
+
+    band('تفاصيل خط السير الأساسي');
+    const allRoutes = Array.isArray(detail.routes) ? detail.routes : [];
+    const mainRows = [];
+    allRoutes.filter(isMainRoute).forEach(r => { if (routeHasData(r)) mainRows.push(routeCells('خط السير الأساسي', r)); });
+    if (mainRows.length === 0 && [detail.departure_date, detail.departure_time, detail.arrival_date, detail.arrival_time].some(Boolean)) {
+      mainRows.push(['خط السير الأساسي (من حقول المهمة)', detail.mission_location || '', '',
+        detail.departure_date ? dateT(detail.departure_date) : '—', detail.departure_time ? tm12(detail.departure_time) : '—',
+        detail.arrival_date ? dateT(detail.arrival_date) : '—', detail.arrival_time ? tm12(detail.arrival_time) : '—']);
+    }
+    table(ROUTE_COLS, mainRows);
+    if (mainRows.length === 0) note('لا توجد مسارات مسجلة');
+
+    band('الأيام / خطوط السير المخصصة');
+    const customGroups = {};
+    (Array.isArray(detail.itineraries) ? detail.itineraries : []).forEach(it => {
+      const t = String((it && (it.group_title || it.title)) || '').trim();
+      if (t && t !== 'خط السير الأساسي' && !customGroups[t]) customGroups[t] = [];
+    });
+    allRoutes.filter(r => !isMainRoute(r)).forEach(r => {
+      const t = String((r && r.group_title) || '').trim() || 'خط سير مخصص';
+      if (!customGroups[t]) customGroups[t] = [];
+      customGroups[t].push(r);
+    });
+    const customRows = [];
+    Object.keys(customGroups).forEach(title => {
+      const rows = customGroups[title].filter(routeHasData);
+      if (rows.length === 0) customRows.push([title, '—', '—', '—', '—', '—', '—']);
+      else rows.forEach(r => customRows.push(routeCells(title, r)));
+    });
+    table(ROUTE_COLS, customRows);
+    if (customRows.length === 0) note('لا توجد أيام / خطوط سير مخصصة');
+
+    band('السيارات والسائقين (أسطول المهمة)');
+    table([{ t: 'اسم السائق', w: 6 }, { t: 'رقم السيارة', w: 6 }],
+      (detail.vehicles || []).filter(v => v.driver_name || v.vehicle_number).map(v => [v.driver_name || '', v.vehicle_number || '']));
+
+    band('القوة البشرية والمشاركين');
+    const participantRows = [];
+    (detail.participants || []).forEach(p => {
+      if (!p.full_name) return;
+      const { routes: routeDays, events } = splitAssignedDays(p.assigned_days);
+      const evTxt = events.map(ev => `${ev.kind === 'join' ? 'انضمام' : 'انفصال'}: ${ev.title}`).join(' + ');
+      const days = [routeDays.join(' + '), evTxt].filter(Boolean).join(' + ') || '—';
+      participantRows.push([
+        participantRows.length + 1,
+        p.participant_type === 'non_volunteer' ? 'غير متطوع' : 'متطوع',
+        p.full_name, p.participation_role || '', p.participant_position || '', p.team_name || '',
+        p.working_hours != null ? fmtHours(p.working_hours, lang) : '—', days, branchName(p.branch_id),
+      ]);
+    });
+    table([
+      { t: 'م', w: 1 }, { t: 'النوع', w: 1 }, { t: 'الاسم', w: 2 }, { t: 'رقم العضوية', w: 1 },
+      { t: 'صفة المشارك', w: 1 }, { t: 'الفريق', w: 1 }, { t: 'الساعات', w: 1 },
+      { t: 'خطوط السير / انضمام-انفصال', w: 2 }, { t: 'الفرع', w: 2 },
+    ], participantRows);
+    if (participantRows.length === 0) note('لا يوجد مشاركون');
+
+    band('انضمام / انفصال');
+    const jlEntries = Array.isArray(detail.join_leave_entries) ? detail.join_leave_entries : [];
+    table([{ t: 'العنوان', w: 3 }, { t: 'النوع', w: 2 }, { t: 'التاريخ والوقت', w: 3 }, { t: 'المتنسبون إليه', w: 4 }],
+      jlEntries.map(e => {
+        const assignedTo = (detail.participants || [])
+          .filter(p => (p.assigned_days || []).includes(jlKey(e.kind, e.title)))
+          .map(p => p.full_name || 'مشارك').join(' + ');
+        return [e.title || '', e.kind === 'join' ? 'انضمام' : 'انفصال', e.dt || '', assignedTo || '—'];
+      }));
+    if (jlEntries.length === 0) note('لا توجد سجلات انضمام أو انفصال');
+
+    band('كود الفريق/الإدارة');
+    fields([['كود الفريق/الإدارة', detail.team_code]]);
+
+    band('إحصائيات المستفيدين');
+    table([{ t: 'العنوان', w: 3 }, { t: 'تصنيف المستفيدين', w: 3 }, { t: 'مستفيدين (مباشر)', w: 3 }, { t: 'مستفيدين (غير مباشر)', w: 3 }],
+      (detail.beneficiaries || []).filter(b => b.category_name).map(b => [b.group_title || '', b.category_name, b.direct_count, b.indirect_count]));
+
+    band('فريق إدارة الغرفة (الهيكل الإداري)');
+    const EOC_ROLES = [
+      ['مسؤول المتابعة (قائد العملية)', 'مسؤول المتابعة'],
+      ['المشرف', 'المشرف'],
+      ['المشرف المراجع', 'المشرف المراجع'],
+      ['الجوكر', 'الجوكر'],
+      ['معبئ الاستمارة', 'معبئ الاستمارة'],
+      ['مستكمل الاستمارة', 'مستكمل الاستمارة'],
+      ['مراجع الاستمارة', 'مراجع الاستمارة'],
+    ];
+    const _fb = (() => {
+      const raw = detail.form_blocks;
+      if (!raw) return null;
+      if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return null; } }
+      return raw;
+    })();
+    const _adminBlocks = (_fb && Array.isArray(_fb.admin) && _fb.admin.length > 0) ? _fb.admin : null;
+    if (_adminBlocks) {
+      _adminBlocks.forEach((blk, bi) => {
+        cell(0, text(blk.title) || `سجل ${bi + 1}`, 'label'); merge(0, COLS - 1); next();
+        table([{ t: 'المسؤولية', w: 6 }, { t: 'الاسم', w: 6 }],
+          EOC_ROLES.map(([label, role]) => [label, text((blk.staff || {})[role] || '')]));
+      });
+    } else {
+      table([{ t: 'المسؤولية', w: 6 }, { t: 'الاسم', w: 6 }], EOC_ROLES.map(([label, role]) => [label, staffName(role)]));
+    }
+
+    const _volBlocks = (_fb && Array.isArray(_fb.volunteer) && _fb.volunteer.length > 0) ? _fb.volunteer : null;
+    const _legacyNotes = detail.volunteer_room_notes || [];
+    if (_volBlocks || _legacyNotes.length > 0) {
+      band('ملاحظات غرفة التطوع');
+      const _blocksToWrite = _volBlocks || [{ id: 'v1', title: '', reviewer: detail.volunteer_room_reviewer_name || '', rows: _legacyNotes }];
+      _blocksToWrite.forEach((blk, bi) => {
+        const bt = text(blk.title);
+        if (bt || _blocksToWrite.length > 1) { cell(0, bt || `سجل ${bi + 1}`, 'label'); merge(0, COLS - 1); next(); }
+        const _rows = (blk.rows || []).filter(r => r && (r.note_date || r.membership_number || r.member_name || r.note_text));
+        table([
+          { t: '#', w: 1 }, { t: 'التاريخ', w: 2 }, { t: 'رقم العضوية', w: 2 }, { t: 'اسم العضو', w: 2 }, { t: 'الملاحظة', w: 5 },
+        ], _rows.map((r, ri) => [ri + 1, r.note_date || '', r.membership_number || '', r.member_name || '', r.note_text || '']));
+        if (_rows.length === 0) note('لا توجد ملاحظات مسجلة');
+        fields([['اسم راصد الاستمارة', text(blk.observer || '')], ['اسم مراجع الاستمارة', text(blk.reviewer || '')]]);
+      });
+    }
+
+    band('الحالة والملاحظات العامة');
+    fields([['موقف الاستمارة إدارياً', statusAr]]);
+    fieldWide('سجل الميدان / ملاحظات عامة', detail.notes);
+    fieldWide('ملاحظات داخلية', detail.internal_notes);
+
+    const rawName = text(detail.mission_name).replace(/[\\/:*?"<>|]/g, '_').trim() || 'استمارة';
+    const missionFileDate = String(missionDate || '').slice(0, 10) || todayFileDate();
+    const missionCode = text(detail.mission_code).replace(/[\\/:*?"<>|]/g, '_').trim();
+
+    return {
+      sheet: {
+        name: 'الاستمارة',
+        header: [],
+        rows: aoa,
+        merges: merges.map(({ s, e }) => [s.r + 1, s.c + 1, e.r + 1, e.c + 1]),
+        widths: [12, 12, 13, 13, 12, 12, 13, 13, 12, 12, 13, 13],
+        showGridLines: false,
+      },
+      rawName,
+      missionFileDate,
+      missionCode,
+    };
+  };
+
+  // 🗜️ الهاندلر: بياخد المهام المعروضة واحد واحد ويحط كل استمارة في ملف مستقل
+  const handleExportAllMissionsZip = async () => {
+    const list = filteredMissions;
+    if (!filterDate) { setCustomAlert("اختار تاريخ الأول (فلتر التاريخ فوق) — التصدير المضغوط لليوم المحدد بس."); return; }
+    if (list.length === 0) { setCustomAlert("لا توجد مهام في هذا اليوم لتصديرها."); return; }
+
+    zipCancelRef.current = false;
+    setZipJob({ total: list.length, done: 0, name: '' });
+
+    const files = [];
+    const failed = [];
+    const token = sessionStorage.getItem('access_token');
+
+    for (let i = 0; i < list.length; i += 1) {
+      if (zipCancelRef.current) break;
+      const m = list[i];
+      setZipJob({ total: list.length, done: i, name: m.mission_name || '' });
+      try {
+        if (!m || !m.mission_id) { failed.push(m.mission_name || 'بدون كود'); continue; }
+        const res = await fetch(`${BASE}/api/missions/${m.mission_id}?client_now=${encodeURIComponent(clientNowLocal())}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) { failed.push(m.mission_name || 'بدون كود'); continue; }
+        const detail = await res.json();
+        const b = buildMissionSheetForZip(detail);
+        const buffer = await buildWorkbookBufferZip([b.sheet]);
+        // 🗂️ التقسيم: الإقليم / اسم المهمة_التاريخ.xlsx  (٤ أقاليم، والمهام جوّاها مباشرة)
+        const regionKey = regionMap[normalizeName(m.branch)] || 'hq';
+        const regionFolder = regionKey === 'canal' ? 'إقليم القنال'
+          : regionKey === 'delta' ? 'إقليم الدلتا'
+          : regionKey === 'saeed' ? 'إقليم الصعيد'
+          : 'إقليم المركز العام';
+        const cleanPart = (s) => String(s).replace(/[\\/:*?"<>|]/g, '_').trim();
+        files.push({ name: `${cleanPart(regionFolder)}/${b.rawName}_${b.missionFileDate}.xlsx`, buffer });
+      } catch (e) {
+        failed.push(m.mission_name || 'بدون كود');
+      }
+    }
+
+    const wasCancelled = zipCancelRef.current;
+    setZipJob(null);
+
+    if (files.length === 0) {
+      setCustomAlert(wasCancelled ? "تم إلغاء التصدير." : "مقدرناش نجيب تفاصيل أي استمارة — مفيش ملف اتنزل.");
+      return;
+    }
+    try {
+      await downloadZipFile(files, `سجل المهام (كل مهمة منفصلة) ${filterDate}.zip`);
+      setCustomAlert(failed.length
+        ? `تم تنزيل ${files.length} استمارة في ملف مضغوط ✅ — وتعذّر ${failed.length}: ${failed.slice(0, 4).join(' · ')}`
+        : `تم تنزيل ${files.length} استمارة في ملف مضغوط ✅`);
+    } catch {
+      setCustomAlert("حدث خطأ أثناء تجهيز الملف المضغوط.");
+    }
+  };
+
+
   // 📋 الحقول الإلزامية — أسماء/مفاتيح الحقول المطلوبة + معاينة المواقع المظلمة
   const FIELD_LABELS = {
     field_exit_date: 'تاريخ المهمة',
@@ -5540,6 +5917,29 @@ const [isModalOpen, setIsModalOpen] = useState(false);
                 <span className="hidden sm:inline">{lang === 'ar' ? 'تصدير' : 'Export'}</span>
               </button>
             )}
+
+                        {/* 🗜️ إضافة: تصدير كل استمارات اليوم في ZIP — للجوكر والمشرف والمالك وإدارة الشباب */}
+            {(isOwner || isSupervisor || isJoker || isYouth) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!filterDate) return setCustomAlert("اختار تاريخ الأول (فلتر التاريخ فوق) — التصدير المضغوط لليوم المحدد بس.");
+                  if (filteredMissions.length === 0) return setCustomAlert("لا توجد مهام في هذا اليوم لتصديرها.");
+                  setShowZipConfirm(true);
+                }}
+                disabled={!!zipJob}
+                data-tip={lang === 'ar' ? 'كل استمارة في ملف Excel منفصل جوّه ملف مضغوط واحد' : 'Each mission as a separate Excel file inside one ZIP'}
+                className="action-btn action-btn--info flex-1 sm:flex-none disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="5" rx="1.5" />
+                  <path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8" />
+                  <path d="M10 12h4" />
+                </svg>
+                <span className="hidden sm:inline">{lang === 'ar' ? 'تصدير مضغوط' : 'Zip export'}</span>
+              </button>
+            )}
+
 
             {isOwner && (
               <button
@@ -6651,6 +7051,32 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 />
 
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
+
+      {/* 🗜️ إضافة: تأكيد التصدير المضغوط */}
+      <DownloadConfirmModal
+        show={showZipConfirm}
+        title="تصدير كل استمارات اليوم (ZIP)"
+        message={`هيتم تجهيز ${filteredMissions.length} استمارة — كل مهمة في ملف Excel منفصل جوّه ملف مضغوط واحد. العملية بتجيب تفاصيل كل مهمة من السيرفر واحدة واحدة، فسيبه لحد ما تخلص.`}
+        confirmLabel={`نزّل ${filteredMissions.length} استمارة`}
+        onCancel={() => setShowZipConfirm(false)}
+        onConfirm={() => { setShowZipConfirm(false); handleExportAllMissionsZip(); }}
+      />
+
+      {/* 🗜️ إضافة: شريط تقدّم التصدير المضغوط */}
+      {zipJob && (
+        <div className="fixed bottom-6 left-6 z-[90] w-72 rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-2)]/95 backdrop-blur-xl shadow-[var(--shadow-2)] p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-[var(--ink)]">جاري تجهيز الاستمارات…</span>
+            <span className="text-xs font-bold text-[var(--accent)]">{zipJob.done}/{zipJob.total}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-[var(--surface-4)] overflow-hidden">
+            <div className="h-full bg-[var(--accent)] transition-all duration-300" style={{ width: `${zipJob.total ? Math.round((zipJob.done / zipJob.total) * 100) : 0}%` }} />
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--muted)] truncate">{zipJob.name}</p>
+          <button type="button" onClick={() => { zipCancelRef.current = true; }} className="mt-3 w-full text-[11px] font-bold text-[var(--muted-2)] hover:text-[var(--accent)]">إلغاء</button>
+        </div>
+      )}
+
 
       {/* 📥 تأكيد تنزيل الاستمارة — نافذة محايدة، «نعم» ينزّل و«إلغاء» يُغلق */}
       <DownloadConfirmModal
