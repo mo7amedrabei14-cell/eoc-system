@@ -231,7 +231,7 @@ const ENGLISH_UI = {
   'الذكاء الاصطناعي وجد خبراً جديداً': 'AI found a new report',
   'تحديث بواسطة:': 'Updated by:',
   'إجراء:': 'Action:',
-  'مؤشرات الغرفة': 'Operations overview',
+  'مؤشرات المركز اليومية': 'Operations overview',
   'رصد الذكاء الاصطناعي': 'AI monitoring',
   'سجل المهام الميدانية': 'Field missions',
   'سجل القوة البشرية': 'Workforce register',
@@ -2127,6 +2127,9 @@ if (e.event_type === 'system_refresh') {
         : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
       case 'audit': return <MemoAuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <MemoHumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
+      case 'powerbi': return (isOwner || isSupervisor || isJoker)
+        ? <MemoPowerBiView lang={language} />
+        : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للجوكر والمشرف والمالك فقط' : 'This page is open to joker, supervisors and owner only'}</p></div>;
       default:
         if (isYouth && !YOUTH_ALLOWED_TABS.includes(activeTab)) {
           return <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
@@ -2140,7 +2143,8 @@ if (e.event_type === 'system_refresh') {
     {
       titleAr: 'الوحدات التشغيلية', titleEn: 'Operations',
       items: [
-        ...((isOwner || isSupervisor || isJoker) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات الغرفة', en: 'Operations Overview' }] : []),
+        ...((isOwner || isSupervisor || isJoker) ? [{ id: 'powerbi', icon: <PowerBiIcon />, ar: 'لوحة المؤشرات الرئيسية', en: 'Dashboard' }] : []),
+        ...((isOwner || isSupervisor || isJoker) ? [{ id: 'home', icon: <HomeIcon />, ar: 'مؤشرات المركز اليومية', en: 'Operations Overview' }] : []),
         ...(!isYouth ? [{ id: 'ai_news', icon: <AIIcon />, ar: 'رصد الذكاء الاصطناعي', en: 'AI Monitoring', update: newUpdates.ai_news }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
@@ -2367,8 +2371,9 @@ if (e.event_type === 'system_refresh') {
 
           <nav key={isSidebarOpen ? 'nav-open' : 'nav-closed'} className="nav-shell p-3 space-y-1.5 mt-2">
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
-            {/* 🔒 حساب إدارة الشباب (yveoc): 3 صفحات فقط — مؤشرات الغرفة، المهام، القوة البشرية */}
-            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات الغرفة" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<PowerBiIcon />} label="لوحة المؤشرات الرئيسية" isActive={activeTab === 'powerbi'} onClick={() => handleNavigation('powerbi')} isOpen={isSidebarOpen} />}
+            {/* 🔒 حساب إدارة الشباب (yveoc): 3 صفحات فقط — مؤشرات المركز اليومية، المهام، القوة البشرية */}
+            {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات المركز اليومية" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
@@ -2443,6 +2448,7 @@ if (e.event_type === 'system_refresh') {
                   {activeTab === 'branches_inventory' && 'الانتشار الجغرافي والمخزون'}
                   {activeTab === 'handover' && 'تسليم وتسلم مشرفين'}
                   {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
+                  {activeTab === 'powerbi' && 'لوحة المؤشرات الرئيسية'}
                 </h1>
                 <span className={`hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${realtimeConnected ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--warn-soft)] text-[var(--warn)]'}`}>
                   <span className={`status-dot ${realtimeConnected ? 'status-dot-live' : 'animate-pulse'}`}></span>
@@ -3286,6 +3292,47 @@ function BranchesAndInventoryView({ branches }) {
     </div>
   );
 }
+
+// 📊 داشبورد Power BI (Publish to web) — تاب مستقل بيحدّث نفسه كل ساعة
+const POWERBI_EMBED_URL = 'https://app.powerbi.com/view?r=eyJrIjoiYmE0ODc0Y2QtMmYyYy00YTZjLTkzZTEtMDBmMTZlMDBlNWRiIiwidCI6IjAyNjU5ODhhLWU0MDQtNGRkYy1hMmEwLTY2MjUwNWMzYjc4ZiIsImMiOjh9';
+const POWERBI_REFRESH_MS = 60 * 60 * 1000;   // كل ساعة
+
+function PowerBiView({ lang = 'ar' }) {
+  const [nonce, setNonce] = useState(0);
+
+  // 🔄 إعادة تحميل الإطار كل ساعة — من غير ما تخرج من الصفحة
+  useEffect(() => {
+    const t = setInterval(() => setNonce(n => n + 1), POWERBI_REFRESH_MS);
+    return () => clearInterval(t);
+  }, []);
+
+  const src = `${POWERBI_EMBED_URL}${POWERBI_EMBED_URL.includes('?') ? '&' : '?'}t=${nonce}`;
+
+  return (
+    <div className="flex-1 flex flex-col p-3 md:p-5 min-h-0">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-[var(--ink)]">
+          {lang === 'ar' ? 'لوحة المؤشرات الرئيسية' : 'Dashboard'}
+        </h2>
+        <button onClick={() => setNonce(n => n + 1)} className="nav-item !w-auto px-4 py-2 text-sm">
+          {lang === 'ar' ? 'تحديث الآن' : 'Refresh'}
+        </button>
+      </div>
+      <div className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden relative" style={{ height: 'calc(100vh - 180px)', minHeight: '560px' }}>
+        <iframe
+          key={nonce}
+          title="Power BI Dashboard"
+          src={src}
+          className="absolute inset-0 w-full h-full border-0"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
+    </div>
+  );
+}
+const MemoPowerBiView = memo(PowerBiView);
+
 
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
@@ -11623,6 +11670,8 @@ const WeatherIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" v
 const WeatherIntelIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-2.4-8.3 5.5 5.5 0 0 0-10.2 2.6A3.7 3.7 0 0 0 7 19h10.5Z"/><path d="M12 3v2M5 6l1.4 1.4M19 6l-1.4 1.4"/><circle cx="18" cy="18" r="3" fill="currentColor" fillOpacity="0.25"/><path d="M18 16.5v3M16.5 18h3"/></svg>;
 const globalEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #ef4444; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px #ef4444;"></div>`, iconSize: [14, 14] });
 const egyptEqIcon = new L.DivIcon({ className: 'custom-leaflet-icon', html: `<div style="background-color: #22c55e; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px #22c55e;"></div>`, iconSize: [16, 16] });
+const PowerBiIcon = () => <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="11" rx="1.5"/><rect x="12" y="3" width="9" height="18" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>;
+
 
 // ==========================================
 // 💡 أيقونة الرادار الخاصة بالذكاء الاصطناعي على الخريطة
