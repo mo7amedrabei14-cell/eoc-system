@@ -1303,6 +1303,16 @@ const cellTextPx = (value) => {
 // 📦 تصدير مصنّف Excel منسّق — sheets: [{name, header, rows, merges?}] — العرض AutoFit حقيقي دائماً
 // 📐 ثابت على كل التصديرات في النظام: تعطيل التفاف النص (Wrap Text) لكل الخلايا + AutoFit تلقائي للأعمدة.
 // (البارامتر الثالث أُهمل لضمان التوافق — التفاف النص معطّل دائماً والأعمدة تتلاءم مع المحتوى تلقائياً.)
+// 🧯 روابط خارجية قادمة من السيرفر (لينك الخبر/الكارثة): نعرض http/https أو رابطاً
+//    نسبياً فقط. أي مخطط آخر (javascript:/data:/vbscript:) يُحيَّد إلى '#' —
+//    السيرفر يرفضها عند الكتابة أيضاً، وهذا حزام ثانٍ للسجلات القديمة.
+const safeExternalHref = (url) => {
+  const raw = String(url ?? '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return /^[a-z][a-z0-9+.\-]*:/i.test(raw) ? '' : raw;
+};
+
 const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: التفاف النص معطل دائماً */) => {
   const ExcelJS = await import('exceljs');
   const wb = new ExcelJS.Workbook();
@@ -3348,6 +3358,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const [mainRouteTitle, setMainRouteTitle] = useState('خط السير الأساسي');
   const [routes, setRoutes] = useState([{ id: 1 }]); 
   const [customItineraries, setCustomItineraries] = useState([]);
+  // 🚫 «لا يوجد خط سير / لا يوجد مستفيدين» — علم دائم يُحفظ في form_blocks فيفضل بعد أي أكشن
+  const [noRoutesFlag, setNoRoutesFlag] = useState(false);
+  const [noBenFlag, setNoBenFlag] = useState(false);
+  const [noVehFlag, setNoVehFlag] = useState(false);
   // 🆔 معرفات صفوف خط السير التي حذفها المستخدم بزرار الحذف صراحةً في هذه الجلسة —
   //    تُرسل في الحفظ كـ deleted_route_ids. السيرفر لا يحذف أي صف محفوظ إلا بهذا
   //    الطلب الصريح (أو «لا يوجد خط سير»)، فأي حمولة ناقصة لا تمحو خط سير محفوظاً.
@@ -3436,6 +3450,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
         : (b.staff || {}),
     })),
     volunteer: volunteerBlocksPayload(),
+    // 🚫 أعلام «لا يوجد ...» — تفضل محفوظة مع المهمة فيرجع نفس الشكل بعد أي حفظ/إعادة فتح
+    noRoutes: noRoutesFlag,
+    noBeneficiaries: noBenFlag,
+    noVehicles: noVehFlag,
   });
   const canEditVolunteerRoom = isOwner || isYouth;
   const formBodyRef = useRef(null);
@@ -3913,7 +3931,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     return () => { cancelled = true; clearInterval(iv); };
   }, []); // deps ثابتة → يعمل مرة واحدة ويقرأ القيم الحية من refs
 
-  const addRoute = () => setRoutes([...routes, { id: Date.now() }]);
+  const addRoute = () => { setNoRoutesFlag(false); setRoutes([...routes, { id: Date.now() }]); };
   const removeRoute = (id) => {
     const row = routes.find(r => r.id === id);
     if (row?.itinerary_id != null) deletedRouteIdsRef.current.add(Number(row.itinerary_id));
@@ -3954,7 +3972,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       })));
     }
   };
-  const addVehicle = () => setVehicles([...vehicles, { id: Date.now() }]);
+  const addVehicle = () => { setNoVehFlag(false); setVehicles([...vehicles, { id: Date.now() }]); };
   // 🧮 سقف المشاركين في الاستمارة الواحدة
   const MAX_MISSION_PARTICIPANTS = 1000;
   const addParticipant = () => {
@@ -3966,7 +3984,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
       ? prev
       : [...prev, { id: `${Date.now()}-${Math.random()}` }]);
   };
-  const addBeneficiary = () => setBeneficiaries([...beneficiaries, { id: Date.now() }]);
+  const addBeneficiary = () => { setNoBenFlag(false); setBeneficiaries([...beneficiaries, { id: Date.now() }]); };
   const removeVehicle = (id) => setVehicles(vehicles.filter(v => v.id !== id));
   const removeParticipant = (id) => setParticipants(participants.filter(p => p.id !== id));
   const removeBeneficiary = (id) => setBeneficiaries(beneficiaries.filter(b => b.id !== id));
@@ -4205,9 +4223,21 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             }, {});
             setCustomItineraries(Object.keys(grouped).map((title, i) => ({ id: i, title: title, routes: grouped[title] })));
           } else { setCustomItineraries([]); }
-        } else { setRoutes([{ id: Date.now() }]); setCustomItineraries([]); }
-
-        setVehicles((data.vehicles && data.vehicles.length > 0) ? data.vehicles.map((v, i) => ({ id: i, ...v })) : [{ id: Date.now() }]);
+   } else {
+          // 🚫 لو المستخدم قال «لا يوجد خط سير» → مفيش صف افتراضي فاضي بعد الفتح
+          let _fbR = null;
+          try { const _raw = data.form_blocks; _fbR = typeof _raw === 'string' ? JSON.parse(_raw) : _raw; } catch { _fbR = null; }
+          setNoRoutesFlag(!!(_fbR && _fbR.noRoutes));
+          setRoutes((_fbR && _fbR.noRoutes) ? [] : [{ id: Date.now() }]);
+          setCustomItineraries([]);
+        }
+        // 🚫 لو المستخدم قال «لا يوجد سيارات» → مفيش صف فاضي افتراضي بعد الفتح
+        let _fbV = null;
+        try { const _rawV = data.form_blocks; _fbV = typeof _rawV === 'string' ? JSON.parse(_rawV) : _rawV; } catch { _fbV = null; }
+        setNoVehFlag(!!(_fbV && _fbV.noVehicles));
+        setVehicles((data.vehicles && data.vehicles.length > 0)
+          ? data.vehicles.map((v, i) => ({ id: i, ...v }))
+          : ((_fbV && _fbV.noVehicles) ? [] : [{ id: Date.now() }]));
         setParticipants((data.participants && data.participants.length > 0) ? data.participants.map((p, i) => ({ id: i, ...p })) : [{ id: Date.now() }]);
         // 🆕 كتالوج الانضمام/الانفصال — سجلات المهمة (تُسنَد للمشاركين عبر مفاتيح JL:*)
         //    `server` يميّز السجلات القادمة من الـ DB (تُرسل مع entry_id للإبقاء على الهوية)
@@ -4247,7 +4277,10 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           : [{ id: 'a1', title: '', staff: {} }]);
         setVolunteerRoomReviewer(data.volunteer_room_reviewer_name || '');
         volunteerRoomDirtyRef.current = false;
-        setBeneficiaries((data.beneficiaries && data.beneficiaries.length > 0) ? data.beneficiaries.map((b, i) => ({ id: i, ...b })) : [{ id: Date.now() }]);
+        setNoBenFlag(!!(_fb && _fb.noBeneficiaries));
+        setBeneficiaries((data.beneficiaries && data.beneficiaries.length > 0)
+          ? data.beneficiaries.map((b, i) => ({ id: i, ...b }))
+          : ((_fb && _fb.noBeneficiaries) ? [] : [{ id: Date.now() }]));
         // 🆕 مهمة جديدة: قسم ملاحظات غرفة التطوع يبدأ فارغاً
         inFlightMissionRef.current = null; // انتهى الطلب بنجاح — يسمح بإعادة الفتح لاحقاً
         setIsModalLoading(false);
@@ -4412,6 +4445,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           "كود المهمة": missionCodeWithDay(m, filterDate),
           "تصنيف المستفيدين": "",
           "الرقم (المباشر)": "",
+          "عنوان التصنيف": "",
           "المستفيدين غير المباشر": "",
           "اسم الاستمارة": m.mission_name,
           "التاريخ": formatDateTime(m.created_at)
@@ -4423,6 +4457,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           "كود المهمة": missionCodeWithDay(m, filterDate),
           "تصنيف المستفيدين": b.category_name,
           "الرقم (المباشر)": b.direct_count,
+          "عنوان التصنيف": b.group_title || '',
           "المستفيدين غير المباشر": b.indirect_count,
           "اسم الاستمارة": m.mission_name,
           "التاريخ": formatDateTime(m.created_at)
@@ -4626,8 +4661,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     // 9) إحصائيات المستفيدين
     band('إحصائيات المستفيدين');
-    table([{ t: 'تصنيف المستفيدين', w: 6 }, { t: 'مستفيدين (مباشر)', w: 3 }, { t: 'مستفيدين (غير مباشر)', w: 3 }],
-      (detail.beneficiaries || []).filter(b => b.category_name).map(b => [b.category_name, b.direct_count, b.indirect_count]));
+    table([{ t: 'العنوان', w: 3 }, { t: 'تصنيف المستفيدين', w: 3 }, { t: 'مستفيدين (مباشر)', w: 3 }, { t: 'مستفيدين (غير مباشر)', w: 3 }],
+      (detail.beneficiaries || []).filter(b => b.category_name).map(b => [b.group_title || '', b.category_name, b.direct_count, b.indirect_count]));
 
     // 10) فريق إدارة الغرفة (الهيكل الإداري) — كل البالكات بعناوينها
     band('فريق إدارة الغرفة (الهيكل الإداري)');
@@ -5014,6 +5049,8 @@ const [isModalOpen, setIsModalOpen] = useState(false);
           // 🗑️ الحذف الصريح فقط: معرفات الصفوف المحفوظة التي حذفها المستخدم بزرار الحذف
           deleted_route_ids: [...deletedRouteIdsRef.current],
           clear_details: clearDetailsRef.current,
+          clear_beneficiaries: noBenFlag,
+          clear_vehicles: noVehFlag,
          vehicles: vehicles.map((_, i) => ({ driver_name: document.getElementById(`v_driver_${i}`)?.value || '', vehicle_number: document.getElementById(`v_plate_${i}`)?.value || '' })).filter(v => v.driver_name !== '' || v.vehicle_number !== ''),
          participants: participants.map((_, i) => ({
            participant_type: document.getElementById(`p_type_${i}`)?.value || 'volunteer',
@@ -5035,7 +5072,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
             // 🔒 إلزامي: مشارك عليه انضمام ⇒ يُرسَل TRUE دائماً مهما كانت قيمة البوكس
             start_from_mission: (participants[i]?.assigned_days || []).some(d => String(d || '').startsWith('JL:J:') || String(d || '').startsWith('JL:L:')) || participants[i]?.start_from_mission !== false
          })).filter(p => p.full_name !== ''),
-         beneficiaries: beneficiaries.map((_, i) => ({ category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
+         beneficiaries: beneficiaries.map((_, i) => ({ group_title: document.getElementById(`b_title_${i}`)?.value || '', category_name: document.getElementById(`b_cat_${i}`)?.value || '', direct_count: parseInt(document.getElementById(`b_count_${i}`)?.value || 0), indirect_count: parseInt(document.getElementById(`b_indirect_${i}`)?.value || 0) })).filter(b => b.category_name !== ''),
          eoc_staff: [ { role_name: 'مسؤول المتابعة', staff_name: document.getElementById('eoc_leader')?.value || '' }, { role_name: 'المشرف', staff_name: document.getElementById('eoc_supervisor')?.value || '' }, { role_name: 'المشرف المراجع', staff_name: document.getElementById('eoc_reviewer')?.value || '' }, { role_name: 'الجوكر', staff_name: document.getElementById('eoc_joker')?.value || '' }, { role_name: 'معبئ الاستمارة', staff_name: document.getElementById('eoc_filler')?.value || '' }, { role_name: 'مستكمل الاستمارة', staff_name: document.getElementById('eoc_completer')?.value || '' }, { role_name: 'مراجع الاستمارة', staff_name: document.getElementById('eoc_final_reviewer')?.value || '' } ].filter(s => s.staff_name !== ''),
                   // 🆕 البالكات المتكررة (أيام/سجلات إدارية) — الباك الأول زي ما هو في eoc_staff
          form_blocks: buildFormBlocks(),
@@ -5791,7 +5828,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <SectionCard title="تفاصيل خط السير الأساسي" icon={<MapIcon />} actionBtn={<button onClick={addRoute} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مسار</button>}>
                 <div className="w-full flex flex-col items-center">
                   <div className="mb-4 -mt-2">
-                    {routes.length > 0 ? (<button onClick={() => { clearDetailsRef.current = true; setRoutes([]); }} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد خط سير</button>) : (<button onClick={() => { clearDetailsRef.current = false; setRoutes([{ id: Date.now() }]); }} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل خط السير</button>)}
+                    {routes.length > 0 ? (<button onClick={() => { clearDetailsRef.current = true; setNoRoutesFlag(true); setRoutes([]); }} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد خط سير</button>) : (<button onClick={() => { clearDetailsRef.current = false; setNoRoutesFlag(false); setRoutes([{ id: Date.now() }]); }} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل خط السير</button>)}
                   </div>
                   <div className="w-full">
                     {routes.map((route, index) => (
@@ -5856,7 +5893,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
               <SectionCard title="السيارات والسائقين (أسطول المهمة)" icon={<CarIcon />} actionBtn={<button onClick={addVehicle} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة سيارة</button>}>
                 <div className="w-full flex flex-col items-center">
                   <div className="mb-4 -mt-2">
-                    {vehicles.length > 0 ? (<button onClick={() => setVehicles([])} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد سيارات</button>) : (<button onClick={() => setVehicles([{ id: Date.now() }])} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل أسطول السيارات</button>)}
+                    {vehicles.length > 0 ? (<button onClick={() => { setNoVehFlag(true); setVehicles([]); }} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد سيارات</button>) : (<button onClick={() => { setNoVehFlag(false); setVehicles([{ id: Date.now() }]); }} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل أسطول السيارات</button>)}
                   </div>
                   <div className="w-full">
                     {vehicles.map((v, index) => (<VehicleRow key={`veh-${v.id}`} index={index} onRemove={() => removeVehicle(v.id)} data={v} />))}
@@ -6220,12 +6257,24 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
               <SectionCard title="إحصائيات المستفيدين" icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} actionBtn={<button onClick={addBeneficiary} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة تصنيف</button>}>
                 <div className="space-y-4">
+                  <div className="flex justify-center">
+                    {beneficiaries.length > 0
+                      ? <button type="button" onClick={() => { setNoBenFlag(true); setBeneficiaries([]); }} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--accent)]/30">لا يوجد مستفيدين</button>
+                      : <button type="button" onClick={() => { setNoBenFlag(false); setBeneficiaries([{ id: Date.now() }]); }} className="bg-[var(--surface-4)] hover:bg-[var(--ok)] text-[var(--muted-2)] px-8 py-1.5 rounded-full text-xs font-bold border border-[var(--ok)]/30 hover:text-white">+ تفعيل المستفيدين</button>}
+                  </div>
                   {beneficiaries.map((ben, index) => (
-                    <div key={`ben-${ben.id}`} className="flex flex-col md:flex-row gap-4 items-end bg-[var(--surface-4)] p-4 rounded-xl border border-[var(--border)]">
-                      <div className="flex-1 w-full"><FormGroup label="تصنيف المستفيدين"><StyledInput id={`b_cat_${index}`} defaultValue={ben?.category_name || ''} placeholder="مثال: أطفال، مصابين..." className="bg-[var(--surface-3)]" /></FormGroup></div>
+                    <div key={`ben-${ben.id}`} className="bg-[var(--surface-4)] p-4 rounded-xl border border-[var(--border)]">
+                      <div className="mb-3">
+                        <FormGroup label="عنوان التصنيف — استرشادي: اكتب اسم اليوم أو الفترة">
+                          <StyledInput id={`b_title_${index}`} defaultValue={ben?.group_title || ''} placeholder="مثال: مستفيدين اليوم الأول (المهام المفتوحة فقط)" className="bg-[var(--surface-3)] font-bold" />
+                        </FormGroup>
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-4 items-end">
+                      <div className="flex-1 w-full"><FormGroup label="تصنيف المستفيدين"><StyledInput id={`b_cat_${index}`} defaultValue={ben?.category_name || ''} placeholder="ضع هنا نوع الخدمة المقدمة" className="bg-[var(--surface-3)]" /></FormGroup></div>
                       <div className="flex-1 w-full"><FormGroup label="مستفيدين (مباشر)"><StyledInput id={`b_count_${index}`} defaultValue={ben?.direct_count || ''} type="number" placeholder="0" className="bg-[var(--surface-3)]" /></FormGroup></div>
                       <div className="flex-1 w-full"><FormGroup label="مستفيدين (غير مباشر)"><StyledInput id={`b_indirect_${index}`} defaultValue={ben?.indirect_count || ''} type="number" placeholder="0" className="bg-[var(--surface-3)]" /></FormGroup></div>
                       {beneficiaries.length > 1 && (<button onClick={() => removeBeneficiary(ben.id)} className="mb-2 p-2 text-[var(--muted-2)] hover:text-[var(--accent)] bg-[var(--surface-3)] rounded-lg border border-[var(--border)]"><TrashIcon /></button>)}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -7589,7 +7638,7 @@ const [nd, setNd] = useState({
                   <td data-label="مدخل الخبر" className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.data_entry_name}</td>
                   <td data-label="إجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                     <div className="flex justify-center gap-1.5">
-                      {n.news_link && <a href={n.news_link} target="_blank" rel="noreferrer" className="icon-btn" title="فتح الرابط"><GlobalWorldIcon /></a>}
+                      {n.news_link && <a href={safeExternalHref(n.news_link) || '#'} target="_blank" rel="noreferrer" className="icon-btn" title="فتح الرابط"><GlobalWorldIcon /></a>}
                       <button onClick={() => handleEdit(n)} className="icon-btn" title="فتح الخبر"><EyeIcon /></button>
                       <button onClick={() => setDownloadTarget(n)} className="icon-btn" title="تصدير الخبر"><DownloadIcon /></button>
                       {(isOwner || isSupervisor || isJoker) && <button onClick={() => setNewsToDelete(n.news_id)} className="icon-btn icon-btn-danger" title="حذف"><TrashIcon /></button>}
@@ -9682,7 +9731,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   <td data-label="إجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                     <div className="flex justify-center gap-1.5">
                       {d.news_link && (
-                        <a href={d.news_link} target="_blank" rel="noreferrer" className="icon-btn" title="فتح مصدر الخبر">
+                        <a href={safeExternalHref(d.news_link) || '#'} target="_blank" rel="noreferrer" className="icon-btn" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
@@ -12036,7 +12085,7 @@ const totalAiCountries = new Set(
                   <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                     <div className="flex justify-center gap-1.5">
                       {n.news_link && (
-                        <a href={n.news_link} target="_blank" rel="noreferrer" className="icon-btn" title="فتح مصدر الخبر">
+                        <a href={safeExternalHref(n.news_link) || '#'} target="_blank" rel="noreferrer" className="icon-btn" title="فتح مصدر الخبر">
                           <GlobalWorldIcon />
                         </a>
                       )}
@@ -12112,7 +12161,7 @@ const totalAiCountries = new Set(
                   <FormGroup label="اسم المستشفى"><StyledInput readOnly value={form.hospital_name} /></FormGroup>
                   <FormGroup label="عدد المصابين"><StyledInput readOnly value={form.injured_count} className="text-[var(--data)] font-bold" /></FormGroup>
                   <FormGroup label="عدد الوفيات"><StyledInput readOnly value={form.deaths_count} className="text-[var(--accent)] font-bold" /></FormGroup>
-                  <div className="md:col-span-3"><FormGroup label="لينك الخبر الأصلي"><a href={form.news_link} target="_blank" rel="noreferrer" className="block w-full bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-sm text-blue-400 hover:text-blue-300 truncate" dir="ltr">{form.news_link}</a></FormGroup></div>
+                  <div className="md:col-span-3"><FormGroup label="لينك الخبر الأصلي"><a href={safeExternalHref(form.news_link) || '#'} target="_blank" rel="noreferrer" className="block w-full bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-sm text-blue-400 hover:text-blue-300 truncate" dir="ltr">{form.news_link}</a></FormGroup></div>
                 </div>
               </SectionCard>
             </div>

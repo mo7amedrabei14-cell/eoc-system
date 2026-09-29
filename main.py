@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
 from datetime import date, time, datetime, timedelta, timezone
@@ -94,7 +94,7 @@ def validate_clear_confirmation(data: ClearAllRequest):
 #    الضخمة (فيها CREATE INDEX على جدول الأحداث اللحظية) على قاعدة عليها حركة،
 #    فتحجز أقفالاً ثقيلة توقف البث اللحظي مؤقتاً. جدول حالة العمل يُنشأ بمستوى خفيف
 #    خاص به (ensure_workspace_schema) يعمل مع كل إقلاع بتكلفة إغلاق–فتح واحدة (كاش).
-SCHEMA_VERSION = "2026-09-27.1"
+SCHEMA_VERSION = "2026-09-28.2"
 
 
 def _schema_version_matches(cursor) -> bool:
@@ -178,6 +178,8 @@ def ensure_schema():
             cursor.execute("ALTER TABLE missions ADD COLUMN IF NOT EXISTS team_code VARCHAR(100) DEFAULT '';")
                         # 🆕 بالكات الاستمارة المتكررة (أيام/سجلات إدارية + بالكات إدارة الشباب والتطوع)
             cursor.execute("ALTER TABLE missions ADD COLUMN IF NOT EXISTS form_blocks JSONB;")
+            # 🏷️ عنوان تصنيف المستفيدين (مثال: مستفيدين اليوم الأول)
+            cursor.execute("ALTER TABLE mission_beneficiaries ADD COLUMN IF NOT EXISTS group_title VARCHAR(150);")
 
             cursor.execute("ALTER TABLE mission_participants ADD COLUMN IF NOT EXISTS participant_position VARCHAR(100);")
             cursor.execute("""
@@ -728,7 +730,10 @@ app = FastAPI(title="EOC System", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # 🔒 المصادقة كلها بـ Bearer token في الترويسة (لا كوكيز إطلاقاً) → لا حاجة
+    #    لتمرير بيانات اعتماد عبر الأصل، وتمريرها مع "*" يعني السماح لأي موقع
+    #    بقراءة ردود طلبات موثوقة. تعطيلها يضيّق السطح بلا أي أثر وظيفي.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -874,6 +879,29 @@ app.include_router(missions.router)
 app.include_router(volunteers.router)
 app.include_router(branches.router)
 
+# 🧯 تنظيف نصوص الأخطاء قبل إرسالها لأي عميل (نقطة الصحة بلا مصادقة):
+#    حذف أي بيانات اعتماد مضمّنة داخل نص الاستثناء (user:pass@host) أو كلمات مرور.
+def _redact_error(message) -> str:
+    text = str(message or "")
+    text = re.sub(r"://[^\s/@]*@", "://***@", text)
+    text = re.sub(r"(?i)(password|passwd|pwd)\s*=\s*\S+", r"\1=***", text)
+    return text
+
+
+# 🧯 روابط الأخبار تُعرض في الواجهة كـ href مباشرة (target=_blank) — الحد الأمني
+#    الحقيقي هو السيرفر: منع الصيغ الخطرة عند الكتابة (javascript:/data:/vbscript:…).
+DANGEROUS_URL_SCHEMES = ("javascript:", "data:", "vbscript:", "file:", "filesystem:", "about:")
+
+
+def _assert_safe_link(value, label: str):
+    """يرفض صيغ الروابط الخطرة (تنفيذ سكربت عند النقر) ويسمح بـ http/https/نسبي."""
+    raw = str(value or "")
+    compact = "".join(ch for ch in raw if ch not in " \t\n\r\u0000").lower()
+    if compact.startswith(DANGEROUS_URL_SCHEMES):
+        raise ValueError(f"{label}: صيغة الرابط غير مسموحة — استخدم رابط http/https.")
+    return value
+
+
 @app.get("/")
 def root():
     return {"system": "EOC System", "status": "online", "boot_id": BOOT_ID}
@@ -902,7 +930,8 @@ def health():
         finally:
             connection.close()
     except Exception as e:
-        db_error = str(e)[:200]
+        # 🧯 لا نُرسل نص الاستثناء الخام للعالم: يُنظَّف من أي بيانات اعتماد (بلا مصادقة هنا)
+        db_error = _redact_error(str(e))[:200]
 
     now = datetime.now(timezone.utc)
     return {
@@ -1206,6 +1235,7 @@ class JoinLeaveEntryRequest(BaseModel):
     client_now: Optional[str] = None        # ساعة العميل المحلية — إطار التحقق من «المستقبل»
 
 class BeneficiaryModel(BaseModel):
+    group_title: Optional[str] = None
     category_name: str
     direct_count: int
     indirect_count: int
@@ -1281,6 +1311,10 @@ class MissionCreate(BaseModel):
 
     # 🛡️ علم المسح المقصود
     clear_details: bool = False
+
+    # 🚫 «لا يوجد مستفيدين» — مسح صريح لصفوف المستفيدين وحدها (بدون مسّ خط السير/المركبات)
+    clear_beneficiaries: bool = False
+    clear_vehicles: bool = False
 
     # 💾 حفظ البيانات بدون تغيير إجراء أو حالة
     action: Optional[str] = None
@@ -1407,6 +1441,45 @@ def is_owner_role(role):
 def can_edit_mission_role(role):
     """هل هذا الدور يملك صلاحية تعديل المهمة (كل الحقول)؟"""
     return bool(role) and str(role.get("role_name", "")).strip().upper() in [r.upper() for r in MISSION_EDIT_ROLE_NAMES]
+
+
+# 🎯 تصنيف الأدوار — نفس تصنيف الواجهة بالحرف (getRoleFlags في Dashboard.jsx)
+#    ونفس الشرط المطبَّق فعلاً في حذف الزلازل («متاح للجوكر والمشرفين والمالك فقط»):
+#    مالك/مدير/مشرف/جوكر = أدوار إدارية (اعتماد/إنهاء/إرجاع/حذف)، وأي دور آخر
+#    (أوبريشن/المتطوع) = دور ميداني: يحفظ مسودة أو يرسل للتحديثات فقط.
+ADMIN_ROLE_NAMES = [
+    "OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER",
+    "المالك", "مدير", "أدمن", "مشرف", "جوكر",
+]
+
+# الحالات التي يُسمح للدور الميداني بكتابتها (نفس أزرار واجهته: مسودة / إرسال للجوكر)
+FIELD_ALLOWED_MISSION_STATUSES = ("DRAFT", "UNDER REVIEW")
+
+
+def is_admin_role(role):
+    """هل هذا الدور إداري (له أزرار الاعتماد/الإنهاء/الإرجاع/الحذف في الواجهة)؟"""
+    return bool(role) and str(role.get("role_name", "")).strip().upper() in [r.upper() for r in ADMIN_ROLE_NAMES]
+
+
+def require_admin_role(role, action_label):
+    """🔒 فرض حدّ الواجهة على السيرفر: أزرار الإجراءات الإدارية محجوبة عن الدور
+    الميداني في الواجهة — ويجب أن تُحجب هنا أيضاً (الواجهة ليست حداً أمنياً)."""
+    if not is_admin_role(role):
+        raise HTTPException(
+            status_code=403,
+            detail=f"{action_label} متاح للمشرف والجوكر والمالك فقط.",
+        )
+
+
+def require_youth_write_block(user_id: int, action_label: str):
+    """🔒 حساب إدارة الشباب (READ_ONLY_MISSIONS) للعرض فقط — بلا أي كتابة على
+    المشاركين/الجلسات/سجلات الانضمام-الانفصال (لا استمارة ولا أزرار في الواجهة،
+    ولا صلاحية في جدول الصلاحيات: mission.view/history فقط)."""
+    if is_youth_role(get_user_role(user_id)):
+        raise HTTPException(
+            status_code=403,
+            detail=f"حساب إدارة الشباب للعرض فقط — لا يمكن {action_label}.",
+        )
 
 
 def find_youth_account_ids(cursor):
@@ -2453,9 +2526,9 @@ def get_missions(
             beneficiaries_dict = {mid: [] for mid in mission_ids}
             if mission_ids:
                 # 💡 الإصلاح التاني: استخدام = ANY(%s) بدل IN %s
-                cursor.execute("SELECT mission_id, category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = ANY(%s)", (mission_ids,))
+                cursor.execute("SELECT mission_id, group_title, category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = ANY(%s)", (mission_ids,))
                 for b_row in cursor.fetchall():
-                    beneficiaries_dict[b_row[0]].append({"category_name": b_row[1], "direct_count": b_row[2], "indirect_count": b_row[3]})
+                    beneficiaries_dict[b_row[0]].append({"group_title": b_row[1], "category_name": b_row[2], "direct_count": b_row[3], "indirect_count": b_row[4]})
 
             result = []
             for r in rows:
@@ -2696,7 +2769,8 @@ def create_mission(
                     """, (comp_dt, comp_dt.strftime('%H:%M'), mission_id))
 
             for ben in mission.beneficiaries:
-                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
+                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, group_title, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s, %s);", (mission_id, ben.group_title, ben.category_name, ben.direct_count, ben.indirect_count))
+
 
             for staff in mission.eoc_staff:
                 cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
@@ -2896,6 +2970,24 @@ def update_mission(
     # 🛡️ الحقول الإلزامية + قاعدة الإنهاء — تُفرض في السيرفر قبل أي PROCESS للطلب
     # 💾 «حفظ التعديلات بدون إجراء»: بلا أي فحص إجراء — الحالة بتتثبت من القاعدة تحت.
     save_only = (getattr(mission, 'action', None) == 'save_edits_only')
+    # 🎯 بوابة سير العمل على السيرفر (نفس أزرار الواجهة): الاعتماد/الإنهاء/الإرجاع
+    #    محجوبة عن الدور الميداني في الواجهة — تُحجب هنا أيضاً. «حفظ بلا إجراء»
+    #    (save_edits_only) مستثنى لأن الحالة تُثبَّت من القاعدة داخلياً.
+    if not save_only:
+        _incoming_status = str(getattr(mission, "status", "") or "").strip().upper()
+        if _incoming_status and _incoming_status not in FIELD_ALLOWED_MISSION_STATUSES:
+            # الحالة نفسها المخزَّنة ⇒ ليست انتقالاً (الحمولة قد تحمل الحالة كما هي
+            # مع تعديل حقول أخرى) — الانتقال الفعلي هو ما يُقيَّد بالدور الإداري.
+            _sconn = get_connection()
+            try:
+                with _sconn.cursor() as _scur:
+                    _scur.execute("SELECT status FROM missions WHERE mission_id = %s", (mission_id,))
+                    _srow = _scur.fetchone()
+            finally:
+                _sconn.close()
+            _stored_status = str(_srow[0] if _srow else "").strip().upper()
+            if _incoming_status != _stored_status:
+                require_admin_role(role, "تغيير حالة المهمة (اعتماد/إنهاء/إرجاع)")
     if not save_only:
         missing_required = validate_mission_required_fields(mission)
         if missing_required:
@@ -3125,9 +3217,9 @@ def update_mission(
                     cursor, mission_id, mission.routes,
                     getattr(mission, 'deleted_route_ids', None), mission.clear_details,
                 )
-            if len(mission.vehicles) > 0 or mission.clear_details:
+            if len(mission.vehicles) > 0 or mission.clear_details or mission.clear_vehicles:
                 cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
-            if len(mission.beneficiaries) > 0 or mission.clear_details:
+            if len(mission.beneficiaries) > 0 or mission.clear_details or mission.clear_beneficiaries:
                 cursor.execute("DELETE FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
             if sent_details["eoc_staff"]:
                 cursor.execute("DELETE FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
@@ -3368,7 +3460,7 @@ def update_mission(
                     """, (comp_dt, comp_dt.strftime('%H:%M'), mission_id))
 
             for ben in mission.beneficiaries:
-                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s);", (mission_id, ben.category_name, ben.direct_count, ben.indirect_count))
+                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, group_title, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s, %s);", (mission_id, ben.group_title, ben.category_name, ben.direct_count, ben.indirect_count))
 
             for staff in mission.eoc_staff:
                 cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
@@ -3482,8 +3574,13 @@ def update_mission_status(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    if is_youth_role(get_user_role(user_id)):
+    _status_actor_role = get_user_role(user_id)
+    if is_youth_role(_status_actor_role):
         raise HTTPException(status_code=403, detail="حساب إدارة الشباب للعرض فقط — التعديل يتم عبر إجراء المراجعة المخصص")
+    # 🎯 سير العمل: مَن يملك أزرار الاعتماد/الإنهاء/الإرجاع في الواجهة فقط يملكها هنا
+    #    (الدور الميداني يحفظ مسودة أو يرسل للتحديثات — لا يعتمد ولا يُنهي).
+    if str(data.status or "").strip().upper() not in FIELD_ALLOWED_MISSION_STATUSES:
+        require_admin_role(_status_actor_role, "تغيير حالة المهمة (اعتماد/إنهاء/إرجاع)")
 
     connection = get_connection()
     try:
@@ -3641,6 +3738,7 @@ def end_participation(
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    require_youth_write_block(user_id, "إنهاء مشاركة")
 
     ids = list(dict.fromkeys(data.participant_ids or []))  # إزالة التكرار مع حفظ الترتيب
     if not ids:
@@ -4015,6 +4113,7 @@ def edit_draft_session(
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    require_youth_write_block(user_id, "تعديل زمن الانضمام/الانفصال")
 
     if data.action not in ("join", "leave"):
         raise HTTPException(status_code=400, detail="action يجب أن يكون 'join' أو 'leave'")
@@ -4094,6 +4193,7 @@ def remove_draft_session(
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    require_youth_write_block(user_id, "حذف سجل انضمام/انفصال")
 
     connection = get_connection()
     try:
@@ -4281,6 +4381,7 @@ def create_join_leave_entry(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
+    require_youth_write_block(user_id, "إنشاء سجل انضمام/انفصال")
 
     connection = get_connection()
     try:
@@ -4330,6 +4431,7 @@ def update_join_leave_entry(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
+    require_youth_write_block(user_id, "تعديل سجل انضمام/انفصال")
 
     connection = get_connection()
     try:
@@ -4413,6 +4515,7 @@ def delete_join_leave_entry(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
+    require_youth_write_block(user_id, "حذف سجل انضمام/انفصال")
 
     connection = get_connection()
     try:
@@ -4550,8 +4653,8 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
                     "working_hours": working_hours
                 })
             
-            cursor.execute("SELECT category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
-            mission_data["beneficiaries"] = [{"category_name": r[0], "direct_count": r[1], "indirect_count": r[2]} for r in cursor.fetchall()]
+            cursor.execute("SELECT group_title, category_name, direct_count, indirect_count FROM mission_beneficiaries WHERE mission_id = %s", (mission_id,))
+            mission_data["beneficiaries"] = [{"group_title": r[0], "category_name": r[1], "direct_count": r[2], "indirect_count": r[3]} for r in cursor.fetchall()]
             
             cursor.execute("SELECT role_name, staff_name FROM mission_eoc_staff WHERE mission_id = %s", (mission_id,))
             mission_data["eoc_staff"] = [{"role_name": r[0], "staff_name": r[1]} for r in cursor.fetchall()]
@@ -4597,6 +4700,9 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
 
 
             return mission_data
+    except HTTPException:
+        # 🧯 لا نبتلع 404/403 ونحوّلها إلى 500: استثناءات HTTP كما هي
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء جلب التفاصيل")
     finally:
@@ -4674,6 +4780,9 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
     _deleter_role = get_user_role(user_id)
     if is_youth_role(_deleter_role):
         raise HTTPException(status_code=403, detail="حساب إدارة الشباب للعرض فقط — لا يمكن حذف المهام")
+    # 🎯 زر الحذف في الواجهة يظهر للمشرف والجوكر والمالك فقط (محجوب عن الدور الميداني)
+    #    — نُطبّق نفس الحد على السيرفر بدلاً من الاعتماد على إخفاء الزر.
+    require_admin_role(_deleter_role, "حذف المهام")
         
     connection = get_connection()
     try:
@@ -4704,7 +4813,11 @@ def delete_mission(mission_id: int, credentials: HTTPAuthorizationCredentials = 
 
             connection.commit()
             return {"message": "تم حذف المهمة بنجاح"}
-            
+
+    except HTTPException:
+        # 🧯 404 «المهمة غير موجودة» تبقى 404 (كانت تُلتقط وتصبح 500)
+        connection.rollback()
+        raise
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500)
@@ -5306,6 +5419,11 @@ class LocalNewsModel(BaseModel):
     deaths_count: int = 0
     news_updates: Optional[str] = None
     news_link: str
+
+    @field_validator("news_link")
+    @classmethod
+    def _check_news_link(cls, v):
+        return _assert_safe_link(v, "رابط الخبر")
     data_entry_name: Optional[str] = None
     notes: Optional[str] = None
 
@@ -5520,6 +5638,7 @@ def delete_local_news(news_id: int, credentials: HTTPAuthorizationCredentials = 
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    require_admin_role(get_user_role(user_id), "حذف الأخبار المحلية")
         
     connection = get_connection()
     try:
@@ -5893,6 +6012,11 @@ class GlobalDisasterModel(BaseModel):
     missing_count: int = 0
     national_societies_interventions: Optional[str] = None
     news_link: str  # 💡 هذا الحقل إلزامي بناءً على طلبك
+
+    @field_validator("news_link")
+    @classmethod
+    def _check_news_link(cls, v):
+        return _assert_safe_link(v, "رابط الكارثة")
     news_updates: Optional[str] = None
     data_entry_name: Optional[str] = None
     notes: Optional[str] = None
@@ -6062,6 +6186,7 @@ def delete_global_disaster(disaster_id: int, credentials: HTTPAuthorizationCrede
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    require_admin_role(get_user_role(user_id), "حذف الكوارث العالمية")
         
     connection = get_connection()
     try:
@@ -6362,6 +6487,11 @@ class AINewsModel(BaseModel):
     deaths_count: Optional[str] = "0"
     news_updates: Optional[str] = None
     news_link: str
+
+    @field_validator("news_link")
+    @classmethod
+    def _check_news_link(cls, v):
+        return _assert_safe_link(v, "رابط الخبر")
     data_entry_name: Optional[str] = "AI Robot"
     # 🕐 توقيت رصد الخبر (يُظهره البوت أم يُملأ يدوياً) — لو فاضي يسجَّل وقت الحفظ بتوقيت القاهرة
     observed_at: Optional[str] = None
@@ -6552,6 +6682,9 @@ def delete_ai_news(news_id: int, credentials: HTTPAuthorizationCredentials = Dep
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+    # 🎯 الواجهة تمنع الحذف عن غير المالك صراحةً — نفس الحد على السيرفر
+    if not is_owner_role(get_user_role(user_id)):
+        raise HTTPException(status_code=403, detail="حذف سجلات الرادار متاح للمالك فقط.")
         
     connection = get_connection()
     try:
