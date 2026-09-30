@@ -21,6 +21,9 @@ import { captureFields, applyFieldsWhenReady } from './draftsStore';
 // الخاص: `const BASE` جوّه مكوّن سبق وسبّب `ReferenceError: BASE is not defined`
 // → React بيفكّ الشجرة كلها (مفيش error boundary) → صفحة بيضاء.
 import { BASE } from './apiBase';
+// ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
+//    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
+import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
 
 // 📤 الطابور المحلي + أرشيف المرفوضات + مخزن الطقس المعلّق:
 //    المنطق ده كله مطلوع لملف نقي قابل للاختبار — frontend/src/outbox.js
@@ -1693,10 +1696,10 @@ useEffect(() => {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toasts.length]);
-  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false, handover: false, weather: false });
+  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false, handover: false, weather: false, gov_contacts: false });
   // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
-  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0, weather: 0 });
+  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0, weather: 0, gov_contacts: 0 });
 
   const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, isYouth, weatherEligible } = getRoleFlags(userData);
 
@@ -1862,6 +1865,7 @@ useEffect(() => {
         ai_news: prev.ai_news + (e.event_type === 'ai_news' ? 1 : 0),
         handover: prev.handover + (e.event_type === 'handover' ? 1 : 0),
         weather: prev.weather + (e.event_type === 'weather' ? 1 : 0),
+        gov_contacts: prev.gov_contacts + (e.event_type === 'gov_contact' ? 1 : 0),
       }));
 
             // 🧾 حدث سجل النظام: يحدّث شاشة السجل المفتوحة لحظياً — بلا توست ولا جرس
@@ -1918,6 +1922,7 @@ if (e.event_type === 'system_refresh') {
         audit: prev.audit + 1,
         handover: prev.handover + (e.event_type === 'handover' ? 1 : 0),
         weather: prev.weather + (e.event_type === 'weather' ? 1 : 0),
+        gov_contacts: prev.gov_contacts + (e.event_type === 'gov_contact' ? 1 : 0),
       }));
 
       // تنوير النقطة الحمراء في القائمة الجانبية
@@ -1931,6 +1936,7 @@ if (e.event_type === 'system_refresh') {
         audit: true,
         handover: prev.handover || e.event_type === 'handover',
         weather: prev.weather || e.event_type === 'weather',
+        gov_contacts: prev.gov_contacts || e.event_type === 'gov_contact',
       }));
       
       if (e.event_type === 'mission' && e.mission_id) {
@@ -2146,7 +2152,7 @@ if (e.event_type === 'system_refresh') {
   //    - tab/type/id = الوجهة وصفّها، nonce = عداد يضمن إعادة الاشتعال لنفس الصف مرتين
   //    - id يقبل null (إشعار بلا entity_id) → تُفتح الصفحة فقط دون أي تتبع (سقوط آمن).
   const [focusTarget, setFocusTarget] = useState(null);
-  const EVENT_TAB_MAP = { mission: 'missions', local_news: 'local_news', global_disaster: 'global_disasters', earthquake: 'earthquakes', ai_news: 'ai_news', handover: 'handover', weather: 'weather', audit: 'audit' };
+  const EVENT_TAB_MAP = { mission: 'missions', local_news: 'local_news', global_disaster: 'global_disasters', earthquake: 'earthquakes', ai_news: 'ai_news', handover: 'handover', weather: 'weather', audit: 'audit', gov_contact: 'gov_contacts' };
 
   // فتح الإشعار (توست أو جرس): تنقّل للصفحة، واطلب تتبّع الصف لو لنا معرف.
   const handleNotificationOpen = (n) => {
@@ -2214,6 +2220,9 @@ if (e.event_type === 'system_refresh') {
       case 'weather': return <MemoWeatherForecastView branches={branchesList} isOwner={isOwner} isJoker={isJoker} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.weather} />;
       case 'weather_intel': return weatherEligible
         ? <WeatherIntelErrorBoundary><MemoWeatherIntelView branches={branchesList} isOwner={isOwner} userRole={userRole} lang={language} setCustomAlert={setCustomAlert} /></WeatherIntelErrorBoundary>
+        : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
+      case 'gov_contacts': return (!isYouth && weatherEligible)
+        ? <MemoGovernorateContactsView branches={branchesList} isOwner={isOwner} isJoker={isJoker} isSupervisor={isSupervisor} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.gov_contacts} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
       case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isYouth={isYouth} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
       case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.local_news} />;
@@ -2475,6 +2484,7 @@ if (e.event_type === 'system_refresh') {
             {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
+            {!isYouth && <NavItem icon={<PhoneIcon />} label={language === 'ar' ? 'سجل التواصل مع المحافظات' : 'Governorate Contacts'} isActive={activeTab === 'gov_contacts'} onClick={() => handleNavigation('gov_contacts')} isOpen={isSidebarOpen} hasUpdate={newUpdates.gov_contacts} />}
 
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
 
@@ -2614,7 +2624,7 @@ if (e.event_type === 'system_refresh') {
       title={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
       aria-label={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
       aria-expanded={notificationsOpen}
-      className="icon-btn !w-11 !h-11 relative"
+      className={`icon-btn !w-11 !h-11 relative bell-wrap ${unreadCount > 0 ? 'is-glowing' : ''}`}
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -7617,6 +7627,7 @@ const CheckIcon = ({ className = '', ...props }) => (
 );
 
 const PendingIcon = (props) => <svg {...props} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const PhoneIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4.2 5.6c0-1 .8-1.8 1.8-1.8h2c.8 0 1.5.5 1.7 1.3l.7 2.4c.2.7-.1 1.4-.7 1.8l-1.1.7a11.3 11.3 0 0 0 5.4 5.4l.7-1.1c.4-.6 1.1-.9 1.8-.7l2.4.7c.8.2 1.3.9 1.3 1.7v2c0 1-.8 1.8-1.8 1.8A15.8 15.8 0 0 1 4.2 5.6Z"/></svg>;
 const ExcelIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9L13 3z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 3v6h6"/><path strokeLinecap="round" strokeWidth={2} d="M9 13.5h6M9 16.5h6M9 19h4"/></svg>;
 // ==========================================
 // 5. شاشة سجل النظام (للمالك فقط)
@@ -9345,6 +9356,577 @@ const visibleBranches = (
     </div>
   );
 }
+
+// ==========================================
+// 📞 سجل التواصل مع المحافظات — Governorate Contacts Log
+// ==========================================
+// ترتيب المحافظات هنا = نفس ترتيب عمود «المحافظة» في صفحة توقعات الطقس بالحرف
+// (نفس الأرقام ونفس الأسماء الجاية من قاعدة البيانات).
+const GOV_CONTACT_BRANCH_ORDER = [19, 13, 20, 8, 32, 12, 26, 29, 15, 16, 9, 25, 21, 17, 14, 31, 27, 18, 24, 22, 7, 23, 28, 30, 10, 11, 6];
+
+function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor, userRole, lang = 'ar', liveUpdateVersion = 0 }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
+  // 🔒 نفس منطق نطاق صفحة توقعات الطقس بالحرف: أوبريشن = إقليمه فقط، ومن فوقه = كل المحافظات
+  const isGlobalScope = isOwner || isJoker || isSupervisor || ['MANAGER', 'SUPERVISOR', 'ADMIN', 'مدير', 'مشرف', 'أدمن', 'جوكر', 'المالك'].includes(userRole);
+  const canExport = isOwner || isJoker || isSupervisor;
+  const canExportFull = isOwner;
+  const canClearAll = isOwner;
+
+  const url = `${BASE}/api/gov-contacts`;
+  const authHeaders = () => ({ Authorization: `Bearer ${getStoredAccessToken()}` });
+
+  let currentUserData = {};
+  try { currentUserData = JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { currentUserData = {}; }
+  const username = String(currentUserData?.username || '').toLowerCase();
+  const myBranchId = Number(currentUserData?.branches?.[0]?.branch_id || currentUserData?.branch_id || 19);
+  const myBranchName = String(currentUserData?.branches?.[0]?.branch_name || currentUserData?.branch || 'المركز العام');
+  let userRegion = 'hq';
+  if (username.includes('delta')) userRegion = 'delta';
+  else if (username.includes('canal')) userRegion = 'canal';
+  else if (username.includes('upper') || username.includes('saeed')) userRegion = 'saeed';
+  else if (W_BRANCH_ID_TO_REGION[myBranchId]) userRegion = W_BRANCH_ID_TO_REGION[myBranchId];
+  else if (wRegionByName[wKey(myBranchName)]) userRegion = wRegionByName[wKey(myBranchName)];
+
+  const visibleBranches = useMemo(() => (
+    isGlobalScope
+      ? (branches || [])
+      : (branches || []).filter(b => (W_BRANCH_ID_TO_REGION[Number(b.id)] || wRegionByName[wKey(b.name)] || 'hq') === userRegion)
+  ).slice().sort((a, b) => {
+    const ia = GOV_CONTACT_BRANCH_ORDER.indexOf(Number(a.id));
+    const ib = GOV_CONTACT_BRANCH_ORDER.indexOf(Number(b.id));
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  }), [branches, isGlobalScope, userRegion]);
+
+  const [filterDate, setFilterDate] = useState(govLocalDate());
+  const [rows, setRows] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [pendingCount, setPendingCount] = useState(() => countGovPending(loadGovPending()));
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [clearAllCode, setClearAllCode] = useState('');
+  const [customAlert, setCustomAlert] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [syncedAt, setSyncedAt] = useState(null);
+  const pendingRef = useRef(loadGovPending());
+  const dirtyRef = useRef(new Set());
+  const timerRef = useRef(null);
+  const lockRef = useRef(false);
+
+  const setPending = (next) => {
+    pendingRef.current = next;
+    setPendingCount(countGovPending(next));
+    saveGovPending(next);
+    // ☁️ مرآة على السيرفر: لو الجهاز ده قفل، نفس الحساب يكمّل من جهاز تاني
+    if (countGovPending(next)) saveWorkspace({ kind: 'pending_save', scope: GOV_PENDING_SCOPE, payload: next });
+    else deleteWorkspace({ kind: 'pending_save', scope: GOV_PENDING_SCOPE });
+  };
+  const putPendingMany = (date, bid, values) => {
+    const store = pendingRef.current || {};
+    const group = store[date] || {};
+    setPending({ ...store, [date]: { ...group, [bid]: { ...(group[bid] || {}), ...values } } });
+  };
+  const dropPending = (date, bids) => {
+    const store = pendingRef.current || {};
+    const group = store[date];
+    if (!group) return;
+    const nextGroup = { ...group };
+    bids.forEach(bid => { delete nextGroup[String(bid)]; });
+    const next = { ...store };
+    if (Object.keys(nextGroup).length) next[date] = nextGroup; else delete next[date];
+    setPending(next);
+  };
+
+  // 🏷️ تجهيز صفوف اليوم: كل محافظة مرئية يصير لها صف بنص «سبب الاتصال» الافتراضي
+  //    (نص حقيقي في القاعدة ⇒ يظهر في تصدير Excel)، وما نمسش أي سبب مخصص محفوظ.
+  //    مرة واحدة لكل يوم — والسيرفر بيحتفظ بالسبب المخزَّن لو الحقل مش مرسل.
+  const provisionRef = useRef(new Set());
+  const provisionDay = async (serverMap) => {
+    if (provisionRef.current.has(filterDate)) return;
+    const pend = (pendingRef.current || {})[filterDate] || {};
+    const missing = (visibleBranches || [])
+      .filter(b => !String((pend[b.id] || {}).reason ?? '').trim())
+      .filter(b => !String(((serverMap || {})[b.id] || {}).reason || '').trim())
+      .map(b => ({ branch_id: Number(b.id), reason: GOV_REASON_DEFAULT }));
+    if (!missing.length) return;
+    provisionRef.current.add(filterDate);
+    try {
+      const res = await fetch(`${url}/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ date: filterDate, rows: missing, silent: true }),
+      });
+      if (res.ok) loadRows(true);
+    } catch { provisionRef.current.delete(filterDate); }
+  };
+
+  const loadRows = async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    try {
+      const res = await fetch(`${url}?date=${filterDate}`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        const map = {};
+        (data || []).forEach(r => {
+          map[r.branch_id] = {
+            reason: r.reason ?? '', contact_count: r.contact_count ?? '',
+            phone_time: r.phone_time ?? '', wireless_time: r.wireless_time ?? '',
+            whatsapp_time: r.whatsapp_time ?? '', reply_time: r.reply_time ?? '',
+            notes: r.notes ?? '',
+          };
+        });
+        const serverMap = { ...map };
+        // 🧷 لا نطمس أي صف فيه شغل لسه ما اتأكدش حفظه (تحديث لحظي/دوري وهنكتبه احنا)
+        const pend = (pendingRef.current || {})[filterDate] || {};
+        Object.keys(pend).forEach(bid => { map[bid] = { ...(map[bid] || emptyGovRow()), ...pend[bid] }; });
+        setRows(map);
+        setSyncedAt(new Date());
+        provisionDay(serverMap);
+      } else if (!silent) { setRows({}); }
+    } catch { if (!silent) setRows({}); }
+    finally { if (!silent) setIsLoading(false); }
+  };
+
+  // 💾 حفظ تلقائي فوري: أي تعديل يتوقف عن الكتابة 0.9 ثانية وبعدها يُرفع — بدون زرار
+  const flush = async ({ retryAll = true } = {}) => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    if (lockRef.current) return;
+    const store = pendingRef.current || {};
+    const dates = Object.keys(store).filter(d => retryAll || d === filterDate);
+    if (!dates.length) return;
+    lockRef.current = true;
+    setSaving(true);
+    let failed = 0;
+    let saved = 0;
+    for (const date of dates) {
+      const group = store[date] || {};
+      const bodyRows = Object.entries(group)
+        .map(([bid, vals]) => {
+          const out = { branch_id: Number(bid) };
+          GOV_CONTACT_FIELDS.forEach((f) => {
+            if (!(f in vals)) return;
+            // 🛡️ الرقم الفاضي يُرسَل null مش نص فاضي — وإلا السيرفر يرفض الدفعة 422
+            const v = vals[f];
+            out[f] = (f === 'contact_count' && (v === '' || v == null)) ? null : v;
+          });
+          return out;
+        })
+        .filter(r => GOV_CONTACT_FIELDS.some(f => f in r));
+      if (!bodyRows.length) { dropPending(date, Object.keys(group)); continue; }
+      try {
+        const res = await fetch(`${url}/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ date, rows: bodyRows, silent: true }),
+          keepalive: true,
+        });
+        if (res.ok) {
+          const ids = bodyRows.map(r => String(r.branch_id));
+          dropPending(date, ids);
+          ids.forEach(bid => dirtyRef.current.delete(`${date}|${bid}`));
+          saved += ids.length;
+        } else { failed += 1; }
+      } catch { failed += 1; }
+    }
+    lockRef.current = false;
+    setSaving(false);
+    if (failed) {
+      setCustomAlert(T('⚠️ فيه تعديلات لسه ما اتأكدش حفظها — محفوظة وستُعاد تلقائياً أول ما الاتصال يرجع.', '⚠️ Some edits are not confirmed yet — kept and retried automatically.'));
+    }
+  };
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+
+  // كل تغيير (فلتر التاريخ) → لوح نظيف وجلب جديد لنفس اليوم
+  useEffect(() => {
+    dirtyRef.current = new Set();
+    loadRows(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterDate]);
+
+  // 🔴 تحديث لحظي حقيقي: أي حفظ من أي جهاز/حساب → إعادة جلب صامتة
+  useEffect(() => { if (liveUpdateVersion > 0) loadRows(true); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [liveUpdateVersion]);
+
+  // 🛡️ شبكة أمان: تحديث صامت دوري (60 ثانية) + إعادة محاولة الإرسال + استرجاع شغل جهاز آخر
+  useEffect(() => {
+    const retry = () => { if (countGovPending(pendingRef.current)) flushRef.current({ retryAll: true }); };
+    const recover = async () => {
+      const remote = await fetchWorkspace('pending_save');
+      const item = (remote || []).find(x => x.scope === GOV_PENDING_SCOPE);
+      if (!item || !item.payload || typeof item.payload !== 'object') return;
+      const merged = { ...(pendingRef.current || {}) };
+      Object.entries(item.payload).forEach(([date, group]) => {
+        merged[date] = { ...(group || {}), ...((pendingRef.current || {})[date] || {}) };
+      });
+      setPending(merged);
+      if (countGovPending(merged)) flushRef.current({ retryAll: true });
+    };
+    recover();
+    const poll = setInterval(() => loadRows(true), 60000);
+    const retryTimer = setInterval(retry, 30000);
+    const onLeave = () => { saveGovPending(pendingRef.current); retry(); };
+    window.addEventListener('online', retry);
+    window.addEventListener('eoc:server-recovered', retry);
+    window.addEventListener('pagehide', onLeave);
+    document.addEventListener('visibilitychange', onLeave);
+    return () => {
+      clearInterval(poll);
+      clearInterval(retryTimer);
+      window.removeEventListener('online', retry);
+      window.removeEventListener('eoc:server-recovered', retry);
+      window.removeEventListener('pagehide', onLeave);
+      document.removeEventListener('visibilitychange', onLeave);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
+
+  const rowOf = (bid) => rows[bid] || emptyGovRow();
+  const markDirty = (date, bid) => { dirtyRef.current.add(`${date}|${bid}`); };
+  const scheduleSave = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => flushRef.current({ retryAll: false }), 900);
+  };
+  const setField = (bid, field, value) => {
+    const before = rowOf(bid);
+    const patch = { [field]: value };
+    // 🏷️ أول لمسة للصف: نثبّت «سبب الاتصال» الافتراضي (زي ما هو مطلوب في الصورة)
+    if (field !== 'reason' && !String(before.reason || '').trim()) patch.reason = GOV_REASON_DEFAULT;
+    setRows(prev => ({ ...prev, [bid]: { ...before, ...patch } }));
+    putPendingMany(filterDate, bid, patch);
+    markDirty(filterDate, bid);
+    scheduleSave();
+  };
+  const toggleChannel = (bid, field) => setField(bid, field, String(rowOf(bid)[field] || '').trim() ? '' : govTimeLabel());
+  // 📝 الملاحظات (داتا فاليد ليست): «تم الرد …» يضبط وقت الرد تلقائياً، و«لم يتم الرد/مغلق» يفرّغه
+  const setNotes = (bid, value) => {
+    const before = rowOf(bid);
+    const patch = { notes: value };
+    let reply = before.reply_time ?? '';
+    if (/^تم الرد/.test(value)) { if (!String(reply).trim()) reply = govTimeLabel(); }
+    else if (value === 'لم يتم الرد' || value === 'مغلق') { reply = ''; }
+    if ((before.reply_time ?? '') !== reply) patch.reply_time = reply || null;
+    if (!String(before.reason || '').trim()) patch.reason = GOV_REASON_DEFAULT;
+    setRows(prev => ({ ...prev, [bid]: { ...before, ...patch, notes: value, reply_time: reply } }));
+    putPendingMany(filterDate, bid, patch);
+    markDirty(filterDate, bid);
+    scheduleSave();
+  };
+
+  // 🧮 الكروت الأربعة (على المحافظات المرئية فقط = نطاق المستخدم)
+  const stats = useMemo(() => {
+    let contacted = 0, replied = 0, notReplied = 0, totalCalls = 0;
+    visibleBranches.forEach(b => {
+      const r = rows[b.id] || {};
+      const notes = String(r.notes || '').trim();
+      const hasAny = GOV_CHANNELS.some(c => String(r[c.key] || '').trim())
+        || Number(r.contact_count) > 0 || notes || String(r.reply_time || '').trim();
+      if (hasAny) contacted += 1;
+      if (notes.startsWith('تم الرد')) replied += 1;
+      else if (notes === 'لم يتم الرد' || notes === 'مغلق') notReplied += 1;
+      totalCalls += Number(r.contact_count) || 0;
+    });
+    return { contacted, replied, notReplied, totalCalls };
+  }, [rows, visibleBranches]);
+
+  const nameById = useMemo(() => (branches || []).reduce((acc, b) => { acc[Number(b.id)] = b.name; return acc; }, {}), [branches]);
+  const govLabel = (b) => (Number(b.id) === 19 ? T('القاهرة (المركز العام)', 'Cairo (General HQ)') : b.name);
+  const scopeRegionLabel = isGlobalScope ? null : W_REGION_LABELS[userRegion];
+
+  const logGovExport = async (kind) => {
+    try {
+      await fetch(`${url}/export-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ kind }),
+      });
+    } catch { /* التسجيل لا يوقف التصدير */ }
+  };
+  // 📊 التصدير المُفلتر (من الجوكر فما فوق): نفس شكل الجدول، بترتيب محافظات الطقس، ومتأثر بفلتر التاريخ
+  const handleExportFiltered = async () => {
+    if (!canExport || exporting) return;
+    setExporting(true);
+    try {
+      const res = await fetch(`${url}/log?from_date=${filterDate}&to_date=${filterDate}`, { headers: authHeaders() });
+      if (!res.ok) { setCustomAlert(T('تعذّر تجهيز التصدير.', 'Export failed.')); return; }
+      const data = await res.json();
+      const byBranch = (data || []).reduce((acc, r) => { acc[Number(r.branch_id)] = r; return acc; }, {});
+      const exportRows = visibleBranches.map(b => {
+        const r = byBranch[Number(b.id)] || {};
+        return {
+          'المحافظة': r.branch_name || nameById[Number(b.id)] || b.name,
+          'سبب الاتصال': r.reason || '',
+          'عدد مرات الاتصال': r.contact_count ?? '',
+          // ⏰ عرض 12 ساعة في الإكسيل (نفس قاعدة المشروع) والقيمة المخزّنة 24 ساعة
+          'هاتفيا': formatTime12(r.phone_time),
+          'لاسلكي': formatTime12(r.wireless_time),
+          'واتساب': formatTime12(r.whatsapp_time),
+          'وقت الرد': formatTime12(r.reply_time),
+          'ملاحظات': r.notes || '',
+        };
+      });
+      await exportWorkbook([{ name: `سجل التواصل ${filterDate}`, ...gridFromRows(exportRows) }], `سجل_التواصل_${filterDate}.xlsx`);
+      await logGovExport('filtered');
+      setCustomAlert(T('تم تصدير سجل التواصل بنجاح!', 'Contacts log exported!'));
+    } catch { setCustomAlert(T('حدث خطأ أثناء التصدير.', 'Export error.')); }
+    finally { setExporting(false); }
+  };
+
+  // 📚 السجل الشامل (المالك فقط): كل التواريخ وسجلات التدقيق
+  const handleExportFull = async () => {
+    if (!canExportFull || exporting) return;
+    setExporting(true);
+    try {
+      const res = await fetch(`${url}/log?all=true`, { headers: authHeaders() });
+      if (!res.ok) { setCustomAlert(T('تعذّر تجهيز السجل الشامل.', 'Failed to build the full log.')); return; }
+      const data = await res.json();
+      const exportRows = (data || []).map(r => ({
+        'التاريخ': r.contact_date || '',
+        'المحافظة': r.branch_name || nameById[Number(r.branch_id)] || '',
+        'سبب الاتصال': r.reason || '',
+        'عدد مرات الاتصال': r.contact_count ?? '',
+        'هاتفيا': formatTime12(r.phone_time),
+        'لاسلكي': formatTime12(r.wireless_time),
+        'واتساب': formatTime12(r.whatsapp_time),
+        'وقت الرد': formatTime12(r.reply_time),
+        'ملاحظات': r.notes || '',
+        'سجّله': r.entered_by_name || '',
+        'آخر تحديث': r.updated_at || '',
+      }));
+      if (!exportRows.length) { setCustomAlert(T('لا توجد سجلات محفوظة بعد.', 'No records yet.')); return; }
+      await exportWorkbook([{ name: 'السجل الشامل', ...gridFromRows(exportRows) }], `السجل_الشامل_للتواصل_${govLocalDate()}.xlsx`);
+      await logGovExport('full');
+      setCustomAlert(T('تم تصدير السجل الشامل بنجاح!', 'Full log exported!'));
+    } catch { setCustomAlert(T('حدث خطأ أثناء التصدير.', 'Export error.')); }
+    finally { setExporting(false); }
+  };
+
+  const confirmClearAll = async () => {
+    try {
+      const res = await fetch(`${url}/clear-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ confirmation_code: clearAllCode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setShowClearAllConfirm(false);
+      setClearAllCode('');
+      if (!res.ok) { setCustomAlert(data.detail || T('تعذّر مسح السجل.', 'Delete failed.')); return; }
+      setPending({});
+      setRows({});
+      setCustomAlert(T('تم مسح سجل التواصل بالكامل.', 'Contacts log cleared.'));
+    } catch { setCustomAlert(T('تعذّر مسح السجل.', 'Delete failed.')); }
+  };
+
+  const cellCls = 'w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-2 py-1.5 text-center text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 transition-colors';
+  const timeCls = 'w-[118px] bg-[var(--surface-3)] border border-[var(--border)] rounded-lg py-1.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 transition-colors';
+
+  // ⌨️ تنقّل بالكيبورد زي شبكة صفحة الطقس: تحت/Enter = الصف اللي بعده (نفس العمود)،
+  //    فوق = اللي قبله، وشمال/يمين بين الخلايا في خانة عدد المرات.
+  //    أي مفتاح عالجه الحقل نفسه (وقت/قائمة) نسيبه للحقل (e.defaultPrevented).
+  const focusCell = (row, col) => {
+    if (row < 0 || row >= visibleBranches.length || col < 0 || col >= GOV_GRID_COLS.length) return;
+    const cell = document.getElementById(`gcell_${row}_${col}`);
+    if (!cell) return;
+    const target = cell.matches('input, select')
+      ? cell
+      : cell.querySelector('input[type="text"], input[type="number"], select, input');
+    if (!target) return;
+    target.focus();
+    if (typeof target.select === 'function') { try { target.select(); } catch { /* بعض الحقول بترفض */ } }
+  };
+  const gridNavKey = (e, row, col) => {
+    if (e.defaultPrevented) return;         // الحقل نفسه استهلك المفتاح (أجزاء الوقت/قائمة الاختيار)
+    const k = e.key;
+    let nr = row;
+    let nc = col;
+    if (k === 'ArrowDown' || k === 'Enter') nr = row + 1;
+    else if (k === 'ArrowUp') nr = row - 1;
+    else if (col === GOV_GRID_COLS.indexOf('count') && k === 'ArrowLeft') nc = col + 1;   // RTL: شمال = التالي
+    else if (col === GOV_GRID_COLS.indexOf('count') && k === 'ArrowRight') nc = col - 1;
+    else return;
+    e.preventDefault();
+    focusCell(nr, nc);
+  };
+  // ── JSX ──
+  return (
+    <div className="space-y-6 pb-10 animate-fade-in-up">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-[var(--ink)] flex items-center gap-2">
+            <span className="text-[var(--accent)]"><PhoneIcon /></span>
+            {T('سجل التواصل مع المحافظات', 'Governorate Contacts Log')}
+          </h2>
+          <p className="text-[var(--muted)] text-sm mt-1">
+            {T('صف واحد لكل محافظة في اليوم — الحفظ تلقائي على السيرفر، وكل الأجهزة ترى نفس الحالة.', 'One row per governorate per day — autosaved on the server; every device sees the same state.')}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="px-2 text-xs font-bold text-[var(--muted)] whitespace-nowrap">{T('التاريخ:', 'Date:')}</span>
+          <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
+          {scopeRegionLabel && (
+            <span className="text-xs font-bold text-[var(--info)] bg-[var(--info-soft)] border border-[var(--info)]/20 rounded-full px-2.5 py-1">{T('نطاقك: ' + scopeRegionLabel, 'Scope: ' + scopeRegionLabel)}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="actionbar flex-wrap">
+        {canExport && (
+          <button type="button" onClick={handleExportFiltered} disabled={exporting} className="action-btn action-btn--ok shrink-0" data-tip="تصدير سجل اليوم إلى Excel">
+            <ExcelIcon /><span className="hidden md:inline">{T('تصدير فردي', 'Export Excel (date filter)')}</span>
+          </button>
+        )}
+        {canExportFull && (
+          <button type="button" onClick={handleExportFull} disabled={exporting} className="action-btn action-btn--ok shrink-0" data-tip="تصدير السجل الشامل لكل التواريخ (المالك فقط)">
+            <ExcelIcon /><span className="hidden md:inline">{T('تصدير السجل الشامل', 'Export full log')}</span>
+          </button>
+        )}
+        {canClearAll && (
+          <button type="button" onClick={() => setShowClearAllConfirm(true)} className="action-btn action-btn--danger shrink-0" data-tip="مسح السجل بالكامل (المالك فقط + رمز التأكيد)">
+            <TrashIcon /><span className="hidden md:inline">{T('مسح الكل', 'Delete all')}</span>
+          </button>
+        )}
+        <span className={`ops-chip shrink-0 ${saving ? 'text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]' : 'text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]'}`}>
+          <span className="live-dot" /> {saving ? T('جارٍ الحفظ…', 'Saving…') : T('الحفظ تلقائي ✓', 'Autosave on ✓')}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard title={T('محافظات تم التواصل معها', 'Contacted governorates')} value={stats.contacted} color="text-[var(--ink)]" borderHighlight />
+        <StatCard title={T('تم الرد', 'Replied')} value={stats.replied} color="text-[var(--ok)]" />
+        <StatCard title={T('لم يتم الرد', 'Not replied')} value={stats.notReplied} color="text-[var(--warn)]" />
+        <StatCard title={T('إجمالي عدد مرات الاتصال', 'Total contact attempts')} value={stats.totalCalls} color="text-[var(--info)]" />
+      </div>
+
+      <div className="card-surface p-4 md:p-6 rounded-3xl border border-[var(--border)]">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <span className="text-[var(--accent)]"><PhoneIcon /></span>
+            {T('سجل التواصل', 'Contacts log')}
+          </h3>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs text-[var(--muted)]">{T('💡 اكتب الوقت في أول خانة وانسخه (Ctrl+C) والصقه في الباقي (Ctrl+V) — أو اضغط على ايقونة المكالمة لوقت مصر الحالي', '💡 Type a time in the first cell, copy it (Ctrl+C) and paste it into the rest (Ctrl+V) — or click the green button for Cairo now')}</span>
+            <span className="text-xs text-[var(--muted)] font-bold">{T('عدد المحافظات المرئية', 'Visible governorates')}: <b className="text-[var(--ink)]">{visibleBranches.length}</b></span>
+          </div>
+        </div>
+        {isLoading ? (
+          <p className="text-[var(--muted)] text-sm py-8 text-center">{T('جارٍ تحميل السجل…', 'Loading…')}</p>
+        ) : visibleBranches.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
+        ) : (
+          <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
+            <table className="w-full text-right whitespace-nowrap min-w-[1280px] text-sm border-separate" style={{ borderSpacing: 0 }}>
+              <thead>
+                <tr>
+                  <th className="wx-sticky-corner p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
+                  <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('سبب الاتصال', 'Contact reason')}</th>
+                  <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('عدد مرات الاتصال', 'Attempts')}</th>
+                  {GOV_CHANNELS.map(c => (
+                    <th key={c.key} className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T(c.ar, c.en)}</th>
+                  ))}
+                  <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('وقت الرد', 'Reply time')}</th>
+                  <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('ملاحظات', 'Notes')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleBranches.map((b, rIdx) => {
+                  const r = rowOf(b.id);
+                  return (
+                    <tr key={b.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
+                      <td className="wx-sticky-col p-2 font-bold text-[var(--ink)] whitespace-nowrap">{govLabel(b)}</td>
+                      <td className="p-2">
+                        <input id={`gcell_${rIdx}_0`} value={r.reason || ''} onChange={e => setField(b.id, 'reason', e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 0)} placeholder={GOV_REASON_DEFAULT} className={cellCls} />
+                      </td>
+                      <td className="p-2">
+                        <input id={`gcell_${rIdx}_1`} type="number" min="0" max="999" inputMode="numeric" value={r.contact_count} onChange={e => setField(b.id, 'contact_count', e.target.value === '' ? '' : Math.max(0, Math.min(999, Number(e.target.value))))} onKeyDown={e => gridNavKey(e, rIdx, 1)} className={`${cellCls} w-20`} placeholder="—" />
+                      </td>
+                      {GOV_CHANNELS.map((c, cIdx) => {
+                        const on = !!String(r[c.key] || '').trim();
+                        const col = 2 + cIdx;
+                        return (
+                          <td key={c.key} className="p-2">
+                            <div className="flex items-center gap-1 justify-center">
+                              <button type="button" onClick={() => toggleChannel(b.id, c.key)} title={T('تسجيل/إلغاء وقت ' + c.ar + ' بوقت مصر الحالي', 'Log/clear ' + c.en + ' time (Cairo now)')} className={`gov-channel-chip ${on ? 'gov-channel-chip--on' : ''}`}>
+                                {on ? <CheckIcon className="w-3.5 h-3.5" /> : <PhoneIcon className="w-3.5 h-3.5" />}
+                              </button>
+                              <div id={`gcell_${rIdx}_${col}`} onKeyDown={e => gridNavKey(e, rIdx, col)}>
+                                <SegTimeField value={r[c.key] || ''} onChange={e => setField(b.id, c.key, e.target.value)} className={timeCls} />
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td className="p-2">
+                        <div className="flex justify-center" id={`gcell_${rIdx}_5`} onKeyDown={e => gridNavKey(e, rIdx, 5)}>
+                          <SegTimeField value={r.reply_time || ''} onChange={e => setField(b.id, 'reply_time', e.target.value)} className={timeCls} />
+                        </div>
+                      </td>
+                      <td className="p-2 min-w-[190px]">
+                        <EocSelect variant="cell" id={`gcell_${rIdx}_6`} value={r.notes || ''} onChange={e => setNotes(b.id, e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 6)}>
+                          <option value="">—</option>
+                          {GOV_NOTES_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </EocSelect>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <DangerConfirmModal
+        show={showClearAllConfirm}
+        title="تأكيد الحذف"
+        message="سيتم حذف سجل التواصل مع المحافظات بالكامل (كل التواريخ وكل المحافظات) نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+        confirmationCode={clearAllCode}
+        onConfirmationCodeChange={setClearAllCode}
+        showConfirmationInput={true}
+        onCancel={() => { setShowClearAllConfirm(false); setClearAllCode(''); }}
+        onConfirm={confirmClearAll}
+      />
+
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
+    </div>
+  );
+}
+
+const MemoGovernorateContactsView = memo(GovernorateContactsView);
+const GOV_NOTES_OPTIONS = ['تم الرد واتساب', 'تم الرد هاتفيا', 'تم الرد لاسلكيا', 'لم يتم الرد', 'مغلق'];
+const GOV_REASON_DEFAULT = 'معرفة وجود مهمات';
+const GOV_CONTACT_FIELDS = ['reason', 'contact_count', 'phone_time', 'wireless_time', 'whatsapp_time', 'reply_time', 'notes'];
+const GOV_CHANNELS = [
+  { key: 'phone_time', ar: 'هاتفيا', en: 'Phone' },
+  { key: 'wireless_time', ar: 'لاسلكي', en: 'Wireless' },
+  { key: 'whatsapp_time', ar: 'واتساب', en: 'WhatsApp' },
+];
+// أعمدة الشبكة بالترتيب (تُستخدم في التنقّل بالكيبورد): السبب · العدد · القنوات الثلاث · وقت الرد · الملاحظات
+const GOV_GRID_COLS = ['reason', 'count', ...GOV_CHANNELS.map(c => c.key), 'reply_time', 'notes'];
+const GOV_PENDING_KEY = 'eoc_gov_contacts_pending_v1';
+const GOV_PENDING_SCOPE = 'gov_contacts_log';
+const emptyGovRow = () => ({ reason: '', contact_count: '', phone_time: '', wireless_time: '', whatsapp_time: '', reply_time: '', notes: '' });
+// ⏰ وقت مصر الحالي بصيغة الآلة HH:MM (24 ساعة) — نفس ما يخزّنه ويرسله المشروع في كل مكان،
+//    والعرض 12 ساعة يحدث تلقائياً في حقل الوقت المقسّم (SegTimeField) وفي الإكسيل.
+const govTimeLabel = () => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date());
+    const hh = parts.find(p => p.type === 'hour')?.value || '';
+    const mm = parts.find(p => p.type === 'minute')?.value || '';
+    return hh && mm ? `${hh}:${mm}` : '';
+  } catch { return ''; }
+};
+const govLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const loadGovPending = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(GOV_PENDING_KEY) || '{}');
+    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+  } catch { return {}; }
+};
+const saveGovPending = (store) => { try { localStorage.setItem(GOV_PENDING_KEY, JSON.stringify(store || {})); } catch { /* ignore */ } };
+const countGovPending = (store) => Object.values(store || {}).reduce((n, g) => n + Object.keys(g || {}).length, 0);
 
 // ==========================================
 // تسليم وتسلم المشرفين (Supervisors Handover)
@@ -12855,13 +13437,20 @@ function ApertureDialog({ show, tone = 'danger', kicker, title, message, onClose
   }, [show]);
 
   // ⌨️ Esc + نقل الفوكس داخل اللوح ثم إرجاعه لمصدره عند الإغلاق
+  //    🔒 إصلاح «طرد المؤشر من خانة الرمز»: كان onClose في مصفوفة الاعتماديات،
+  //    وكل حرف في خانة الرمز يعمل re-render للأب ⇒ onClose جديد ⇒ التأثير
+  //    يتنضّف ويعيد التشغيل ⇒ الفوكس يُسحب من الخانة. الحل: onClose من مرجع
+  //    ثابت، والتأثير يعتمد على mounted فقط (يعمل مرة عند الفتح ومرة عند الإغلاق).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     if (!mounted) return undefined;
-    const onKey = (e) => { if (e.key === 'Escape' && onClose) onClose(); };
+    const onKey = (e) => { if (e.key === 'Escape' && onCloseRef.current) onCloseRef.current(); };
     window.addEventListener('keydown', onKey);
-    const prev = document.activeElement;
-    restoreRef.current = prev;
+    restoreRef.current = document.activeElement;
     const t = setTimeout(() => {
+      // ✋ لو الفوكس بقى جوّه اللوح (المستخدم بيكتب الرمز) لا نسرقه
+      if (panelRef.current && panelRef.current.contains(document.activeElement)) return;
       const el = panelRef.current?.querySelector('.sig-btn-main') || panelRef.current;
       try { el?.focus?.(); } catch { /* noop */ }
     }, 90);
@@ -12871,7 +13460,7 @@ function ApertureDialog({ show, tone = 'danger', kicker, title, message, onClose
       const back = restoreRef.current;
       if (back && back.focus) { try { back.focus(); } catch { /* noop */ } }
     };
-  }, [mounted, onClose]);
+  }, [mounted]);
 
   if (!mounted) return null;
 

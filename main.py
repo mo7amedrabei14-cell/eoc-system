@@ -637,6 +637,55 @@ def ensure_workspace_schema():
         connection.close()
 
 
+def ensure_gov_contacts_schema():
+    """📞 جدول «سجل التواصل مع المحافظات» — خطوة خفيفة منفصلة.
+
+    ⚠️ لا نرفع SCHEMA_VERSION: رفعه يُعيد تشغيل كتلة الـ DDL الثقيلة على قاعدة
+    عليها حركة (تحجز أقفالاً توقف البث اللحظي). نفس أسلوب ensure_workspace_schema:
+    فحص وجود واحد + إنشاء عند الغياب.
+    القيد UNIQUE (contact_date, branch_id) هو ضمان «صف واحد لكل محافظة في اليوم»
+    ⇒ إعادة الإرسال/التحديث اللحظي لا تُنشئ نسخاً مكرَّرة أبداً.
+    """
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT to_regclass('public.governorate_contacts');")
+            if cursor.fetchone()[0] is None:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS governorate_contacts (
+                        contact_id     BIGSERIAL PRIMARY KEY,
+                        contact_date   DATE NOT NULL,
+                        branch_id      INTEGER NOT NULL REFERENCES branches(branch_id) ON DELETE CASCADE,
+                        reason         VARCHAR(120),
+                        contact_count  INTEGER,
+                        phone_time     VARCHAR(20),
+                        wireless_time  VARCHAR(20),
+                        whatsapp_time  VARCHAR(20),
+                        reply_time     VARCHAR(20),
+                        notes          VARCHAR(120),
+                        entered_by     INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+                        created_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo'),
+                        updated_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    );
+                """)
+            # 🧷 الفهارس تُضمن دائماً حتى لو الجدول قديم — بلا فهرس فريد، ON CONFLICT يفشل 500 للأبد
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_gov_contacts_date_branch
+                    ON governorate_contacts (contact_date, branch_id);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_gov_contacts_date
+                    ON governorate_contacts (contact_date DESC);
+            """)
+            connection.commit()
+            print("gov contacts schema: governorate_contacts created")
+    except Exception as e:
+        connection.rollback()
+        print(f"ensure_gov_contacts_schema error (will retry next boot): {e}")
+    finally:
+        connection.close()
+
+
 def ensure_client_errors_schema():
     """🧯 جدول بلاغات أخطاء الواجهة (تشخيص «الشاشة البيضا») — خطوة خفيفة منفصلة.
 
@@ -710,6 +759,7 @@ def _bootstrap_schema_in_background():
         ensure_schema()
         ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
         ensure_client_errors_schema()  # 🧯 جدول بلاغات أخطاء الواجهة (خفيفة منفصلة)
+        ensure_gov_contacts_schema()   # 📞 جدول سجل التواصل مع المحافظات (خفيفة منفصلة)
         _schema_error["message"] = None
     except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
         _schema_error["message"] = str(e)[:200]
@@ -766,6 +816,26 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "خطأ غير متوقع في السيرفر — العملية لم تُنفَّذ، جرّب تاني."},
+    )
+
+
+@app.exception_handler(HTTPException)
+async def _http_exception_sanitizer(request: Request, exc: HTTPException):
+    """🧯 تنظيف مركزي واحد لردود الأخطاء: كان عشرات النقاط ترفع
+    HTTPException(status_code=500, detail=str(e))، ونص استثناء الاتصال بالقاعدة قد
+    يحمل عنوان الخادم/اسم المستخدم (user:pass@host) — وهي بيانات داخلية لا تُرسل للعميل.
+    النصوص هنا تمرّ من _redact_error، وباقي الرسائل تُعاد كما هي بلا أي تغيير
+    (لا نُخفي رسائل التحقق/العمل عن الواجهة، ولا نغيّر أي كود حالة).
+    """
+    detail = exc.detail
+    if exc.status_code >= 500:
+        detail = _redact_error(detail) or "حدث خطأ داخلي في السيرفر."
+    else:
+        detail = _redact_error(detail) if isinstance(detail, str) else detail
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": detail},
+        headers=getattr(exc, "headers", None),
     )
 
 
@@ -948,10 +1018,58 @@ def health():
         "schema_error": _schema_error["message"],
     }
 
+# 🔒 حدّ محاولات الدخول: Argon2 يجعل كل تخمين مكلفاً أصلاً، وهذا الحد يمنع سلاسل
+#    التخمين السريعة. المفتاح = IP (من ترويسة Vercel) + اسم المستخدم.
+LOGIN_WINDOW_SECONDS = int(os.environ.get("LOGIN_WINDOW_SECONDS", "900") or 900)
+LOGIN_MAX_FAILURES = int(os.environ.get("LOGIN_MAX_FAILURES", "10") or 10)
+_login_failures = {}
+
+
+def _login_key(request, username: str) -> str:
+    client_ip = "-"
+    try:
+        forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+        client_ip = forwarded or (request.client.host if request.client else "-")
+    except Exception:
+        pass
+    return f"{client_ip}|{(username or '').strip().lower()}"
+
+
+def _login_is_throttled(key: str) -> bool:
+    now = datetime.now(timezone.utc)
+    hits = [t for t in _login_failures.get(key, []) if (now - t).total_seconds() < LOGIN_WINDOW_SECONDS]
+    if hits:
+        _login_failures[key] = hits
+    else:
+        _login_failures.pop(key, None)
+    return len(hits) >= LOGIN_MAX_FAILURES
+
+
+def _login_note_failure(key: str):
+    _login_failures.setdefault(key, []).append(datetime.now(timezone.utc))
+    # تقليم الذاكرة لو تعددت المفاتيح (نسخة طويلة العمر) — لا تراكم لا نهائي
+    if len(_login_failures) > 5000:
+        for stale in list(_login_failures)[:1000]:
+            _login_failures.pop(stale, None)
+
+
 @app.post("/token")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+    """🔒 لا تمييز بين «مستخدم غير موجود» و«كلمة مرور خاطئة» في الرد (منع تعداد الحسابات)،
+    مع حدّ محاولات لكل (IP + اسم مستخدم)."""
+    login_key = _login_key(request, form_data.username)
+    if _login_is_throttled(login_key):
+        raise HTTPException(
+            status_code=429,
+            detail="محاولات دخول خاطئة كثيرة — حاول مرة أخرى بعد ربع ساعة.",
+        )
+
     user = authenticate_user(form_data.username, form_data.password)
-    if not user: raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور غير صحيحة")
+    if not user:
+        _login_note_failure(login_key)
+        raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور غير صحيحة")
+
+    _login_failures.pop(login_key, None)
 
     role = get_user_role(user["user_id"])
     if not role: raise HTTPException(status_code=403, detail="User has no assigned role")
@@ -1480,6 +1598,33 @@ def require_youth_write_block(user_id: int, action_label: str):
             status_code=403,
             detail=f"حساب إدارة الشباب للعرض فقط — لا يمكن {action_label}.",
         )
+
+
+def _user_has_permission(cursor, user_id: int, permission_code: str) -> bool:
+    """🔒 هل يملك المستخدم صلاحية معيّنة؟ نفس منطق get_effective_permissions (مع توريث
+    الأدوار عبر role_inheritance)، لكن ينفَّذ على *نفس* اتصال الطلب — فلا نستهلك
+    اتصالين إضافيين على قاعدة بإمكانيات محدودة مقابل كل قراءة مهمة."""
+    cursor.execute("""
+        WITH RECURSIVE role_tree AS (
+            SELECT r.role_id
+            FROM user_roles ur
+            JOIN roles r ON r.role_id = ur.role_id
+            WHERE ur.user_id = %s
+
+            UNION
+
+            SELECT ri.parent_role_id
+            FROM role_inheritance ri
+            JOIN role_tree rt ON ri.child_role_id = rt.role_id
+        )
+        SELECT 1
+        FROM role_tree rt
+        JOIN role_permissions rp ON rp.role_id = rt.role_id
+        JOIN permissions p ON p.permission_id = rp.permission_id
+        WHERE p.permission_code = %s
+        LIMIT 1
+    """, (user_id, permission_code))
+    return cursor.fetchone() is not None
 
 
 def find_youth_account_ids(cursor):
@@ -4563,10 +4708,18 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
-        
+
+    # 🔒 تفاصيل المهمة تحتوي مشاركين وسجلات إدارية وأرقاماً ميدانية: التوكن وحده ليس
+    #    تفويضاً — نلزم صلاحية العرض الفعلية (كل الأدوار القائمة تملكها، فهذا لا يكسر
+    #    أي مسار شرعي، لكنه يمنع أي حساب مُنشأ بلا صلاحيات من قراءة أي مهمة بالمعرّف).
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
+            # 🔒 نفس منطق get_effective_permissions لكن على *نفس* اتصال الطلب
+            #    (صفر اتصالات إضافية) — التوكن وحده ليس تفويضاً للقراءة.
+            if not _user_has_permission(cursor, user_id, "mission.view"):
+                raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض تفاصيل المهام.")
+
             cursor.execute("SELECT * FROM missions WHERE mission_id = %s", (mission_id,))
             mission_row = cursor.fetchone()
             if not mission_row: raise HTTPException(status_code=404)
@@ -6537,37 +6690,71 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
             _ensure_ai_news_observed_at(cursor)
+            # 🛡️ Upsert على news_link: إعادة إرسال نفس الرابط ⇒ تحديث بدل خطأ 500
+            #    duplicate key — كل خبر يتبعت ويحفظ بلا أي فشل إرسال للأبد.
+            #    التحديث فقط لو السجل القديم بلا تحليل حقيقي (فشل التحليل/غير مصنف) —
+            #    فتُصلَّح سجلات الفشل القديمة تلقائياً، والتعديلات اليدوية السليمة لا تُكتب فوقها.
             cursor.execute("""
                 INSERT INTO ai_news (
                     incident_date, incident_month, incident_description, news_type, news_publisher,
                     street_name, area_name, governorate, hospital_name, injured_count, deaths_count,
                     news_updates, news_link, data_entry_name, observed_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s::text, '')::timestamp, (now() AT TIME ZONE 'Africa/Cairo'))) RETURNING id;
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s::text, '')::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))
+                ON CONFLICT (news_link) DO UPDATE SET
+                    incident_date = EXCLUDED.incident_date,
+                    incident_month = EXCLUDED.incident_month,
+                    incident_description = EXCLUDED.incident_description,
+                    news_type = EXCLUDED.news_type,
+                    news_publisher = EXCLUDED.news_publisher,
+                    street_name = EXCLUDED.street_name,
+                    area_name = EXCLUDED.area_name,
+                    governorate = EXCLUDED.governorate,
+                    hospital_name = EXCLUDED.hospital_name,
+                    injured_count = EXCLUDED.injured_count,
+                    deaths_count = EXCLUDED.deaths_count,
+                    news_updates = EXCLUDED.news_updates,
+                    data_entry_name = EXCLUDED.data_entry_name,
+                    observed_at = EXCLUDED.observed_at
+                WHERE ai_news.news_type LIKE '%فشل التحليل%'
+                   OR ai_news.news_type IN ('', '-', 'غير مصنف', 'أخرى / غير مصنف')
+                RETURNING id, (xmax = 0) AS inserted
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
-                news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or '')
+                news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''),
+                news.news_link,
             ))
-            new_id = cursor.fetchone()[0]
+            row = cursor.fetchone()
+            if row is None:
+                # الرابط موجود على سجل سليم (محلَّل/معدَّل يدوياً) — لا إدراج ولا تحديث
+                cursor.execute("SELECT id FROM ai_news WHERE news_link = %s LIMIT 1;", (news.news_link,))
+                dup = cursor.fetchone()
+                if not dup:
+                    raise HTTPException(status_code=500, detail="تعارض رابط الخبر بلا سجل")
+                new_id, is_new = dup[0], False
+            else:
+                new_id, is_new = row[0], bool(row[1])
 
-            # بدون لوج في audit_logs لكل خبر يرسله البوت — كانت ضوضاء غير لازمة تُغرق السجل.
-            # يبقى إشعار التحديث اللحظي في الفيد كما هو تماماً (الفاعل يظهر «نظام» عبر actor_user_id=None)،
-            # والفارق الوحيد: لا يُكتب صف في audit_logs لنشر/إرسال خبر البوت.
-            try:
-                _ai_news_text = f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"
-                create_realtime_event(
-                    cursor,
-                    event_type="ai_news",
-                    action=_ai_news_text,
-                    actor_user_id=None,
-                    entity_id=new_id,
-                    details={"action_text": _ai_news_text},
-                )
-            except Exception as e: pass
+            # الإشعار اللحظي عند الإدراج الجديد فقط — إعادة الإرسال/الإصلاح بلا إشعار (منع التكرار)
+            if is_new:
+                try:
+                    _ai_news_text = f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"
+                    create_realtime_event(
+                        cursor,
+                        event_type="ai_news",
+                        action=_ai_news_text,
+                        actor_user_id=None,
+                        entity_id=new_id,
+                        details={"action_text": _ai_news_text},
+                    )
+                except Exception as e: pass
 
             connection.commit()
-            return {"message": "تم الحفظ بنجاح", "id": new_id}
+            return {"message": "تم الحفظ بنجاح" if is_new else "الخبر موجود — تم تحديث التحليل", "id": new_id}
+    except HTTPException:
+        connection.rollback()
+        raise
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -6577,8 +6764,16 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
 @app.put("/api/ai-news/{news_id}")
 def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id: raise HTTPException(status_code=401)
+    import os
+    system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+
+    if system_token and token.strip() == system_token:
+        # 🤖 قناة البوت: نفس مفتاح النظام المستخدم أصلاً في إنشاء الأخبار — تسمح له بإعادة
+        #    تحليل خبر سبق حفظه (إصلاح سجلات «فشل التحليل» القديمة). لا توسيع لسطح أي مستخدم.
+        user_id = 1
+    else:
+        user_id = get_current_user_id(token)
+        if not user_id: raise HTTPException(status_code=401)
         
     connection = get_connection()
     try:
@@ -6714,9 +6909,12 @@ def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(securit
         if response.status_code in [200, 204]:
             return {"message": "تم إطلاق وحش الرصد بنجاح! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة."}
         else:
-            raise HTTPException(status_code=response.status_code, detail=f"فشل جيت هاب: {response.text}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"فشل الاتصال الداخلي: {str(e)}")
+            # 🧯 لا نُمرّر نص رد GitHub كما هو (قد يحمل تفاصيل داخلية) — رسالة مختصرة فقط
+            raise HTTPException(status_code=502, detail="تعذّر إطلاق الرادار عبر GitHub — تحقق من صلاحية مفتاح التشغيل.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="فشل الاتصال الداخلي بمزوّد التشغيل")
 
 # Fix Vercel Environment Variables Conflict
 
@@ -7558,6 +7756,440 @@ def weather_export_log(payload: WeatherExportLogModel, credentials: HTTPAuthoriz
         connection.rollback()
         print(f"Error logging weather export: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء تسجيل التنزيل")
+    finally:
+        connection.close()
+
+
+# =====================================================================
+# 📞 سجل التواصل مع المحافظات — Governorate Contacts Log
+# =====================================================================
+# صفحة تشغيلية جديدة: صف واحد لكل (تاريخ × محافظة)، ونطاق الأقاليم مطابق بالحرف
+# لنطاق صفحة توقعات الطقس (الأوبريشن يرى/يعدّل إقليمه فقط)، والحساب الوحيد
+# المستبعد تماماً هو حساب إدارة الشباب والتطوع (قراءة فقط للمهام).
+# 🌐 الحقيقة الواحدة: كل الحفظ في القاعدة — لا شيء في localStorage وحده، فكل
+#    الأجهزة على نفس الحساب ترى نفس آخر حالة.
+GOV_CONTACT_DEFAULT_REASON = "معرفة وجود مهمات"
+# داتا فاليد ليست الملاحظات (اقتراحات — تُقبل أي قيمة نصية أخرى أيضاً)
+GOV_CONTACT_NOTE_OPTIONS = (
+    "تم الرد واتساب",
+    "تم الرد هاتفيا",
+    "تم الرد لاسلكيا",
+    "لم يتم الرد",
+    "مغلق",
+)
+# الأعمدة القابلة للكتابة (نفس شكل الجدول المطلوب بالحرف)
+GOV_CONTACT_FIELDS = (
+    "reason", "contact_count",
+    "phone_time", "wireless_time", "whatsapp_time",
+    "reply_time", "notes",
+)
+GOV_CONTACT_MAX_LEN = 120
+# تصدير Excel (بفلتر التاريخ) من «الجوكر» فما فوق — لا يُصدّر الأوبريشن (4 حسابات)
+GOV_CONTACT_EXPORT_ROLES = (
+    "OWNER", "JOKER", "SUPERVISOR", "MANAGER", "ADMIN",
+    "المالك", "جوكر", "مشرف", "مدير", "أدمن",
+)
+GOV_CONTACT_OWNER_ROLES = ("OWNER", "المالك")
+
+
+class GovContactRowModel(BaseModel):
+    branch_id: int
+    reason: Optional[str] = None
+    contact_count: Optional[int] = None
+    phone_time: Optional[str] = None
+    wireless_time: Optional[str] = None
+    whatsapp_time: Optional[str] = None
+    reply_time: Optional[str] = None
+    notes: Optional[str] = None
+
+    def provided_fields(self):
+        """الأعمدة المُرسَلة فعلاً في هذه الحمولة — فقط هى ما يُكتب.
+        العمود الغائب لا يُلمَس (يُحتفظ بقيمته المخزَّنة)، والمُرسَل بفارغ/null
+        يُفرَّغ صراحةً (فعل المستخدم: مسح الخانة). نفس قاعدة حفظ الطقس الجزئي:
+        لا تُكتب قيم فارغة فوق بيانات محفوظة لم تُحمَّل محلياً."""
+        came = getattr(self, "model_fields_set", set())
+        return [c for c in GOV_CONTACT_FIELDS if c in came]
+
+
+class GovContactBatchModel(BaseModel):
+    date: str
+    rows: List[GovContactRowModel] = []
+    silent: bool = False
+
+
+class GovContactExportLogModel(BaseModel):
+    kind: str = "filtered"  # 'filtered' | 'full'
+
+
+def _gov_role_names(role) -> str:
+    return str((role or {}).get("role_name", "")).strip().upper()
+
+
+def require_gov_contacts_access(role):
+    """الصفحة مفتوحة لكل أدوار التشغيل (أوبريشن فما فوق) ما عدا إدارة الشباب والتطوع."""
+    if not is_weather_eligible(role):
+        raise HTTPException(status_code=403, detail="سجل التواصل متاح لأدوار التشغيل فقط")
+    if is_youth_role(role):
+        raise HTTPException(
+            status_code=403,
+            detail="سجل التواصل مع المحافظات مستبعد لحساب إدارة الشباب والتطوع",
+        )
+
+
+def require_gov_contacts_export(role):
+    """تصدير ملف Excel (بفلتر التاريخ) متاح من «الجوكر» فما فوق فقط."""
+    require_gov_contacts_access(role)
+    if _gov_role_names(role) not in [r.upper() for r in GOV_CONTACT_EXPORT_ROLES]:
+        raise HTTPException(
+            status_code=403,
+            detail="تصدير سجل التواصل متاح من الجوكر فما فوق فقط",
+        )
+
+
+def require_gov_contacts_owner(role):
+    """تصدير السجل الشامل + مسح الكل: المالك فقط."""
+    require_gov_contacts_access(role)
+    if _gov_role_names(role) not in [r.upper() for r in GOV_CONTACT_OWNER_ROLES]:
+        raise HTTPException(status_code=403, detail="هذا الإجراء متاح للمالك فقط")
+
+
+def _gov_contact_text(value, label, max_len=GOV_CONTACT_MAX_LEN):
+    """تنظيف نصي: تقليم + حذف أسطر/تحكم + حد أقصى للطول (بلا تغيير أي محتوى)."""
+    if value is None:
+        return None
+    text = " ".join(str(value).replace("\r", " ").replace("\n", " ").split())
+    if len(text) > max_len:
+        raise HTTPException(status_code=400, detail=f"حقل «{label}» أطول من الحد المسموح ({max_len})")
+    return text
+
+
+def _gov_contact_count(value):
+    if value is None:
+        return None
+    try:
+        num = int(value)
+    except Exception:
+        raise HTTPException(status_code=400, detail="عدد مرات الاتصال يجب أن يكون رقماً")
+    if num < 0 or num > 999:
+        raise HTTPException(status_code=400, detail="عدد مرات الاتصال يجب أن يكون بين 0 و 999")
+    return num
+
+
+def _gov_contact_field_value(row: GovContactRowModel, field: str):
+    if field == "contact_count":
+        return _gov_contact_count(getattr(row, field))
+    return _gov_contact_text(getattr(row, field), field)
+
+
+@app.get("/api/gov-contacts")
+def get_gov_contacts(date: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """كل صفوف السجل المحفوظة في يوم واحد (داخل نطاق إقليم المستخدم)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_gov_contacts_access(role)
+    contact_date = validate_forecast_date(date)
+    scope = weather_region_scope(user_id, role)
+    allowed_branch_ids = _weather_scope_branch_param(scope)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+                SELECT g.branch_id, g.contact_date, g.reason, g.contact_count,
+                       g.phone_time, g.wireless_time, g.whatsapp_time, g.reply_time,
+                       g.notes, g.entered_by, u.full_name, TRIM(b.branch_name),
+                       g.updated_at
+                FROM governorate_contacts g
+                LEFT JOIN users u ON u.user_id = g.entered_by
+                LEFT JOIN branches b ON b.branch_id = g.branch_id
+                WHERE g.contact_date = %s
+            """
+            params = [contact_date]
+            if allowed_branch_ids is not None:
+                sql += " AND g.branch_id = ANY(%s)"
+                params.append(allowed_branch_ids)
+            sql += " ORDER BY g.branch_id;"
+            cursor.execute(sql, tuple(params))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "branch_id": r[0],
+                    "contact_date": r[1].isoformat() if r[1] else None,
+                    "reason": r[2],
+                    "contact_count": r[3],
+                    "phone_time": r[4],
+                    "wireless_time": r[5],
+                    "whatsapp_time": r[6],
+                    "reply_time": r[7],
+                    "notes": r[8],
+                    "entered_by": r[9],
+                    "entered_by_name": r[10],
+                    "branch_name": r[11],
+                    "updated_at": fmt_dt(r[12]),
+                }
+                for r in rows
+            ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error loading governorate contacts: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تحميل سجل التواصل")
+    finally:
+        connection.close()
+
+
+@app.post("/api/gov-contacts/batch")
+def save_gov_contacts(
+    payload: GovContactBatchModel,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """حفظ جزئي بالحرف لسجل التواصل (يُرسل ما لمّسه المستخدم فقط).
+    - كل صف يُحدَّث على (التاريخ، المحافظة) ولو مش موجود يُنشأ → لا تكرار ولا فقد.
+    - النطاق الإقليمي مفروض على السيرفر (الأوبريشن لا يكتب خارج إقليمه)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_gov_contacts_access(role)
+    contact_date = validate_forecast_date(payload.date)
+    scope = weather_region_scope(user_id, role)
+    allowed_branch_ids = _weather_scope_branch_param(scope)
+
+    prepared = []
+    for row in payload.rows or []:
+        if allowed_branch_ids is not None and row.branch_id not in allowed_branch_ids:
+            raise HTTPException(status_code=403, detail="لا يمكنك تعديل محافظات خارج نطاق إقليمك")
+        fields = row.provided_fields()
+        if not fields:
+            continue
+        cols = list(fields)
+        values = [_gov_contact_field_value(row, f) for f in fields]
+        # 🏷️ «سبب الاتصال» يُثبَّت في القاعدة كنص حقيقي دايماً (الافتراضي لو مش مرسل) —
+        #    لأن التصدير لـ Excel بيقرأ القاعدة: صف من غير سبب = خانة فاضية في الملف.
+        #    وعلى التحديث: ما نمسحش سبب مخصص محفوظ من قبل (نحتفظ بالمخزَّن إلا لو مرسل صراحةً).
+        reason_provided = "reason" in fields
+        if not reason_provided:
+            cols = ["reason", *cols]
+            values = [GOV_CONTACT_DEFAULT_REASON, *values]
+        prepared.append((row, fields, cols, values, reason_provided))
+
+    if not prepared:
+        return {"message": "لا توجد تعديلات للحفظ", "saved": 0}
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            for row, fields, cols, values, reason_provided in prepared:
+                assignments = ", ".join(f"{f} = EXCLUDED.{f}" for f in fields)
+                if not reason_provided:
+                    assignments += (
+                        ", reason = COALESCE(NULLIF(governorate_contacts.reason, ''), EXCLUDED.reason)"
+                    )
+                cursor.execute(
+                    f"""
+                    INSERT INTO governorate_contacts
+                        (contact_date, branch_id, {', '.join(cols)}, entered_by, updated_at)
+                    VALUES ({', '.join(['%s'] * (len(values) + 3))}, (now() AT TIME ZONE 'Africa/Cairo'))
+                    ON CONFLICT (contact_date, branch_id) DO UPDATE SET
+                        {assignments},
+                        entered_by = EXCLUDED.entered_by,
+                        updated_at = (now() AT TIME ZONE 'Africa/Cairo');
+                    """,
+                    (contact_date, row.branch_id, *values, user_id),
+                )
+            if not payload.silent:
+                create_audit_log(
+                    cursor,
+                    user_id,
+                    "تحديث سجل التواصل مع المحافظات",
+                    mission_id=None,
+                    entity_type="gov_contact",
+                    entity_id=None,
+                    details={
+                        "action_text": f"حدّث سجل التواصل مع المحافظات ليوم {contact_date} ({len(prepared)} محافظة)"
+                    },
+                )
+            connection.commit()
+            return {"message": "تم الحفظ بنجاح", "saved": len(prepared)}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error saving governorate contacts: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء حفظ سجل التواصل")
+    finally:
+        connection.close()
+
+
+@app.get("/api/gov-contacts/log")
+def get_gov_contacts_log(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    all: bool = False,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """سجل التواصل للتصدير:
+    - `all=true` (السجل الشامل) — المالك فقط، وكل التواريخ.
+    - وإلا نطاق تاريخ (from_date/to_date) للتأثير بفلتر الصفحة — من الجوكر فما فوق.
+    النطاق الإقليمي يبقى مفروضاً على السيرفر في الحالتين (المالك عام)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    if all:
+        require_gov_contacts_owner(role)
+    else:
+        require_gov_contacts_export(role)
+
+    scope = weather_region_scope(user_id, role)
+    allowed_branch_ids = _weather_scope_branch_param(scope)
+    params = []
+    where = []
+    if not all:
+        start = validate_forecast_date(from_date or to_date or "")
+        end = validate_forecast_date(to_date or from_date or "")
+        if end < start:
+            start, end = end, start
+        where.append("g.contact_date BETWEEN %s AND %s")
+        params.extend([start, end])
+    if allowed_branch_ids is not None:
+        where.append("g.branch_id = ANY(%s)")
+        params.append(allowed_branch_ids)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT g.contact_date, g.branch_id, TRIM(b.branch_name), g.reason,
+                       g.contact_count, g.phone_time, g.wireless_time, g.whatsapp_time,
+                       g.reply_time, g.notes, u.full_name, g.updated_at
+                FROM governorate_contacts g
+                LEFT JOIN branches b ON b.branch_id = g.branch_id
+                LEFT JOIN users u ON u.user_id = g.entered_by
+                {'WHERE ' + ' AND '.join(where) if where else ''}
+                ORDER BY g.contact_date DESC, g.branch_id;
+                """,
+                tuple(params),
+            )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "contact_date": r[0].isoformat() if r[0] else None,
+                    "branch_id": r[1],
+                    "branch_name": r[2],
+                    "reason": r[3],
+                    "contact_count": r[4],
+                    "phone_time": r[5],
+                    "wireless_time": r[6],
+                    "whatsapp_time": r[7],
+                    "reply_time": r[8],
+                    "notes": r[9],
+                    "entered_by_name": r[10],
+                    "updated_at": fmt_dt(r[11]),
+                }
+                for r in rows
+            ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error exporting governorate contacts: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تجهيز سجل التواصل")
+    finally:
+        connection.close()
+
+
+@app.post("/api/gov-contacts/export-log")
+def gov_contacts_export_log(
+    payload: GovContactExportLogModel,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """تسجيل تنزيل تقرير سجل التواصل (حدثان مميزان: المُفلتر / الشامل)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    if payload.kind == "full":
+        require_gov_contacts_owner(role)
+        action = "تنزيل السجل الشامل للتواصل مع المحافظات"
+        detail = "قام بتصدير السجل الشامل للتواصل مع المحافظات"
+    else:
+        require_gov_contacts_export(role)
+        action = "تنزيل سجل التواصل مع المحافظات"
+        detail = "قام بتصدير سجل التواصل مع المحافظات (بفلتر التاريخ)"
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            create_audit_log(
+                cursor,
+                user_id,
+                action,
+                mission_id=None,
+                entity_type="gov_contact",
+                entity_id=None,
+                details={"action_text": detail},
+            )
+            connection.commit()
+            return {"message": "تم تسجيل عملية التنزيل"}
+    except Exception as e:
+        connection.rollback()
+        print(f"Error logging governorate contacts export: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تسجيل التنزيل")
+    finally:
+        connection.close()
+
+
+@app.post("/api/gov-contacts/clear-all")
+def clear_all_gov_contacts(
+    data: ClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """مسح سجل التواصل بالكامل — المالك فقط + رمز التأكيد (نفس مسار المسح الحالي)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_gov_contacts_owner(role)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM governorate_contacts;")
+            deleted_count = cursor.fetchone()[0]
+            cursor.execute("DELETE FROM governorate_contacts;")
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح سجل التواصل مع المحافظات",
+                mission_id=None,
+                entity_type="gov_contact",
+                entity_id=None,
+                details={
+                    "action_text": f"قام المالك بمسح سجل التواصل مع المحافظات بالكامل ({deleted_count} صف)"
+                },
+            )
+            connection.commit()
+            return {
+                "message": "تم مسح سجل التواصل مع المحافظات بالكامل",
+                "deleted_count": deleted_count,
+            }
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error clearing governorate contacts: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء مسح سجل التواصل")
     finally:
         connection.close()
 

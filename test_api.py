@@ -1,6 +1,16 @@
+import os
+
 import requests
 
-token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNiIsImV4cCI6MTc5MDAyNjAxOH0.Yj9FT8mHOF7tN2MM20xPZal1O30ZdH-aeGpjH8sj8jA"
+# 🔒 لا توكنات مكتوبة في الكود: التوكن يُقرأ من البيئة فقط (توكن هنا كان يبقى في
+#    تاريخ المستودع بعد انتهاء صلاحيته، وهو تسريب دائم لا داعي له).
+#    الاستخدام:  EOC_TOKEN="<توكن من /token>" python test_api.py
+token = (os.environ.get("EOC_TOKEN") or "").strip()
+if not token:
+    raise SystemExit(
+        "مطلوب متغير البيئة EOC_TOKEN — احصل على توكن من POST /token ثم شغّل:\n"
+        "  EOC_TOKEN=ey... python test_api.py"
+    )
 headers = {"Authorization": f"Bearer {token}"}
 
 print("Testing /api/dashboard/stats:")

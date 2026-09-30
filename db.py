@@ -1,4 +1,5 @@
 import os
+import random
 import time
 import psycopg
 from dotenv import load_dotenv
@@ -128,7 +129,11 @@ def get_connection(max_attempts: int = None, budget_s: float = None):
             )
         except psycopg.OperationalError as exc:
             elapsed = time.monotonic() - started
-            delay = BASE_DELAY_S * (2 ** (attempt - 1))
+            # 🎲 jitter: بدون تشتيت زمني، كل الطلبات/النسخ تعيد المحاولة في *نفس اللحظة* على
+            #    نفس الخطأ (مثلاً «remaining connection slots») ⇒ تتحول لتضخيم للحمل على
+            #    قاعدة مزدحمة حتى تزيد مدة العطل. التشتيت هنا في نطاق النصف إلى الكامل من
+            #    التأخير الأصلي ⇒ نفس عدد المحاولات ونفس الميزانية الزمنية، فرق التوقيت فقط.
+            delay = BASE_DELAY_S * (2 ** (attempt - 1)) * (0.5 + random.random() * 0.5)
             can_retry = (
                 attempt < attempts
                 and _is_retryable(exc)

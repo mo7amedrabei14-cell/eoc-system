@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { normTime, formatTime12, formatDateTime12 } from './timeutils';
+import { normTime, formatTime12, formatDateTime12, parseTimeText } from './timeutils';
 
 /* ─── مساعدات الوقت المساعدة (مُنسوخة من Dashboard.jsx为了避免 circular import) ─── */
 
@@ -572,6 +572,20 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
     setActiveSeg(si);
   };
 
+  // 📋 لصق وقت: «09:26 AM» أو «14:30» أو «9:26» → نفس مسار الكتابة بالأجزاء (فيمرّ عبر onChange).
+  // سببه: الحقل مقسّم ولا يقبل كتابة حرة، فلولا هذا المسار ما اشتغل النسخ واللصق بين الخلايا.
+  // نص غير مفهوم ⇒ نتركه للمتصفح (صفر تغيير على السلوك القديم).
+  const handlePaste = (e) => {
+    if (disabled) return;
+    const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+    const machineValue = parseTimeText(pasted);
+    if (!machineValue) return;
+    e.preventDefault();
+    setSegs(parseTimeSegs(to12Display(machineValue)));
+    setClock(machineValue);
+    setAmpm(meridian(machineValue));
+  };
+
   // ─── Time wheel popup ───
   const GAP = 8, EDGE = 8;
 
@@ -645,6 +659,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
           onChange={() => {}}
           onKeyDown={handleKeyDown}
           onClick={handleInputClick}
+          onPaste={handlePaste}
           disabled={disabled}
           autoComplete="off"
           {...props}

@@ -20,6 +20,29 @@ export function normTime(t) {
   return `${pad(h)}:${pad(mm)}`;
 }
 
+// 📋 نص ملصوق (نسخ من خلية وقت ولصقه في خلية أخرى) → HH:MM آلة 24 ساعة، أو ''.
+// يقبل: «09:26 AM» · «09:26 am» · «11:15» · «14:30» · «2:19pm» · «9:26 ص» · «10:30:00».
+// السبب: حقول الوقت في المشروع مقسّمة (لا تقبل كتابة حرة)، فلولا هذا المسار ما اشتغل
+// النسخ واللصق بين الخلايا (المستخدم يكتب الوقت في أول خانة ويلزقه في الباقي).
+export function parseTimeText(text) {
+  if (!text) return '';
+  const raw = String(text)
+    .replace(/[\u200e\u200f\u202a-\u202e\u202f\u00a0]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!raw) return '';
+  const m = raw.match(/^(\d{1,2})\s*[:.]\s*(\d{1,2})(?::\d{1,2})?\s*(am|pm|a\.?m\.?|p\.?m\.?|ص|م)?$/i);
+  if (!m) return '';
+  let h = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  if (!Number.isFinite(h) || !Number.isFinite(mm) || mm > 59) return '';
+  const mer = (m[3] || '').toLowerCase().replace(/\./g, '').trim();
+  if (mer === 'pm' || mer === 'م') { if (h < 12) h += 12; }
+  else if (mer === 'am' || mer === 'ص') { if (h === 12) h = 0; }
+  if (h > 23) return '';
+  return `${pad(h)}:${pad(mm)}`;
+}
+
 // 14:35 → '02:35 PM' — التحويل الوحيد للعرض (وقت فقط). يمرر القيمة كما هي عند الفشل.
 export function formatTime12(t) {
   if (!t) return '';

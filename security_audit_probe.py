@@ -14,6 +14,7 @@
 """
 import os
 import sys
+import time
 
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
@@ -47,6 +48,7 @@ HDR = lambda k: {"Authorization": f"Bearer {TOK[k]}"}  # noqa: E731
 print("users:", {k: v for k, v in USERS.items()})
 
 RESULTS = []
+INCONCLUSIVE = []
 
 
 def probe(title, expected_secure, method, path, who=None, body=None, headers=None, expect_secure_status=None):
@@ -54,12 +56,26 @@ def probe(title, expected_secure, method, path, who=None, body=None, headers=Non
 
     expected_secure=True  ⇒ الطلب يجب أن يُرفض (401/403 افتراضاً).
     expected_secure=False ⇒ الطلب يجب أن ينجح (رحلة دور شرعي).
+
+    ملاحظة: 503 = قاعدة البيانات وصلت حد الاتصالات (max_connections=20 على خطة Aiven
+    الحالية) ⇒ الطلب لم يصل أصلاً لقرار الصلاحية، فنسجّله كـ«غير حاسم» بعد إعادة محاولة
+    بدل اعتباره اختراقاً أو نجاحاً (لا نتّهم الكود بعلل الشبكة/السعة).
     """
     h = dict(HDR(who)) if who else {}
     if headers:
         h.update(headers)
     r = client.request(method, path, json=body, headers=h)
     got = r.status_code
+    for _ in range(2):
+        if got != 503:
+            break
+        time.sleep(3)
+        r = client.request(method, path, json=body, headers=h)
+        got = r.status_code
+    if got == 503:
+        INCONCLUSIVE.append(title)
+        print(f"🟡 INCONCLUSIVE  [{got:>3}] {title}")
+        return r
     secure_set = expect_secure_status or (401, 403)
     secure = got in secure_set
     RESULTS.append((title, got, secure, expected_secure))
@@ -117,13 +133,15 @@ print(line)
 print("A) الرحلة الشرعية أولاً (يجب أن تبقى ناجحة — لا يُكسر أي دور)")
 print(line)
 probe("owner يقرأ تفاصيل المهمة", False, "GET", f"/api/missions/{MID}", who="owner", expect_secure_status=(200,))
-probe("owner يحفظ تعديلات بدون إجراء (save_edits_only)", False, "PUT", f"/api/missions/{MID}", who="owner",
-      body={**MISSION, "action": "save_edits_only"}, expect_secure_status=(200,))
+# ℹ️ «حفظ بلا إجراء» قاعدة عمل: مسموحة فقط للاستمارات (قيد المراجعة/مُرجَعة/معتمدة) —
+#    لذلك تُختبر بعد نقل المهمة إلى «قيد المراجعة» أدناه، لا وهي Draft (كانت 400 متوقعة).
 probe("youth يقرأ تفاصيل المهمة (مراجعة إدارة الشباب)", False, "GET", f"/api/missions/{MID}", who="youth",
       expect_secure_status=(200,))
 probe("operation يقرأ تفاصيل المهمة", False, "GET", f"/api/missions/{MID}", who="operation", expect_secure_status=(200,))
 probe("operation يرسل للجوكر (Under Review) عبر /status", False, "POST", f"/api/missions/{MID}/status",
       who="operation", body={"status": "Under Review"}, expect_secure_status=(200,))
+probe("owner يحفظ تعديلات بدون إجراء (الحالة «قيد المراجعة»)", False, "PUT", f"/api/missions/{MID}", who="owner",
+      body={**MISSION, "status": "Under Review", "action": "save_edits_only"}, expect_secure_status=(200,))
 probe("operation يحفظ مسودة عبر PUT (Draft)", False, "PUT", f"/api/missions/{MID}", who="operation",
       body={**MISSION, "status": "Draft"}, expect_secure_status=(200,))
 probe("joker يعتمد المهمة (Approved) عبر /status", False, "POST", f"/api/missions/{MID}/status", who="joker",
@@ -194,7 +212,10 @@ conn.close()
 
 print("\n" + "=" * 78)
 bad = [x for x in RESULTS if not x[2]]
-print(f"نتائج: {len(RESULTS)} حالة | 🔴 غير مطابق = {len(bad)} | 🟢 مطابق = {len(RESULTS) - len(bad)}")
+print(f"نتائج: {len(RESULTS)} حالة | 🔴 غير مطابق = {len(bad)} | 🟢 مطابق = {len(RESULTS) - len(bad)}"
+      + (f" | 🟡 غير حاسم (503 سعة قاعدة) = {len(INCONCLUSIVE)}" if INCONCLUSIVE else ""))
+for title in INCONCLUSIVE:
+    print(f"   🟡 [503] {title}")
 for t, code, _, exp in bad:
     print(f"   🔴 [{code}] {'(يجب أن يُرفض)' if exp else '(رحلة شرعية يجب أن تنجح)'} {t}")
 print("=" * 78)

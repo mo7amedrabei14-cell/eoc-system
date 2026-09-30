@@ -5,6 +5,7 @@ import os
 import time
 import urllib.parse
 import concurrent.futures
+import sys
 import random
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -21,14 +22,53 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN")
 SYSTEM_API_URL = "https://eoc-system-b12f.vercel.app/api/ai-news"
 
-# Quota management: free tier = 20 req/day. We batch 5 articles per call,
-# so 20 calls × 5 = 100 articles analyzed per day. Leave a buffer.
-GEMINI_DAILY_LIMIT = 18
+# ==========================================
+# Quota & Model Chain — كل النماذج هنا مجانية (Free Tier فقط)
+# ==========================================
+# 🧠 سبب «فشل التحليل» قبل الإصلاح (مُثبَت بالتجربة على المفتاح):
+#    نماذج Gemini 3.x تستهلك رموز «التفكير» (thinking) من نفس ميزانية
+#    maxOutputTokens، فكان الرد يرجع finishReason=MAX_TOKENS بنصٍّ فارغ ⇒ JSON غير
+#    صالح ⇒ news_type = «غير مصنف (فشل التحليل)». كذلك انتهت حصة الحساب المجانية
+#    لنماذج بعينها (429) فكان الرادار يتوقف تماماً عن التحليل.
+#    الحل ثلاثي: (1) تعطيل التفكير: thinkingBudget=0 أو thinkingLevel=low حسب ما
+#    يقبله كل نموذج. (2) responseMimeType=application/json. (3) سلسلة نماذج مجانية
+#    بديلة عند 429/404/503 + تحليل احتياطي محلي مضمون آخر الطريق.
+GEMINI_DAILY_LIMIT = int(os.environ.get("GEMINI_DAILY_LIMIT", "60") or 60)
+GEMINI_CALLS_PER_MODEL_CAP = int(os.environ.get("GEMINI_CALLS_PER_MODEL_CAP", "20") or 20)
 gemini_calls_today = 0
+gemini_calls_by_model = {}
 
-# Current stable Gemini Flash model — 2.0-flash was retired (404), 3.6-flash is the live name
-GEMINI_MODEL = "gemini-3.6-flash"
-BATCH_SIZE = 5  # articles per Gemini API call
+# 🔤 تُجرَّب بالترتيب — كلها على الطبقة المجانية (Google AI Studio Free Tier).
+#    GEMINI_MODEL من البيئة يتقدّم لو موجود، والباقي بدائل مجانية مجرَّبة فعلياً.
+MODEL_CHAIN = [
+    os.environ.get("GEMINI_MODEL", "").strip(),
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+]
+GEMINI_MODELS = [m for i, m in enumerate(MODEL_CHAIN) if m and m not in MODEL_CHAIN[:i]]
+dead_models = set()       # 404: النموذج غير متاح لهذا المفتاح
+quota_exhausted_models = set()  # 429: استُهلكت حصته المجانية
+# 🛡️ حماية من عاصفة استدعاءات: لو فشل نموذج مرتين متتاليتين (صيغة/رد غير صالح) نتوقف
+#    عن تجربته في *باقي الجولة* بدل إعادة محاولته مع كل دفعة (كان يضاعف الاستدعاءات
+#    بلا داعٍ في جولات الإصلاح الكبيرة).
+degraded_models = set()
+model_failures = {}
+
+# صيغ generationConfig: الأولى تعطّل التفكير (أسرع وأرخص وتُرجع JSON كامل)،
+# والنموذج الذي يرفضها (400) نجرّب معه التي تليها ثم الافتراضية.
+GEN_CONFIG_VARIANTS = (
+    {"thinkingBudget": 0},
+    {"thinkingLevel": "low"},
+    None,
+)
+
+BATCH_SIZE = 4  # articles per Gemini API call
 
 KEYWORDS = [
     'تصادم', 'انقلاب', 'خروج قطار', 'اصطدام', 'حوادث طرق', 'ميكروباص', 'سيارة نقل',
@@ -146,10 +186,242 @@ def scrape_full_article(url):
 
 # ==========================================
 # 4. Gemini AI — Batch Analysis Engine
+#    + محرّك تحليل احتياطي محلي مضمون (لا خبر بلا تحليل إطلاقاً)
 # ==========================================
 def can_call_gemini():
-    """Check if we still have quota for Gemini API calls."""
+    """هل ما زالت ميزانية استدعاءات التحليل متاحة؟"""
     return gemini_calls_today < GEMINI_DAILY_LIMIT
+
+
+def _parse_ai_json(ai_text):
+    """يحوّل رد النموذج إلى list[dict]، أو None لو النص فارغ/مقطوع/غير JSON."""
+    if not ai_text:
+        return None
+    clean_text = ai_text.strip()
+    if clean_text.startswith('```'):
+        clean_text = clean_text.split('\n', 1)[1] if '\n' in clean_text else clean_text[3:]
+    if clean_text.endswith('```'):
+        clean_text = clean_text[:-3]
+    clean_text = clean_text.strip()
+    try:
+        results = json.loads(clean_text)
+    except json.JSONDecodeError:
+        start, end = clean_text.find('['), clean_text.rfind(']')
+        if start == -1 or end <= start:
+            return None
+        try:
+            results = json.loads(clean_text[start:end + 1])
+        except json.JSONDecodeError:
+            return None
+    if isinstance(results, dict):
+        results = [results]
+    if not isinstance(results, list):
+        return None
+    return [item for item in results if isinstance(item, dict)]
+
+
+def _call_gemini_model(model, prompt):
+    """يجرّب نموذجاً مجانياً واحداً بثلاث صيغ (بلا تفكير ← تفكير منخفض ← الافتراضية).
+    يرجع: ("ok", list[dict]) | ("next", سبب) للنموذج التالي | ("fail", سبب)."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    note = "رد غير صالح"
+    for gen_variant in GEN_CONFIG_VARIANTS:
+        generation_config = {
+            "temperature": 0.2,
+            "maxOutputTokens": 8192,
+            "responseMimeType": "application/json",
+        }
+        if gen_variant is not None:
+            generation_config["thinkingConfig"] = dict(gen_variant)
+        payload = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": generation_config}
+        for attempt in range(2):
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=90)
+            except Exception as e:
+                note = f"شبكة: {e}"
+                time.sleep(2)
+                continue
+
+            code = response.status_code
+            if code == 200:
+                try:
+                    data = response.json()
+                except Exception:
+                    note = "رد غير JSON"
+                    continue
+                candidate = (data.get('candidates') or [{}])[0]
+                finish = str(candidate.get('finishReason') or '')
+                ai_text = "".join(
+                    part.get('text') or ''
+                    for part in ((candidate.get('content') or {}).get('parts') or [])
+                )
+                parsed = _parse_ai_json(ai_text)
+                if parsed is not None:
+                    return "ok", parsed
+                note = f"رد غير صالح (finish={finish or '?'} طول={len(ai_text)})"
+                break  # هذه الصيغة غير نافعة ⇒ جرّب صيغة التفكير التالية
+            if code in (400, 422):
+                note = f"صيغة الطلب مرفوضة ({code})"
+                break  # نفس النموذج بصيغة تفكير أخرى
+            if code == 404:
+                dead_models.add(model)
+                return "next", "404 (النموذج غير متاح لهذا المفتاح)"
+            if code == 429:
+                quota_exhausted_models.add(model)
+                return "next", "429 (انتهت الحصة المجانية لهذا النموذج)"
+            if code in (500, 502, 503, 504):
+                note = f"{code} (النموذج مزدحم)"
+                time.sleep(3)
+                continue
+            note = f"{code}: {response.text[:150]}"
+            time.sleep(2)
+    print(f"   ⚠️ {model}: {note}")
+    return "fail", note
+
+
+# ── تحليل احتياطي محلي مضمون: لا يحتاج أي API ولا حصة، فيستحيل أن يبقى خبر بلا تحليل ──
+GOV_CENTROIDS = {
+    "القاهرة": (30.0444, 31.2357), "الجيزة": (30.0131, 31.2089), "القليوبية": (30.4659, 31.1841),
+    "الفيوم": (29.3084, 30.8428), "المنيا": (28.1099, 30.7503), "أسيوط": (27.1809, 31.1837),
+    "سوهاج": (26.5591, 31.6957), "قنا": (26.1550, 32.7164), "الأقصر": (25.6872, 32.6396),
+    "الاقصر": (25.6872, 32.6396), "اسوان": (24.0889, 32.8998), "البحر الأحمر": (27.2579, 33.8116),
+    "البحيرة": (30.8481, 30.3436), "الدقهلية": (31.0409, 31.3785), "دمياط": (31.4165, 31.8133),
+    "الشرقية": (30.5877, 31.5020), "كفر الشيخ": (31.1117, 30.9398), "غربية": (30.7865, 31.0004),
+    "المنوفية": (30.5972, 30.9876), "بني سويف": (29.0661, 31.0994), "الإسكندرية": (31.2001, 29.9187),
+    "بورسعيد": (31.2653, 32.3019), "السويس": (29.9668, 32.5498), "الإسماعيلية": (30.5965, 32.2715),
+    "شمال سيناء": (31.1312, 33.7984), "جنوب سيناء": (28.5399, 33.9750), "مطروح": (31.3543, 27.2373),
+    "الوادي الجديد": (25.4514, 30.5464), "المنصورة": (31.0409, 31.3785),
+}
+
+TYPE_KEYWORDS = [
+    (("تصادم قطار", "خروج قطار", "قطار", "سكة حديد"), "حادث سكة حديد"),
+    (("تصادم", "اصطدام", "انقلاب", "دهس", "ميكروباص", "سيارة نقل", "مقطورة", "حادث مروري"), "حادث مروري"),
+    (("حريق", "حرائق", "اشتعال", "نيران", "تفحم", "ماس كهربائي"), "حريق"),
+    (("انهيار", "سقوط مبنى", "سقوط عقار", "تصدع", "ميل عقار"), "انهيار مبنى"),
+    (("هبوط أرضي", "هبوط ارضي"), "هبوط أرضي"),
+    (("سيول", "فيضان", "فيضانات", "أمطار غزيرة", "امطار غزيرة"), "سيول وفيضانات"),
+    (("تسرب غاز", "انفجار غاز"), "تسرب غاز"),
+    (("تسرب كيميائي", "تسرب مواد"), "تسرب كيميائي"),
+    (("انفجار", "عبوة ناسفة", "قنبلة"), "انفجار"),
+    (("زلزال", "هزة أرضية", "هزه ارضيه"), "زلزال"),
+    (("غرق", "غرقى", "الغرق"), "غرق"),
+    (("تسمم", "تسمم غذائي"), "تسمم"),
+    (("اختناق",), "اختناق"),
+    (("اشتباكات", "إطلاق نار", "اطلاق نار"), "أحداث أمنية"),
+]
+
+TYPE_PLAYBOOK = {
+    "حريق": "دفع سيارات إطفاء وتأمين كردون حول الموقع، إخلاء العقارات المجاورة، التنسيق مع الحماية المدنية لمنع امتداد النيران.",
+    "حادث مروري": "تأمين موقع الحادث وتحويل المرور لمسار بديل، دفع أوناش لرفع المركبات، وتجهيز الإسعاف للحالات الحرجة.",
+    "حادث سكة حديد": "إخطار هيئة السكة الحديد وإيقاف الحركة على الخط، إخلاء الرصيف، ودفع فرق إنقاذ وإسعاف للسكة.",
+    "انهيار مبنى": "تشكيل فرق بحث وإنقاذ مدعومة بكلاب ومساعدات صوتية، تأمين المباني المجاورة، ورفع الأنقاض بحذر.",
+    "هبوط أرضي": "إخلاء المباني المتأثرة وتأمين نطاق آمن، دراسة استقرار التربة، ومنع مرور المركبات الثقيلة.",
+    "سيول وفيضانات": "تشغيل طلمبات شفط المياه، إخلاء المناطق المنخفضة، وتأمين محولات الكهرباء والطرق السريعة.",
+    "تسرب غاز": "قطع مصدر التسرب وتهوية المكان، إخلاء دائرة 200 متر، ومنع كل مصادر الاشتعال قبل المعالجة.",
+    "تسرب كيميائي": "تحديد نوع المادة وتأمين منطقة عازلة، دفع فرق مواد خطرة بمهمات وقاية كاملة، والتنسيق مع البيئة والصحة.",
+    "انفجار": "تأمين محيط الانفجار ومسح وجود عبوات ثانية، دفع فرق إسعاف، وتقييم استقرار المباني المتضررة.",
+    "زلزال": "جرد المباني المتضررة وتصنيفها، فتح مراكز إيواء، وتجهيز فرق إنقاذ على مستوى المحافظات المجاورة.",
+    "غرق": "دفع فرق إنقاذ بحري وغطاسين، إخلاء الشاطئ، وتنسيق مع الإسعاف لحالات الغرق الحرجة.",
+    "تسمم": "سحب العينات وتحديد المصدر، دفع محاليل ومستلزمات مستشفيات، وتوعية المواطنين بتجنب المصدر.",
+    "اختناق": "تهوية المكان وإخراج المتواجدين، دفع أسطوانات أكسجين، وفحص مصدر الغازات.",
+    "أحداث أمنية": "تأمين محيط الأحداث بالتنسيق مع الأمن، دفع إسعاف ميداني، ومسار آمن لخروج المصابين.",
+}
+
+FIELD_PLAYBOOK_DEFAULT = "تأمين موقع الحادث وكردون أمني، دفع الإسعاف والإنقاذ لتقييم الخسائر ميدانياً، وتحديث الغرفة بالأرقام المؤكدة أولاً بأول."
+
+
+def _to_int(value):
+    """يحوّل أرقاماً عربية/لاتينية إلى int، ويرجع 0 لو غير صالح."""
+    if value is None:
+        return 0
+    text = str(value).translate(str.maketrans('٠١٢٣٤٥٦٧٨٩', '0123456789'))
+    digits = ''.join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return 0
+    try:
+        return int(digits[:6])
+    except ValueError:
+        return 0
+
+
+def _extract_counts(text):
+    """يستخرج (وفيات، إصابات) من نص الخبر بعبارات عربية مباشرة — بلا ذكاء اصطناعي."""
+    import re as _re
+
+    def _max_of(words):
+        best = 0
+        for word in words:
+            for pattern in (rf"(\d+)\s*[^\d]{{0,12}}{word}", rf"{word}[^\d]{{0,20}}(\d+)"):
+                for match in _re.findall(pattern, text):
+                    best = max(best, _to_int(match))
+        return best
+
+    deaths = _max_of(("مصرع", "قتيل", "قتلى", "وفاة", "وفيات", "متوفى", "متوفين", "جثة", "جثث", "مصرعه", "مصرعها"))
+    injured = _max_of(("إصابة", "اصابة", "إصابات", "مصاب", "مصابين", "جرحى", "جريح", "حالات حرجة"))
+    return deaths, injured
+
+
+def fallback_analysis(article, reason=""):
+    """تحليل آلي محلي مضمون لأي خبر — يشتغل حتى لو كل النماذج المجانية وقعت أو انتهت
+    حصتها، فلا يبقى خبر واحد في «غير مصنف (فشل التحليل)»."""
+    import re as _re
+
+    title = (article.get('title') or '').strip()
+    body = (article.get('text') or '').strip()
+    text = f"{title} {body}".strip()
+
+    news_type = "بلاغ حادث (تحليل آلي)"
+    for keywords, label in TYPE_KEYWORDS:
+        if any(word in text for word in keywords):
+            news_type = label
+            break
+
+    deaths, injured = _extract_counts(text)
+    severity = 3
+    if injured:
+        severity = 6 if injured < 5 else 7
+    if deaths:
+        severity = 8 if deaths < 5 else 9
+    if deaths >= 10:
+        severity = 10
+
+    governorate = guess_governorate(text)
+    latitude, longitude = GOV_CENTROIDS.get(governorate, (None, None))
+
+    hospital = ""
+    hospital_match = _re.search(r"مستشفى\s+([^\s،,.\n]{2,20})", text)
+    if hospital_match:
+        hospital = hospital_match.group(1).strip()
+    street = ""
+    street_match = _re.search(r"(?:شارع|طريق)\s+([^\s،,.\n]{2,25})", text)
+    if street_match:
+        street = street_match.group(1).strip()
+    area = ""
+    area_match = _re.search(r"(?:منطقة|حي|قرية|مركز|مدينة)\s+([^\s،,.\n]{2,20})", text)
+    if area_match:
+        area = area_match.group(1).strip()
+
+    summary_source = (body or title)[:400]
+    description = f"{title}" if not summary_source or summary_source == title else f"{title} — {summary_source}"[:500]
+
+    return {
+        "title": title,
+        "incident_description": description or title or "بلاغ بلا نص (تحليل آلي)",
+        "news_type": news_type,
+        "governorate": governorate,
+        "area_name": area,
+        "street_name": street,
+        "hospital_name": hospital,
+        "injured_count": injured,
+        "deaths_count": deaths,
+        "severity_score": severity,
+        "latitude": latitude,
+        "longitude": longitude,
+        "tactical_recommendations": TYPE_PLAYBOOK.get(news_type, FIELD_PLAYBOOK_DEFAULT),
+        "analysis_source": "heuristic",
+        "analysis_note": reason or "تحليل آلي احتياطي (كل النماذج المجانية غير متاحة)",
+    }
 
 def analyze_batch_with_ai(articles_batch):
     """
@@ -159,11 +431,12 @@ def analyze_batch_with_ai(articles_batch):
     global gemini_calls_today
 
     if not GEMINI_API_KEY:
-        return [None] * len(articles_batch)
+        print("⚠️ GEMINI_API_KEY غير موجود — سيُستخدم التحليل الاحتياطي المحلي")
+        return [fallback_analysis(a, "مفتاح التحليل غير مُعد") for a in articles_batch]
 
     if not can_call_gemini():
-        print(f"⚠️ Quota limit approaching ({gemini_calls_today}/{GEMINI_DAILY_LIMIT}) — skipping AI analysis")
-        return [None] * len(articles_batch)
+        print(f"⚠️ استُهلكت ميزانية التحليل ({gemini_calls_today}/{GEMINI_DAILY_LIMIT}) — تحليل احتياطي محلي مضمون")
+        return [fallback_analysis(a) for a in articles_batch]
 
     articles_for_prompt = []
     for a in articles_batch:
@@ -199,63 +472,51 @@ def analyze_batch_with_ai(articles_batch):
 {json.dumps(articles_for_prompt, ensure_ascii=False, indent=2)}
 """
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-    headers = {'Content-Type': 'application/json'}
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 8192
-        }
-    }
+    live_models = [
+        m for m in GEMINI_MODELS
+        if m not in dead_models and m not in quota_exhausted_models and m not in degraded_models
+    ]
+    parsed_results = None
+    note = ""
+    for model in live_models:
+        kind, payload_result = _call_gemini_model(model, prompt)
+        if kind == "ok":
+            gemini_calls_today += 1
+            gemini_calls_by_model[model] = gemini_calls_by_model.get(model, 0) + 1
+            if gemini_calls_by_model[model] >= GEMINI_CALLS_PER_MODEL_CAP:
+                quota_exhausted_models.add(model)
+            parsed_results = payload_result
+            model_failures.pop(model, None)
+            print(f"✅ تحليل ناجح عبر {model}: {len(articles_batch)} أخبار (استدعاء {gemini_calls_today}/{GEMINI_DAILY_LIMIT})")
+            break
+        note = payload_result
+        model_failures[model] = model_failures.get(model, 0) + 1
+        if model_failures[model] >= 2:
+            degraded_models.add(model)
+            debug_suffix = " — لن يُعاد تجربته في هذه الجولة"
+        else:
+            debug_suffix = ""
+        if kind == "next":
+            print(f"↩️ تخطّي {model}: {note}{debug_suffix}")
+        elif debug_suffix:
+            print(f"↩️ تخفيض {model} بعد فشل متكرر{debug_suffix}")
 
-    for attempt in range(3):
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=60)
+    if parsed_results is None:
+        # كل النماذج المجانية وقعت/انتهت حصتها ⇒ قسّم الدفعة (خبر واحد = أعلى فرصة نجاح)
+        if live_models and len(articles_batch) > 1:
+            mid = len(articles_batch) // 2
+            print(f"↔️ تقسيم الدفعة ({mid} + {len(articles_batch) - mid}) لإعادة المحاولة")
+            return (analyze_batch_with_ai(articles_batch[:mid])
+                    + analyze_batch_with_ai(articles_batch[mid:]))
+        print("🧯 تحليل احتياطي محلي مضمون — لا يُترك أي خبر بلا تحليل")
+        return [fallback_analysis(a) for a in articles_batch]
 
-            if response.status_code == 200:
-                gemini_calls_today += 1
-                data = response.json()
-                ai_text = data['candidates'][0]['content']['parts'][0]['text']
-                # Clean markdown fences if present
-                clean_text = ai_text.strip()
-                if clean_text.startswith('```'):
-                    clean_text = clean_text.split('\n', 1)[1] if '\n' in clean_text else clean_text[3:]
-                if clean_text.endswith('```'):
-                    clean_text = clean_text[:-3]
-                clean_text = clean_text.strip()
-
-                results = json.loads(clean_text)
-
-                # Ensure we return a list
-                if isinstance(results, dict):
-                    results = [results]
-
-                # Pad with None if fewer results than articles
-                while len(results) < len(articles_batch):
-                    results.append(None)
-
-                print(f"✅ Gemini analysis OK: {len(articles_batch)} articles in 1 call (quota: {gemini_calls_today}/{GEMINI_DAILY_LIMIT})")
-                return results[:len(articles_batch)]
-
-            elif response.status_code == 429:
-                # RATE LIMITED — do NOT retry (daily quota, not transient)
-                print(f"⚠️ Gemini quota EXHAUSTED (429) — stopping AI analysis for this run")
-                gemini_calls_today = GEMINI_DAILY_LIMIT  # Mark as depleted
-                return [None] * len(articles_batch)
-
-            else:
-                print(f"⚠️ Gemini error {response.status_code} (attempt {attempt+1}): {response.text[:200]}")
-                time.sleep(2)
-
-        except json.JSONDecodeError as e:
-            print(f"⚠️ Gemini returned invalid JSON (attempt {attempt+1}): {e}")
-            time.sleep(1)
-        except Exception as e:
-            print(f"⚠️ Gemini call failed (attempt {attempt+1}): {e}")
-            time.sleep(2)
-
-    return [None] * len(articles_batch)
+    # 🛡️ ضمان أخير: dict كامل لكل خبر (لو رجّع النموذج أقل من العدد ⇒ استكمال بالتحليل الاحتياطي)
+    results = []
+    for idx, article in enumerate(articles_batch):
+        item = parsed_results[idx] if idx < len(parsed_results) else None
+        results.append(item if isinstance(item, dict) and item else fallback_analysis(article, "عنصر ناقص في رد النموذج"))
+    return results
 
 # ==========================================
 # 5. Single Source Scanner (RSS + Scrape)
@@ -302,8 +563,30 @@ def scan_single_source(publisher, url, now_utc):
 # ==========================================
 # 6. Send Report to API
 # ==========================================
+def _build_tactical_report(article, ai_data):
+    """نص التقرير التكتيكي المعروض في الواجهة (خطورة + إحداثيات + توصيات + مصدر التحليل + صورة)."""
+    severity = ai_data.get("severity_score", "?")
+    tactical = ai_data.get("tactical_recommendations") or "لا توجد توصيات واضحة."
+    lat = ai_data.get("latitude") if ai_data.get("latitude") is not None else "غير متوفر"
+    lng = ai_data.get("longitude") if ai_data.get("longitude") is not None else "غير متوفر"
+    source_label = (
+        "تحليل آلي احتياطي (بلا ذكاء اصطناعي)"
+        if str(ai_data.get("analysis_source") or "").lower() == "heuristic"
+        else "ذكاء اصطناعي (Gemini)"
+    )
+    return (
+        f"🔥 [مستوى الخطورة]: {severity}/10\n"
+        f"📍 [إحداثيات الموقع]: {lat}, {lng}\n"
+        f"💡 [توصيات تكتيكية للغرفة]: {tactical}\n"
+        f"🧠 [مصدر التحليل]: {source_label}\n"
+        f"📸 [صورة الحادثة]: {article.get('image_url', 'لا توجد صورة')}"
+    )
+
+
 def send_report(article, ai_data):
-    """Send a single article report to the EOC API."""
+    """Send a single article report to the EOC API — التحليل هنا مضمون (AI أو احتياطي محلي)."""
+    if not isinstance(ai_data, dict) or not ai_data:
+        ai_data = fallback_analysis(article, "رد فارغ من محرّك التحليل")
     if ai_data:
         severity = ai_data.get("severity_score", "?")
         tactical = ai_data.get("tactical_recommendations", "لا توجد توصيات واضحة.")
@@ -318,26 +601,23 @@ def send_report(article, ai_data):
         injured = str(ai_data.get("injured_count", "0"))
         deaths = str(ai_data.get("deaths_count", "0"))
     else:
-        # Fallback: use keyword guessing for governorate
-        gov = guess_governorate(f"{article['title']} {article['text']}")
-        severity = "?"
-        tactical = "تعذر التحليل بواسطة الذكاء الاصطناعي. يرجى المراجعة اليدوية."
-        lat = "غير متوفر"
-        lng = "غير متوفر"
-        description = article["title"]
-        news_type = "غير مصنف (فشل التحليل)"
-        area = ""
-        street = ""
-        hospital = ""
-        injured = "0"
-        deaths = "0"
+        # ⚠️ فرع احترازي غير قابل للوصول بعد الإصلاح (التحليل الاحتياطي فوق يضمن dict دائماً) —
+        #    وكان هو مصدر نص «فشل التحليل / تعذر التحليل» اللي كان يظهر لكل خبر.
+        _fb = fallback_analysis(article, "فرع احترازي")
+        gov = _fb["governorate"]
+        severity = _fb["severity_score"]
+        tactical = _fb["tactical_recommendations"]
+        lat = _fb["latitude"] if _fb["latitude"] is not None else "غير متوفر"
+        lng = _fb["longitude"] if _fb["longitude"] is not None else "غير متوفر"
+        description = _fb["incident_description"]
+        news_type = _fb["news_type"]
+        area = _fb["area_name"]
+        street = _fb["street_name"]
+        hospital = _fb["hospital_name"]
+        injured = str(_fb["injured_count"])
+        deaths = str(_fb["deaths_count"])
 
-    tactical_report = (
-        f"🔥 [مستوى الخطورة]: {severity}/10\n"
-        f"📍 [إحداثيات الموقع]: {lat}, {lng}\n"
-        f"💡 [توصيات تكتيكية للغرفة]: {tactical}\n"
-        f"📸 [صورة الحادثة]: {article.get('image_url', 'لا توجد صورة')}"
-    )
+    tactical_report = _build_tactical_report(article, ai_data)
 
     payload = {
         "incident_date": datetime.now().strftime("%Y-%m-%d"),
@@ -360,6 +640,9 @@ def send_report(article, ai_data):
         res = requests.post(SYSTEM_API_URL, json=payload, headers=headers_api, timeout=15)
         if res.status_code in [200, 201]:
             print(f"  ✅ إرسال ناجح: {article['title'][:60]}")
+        elif "duplicate key" in (res.text or ""):
+            # 🛡️ لو السيرفر القديم رفض التكرار 500 — الخبر أصلاً محفوظ ⇒ يُعدّ نجاحاً
+            print(f"  ✅ الخبر محفوظ مسبقاً (تكرار رابط): {article['title'][:60]}")
         else:
             print(f"  ⚠️ خطأ إرسال ({res.status_code}): {res.text[:100]}")
             # Don't add to processed set if POST failed — retry next run
@@ -379,6 +662,11 @@ def run_ai_scanner():
         return
 
     gemini_calls_today = 0
+    gemini_calls_by_model.clear()
+    dead_models.clear()
+    quota_exhausted_models.clear()
+    degraded_models.clear()
+    model_failures.clear()
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT )...")
     now_utc = datetime.utcnow()
 
@@ -400,22 +688,18 @@ def run_ai_scanner():
         print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء.")
         return
 
-    # Phase 2: Batch-analyze with Gemini (sequential, quota-aware)
-    print(f"\n🧠 بدء التحليل الذكي (بجمع {BATCH_SIZE} أخبار في كل طلب)...\n")
+    # Phase 2: تحليل كل الأخبار — AI مجاني عند توفّر الحصة، وإلا تحليل آلي احتياطي مضمون
+    print(f"\n🧠 بدء التحليل (بجمع {BATCH_SIZE} أخبار في كل طلب)...\n")
 
+    total_batches = (len(all_articles) + BATCH_SIZE - 1) // BATCH_SIZE
     for i in range(0, len(all_articles), BATCH_SIZE):
-        if not can_call_gemini():
-            print(f"⚠️ Quartz depleted at article {i}/{len(all_articles)} — sending remaining without AI")
-            break
-
         batch = all_articles[i:i + BATCH_SIZE]
         batch_num = (i // BATCH_SIZE) + 1
-        total_batches = (len(all_articles) + BATCH_SIZE - 1) // BATCH_SIZE
         print(f"📡 الدفعة {batch_num}/{total_batches} ({len(batch)} أخبار)...")
 
+        # ✅ التحليل لا يفشل: كل عنصر dict دائماً (AI أو احتياطي) — لا None ولا «فشل التحليل»
         ai_results = analyze_batch_with_ai(batch)
 
-        # Send each article with its AI analysis (or fallback)
         for article, ai_data in zip(batch, ai_results):
             send_report(article, ai_data)
             time.sleep(0.3)  # Small delay between API posts
@@ -424,21 +708,129 @@ def run_ai_scanner():
         if i + BATCH_SIZE < len(all_articles) and can_call_gemini():
             time.sleep(1)
 
-    # Send remaining articles (those after quota was exhausted) without AI
-    remaining_start = 0
-    for i in range(0, len(all_articles), BATCH_SIZE):
-        if not can_call_gemini():
-            remaining_start = i
-            break
-        remaining_start = i + BATCH_SIZE
-
-    if remaining_start < len(all_articles):
-        print(f"\n🔄 إرسال {len(all_articles) - remaining_start} أخبار متبقية بدون تحليل AI...")
-        for article in all_articles[remaining_start:]:
-            send_report(article, None)
-            time.sleep(0.2)
-
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء من المسح (Gemini calls: {gemini_calls_today}/{GEMINI_DAILY_LIMIT})")
 
+    # Phase 3: إصلاح الأخبار القديمة التي فشل تحليلها قبل هذا الإصلاح (لا يبقى خبر بلا تحليل)
+    try:
+        repair_unanalyzed_news()
+    except Exception as e:
+        print(f"⚠️ تعذّر إصلاح الأخبار القديمة: {e}")
+
+
+# ==========================================
+# 8. Repair Engine — إعادة تحليل كل خبر فشل تحليله سابقاً
+# ==========================================
+RADAR_REPAIR_LIMIT = int(os.environ.get("RADAR_REPAIR_LIMIT", "400") or 400)
+
+
+def _needs_repair(news):
+    """هل هذا السجل بلا تحليل حقيقي؟ (علامات الفشل القديمة أو تصنيف فارغ)."""
+    news_type = str(news.get("news_type") or "").strip()
+    updates = str(news.get("news_updates") or "")
+    if "تعذر التحليل" in updates or "فشل التحليل" in news_type:
+        return True
+    return news_type in ("", "-", "غير مصنف", "أخرى / غير مصنف")
+
+
+def repair_unanalyzed_news(limit=None):
+    """يعيد تحليل كل خبر سابق فشل تحليله (news_type = «غير مصنف (فشل التحليل)») عبر
+    PUT /api/ai-news/{id} بمفتاح النظام — حتى لا يبقى في القاعدة أي خبر بلا تحليل.
+    يستخدم التحليل نفسه: ذكاء اصطناعي مجاني عند توفّر الحصة، وإلا التحليل الاحتياطي المحلي."""
+    if not SYSTEM_TOKEN:
+        print("⚠️ SYSTEM_TOKEN مفقود — تخطّي إصلاح الأخبار القديمة")
+        return
+
+    cap = RADAR_REPAIR_LIMIT if limit is None else limit
+    headers = {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
+    try:
+        res = requests.get(SYSTEM_API_URL, headers=headers, timeout=30)
+    except Exception as e:
+        print(f"⚠️ تعذّر جلب أخبار الرادار: {e}")
+        return
+    if not res.ok:
+        print(f"⚠️ تعذّر جلب أخبار الرادار ({res.status_code})")
+        return
+    try:
+        rows = res.json()
+    except Exception:
+        print("⚠️ رد غير صالح من نقطة أخبار الرادار")
+        return
+
+    if not isinstance(rows, list):
+        print("⚠️ شكل غير متوقع لبيانات الرادار")
+        return
+
+    pending = [r for r in rows if isinstance(r, dict) and _needs_repair(r) and r.get("news_link")]
+    if not pending:
+        print("ℹ️ لا توجد أخبار قديمة بلا تحليل — كل السجلات محلَّلة.")
+        return
+
+    pending = pending[:cap]
+    print(f"\n🛠️ إصلاح {len(pending)} خبر قديم بلا تحليل (حد الجولة: {cap})...")
+    repaired = 0
+    for i in range(0, len(pending), BATCH_SIZE):
+        batch_rows = pending[i:i + BATCH_SIZE]
+        articles = [{
+            "title": (row.get("incident_description") or "بلاغ بلا عنوان").strip(),
+            "text": f"{row.get('incident_description') or ''} {row.get('news_publisher') or ''}".strip(),
+            "link": row.get("news_link"),
+            "publisher": row.get("news_publisher") or "",
+            "image_url": "لا توجد صورة",
+        } for row in batch_rows]
+        analyses = analyze_batch_with_ai(articles)
+        for row, article, ai_data in zip(batch_rows, articles, analyses):
+            payload = {
+                "incident_date": (str(row.get("incident_date") or "")[:10] or None),
+                "incident_month": row.get("incident_month"),
+                "incident_description": ai_data.get("incident_description") or article["title"],
+                "news_type": ai_data.get("news_type") or "بلاغ حادث (تحليل آلي)",
+                "news_publisher": row.get("news_publisher"),
+                "street_name": ai_data.get("street_name") or "",
+                "area_name": ai_data.get("area_name") or "",
+                "governorate": (
+                    ai_data.get("governorate")
+                    if ai_data.get("governorate") not in (None, "", "-")
+                    else (row.get("governorate") or "-")
+                ),
+                "hospital_name": ai_data.get("hospital_name") or "",
+                "injured_count": str(ai_data.get("injured_count") or 0),
+                "deaths_count": str(ai_data.get("deaths_count") or 0),
+                "news_updates": _build_tactical_report(article, ai_data),
+                "news_link": row.get("news_link"),
+                "data_entry_name": row.get("data_entry_name") or "OSINT  AI",
+                "observed_at": (str(row.get("observed_at") or "")[:19] or None),
+            }
+            try:
+                put = requests.put(f"{SYSTEM_API_URL}/{row.get('id')}", json=payload, headers=headers, timeout=20)
+                if put.status_code in (200, 201):
+                    repaired += 1
+                else:
+                    print(f"  ⚠️ فشل إصلاح الخبر {row.get('id')} ({put.status_code}): {put.text[:120]}")
+            except Exception as e:
+                print(f"  ⚠️ فشل إصلاح الخبر {row.get('id')}: {e}")
+            time.sleep(0.15)
+        print(f"   … أُصلح {repaired}/{min(i + len(batch_rows), len(pending))}")
+
+    print(f"✅ إصلاح الأخبار القديمة: {repaired}/{len(pending)} خبر أصبح محلَّلاً.")
+
 if __name__ == '__main__':
-    run_ai_scanner()
+    # 🔧 أوضاع التشغيل:
+    #   python ai_radar.py                    ⇒ مسح المصادر + تحليل + إصلاح دفعة من القديم
+    #   python ai_radar.py --repair-only      ⇒ إصلاح الأخبار القديمة فقط (بلا مسح جديد)
+    #   python ai_radar.py --repair-only 2000 ⇒ إصلاح كل السجلات القديمة في جولة واحدة
+    args = [a for a in sys.argv[1:] if a.strip()]
+    if '--repair-only' in args:
+        rest = [a for a in args if a != '--repair-only']
+        repair_limit = int(rest[0]) if rest and rest[0].isdigit() else None
+        gemini_calls_today = 0
+        gemini_calls_by_model.clear()
+        dead_models.clear()
+        quota_exhausted_models.clear()
+        degraded_models.clear()
+        model_failures.clear()
+        if not GEMINI_API_KEY or not SYSTEM_TOKEN:
+            print("⚠️ المفاتيح مفقودة! تأكد من GEMINI_API_KEY و SYSTEM_TOKEN")
+            sys.exit(2)
+        repair_unanalyzed_news(limit=repair_limit)
+    else:
+        run_ai_scanner()

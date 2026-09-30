@@ -1377,6 +1377,8 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 /* unread count makes the corona inhale: the bell fills with each new signal */
 .bell-wrap.is-glowing .bell-ring { animation: bell-inhale 2.4s ease-in-out infinite, bell-ring-spin 2.2s linear infinite; opacity: 0.78; }
+.icon-btn:has(.bell-ring) { overflow: visible !important; }
+@media (prefers-reduced-motion: reduce) { .bell-ring, .bell-ring::after { animation-duration: 4.5s; } }
 .bell-wrap.is-glowing .bell-ring::after { animation-duration: 1.5s; }
 @keyframes bell-inhale { 0%,100% { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--bell-c, var(--accent)) 40%, transparent)); } 50% { filter: drop-shadow(0 0 13px color-mix(in srgb, var(--bell-c, var(--accent)) 72%, transparent)); } }
 @keyframes dropdown-out {
@@ -2621,7 +2623,7 @@ select.field {
 .seg-ghost { color: transparent !important; caret-color: transparent !important;
              -webkit-text-fill-color: transparent !important; }
 .seg-ghost::placeholder { color: transparent !important; }
-.seg-ghost::selection { background: transparent !important; }
+.seg-ghost::selection { background: transparent !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
 .seg-ghost.field:focus { caret-color: transparent !important; }
 .seg-ghost:disabled { cursor: not-allowed; }
 
@@ -2761,6 +2763,31 @@ select.field {
 /* border-separate يتجاهل حدود الصف <tr> — فنفصلها على مستوى الخلايا بدلاً منها */
 .wx-frozen tbody td,
 .wx-frozen tbody th { border-top: 1px solid var(--border); }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   📞 سجل التواصل مع المحافظات — أزرار القنوات (هاتف/لاسلكي/واتساب)
+   الغرض: زر واحد لكل قناة: مفعل (وقت مسجّل) بلون أخضر مؤكد، وغير مفعل بحدود هادية.
+   الألوان كلها من متغيرات الثيم (دارك/فاتح) — لا ألوان صلبة جديدة. */
+.gov-channel-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.gov-channel-chip:hover { color: var(--ink); border-color: var(--accent); }
+.gov-channel-chip--on {
+  color: var(--ok);
+  border-color: var(--ok-soft);
+  background: var(--ok-soft);
+}
 
 /* ─────────────────────────────────────────────────────────────────────────────
    🩺 شاشة وقوع السيرفر (Server Watchdog) + شريط الرجوع
