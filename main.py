@@ -8730,15 +8730,18 @@ def _eq_intel_ingest_events(events, source="usgs"):
                         mirror_region = _zone["id"]
                         _best_radius = _zone["radius_km"]
                 try:
+                    # 🎯 نفس شرط الباك فيل: M≥4 فقط يدخل الكتالوج — العدد يفضل على نفس المعيار
                     cursor.execute("""
                         INSERT INTO earthquake_catalog
                             (source, external_id, occurred_at, magnitude, depth_km, place, latitude, longitude, region_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        SELECT %s, %s, %s, %s, %s, %s, %s, %s, %s
+                        WHERE COALESCE(%s::double precision, 0) >= %s
                         ON CONFLICT (source, external_id) DO NOTHING;
                     """, (
                         source or "usgs", norm["external_id"], norm["occurred_at"],
                         norm["magnitude"], norm["depth_km"], norm["place"],
                         norm["latitude"], norm["longitude"], mirror_region,
+                        norm["magnitude"], EQ_CATALOG_MINMAG,
                     ))
                     _EQ_FORECAST_MEM_CACHE.clear()  # إحصاءات العالم/المناطق تلتقط الجديد فوراً
                 except Exception as _cat_err:
@@ -8887,9 +8890,11 @@ def get_earthquake_intel(
     role = get_user_role(user_id)
     require_eq_intel_access(role)
     try:
-        limit = max(1, min(int(limit), 500))
+        limit = max(0, int(limit))      # 🌍 0 = السجل كله (بلا حد)
     except Exception:
         limit = 200
+    if limit > 500:
+        limit = 500                     # سقف حماية للقيم المفتوحة
 
     where = []
     params = []
@@ -8914,8 +8919,8 @@ def get_earthquake_intel(
                 FROM earthquake_intel
                 {'WHERE ' + ' AND '.join(where) if where else ''}
                 ORDER BY occurred_at DESC NULLS LAST, eq_intel_id DESC
-                LIMIT %s;
-            """, (*params, limit))
+                {'LIMIT %s' if limit > 0 else ''};
+            """, (*params, limit) if limit > 0 else (*params,))
             rows = cursor.fetchall()
             return [
                 {

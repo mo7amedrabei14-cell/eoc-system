@@ -24,10 +24,8 @@ let hardCapOverride = 0;              // للاختبارات فقط
 const TEXT_ACTION = 'جاري تنفيذ العملية…';
 const BACKGROUND_URL_PATTERNS = [
   '/api/realtime/',                   // النبضة الحية المستمرة — مستثناة دائماً
-  '/api/workspace',                   // مرآة المسودات — حفظ/استرجاع خلفي صامت
   '/api/health',                      // نبضة الحارس — خلفية دائمة
   '/api/missions/by-idempotency',     // فحص التكرار في محرك الإعادة — خلفي
-  '/api/gov-contacts/batch',          // تجهيز صفوف اليوم + إعادة الإرسال — خلفي
   '/token',              
   '/export-log',                      // 📝 تسجيل تيليمتري خلفي للتصديرات — مش أكشن للمستخدم
 ];
@@ -159,7 +157,7 @@ export function installWorkingAuto() {
 
   // ⚖️ القاعدة الجذرية: الحبة = الأكشنز فقط (POST/PUT/DELETE/PATCH).
   //    تحميل البيانات (GET/HEAD/OPTIONS) مستحيل يشعلها — لا نوافذ توقيت ولا تتبع ضغطات.
-  const WORKING_PATCH_VERSION = 'v4';
+  const WORKING_PATCH_VERSION = 'v5';
   if (typeof window.fetch === 'function' && window.fetch.__eocWorkingVersion !== WORKING_PATCH_VERSION) {
     const originalFetch = (window.fetch.__eocOriginalFetch || window.fetch).bind(window);
     const patchedFetch = (...args) => {
@@ -171,9 +169,7 @@ export function installWorkingAuto() {
         const isRead = READ_METHODS.has(method);            // 🚫 تحميل بيانات ⇒ أبداً لا
         const isBackground = BACKGROUND_URL_PATTERNS.some((pat) => url.includes(pat));
         const isLocal = url.startsWith('blob:') || url.startsWith('data:');
-        const isBgSilent = (window.__eocBgSync > 0)
-          || (typeof (args[1] && args[1].body) === 'string' && args[1].body.includes('"silent":true'));
-        if (!isRead && !isBackground && !isLocal && !isBgSilent) {
+        if (!isRead && !isBackground && !isLocal) {
           autoInFlight += 1;
           autoShow(TEXT_ACTION);
           Promise.resolve(promise)

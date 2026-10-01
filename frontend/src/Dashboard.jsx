@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fra
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, Circle, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, Circle, CircleMarker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 // ⏰ وحدة الزمن الموحّدة — العرض 12 ساعة فقط، الآلة 24 ساعة (راجع timeutils.js)
@@ -2400,12 +2400,6 @@ if (e.event_type === 'system_refresh') {
   const visibleLiveCount = visibleToasts.length;
   const queuedCount = regularLiveToasts.length - (visibleToasts.length - eqWindowToasts.length);
 
-  // 🔇 صفحة مؤشرات المركز الرئيسية: الحبة مكتومة هنا تماماً (تحديثها الدوري لا يستحق إزعاجاً)
-  useEffect(() => {
-    setWorkingSuppressed(activeTab === 'home');
-    return () => setWorkingSuppressed(false);
-  }, [activeTab]);
-
   const palQuery = paletteQuery.trim().toLowerCase();
   const palResults = [];
   const palFlat = [];
@@ -4239,8 +4233,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       const t = setTimeout(() => ctrl.abort(), ms);
       return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(t));
     };
-    // 🤫 مزامنة خلفية: طلبات الإعادة لا تُشعل حبة «تنفيذ عملية» أبداً
-    window.__eocBgSync = (window.__eocBgSync || 0) + 1;
+    window.__eocBgSync = 0;   // v5: الراية أُلغيت — كل أكشن يضوّي
     try {
       const checkMirror = async (item) => {
         // 🪞 نعترف بالاستمارة بالمفتاح أو بكود المهمة — أي علامة وصول تكفي
@@ -4279,7 +4272,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       }
       refreshPending(); // ✅ مزامنة نهائية دايماً — العداد عمره ما يفضل قديم
     } finally {
-      window.__eocBgSync = Math.max(0, (window.__eocBgSync || 1) - 1);
+      window.__eocBgSync = 0;
       retryInFlightRef.current = false;
       setOutboxRetrying(false);
     }
@@ -11301,14 +11294,27 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
   const [exporting, setExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null); // {eq_intel_id, magnitude, place}
   const isFirstLiveRef = useRef(true);
+  // 🌋 أحزمة النشاط الزلزالي العالمي (حدود الصفائح — PB2002) — تُجلب مرة واحدة وتتكاش
+  const [eqPlates, setEqPlates] = useState(window.__EQ_PLATES_CACHE || null);
+  useEffect(() => {
+    if (window.__EQ_PLATES_CACHE) return;
+    fetch('https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && Array.isArray(d.features)) { window.__EQ_PLATES_CACHE = d; setEqPlates(d); } })
+      .catch(() => { /* بلا حدود — الخريطة تشتغل عادي */ });
+  }, []);
 
   const fetchQuakes = async (silent = false) => {
     if (!silent) setIsLoading(true);
     const token = getStoredAccessToken();
     const qs = new URLSearchParams();
-    if (filterFrom) qs.set('from_date', filterFrom);
-    if (filterTo) qs.set('to_date', filterTo);
-    if (!filterTo) qs.set('limit', '200');
+    if (filterFrom || filterTo) {
+      if (filterFrom) qs.set('from_date', filterFrom);
+      if (filterTo) qs.set('to_date', filterTo);
+      qs.set('limit', '0');    // 🔍 بفلتر: كل نتائج الفلتر من غير حد
+    } else {
+      qs.set('limit', '500');  // 🌍 بلا فلتر: الحد الأقصى — آخر الرصود
+    }
     try {
       const res = await fetch(`${BASE}/api/earthquake-intel?${qs.toString()}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
@@ -11452,7 +11458,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
 
   // 🛡️ شبكة أمان: تحديث صامت دوري كل 60 ثانية
   useEffect(() => {
-    const t = setInterval(() => { fetchQuakes(true); }, 60000);
+    const t = setInterval(() => { fetchQuakes(true); fetchCatalogStats(); }, 60000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -11688,7 +11694,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
                   <p className="text-[10px] text-[var(--muted)]">{T('إجمالي الزلازل (30 سنة)', 'Total quakes (30y)')}</p>
-                  <p className="text-2xl font-extrabold text-orange-400">{Number(worldZone.total40 ?? worldZone.hist40 ?? 0).toLocaleString('en')}</p>
+                  <p className="text-2xl font-extrabold text-orange-400">{catalogTotal.toLocaleString('en')}</p>
                   <p className="text-[10px] text-[var(--muted)]">≈ {worldZone.daily_avg ?? '—'} {T('زلزال/يوم', 'per day')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
@@ -11846,6 +11852,15 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
               <div className="h-[420px] rounded-2xl overflow-hidden border border-white/5 relative">
                 <MapContainer center={[22, 30]} zoom={2} minZoom={2} worldCopyJump scrollWheelZoom style={{ height: '100%', width: '100%' }}>
                   <ThemedTileLayer />
+                  {/* 🌋 أحزمة النشاط الزلزالي العالمي — حدود الصفائح التكتونية */}
+                  {eqPlates && eqPlates.features.map((f, i) => {
+                    const g = f.geometry;
+                    if (!g || !Array.isArray(g.coordinates)) return null;
+                    const st = { color: '#f59e0b', weight: 1, opacity: 0.55 };
+                    if (g.type === 'LineString') return <Polyline key={`pl-${i}`} positions={g.coordinates.map(([x, y]) => [y, x])} pathOptions={st} interactive={false} />;
+                    if (g.type === 'MultiLineString') return g.coordinates.map((line, j) => <Polyline key={`pl-${i}-${j}`} positions={line.map(([x, y]) => [y, x])} pathOptions={st} interactive={false} />);
+                    return null;
+                  })}
                   {/* 🗺️ حلقة المعيار التاريخي: نطاق أقوى حدث في 30 سنة لنفس الفترة حول كل موقع */}
                   {analysisEvents.filter(e => e.latitude != null && e.longitude != null && e.hist_max_mag != null).map((ev) => (
                     <Circle key={`eqh-${ev.eq_intel_id}`} center={[ev.latitude, ev.longitude]}
@@ -11897,6 +11912,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                   <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#10b981' }} />{T('منخفضة', 'Low')}</div>
                   <div className="flex items-center gap-1.5 mt-1 text-[var(--muted)]"><span className="w-4 border-t-2 border-dashed" style={{ borderColor: '#94a3b8' }} />{T('الحلقة الرمادية = سقف 30 سنة للموقع', 'Grey ring = 30y site ceiling')}</div>
                   <div className="text-[var(--muted)]">{T('حجم الدائرة يكبر مع درجة الخطورة', 'Circle size grows with risk')}</div>
+                  <div className="flex items-center gap-1.5 mt-1"><span className="w-4 border-t-2" style={{ borderColor: '#f59e0b' }} />{T('أحزمة النشاط الزلزالي العالمي (حدود الصفائح)', 'Global seismic belts (plate boundaries)')}</div>
                 </div>
               </div>
             ) : (
@@ -11954,7 +11970,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
           </p>
         ) : (
           <div className="space-y-2">
-            {quakes.slice(0, 40).map((q) => (
+            {quakes.map((q) => (
               <div key={q.eq_intel_id} id={`focus-row-${q.eq_intel_id}`}
                 className={`flex flex-wrap items-center gap-x-4 gap-y-1 p-3 rounded-2xl border transition-all ${focusedRowId === q.eq_intel_id ? 'border-[var(--accent)] bg-[var(--accent-softer)] ring-2 ring-[var(--accent)] animate-pulse' : 'bg-[var(--surface-2)] border-white/5'}`}>
                 <span className={`text-lg font-extrabold w-14 ${magColor(q.magnitude)}`}>{q.magnitude != null ? fmtMag(q.magnitude) : '؟'}</span>
