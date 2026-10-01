@@ -8214,7 +8214,7 @@ EQ_INTEL_FEEDS = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
 )
 EQ_INTEL_DEDUPE_MINUTES = 180      # نافذة تجاهل التكرار لنفس الحدث من التغذيات
-EQ_INTEL_POLL_SECONDS = 60         # إيقاع المحرك الدوري (من GitHub Actions)
+EQ_INTEL_POLL_SECONDS = int(os.getenv("EQ_INTEL_POLL_SECONDS", "30"))  # 🚀 رصد أسرع (كان 60)
 
 # مركز القارة الأفريقية القريبة من مصر — نقطة قياس القرب الجغرافي
 # (وسط مصر الجغرافي تقريباً؛ القياس بالكيلومتر العظيمي great-circle)
@@ -8832,15 +8832,21 @@ def _eq_intel_local_engine_loop():
     _schema_ready.wait(timeout=60)  # ننتظر جاهزية الجداول قبل أول دورة
     while True:
         try:
-            features = None
+            # 🚀 دمج التغذيتين معاً: all_hour (الأحدث) + all_day (لتقاط الأحداث اللي
+            #    USGS نشرها متأخراً — بره نافذة الساعة لكن داخل نافذة التجاهل 180 دقيقة).
+            #    الفريد (source, external_id) + cutoff يمنعان أي تكرار أو أحداث قديمة.
+            features_by_id = {}
             for feed_url in EQ_INTEL_FEEDS:
                 try:
                     resp = _requests.get(feed_url, timeout=15, headers={"User-Agent": "EOC-Earthquake-Intel/1.0"})
                     if resp.ok:
-                        features = (resp.json() or {}).get("features", []) or []
-                        break
+                        for f in ((resp.json() or {}).get("features", []) or []):
+                            fid = (f or {}).get("id") or (((f or {}).get("properties") or {}).get("code") or "")
+                            if fid:
+                                features_by_id[fid] = f
                 except Exception:
                     continue
+            features = list(features_by_id.values()) if features_by_id else None
             if features:
                 events = []
                 import time as _t
