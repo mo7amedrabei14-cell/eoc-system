@@ -24,8 +24,16 @@ let hardCapOverride = 0;              // للاختبارات فقط
 const TEXT_ACTION = 'جاري تنفيذ العملية…';
 const BACKGROUND_URL_PATTERNS = [
   '/api/realtime/',                   // النبضة الحية المستمرة — مستثناة دائماً
+  '/api/workspace',                   // مرآة المسودات — حفظ/استرجاع خلفي صامت
+  '/api/health',                      // نبضة الحارس — خلفية دائمة
+  '/api/missions/by-idempotency',     // فحص التكرار في محرك الإعادة — خلفي
+  '/api/gov-contacts/batch',          // تجهيز صفوف اليوم + إعادة الإرسال — خلفي
+  '/token',              
+  '/export-log',                      // 📝 تسجيل تيليمتري خلفي للتصديرات — مش أكشن للمستخدم
 ];
-/* ضغطات الأزرار فقط ترفع راية «تنفيذ عملية» — باتصال حقيقي بالـ DOM */
+// ✋ الميثودز دي «قراءة/تحميل بيانات» — لا تُشعل الحبة أبداً (الأكشنز فقط)
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+// ✋ ضغطات الأزرار فقط ترفع راية «تنفيذ عملية» — باتصال حقيقي بالـ DOM
 let lastButtonPressAt = 0;
 const BUTTON_SELECTOR = [
   'button', '[role="button"]', 'input[type="submit"]', 'input[type="button"]',
@@ -121,7 +129,9 @@ function autoShow(text) {
   }
   autoActive = true;
   autoShownAt = Date.now();
-  showWorking(text);
+  // 🔒 لو فيه حبة يدوية شغالة بالفعل («جاري حفظ الخبر…») لا نطيح نصها — العدّاد يفضل متوازن
+  const keepText = activeCount > 0 && currentText && currentText !== TEXT_ACTION;
+  showWorking(keepText ? currentText : text);
   // 🛡️ صمام أمان: طلب معلّق لا يُبقي الحبة أكثر من 15 ثانية مهما حدث
   if (autoSafetyTimer) clearTimeout(autoSafetyTimer);
   autoSafetyTimer = setTimeout(() => {
@@ -147,23 +157,23 @@ export function installWorkingAuto() {
   if (autoInstalled || typeof window === 'undefined' || typeof document === 'undefined') return;
   autoInstalled = true;
 
-  // ① تتبع ضغطات الأزرار (لتمييز نص «تنفيذ عملية» عن «تحميل بيانات»)
-  ['click', 'submit', 'keydown'].forEach((evt) => {
-    document.addEventListener(evt, markButtonPress, { capture: true, passive: true });
-  });
-
-  // ② اعتراض fetch: الحبة تظهر فقط للطلبات الناتجة عن ضغطة زر (خلال 1.6 ثانية).
-  //    التحديثات الخلفية الدورية وفتحات الصفحات الصامتة لا تُشعلها — لا 24 ساعة!
-  if (typeof window.fetch === 'function' && !window.fetch.__eocWorkingPatched) {
-    const originalFetch = window.fetch.bind(window);
+  // ⚖️ القاعدة الجذرية: الحبة = الأكشنز فقط (POST/PUT/DELETE/PATCH).
+  //    تحميل البيانات (GET/HEAD/OPTIONS) مستحيل يشعلها — لا نوافذ توقيت ولا تتبع ضغطات.
+  const WORKING_PATCH_VERSION = 'v4';
+  if (typeof window.fetch === 'function' && window.fetch.__eocWorkingVersion !== WORKING_PATCH_VERSION) {
+    const originalFetch = (window.fetch.__eocOriginalFetch || window.fetch).bind(window);
     const patchedFetch = (...args) => {
       const promise = originalFetch(...args);
       try {
         const url = String((args[0] && args[0].url) || args[0] || '');
+        const rawMethod = (args[1] && args[1].method) || (args[0] && args[0].method) || 'GET';
+        const method = String(rawMethod).toUpperCase();
+        const isRead = READ_METHODS.has(method);            // 🚫 تحميل بيانات ⇒ أبداً لا
         const isBackground = BACKGROUND_URL_PATTERNS.some((pat) => url.includes(pat));
         const isLocal = url.startsWith('blob:') || url.startsWith('data:');
-        const isAction = (Date.now() - lastButtonPressAt) <= INTERACTION_WINDOW_MS;
-        if (isAction && !isBackground && !isLocal) {
+        const isBgSilent = (window.__eocBgSync > 0)
+          || (typeof (args[1] && args[1].body) === 'string' && args[1].body.includes('"silent":true'));
+        if (!isRead && !isBackground && !isLocal && !isBgSilent) {
           autoInFlight += 1;
           autoShow(TEXT_ACTION);
           Promise.resolve(promise)
@@ -177,6 +187,8 @@ export function installWorkingAuto() {
       return promise;
     };
     patchedFetch.__eocWorkingPatched = true;
+    patchedFetch.__eocWorkingVersion = WORKING_PATCH_VERSION;
+    patchedFetch.__eocOriginalFetch = originalFetch;
     window.fetch = patchedFetch;
   }
 }

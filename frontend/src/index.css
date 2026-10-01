@@ -3392,7 +3392,7 @@ select.field {
 /* علامة الودينج الدوّارة داخل دائرة ناعمة */
 .working-spinbox{
   flex: none;
-  width: 46px; height: 46px;
+  width: 34px; height: 34px;
   border-radius: 50%;
   display: grid; place-items: center;
   color: var(--accent);
@@ -3401,7 +3401,7 @@ select.field {
     color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .working-spin{
-  width: 28px; height: 28px;
+  width: 22px; height: 22px;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
   animation: working-spin-rotate .85s linear infinite;
 }

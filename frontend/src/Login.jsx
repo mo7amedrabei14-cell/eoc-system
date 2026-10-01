@@ -5,6 +5,9 @@ import { BASE } from './apiBase';
 // "تعذر الاتصال" العامة — والتلميذ يشوف تعليمات الرستر و Ctrl+Shift+R فوراً.
 import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serverHealth';
 import { checkServerHealth } from './serverHealthCore';
+// 🔇 شاشة الدخول ليها مؤشرها الخاص (سبينر الزر) — حبة العمل العامة مكتومة هنا تماماً
+import { setWorkingSuppressed } from './workingToast';
+
 
 /* ─────────────────────────────────────────────────────────────
    أيقونات داخلية خفيفة (SVG) بنفس لغة النظام
@@ -73,6 +76,12 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(true);
+    // 🔇 كتم الحبة في شاشة الدخول — مؤشر التحميل هنا هو سبينر زر الدخول نفسه
+  useEffect(() => {
+    setWorkingSuppressed(true);
+    return () => setWorkingSuppressed(false);
+  }, []);
+
   const [isMounted, setIsMounted] = useState(false);
   // 🔐 خطوة تحقق إضافية بكود 6 أرقام — تظهر فقط لحساب الأونر بعد نجاح الدخول العادي
   const [loginStage, setLoginStage] = useState('form'); // 'form' | 'verify'

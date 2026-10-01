@@ -2596,7 +2596,7 @@ if (e.event_type === 'system_refresh') {
             {/* 🔒 حساب إدارة الشباب (yveoc): 3 صفحات فقط — مؤشرات المركز اليومية، المهام، القوة البشرية */}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات المركز اليومية" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
-            {!isYouth && <NavItem icon={<PhoneIcon />} label={language === 'ar' ? 'سجل التواصل مع المحافظات' : 'Governorate Contacts'} isActive={activeTab === 'gov_contacts'} onClick={() => handleNavigation('gov_contacts')} isOpen={isSidebarOpen} hasUpdate={newUpdates.gov_contacts} />}
+            {!isYouth && <NavItem icon={<PhoneIcon />} label={language === 'ar' ? 'سجل التواصل مع الفروع' : 'Governorate Contacts'} isActive={activeTab === 'gov_contacts'} onClick={() => handleNavigation('gov_contacts')} isOpen={isSidebarOpen} hasUpdate={newUpdates.gov_contacts} />}
 
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
 
@@ -3281,7 +3281,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
           </div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={aiTotalNews} /></p>
-            <span className="kpi-sub kpi-sub-lg">رصد تكتيكي متراكم</span>
+            <span className="kpi-sub kpi-sub-lg">خبر محلي وعالمي</span>
           </div>
         </TiltCard>
 
@@ -4239,6 +4239,8 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       const t = setTimeout(() => ctrl.abort(), ms);
       return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(t));
     };
+    // 🤫 مزامنة خلفية: طلبات الإعادة لا تُشعل حبة «تنفيذ عملية» أبداً
+    window.__eocBgSync = (window.__eocBgSync || 0) + 1;
     try {
       const checkMirror = async (item) => {
         // 🪞 نعترف بالاستمارة بالمفتاح أو بكود المهمة — أي علامة وصول تكفي
@@ -4277,6 +4279,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       }
       refreshPending(); // ✅ مزامنة نهائية دايماً — العداد عمره ما يفضل قديم
     } finally {
+      window.__eocBgSync = Math.max(0, (window.__eocBgSync || 1) - 1);
       retryInFlightRef.current = false;
       setOutboxRetrying(false);
     }
@@ -9539,7 +9542,7 @@ const visibleBranches = (
 }
 
 // ==========================================
-// 📞 سجل التواصل مع المحافظات — Governorate Contacts Log
+// 📞 سجل التواصل مع الفروع — Governorate Contacts Log
 // ==========================================
 // ترتيب المحافظات هنا = نفس ترتيب عمود «المحافظة» في صفحة توقعات الطقس بالحرف
 // (نفس الأرقام ونفس الأسماء الجاية من قاعدة البيانات).
@@ -9592,6 +9595,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   const dirtyRef = useRef(new Set());
   const timerRef = useRef(null);
   const lockRef = useRef(false);
+  const userEditRef = useRef(false);   // ✋ هل فيه تعديل مستخدم مستني أول محاولة حفظ؟ (عشان الحبة تطلع مرة واحدة بس)
 
   const setPending = (next) => {
     pendingRef.current = next;
@@ -9670,13 +9674,17 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   // 💾 حفظ تلقائي فوري: أي تعديل يتوقف عن الكتابة 0.9 ثانية وبعدها يُرفع — بدون زرار
   const flush = async ({ retryAll = true } = {}) => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-    if (lockRef.current) return;
+    // فيه حفظ شغال بالفعل؟ نأجّله 0.8 ثانية بدل ما نستنى دورة الـ30 ثانية
+    if (lockRef.current) { timerRef.current = setTimeout(() => flushRef.current({ retryAll }), 800); return; }
     const store = pendingRef.current || {};
     const dates = Object.keys(store).filter(d => retryAll || d === filterDate);
-    if (!dates.length) return;
+    if (!dates.length) { userEditRef.current = false; return; }
+    // 🎯 الحبة للأكشنز فقط: تعديل مستخدم = أكشن ⇒ حبة — إعادة المحاولة الخلفية صامتة
+    const fromUser = retryAll === false || userEditRef.current;
+    userEditRef.current = false;
     lockRef.current = true;
     setSaving(true);
-    showWorking('جاري مزامنة تعديلات التواصل مع المحافظات…');
+    if (fromUser) showWorking('جاري حفظ تعديلات التواصل مع المحافظات…');
     let failed = 0;
     let saved = 0;
     try {
@@ -9714,7 +9722,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
       // 🛡️ مهما حدث: القفل يُفتح والحبة تختفي — لا تعليق للأبد
       lockRef.current = false;
       setSaving(false);
-      hideWorking();
+      if (fromUser) hideWorking();
     }
     if (failed) {
       setCustomAlert(T('⚠️ فيه تعديلات لسه ما اتأكدش حفظها — محفوظة وستُعاد تلقائياً أول ما الاتصال يرجع.', '⚠️ Some edits are not confirmed yet — kept and retried automatically.'));
@@ -9771,6 +9779,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   const rowOf = (bid) => rows[bid] || emptyGovRow();
   const markDirty = (date, bid) => { dirtyRef.current.add(`${date}|${bid}`); };
   const scheduleSave = () => {
+    userEditRef.current = true;   // ✋ تعديل مستخدم ⇒ أول حفظ يليه يعرض الحبة
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => flushRef.current({ retryAll: false }), 900);
   };
@@ -9785,16 +9794,12 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
     scheduleSave();
   };
   const toggleChannel = (bid, field) => setField(bid, field, String(rowOf(bid)[field] || '').trim() ? '' : govTimeLabel());
-  // 📝 الملاحظات (داتا فاليد ليست): «تم الرد …» يضبط وقت الرد تلقائياً، و«لم يتم الرد/مغلق» يفرّغه
+  // 📝 الملاحظات (داتا فاليد ليست): تُسجَّل كما هي — «وقت الرد» يدوي بالكامل (لا تعبئة ولا تفريغ تلقائي)
   const setNotes = (bid, value) => {
     const before = rowOf(bid);
     const patch = { notes: value };
-    let reply = before.reply_time ?? '';
-    if (/^تم الرد/.test(value)) { if (!String(reply).trim()) reply = govTimeLabel(); }
-    else if (value === 'لم يتم الرد' || value === 'مغلق') { reply = ''; }
-    if ((before.reply_time ?? '') !== reply) patch.reply_time = reply || null;
     if (!String(before.reason || '').trim()) patch.reason = GOV_REASON_DEFAULT;
-    setRows(prev => ({ ...prev, [bid]: { ...before, ...patch, notes: value, reply_time: reply } }));
+    setRows(prev => ({ ...prev, [bid]: { ...before, ...patch, notes: value } }));
     putPendingMany(filterDate, bid, patch);
     markDirty(filterDate, bid);
     scheduleSave();
@@ -9942,7 +9947,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
         <div>
           <h2 className="text-2xl font-bold text-[var(--ink)] flex items-center gap-2">
             <span className="text-[var(--accent)]"><PhoneIcon /></span>
-            {T('سجل التواصل مع المحافظات', 'Governorate Contacts Log')}
+            {T('سجل التواصل مع الفروع', 'Governorate Contacts Log')}
           </h2>
           <p className="text-[var(--muted)] text-sm mt-1">
             {T('صف واحد لكل محافظة في اليوم — الحفظ تلقائي على السيرفر، وكل الأجهزة ترى نفس الحالة.', 'One row per governorate per day — autosaved on the server; every device sees the same state.')}
@@ -10066,7 +10071,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
       <DangerConfirmModal
         show={showClearAllConfirm}
         title="تأكيد الحذف"
-        message="سيتم حذف سجل التواصل مع المحافظات بالكامل (كل التواريخ وكل المحافظات) نهائياً. هذا الإجراء لا يمكن التراجع عنه."
+        message="سيتم حذف سجل التواصل مع الفروع بالكامل (كل التواريخ وكل المحافظات) نهائياً. هذا الإجراء لا يمكن التراجع عنه."
         confirmationCode={clearAllCode}
         onConfirmationCodeChange={setClearAllCode}
         showConfirmationInput={true}
@@ -14736,7 +14741,7 @@ export function WorkingToast() {
   if (!text) return null;
   return (
     <div className="fixed bottom-5 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 z-[200] pointer-events-none animate-fade-in-up">
-      <div className="working-pill flex items-center gap-3 ps-2.5 pe-6 py-2 text-base font-extrabold text-[var(--accent)] [text-shadow:0_0_10px_currentColor]">
+      <div className="working-pill flex items-center justify-center gap-2.5 ps-3 pe-8 py-1 min-w-[300px] text-base font-extrabold text-[var(--accent)] [text-shadow:0_0_10px_currentColor]">
         <span className="working-spinbox" aria-hidden="true">
           <svg viewBox="0 0 50 50" className="working-spin">
             <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" strokeDasharray="64 62" />
