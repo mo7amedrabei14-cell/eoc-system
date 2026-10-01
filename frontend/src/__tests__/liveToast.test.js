@@ -20,7 +20,7 @@ import {
   DUPLICATE_WINDOW_MS,
 } from '../liveToast.js';
 
-const TOKEN_TONES = ['accent', 'info', 'warn', 'ok', 'data', 'ai'];
+const TOKEN_TONES = ['accent', 'info', 'warn', 'ok', 'data', 'ai', 'quake'];
 
 test('كل نوع حدث معروف له نبرة لونية من توكنات الثيم', () => {
   for (const [type, v] of Object.entries(LIVE_TONES)) {
@@ -35,12 +35,13 @@ test('نوع حدث مجهول يسقط على الاحتياطي بدون ان�
   }
 });
 
-test('الأخبار معلومة، الزلزال انتباه، الطقس قياس، التسليم اكتمال، الرصد الآلي ذكاء', () => {
+test('الأخبار معلومة، الزلزال انتباه، الطقس قياس، التسليم اكتمال، الرصد الآلي ذكاء، استخبارات الزلازل أصفر مميز', () => {
   assert.equal(notifyVisual('local_news').tone, 'info');
   assert.equal(notifyVisual('earthquake').tone, 'warn');
   assert.equal(notifyVisual('weather').tone, 'data');
   assert.equal(notifyVisual('handover').tone, 'ok');
   assert.equal(notifyVisual('ai_news').tone, 'ai');
+  assert.equal(notifyVisual('eq_intel').tone, 'quake');
 });
 
 test('التسميات عربية/إنجليزية وكل نوع له الاثنتان', () => {

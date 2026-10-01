@@ -1,0 +1,33 @@
+name: Earthquake Intelligence Runner 🌍
+
+on:
+  schedule:
+    # ⚠️ GitHub Actions: الحد الأدنى الفعلي للجدولة كل 5 دقائق
+    # (الزلزال يظهر في تغذية USGS خلال ثوانٍ — ولو احتجت دورة أسرع شغّل
+    #  earthquake_intel.py بمهمة مجدولة محلية أو Vercel Cron كل دقيقة)
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  quake-watch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: تحميل ملفات المشروع
+        uses: actions/checkout@v4
+
+      - name: تجهيز بيئة البايثون
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: تسطيب المكتبة المطلوبة
+        run: |
+          pip install --upgrade pip
+          pip install requests python-dotenv
+
+      - name: تشغيل محرك رصد الزلازل
+        env:
+          SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
+          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-b12f.vercel.app' }}
+        run: python earthquake_intel.py

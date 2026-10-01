@@ -13,6 +13,7 @@ export const LIVE_TONES = {
   local_news: { tone: 'info', kind: 'news' },
   global_disaster: { tone: 'accent', kind: 'disaster' },
   earthquake: { tone: 'warn', kind: 'quake' },
+  eq_intel: { tone: 'quake', kind: 'quake' },  // 💛 نبرة زلزالية مخصصة — أصفر مميز يعرف فوراً
   weather: { tone: 'data', kind: 'weather' },
   handover: { tone: 'ok', kind: 'handover' },
   ai_news: { tone: 'ai', kind: 'ai' },
@@ -32,11 +33,73 @@ export const LIVE_LABELS = {
   local_news: { ar: 'خبر محلي', en: 'Local news' },
   global_disaster: { ar: 'كارثة عالمية', en: 'Global disaster' },
   earthquake: { ar: 'رصد زلزالي', en: 'Seismic' },
+  eq_intel: { ar: 'استخبارات زلزالية', en: 'Quake intel' },
   weather: { ar: 'طقس', en: 'Weather' },
   handover: { ar: 'تسليم وردية', en: 'Handover' },
   ai_news: { ar: 'رصد آلي', en: 'AI signal' },
   audit: { ar: 'سجل النظام', en: 'System log' },
 };
+
+// 🚨 نافذة إضافية للزلازل الاستخباراتية: تُعرض فوق الطابور المركزي فوراً
+//    حتى لو كان التوست الأحادي مشغولاً — المطلوب أن يكون المستخدم أول من يعرف.
+export const EQ_INTEL_EXTRA_TOASTS = 1;
+
+// 🔊 إنذار الزلازل القريبة من وسط القارة: نغمة إيقاظ متكررة عبر Web Audio API
+//    (بدون ملفات صوت خارجية — تضمن التشغيل من أول مرة). مطلوب تفاعل مستخدم واحد
+//    سابقاً في الجلسة (نقرة/زر) لأن المتصفحات تحجب الصوت التلقائي — نفتح قناة
+//    الصوت عند أول تفاعل حتى يكون الإنذار جاهزاً لحظة وقوع الزلزال.
+let _eqAudioCtx = null;
+let _eqSoundUnlocked = false;
+
+export function unlockEarthquakeSound() {
+  try {
+    if (_eqSoundUnlocked) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    _eqAudioCtx = new Ctx();
+    // تشغيل صامت للتهيئة: يفتح قناة الصوت بعد أول تفاعل مستخدم (سياسة المتصفحات)
+    const osc = _eqAudioCtx.createOscillator();
+    const gain = _eqAudioCtx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain).connect(_eqAudioCtx.destination);
+    osc.start();
+    osc.stop(_eqAudioCtx.currentTime + 0.05);
+    _eqSoundUnlocked = true;
+  } catch {
+    // بدون صوت في سياقات مقيدة — الإشعار البصري يبقى كاملاً
+  }
+}
+
+export function playEarthquakeAlarm(pattern = 'critical') {
+  try {
+    unlockEarthquakeSound();
+    if (!_eqAudioCtx) return;
+    if (_eqAudioCtx.state === 'suspended') _eqAudioCtx.resume();
+    const ctx = _eqAudioCtx;
+    const now = ctx.currentTime;
+    const beep = (startOffset, freq, dur, vol = 0.28) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, now + startOffset);
+      gain.gain.setValueAtTime(vol, now + startOffset);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + startOffset + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + startOffset);
+      osc.stop(now + startOffset + dur + 0.02);
+    };
+    if (pattern === 'critical') {
+      // ثلاث صفعات إنذار حادة صاعدة — لا تُشبه أي نغمة توست عادية
+      [0, 0.45, 0.9].forEach((offset, i) => beep(offset, 660 + i * 220, 0.32, 0.3));
+    } else {
+      // تنبيه مزدوج أهدأ للزلازل الخارجية
+      beep(0, 520, 0.25, 0.22);
+      beep(0.35, 520, 0.25, 0.22);
+    }
+  } catch {
+    // فشل الصوت لا يجب أن يكسر الإشعار البصري أبداً
+  }
+}
 
 export function notifyLabel(event_type, language = 'ar') {
   const entry = LIVE_LABELS[event_type];

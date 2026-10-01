@@ -364,6 +364,23 @@
   .safe-bottom { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
   .safe-top { padding-top: calc(1rem + env(safe-area-inset-top)); }
 
+  /* ────────────────────────────────────────────────────────────────────
+     21) HEIGHTS — dvh يحل مشكلة شريط عنوان المتصفح المتحرك على الموبايل
+     ──────────────────────────────────────────────────────────────────── */
+  main#main-scroll-container { height: 100dvh; }
+  .sidebar-shell { height: 100dvh; }
+  .modal-card { max-height: 100dvh !important; min-height: 100dvh; }
+
+  /* الهيدر الثابت يراعي النوتش أعلى الشاشة */
+  .glass-header { padding-top: max(0.875rem, env(safe-area-inset-top)); }
+
+  /* منع التكبير التلقائي عند التركيز (iOS) — كل الحقول 16px+ (مغطاة أعلاه) وتمرير ناعم */
+  main#main-scroll-container { -webkit-overflow-scrolling: touch; }
+
+  /* جداول كثيرة الأعمدة داخل غلاف تمرير: عرض أدنى للحفاظ على قراءة الأعمدة */
+  .table-shell + .overflow-x-auto table,
+  .overflow-x-auto > table { min-width: max-content; }
+
   /* ──────────────────────────────────────────────────────────────────────
      20) PRINT — Ensure mobile styles don't affect print
      ────────────────────────────────────────────────────────────────────── */

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fra
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, Circle, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 // ⏰ وحدة الزمن الموحّدة — العرض 12 ساعة فقط، الآلة 24 ساعة (راجع timeutils.js)
@@ -58,7 +58,14 @@ import {
   shouldSuppressDuplicate,
   rememberEventKey,
   initialsFrom,
+  EQ_INTEL_EXTRA_TOASTS,
+  unlockEarthquakeSound,
+  playEarthquakeAlarm,
 } from './liveToast';
+import { showWorking, hideWorking, resetWorking, withWorking, installWorkingAuto, setWorkingSuppressed, WORKING_EVENTS } from './workingToast';
+
+// ⛑️ ضمانة 100%: أي أكشن في أي صفحة (نقرة ⇒ طلب شبكة) يشعل حبة العمل تلقائياً
+installWorkingAuto();
 
 // 🗓️ اليوم اللي المهمة تظهر فيه بعد الإنهاء = closed_at من السيرفر (وقت الإغلاق الفعلي)
 // مع fallback للبيانات القديمة على completion_date، وحماية لو أقدم من الإنشاء.
@@ -222,6 +229,7 @@ const MemoWeatherForecastView = memo(WeatherForecastView);
 const MemoHandoverView = memo(HandoverView);
 const MemoGlobalDisastersView = memo(GlobalDisastersView);
 const MemoEarthquakesView = memo(EarthquakesView);
+const MemoEqIntelView = memo(EqIntelView);
 const MemoAINewsMonitorView = memo(AINewsMonitorView);
 const MemoHumanResourcesView = memo(HumanResourcesView);
 const MemoWeatherIntelView = memo(WeatherIntelView);
@@ -1316,7 +1324,7 @@ const safeExternalHref = (url) => {
   return /^[a-z][a-z0-9+.\-]*:/i.test(raw) ? '' : raw;
 };
 
-const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: التفاف النص معطل دائماً */) => {
+const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: التفاف النص معطل دائماً */) => {
   const ExcelJS = await import('exceljs');
   const wb = new ExcelJS.Workbook();
   wb.created = new Date();
@@ -1383,6 +1391,17 @@ const exportWorkbook = async (sheets, fileName, _wrapText /* مُهمل: الت�
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+};
+
+// ⏳ مؤشر العمل العام لكل تصديرات الإكسيل في النظام (استثناء: المضغوط له مؤشره الخاص)
+const exportWorkbook = (sheets, fileName, wrapText) =>
+  withWorking('جاري تجهيز ملف الإكسيل…', () => _exportWorkbookImpl(sheets, fileName, wrapText));
+
+// 🔢 عرض قوة الزلزال برقم واحد عشري كحد أقصى — لا عوامات طويلة (1.25315323129139)
+const fmtMag = (m) => {
+  const v = Number(m);
+  if (m == null || m === '' || !Number.isFinite(v)) return '؟';
+  return (Math.round(v * 10) / 10).toLocaleString('en', { maximumFractionDigits: 1 });
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -1696,10 +1715,10 @@ useEffect(() => {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toasts.length]);
-  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, audit: false, ai_news: false, handover: false, weather: false, gov_contacts: false });
+  const [newUpdates, setNewUpdates] = useState({ missions: false, local_news: false, global_disasters: false, earthquakes: false, eq_intel: false, audit: false, ai_news: false, handover: false, weather: false, gov_contacts: false });
   // 🔄 عدّاد بيزيد كل مرة يوصل تحديث جديد لنوع بيانات معين، بنستخدمه عشان
   // الشاشة اللي فاتحة فعلاً (زي سجل المهام) تعمل Refetch لوحدها من غير ما المستخدم يعمل Refresh يدوي.
-  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, ai_news: 0, audit: 0, handover: 0, weather: 0, gov_contacts: 0 });
+  const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, eq_intel: 0, ai_news: 0, audit: 0, handover: 0, weather: 0, gov_contacts: 0 });
 
   const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, isYouth, weatherEligible } = getRoleFlags(userData);
 
@@ -1735,6 +1754,18 @@ useEffect(() => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // 🔊 فتح قناة الصوت عند أول تفاعل مستخدم (سياسة المتصفحات): بعد أول نقرة/ضغطة
+  //    يصبح الإنذار الصوتي للزلازل جاهزاً لحظة وقوع الحدث دون حجب.
+  useEffect(() => {
+    const unlock = () => unlockEarthquakeSound();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
   }, []);
 
   useEffect(() => {
@@ -1862,6 +1893,7 @@ useEffect(() => {
         local_news: prev.local_news + (e.event_type === 'local_news' ? 1 : 0),
         global_disasters: prev.global_disasters + (e.event_type === 'global_disaster' ? 1 : 0),
         earthquakes: prev.earthquakes + (e.event_type === 'earthquake' ? 1 : 0),
+        eq_intel: prev.eq_intel + (e.event_type === 'eq_intel' ? 1 : 0),
         ai_news: prev.ai_news + (e.event_type === 'ai_news' ? 1 : 0),
         handover: prev.handover + (e.event_type === 'handover' ? 1 : 0),
         weather: prev.weather + (e.event_type === 'weather' ? 1 : 0),
@@ -1907,6 +1939,54 @@ if (e.event_type === 'system_refresh') {
         return;
       }
 
+      // 🚨 استخبارات الزلازل: الباك إند يبث فقط ما يستحق الإشعار (≥4 ريختر أو قريب من مصر
+      //    أو خطورة ≥25) — والصوت حصراً لما فوق 4 ريختر (sound_alert من السيرفر).
+      //    ثم return فوراً: لا يمر بمسار التوست العام فلا يتكرر الإشعار أبداً.
+      if (e.event_type === 'eq_intel') {
+        const eqMeta = (e.details && typeof e.details === 'object' && !Array.isArray(e.details)) ? e.details.earthquake : null;
+        if (eqMeta?.sound_alert) playEarthquakeAlarm();
+        setToasts(prev => {
+          const wid = `eqw-${e.event_id}`;
+          if (prev.some(t => t.id === wid)) return prev;
+          return [...prev, {
+            id: wid,
+            eventId: e.event_id,
+            user: 'نظام الرصد الزلزالي',
+            action: String(e.action || 'زلزال جديد'),
+            details: eqMeta
+              ? [`${eqMeta.magnitude != null ? eqMeta.magnitude : '؟'} ريختر`, eqMeta.place || ''].filter(Boolean).join(' — ')
+              : (typeof e.details === 'string' ? e.details : ''),
+            detailUrl: eqMeta?.detail_url || null,
+            isAi: false,
+            event_type: e.event_type,
+            mission_id: null,
+            entity_id: e.entity_id ?? null,
+            created_at: e.created_at,
+          }];
+        });
+        // 🔔 الجرس + النقطة الحمراء: يدخلان من هنا (قبل الـ return) —
+        //    والنقر على الإشعار ينقلك للصفحة وينزلك للرصد نفسه وينومّضه (focusTarget)
+        setNewUpdates(prev => ({ ...prev, eq_intel: true }));
+        const eqNoticeId = `n-${eventKey}`;
+        setNotifications(prev => {
+          if (prev.some(n => n.id === eqNoticeId)) return prev;
+          return [{
+            id: eqNoticeId,
+            eventId: e.event_id,
+            event_type: e.event_type,
+            action: e.action,
+            actor_name: 'نظام الرصد الزلزالي',
+            details: typeof e.details === 'object' ? (e.details?.earthquake ? `${e.details.earthquake.magnitude ?? '؟'} ريختر — ${e.details.earthquake.place || ''}` : JSON.stringify(e.details)) : String(e.details || ''),
+            mission_id: null,
+            entity_id: e.entity_id ?? null,
+            created_at: e.created_at,
+            read: false,
+          }, ...prev].slice(0, 40);
+        });
+        setUnreadCount(prev => prev + 1);
+        return; // ✋ إشعار واحد فقط لكل زلزال
+      }
+
       const isAi = e.event_type === 'ai_news';
       const isMine = Number(userData?.user_id) > 0 && e.actor_user_id === Number(userData?.user_id);
 
@@ -1918,6 +1998,7 @@ if (e.event_type === 'system_refresh') {
         local_news: prev.local_news + (e.event_type === 'local_news' ? 1 : 0),
         global_disasters: prev.global_disasters + (e.event_type === 'global_disaster' ? 1 : 0),
         earthquakes: prev.earthquakes + (e.event_type === 'earthquake' ? 1 : 0),
+        eq_intel: prev.eq_intel + (e.event_type === 'eq_intel' ? 1 : 0),
         ai_news: prev.ai_news + (isAi ? 1 : 0),
         audit: prev.audit + 1,
         handover: prev.handover + (e.event_type === 'handover' ? 1 : 0),
@@ -1932,6 +2013,7 @@ if (e.event_type === 'system_refresh') {
         local_news: prev.local_news || e.event_type === 'local_news',
         global_disasters: prev.global_disasters || e.event_type === 'global_disaster',
         earthquakes: prev.earthquakes || e.event_type === 'earthquake',
+        eq_intel: prev.eq_intel || e.event_type === 'eq_intel',
         ai_news: prev.ai_news || isAi,
         audit: true,
         handover: prev.handover || e.event_type === 'handover',
@@ -2007,7 +2089,21 @@ if (e.event_type === 'system_refresh') {
         } else {
           const events = Array.isArray(data.events) ? data.events : [];
           events.forEach(notifyRealtime);
-          if (events.length > 0) lastEventIdRef.current = events[events.length - 1].event_id;
+          if (events.length > 0) {
+            let maxId = events[events.length - 1].event_id;
+            // 🛡️ حارس جذري ضد تكرار/سقوط الأحداث عند فيضان الحد الأقصى:
+            //    لو وصلنا LIMIT الأحداث (موجة ضغط مثلاً) فقد تكون هناك أحداث أبعد
+            //    لم تُرجع بعد — نُبقي after_id قبل آخر حدث مُعالج فعلاً فيجلبها الطلب التالي.
+            //    أما لو كان latest_id أبعد من نافذة LIMIT ⇒ أحداث سقطت من الجلسة (قفزة كبيرة)
+            //    نعيد التهيئة من watermark الجديد لتجنب معالجة كم قديم مكرر.
+            if (events.length >= 100 && data.latest_id > maxId) {
+              lastEventIdRef.current = maxId; // استمر بالجلب التدريجي
+            } else if (typeof data.latest_id === 'number') {
+              lastEventIdRef.current = data.latest_id;
+            } else {
+              lastEventIdRef.current = maxId;
+            }
+          }
         }
         pollBackoffRef.current = 4000;
         if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
@@ -2152,7 +2248,7 @@ if (e.event_type === 'system_refresh') {
   //    - tab/type/id = الوجهة وصفّها، nonce = عداد يضمن إعادة الاشتعال لنفس الصف مرتين
   //    - id يقبل null (إشعار بلا entity_id) → تُفتح الصفحة فقط دون أي تتبع (سقوط آمن).
   const [focusTarget, setFocusTarget] = useState(null);
-  const EVENT_TAB_MAP = { mission: 'missions', local_news: 'local_news', global_disaster: 'global_disasters', earthquake: 'earthquakes', ai_news: 'ai_news', handover: 'handover', weather: 'weather', audit: 'audit', gov_contact: 'gov_contacts' };
+  const EVENT_TAB_MAP = { mission: 'missions', local_news: 'local_news', global_disaster: 'global_disasters', earthquake: 'earthquakes', eq_intel: 'eq_intel', ai_news: 'ai_news', handover: 'handover', weather: 'weather', audit: 'audit', gov_contact: 'gov_contacts' };
 
   // فتح الإشعار (توست أو جرس): تنقّل للصفحة، واطلب تتبّع الصف لو لنا معرف.
   const handleNotificationOpen = (n) => {
@@ -2221,6 +2317,9 @@ if (e.event_type === 'system_refresh') {
       case 'weather_intel': return weatherEligible
         ? <WeatherIntelErrorBoundary><MemoWeatherIntelView branches={branchesList} isOwner={isOwner} userRole={userRole} lang={language} setCustomAlert={setCustomAlert} /></WeatherIntelErrorBoundary>
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
+      case 'eq_intel': return (!isYouth && weatherEligible)
+        ? <MemoEqIntelView lang={language} liveUpdateVersion={liveUpdateVersion.eq_intel} isOwner={isOwner} focusTarget={focusTarget} />
+        : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
       case 'gov_contacts': return (!isYouth && weatherEligible)
         ? <MemoGovernorateContactsView branches={branchesList} isOwner={isOwner} isJoker={isJoker} isSupervisor={isSupervisor} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.gov_contacts} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
@@ -2255,6 +2354,7 @@ if (e.event_type === 'system_refresh') {
         ...(!isYouth ? [{ id: 'ai_news', icon: <AIIcon />, ar: 'رصد الذكاء الاصطناعي', en: 'AI Monitoring', update: newUpdates.ai_news }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
+        ...(!isYouth && weatherEligible ? [{ id: 'eq_intel', icon: <EarthquakeIcon />, ar: 'استخبارات الزلازل', en: 'Earthquake Intelligence' }] : []),
         { id: 'missions', icon: <AlertIcon />, ar: 'سجل المهام الميدانية', en: 'Field Missions', update: newUpdates.missions },
         ...((isOwner || isSupervisor || isJoker || isYouth) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
         ...(!isYouth ? [{ id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news }] : []),
@@ -2293,9 +2393,18 @@ if (e.event_type === 'system_refresh') {
   // المقفل (closing) يرسم أثناء أنيميشن الخروج؛ غير المقفل يظهر أول MAX_VISIBLE_TOASTS فقط.
   const closingToasts = toasts.filter(t => t.closing);
   const liveToasts = toasts.filter(t => !t.closing);
-  const visibleToasts = liveToasts.slice(0, MAX_VISIBLE_TOASTS);
+  // 🌍 نافذة الزلازل الاستخباراتية: تُعرض فوراً فوق الطابور المركزي (أول من يعرف)
+  const eqWindowToasts = liveToasts.filter(t => t.event_type === 'eq_intel').slice(0, EQ_INTEL_EXTRA_TOASTS);
+  const regularLiveToasts = liveToasts.filter(t => t.event_type !== 'eq_intel');
+  const visibleToasts = [...eqWindowToasts, ...regularLiveToasts.slice(0, MAX_VISIBLE_TOASTS)];
   const visibleLiveCount = visibleToasts.length;
-  const queuedCount = liveToasts.length - visibleLiveCount;
+  const queuedCount = regularLiveToasts.length - (visibleToasts.length - eqWindowToasts.length);
+
+  // 🔇 صفحة مؤشرات المركز الرئيسية: الحبة مكتومة هنا تماماً (تحديثها الدوري لا يستحق إزعاجاً)
+  useEffect(() => {
+    setWorkingSuppressed(activeTab === 'home');
+    return () => setWorkingSuppressed(false);
+  }, [activeTab]);
 
   const palQuery = paletteQuery.trim().toLowerCase();
   const palResults = [];
@@ -2326,8 +2435,6 @@ if (e.event_type === 'system_refresh') {
     <div ref={dashboardRootRef} data-theme={theme} className="app-shell min-h-screen bg-[var(--bg)] text-white font-sans selection:bg-[var(--accent)] selection:text-white flex overflow-hidden transition-colors duration-300" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
-      {/* 💡 الثيم الآن عبر data-theme + نظام CSS تصميمي واحد في index.css (light=طبقات بيضاء/ألوان حيادية، dark=أسطح عميقة) */}
-
       
       {/* ◈ منطقة الوعي — نَوْل الإشارة: الإشارة بتدخل بذرة وبتتنسج للخارج */}
       <div id="sig-top-rail" className="sig-loom">
@@ -2343,10 +2450,10 @@ if (e.event_type === 'system_refresh') {
           const vis = notifyVisual(toastItem.event_type);
           const age = formatEventAge(toastItem.created_at, language);
           const shape = vis.tone === 'warn' ? 'sig-shape-plate'
-            : vis.tone === 'accent' ? 'sig-shape-frame'
+            : (vis.tone === 'accent' || vis.tone === 'quake') ? 'sig-shape-frame'
             : vis.tone === 'ok' ? 'sig-shape-seal'
             : '';
-          const force = vis.tone === 'accent' ? 3 : (vis.tone === 'warn' || vis.tone === 'ai') ? 2 : vis.tone === 'ok' ? 0 : 1;
+          const force = (vis.tone === 'accent' || vis.tone === 'quake') ? 3 : (vis.tone === 'warn' || vis.tone === 'ai') ? 2 : vis.tone === 'ok' ? 0 : 1;
           const headline = toastItem.isAi
             ? (language === 'en' ? 'New AI signal detected' : 'الذكاء الاصطناعي وجد خبراً جديداً')
             : toastItem.action;
@@ -2477,13 +2584,18 @@ if (e.event_type === 'system_refresh') {
           )}
 
           <nav key={isSidebarOpen ? 'nav-open' : 'nav-closed'} className="nav-shell p-3 space-y-1.5 mt-2">
-            {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
+            {/* 🤖 القسم التلقائي: الوحدات اللي بتشتغل وترصد لوحدها (مؤشرات + رصد آلي + طقس + زلازل) */}
+            {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التلقائية</p>}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<PowerBiIcon />} label="لوحة المؤشرات الرئيسية" isActive={activeTab === 'powerbi'} onClick={() => handleNavigation('powerbi')} isOpen={isSidebarOpen} />}
+            {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
+            {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
+            {!isYouth && weatherEligible && <NavItem icon={<EarthquakeIcon />} label={language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence'} isActive={activeTab === 'eq_intel'} onClick={() => handleNavigation('eq_intel')} isOpen={isSidebarOpen} hasUpdate={newUpdates.eq_intel} />}
+
+            {/* 🛠️ القسم التشغيلي: كل الباقي بنفس ترتيبها — إدخال يدوي ومتابعة تشغيلية */}
+            {isSidebarOpen && <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
             {/* 🔒 حساب إدارة الشباب (yveoc): 3 صفحات فقط — مؤشرات المركز اليومية، المهام، القوة البشرية */}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات المركز اليومية" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
-            {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
-            {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
             {!isYouth && <NavItem icon={<PhoneIcon />} label={language === 'ar' ? 'سجل التواصل مع المحافظات' : 'Governorate Contacts'} isActive={activeTab === 'gov_contacts'} onClick={() => handleNavigation('gov_contacts')} isOpen={isSidebarOpen} hasUpdate={newUpdates.gov_contacts} />}
 
             <NavItem icon={<AlertIcon />} label="سجل المهام الميدانية" isActive={activeTab === 'missions'} onClick={() => handleNavigation('missions')} isOpen={isSidebarOpen} hasUpdate={newUpdates.missions} />
@@ -2548,6 +2660,7 @@ if (e.event_type === 'system_refresh') {
                   {activeTab === 'ai_news' && 'رصد الذكاء الاصطناعي'}
                   {activeTab === 'weather' && (language === 'ar' ? 'توقعات الطقس' : 'Weather Forecasts')}
                   {activeTab === 'weather_intel' && (language === 'ar' ? 'استخبارات الطقس اليومية' : 'Daily Weather Intelligence')}
+                  {activeTab === 'eq_intel' && (language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence')}
                   {activeTab === 'missions' && 'إدارة المهام الميدانية'}
                   {activeTab === 'human_resources' && 'سجل القوة البشرية'}
                   {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
@@ -2632,7 +2745,7 @@ if (e.event_type === 'system_refresh') {
       </svg>
       {unreadCount > 0 && <span className="bell-ring" />}
       {unreadCount > 0 && (
-        <span key={unreadCount} className="absolute -top-1.5 -start-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-scale-pop">
+        <span key={unreadCount} className="absolute -top-1.5 -start-1.5 z-10 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-scale-pop">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
@@ -2676,11 +2789,11 @@ if (e.event_type === 'system_refresh') {
               key={n.id}
               type="button"
               onClick={() => handleNotificationOpen(n)}
-              className={`notif-item notif-item-in w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)] ' + (notifications.find(x => !x.read)?.id === n.id ? 'update-glow-notif' : '')}`}
+              className={`notif-item notif-item-in w-full text-start px-4 py-3 flex items-start gap-3 border-b border-[var(--border)] transition-colors ${n.read ? 'opacity-60 hover:opacity-100' : n.event_type === 'eq_intel' ? 'bg-yellow-400/[0.07] hover:bg-yellow-400/[0.12] border-s-4 border-s-yellow-400' : 'bg-[var(--accent-softer)] hover:bg-[var(--accent-soft)] ' + (notifications.find(x => !x.read)?.id === n.id ? 'update-glow-notif' : '')}`}
               style={{ animationDelay: `${Math.min(i, 8) * 42}ms` }}
             >
-              <span className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${n.event_type === 'mission' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>
-                {n.event_type === 'mission' ? <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> : <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>}
+              <span className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${n.event_type === 'eq_intel' ? 'bg-yellow-400/15 text-yellow-400 border-yellow-400/40' : n.event_type === 'mission' ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]' : 'bg-[var(--surface-week)] text-[var(--muted)] border-[var(--border)]'}`}>
+                {n.event_type === 'eq_intel' ? <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg> : n.event_type === 'mission' ? <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> : <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>}
               </span>
               <span className="flex-1 min-w-0">
                 <span className="flex items-center justify-between gap-2">
@@ -2861,6 +2974,9 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
 
   // 🌤️ الطقس اليومي المجمّع (قراءة فقط) — يتحدّث تلقائياً مع أي حفظ/إنهاء توقعات
   const [dailyWeather, setDailyWeather] = useState([]);
+  // 🌍 استخبارات الزلازل: الرصود + حالة المحرك (لكروت مؤشرات المركز)
+  const [eqIntelList, setEqIntelList] = useState([]);
+  const [eqIntelStatus, setEqIntelStatus] = useState(null);
     // 🤖 أرقام بوت الأخبار (رصد الذكاء الاصطناعي) — نفس داتا صفحة الرصد
   const [aiNewsList, setAiNewsList] = useState([]);
 
@@ -2908,6 +3024,8 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
       get('/api/earthquakes/egypt',  (d) => setEgyptEqs(Array.isArray(d) ? d : [])),
       get('/api/ai-news',            (d) => setAiNewsList(Array.isArray(d) ? d : [])),
       get(`/api/weather/daily?date=${filterDate || getLocalDate()}`, (d) => setDailyWeather(Array.isArray(d) ? d : [])),
+      get('/api/earthquake-intel?limit=500', (d) => setEqIntelList(Array.isArray(d) ? d : [])),
+      get('/api/earthquake-intel/status', (d) => setEqIntelStatus(d)),
     ]);
   }, [filterDate]);
 
@@ -2916,6 +3034,7 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
     loadHomeIndicators,
     liveUpdateVersion.missions, liveUpdateVersion.local_news, liveUpdateVersion.global_disasters,
     liveUpdateVersion.earthquakes, liveUpdateVersion.ai_news, liveUpdateVersion.weather,
+    liveUpdateVersion.eq_intel,
   ]);
 
   // ④ شبكة أمان: تحديث صامت دوري — يضمن إن الأرقام تتحدّث حتى لو ضاع أي حدث لحظي
@@ -2984,6 +3103,20 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
   const dailyAiNews = filterDate
     ? aiNewsList.filter(n => n.incident_date === filterDate)
     : aiNewsList;
+
+  // 🌍 كروت استخبارات الزلازل — مقيّدة بتاريخ الفلتر (نفس منطق باقي الكروت)
+  const dailyEqIntel = filterDate
+    ? eqIntelList.filter(q => String(q.occurred_at || '').startsWith(filterDate))
+    : eqIntelList;
+  const eqIntelCount = dailyEqIntel.length;
+  const eqIntelMaxRisk = dailyEqIntel.reduce((mx, q) => Math.max(mx, Number(q.risk_score) || 0), 0);
+  // 🥇 أقوى حدث اليوم/الفلتر (بمكانه ودولته) — من نفس داتا صفحة الاستخبارات
+  const eqIntelStrongest = dailyEqIntel.reduce((best, q) => (
+    (Number(q.magnitude) || 0) > (Number(best?.magnitude) || 0) ? q : best
+  ), null);
+  const eqIntelEngineOk = eqIntelStatus?.engine?.last_status === 'ok';
+  // 🆕 آخر زلزال مرصود (حسب الفلتر) — لكارت المؤشرات الرابع
+  const eqIntelLatest = dailyEqIntel[0] || null;
   const aiTotalNews = dailyAiNews.length;
   const aiTotalCountries = new Set(dailyAiNews.map(n => n.governorate).filter(Boolean)).size;
 
@@ -3133,43 +3266,89 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         </div>
       </div>
 
-            {/* 📊 إحصائيات بوت الأخبار — تحت الكارد مباشرة (نفس ألوان وصفحة الرصد) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+            {/* 📊 إحصائيات بوت الأخبار — تحت الكارد مباشرة (نفس ستايل كروت الزلازل حرفياً) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger">
 
         {/* إجمالي الأخبار المرصودة */}
-        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
-          <div className="flex items-center justify-between">
-            <div>
-
-              <p className="text-[var(--muted-2)] text-lg font-bold">إجمالي الأخبار المرصودة</p>
-              <p className="text-5xl font-black text-white mt-2">{aiTotalNews.toLocaleString()}</p>
-            </div>
-            <div className="bg-purple-500/10 text-purple-400 p-3.5 rounded-xl">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">إجمالي الأخبار المرصودة</h3>
+            <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12m2-8h2v8a2 2 0 01-2 2h-2M7 8h6M7 12h6M7 16h4" />
               </svg>
             </div>
           </div>
-        </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={aiTotalNews} /></p>
+            <span className="kpi-sub kpi-sub-lg">رصد تكتيكي متراكم</span>
+          </div>
+        </TiltCard>
 
         {/* الدول المرصودة */}
-        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[var(--muted-2)] text-lg font-bold">الدول المرصودة</p>
-              <p className="text-5xl font-black text-white mt-2">{aiTotalCountries.toLocaleString()}</p>
-            </div>
-            <div className="bg-purple-500/10 text-purple-400 p-3.5 rounded-xl">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول المرصودة</h3>
+            <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
                 <path strokeLinecap="round" strokeWidth={1.8} d="M3 12h18M12 3c2.2 2.5 3.4 5.5 3.4 9s-1.2 6.5-3.4 9c-2.2-2.5-3.4-5.5-3.4-9S9.8 5.5 12 3z" />
               </svg>
             </div>
           </div>
-        </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={aiTotalCountries} /></p>
+            <span className="kpi-sub kpi-sub-lg">تغطية جغرافية للرصد</span>
+          </div>
+        </TiltCard>
 
       </div>
 
+
+      {/* 🌍 استخبارات الزلازل — 4 كروت فوقية بين بوت الأخبار والطقس اليومي (نفس داتا الصفحة) */}
+      <div className="animate-fade-in-up">
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <span className="text-[var(--accent)]"><EarthquakeIcon /></span>
+            استخبارات الزلازل
+          </h3>
+          <span className="text-xs font-bold text-[var(--muted)] bg-[var(--surface-3)] border border-[var(--border)] rounded-full px-2.5 py-0.5">يتم رصد الزلازل بشكل آلي دون تدخل يدوي</span>
+          <span className={`ops-chip ${eqIntelEngineOk ? 'text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]' : 'text-yellow-400 border-yellow-400/20 bg-yellow-400/10'}`}>
+            <span className={eqIntelEngineOk ? 'live-dot' : 'w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse'} />
+            {eqIntelEngineOk ? 'المراقبة تعمل — كل دقيقة' : 'بانتظار أول دورة رصد'}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger">
+          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+            <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">الزلازل المرصودة</h3><div className="p-2 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><EarthquakeIcon/></div></div>
+            <div className="flex flex-wrap items-center gap-2 relative z-10">
+              <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={eqIntelCount} /></p>
+              <span className="kpi-sub kpi-sub-lg">{filterDate ? 'حسب الفلتر' : 'كل العالم (حتى الآن)'}</span>
+            </div>
+          </TiltCard>
+          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+            <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">أعلى درجة خطورة</h3><div className="p-2 rounded-xl text-orange-400 bg-orange-400/10 border border-orange-400/20 shrink-0"><AlertIcon/></div></div>
+            <div className="flex flex-wrap items-center gap-2 relative z-10">
+              <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={eqIntelMaxRisk} /></p>
+              <span className="kpi-sub kpi-sub-lg">من 100 (38% شدة · 30% قرب · 32% تاريخ)</span>
+            </div>
+          </TiltCard>
+          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+            <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">أقوى حدث اليوم</h3><div className="p-2 rounded-xl text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 shrink-0"><GlobalWorldIcon/></div></div>
+            <div className="flex flex-wrap items-center gap-2 relative z-10">
+              <p className="kpi-value text-5xl text-[var(--ink)]">{eqIntelStrongest?.magnitude != null ? fmtMag(eqIntelStrongest.magnitude) : '—'}</p>
+              <span className="kpi-sub kpi-sub-lg truncate max-w-full" title={eqIntelStrongest?.place || ''}>{eqIntelStrongest?.place || 'لا رصود بعد'}</span>
+            </div>
+          </TiltCard>
+          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+            <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">آخر زلزال مرصود</h3><div className="p-2 rounded-xl shrink-0 text-cyan-400 bg-cyan-400/10 border border-cyan-400/20"><EarthquakeIcon/></div></div>
+            <div className="flex flex-wrap items-center gap-2 relative z-10">
+              <p className="kpi-value text-5xl text-[var(--ink)]">{eqIntelLatest?.magnitude != null ? fmtMag(eqIntelLatest.magnitude) : '—'}</p>
+              <span className="kpi-sub kpi-sub-lg truncate max-w-full" title={eqIntelLatest?.place || ''}>{eqIntelLatest?.place || 'لا رصود بعد'}</span>
+            </div>
+          </TiltCard>
+        </div>
+      </div>
 
       {/* 🌤️ بطاقة الطقس اليومي — فوق الخريطة مباشرة، تتحدّث لحظياً مع أي حفظ توقعات */}
       {weatherEligible && (<div className="card-surface p-4 md:p-6 animate-fade-in-up">
@@ -8022,6 +8201,7 @@ const [nd, setNd] = useState({
 
     submitLockRef.current = true;
     setSavingNews(true);
+    showWorking(nd.news_id ? 'جاري تحديث الخبر…' : 'جاري حفظ الخبر…');
     try {
       const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) {
@@ -8060,6 +8240,7 @@ const [nd, setNd] = useState({
     finally {
       setSavingNews(false);
       submitLockRef.current = false;
+      hideWorking();
     }
   };
   const handleClearAllLocalNews = () => {
@@ -9495,9 +9676,11 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
     if (!dates.length) return;
     lockRef.current = true;
     setSaving(true);
+    showWorking('جاري مزامنة تعديلات التواصل مع المحافظات…');
     let failed = 0;
     let saved = 0;
-    for (const date of dates) {
+    try {
+      for (const date of dates) {
       const group = store[date] || {};
       const bodyRows = Object.entries(group)
         .map(([bid, vals]) => {
@@ -9526,9 +9709,13 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
           saved += ids.length;
         } else { failed += 1; }
       } catch { failed += 1; }
+      }
+    } finally {
+      // 🛡️ مهما حدث: القفل يُفتح والحبة تختفي — لا تعليق للأبد
+      lockRef.current = false;
+      setSaving(false);
+      hideWorking();
     }
-    lockRef.current = false;
-    setSaving(false);
     if (failed) {
       setCustomAlert(T('⚠️ فيه تعديلات لسه ما اتأكدش حفظها — محفوظة وستُعاد تلقائياً أول ما الاتصال يرجع.', '⚠️ Some edits are not confirmed yet — kept and retried automatically.'));
     }
@@ -10170,6 +10357,7 @@ const onMatrixChange = (s, d, val) => {
     if (submitLockRef.current) return;
     if (!form.handover_date) { setNotice(T('يرجى اختيار التاريخ', 'Please choose a date')); return; }
     setSaving(true);
+    showWorking('جاري حفظ سجل التسليم…');
     submitLockRef.current = true;
     const token = sessionStorage.getItem('access_token') || '';
     const { issuesList, followUpsList, ...formRest } = form;
@@ -10187,6 +10375,7 @@ const onMatrixChange = (s, d, val) => {
     };
     const url = editingId ? `${BASE}/api/handovers/${editingId}` : `${BASE}/api/handovers`;
     const method = editingId ? 'PUT' : 'POST';
+    let saveFailed = false;   // 🛡️ أي مسار فشل يمنع رسالة النجاح وإغلاق المودال
     try {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.status === 409) {
@@ -10203,17 +10392,15 @@ const onMatrixChange = (s, d, val) => {
             handoverDraft.clear(); // 💾 وصل للسيرفر فعلاً ⇒ المسودة انتهت مهمتها
             fetchHandovers();
             setCustomAlert("يوجد سجل لهذا التاريخ — تم تحديثه بمدخلاتك بنجاح!");
-            setSaving(false);
-            submitLockRef.current = false;
-            return;
-          }
-        }
-        setNotice(T('فشل الحفظ — يوجد سجل لهذا التاريخ', 'Save failed — a record exists for this date'));
-        setSaving(false);
-        submitLockRef.current = false;
-        return;
+          } else { saveFailed = true; }
+        } else { saveFailed = true; }
+      } else if (!res.ok) { saveFailed = true; }
+      if (saveFailed) {
+        setNotice(res.status === 409
+          ? T('فشل الحفظ — يوجد سجل لهذا التاريخ', 'Save failed — a record exists for this date')
+          : T('فشل الحفظ', 'Save failed'));
+        return;   // 🛡️ finally يتكفل بإخفاء الحبة وفتح القفل دائماً
       }
-      if (!res.ok) { setNotice(T('فشل الحفظ', 'Save failed')); setSaving(false); submitLockRef.current = false; return; }
       setModalOpen(false);
       setNotice(null);
       handoverDraft.clear(); // 💾 الحفظ نجح ⇒ المسودة المحلية مالهاش لزوم
@@ -10222,9 +10409,12 @@ const onMatrixChange = (s, d, val) => {
     } catch (error) {
       console.error('Save error:', error);
       setNotice(T('فشل الاتصال بالخادم', 'Connection failed'));
+    } finally {
+      // 🛡️ الضمانة المطلقة: مهما حدث (نجاح/فشل/استثناء/return) — الحبة تختفي والقفل يُفتح
+      setSaving(false);
+      hideWorking();
+      submitLockRef.current = false;
     }
-    setSaving(false);
-    submitLockRef.current = false;
   };
 
   const handleClearAllHandovers = () => {
@@ -11055,6 +11245,766 @@ const [clearAllCode, setClearAllCode] = useState('');
   );
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🌍 استخبارات الزلازل — صفحة المراقبة اللحظية + تحليل الخطورة التاريخي
+//    (نفس روح استخبارات الطقس: كروت مؤشرات + تحليل + سجل حي بدون فشل)
+// ═══════════════════════════════════════════════════════════════════════════
+function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focusTarget = null }) {
+  const isAr = lang === 'ar';
+  const T = (ar, en) => (isAr ? ar : en);
+
+  // 🎯 تتبّع إشعار الزلازل: ننزل للرصد المستهدف ونومّضه (نفس نمط المهام) —
+  //    الروابط الخارجية تُفتح مباشرة (detail_url)، وهذا المسار للرصود الداخلية.
+  const [focusedRowId, setFocusedRowId] = useState(null);
+  useEffect(() => {
+    if (!focusTarget || focusTarget.tab !== 'eq_intel' || focusTarget.id == null) return;
+    const id = focusTarget.id;
+    const start = Date.now();
+    const iv = window.setInterval(() => {
+      const el = document.getElementById(`focus-row-${id}`);
+      if (el) {
+        window.requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        setFocusedRowId(id);
+        window.setTimeout(() => setFocusedRowId(null), 2600);
+        window.clearInterval(iv);
+      } else if (Date.now() - start > 8000) {
+        window.clearInterval(iv);
+      }
+    }, 100);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTarget?.nonce]);
+
+  // 🗓️ فلتر التاريخ — افتراضياً «من اليوم» (يتغير تلقائياً كل يوم) + «إلى» فارغ = حتى الآن
+  const [filterFrom, setFilterFrom] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [filterTo, setFilterTo] = useState('');
+
+  const [quakes, setQuakes] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
+  // 🔕 تنبيه الإجراءات (مسح الكل/التصدير) — إخفاء تلقائي بعد 7 ثوانٍ
+  const [customAlert, setCustomAlert] = useState(null);
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
+  const [forecast, setForecast] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [analysisLoading, setAnalysisLoading] = useState(true);
+  const [forecastLoading, setForecastLoading] = useState(true);
+  const [statusInfo, setStatusInfo] = useState(null);
+  const [catalog, setCatalog] = useState(null);
+  const [backfilling, setBackfilling] = useState(false);
+  const [riskView, setRiskView] = useState('map'); // 'map' | 'table'
+  const [exporting, setExporting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // {eq_intel_id, magnitude, place}
+  const isFirstLiveRef = useRef(true);
+
+  const fetchQuakes = async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    const token = getStoredAccessToken();
+    const qs = new URLSearchParams();
+    if (filterFrom) qs.set('from_date', filterFrom);
+    if (filterTo) qs.set('to_date', filterTo);
+    if (!filterTo) qs.set('limit', '200');
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel?${qs.toString()}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json().catch(() => []);
+        if (Array.isArray(data)) setQuakes(data);
+      }
+      const resStatus = await fetch(`${BASE}/api/earthquake-intel/status`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (resStatus.ok) {
+        const st = await resStatus.json().catch(() => null);
+        if (st && typeof st === 'object') setStatusInfo(st);
+      }
+    } catch {
+      // الشبكة تعود — التحديث اللحظي/الدوري سيعيد المحاولة
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchAnalysis = async (silent = false) => {
+    if (!silent) setAnalysisLoading(true);
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel/analysis?days=7&limit=60`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && typeof data === 'object') setAnalysis(data);
+      }
+    } catch {
+      // آخر تحليل يبقى ظاهراً حتى تعود الشبكة
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const fetchForecast = async (silent = false) => {
+    if (!silent) setForecastLoading(true);
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel/forecast`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && typeof data === 'object') setForecast(data);
+      }
+    } catch {
+      // آخر توقعات تبقى ظاهرة حتى تعود الشبكة
+    } finally {
+      setForecastLoading(false);
+    }
+  };
+
+  const fetchCatalogStats = async () => {
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel/catalog/stats`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && typeof data === 'object') setCatalog(data);
+      }
+    } catch { /* الشبكة تعود لاحقاً */ }
+  };
+
+  const runCatalogBackfill = async () => {
+    setBackfilling(true);
+    showWorking('جاري تحديث الكتالوج التاريخي (30 سنة عالمي)…');
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel/catalog/backfill`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        if (data.catalog) setCatalog(data.catalog);
+      } else {
+        console.warn('catalog backfill failed:', data.detail);
+      }
+    } catch {
+      // فشل شبكة — يمكن إعادة المحاولة
+    } finally {
+      setBackfilling(false);
+      hideWorking();
+    }
+  };
+
+  useEffect(() => {
+    fetchQuakes();
+    fetchAnalysis();
+    fetchForecast();
+    fetchCatalogStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 🗓️ أي تغيير في الفلتر يعيد السحب فوراً (الكارت الأول + السجل + التصدير يتبعون الفلتر)
+  useEffect(() => {
+    fetchQuakes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterFrom, filterTo]);
+
+  // 📤 تصدير السجل الشامل — ملف Excel حقيقي يُبنى على السيرفر (المالك فقط):
+  // «من» فقط ⇒ يومها كامل · «من + إلى» ⇒ الفترة كاملة · بلا فلتر ⇒ الكل (حتى داتا الباك فيل التاريخية)
+  const exportLog = async () => {
+    if (exporting) return;
+    setExporting(true);
+    showWorking('جاري بناء السجل الشامل من السيرفر…');
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel/export-log`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'full', from_date: filterFrom || null, to_date: filterTo || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setCustomAlert(data?.detail || 'فشل التصدير');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `سجل_الزلازل_الشامل${filterFrom ? `_${filterFrom}` : ''}${filterTo ? `_${filterTo}` : ''}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setCustomAlert('تم تصدير السجل الشامل (Excel) بكل التفاصيل بنجاح');
+    } catch {
+      setCustomAlert('تعذر الاتصال بالسيرفر أثناء التصدير');
+    } finally {
+      setExporting(false);
+      hideWorking();
+    }
+  };
+
+  // 🔄 تحديث لحظي: أي زلزال جديد (eq_intel) يعيد السحب صامتاً
+  //    + التوقعات وإحصاءات الكتالوج («العالم كله» يكبر لحظياً مع كل رصد جديد)
+  useEffect(() => {
+    if (isFirstLiveRef.current) { isFirstLiveRef.current = false; return; }
+    fetchQuakes(true);
+    fetchForecast(true);
+    fetchCatalogStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveUpdateVersion]);
+
+  // 🛡️ شبكة أمان: تحديث صامت دوري كل 60 ثانية
+  useEffect(() => {
+    const t = setInterval(() => { fetchQuakes(true); }, 60000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 📊 التحليل التاريخي يُحدَّث دورياً كل 5 دقائق (مقارنة 30 سنة مكلفة نسبياً)
+  useEffect(() => {
+    const t = setInterval(() => { fetchAnalysis(true); }, 300000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fmtTime12 = (dt) => {
+    if (!dt) return '-';
+    const d = new Date(String(dt).replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) return String(dt);
+    let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${ampm}`;
+  };
+
+  const magColor = (mag) => {
+    const m = Number(mag) || 0;
+    if (m >= 6) return 'text-red-400';
+    if (m > 5) return 'text-red-500';   // 🔴 فوق 5 ريختر أحمر صريح (طلب المستخدم)
+    if (m >= 4) return 'text-yellow-400';
+    return 'text-[var(--muted)]';
+  };
+
+  const riskBg = (level) => ({
+    'حرجة': 'bg-red-500/20 text-red-400 border-red-500/30',
+    'عالية': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    'متوسطة': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    'منخفضة': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  }[level] || 'bg-white/5 text-[var(--muted)] border-white/10');
+
+  const summary = analysis?.summary || {};
+  const analysisEvents = Array.isArray(analysis?.events) ? analysis.events : [];
+  const catalogReady = Boolean(catalog?.ready);
+  const catalogTotal = catalog?.total ?? 0;
+  // 🗓️ نهاية التغطية تُعرض دائماً بتاريخ اليوم — تتغير تلقائياً كل يوم (الكتالوج يكبر لحظياً من الرصد)
+  const [, setCatalogClockTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setCatalogClockTick((x) => x + 1), 60000); return () => clearInterval(t); }, []);
+  const catalogLiveTo = (() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`; })();
+  // 🗑️ مسح الكل — المالك فقط (نفس نمط باقي الصفحات: مودال + رمز تأكيد 301014)
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [clearAllCode, setClearAllCode] = useState('');
+  const confirmClearAllEqIntel = async () => {
+    showWorking('جاري مسح سجل الزلازل بالكامل…');
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel/clear-all`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation_code: clearAllCode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setCustomAlert(data?.detail || 'فشل مسح السجل'); return; }
+      setCustomAlert(data?.message || 'تم مسح السجل بنجاح');
+      setShowClearAllConfirm(false);
+      setClearAllCode('');
+      fetchQuakes(true);
+      fetchAnalysis(true);
+    } catch {
+      setCustomAlert('تعذر الاتصال بالسيرفر');
+    } finally {
+      hideWorking();
+    }
+  };
+
+  // 🗑️ حذف زلزال منفرد (المالك فقط) — مع تقييد العملية في سجل النظام
+  const confirmDeleteQuake = async () => {
+    if (!deleteTarget || exporting) return;
+    setExporting(true);
+    showWorking('جاري حذف الرصد…');
+    const token = getStoredAccessToken();
+    try {
+      const res = await fetch(`${BASE}/api/earthquake-intel/${deleteTarget.eq_intel_id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setCustomAlert(data?.detail || 'فشل حذف الرصد'); return; }
+      setCustomAlert(data?.message || 'تم حذف الرصد بنجاح');
+      setDeleteTarget(null);
+      fetchQuakes(true);
+      fetchAnalysis(true);
+    } catch {
+      setCustomAlert('تعذر الاتصال بالسيرفر');
+    } finally {
+      setExporting(false);
+      hideWorking();
+    }
+  };
+
+  // 🌍 «العالم كله»: كارت التغطية الشاملة — يُعرض منفصلاً وفوق كل المناطق
+  const worldZone = Array.isArray(forecast?.zones) ? forecast.zones.find((z) => z.id === 'world') : null;
+
+  // 🥇 مشتقات الكروت: أقوى حدث + آخر رصد (حسب الفلتر)
+  const eqStrongest = quakes.reduce((best, q) => ((Number(q.magnitude) || 0) > (Number(best?.magnitude) || 0) ? q : best), null);
+  const eqLatest = quakes[0] || null;
+
+  // 🗓️ أيام الأسبوع المستهدف في التوقعات (7 أيام من لحظة التوليد) — تاريخ + اسم اليوم تحت كل بار
+  const weekDays = (() => {
+    const base = forecast?.generated_at ? new Date(String(forecast.generated_at).replace(' ', 'T')) : new Date();
+    const start = isNaN(base.getTime()) ? new Date() : base;
+    const pad = (n) => String(n).padStart(2, '0');
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      return {
+        day: d.toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', { weekday: 'long' }),
+        short: `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`,
+      };
+    });
+  })();
+
+  return (
+    <div className="space-y-6">
+      {/* 🗓️ شريط الفلتر (بنمط المشروع) + 📤 التصدير — الافتراضي «عرض الكل» والفلترة اختيارية */}
+      <div className="card-surface p-4 rounded-3xl border border-[var(--border)] flex flex-wrap items-center gap-x-4 gap-y-2">
+        {filterFrom || filterTo ? (
+          <button onClick={() => { setFilterFrom(''); setFilterTo(''); }} className="chip chip-active !py-1">
+            ✕ {T('إلغاء الفلتر (عرض الكل)', 'Clear filter (show all)')}
+          </button>
+        ) : (
+          <span className="text-xs font-bold text-emerald-400 inline-flex items-center gap-1.5">
+            <span className="status-dot status-dot-live" /> {T('عرض الكل — أحدث الرصود أولاً', 'Showing all — latest first')}
+          </span>
+        )}
+        <span className="text-xs font-bold text-[var(--muted)]">🗓️ {T('من', 'From')}</span>
+        <SegDateField value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="field !py-1.5 !px-3 w-auto" />
+        <span className="text-xs font-bold text-[var(--muted)]">{T('إلى', 'To')}</span>
+        <SegDateField value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="field !py-1.5 !px-3 w-auto" />
+        <div className="ms-auto flex items-center gap-2">
+          {isOwner && (
+            <button onClick={exportLog} disabled={exporting} className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(199,0,0,0.3)]" data-tip="Excel من السيرفر بكل التفاصيل: «من» فقط = يوم كامل · «من+إلى» = الفترة · بلا فلتر = الكل (حتى داتا الباك فيل)">
+              <DownloadIcon /> {exporting ? '…' : T('تصدير السجل الشامل', 'Export full log')}
+            </button>
+          )}
+          {isOwner && (
+            <button onClick={() => setShowClearAllConfirm(true)} className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(199,0,0,0.3)]" data-tip="مسح سجل الزلازل بالكامل (المالك فقط + رمز التأكيد)">
+              <TrashIcon /> <span className="hidden md:inline">{T('مسح الكل', 'Delete all')}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* كروت المؤشرات — نفس شكل كروت المؤشرات اليومية (بمقاس خط هذه الصفحة) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card border-l-4 border-l-[var(--accent)]">
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <h3 className="text-[var(--muted)] text-xs font-semibold">{T('الزلازل المرصودة (حسب الفلتر)', 'Quakes (per filter)')}</h3>
+            <div className="p-1.5 rounded-xl text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] shrink-0"><EarthquakeIcon /></div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-3xl text-[var(--ink)]">{quakes.length}</p>
+            <span className="kpi-sub">{filterFrom || filterTo ? T('حسب الفلتر', 'Filtered') : T('عرض الكل', 'Showing all')}</span>
+          </div>
+        </TiltCard>
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <h3 className="text-[var(--muted)] text-xs font-semibold">{T('أعلى خطورة (0-100)', 'Max risk')}</h3>
+            <div className="p-1.5 rounded-xl text-orange-400 bg-orange-400/10 border border-orange-400/20 shrink-0"><AlertIcon /></div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-3xl text-orange-500">{summary.max_risk ?? 0}</p>
+            <span className="kpi-sub">38% شدة · 30% قرب · 32% تاريخ</span>
+          </div>
+        </TiltCard>
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <h3 className="text-[var(--muted)] text-xs font-semibold">{T('أقوى حدث اليوم', 'Strongest today')}</h3>
+            <div className="p-1.5 rounded-xl text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 shrink-0"><GlobalWorldIcon /></div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-3xl text-yellow-500">{eqStrongest?.magnitude != null ? fmtMag(eqStrongest.magnitude) : '—'}</p>
+            <span className="kpi-sub truncate max-w-full" title={eqStrongest?.place || ''}>{eqStrongest?.place || T('لا رصود بعد', 'None yet')}</span>
+          </div>
+        </TiltCard>
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
+          <div className="flex items-center justify-between mb-2 relative z-10">
+            <h3 className="text-[var(--muted)] text-xs font-semibold">{T('آخر زلزال مرصود', 'Latest detected quake')}</h3>
+            <div className="p-1.5 rounded-xl text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 shrink-0"><EarthquakeIcon /></div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-3xl text-cyan-400">{eqLatest?.magnitude != null ? fmtMag(eqLatest.magnitude) : '—'}</p>
+            <span className="kpi-sub truncate max-w-full" title={eqLatest?.place || ''}>{eqLatest?.place || T('لا رصد بعد', 'None yet')}</span>
+          </div>
+        </TiltCard>
+      </div>
+
+      {/* شريط صحة المراقبة + حالة الكتالوج التاريخي — مدمجان في مستطيل واحد */}
+      <div className="card-surface p-4 rounded-3xl border border-[var(--border)] flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+        <span className="inline-flex items-center gap-1.5 font-bold text-[var(--ink)]">
+          <span className={`status-dot ${statusInfo?.engine?.last_status === 'ok' ? 'status-dot-live' : 'animate-pulse'}`}></span>
+          {T('المراقبة الدورية (كل دقيقة)', 'Minute polling')}
+        </span>
+        <span className="text-[var(--muted)]">{T('آخر دورة ناجحة:', 'Last run:')} <b className="text-[var(--ink)]">{statusInfo?.engine?.last_run_at ? fmtTime12(statusInfo.engine.last_run_at) : '-'}</b></span>
+        {Number(statusInfo?.feed?.freshness_seconds) > 600 && (
+          <span className="text-yellow-400 font-bold">⚠ {T('التغذية متأخرة', 'Feed lagging')}</span>
+        )}
+        <span className="hidden md:block w-px h-4 bg-[var(--border)]" />
+        <span className="inline-flex items-center gap-1.5 font-bold text-[var(--ink)]">📚 {T('الكتالوج التاريخي (30 سنة — العالم كله)', 'Historical catalog (30y — worldwide)')}</span>
+        <span className="text-[var(--muted)]">{T('السجلات:', 'Records:')} <b className="text-[var(--ink)]">{catalogTotal.toLocaleString('en')}</b></span>
+        <span className="text-[var(--muted)]">{T('التغطية:', 'Coverage:')} <b className="text-[var(--ink)]">{catalog?.coverage_from ? `${(catalog.coverage_from || '').slice(0, 10)} → ${catalogLiveTo}` : '-'}</b></span>
+        <span className={catalogReady ? 'text-emerald-400 font-bold' : 'text-yellow-400 font-bold'}>
+          {catalogReady ? `✓ ${T('جاهز للمقارنة', 'Ready')}` : `⚠ ${T('فارغ — التحقق يتم من USGS مباشرة', 'Empty — comparing via USGS live')}`}
+          {catalogReady ? ` (${T('محلي', 'local')})` : ''}
+        </span>
+        {isOwner && (
+          <button onClick={runCatalogBackfill} disabled={backfilling}
+            className="ms-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold shadow-[0_0_15px_rgba(199,0,0,0.3)]"
+            data-tip="تمديد/تحديث الكتالوج — سنة بسنة (آمن للتكرار)">
+            {backfilling ? T('⏳ جارٍ تحديث 30 سنة (عالمي)…', '⏳ Backfilling 30y worldwide…') : T('🔄 تحديث الكتالوج التاريخي (عالمي)', '🔄 Refresh worldwide catalog')}
+          </button>
+        )}
+      </div>
+
+      {/* 🌍 العالم كله — 30 سنة من الكتالوج المحلي: إحصاء عميق حقيقي (بلا نسب بواسون المشبعة) */}
+      {worldZone && (
+        <div className="card-surface p-5 rounded-3xl border border-[var(--border)] bg-gradient-to-l from-red-950/40 via-[var(--surface-2)] to-[var(--surface-2)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              🌍 {T('العالم كله — 30 سنة من النشاط الزلزالي', 'Worldwide — 30 years of seismic activity')}
+              <span className="text-[11px] font-bold text-[var(--muted)]">({T('كتالوج USGS المحلي — M≥4', 'Local USGS catalog — M≥4')})</span>
+            </h3>
+            {forecast?.generated_at && <span className="text-[11px] text-[var(--muted)]">🕐 {fmtTime12(forecast.generated_at)}</span>}
+          </div>
+          {worldZone.model_ok === false ? (
+            <p className="text-sm text-[var(--muted)] py-4 text-center">⏳ {T('الكتالوج المحلي لم يُعبَّأ بعد — شغّل باك فيل الكتالوج أو انتظر التحديث.', 'Local catalog not filled yet — run the backfill script or wait for refresh.')}</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
+                  <p className="text-[10px] text-[var(--muted)]">{T('إجمالي الزلازل (30 سنة)', 'Total quakes (30y)')}</p>
+                  <p className="text-2xl font-extrabold text-orange-400">{Number(worldZone.total40 ?? worldZone.hist40 ?? 0).toLocaleString('en')}</p>
+                  <p className="text-[10px] text-[var(--muted)]">≈ {worldZone.daily_avg ?? '—'} {T('زلزال/يوم', 'per day')}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
+                  <p className="text-[10px] text-[var(--muted)]">{T('أقوى زلزال مسجل', 'Strongest recorded')}</p>
+                  <p className="text-2xl font-extrabold text-red-400">{worldZone.strongest_mag ?? '—'}</p>
+                  <p className="text-[10px] text-[var(--muted)] truncate" title={worldZone.strongest_place || ''}>{worldZone.strongest_place || '—'}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
+                  <p className="text-[10px] text-[var(--muted)]">{T('متوسط أقوى زلزال سنوياً', 'Avg yearly max')}</p>
+                  <p className="text-2xl font-extrabold text-yellow-400">{worldZone.yearly_max_avg ?? '—'}</p>
+                  <p className="text-[10px] text-[var(--muted)]">{T('ريختر — المرجع السنوي المتوقع', 'Richter — expected annual benchmark')}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
+                  <p className="text-[10px] text-[var(--muted)]">{T('زلزالات M≥5 / M≥6 / M≥7', 'M≥5 / M≥6 / M≥7 quakes')}</p>
+                  <p className="text-lg font-extrabold text-[var(--ink)]">{Number(worldZone.m5 || 0).toLocaleString('en')} / {Number(worldZone.m6 || 0).toLocaleString('en')} / {Number(worldZone.m7 || 0).toLocaleString('en')}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
+                  <p className="text-[10px] text-[var(--muted)]">{T('النشاط الحالي (28 يوم)', 'Current activity (28d)')}</p>
+                  <p className={`text-2xl font-extrabold ${(worldZone.activity_ratio || 1) > 1.5 ? 'text-red-400' : (worldZone.activity_ratio || 1) < 0.7 ? 'text-emerald-400' : 'text-orange-400'}`}>{worldZone.activity_ratio != null ? `×${worldZone.activity_ratio}` : '—'}</p>
+                  <p className="text-[10px] text-[var(--muted)]">{T('مقارنة بالمعدل التاريخي (×1 = طبيعي)', 'vs historical rate (×1 = normal)')}</p>
+                </div>
+                <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
+                  <p className="text-[10px] text-[var(--muted)]">{T('متوقع باقي الشهر (M≥4)', 'Expected rest of month (M≥4)')}</p>
+                  <p className="text-2xl font-extrabold text-[var(--ink)]">{worldZone.expected28 ?? '—'}</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-[var(--muted)] mt-3">
+                📊 {T('أرقام حقيقية من كتالوج 30 سنة المعبَّأ محلياً — تُستخدم كمرجع مقارنة لكل الزلازل الجديدة.', 'Real figures from the filled 30-year local catalog — used as the benchmark for every new detection.')}
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 🔮 توقعات الأسبوع القادم (نموذج إحصائي) */}
+      <div className="card-surface p-5 rounded-3xl border border-[var(--border)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            🔮 {T('توقعات الأسبوع القادم لكل منطقة', 'Next-week forecast per zone')}
+          </h3>
+          {forecast?.generated_at && <span className="text-[11px] text-[var(--muted)]">🕐 {fmtTime12(forecast.generated_at)}</span>}
+        </div>
+        <p className="text-[11px] text-[var(--muted)] mb-4">
+          {T('ماذا يعني هذا الكارت؟ نحسب لكل منطقة معدلها التاريخي (آخر 10 سنوات) ومعدلها الحديث (آخر 28 يوماً)، ثم ندمجهما (45% تاريخي + 55% حديث) في توزيع بواسون يعطي العدد المتوقع وفرص حدوث زلزال خلال الأسبوع القادم. «اتجاه النشاط» يوضح هل المنطقة أهدأ أو أنشط من معدلها التاريخي — وهو سؤال مختلف تماماً عن «خطورة الأسبوع» التي تعتمد على فرص الأسبوع القادم.',
+            'What does this card mean? For each zone we blend its 10-year historical rate with the last 28 days (45% / 55%) into a Poisson model giving expected counts and chances for the coming week. "Activity trend" shows whether the zone is quieter or busier than its own historical rate — a different question from "week risk", which is about chances for the coming week.',
+          )}
+        </p>
+        <p className="text-[11px] font-bold text-orange-300 mb-3 inline-flex items-center gap-1.5">
+          🗓️ {T('أسبوع التوقعات:', 'Forecast week:')}
+          <b className="text-[var(--ink)]">{weekDays[0]?.day} {weekDays[0]?.short}</b>
+          <span>←</span>
+          <b className="text-[var(--ink)]">{weekDays[6]?.day} {weekDays[6]?.short}</b>
+          <span className="text-[var(--muted)] font-normal">— {T('يتغيّر تلقائياً كل أسبوع', 'auto-advances weekly')}</span>
+        </p>
+        {forecastLoading && !forecast ? (
+          <p className="text-[var(--muted)] text-sm py-6 text-center">⏳ {T('جارٍ بناء التوقعات…', 'Building forecast…')}</p>
+        ) : !forecast?.zones?.length ? (
+          <p className="text-[var(--muted)] text-sm py-6 text-center">{T('التوقعات غير متاحة حالياً.', 'Forecast unavailable.')}</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {[...forecast.zones].filter((z) => z.id !== 'world').sort((a, b) => {
+              const rank = { 'مرتفع': 3, 'متوسط': 2, 'منخفض': 1 };
+              return (rank[b.week_risk] || 0) - (rank[a.week_risk] || 0) || (b.prob_m45_pct || 0) - (a.prob_m45_pct || 0);
+            }).map((z) => (
+              <div key={z.id} className="p-4 rounded-2xl bg-[var(--surface-2)] border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-sm text-white">{isAr ? z.ar : z.en}</span>
+                  <span className={`text-[11px] px-2 py-0.5 rounded border font-bold ${riskBg(z.week_risk)}`}>{z.week_risk}</span>
+                </div>
+                {z.model_ok === false ? (
+                  <p className="text-xs text-[var(--muted)] py-3 text-center">{T('تعذر جلب إحصاءات المنطقة', 'Zone stats unavailable')}</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 gap-2 text-center mb-2">
+                      <div className="rounded-xl bg-white/[0.04] py-2">
+                        <p className="text-[10px] text-[var(--muted)]">{T('متوقع M≥4', 'Exp M≥4')}</p>
+                        <p className={`text-lg font-extrabold ${magColor(z.expected_week_m4)}`}>{z.expected_week_m4}</p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.04] py-2">
+                        <p className="text-[10px] text-[var(--muted)]">{T('احتمال M≥4.5', 'P M≥4.5')}</p>
+                        <p className="text-lg font-extrabold text-orange-400">{z.prob_m45_pct}%</p>
+                      </div>
+                      <div className="rounded-xl bg-white/[0.04] py-2">
+                        <p className="text-[10px] text-[var(--muted)]">{T('احتمال M≥5', 'P M≥5')}</p>
+                        <p className="text-lg font-extrabold text-red-400">{z.prob_m5_pct}%</p>
+                      </div>
+                    </div>
+                    {/* منحنى 7 أيام تراكمي: احتمال M≥4 حتى نهاية كل يوم — وتحت كل بار تاريخه واسم يومه */}
+                    <div className="flex items-end gap-1 h-10 mb-1">
+                      {(z.daily_cumulative_m4 || []).map((p, i) => (
+                        <div key={i} className="flex-1 rounded-t bg-gradient-to-t from-red-600/40 to-red-400/80" style={{ height: `${Math.max(6, p)}%` }} title={`${weekDays[i]?.day || ''} ${weekDays[i]?.short || ''} — ${p}%`} />
+                      ))}
+                    </div>
+                    <div className="flex gap-1 mb-2">
+                      {weekDays.map((d, i) => (
+                        <div key={i} className="flex-1 text-center leading-tight">
+                          <p className="text-[9px] text-[var(--muted)] truncate">{d.day}</p>
+                          <p className="text-[9px] font-bold text-[var(--ink)]">{d.short}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
+                      <span title={T('اتجاه النشاط = هل المنطقة الآن أنشط أو أهدأ من معدلها التاريخي (10 سنوات)؟ سؤال مختلف عن خطورة الأسبوع.', 'Activity trend = is the zone busier or quieter than its own 10-year rate? A different question from week risk.')}
+                        className="inline-flex items-center gap-1 cursor-help">
+                        {T('اتجاه النشاط (مقارنة بالتاريخ):', 'Activity trend (vs history):')}
+                        <b className={z.activity_trend === 'مرتفع' ? 'text-red-400' : z.activity_trend === 'طبيعي' ? 'text-emerald-400' : 'text-[var(--ink)]'}>{z.activity_trend}</b>
+                        {z.anomaly_ratio != null && <span>×{z.anomaly_ratio}</span>}
+                      </span>
+                      {z.swarm_flag && <span className="text-yellow-400 font-bold">⚡ {T('نشاط عنقودي', 'Swarm')}</span>}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 📊 تحليل الخطورة التاريخي (30 سنة — عالمي) */}
+      <div className="card-surface p-5 rounded-3xl border border-[var(--border)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <EarthquakeIcon /> {T('تحليل «أعلى خطورة» مقارنةً بـ 30 سنة (عالمي)', '"Highest risk" analysis vs 30 years (worldwide)')}
+          </h3>
+          <div className="flex items-center gap-1 bg-[var(--surface-2)] rounded-xl p-1">
+            <button onClick={() => setRiskView('map')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${riskView === 'map' ? 'bg-red-600 text-white' : 'text-[var(--muted)]'}`}>{T('خريطة', 'Map')}</button>
+            <button onClick={() => setRiskView('table')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${riskView === 'table' ? 'bg-red-600 text-white' : 'text-[var(--muted)]'}`}>{T('جدول', 'Table')}</button>
+          </div>
+        </div>
+        <p className="text-[11px] text-[var(--muted)] mb-1">
+          {T('ما هو «أعلى خطورة»؟ درجة من 0 إلى 100 تُحسب لكل زلزال مرصود في آخر 7 أيام من ثلاثة عناصر: 38% شدة الزلزال نفسه (القوة) + 30% قربه من وسط القارة (كلما اقترب زاد تأثيره المحتمل على مصر) + 32% «المفارقة التاريخية»: كم كان أقوى زلزال في نفس الموقع ونفس الفترة من السنة (±15 يوماً) خلال آخر 30 سنة داخل 500 كم؟ زلزال 5.5 في منطقة عادةً ما يتجاوز 3 يُعدّ شاذاً وترتفع درجته، والزلزال نفسه في منطقة شهدت 7.5 يُعدّ عادياً وتنخفض درجته.',
+            'What is "highest risk"? A 0-100 score per quake in the last 7 days: 38% magnitude + 30% proximity to Egypt\'s continental center (closer = higher potential impact) + 32% historical anomaly: how strong was the strongest same-season (±15 days) quake within 500 km in 30 years? A 5.5 where 3 is usual scores high; the same quake where 7.5 happened scores low.',
+          )}
+        </p>
+        <p className="text-[11px] mb-3 text-[var(--muted)]">
+          {T('على الخريطة: الدوائر = الزلازل المرصودة (حجمها ولونها = درجة الخطورة)، والحلقات الرمادية المنقطة = الحد التاريخي لكل موقع (أقوى حدث في 30 سنة لنفس الفترة) لتقيس الفرق بعينك.',
+            'On the map: circles = detected quakes (size & color = risk score), dashed grey rings = the historical benchmark per location (30-year same-season max) so you can see the gap.',
+          )}
+        </p>
+        {analysisLoading && !analysis ? (
+          <p className="text-[var(--muted)] text-sm py-6 text-center">⏳ {T('جارٍ بناء التحليل التاريخي…', 'Building historical analysis…')}</p>
+        ) : analysisEvents.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm py-6 text-center">{T('لا توجد أحداث لتحليلها بعد.', 'No events to analyze yet.')}</p>
+        ) : (
+          <>
+            {/* إحصاء سريع: كم حدثاً في كل مستوى خطورة (آخر 7 أيام — عالمي) */}
+            <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+              <span className={`px-2.5 py-1 rounded-full border font-bold ${riskBg('حرجة')}`}>{T('حرجة', 'Critical')}: {summary.critical ?? 0}</span>
+              <span className={`px-2.5 py-1 rounded-full border font-bold ${riskBg('عالية')}`}>{T('عالية', 'High')}: {summary.high ?? 0}</span>
+              <span className={`px-2.5 py-1 rounded-full border font-bold ${riskBg('متوسطة')}`}>{T('متوسطة', 'Moderate')}: {summary.moderate ?? 0}</span>
+              <span className={`px-2.5 py-1 rounded-full border font-bold ${riskBg('منخفضة')}`}>{T('منخفضة', 'Low')}: {summary.low ?? 0}</span>
+              <span className="text-[var(--muted)] ms-auto">🕒 {T('يُحدَّث تلقائياً كل 5 دقائق', 'Auto-refreshes every 5 min')}{analysis?.generated_at ? ` · ${T('آخر تحديث', 'Updated')} ${fmtTime12(analysis.generated_at)}` : ''}</span>
+            </div>
+            {riskView === 'map' ? (
+              <div className="h-[420px] rounded-2xl overflow-hidden border border-white/5 relative">
+                <MapContainer center={[22, 30]} zoom={2} minZoom={2} worldCopyJump scrollWheelZoom style={{ height: '100%', width: '100%' }}>
+                  <ThemedTileLayer />
+                  {/* 🗺️ حلقة المعيار التاريخي: نطاق أقوى حدث في 30 سنة لنفس الفترة حول كل موقع */}
+                  {analysisEvents.filter(e => e.latitude != null && e.longitude != null && e.hist_max_mag != null).map((ev) => (
+                    <Circle key={`eqh-${ev.eq_intel_id}`} center={[ev.latitude, ev.longitude]}
+                      radius={60000 + (Number(ev.hist_max_mag) || 0) * 30000}
+                      pathOptions={{ color: '#94a3b8', dashArray: '4 6', weight: 1.5, fill: false }} />
+                  ))}
+                  {/* 🎯 مركز الزلزال بالظبط: نقطة فوق كل دائرة خطورة */}
+                  {analysisEvents.filter(e => e.latitude != null && e.longitude != null).map((ev) => (
+                    <CircleMarker key={`eqc-${ev.eq_intel_id}`} center={[ev.latitude, ev.longitude]}
+                      radius={4} pathOptions={{ color: '#ffffff', weight: 1.5, fillColor: '#ffffff', fillOpacity: 0.95 }}>
+                      <Tooltip direction="top" offset={[0, -4]} opacity={1}>
+                        <span dir="rtl" style={{ fontFamily: 'inherit', fontSize: 12 }}>
+                          🎯 {T('مركز الزلزال', 'Epicenter')}<br />
+                          <b>{ev.place || 'غير محدد'}</b><br />
+                          {ev.magnitude != null ? `${fmtMag(ev.magnitude)} ريختر` : ''} · {ev.occurred_at || ''}<br />
+                          {T('الخطورة', 'Risk')}: <b>{ev.risk_score}/100 — {ev.risk_level}</b>
+                        </span>
+                      </Tooltip>
+                    </CircleMarker>
+                  ))}
+                  {analysisEvents.filter(e => e.latitude != null && e.longitude != null).map((ev) => {
+                    const lv = ev.risk_level;
+                    const color = lv === 'حرجة' ? '#ef4444' : lv === 'عالية' ? '#f97316' : lv === 'متوسطة' ? '#eab308' : '#10b981';
+                    const radius = 80000 + (Number(ev.risk_score) || 0) * 4000;
+                    return (
+                      <Circle key={`eqa-${ev.eq_intel_id}`} center={[ev.latitude, ev.longitude]} radius={radius}
+                        pathOptions={{ color, fillColor: color, fillOpacity: 0.25, weight: 2 }}>
+                        <Popup>
+                          <div dir="rtl" style={{ fontFamily: 'inherit' }}>
+                            <b>{ev.place || 'غير محدد'}</b><br />
+                            {ev.magnitude != null ? `${fmtMag(ev.magnitude)} ريختر` : ''} · {ev.occurred_at || ''}<br />
+                            الخطورة: <b>{ev.risk_score}/100 — {ev.risk_level}</b><br />
+                            {(Number(ev.risk_score) || 0) >= 50 && <b style={{ color: '#ef4444' }}>👀 يستحق المراقبة الآن<br /></b>}
+                            أقوى تاريخي لنفس الفترة: {ev.hist_max_mag != null ? `${ev.hist_max_mag} ريختر` : '؟'}<br />
+                            عدد أحداث الفترة: {ev.hist_window_count ?? '؟'}
+                            {ev.detail_url && <><br /><a href={ev.detail_url} target="_blank" rel="noreferrer" style={{ color: '#ef4444', fontWeight: 700 }}>تفاصيل الزلزال على USGS ↗</a></>}
+                          </div>
+                        </Popup>
+                      </Circle>
+                    );
+                  })}
+                </MapContainer>
+                {/* 🔖 مفتاح الخريطة */}
+                <div className="absolute top-2 end-2 z-[600] bg-black/75 rounded-xl px-3 py-2 text-[10px] leading-relaxed pointer-events-none border border-white/10">
+                  <div className="font-bold mb-1 text-white">{T('مفتاح الخريطة', 'Map legend')}</div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />{T('خطورة حرجة (75+)', 'Critical (75+)')}</div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#f97316' }} />{T('عالية (50+)', 'High (50+)')}</div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#eab308' }} />{T('متوسطة (25+)', 'Moderate (25+)')}</div>
+                  <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#10b981' }} />{T('منخفضة', 'Low')}</div>
+                  <div className="flex items-center gap-1.5 mt-1 text-[var(--muted)]"><span className="w-4 border-t-2 border-dashed" style={{ borderColor: '#94a3b8' }} />{T('الحلقة الرمادية = سقف 30 سنة للموقع', 'Grey ring = 30y site ceiling')}</div>
+                  <div className="text-[var(--muted)]">{T('حجم الدائرة يكبر مع درجة الخطورة', 'Circle size grows with risk')}</div>
+                </div>
+              </div>
+            ) : (
+          <div className="overflow-x-auto rounded-2xl border border-white/5">
+            <table className="w-full min-w-[880px] text-sm">
+              <thead className="bg-[var(--surface-2)] text-[11px] uppercase text-[var(--muted)]">
+                <tr>
+                  <th className="p-3 text-right">التاريخ والوقت</th>
+                  <th className="p-3 text-right">القوة</th>
+                  <th className="p-3 text-right">الموقع</th>
+                  <th className="p-3 text-right">أقوى تاريخي (±15 يوم / 500كم)</th>
+                  <th className="p-3 text-right">عدد أحداث الفترة</th>
+                  <th className="p-3 text-right">الخطورة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analysisEvents.map((ev) => (
+                  <tr key={`eqt-${ev.eq_intel_id}`} className="border-t border-white/5 hover:bg-white/[0.03]">
+                    <td className="p-3 whitespace-nowrap">{ev.occurred_at ? fmtTime12(ev.occurred_at) : '-'}</td>
+                    <td className={`p-3 font-bold ${magColor(ev.magnitude)}`}>{ev.magnitude != null ? fmtMag(ev.magnitude) : '-'}</td>
+                    <td className="p-3">{ev.place || '-'}</td>
+                    <td className="p-3">{ev.hist_max_mag != null ? `${ev.hist_max_mag} ريختر` : '؟'}</td>
+                    <td className="p-3">{ev.hist_window_count ?? '؟'}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded text-xs font-bold border ${riskBg(ev.risk_level)}`}>{ev.risk_score}/100 — {ev.risk_level}</span>
+                      {(Number(ev.risk_score) || 0) >= 50 && (
+                        <p className="text-[11px] font-bold text-red-400 mt-1">👀 {T('يستحق المراقبة الآن — تابع التحديثات', 'Worth watching now — follow updates')}</p>
+                      )}
+                      {ev.detail_url && (
+                        <a href={ev.detail_url} target="_blank" rel="noreferrer" className="ms-2 text-xs font-bold text-red-400 hover:text-red-300 underline underline-offset-2">
+                          {T('تفاصيل ↗', 'Details ↗')}
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+            )}
+          </>
+        )}
+      </div>
+      {/* 📡 السجل اللحظي الحي */}
+      <div className="card-surface p-5 rounded-3xl border border-[var(--border)]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <span className="status-dot status-dot-live"></span> {T('السجل اللحظي — آخر الرصود (عالمي)', 'Live log — latest detections (worldwide)')}
+          </h3>
+          {isLoading && <span className="text-xs text-[var(--muted)]">⏳ {T('جارٍ التحميل…', 'Loading…')}</span>}
+        </div>
+        {quakes.length === 0 ? (
+          <p className="text-[var(--muted)] text-sm py-6 text-center">
+            {T('لا توجد رصود بعد — المحرك يجمع الزلازل كل دقيقة من USGS.', 'No detections yet — the engine polls USGS every minute.')}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {quakes.slice(0, 40).map((q) => (
+              <div key={q.eq_intel_id} id={`focus-row-${q.eq_intel_id}`}
+                className={`flex flex-wrap items-center gap-x-4 gap-y-1 p-3 rounded-2xl border transition-all ${focusedRowId === q.eq_intel_id ? 'border-[var(--accent)] bg-[var(--accent-softer)] ring-2 ring-[var(--accent)] animate-pulse' : 'bg-[var(--surface-2)] border-white/5'}`}>
+                <span className={`text-lg font-extrabold w-14 ${magColor(q.magnitude)}`}>{q.magnitude != null ? fmtMag(q.magnitude) : '؟'}</span>
+                <span className="text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--muted)]">{q.status || ''}</span>
+                <span dir="ltr" className="text-sm text-[var(--ink)] flex-1 min-w-40 text-right">{q.place || T('غير محدد', 'Unknown')}</span>
+                {q.distance_km != null && <span className="text-xs text-[var(--muted)]" title={T('المسافة عن وسط القارة (وسط مصر)', 'Distance from continental center (Egypt)')}>📍 {Math.round(q.distance_km).toLocaleString('en')} {T('كم', 'km')}</span>}
+                {q.sound_alert && <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold">🔔 {T('صوت', 'Sound')}</span>}
+                <span className="text-xs text-[var(--muted)] whitespace-nowrap">🕐 {fmtTime12(q.occurred_at)}</span>
+                {q.detail_url && (
+                  <a href={q.detail_url} target="_blank" rel="noreferrer" className="text-xs font-bold text-red-400 hover:text-red-300 underline underline-offset-2">
+                    {T('تفاصيل ↗', 'Details ↗')}
+                  </a>
+                )}
+                {isOwner && (
+                  <button onClick={() => setDeleteTarget({ eq_intel_id: q.eq_intel_id, magnitude: q.magnitude, place: q.place || 'غير محدد' })}
+                    className="icon-btn icon-btn-danger shrink-0"
+                    title="حذف هذا الرصد (المالك فقط)"
+                    data-tip="حذف هذا الرصد (المالك فقط) — يقيد في سجل النظام">
+                    <TrashIcon />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* — نافذة تأكيد مسح الكل (المالك فقط — نفس نمط باقي الصفحات) — */}
+      <DangerConfirmModal
+        show={showClearAllConfirm}
+        title="تأكيد الحذف"
+        message="سيتم مسح سجل استخبارات الزلازل بالكامل نهائياً (كل الرصود). هذا الإجراء لا يمكن التراجع عنه، وسيُقيد في سجل النظام."
+        confirmationCode={clearAllCode}
+        onConfirmationCodeChange={setClearAllCode}
+        showConfirmationInput={true}
+        onCancel={() => { setShowClearAllConfirm(false); setClearAllCode(''); }}
+        onConfirm={confirmClearAllEqIntel}
+      />
+
+      {/* — نافذة تأكيد حذف زلزال منفرد (المالك فقط) — */}
+      <DangerConfirmModal
+        show={!!deleteTarget}
+        title="تأكيد حذف الرصد"
+        message={deleteTarget ? `سيتم حذف رصد الزلزال بقوة ${deleteTarget.magnitude} ريختر — ${deleteTarget.place} نهائياً، وسيُقيد في سجل النظام.` : ''}
+        confirmationCode=""
+        onConfirmationCodeChange={() => {}}
+        showConfirmationInput={false}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDeleteQuake}
+      />
+
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
+    </div>
+  );
+}
 
 function EarthquakesView({ isOwner, isSupervisor, isJoker, lang = 'ar', focusTarget = null, liveUpdateVersion = 0 }) {
   const [activeEqTab, setActiveEqTab] = useState('all'); 
@@ -12435,73 +13385,81 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         </div>
       </div>
 
-      {/* 3. كروت الإحصاءات السريعة (KPIs) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-[var(--muted)]">{T('المواقع المغطاة', 'Monitored Locations')}</p>
-            <h4 className="text-2xl font-black text-[var(--ink)] mt-1">{kpiTotalLocations}</h4>
-            <p className="text-[10px] text-[var(--faint)] mt-0.5">{T('جميع المواقع النشطة', 'All active locations')}</p>
+      {/* 3. كروت الإحصاءات السريعة (KPIs) — نفس ستايل كروت الزلازل/المؤشرات اليومية حرفياً (TiltCard + توهج يتبع الماوس) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">{T('المواقع المغطاة', 'Monitored Locations')}</h3>
+            <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-300 border-2 border-blue-400/60 shadow-[0_0_18px_rgba(59,130,246,0.45),0_0_5px_rgba(59,130,246,0.55),inset_0_0_9px_rgba(59,130,246,0.18)] [text-shadow:0_0_10px_currentColor] flex items-center justify-center text-xl font-black shrink-0">📍</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-xl font-black">📍</div>
-        </div>
-        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-[var(--muted)]">{T('إشارات المخاطر المرصودة', 'Detected Hazard Alerts')}</p>
-            <h4 className={`text-2xl font-black mt-1 ${kpiHazardsCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{kpiHazardsCount}</h4>
-            <p className="text-[10px] text-[var(--faint)] mt-0.5">{kpiHazardsCount > 0 ? T('تتطلب متابعة تشغيلية', 'Requires monitoring') : T('لا توجد مخاطر استثنائية', 'No extreme hazards')}</p>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={kpiTotalLocations} /></p>
+            <span className="kpi-sub kpi-sub-lg">{T('جميع المواقع النشطة', 'All active locations')}</span>
           </div>
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black ${kpiHazardsCount > 0 ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>⚠️</div>
-        </div>
-        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-[var(--muted)]">{T('حالات الشذوذ الإحصائي', 'Statistical Anomalies')}</p>
-            <h4 className={`text-2xl font-black mt-1 ${kpiAnomaliesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{kpiAnomaliesCount}</h4>
-            <p className="text-[10px] text-[var(--faint)] mt-0.5">{T('انحراف عن النطاق المعتاد (P25-P75)', 'Deviation from P25-P75')}</p>
+        </TiltCard>
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">{T('إشارات المخاطر المرصودة', 'Detected Hazard Alerts')}</h3>
+            <div className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center text-xl font-black [text-shadow:0_0_10px_currentColor] shrink-0 ${kpiHazardsCount > 0 ? 'bg-red-500/15 text-red-300 border-red-400/60 shadow-[0_0_18px_rgba(248,113,113,0.45),0_0_5px_rgba(248,113,113,0.55),inset_0_0_9px_rgba(248,113,113,0.18)]' : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/60 shadow-[0_0_18px_rgba(52,211,153,0.45),0_0_5px_rgba(52,211,153,0.55),inset_0_0_9px_rgba(52,211,153,0.18)]'}`}>⚠️</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl font-black">📈</div>
-        </div>
-        <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-[var(--muted)]">
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className={`kpi-value text-5xl ${kpiHazardsCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}><CountUp value={kpiHazardsCount} /></p>
+            <span className="kpi-sub kpi-sub-lg">{kpiHazardsCount > 0 ? T('تتطلب متابعة تشغيلية', 'Requires monitoring') : T('لا توجد مخاطر استثنائية', 'No extreme hazards')}</span>
+          </div>
+        </TiltCard>
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">{T('حالات الشذوذ الإحصائي', 'Statistical Anomalies')}</h3>
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-300 border-2 border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.45),0_0_5px_rgba(251,191,36,0.55),inset_0_0_9px_rgba(251,191,36,0.18)] [text-shadow:0_0_10px_currentColor] flex items-center justify-center text-xl font-black shrink-0">📈</div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className={`kpi-value text-5xl ${kpiAnomaliesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}><CountUp value={kpiAnomaliesCount} /></p>
+            <span className="kpi-sub kpi-sub-lg">{T('انحراف عن النطاق المعتاد (P25-P75)', 'Deviation from P25-P75')}</span>
+          </div>
+        </TiltCard>
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate" title={kpiPeak?.label || ''}>
               {kpiPeak ? kpiPeak.label : (kpiIsHotSeason ? T('أعلى حرارة متوقعة', 'Highest Expected Temp') : T('أعلى نسبة أمطار متوقعة', 'Highest Rain Probability'))}
-            </p>
-            <h4 className={`text-2xl font-black mt-1 ${kpiIsHotSeason ? 'text-red-400' : 'text-cyan-400'}`}>
-              {kpiPeak ? `${kpiPeak.value}${kpiPeak.unit}` : '—'}
-            </h4>
-            <p className="text-[10px] text-[var(--faint)] mt-0.5 truncate" title={kpiPeak?.name || ''}>
-              {kpiPeak ? `📍 ${kpiPeak.name}` : T('لا توجد بيانات لهذا التاريخ', 'No data for this date')}
-            </p>
+            </h3>
+            <div className={`w-10 h-10 shrink-0 rounded-xl border-2 flex items-center justify-center text-xl [text-shadow:0_0_10px_currentColor] ${kpiIsHotSeason ? 'bg-red-500/15 text-red-300 border-red-400/60 shadow-[0_0_18px_rgba(248,113,113,0.45),0_0_5px_rgba(248,113,113,0.55),inset_0_0_9px_rgba(248,113,113,0.18)]' : 'bg-cyan-500/15 text-cyan-300 border-cyan-400/60 shadow-[0_0_18px_rgba(34,211,238,0.45),0_0_5px_rgba(34,211,238,0.55),inset_0_0_9px_rgba(34,211,238,0.18)]'}`}>{kpiIsHotSeason ? '🌡️' : '🌧️'}</div>
           </div>
-          <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-xl ${kpiIsHotSeason ? 'bg-red-500/10 text-red-400' : 'bg-cyan-500/10 text-cyan-400'}`}>{kpiIsHotSeason ? '🌡️' : '🌧️'}</div>
-        </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className={`kpi-value text-5xl ${kpiIsHotSeason ? 'text-red-400' : 'text-cyan-400'}`}>
+              {kpiPeak ? `${kpiPeak.value}${kpiPeak.unit}` : '—'}
+            </p>
+            <span className="kpi-sub kpi-sub-lg truncate max-w-full" title={kpiPeak?.name || ''}>
+              {kpiPeak ? `📍 ${kpiPeak.name}` : T('لا توجد بيانات لهذا التاريخ', 'No data for this date')}
+            </span>
+          </div>
+        </TiltCard>
       </div>
 
-      <div className="card-surface p-4 rounded-2xl border border-[var(--border)] flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-[var(--muted)]">{T('محافظات بها مخاطر', 'Governorates with Hazards')}</p>
-            <h4 className={`text-2xl font-black mt-1 ${kpiHazardLocations.length > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-              {kpiHazardLocations.length}
-            </h4>
-            {kpiHazardLocations.length === 0 ? (
-              <p className="text-[10px] text-[var(--faint)] mt-0.5">{T('لا توجد إشارات مخاطر مرصودة', 'No hazard alerts detected')}</p>
-            ) : (
-              <>
-                <div className="mt-1.5 flex flex-wrap gap-1 max-h-[68px] overflow-y-auto custom-scrollbar pe-1">
-                  {kpiHazardLocations.map((h, i) => (
-                    <span key={`${h.name}-${i}`} title={h.name}
-                      className="inline-flex items-center gap-1 max-w-[9.5rem] px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-950/50 text-red-300 border border-red-800/50">
-                      <span className="truncate">{h.name}</span>
-                      <span className="shrink-0 font-mono opacity-80">{h.count}</span>
-                    </span>
-                  ))}
-                </div>
-                <p className="text-[10px] text-[var(--faint)] mt-1">{T('إجمالي الإشارات:', 'Total signals:')} {kpiHazardsCount}</p>
-              </>
+      <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">{T('محافظات بها مخاطر', 'Governorates with Hazards')}</h3>
+            <div className={`w-10 h-10 shrink-0 rounded-xl border-2 flex items-center justify-center text-xl [text-shadow:0_0_10px_currentColor] ${kpiHazardLocations.length > 0 ? 'bg-red-500/15 text-red-300 border-red-400/60 shadow-[0_0_18px_rgba(248,113,113,0.45),0_0_5px_rgba(248,113,113,0.55),inset_0_0_9px_rgba(248,113,113,0.18)]' : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/60 shadow-[0_0_18px_rgba(52,211,153,0.45),0_0_5px_rgba(52,211,153,0.55),inset_0_0_9px_rgba(52,211,153,0.18)]'}`}>🚩</div>
+          </div>
+          <div className="relative z-10">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className={`kpi-value text-5xl ${kpiHazardLocations.length > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                <CountUp value={kpiHazardLocations.length} />
+              </p>
+              <span className="kpi-sub kpi-sub-lg">{kpiHazardLocations.length === 0 ? T('لا توجد إشارات مخاطر مرصودة', 'No hazard alerts detected') : `${T('إجمالي الإشارات:', 'Total signals:')} ${kpiHazardsCount}`}</span>
+            </div>
+            {kpiHazardLocations.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1 max-h-[68px] overflow-y-auto custom-scrollbar pe-1">
+                {kpiHazardLocations.map((h, i) => (
+                  <span key={`${h.name}-${i}`} title={h.name}
+                    className="inline-flex items-center gap-1 max-w-[9.5rem] px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-950/50 text-red-300 border border-red-800/50">
+                    <span className="truncate">{h.name}</span>
+                    <span className="shrink-0 font-mono opacity-80">{h.count}</span>
+                  </span>
+                ))}
+              </div>
             )}
           </div>
-          <div className="w-10 h-10 shrink-0 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-xl">🚩</div>
-        </div>
+      </TiltCard>
 
       {/* 4. حالة API المرئية مع الاحتفاظ بالبيانات التي تم جلبها بنجاح */}
       {apiError && !isLoading && (
@@ -13121,26 +14079,16 @@ const totalAiCountries = new Set(
         </div>
       </div>
 
-            {/* إحصائيات الرصد */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up">
+            {/* إحصائيات الرصد — نفس ستايل كروت الزلازل/المؤشرات اليومية حرفياً (TiltCard + توهج يتبع الماوس) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger">
 
         {/* عدد الأخبار */}
-        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-[var(--muted-2)] text-lg font-bold">
-                إجمالي الأخبار المرصودة
-              </p>
-
-              <p className="text-5xl font-black text-white mt-2">
-                {filteredNews.length.toLocaleString()}
-              </p>
-            </div>
-
-            <div className="bg-purple-500/10 text-purple-400 p-3.5 rounded-xl">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">إجمالي الأخبار المرصودة</h3>
+            <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
               <svg
-                className="w-7 h-7"
+                className="w-6 h-6"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -13153,32 +14101,21 @@ const totalAiCountries = new Set(
                 />
               </svg>
             </div>
-
           </div>
-        </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={filteredNews.length} /></p>
+            <span className="kpi-sub kpi-sub-lg">خلال الفترة المعروضة</span>
+          </div>
+        </TiltCard>
 
 
         {/* عدد الدول */}
-        <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-[var(--muted-2)] text-lg font-bold">
-                الدول المرصودة
-              </p>
-
-              <p className="text-5xl font-black text-white mt-2">
-                {new Set(
-                  filteredNews
-                    .map(n => n.governorate)
-                    .filter(Boolean)
-                ).size.toLocaleString()}
-              </p>
-            </div>
-
-            <div className="bg-purple-500/10 text-purple-400 p-3.5 rounded-xl">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول المرصودة</h3>
+            <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
               <svg
-                className="w-7 h-7"
+                className="w-6 h-6"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -13196,9 +14133,12 @@ const totalAiCountries = new Set(
                 />
               </svg>
             </div>
-
           </div>
-        </div>
+          <div className="flex flex-wrap items-center gap-2 relative z-10">
+            <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={new Set(filteredNews.map(n => n.governorate).filter(Boolean)).size} /></p>
+            <span className="kpi-sub kpi-sub-lg">تغطية جغرافية للرصد</span>
+          </div>
+        </TiltCard>
 
       </div>
 
@@ -13215,7 +14155,7 @@ const totalAiCountries = new Set(
           )}
         </div>
         <div className="h-[300px] md:h-[350px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative">
-          <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[22, 30]} zoom={2} minZoom={2} worldCopyJump scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <ThemedTileLayer />
             
             {filteredNews.map(news => {
@@ -13764,6 +14704,11 @@ function SignalNote({
               </div>
             )}
             {detail && <p className="sig-detail">{detail}</p>}
+            {item.detailUrl && (
+              <a href={item.detailUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="sig-detail-link">
+                {language === 'en' ? 'USGS details ↗' : 'تفاصيل الزلزال ↗'}
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -13773,6 +14718,35 @@ function SignalNote({
   );
 }
 
+
+// ⏳ مؤشر العمل العام: أي أكشن في أي صفحة يعرض «جاري…» ثابتة حتى رسالة التأكيد
+//   (مُصدَّر ليُركَّب في جذر التطبيق — يعمل حتى في شاشة الدخول)
+export function WorkingToast() {
+  const [text, setText] = useState('');
+  useEffect(() => {
+    const onShow = (e) => setText((e.detail && e.detail.text) || 'جاري التنفيذ…');
+    const onHide = () => setText('');
+    window.addEventListener(WORKING_EVENTS.SHOW, onShow);
+    window.addEventListener(WORKING_EVENTS.HIDE, onHide);
+    return () => {
+      window.removeEventListener(WORKING_EVENTS.SHOW, onShow);
+      window.removeEventListener(WORKING_EVENTS.HIDE, onHide);
+    };
+  }, []);
+  if (!text) return null;
+  return (
+    <div className="fixed bottom-5 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 z-[200] pointer-events-none animate-fade-in-up">
+      <div className="working-pill flex items-center gap-3 ps-2.5 pe-6 py-2 text-base font-extrabold text-[var(--accent)] [text-shadow:0_0_10px_currentColor]">
+        <span className="working-spinbox" aria-hidden="true">
+          <svg viewBox="0 0 50 50" className="working-spin">
+            <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" strokeDasharray="64 62" />
+          </svg>
+        </span>
+        {text}
+      </div>
+    </div>
+  );
+}
 
 function ActionToast({ message, onClose }) {
   const [paused, setPaused] = useState(false);

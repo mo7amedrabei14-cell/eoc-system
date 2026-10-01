@@ -60,11 +60,25 @@ def _normalize_action(text: Optional[str]) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _strip_scope(s: str) -> str:
+    """حذف كلمات النطاق ككلمات كاملة ثم تنظيف المسافات — خطوة المقارنة الجوهرية."""
+    return re.sub(r"\s+", " ", _SCOPE_RE.sub(" ", s)).strip()
+
+
 def is_same_logical_action(prev_action: Optional[str], new_action: Optional[str]) -> bool:
-    """هل النصّان نفس الحركة المنطقية؟ (متطابق أو واحد يحتوي الآخر)"""
-    a, b = _normalize_action(prev_action), _normalize_action(new_action)
-    if not a or not b:
+    """هل النصّان نفس الحركة المنطقية؟ (متطابق أو واحد يحتوي الآخر)
+
+    🛡️ علاج جذري لتكرار الإشعارات (نفس الحركة من مسارين):
+    بعض النقاط بتكتب صف الأوديت (وبثه اللحظي) + صف بث صريح في نفس الثانية،
+    والأكشن الوحيد اللي بيفرق بينهم كلمة نطاق («إضافة زلزال» مقابل
+    «إضافة زلزال عالمي»). الحارس القديم كان بيحذف كلمات النطاق *بعد* المقارنة
+    فبيعتبرهم حركتين مختلفتين ⇒ إشعار مرتين. الحل: نقارن على النص بعد حذف
+    كلمات النطاق — فكل ما وصل بحركة واحدة ونطاق مختلف يُدمج تلقائياً.
+    """
+    a_full, b_full = _normalize_action(prev_action), _normalize_action(new_action)
+    if not a_full or not b_full:
         return False
+    a, b = _strip_scope(a_full), _strip_scope(b_full)
     if a == b:
         return True
     shorter, longer = (a, b) if len(a) <= len(b) else (b, a)

@@ -1345,42 +1345,46 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* حلقة نارية أنيقة تدور باستمرار حول زر الجرس عند وجود إشعارات غير مقروءة.
    قوس لهبي (أصفر→برتقالي→أحمر) يشبه المذنّب يلفّ حلقة رفيعة بشكل دائري سلس،
    عبر conic-gradient + mask، بدون أي reflow (transform فقط). */
-/* NOTIF bell: a breathing corona around a live core, not a flame trail.
-   Two stacked conic rings rotate in opposite directions; the outer one breathes
-   with unread count. Colour is derived from --bell-c (set per severity by the bell). */
+/* 🔥 الحلقة النارية حول زر الجرس عند وجود إشعارات غير مقروءة.
+   قوس لهبي واضح (أصفر → برتقالي → أحمر) يدور باستمرار — بدون color-mix
+   ولا متغيرات اختيارية حتى لا تختفي على أي متصفح/ثيم. */
+.bell-wrap { overflow: visible; }
 .bell-ring {
   position: absolute;
-  inset: -5px;
+  inset: -6px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, var(--bell-c, var(--accent)), color-mix(in srgb, var(--bell-c, var(--accent)) 14%, transparent) 58%, transparent 72%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
-  animation: bell-ring-spin 3.4s linear infinite;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--bell-c, var(--accent)) 55%, transparent));
+  background: conic-gradient(from 0deg,
+    #ffd54a 0deg, #ff9a3d 70deg, #ff5722 150deg, #e0341b 210deg,
+    rgba(224, 52, 27, 0.18) 260deg, rgba(255, 255, 255, 0) 305deg, #ffd54a 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  animation: bell-ring-spin 2.6s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 122, 40, 0.85)) drop-shadow(0 0 14px rgba(255, 80, 30, 0.45));
   pointer-events: none;
   will-change: transform;
-  opacity: 0.5;
+  z-index: 0;
+  opacity: 0.95;
 }
 .bell-ring::after {
   content: "";
   position: absolute;
-  inset: 7px;
+  inset: 5px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0, var(--bell-c, var(--accent)) 36%, transparent 52%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 1.5px), #000 calc(100% - 1px));
-  animation: bell-ring-spin 2.1s linear infinite reverse;
+  background: conic-gradient(from 180deg, transparent 0deg, #ffe08a 40deg, #ff8a3d 95deg, transparent 145deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px));
+  animation: bell-ring-spin 1.7s linear infinite reverse;
 }
 @keyframes bell-ring-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 /* unread count makes the corona inhale: the bell fills with each new signal */
-.bell-wrap.is-glowing .bell-ring { animation: bell-inhale 2.4s ease-in-out infinite, bell-ring-spin 2.2s linear infinite; opacity: 0.78; }
+.bell-wrap.is-glowing .bell-ring { animation: bell-inhale 2.4s ease-in-out infinite, bell-ring-spin 2.2s linear infinite; }
 .icon-btn:has(.bell-ring) { overflow: visible !important; }
 @media (prefers-reduced-motion: reduce) { .bell-ring, .bell-ring::after { animation-duration: 4.5s; } }
 .bell-wrap.is-glowing .bell-ring::after { animation-duration: 1.5s; }
-@keyframes bell-inhale { 0%,100% { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--bell-c, var(--accent)) 40%, transparent)); } 50% { filter: drop-shadow(0 0 13px color-mix(in srgb, var(--bell-c, var(--accent)) 72%, transparent)); } }
+@keyframes bell-inhale { 0%,100% { filter: drop-shadow(0 0 5px rgba(255, 122, 40, 0.6)); } 50% { filter: drop-shadow(0 0 15px rgba(255, 90, 30, 0.95)) drop-shadow(0 0 26px rgba(255, 60, 20, 0.5)); } }
 @keyframes dropdown-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to   { opacity: 0; transform: translateY(-6px) scale(0.98); }
@@ -3342,6 +3346,71 @@ select.field {
 .sig-note.is-paused{ border-color: color-mix(in srgb, var(--sig-c) 50%, var(--border-strong)); }
 
 /* ── سادساً: النبرات ── */
+/* ⏳ حبة «جاري…» — لودينج لطيف: سبينر يدور + شريط ضوئي بيلف حول إطار الحبة + تنفس */
+@property --wp-angle{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+.working-pill{
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 55%),
+    color-mix(in srgb, var(--surface-4) 92%, var(--accent));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  box-shadow:
+    0 10px 34px -12px color-mix(in srgb, var(--accent) 35%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent) 20%, transparent);
+  animation: working-breathe 2.4s ease-in-out infinite;
+}
+/* 🔄 الشريط الضوئي: يلف حول إطار الحبة المستدير كأنه لودينج */
+.working-pill::before{
+  content: "";
+  position: absolute; inset: -2.5px; border-radius: 999px; z-index: -1;
+  padding: 2.5px;
+  background: conic-gradient(from var(--wp-angle),
+    transparent 0deg,
+    color-mix(in srgb, var(--accent) 80%, #fff) 55deg,
+    #ffe1e1 85deg,
+    var(--accent) 120deg,
+    transparent 190deg,
+    transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent));
+  animation: working-frame-spin 1.5s linear infinite;
+  pointer-events: none;
+}
+@keyframes working-frame-spin{ to{ --wp-angle: 360deg; } }
+@keyframes working-breathe{
+  0%, 100%{ transform: scale(1); opacity: .94; }
+  50%{ transform: scale(1.03); opacity: 1; }
+}
+
+/* علامة الودينج الدوّارة داخل دائرة ناعمة */
+.working-spinbox{
+  flex: none;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--accent);
+  background:
+    radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+    color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.working-spin{
+  width: 28px; height: 28px;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
+  animation: working-spin-rotate .85s linear infinite;
+}
+@keyframes working-spin-rotate{ to{ transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce){
+  .working-pill, .working-pill::before, .working-spinbox, .working-spin{ animation-duration: 5s; }
+}
+
 .sig-tone-info   { --sig-c: var(--info); }
 .sig-tone-accent { --sig-c: var(--accent); }
 .sig-tone-warn   { --sig-c: var(--warn); }
@@ -3351,6 +3420,10 @@ select.field {
 .sig-tone-danger { --sig-c: var(--accent); }
 .sig-tone-export { --sig-c: #0ea5e9; }
 .sig-tone-purge  { --sig-c: var(--accent); }
+/* 💛 النبرة الزلزالية: أصفر واضح يميّز إشعار الزلازل عن كل الإشعارات */
+.sig-tone-quake  { --sig-c: #facc15; }
+.sig-tone-quake.sig-shape-frame{ border-color: color-mix(in srgb, #facc15 55%, var(--border-strong));
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.22); }
 
 /* ── سابعاً: الرصيف العلوي اللي بتظهر فيه كل الإشارات ── */
 .sig-loom, .sig-dock-layer{
@@ -3806,3 +3879,17 @@ select.field {
   .sig-thread{ transform:none !important; opacity:.35 !important; }
   .sig-shape-seal .sig-seed::after{ --nt-p:100 !important; }
 }
+
+/* 🔗 رابط تفاصيل الزلزال داخل التوست اللحظي */
+.sig-detail-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sig-detail-link:hover { filter: brightness(1.2); }

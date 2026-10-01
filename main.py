@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Depends, HTTPException, status, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, field_validator
 from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
@@ -760,6 +760,8 @@ def _bootstrap_schema_in_background():
         ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
         ensure_client_errors_schema()  # 🧯 جدول بلاغات أخطاء الواجهة (خفيفة منفصلة)
         ensure_gov_contacts_schema()   # 📞 جدول سجل التواصل مع المحافظات (خفيفة منفصلة)
+        ensure_earthquake_intel_schema()  # 🌍 جدول استخبارات الزلازل (خفيفة منفصلة)
+        ensure_earthquake_catalog_schema()  # 📚 كتالوج 30 سنة التاريخي (خفيفة منفصلة)
         _schema_error["message"] = None
     except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
         _schema_error["message"] = str(e)[:200]
@@ -5417,7 +5419,7 @@ def get_realtime_events(
                             e.target_user_id = %s
                             OR (
                                 e.target_user_id IS NULL
-                                AND e.event_type IN ('mission','local_news','global_disaster','earthquake','ai_news','system_refresh')
+                                AND e.event_type IN ('mission','local_news','global_disaster','earthquake','eq_intel','ai_news','system_refresh')
                                 AND (
                                     e.event_type != 'mission'
                                     OR e.mission_id IS NULL
@@ -5445,7 +5447,10 @@ def get_realtime_events(
                     "actor_name": r[4] or "نظام",
                     "mission_id": r[5],
                     "entity_id": r[6],
-                    "details": r[7].get("action_text", str(r[7])) if isinstance(r[7], dict) else str(r[7] or ""),
+                    # 🌍 أحداث الزلازل الاستخباراتية: القاموس الكامل (لازم details.earthquake.sound_alert
+                    #    يوصل للواجهة لتفعيل الإنذار الصوتي) — بقية الأنواع: نص الحركة فقط كما كان.
+                    "details": (r[7] if (isinstance(r[7], dict) and r[1] == "eq_intel")
+                                else (r[7].get("action_text", str(r[7])) if isinstance(r[7], dict) else str(r[7] or ""))),
                     "target_user_id": r[8],
                     "created_at": r[9].strftime("%Y-%m-%d %H:%M") if r[9] else "",
                 }
@@ -6414,7 +6419,7 @@ def add_global_eq(eq: GlobalEqModel, credentials: HTTPAuthorizationCredentials =
             eq_id = cursor.fetchone()[0]
             try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})
             except Exception: pass
-            _emit_live(cursor, event_type="earthquake", action="إضافة زلزال عالمي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})
+            _emit_live(cursor, event_type="earthquake", action="إضافة زلزال عالمي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"أضاف زلزال عالمي بقوة {eq.magnitude} في {eq.country or eq.region}"})  # 🛡️ بث موحّد: صف الأوديت (نفس المعاملة) هو البث الرئيسي — صف الإضافة الصريح كان يسبب إشعاراً مكرراً
             connection.commit()
             return {"message": "تم الإضافة"}
     except Exception as e:
@@ -6467,7 +6472,7 @@ def add_egypt_eq(eq: EgyptEqModel, credentials: HTTPAuthorizationCredentials = D
             eq_id = cursor.fetchone()[0]
             try: create_audit_log(cursor, user_id, "إضافة زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})
             except Exception: pass
-            _emit_live(cursor, event_type="earthquake", action="إضافة زلزال محلي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})
+            _emit_live(cursor, event_type="earthquake", action="إضافة زلزال محلي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"أضاف زلزال محلي (مصر) بقوة {eq.magnitude} في {eq.region}"})  # 🛡️ بث موحّد: صف الأوديت هو البث الرئيسي — صف الإضافة الصريح كان يسبب إشعاراً مكرراً
             connection.commit()
             return {"message": "تم الإضافة"}
     except Exception as e:
@@ -6507,7 +6512,7 @@ def update_global_eq(eq_id: int, eq: GlobalEqModel, credentials: HTTPAuthorizati
             """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude, eq_id))
             try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})
             except Exception: pass
-            _emit_live(cursor, event_type="earthquake", action="تعديل زلزال عالمي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})
+            _emit_live(cursor, event_type="earthquake", action="تعديل زلزال عالمي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال عالمي بقوة {eq.magnitude}"})  # 🛡️ بث موحّد — صف الأوديت هو البث الرئيسي
             connection.commit()
             return {"message": "تم التعديل"}
     except Exception as e:
@@ -6530,7 +6535,7 @@ def update_egypt_eq(eq_id: int, eq: EgyptEqModel, credentials: HTTPAuthorization
             """, (eq.date, eq.time, eq.magnitude, eq.depth_km, eq.region, eq.longitude, eq.latitude, eq_id))
             try: create_audit_log(cursor, user_id, "تعديل زلزال", mission_id=None, entity_type="earthquake", entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال محلي (مصر) بقوة {eq.magnitude}"})
             except Exception: pass
-            _emit_live(cursor, event_type="earthquake", action="تعديل زلزال محلي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال محلي (مصر) بقوة {eq.magnitude}"})
+            _emit_live(cursor, event_type="earthquake", action="تعديل زلزال محلي", actor_user_id=user_id, entity_id=eq_id, details={"action_text": f"عدّل بيانات زلزال محلي بقوة {eq.magnitude}"})  # 🛡️ بث موحّد — صف الأوديت هو البث الرئيسي
             connection.commit()
             return {"message": "تم التعديل"}
     except Exception as e:
@@ -6715,15 +6720,17 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                     news_updates = EXCLUDED.news_updates,
                     data_entry_name = EXCLUDED.data_entry_name,
                     observed_at = EXCLUDED.observed_at
-                WHERE ai_news.news_type LIKE '%فشل التحليل%'
-                   OR ai_news.news_type IN ('', '-', 'غير مصنف', 'أخرى / غير مصنف')
+                WHERE btrim(coalesce(ai_news.news_type, '')) = ''
+                   OR btrim(ai_news.news_type) = '-'
+                   OR ai_news.news_type LIKE %s
+                   OR ai_news.news_type = ANY(%s)
                 RETURNING id, (xmax = 0) AS inserted
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
                 news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''),
-                news.news_link,
+                "%فشل التحليل%", ["غير مصنف", "أخرى / غير مصنف"],
             ))
             row = cursor.fetchone()
             if row is None:
@@ -8192,6 +8199,1947 @@ def clear_all_gov_contacts(
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء مسح سجل التواصل")
     finally:
         connection.close()
+
+
+# =====================================================================
+# 🌍 استخبارات الزلازل — Earthquake Intelligence (مراقبة لحظية 24/7)
+# =====================================================================
+# يقرأ محرك الزلازل (earthquake_intel.py — GitHub Actions كل دقيقة) من USGS
+# ويبث أي زلزال جديد فوراً في قناة realtime → أول واحد يعرف قبل التطبيقات.
+# مبدأ الأمان: endpoint الاستقبال للنظام فقط (SYSTEM_TOKEN)، وendpoint القراءة
+# مفتوح لأدوار التشغيل ما عدا إدارة الشباب والتطوع — مثل صفحة سجل التواصل.
+
+EQ_INTEL_FEEDS = (
+    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson",
+    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
+)
+EQ_INTEL_DEDUPE_MINUTES = 180      # نافذة تجاهل التكرار لنفس الحدث من التغذيات
+EQ_INTEL_POLL_SECONDS = 60         # إيقاع المحرك الدوري (من GitHub Actions)
+
+# مركز القارة الأفريقية القريبة من مصر — نقطة قياس القرب الجغرافي
+# (وسط مصر الجغرافي تقريباً؛ القياس بالكيلومتر العظيمي great-circle)
+EQ_INTEL_ORIGIN_LAT = 27.0
+EQ_INTEL_ORIGIN_LON = 30.0
+
+# مؤقت حالة المحرك في الذاكرة (لا شيء دائم — الكرون هو الحقيقة)
+EQ_INTEL_STATE = {
+    "last_run_at": None,
+    "last_status": None,
+    "last_error": None,
+}
+
+
+def _eq_intel_haversine_km(lat1, lon1, lat2, lon2):
+    """المسافة بالكيلومتر بين نقطتين على سطح الأرض (great-circle)."""
+    import math
+    if lat1 is None or lon1 is None:
+        return None
+    try:
+        p1, p2 = math.radians(float(lat1)), math.radians(float(lat2))
+        dp = math.radians(float(lat2) - float(lat1))
+        dl = math.radians(float(lon2) - float(lon1))
+        a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+        return round(6371.0 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)), 1)
+    except Exception:
+        return None
+
+
+def _eq_intel_is_continent_center(distance_km, magnitude):
+    """هل الزلزال في وسط القارة/المنطقة القريبة من مصر؟
+    عتبة جغرافية موحّدة: داخل 1500 كم من وسط القارة (وسط مصر تقريباً)
+    ⇒ نوتفيكيشن صوتي إجباري. خارجها: توست بصري فقط."""
+    if distance_km is None:
+        return False
+    try:
+        mag = float(magnitude) if magnitude is not None else 0.0
+    except Exception:
+        mag = 0.0
+    if mag >= 5.0:
+        return distance_km <= 2500
+    if mag >= 4.0:
+        return distance_km <= 2000
+    return distance_km <= 1500
+
+
+def _eq_intel_status_label(magnitude):
+    """نفس تصنيف مركز رصد الزلازل الحالي: 5.1+ زلزال، وإلا هزة أرضية."""
+    try:
+        return "زلزال" if float(magnitude or 0) >= 5.1 else "هزة أرضية"
+    except Exception:
+        return "هزة أرضية"
+
+
+# ── 📊 تحليل الخطورة التاريخي (Risk Analysis Map) ───────────────────────────
+#    كل زلزال يُقارن بتاريخ المنطقة: نفس الفترة (±15 يوم) خلال آخر 30 سنة،
+#    داخل 500 كم من مركز الحدث — من كتالوج USGS الرسمي.
+EQ_INTEL_HIST_RADIUS_KM = 500     # نطاق المقارنة التاريخية حول مركز الحدث
+EQ_INTEL_REGION_RADIUS_KM = 1500  # نطاق خط الأساس الإقليمي (نفس دائرة القرب)
+EQ_INTEL_HIST_WINDOW_DAYS = 15    # «نفس الفترة» = ±15 يوم من يوم الحدث
+EQ_INTEL_HIST_YEARS = 30          # عمق المقارنة: 30 سنة
+EQ_INTEL_HIST_MINMAG = 4.5        # الحد الأدنى للكتالوج التاريخي (حجم معقول)
+# 🔔 بوابات الإشعارات (طلب المستخدم: العالم سيزرق زلازل — لا إغراق):
+#    - الإشعار اللحظي + قيد الأوديت: زلزال ≥ 4 ريختر، أو قريب من مصر (≤ 1500 كم)،
+#      أو يمثل خطورة فعلية على مصر (درجة ≥ 25).
+#    - الصوت الإنذاري حصراً لما فوق 4 ريختر (بشرط القرب من مصر للبعيد القوي؟ لا —
+#      الصوت لكل ≥4 بلا استثناء كما طلِب حرفياً).
+EQ_NOTIFY_MIN_MAG = 4.0
+EQ_NOTIFY_PROXIMITY_KM = 1500
+EQ_NOTIFY_RISK_SCORE = 25
+EQ_AUDIT_MIN_MAG = 4.0
+EQ_AUDIT_PROXIMITY_KM = 1500
+EQ_AUDIT_RISK_SCORE = 25
+_EQ_INTEL_HIST_MEM_TTL = 6 * 3600
+_EQ_INTEL_HIST_MEM_CACHE = {}     # (lat, lon, month-day) → (ts, نتيجة)
+
+# منحنى خطورة القوة: مراسٍ (قوة → 0-100) بتحويل خطي بينها
+_EQ_MAG_ANCHORS = [(0.0, 0.0), (2.5, 5.0), (3.0, 10.0), (3.5, 18.0), (4.0, 28.0),
+                   (4.5, 40.0), (5.0, 55.0), (5.5, 68.0), (6.0, 80.0),
+                   (6.5, 90.0), (7.0, 97.0), (10.0, 100.0)]
+
+
+def _eq_intel_magnitude_factor(magnitude):
+    """عامل الشدة: 0-100 حسب منحنى المراسٍ (تفسيري وطيفي، لا عشوائية)."""
+    try:
+        mag = float(magnitude)
+    except Exception:
+        return 5.0
+    if mag <= _EQ_MAG_ANCHORS[0][0]:
+        return _EQ_MAG_ANCHORS[0][1]
+    for (m1, s1), (m2, s2) in zip(_EQ_MAG_ANCHORS, _EQ_MAG_ANCHORS[1:]):
+        if m1 <= mag <= m2:
+            if m2 == m1:
+                return s2
+            return round(s1 + (mag - m1) * (s2 - s1) / (m2 - m1), 1)
+    return 100.0
+
+
+def _eq_intel_proximity_factor(distance_km):
+    """عامل القرب من وسط القارة (وسط مصر): 0 كم = 100، 3000 كم فأكثر = 0."""
+    if distance_km is None:
+        return 30.0
+    return round(max(0.0, min(100.0, 100.0 * (1.0 - float(distance_km) / 3000.0))), 1)
+
+
+def _eq_intel_historical_anomaly(magnitude, hist_max_mag):
+    """عامل المفارقة التاريخية: قوة الحدث ÷ أقوى حدث في نفس الفترة تاريخياً (0-100).
+    100 يعني «بحجم/أقوى من أي شيء مرّ هنا في نفس الفترة خلال 30 سنة»."""
+    if hist_max_mag is None:
+        return None
+    try:
+        base = max(3.0, float(hist_max_mag))
+        mag = float(magnitude or 0.0)
+    except Exception:
+        return None
+    return round(max(0.0, min(100.0, 100.0 * mag / base)), 1)
+
+
+def _eq_intel_risk_score(mag_factor, prox_factor, hist_anomaly):
+    """درجة الخطورة 0-100: أوزان 38% شدة + 30% قرب + 32% مفارقة تاريخية.
+    لو التاريخ غير متاح (فشل جلب) تُعاد توزيع الأوزان (55/45) — بلا فشل أبداً."""
+    if hist_anomaly is None:
+        return round(0.55 * (mag_factor or 0.0) + 0.45 * (prox_factor or 0.0), 1)
+    return round(0.38 * (mag_factor or 0.0) + 0.30 * (prox_factor or 0.0) + 0.32 * hist_anomaly, 1)
+
+
+def _eq_intel_risk_level(score):
+    """مستوى الخطورة من الدرجة: حرجة ≥ 75، عالية ≥ 50، متوسطة ≥ 25، وإلا منخفضة."""
+    try:
+        s = float(score)
+    except Exception:
+        s = 0.0
+    if s >= 75:
+        return "حرجة"
+    if s >= 50:
+        return "عالية"
+    if s >= 25:
+        return "متوسطة"
+    return "منخفضة"
+
+
+def _eq_intel_hist_min_day_gap(event_date, hist_date):
+    """أقل مسافة أيام بين يوم الحدث ويوم تاريخي عبر حدود السنوات (±1 سنة).
+    تُستخدم لعزل «نفس الفترة» من الكتالوج الكامل."""
+    best = None
+    for k in (-1, 0, 1):
+        try:
+            shifted = hist_date.replace(year=event_date.year + k)
+        except ValueError:  # 29 فبراير في سنة غير كبيسة
+            continue
+        gap = abs((shifted - event_date).days)
+        if best is None or gap < best:
+            best = gap
+    return best if best is not None else 10000
+
+
+_EQ_CATALOG_READY_CACHE = {"v": False, "ts": 0.0}
+
+
+def _eq_catalog_ready_cached():
+    """هل الكتالوج المحلي (العالم كله) معبَّأ؟ — فحص خفيف بذاكرة 5 دقائق."""
+    import time as _time
+    now_ts = _time.time()
+    if now_ts - _EQ_CATALOG_READY_CACHE.get("ts", 0) < 300:
+        return _EQ_CATALOG_READY_CACHE.get("v", False)
+    ready = False
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1 FROM earthquake_catalog WHERE region_id = 'world' LIMIT 1;")
+                ready = cursor.fetchone() is not None
+        finally:
+            connection.close()
+    except Exception:
+        ready = False
+    _EQ_CATALOG_READY_CACHE["v"] = ready
+    _EQ_CATALOG_READY_CACHE["ts"] = now_ts
+    return ready
+
+
+def _eq_intel_fetch_history(lat, lon, event_date, radius_km=EQ_INTEL_HIST_RADIUS_KM):
+    """📊 جلب الخط التاريخي: أقوى حدث + عدد الأحداث في «نفس الفترة»
+    (±EQ_INTEL_HIST_WINDOW_DAYS يوماً) خلال آخر 30 سنة، داخل radius_km من الموقع.
+
+    🌍 المصدر الأول: الكتالوج المحلي المعبَّأ من USGS (30 سنة — العالم كله) —
+       استعلام SQL محلي فوري بلا أي شبكة، لأي موقع على الأرض.
+    المصدر الاحتياطي: استعلام USGS المباشر (كما كان) عندما يكون الكتالوج فارغاً.
+    يرجع dict أو None عند أي فشل — لا يوقف أي مسار آخر.
+    """
+    import requests as _requests
+    import time as _time
+    cache_key = (round(float(lat), 1), round(float(lon), 1), event_date.month, event_date.day, radius_km)
+    now_ts = _time.time()
+    cached = _EQ_INTEL_HIST_MEM_CACHE.get(cache_key)
+    if cached and (now_ts - cached[0]) < _EQ_INTEL_HIST_MEM_TTL:
+        return cached[1]
+    try:
+        start_day = event_date - timedelta(days=EQ_INTEL_HIST_WINDOW_DAYS)
+        end_day = event_date + timedelta(days=EQ_INTEL_HIST_WINDOW_DAYS)
+        start = start_day.replace(year=event_date.year - EQ_INTEL_HIST_YEARS)
+        end = end_day.replace(year=event_date.year - 1)   # باستثناء السنة الحالية
+
+        # ── ① الكتالوج المحلي (العالم كله) — مسار سريع بلا شبكة
+        if _eq_catalog_ready_cached():
+            try:
+                connection = get_connection()
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT COUNT(*),
+                                   MAX(magnitude) FILTER (WHERE (
+                                     ABS(date_part('doy', occurred_at)::int - %s) <= %s
+                                     OR 365 - ABS(date_part('doy', occurred_at)::int - %s) <= %s
+                                   )),
+                                   COUNT(*) FILTER (WHERE (
+                                     ABS(date_part('doy', occurred_at)::int - %s) <= %s
+                                     OR 365 - ABS(date_part('doy', occurred_at)::int - %s) <= %s
+                                   ))
+                            FROM earthquake_catalog
+                            WHERE magnitude IS NOT NULL
+                              AND occurred_at BETWEEN %s AND %s
+                              AND 6371.0 * acos(least(1.0, greatest(-1.0,
+                                    sin(radians(%s)) * sin(radians(latitude)) +
+                                    cos(radians(%s)) * cos(radians(latitude)) * cos(radians(longitude) - radians(%s))
+                              ))) <= %s;
+                        """, (
+                            event_date.timetuple().tm_yday, EQ_INTEL_HIST_WINDOW_DAYS,
+                            event_date.timetuple().tm_yday, EQ_INTEL_HIST_WINDOW_DAYS,
+                            event_date.timetuple().tm_yday, EQ_INTEL_HIST_WINDOW_DAYS,
+                            event_date.timetuple().tm_yday, EQ_INTEL_HIST_WINDOW_DAYS,
+                            start, end,
+                            float(lat), float(lat), float(lon), radius_km,
+                        ))
+                        total_local, w_max, w_count = cursor.fetchone()
+                        result = {
+                            "hist_max_mag": (float(w_max) if w_max is not None else None),
+                            "hist_window_count": int(w_count or 0),
+                            "hist_total_catalog": int(total_local or 0),
+                            "hist_since": start.isoformat(),
+                            "hist_source": "local_catalog",
+                        }
+                        _EQ_INTEL_HIST_MEM_CACHE[cache_key] = (now_ts, result)
+                        return result
+                finally:
+                    connection.close()
+            except Exception as le:
+                print(f"eq intel local catalog hist failed (falling back to USGS): {le}")
+
+        # ── ② الاحتياطي: استعلام USGS المباشر (الكتالوج المحلي غير معبَّأ بعد)
+        params = {
+            "format": "geojson",
+            "starttime": start.isoformat(),
+            "endtime": end.isoformat(),
+            "latitude": round(float(lat), 3),
+            "longitude": round(float(lon), 3),
+            "maxradiuskm": radius_km,
+            "minmagnitude": EQ_INTEL_HIST_MINMAG,
+            "orderby": "magnitude",
+            "limit": 1000,
+        }
+        resp = _requests.get(
+            "https://earthquake.usgs.gov/fdsnws/event/1/query",
+            params=params, timeout=15,
+            headers={"User-Agent": "EOC-Earthquake-Intel/1.0"},
+        )
+        if not resp.ok:
+            return None
+        features = (resp.json() or {}).get("features", []) or []
+        window_mags = []
+        total_catalog = len(features)
+        for f in features:
+            props = (f or {}).get("properties") or {}
+            mag = props.get("mag")
+            t_ms = props.get("time")
+            if mag is None or t_ms is None:
+                continue
+            try:
+                h_date = datetime.fromtimestamp(float(t_ms) / 1000.0, tz=ZoneInfo("UTC")).date()
+            except Exception:
+                continue
+            if _eq_intel_hist_min_day_gap(event_date, h_date) <= EQ_INTEL_HIST_WINDOW_DAYS:
+                window_mags.append(float(mag))
+        result = {
+            "hist_max_mag": (max(window_mags) if window_mags else None),
+            "hist_window_count": len(window_mags),
+            "hist_total_catalog": total_catalog,
+            "hist_since": start.isoformat(),
+            "hist_source": "usgs_live",
+        }
+        _EQ_INTEL_HIST_MEM_CACHE[cache_key] = (now_ts, result)
+        return result
+    except Exception as e:
+        print(f"eq intel history fetch failed: {e}")
+        return None
+
+
+def _eq_intel_risk_payload(row, hist):
+    """بناء مكونات الخطورة الكاملة لصف زلزال (hist قد يكون None — لا فشل أبداً)."""
+    mag_factor = _eq_intel_magnitude_factor(row.get("magnitude"))
+    prox_factor = _eq_intel_proximity_factor(row.get("distance_km"))
+    hist_max = (hist or {}).get("hist_max_mag") if isinstance(hist, dict) else None
+    hist_count = (hist or {}).get("hist_window_count") if isinstance(hist, dict) else None
+    anomaly = _eq_intel_historical_anomaly(row.get("magnitude"), hist_max)
+    score = _eq_intel_risk_score(mag_factor, prox_factor, anomaly)
+    return {
+        "magnitude_factor": mag_factor,
+        "proximity_factor": prox_factor,
+        "historical_anomaly": anomaly,
+        "hist_max_mag": hist_max,
+        "hist_window_count": hist_count,
+        "risk_score": score,
+        "risk_level": _eq_intel_risk_level(score),
+    }
+
+
+def ensure_earthquake_intel_schema():
+    """🌍 جدول زلازل الاستخبارات اللحظية — خطوة خفيفة منفصلة (لا رفع SCHEMA_VERSION).
+
+    نفس أسلوب ensure_gov_contacts_schema: فحص وجود واحد + إنشاء عند الغياب.
+    مصدر السجل الوحيد للحفظ هو محرك earthquake_intel عبر SYSTEM_TOKEN —
+    القيد الفريد (source, external_id) يمنع تكرار نفس الزلزال مهما أُعيد التشغيل.
+    """
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT to_regclass('public.earthquake_intel');")
+            if cursor.fetchone()[0] is None:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS earthquake_intel (
+                        eq_intel_id   BIGSERIAL PRIMARY KEY,
+                        source        VARCHAR(40)  NOT NULL DEFAULT 'usgs',
+                        external_id   VARCHAR(160) NOT NULL DEFAULT '',
+                        occurred_at   TIMESTAMP WITHOUT TIME ZONE,
+                        magnitude     DOUBLE PRECISION,
+                        depth_km      DOUBLE PRECISION,
+                        place         VARCHAR(240),
+                        latitude      DOUBLE PRECISION,
+                        longitude     DOUBLE PRECISION,
+                        distance_km   DOUBLE PRECISION,
+                        sound_alert   BOOLEAN NOT NULL DEFAULT FALSE,
+                        raw           JSONB,
+                        created_at    TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    );
+                """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_eq_intel_source_external
+                    ON earthquake_intel (source, external_id);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_eq_intel_occurred
+                    ON earthquake_intel (occurred_at DESC);
+            """)
+            # 📊 أعمدة تحليل الخطورة التاريخي (خطوة خفيفة — إضافة أعمدة فقط)
+            cursor.execute("ALTER TABLE earthquake_intel ADD COLUMN IF NOT EXISTS hist_max_mag DOUBLE PRECISION;")
+            cursor.execute("ALTER TABLE earthquake_intel ADD COLUMN IF NOT EXISTS hist_window_count INTEGER;")
+            cursor.execute("ALTER TABLE earthquake_intel ADD COLUMN IF NOT EXISTS hist_scanned_at TIMESTAMP WITHOUT TIME ZONE;")
+            connection.commit()
+    except Exception as e:
+        connection.rollback()
+        print(f"ensure_earthquake_intel_schema error (will retry next boot): {e}")
+    finally:
+        connection.close()
+
+
+def require_eq_intel_access(role):
+    """صفحة الزلازل الاستخباراتية: أدوار التشغيل كلها ما عدا إدارة الشباب."""
+    if not is_weather_eligible(role):
+        raise HTTPException(status_code=403, detail="استخبارات الزلازل متاحة لأدوار التشغيل فقط")
+    if is_youth_role(role):
+        raise HTTPException(status_code=403, detail="استخبارات الزلازل مستبعدة لحساب إدارة الشباب والتطوع")
+
+
+class EqIntelIngestModel(BaseModel):
+    source: str = "usgs"
+    events: List[Dict[str, Any]]
+
+
+def _eq_intel_normalize_event(ev: Dict[str, Any]):
+    """توحيد حقول الحدث القادم من المحرك (مرن: يقبل مفاتيح بديلة)."""
+    if not isinstance(ev, dict):
+        return None
+    external_id = ev.get("external_id") or ev.get("id") or ev.get("event_id")
+    occurred = ev.get("occurred_at") or ev.get("time") or ev.get("datetime")
+    dt_val = None
+    if occurred is not None:
+        try:
+            if isinstance(occurred, (int, float)) or (isinstance(occurred, str) and occurred.strip().isdigit()):
+                # epoch milliseconds (صيغة USGS الأصلية)
+                d = datetime.fromtimestamp(float(occurred) / 1000.0, tz=ZoneInfo("UTC"))
+            else:
+                raw = str(occurred).strip().replace("Z", "+00:00")
+                d = datetime.fromisoformat(raw)
+            dt_val = d.astimezone(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+        except Exception:
+            dt_val = None
+    def _num(key, *alts):
+        for k in (key, *alts):
+            v = ev.get(k)
+            if v is None or v == "":
+                continue
+            try:
+                return float(v)
+            except Exception:
+                continue
+        return None
+    place = ev.get("place") or ev.get("region") or ev.get("country") or ""
+    mag_raw = _num("magnitude", "mag")
+    depth_raw = _num("depth_km", "depth")
+    return {
+        "external_id": (str(external_id).strip()[:160] if external_id else ""),
+        "occurred_at": dt_val,
+        # 🔢 تقريب القوة والعمق لمنع عوامات طويلة (1.25315323129139) من USGS
+        "magnitude": (round(mag_raw, 2) if mag_raw is not None else None),
+        "depth_km": (round(depth_raw, 2) if depth_raw is not None else None),
+        "place": (str(place).strip()[:240] or None),
+        "latitude": _num("latitude", "lat"),
+        "longitude": _num("longitude", "lon", "lng"),
+    }
+
+
+@app.post("/api/earthquake-intel/ingest")
+def ingest_earthquake_intel(
+    payload: EqIntelIngestModel,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """🌍 استقبال الزلازل المرصودة من محرك earthquake_intel (SYSTEM_TOKEN فقط).
+
+    يُدرج الجديدة فقط وينبثق كل زلزال جديد فوراً في قناة الريال تايم:
+    - event_type='eq_intel' ⇒ نافذة توست إضافية في الواجهة (بجانب الطابور) + نقطة حمراء.
+    - details.sound_alert=true ⇒ صوت إنذار إجباري عند كل الحسابات (وسط القارة القريبة من مصر).
+    - actor_user_id=None ⇒ الفاعل «نظام» — لا يُستبعد أحد من الإشعار (ولا المالك).
+    - كل زلزال جديد يُقيَّد أيضاً في audit_logs (سجل النظام) كرصد آلي بلا إشعار إضافي.
+    """
+    token = credentials.credentials
+    system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    if not (system_token and token.strip() == system_token):
+        raise HTTPException(status_code=403, detail="استقبال الزلازل متاح للنظام فقط")
+
+    try:
+        inserted = _eq_intel_ingest_events(payload.events, payload.source or "usgs")
+        return {"message": f"تمت معالجة {len(payload.events or [])} رصد — جديد: {inserted}", "inserted": inserted}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء استقبال الزلازل")
+
+
+def _eq_intel_ingest_events(events, source="usgs"):
+    """🌍 نواة الاستقبال المشتركة (endpoint الخارجي + المحرك المحلي الدوري):
+    إدخال الجديدة فقط + بث الريال تايم + قيد الأوديت — بمعاملة واحدة."""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cutoff = (datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None) - timedelta(minutes=EQ_INTEL_DEDUPE_MINUTES))
+            inserted = 0
+            for ev in events or []:
+                norm = _eq_intel_normalize_event(ev)
+                if not norm or not norm["external_id"]:
+                    continue
+                if norm["occurred_at"] and norm["occurred_at"] < cutoff:
+                    continue  # قديم من إعادة تشغيل التغذية — تجاهله
+                dist = _eq_intel_haversine_km(
+                    norm["latitude"], norm["longitude"],
+                    EQ_INTEL_ORIGIN_LAT, EQ_INTEL_ORIGIN_LON,
+                )
+                mag = norm["magnitude"]
+                # 📊 درجة خطورة مبدئية (بلا تاريخ) لتقرير البوابة — التاريخ يُحسب لاحقاً عند العرض
+                risk_now = _eq_intel_risk_payload(
+                    {"magnitude": mag, "distance_km": dist}, None,
+                )
+                # 🔔 بوابات الإشعار (بدل إغراق كل زلزال عالمي):
+                #    يُبث ويُقيَّد في الأوديت فقط إذا: قوته ≥ 4، أو قريب من مصر (≤ 1500 كم)،
+                #    أو درجة خطورته ≥ 25 (مستوى متوسطة فأعلى). البقية تُخزَّن في السجل فقط.
+                mag_val = float(mag) if mag is not None else 0.0
+                dist_val = float(dist) if dist is not None else 99999.0
+                score_val = float(risk_now.get("risk_score") or 0)
+                should_notify = (
+                    mag_val >= EQ_NOTIFY_MIN_MAG
+                    or dist_val <= EQ_NOTIFY_PROXIMITY_KM
+                    or score_val >= EQ_NOTIFY_RISK_SCORE
+                )
+                # 🔊 الصوت الإنذاري حصراً لما فوق 4 ريختر (بلا استثناء — طلب صريح)
+                sound = mag_val >= 4.0
+                status_label = _eq_intel_status_label(mag)
+                cursor.execute("""
+                    INSERT INTO earthquake_intel
+                        (source, external_id, occurred_at, magnitude, depth_km,
+                         place, latitude, longitude, distance_km, sound_alert, raw)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (source, external_id) DO NOTHING
+                    RETURNING eq_intel_id;
+                """, (
+                    source or "usgs", norm["external_id"], norm["occurred_at"],
+                    norm["magnitude"], norm["depth_km"], norm["place"],
+                    norm["latitude"], norm["longitude"], dist, sound,
+                    Jsonb(ev) if isinstance(ev, dict) else None,
+                ))
+                got = cursor.fetchone()
+                if not got:
+                    continue
+                inserted += 1
+                # 📚 مرآة الكتالوج التاريخي: كل رصد جديد يُدرج تلقائياً في earthquake_catalog
+                #    فيكبر «العالم كله» والمناطق كل يوم بدون أي باك فيل يدوي.
+                #    region_id = أضيق منطقة تحتوي النقطة (نفس منطق الباك فيل)، وإلا 'world'.
+                mirror_region = "world"
+                _best_radius = None
+                for _zone in EQ_FORECAST_ZONES:
+                    if _zone.get("is_world") or not _zone.get("radius_km"):
+                        continue
+                    _d = _eq_intel_haversine_km(norm["latitude"], norm["longitude"], _zone["lat"], _zone["lon"])
+                    if _d is not None and _d <= _zone["radius_km"] and (_best_radius is None or _zone["radius_km"] < _best_radius):
+                        mirror_region = _zone["id"]
+                        _best_radius = _zone["radius_km"]
+                try:
+                    cursor.execute("""
+                        INSERT INTO earthquake_catalog
+                            (source, external_id, occurred_at, magnitude, depth_km, place, latitude, longitude, region_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (source, external_id) DO NOTHING;
+                    """, (
+                        source or "usgs", norm["external_id"], norm["occurred_at"],
+                        norm["magnitude"], norm["depth_km"], norm["place"],
+                        norm["latitude"], norm["longitude"], mirror_region,
+                    ))
+                    _EQ_FORECAST_MEM_CACHE.clear()  # إحصاءات العالم/المناطق تلتقط الجديد فوراً
+                except Exception as _cat_err:
+                    print(f"eq catalog mirror insert failed: {_cat_err}")
+                mag_txt = f"{norm['magnitude']:g}" if norm["magnitude"] is not None else "؟"
+                place_txt = norm["place"] or "غير محدد"
+                time_txt = norm["occurred_at"].strftime("%Y-%m-%d %H:%M") if norm["occurred_at"] else ""
+                # 📢 بث كل زلزال فوراً (طلب المستخدم): أي زلزال ⇒ إشعار + صوت عند الجميع
+                # 🔗 رابط تفاصيل USGS الرسمي — يُحفظ مع raw ويُبث في الإشعار لفتحه بضغطة
+                detail_url = None
+                if (source or "usgs") == "usgs" and norm["external_id"]:
+                    detail_url = f"https://earthquake.usgs.gov/earthquakes/eventpage/{norm['external_id']}"
+                details = {
+                    "action_text": f"{status_label} بقوة {mag_txt} درجة — {place_txt}" + (f" ({time_txt})" if time_txt else ""),
+                    "earthquake": {
+                        "eq_intel_id": got[0],
+                        "magnitude": norm["magnitude"],
+                        "place": norm["place"],
+                        "occurred_at": time_txt,
+                        "distance_km": dist,
+                        "sound_alert": sound,
+                        "detail_url": detail_url,
+                    },
+                }
+                if should_notify:
+                    create_realtime_event(
+                        cursor,
+                        event_type="eq_intel",
+                        action=f"زلزال جديد بقوة {mag_txt} — {place_txt}",
+                        actor_user_id=None,          # «نظام»: لا يُستبعد الفاعل من الإشعار
+                        entity_id=got[0],
+                        details=details,
+                    )
+                # 🧾 سجل النظام: بنفس بوابة الإشعار (≥4 ريختر أو قريب من مصر أو خطورة ≥25).
+                #    realtime=False ⇒ لا حدث لحظي إضافي — الإشعار الفوري أعلاه واحد فقط.
+                if should_notify:
+                    try:
+                        create_audit_log(
+                            cursor,
+                            1,  # النظام — الرصد الآلي لا فاعل بشري له
+                            f"رصد زلزال {status_label}",
+                            mission_id=None,
+                            entity_type="earthquake",
+                            entity_id=got[0],
+                            details={
+                                "action_text": (
+                                    f"رصد آلي: زلزال بقوة {mag_txt} درجة — {place_txt}"
+                                    + (f" ({time_txt})" if time_txt else "")
+                                ),
+                                "magnitude": norm["magnitude"],
+                                "place": norm["place"],
+                                "occurred_at": time_txt,
+                                "distance_km": dist,
+                                "source": source or "usgs",
+                                "detail_url": detail_url,
+                            },
+                            realtime=False,
+                        )
+                    except Exception as audit_err:
+                        # توثيق الزلزال لا يُعطّل استقباله أبداً
+                        print(f"eq intel audit log failed: {audit_err}")
+            connection.commit()
+            EQ_INTEL_STATE["last_run_at"] = datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None).isoformat(timespec="seconds")
+            EQ_INTEL_STATE["last_status"] = "ok"
+            EQ_INTEL_STATE["last_error"] = None
+            return inserted
+    except Exception as e:
+        connection.rollback()
+        EQ_INTEL_STATE["last_status"] = "error"
+        EQ_INTEL_STATE["last_error"] = str(e)[:200]
+        print(f"Error ingesting earthquake intel: {e}")
+        raise
+    finally:
+        connection.close()
+
+
+# ── 🖥️ المحرك المحلي الدوري (علاج جذري: التغذية الكرونية كانت تُرسل لبيئة الإنتاج فقط
+#    ⇒ السيرفر المحلي/أي بيئة أخرى بلا رصد ولا إشعارات إطلاقاً رغم أن USGS فيه أحداث).
+#    المحرك يعمل داخل السيرفر نفسه: يقرأ تغذية USGS كل دقيقة ويُدخل الزلازل عبر نفس
+#    نواة الاستقبال (فريد source+external_id ⇒ لا تكرار حتى لو تعددت المحركات).
+#    للإيقاف: EOC_EQ_LOCAL_ENGINE=0
+def _eq_intel_local_engine_loop():
+    import time as _time
+    import requests as _requests
+    if (os.getenv("EOC_EQ_LOCAL_ENGINE", "1").strip().lower() in ("0", "false", "off")):
+        print("EQ local engine disabled (EOC_EQ_LOCAL_ENGINE=0)")
+        return
+    _schema_ready.wait(timeout=60)  # ننتظر جاهزية الجداول قبل أول دورة
+    while True:
+        try:
+            features = None
+            for feed_url in EQ_INTEL_FEEDS:
+                try:
+                    resp = _requests.get(feed_url, timeout=15, headers={"User-Agent": "EOC-Earthquake-Intel/1.0"})
+                    if resp.ok:
+                        features = (resp.json() or {}).get("features", []) or []
+                        break
+                except Exception:
+                    continue
+            if features:
+                events = []
+                import time as _t
+                _t0 = _t.time()
+                for f in features:
+                    props = (f or {}).get("properties") or {}
+                    geom = (f or {}).get("geometry") or {}
+                    coords = (geom.get("coordinates") or [None, None, None])
+                    lon, lat, depth = (list(coords) + [None, None, None])[:3]
+                    events.append({
+                        "external_id": f.get("id") or props.get("code") or "",
+                        "occurred_at": props.get("time"),
+                        "magnitude": props.get("mag"),
+                        "depth_km": depth,
+                        "place": props.get("place") or "",
+                        "latitude": lat,
+                        "longitude": lon,
+                    })
+                inserted = _eq_intel_ingest_events(events, "usgs")
+                print(f"EQ local engine: feed={len(events)} new={inserted} in {_t.time()-_t0:.1f}s")
+        except Exception as e:
+            print(f"EQ local engine cycle failed: {e}")
+        _time.sleep(EQ_INTEL_POLL_SECONDS)
+
+
+_EQ_INTEL_ENGINE_THREAD = threading.Thread(
+    target=_eq_intel_local_engine_loop,
+    name="eoc-eq-intel-engine",
+    daemon=True,
+)
+_EQ_INTEL_ENGINE_THREAD.start()
+
+
+@app.get("/api/earthquake-intel")
+def get_earthquake_intel(
+    limit: int = 200,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """🌍 آخر الزلازل المرصودة لمحرك الاستخبارات (أدوار التشغيل ما عدا إدارة الشباب).
+    فلاتر اختيارية: from_date/to_date (شاملة الطرفين) — بلا فلتر = الأحدث أولاً."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_eq_intel_access(role)
+    try:
+        limit = max(1, min(int(limit), 500))
+    except Exception:
+        limit = 200
+
+    where = []
+    params = []
+    if from_date or to_date:
+        start = validate_forecast_date(from_date or to_date)
+        end = validate_forecast_date(to_date or from_date)
+        if end < start:
+            start, end = end, start
+        where.append("occurred_at >= %s")
+        where.append("occurred_at < %s")
+        params.extend([datetime.combine(start, datetime.min.time()), datetime.combine(end, datetime.min.time()) + timedelta(days=1)])
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(f"""
+                SELECT eq_intel_id, source, external_id, occurred_at, magnitude,
+                       depth_km, place, latitude, longitude, distance_km,
+                       sound_alert, created_at, hist_max_mag, hist_window_count, hist_scanned_at,
+                       CASE WHEN source = 'usgs' AND external_id <> ''
+                            THEN 'https://earthquake.usgs.gov/earthquakes/eventpage/' || external_id END
+                FROM earthquake_intel
+                {'WHERE ' + ' AND '.join(where) if where else ''}
+                ORDER BY occurred_at DESC NULLS LAST, eq_intel_id DESC
+                LIMIT %s;
+            """, (*params, limit))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "eq_intel_id": r[0],
+                    "source": r[1],
+                    "external_id": r[2],
+                    "occurred_at": fmt_dt(r[3]),
+                    "magnitude": r[4],
+                    "depth_km": r[5],
+                    "place": r[6],
+                    "latitude": r[7],
+                    "longitude": r[8],
+                    "distance_km": r[9],
+                    "sound_alert": r[10],
+                    "status": _eq_intel_status_label(r[4]),
+                    "created_at": fmt_dt(r[11]),
+                    "detail_url": r[15],
+                    "hist_max_mag": r[12],
+                    "hist_window_count": r[13],
+                    "hist_scanned_at": fmt_dt(r[14]),
+                    # 📊 درجة/مستوى الخطورة تُحسب فورياً من القيم المخزنة (بلا شبكة)
+                    **_eq_intel_risk_payload(
+                        {"magnitude": r[4], "distance_km": r[9],
+                         "hist_max_mag": r[12], "hist_window_count": r[13]},
+                        {"hist_max_mag": r[12], "hist_window_count": r[13]} if r[12] is not None else None,
+                    ),
+                }
+                for r in rows
+            ]
+    except Exception as e:
+        print(f"Error loading earthquake intel: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تحميل استخبارات الزلازل")
+    finally:
+        connection.close()
+
+
+@app.get("/api/earthquake-intel/status")
+def get_earthquake_intel_status(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """مؤشر صحة المراقبة: آخر تشغيل للمحرك + حرفية التغذية (مدققة من USGS مباشرة)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_eq_intel_access(role)
+
+    feed_freshness = None
+    feed_count = None
+    try:
+        import requests as _requests
+        resp = _requests.get(EQ_INTEL_FEEDS[0], timeout=6)
+        if resp.ok:
+            data = resp.json()
+            feed_count = len(data.get("features", []))
+            stamp = data.get("metadata", {}).get("generated")
+            if stamp:
+                generated = datetime.fromtimestamp(int(stamp), tz=ZoneInfo("UTC"))
+                now_utc = datetime.now(ZoneInfo("UTC"))
+                feed_freshness = int((now_utc - generated).total_seconds())
+    except Exception as e:
+        print(f"eq intel feed probe failed: {e}")
+
+    # 🛡️ «آخر دورة ناجحة» من القاعدة نفسها (ليس من الذاكرة فقط):
+    #    ذاكرة المحرك تُمسح بإعادة تشغيل السيرفر — آخر استقبال فعلي في DB هو الحقيقة.
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*), MAX(created_at) FROM earthquake_intel;")
+            total_rows, last_ingest = cursor.fetchone()
+    except Exception:
+        total_rows, last_ingest = 0, None
+    finally:
+        connection.close()
+
+    last_run = EQ_INTEL_STATE["last_run_at"] or fmt_dt(last_ingest)
+    return {
+        "engine": {
+            "last_run_at": last_run,
+            "last_status": (EQ_INTEL_STATE["last_status"] or ("ok" if last_ingest else None)),
+            "last_error": EQ_INTEL_STATE["last_error"],
+            "poll_seconds": EQ_INTEL_POLL_SECONDS,
+            # 🖥️ مصدر التغذية الفعلي: خيط محلي داخل السيرفر أو كرون خارجي
+            "mode": ("local_thread" if ("_EQ_INTEL_ENGINE_THREAD" in globals() and _EQ_INTEL_ENGINE_THREAD and _EQ_INTEL_ENGINE_THREAD.is_alive()) else "external_cron"),
+        },
+        "db": {
+            "rows": int(total_rows or 0),
+            "last_ingest_at": fmt_dt(last_ingest),
+        },
+        "feed": {
+            "url": EQ_INTEL_FEEDS[0],
+            "count": feed_count,
+            "freshness_seconds": feed_freshness,
+        },
+    }
+
+
+class EqIntelExportModel(BaseModel):
+    kind: str = "filtered"  # 'filtered' (بفلتر التاريخ) | 'full' (الشامل — المالك فقط)
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+
+
+@app.post("/api/earthquake-intel/export-log")
+def export_earthquake_intel_log(
+    payload: EqIntelExportModel,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """📤 تصدير سجل الزلازل الشامل — ملف Excel حقيقي يُبنى على السيرفر (المالك فقط).
+
+    - الفلاتر اختيارية: «من» فقط ⇒ يومها كامل؛ «من + إلى» ⇒ الفترة كاملة؛ بلا فلتر ⇒ الكل.
+    - يشمل كل شيء: الرصود اللحظي (earthquake_intel) + كتالوج الباك فيل (earthquake_catalog)
+      — بلا تكرار (الأولوية للرصد اللحظي لأن حقوله أغنى: خطورة/مسافة/رابط).
+    - كل الأعمدة: التاريخ، الوقت، الشدة، العمق، المكان، الإحداثيات، المسافة عن مصر،
+      التصنيف، الخطورة (0-100)، مستوى الخطورة، أقوى حدث تاريخي، عدد أحداث الفترة،
+      المصدر، الرابط الرسمي.
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_eq_intel_access(role)
+    if not is_owner_role(role):
+        raise HTTPException(status_code=403, detail="تصدير السجل الشامل متاح للمالك فقط")
+
+    start_dt = end_dt = None
+    if payload.from_date or payload.to_date:
+        start = validate_forecast_date(payload.from_date or payload.to_date or "")
+        end = validate_forecast_date(payload.to_date or payload.from_date or "")
+        if end < start:
+            start, end = end, start
+        start_dt = datetime.combine(start, datetime.min.time())
+        end_dt = datetime.combine(end, datetime.min.time()) + timedelta(days=1)
+
+    where_intel = []
+    where_cat = []
+    params = []
+    if start_dt and end_dt:
+        where_intel = ["occurred_at >= %s", "occurred_at < %s"]
+        where_cat = ["occurred_at >= %s", "occurred_at < %s"]
+        params = [start_dt, end_dt]
+
+    try:
+        import io
+        from openpyxl import Workbook
+    except ImportError:
+        raise HTTPException(status_code=500, detail="مكتبة Excel غير متاحة على السيرفر (openpyxl)")
+
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet("سجل الزلازل")
+    ws.append([
+        "التاريخ", "الوقت", "الشدة (ريختر)", "العمق (كم)", "المكان",
+        "خط العرض", "خط الطول", "المسافة عن مصر (كم)", "التصنيف",
+        "الخطورة (0-100)", "مستوى الخطورة", "أقوى حدث تاريخي (±15 يوم)",
+        "عدد أحداث الفترة", "المصدر", "الرابط الرسمي",
+    ])
+
+    seen = set()
+    written = 0
+
+    def _row_from(occurred_at, magnitude, depth_km, place, lat, lon, dist, hist_max, hist_count, source, external_id, detail_url):
+        dt = fmt_dt(occurred_at)
+        date_part, time_part = (dt.split(" ") + [""])[:2] if dt else ("", "")
+        risk = _eq_intel_risk_payload(
+            {"magnitude": magnitude, "distance_km": dist},
+            {"hist_max_mag": hist_max, "hist_window_count": hist_count} if hist_max is not None else None,
+        )
+        return [
+            date_part, time_part, magnitude, depth_km, place,
+            lat, lon,
+            (round(float(dist)) if dist is not None else None),
+            _eq_intel_status_label(magnitude),
+            risk.get("risk_score"), risk.get("risk_level"),
+            hist_max, hist_count, source, detail_url,
+        ]
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # ① الرصد اللحظي أولاً (أغنى الحقول) — ثم الكتالوج يكمّل بلا تكرار
+            cursor.execute(f"""
+                SELECT occurred_at, magnitude, depth_km, place, latitude, longitude,
+                       distance_km, hist_max_mag, hist_window_count, source, external_id
+                FROM earthquake_intel
+                {'WHERE ' + ' AND '.join(where_intel) if where_intel else ''}
+                ORDER BY occurred_at DESC NULLS LAST;
+            """, tuple(params))
+            for r in cursor.fetchall():
+                ext = (r[10] or "")
+                seen.add(ext)
+                detail = (f"https://earthquake.usgs.gov/earthquakes/eventpage/{ext}" if ext else None)
+                ws.append(_row_from(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9] or "usgs", ext, detail))
+                written += 1
+
+            # ② كتالوج الباك فيل (30 سنة) — بلا فلتر = كل شيء حتى الداتا التاريخية
+            cursor.execute(f"""
+                SELECT occurred_at, magnitude, depth_km, place, latitude, longitude, source, external_id
+                FROM earthquake_catalog
+                {'WHERE ' + ' AND '.join(where_cat) if where_cat else ''}
+                ORDER BY occurred_at DESC NULLS LAST;
+            """, tuple(params))
+            for r in cursor.fetchall():
+                ext = (r[7] or "")
+                if ext and ext in seen:
+                    continue
+                if ext:
+                    seen.add(ext)
+                dist = None
+                if r[4] is not None and r[5] is not None:
+                    dist = _eq_intel_haversine_km(r[4], r[5], EQ_INTEL_ORIGIN_LAT, EQ_INTEL_ORIGIN_LON)
+                detail = (f"https://earthquake.usgs.gov/earthquakes/eventpage/{ext}" if ext else None)
+                ws.append(_row_from(r[0], r[1], r[2], r[3], r[4], r[5], dist, None, None, r[6] or "usgs", ext, detail))
+                written += 1
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error exporting earthquake log: {e}")
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء تصدير سجل الزلازل: {str(e)[:120]}")
+    finally:
+        connection.close()
+
+    try:
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=earthquake_log.xlsx"},
+        )
+    except Exception as e:
+        print(f"Error building xlsx: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء بناء ملف الإكسيل")
+
+
+@app.delete("/api/earthquake-intel/{eq_intel_id}")
+def delete_earthquake_intel(
+    eq_intel_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """🗑️ حذف رصد زلزال منفرد — المالك فقط (مع قيد أوديت وربط أحداث الريال تايم)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    role = get_user_role(user_id)
+    if not is_owner_role(role):
+        raise HTTPException(status_code=403, detail="حذف الرصد متاح للمالك فقط")
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT magnitude, place, occurred_at FROM earthquake_intel WHERE eq_intel_id = %s;",
+                (eq_intel_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="الرصد غير موجود")
+            mag_txt = f"{row[0]:g}" if row[0] is not None else "؟"
+            place_txt = row[1] or "غير محدد"
+
+            cursor.execute("DELETE FROM realtime_events WHERE event_type = 'eq_intel' AND entity_id = %s;", (eq_intel_id,))
+            cursor.execute("DELETE FROM earthquake_intel WHERE eq_intel_id = %s;", (eq_intel_id,))
+
+            try:
+                create_audit_log(
+                    cursor,
+                    user_id,
+                    "حذف رصد زلزال",
+                    mission_id=None,
+                    entity_type="earthquake",
+                    entity_id=eq_intel_id,
+                    details={"action_text": f"قام المالك بحذف رصد زلزال بقوة {mag_txt} درجة — {place_txt}"},
+                    realtime=False,
+                )
+            except Exception as audit_err:
+                print(f"eq intel delete audit failed: {audit_err}")
+
+            connection.commit()
+            return {"message": f"تم حذف الرصد بقوة {mag_txt} — {place_txt}"}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error deleting earthquake intel row: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء حذف الرصد")
+    finally:
+        connection.close()
+
+
+@app.get("/api/earthquake-intel/analysis")
+def analyze_earthquake_intel(
+    days: int = 7,
+    limit: int = 60,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """📊 خريطة تحليل الخطورة (Risk Analysis Map):
+    كل زلزال في آخر `days` يوم يُقارن بتاريخ منطقته — نفس الفترة (±15 يوماً)
+    خلال آخر 30 سنة داخل 500 كم من مركزه (كتالوج USGS) — مع خط أساس إقليمي
+    لدائرة 1500 كم حول وسط القارة (وسط مصر).
+    - التاريخ يُجلب مرة واحدة لكل حدث ويُخزَّن في القاعدة (hist_*) — لا تكرار.
+    - الجلب دفعات متوازية (8 خيوط) بلا فشل: ما يفشل يُحسب من الباقي.
+    - الأوزان: 38% شدة + 30% قرب + 32% مفارقة تاريخية (55/45 عند غياب التاريخ).
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_eq_intel_access(role)
+    try:
+        days = max(1, min(int(days), 30))
+    except Exception:
+        days = 7
+    try:
+        limit = max(1, min(int(limit), 150))
+    except Exception:
+        limit = 60
+
+    now_cairo = datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+    window_start = now_cairo - timedelta(days=days)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT e.eq_intel_id, e.occurred_at, e.magnitude, e.place, e.latitude,
+                       e.longitude, e.distance_km, e.sound_alert, e.hist_max_mag,
+                       e.hist_window_count, e.hist_scanned_at,
+                       CASE WHEN e.source = 'usgs' AND e.external_id <> ''
+                            THEN 'https://earthquake.usgs.gov/earthquakes/eventpage/' || e.external_id END
+                FROM earthquake_intel e
+                WHERE occurred_at IS NOT NULL AND occurred_at >= %s
+                ORDER BY occurred_at DESC
+                LIMIT %s;
+            """, (window_start, limit))
+            rows = cursor.fetchall()
+
+            # 🔄 Backfill تاريخي: الصفوف التي لم تُقارن بعد — دفعة متوازية (8 خيوط)
+            # 📚 أولوية الكتالوج المحلي (30 سنة داخل قاعدة البيانات): فوري وبلا شبكة،
+            #    ويُستخدم فقط لو غطّى موقع الحدث؛ وإلا يقع العمل على USGS المباشر.
+            catalog_ready = _eq_catalog_stats()["ready"]
+            need = []
+            for r in rows:
+                if r[8] is None and r[4] is not None and r[5] is not None and r[1] is not None:
+                    if catalog_ready:
+                        local = _eq_catalog_local_hist(float(r[4]), float(r[5]), r[1].date(), EQ_INTEL_HIST_RADIUS_KM)
+                        if local is not None:
+                            cursor.execute("""
+                                UPDATE earthquake_intel
+                                SET hist_max_mag = %s, hist_window_count = %s,
+                                    hist_scanned_at = (now() AT TIME ZONE 'Africa/Cairo')
+                                WHERE eq_intel_id = %s;
+                            """, (local["hist_max_mag"], local["hist_window_count"], r[0]))
+                            continue
+                    need.append((r[0], float(r[4]), float(r[5]), r[1].date()))
+            hist_by_id = {}
+            if need:
+                from concurrent.futures import ThreadPoolExecutor
+                def _fetch_one(item):
+                    eq_id, lat, lon, d = item
+                    return eq_id, _eq_intel_fetch_history(lat, lon, d, EQ_INTEL_HIST_RADIUS_KM)
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    for eq_id, hist in pool.map(_fetch_one, need):
+                        if hist is not None:
+                            hist_by_id[eq_id] = hist
+                for eq_id, hist in hist_by_id.items():
+                    cursor.execute("""
+                        UPDATE earthquake_intel
+                        SET hist_max_mag = %s, hist_window_count = %s,
+                            hist_scanned_at = (now() AT TIME ZONE 'Africa/Cairo')
+                        WHERE eq_intel_id = %s;
+                    """, (hist["hist_max_mag"], hist["hist_window_count"], eq_id))
+            if hist_by_id:
+                connection.commit()
+
+            # 📡 خط الأساس الإقليمي (ذاكرة 6 ساعات): دائرة 1500 كم حول وسط مصر
+            # 🌍 خط الأساس الإقليمي من الكتالوج المحلي أولاً (العالم كله معبَّأ) — وإلا USGS
+            region_hist = None
+            if _eq_catalog_ready_cached():
+                try:
+                    region_hist = _eq_intel_fetch_history(
+                        EQ_INTEL_ORIGIN_LAT, EQ_INTEL_ORIGIN_LON, now_cairo.date(),
+                        EQ_INTEL_REGION_RADIUS_KM,
+                    )
+                except Exception:
+                    region_hist = None
+            if not region_hist:
+                region_hist = _eq_intel_fetch_history(
+                    EQ_INTEL_ORIGIN_LAT, EQ_INTEL_ORIGIN_LON, now_cairo.date(),
+                    EQ_INTEL_REGION_RADIUS_KM,
+                )
+
+            events = []
+            for r in rows:
+                eq_id, occurred_at, mag, place, lat, lon, dist, sound = r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]
+                hist_max, hist_count = r[8], r[9]
+                payload = _eq_intel_risk_payload(
+                    {"magnitude": mag, "distance_km": dist},
+                    {"hist_max_mag": hist_max, "hist_window_count": hist_count} if hist_max is not None else None,
+                )
+                events.append({
+                    "eq_intel_id": eq_id,
+                    "occurred_at": fmt_dt(occurred_at),
+                    "magnitude": mag,
+                    "place": place,
+                    "latitude": lat,
+                    "longitude": lon,
+                    "distance_km": dist,
+                    "sound_alert": sound,
+                    "status": _eq_intel_status_label(mag),
+                    "detail_url": r[11],
+                    **payload,
+                })
+
+            summary = {
+                "critical": sum(1 for e in events if e["risk_level"] == "حرجة"),
+                "high": sum(1 for e in events if e["risk_level"] == "عالية"),
+                "moderate": sum(1 for e in events if e["risk_level"] == "متوسطة"),
+                "low": sum(1 for e in events if e["risk_level"] == "منخفضة"),
+                "max_risk": (max((e["risk_score"] for e in events), default=None)),
+                "events": len(events),
+                "region_hist_max_mag": (region_hist or {}).get("hist_max_mag"),
+                "region_hist_window_count": (region_hist or {}).get("hist_window_count"),
+                "hist_years": EQ_INTEL_HIST_YEARS,
+                "scope": "world",
+                "note_ar": (
+                    "التحليل عالمي بالكامل: كل زلزال مرصود يُقارن بتاريخ موقعه نفسه — "
+                    "أقوى الأحداث في نفس الفترة من السنة (±15 يوماً) خلال آخر 30 سنة "
+                    "داخل 500 كم من مركزه، أياً كانت الدولة. الدرجة = 38% شدة + 30% قرب "
+                    "من وسط القارة (أثر التأثير على مصر) + 32% مفارقة تاريخية."
+                ),
+                "hist_window_days": EQ_INTEL_HIST_WINDOW_DAYS,
+                "hist_radius_km": EQ_INTEL_HIST_RADIUS_KM,
+                "region_radius_km": EQ_INTEL_REGION_RADIUS_KM,
+            }
+            return {
+                "generated_at": fmt_dt(now_cairo),
+                "region": {"latitude": EQ_INTEL_ORIGIN_LAT, "longitude": EQ_INTEL_ORIGIN_LON},
+                "summary": summary,
+                "events": events,
+                "catalog": _eq_catalog_stats(),
+            }
+    except Exception as e:
+        print(f"Error building earthquake intel analysis: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء بناء تحليل الخطورة")
+    finally:
+        connection.close()
+
+
+# ── 🔮 نموذج التوقع الأسبوعي (Statistical Seismicity Forecast) ─────────────
+#    لكل منطقة رصد: معدل تاريخي (كتالوج USGS لـ 10 سنوات) + معدل حديث (آخر 28 يوماً)
+#    ⇒ دمج 45/55 ⇒ توزيع بواسون يعطي العدد المتوقع واحتمال ≥ حدث واحد لكل نطاق قوة.
+#    نموذج إحصائي استرشادي للحسابات والمتابعة — وليس تنبؤاً مؤكداً.
+EQ_FORECAST_HIST_YEARS = 10        # عمق المعدل التاريخي
+EQ_FORECAST_RECENT_DAYS = 28       # نافذة المعدل الحديث (4 أسابيع)
+_EQ_FORECAST_MEM_TTL = 3 * 3600    # ذاكرة 3 ساعات (استعلامات count خفيفة)
+_EQ_FORECAST_MEM_CACHE = {}
+
+EQ_FORECAST_ZONES = [
+    # affects_egypt=True ⇒ زلزال المنطقة قد يكون له تأثير على مصر (قرب/تسونامي/نفس الصفحة التكتونية)
+    {"id": "egypt",     "ar": "مصر",                    "en": "Egypt",                  "lat": 26.8,  "lon": 30.8,   "radius_km": 400, "affects_egypt": True},
+    {"id": "redsea",    "ar": "البحر الأحمر (شمال)",    "en": "Northern Red Sea",       "lat": 27.5,  "lon": 34.0,   "radius_km": 350, "affects_egypt": True},
+    {"id": "aqaba",     "ar": "خليج العقبة وسيناء",     "en": "Gulf of Aqaba & Sinai",  "lat": 28.9,  "lon": 34.6,   "radius_km": 300, "affects_egypt": True},
+    {"id": "levant",    "ar": "بلاد الشام (البحر الميت)", "en": "Levant (Dead Sea)",     "lat": 32.5,  "lon": 35.7,   "radius_km": 350, "affects_egypt": True},
+    {"id": "emedit",    "ar": "شرق المتوسط",            "en": "Eastern Mediterranean",  "lat": 33.0,  "lon": 32.5,   "radius_km": 500, "affects_egypt": True},
+    {"id": "cyprus",    "ar": "قبرص وجنوب تركيا",       "en": "Cyprus & S. Turkey",     "lat": 35.5,  "lon": 33.0,   "radius_km": 450, "affects_egypt": True},
+    {"id": "turkey",    "ar": "تركيا (الأناضول)",       "en": "Turkey (Anatolia)",      "lat": 39.0,  "lon": 33.0,   "radius_km": 600, "affects_egypt": True},
+    {"id": "aegean",    "ar": "اليونان والبحر الإيجي",  "en": "Greece & Aegean",        "lat": 37.0,  "lon": 25.5,   "radius_km": 500, "affects_egypt": True},
+    {"id": "zagros",    "ar": "إيران (الزاغروس)",       "en": "Iran (Zagros)",          "lat": 30.0,  "lon": 52.0,   "radius_km": 700, "affects_egypt": False},
+    {"id": "japan",     "ar": "اليابان",                "en": "Japan",                  "lat": 38.0,  "lon": 142.0,  "radius_km": 500, "affects_egypt": False},
+    {"id": "indonesia", "ar": "إندونيسيا",              "en": "Indonesia",              "lat": 0.0,   "lon": 118.0,  "radius_km": 700, "affects_egypt": False},
+    {"id": "chile",     "ar": "شيلي",                   "en": "Chile",                  "lat": -30.0, "lon": -71.0,  "radius_km": 500, "affects_egypt": False},
+    # 🌍 «العالم كله»: التغطية الشاملة المطلوبة للصفحة — كل زلازل العالم بلا استثناء.
+    #    المعدل التاريخي من الكتالوج المحلي فقط (بلا استعلامات USGS مكلفة)،
+    #    وتُعرض في كارت مستقل بارز أعلى صفحة التوقعات.
+    {"id": "world",     "ar": "🌍 العالم كله",          "en": "🌍 Worldwide",           "lat": 0.0,   "lon": 0.0,    "radius_km": 0,   "affects_egypt": False, "is_world": True},
+]
+
+# المناطق المؤثرة على مصر = الكتالوج التاريخي يُجمَع لها (زر تحديث الكتالوج)
+EQ_CATALOG_REGIONS = [z for z in EQ_FORECAST_ZONES if z.get("affects_egypt")]
+EQ_CATALOG_MINMAG = 4.0
+
+
+def ensure_earthquake_catalog_schema():
+    """📚 كتالوج الزلازل التاريخي (30 سنة — العالم كله) — خطوة خفيفة منفصلة (لا رفع SCHEMA_VERSION).
+
+    مصدر المقارنة المحلي الدائم لتحليل الخطورة: يُعبَّأ مرة واحدة (أو دورياً) بزر
+    المالك عبر /api/earthquake-intel/catalog/backfill من كتالوج USGS الرسمي.
+    التغطية عالمية: المناطق المؤثرة على مصر (region_id=معرف المنطقة) + بقية العالم
+    (region_id='world') — والفريد (source, external_id) ⇒ التعبئة المتكررة لا تُنشئ نسخاً.
+    """
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT to_regclass('public.earthquake_catalog');")
+            if cursor.fetchone()[0] is None:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS earthquake_catalog (
+                        catalog_id     BIGSERIAL PRIMARY KEY,
+                        source         VARCHAR(40)  NOT NULL DEFAULT 'usgs',
+                        external_id    VARCHAR(160) NOT NULL DEFAULT '',
+                        occurred_at    TIMESTAMP WITHOUT TIME ZONE,
+                        magnitude      DOUBLE PRECISION,
+                        depth_km       DOUBLE PRECISION,
+                        place          VARCHAR(240),
+                        latitude       DOUBLE PRECISION,
+                        longitude      DOUBLE PRECISION,
+                        region_id      VARCHAR(40),
+                        created_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    );
+                """)
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_eq_catalog_source_external
+                    ON earthquake_catalog (source, external_id);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_eq_catalog_occurred
+                    ON earthquake_catalog (occurred_at DESC);
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_eq_catalog_region
+                    ON earthquake_catalog (region_id);
+            """)
+            connection.commit()
+    except Exception as e:
+        connection.rollback()
+        print(f"ensure_earthquake_catalog_schema error (will retry next boot): {e}")
+    finally:
+        connection.close()
+
+
+def _eq_catalog_local_hist(lat, lon, event_date, radius_km=EQ_INTEL_HIST_RADIUS_KM):
+    """📚 المقارنة التاريخية من الكتالوج المحلي (بلا شبكة): أقوى حدث + عددهم
+    في «نفس الفترة» (±15 يوماً عبر حدود السنوات) خلال كل عمق الكتالوج داخل radius_km.
+    يرجع dict أو None لو الكتالوج فاضي/قريب منه — ليقع العمل على مسار USGS المباشر.
+    """
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM earthquake_catalog;")
+                if cursor.fetchone()[0] == 0:
+                    return None
+                cursor.execute("""
+                    SELECT COALESCE(MAX(magnitude), NULL), COUNT(*)
+                    FROM earthquake_catalog
+                    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+                      AND magnitude IS NOT NULL
+                      AND occurred_at IS NOT NULL
+                      AND (6371.0 * 2 * atan2(
+                            sqrt(
+                              power(sin(radians(latitude - %s) / 2), 2) +
+                              cos(radians(%s)) * cos(radians(latitude)) *
+                              power(sin(radians(longitude - %s) / 2), 2)
+                            ),
+                            sqrt(1 - (
+                              power(sin(radians(latitude - %s) / 2), 2) +
+                              cos(radians(%s)) * cos(radians(latitude)) *
+                              power(sin(radians(longitude - %s) / 2), 2)
+                            ))
+                          )) <= %s
+                      AND (
+                            (date_part('doy', occurred_at)::int - %s + 365) %% 365 <= %s
+                         OR (date_part('doy', occurred_at)::int - %s + 365) %% 365 >= 365 - %s
+                      );
+                """, (
+                    lat, lat, lon, lat, lat, lon, radius_km,
+                    event_date.timetuple().tm_yday, EQ_INTEL_HIST_WINDOW_DAYS,
+                    event_date.timetuple().tm_yday, EQ_INTEL_HIST_WINDOW_DAYS,
+                ))
+                r = cursor.fetchone()
+                if not r or r[1] == 0:
+                    return None
+                return {
+                    "hist_max_mag": r[0],
+                    "hist_window_count": int(r[1]),
+                    "hist_source": "local_catalog",
+                }
+        finally:
+            connection.close()
+    except Exception as e:
+        print(f"eq catalog local hist failed: {e}")
+        return None
+
+
+def _eq_catalog_stats():
+    """حالة الكتالوج المحلي: العدد الإجمالي + تغطيته الزمنية + عدد لكل منطقة."""
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*), MIN(occurred_at), MAX(occurred_at)
+                    FROM earthquake_catalog;
+                """)
+                total, mn, mx = cursor.fetchone()
+                cursor.execute("""
+                    SELECT region_id, COUNT(*) FROM earthquake_catalog
+                    WHERE region_id IS NOT NULL GROUP BY region_id;
+                """)
+                per_region = {r[0]: int(r[1]) for r in cursor.fetchall()}
+                return {
+                    "total": int(total or 0),
+                    "coverage_from": fmt_dt(mn),
+                    "coverage_to": fmt_dt(mx),
+                    "per_region": per_region,
+                    "ready": bool(total and total > 0),
+                }
+        finally:
+            connection.close()
+    except Exception as e:
+        print(f"eq catalog stats failed: {e}")
+        return {"total": 0, "coverage_from": None, "coverage_to": None, "per_region": {}, "ready": False}
+
+
+def _eq_catalog_baseline_zones():
+    """خط الأساس التاريخي لكل منطقة مؤثرة على مصر: أقوى حدث في نفس الفترة الحالية
+    (±15 يوماً) خلال كل عمق الكتالوج + إجمالي أحداثها الكتالوجية."""
+    out = []
+    try:
+        now_doy = datetime.now(ZoneInfo("Africa/Cairo")).timetuple().tm_yday
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                for zone in EQ_CATALOG_REGIONS:
+                    cursor.execute("""
+                        SELECT COALESCE(MAX(magnitude), NULL), COUNT(*)
+                        FROM earthquake_catalog
+                        WHERE region_id = %s AND magnitude IS NOT NULL
+                          AND occurred_at IS NOT NULL
+                          AND (
+                                (date_part('doy', occurred_at)::int - %s + 365) %% 365 <= %s
+                             OR (date_part('doy', occurred_at)::int - %s + 365) %% 365 >= 365 - %s
+                          );
+                    """, (zone["id"], now_doy, EQ_INTEL_HIST_WINDOW_DAYS, now_doy, EQ_INTEL_HIST_WINDOW_DAYS))
+                    mx, cnt = cursor.fetchone()
+                    cursor.execute("SELECT COUNT(*) FROM earthquake_catalog WHERE region_id = %s;", (zone["id"],))
+                    total = cursor.fetchone()[0]
+                    out.append({
+                        "id": zone["id"], "ar": zone["ar"], "en": zone["en"],
+                        "season_max_mag": mx,
+                        "season_count": int(cnt or 0),
+                        "total_count": int(total or 0),
+                    })
+        finally:
+            connection.close()
+    except Exception as e:
+        print(f"eq catalog baseline failed: {e}")
+    return out
+
+
+def _eq_world_backfill_core(now_cairo):
+    """🌍 سحب 30 سنة من زلازل العالم كله (M≥4) إلى الكتالوج المحلي — طلب لكل سنة
+    (حجم العالم أكبر من حد 20000 للطلب الواحد). فريد (source, external_id) ⇒ آمن للتكرار.
+    يرجع (region_id, inserted, error) بنفس بنية مناطق الكتالوج."""
+    import requests as _requests
+    start_date = now_cairo - timedelta(days=EQ_INTEL_HIST_YEARS * 365)
+    inserted_total = 0
+    err = None
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                for year_offset in range(EQ_INTEL_HIST_YEARS):
+                    year_start = start_date.replace(year=start_date.year + year_offset)
+                    year_end = year_start.replace(year=year_start.year + 1)
+                    if year_start > now_cairo:
+                        break
+                    cursor.execute(
+                        "SELECT 1 FROM earthquake_catalog WHERE region_id='world' AND occurred_at >= %s AND occurred_at < %s LIMIT 1;",
+                        (year_start, min(year_end, now_cairo)),
+                    )
+                    if cursor.fetchone():
+                        continue  # هذه السنة معبأة مسبقاً
+                    try:
+                        resp = _requests.get(
+                            "https://earthquake.usgs.gov/fdsnws/event/1/query",
+                            params={
+                                "format": "geojson",
+                                "starttime": year_start.date().isoformat(),
+                                "endtime": min(year_end, now_cairo).date().isoformat(),
+                                "minmagnitude": EQ_CATALOG_MINMAG,
+                                "orderby": "time",
+                                "limit": 20000,
+                            },
+                            timeout=120,
+                            headers={"User-Agent": "EOC-Earthquake-Intel/1.0"},
+                        )
+                        if not resp.ok:
+                            err = f"year {year_start.year}: HTTP {resp.status_code}"
+                            continue
+                        features = (resp.json() or {}).get("features", []) or []
+                        for f in features:
+                            props = (f or {}).get("properties") or {}
+                            geom = (f or {}).get("geometry") or {}
+                            coords = (geom.get("coordinates") or [None, None, None])
+                            lon, lat, depth = (list(coords) + [None, None, None])[:3]
+                            ext = str(f.get("id") or props.get("code") or "").strip()
+                            t_ms = props.get("time")
+                            if not ext or t_ms is None or lat is None:
+                                continue
+                            try:
+                                occ = datetime.fromtimestamp(float(t_ms) / 1000.0, tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+                            except Exception:
+                                continue
+                            cursor.execute("""
+                                INSERT INTO earthquake_catalog
+                                    (source, external_id, occurred_at, magnitude, depth_km,
+                                     place, latitude, longitude, region_id)
+                                VALUES ('usgs', %s, %s, %s, %s, %s, %s, %s, 'world')
+                                ON CONFLICT (source, external_id) DO NOTHING;
+                            """, (
+                                ext[:160], occ, props.get("mag"), depth,
+                                (props.get("place") or "")[:240] or None, lat, lon,
+                            ))
+                            inserted_total += cursor.rowcount
+                        connection.commit()
+                    except Exception as ye:
+                        err = f"year {year_start.year}: {str(ye)[:100]}"
+        finally:
+            connection.close()
+    except Exception as e:
+        err = str(e)[:120]
+    return "world", inserted_total, err
+
+
+_EQ_WORLD_BACKFILL = {"running": False, "done": False, "error": None, "inserted": 0}
+
+
+def _eq_world_backfill_thread():
+    """خيط تعبئة تلقائي عند الإقلاع: لو كتالوج العالم فارغ يُبنى مرة واحدة في الخلفية
+    (بضع دقائق) — وبعده كل حسابات «العالم كله» فورية من القاعدة بلا أي شبكة."""
+    # 🖐️ افتراضياً معطّل: المالك يشغّل backfill_world_catalog.py يدوياً خارج السيرفر
+    #    (يمنع ازدواج السحب والازدحام على اتصالات Aiven). للتفعيل التلقائي: EOC_EQ_WORLD_BACKFILL=1
+    if (os.getenv("EOC_EQ_WORLD_BACKFILL", "0").strip().lower() not in ("1", "true", "on")):
+        print("EQ world catalog auto-backfill disabled (شغّل backfill_world_catalog.py يدوياً أو EOC_EQ_WORLD_BACKFILL=1)")
+        return
+    _schema_ready.wait(timeout=60)
+    if _EQ_WORLD_BACKFILL["running"]:
+        return
+    _EQ_WORLD_BACKFILL["running"] = True
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM earthquake_catalog WHERE region_id='world';")
+                already = cursor.fetchone()[0]
+        finally:
+            connection.close()
+        if already > 0:
+            _EQ_WORLD_BACKFILL["done"] = True
+            return
+        now_cairo = datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+        rid, inserted, err = _eq_world_backfill_core(now_cairo)
+        _EQ_WORLD_BACKFILL["inserted"] = inserted
+        _EQ_WORLD_BACKFILL["error"] = err
+        _EQ_WORLD_BACKFILL["done"] = True
+        _EQ_CATALOG_READY_CACHE["ts"] = 0.0  # إبطال فحص الجاهزية ليكتشف الکتالوج الجديد
+        print(f"EQ world catalog auto-backfill: inserted={inserted} error={err}")
+    except Exception as e:
+        _EQ_WORLD_BACKFILL["error"] = str(e)[:200]
+        print(f"EQ world catalog auto-backfill failed: {e}")
+    finally:
+        _EQ_WORLD_BACKFILL["running"] = False
+
+
+threading.Thread(target=_eq_world_backfill_thread, name="eoc-eq-world-catalog", daemon=True).start()
+
+
+@app.post("/api/earthquake-intel/catalog/backfill")
+def backfill_earthquake_catalog(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """📚 تعبئة الكتالوج التاريخي (30 سنة) من كتالوج USGS لكل المناطق المؤثرة على مصر
+    (تركيا والشام وقبرص واليونان والأحمر والعقبة وشرق المتوسط ومصر) — المالك فقط.
+    دفعات متوازية (8 خيوط)، فريد (source, external_id) ⇒ التكرار آمن.
+    التغطية عالمية: المناطق المؤثرة على مصر + بقية العالم (region_id='world').
+    يرجع عدد المدرَج لكل منطقة. الموجود مسبقاً لا يُلمس (ON CONFLICT DO NOTHING)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    if not is_owner_role(role):
+        raise HTTPException(status_code=403, detail="تعبئة الكتالوج التاريخي متاحة للمالك فقط")
+
+    import requests as _requests
+    from concurrent.futures import ThreadPoolExecutor
+    now_cairo = datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+    start = (now_cairo - timedelta(days=EQ_INTEL_HIST_YEARS * 365)).date().isoformat()
+    end = now_cairo.date().isoformat()
+
+    def _pull(zone):
+        try:
+            resp = _requests.get(
+                "https://earthquake.usgs.gov/fdsnws/event/1/query",
+                params={
+                    "format": "geojson",
+                    "starttime": start,
+                    "endtime": end,
+                    "minmagnitude": EQ_CATALOG_MINMAG,
+                    "orderby": "time",
+                    "limit": 20000,
+                    **({} if zone.get("is_world") else {
+                        "latitude": zone["lat"],
+                        "longitude": zone["lon"],
+                        "maxradiuskm": zone["radius_km"],
+                    }),
+                },
+                # 🌍 سحب العالم كله ثقيل (عشرات آلاف الأحداث) — مهلة أوسع
+                timeout=(240 if zone.get("is_world") else 90),
+                headers={"User-Agent": "EOC-Earthquake-Intel/1.0"},
+            )
+            if not resp.ok:
+                return zone["id"], 0, f"HTTP {resp.status_code}"
+            features = (resp.json() or {}).get("features", []) or []
+            conn2 = get_connection()
+            inserted = 0
+            try:
+                with conn2.cursor() as cur2:
+                    for f in features:
+                        props = (f or {}).get("properties") or {}
+                        geom = (f or {}).get("geometry") or {}
+                        coords = (geom.get("coordinates") or [None, None, None])
+                        lon, lat, depth = (list(coords) + [None, None, None])[:3]
+                        ext = str(f.get("id") or props.get("code") or "").strip()
+                        t_ms = props.get("time")
+                        if not ext or t_ms is None or lat is None:
+                            continue
+                        try:
+                            occ = datetime.fromtimestamp(float(t_ms) / 1000.0, tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+                        except Exception:
+                            continue
+                        cur2.execute("""
+                            INSERT INTO earthquake_catalog
+                                (source, external_id, occurred_at, magnitude, depth_km,
+                                 place, latitude, longitude, region_id)
+                            VALUES ('usgs', %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (source, external_id) DO NOTHING;
+                        """, (
+                            ext[:160], occ, props.get("mag"), depth,
+                            (props.get("place") or "")[:240] or None, lat, lon, zone["id"],
+                        ))
+                        inserted += cur2.rowcount
+                conn2.commit()
+            except Exception as e:
+                conn2.rollback()
+                return zone["id"], 0, str(e)[:120]
+            finally:
+                conn2.close()
+            return zone["id"], inserted, None
+        except Exception as e:
+            return zone["id"], 0, str(e)[:120]
+
+    # 🌍 «العالم كله» يُسحب سنوياً (30 طلباً) لأن حجمه أكبر من حد 20000 للطلب الواحد
+    world_zone = next((z for z in EQ_FORECAST_ZONES if z.get("is_world")), None)
+    world_result = None
+    if world_zone:
+        world_result = _eq_world_backfill_core(now_cairo)
+    pull_zones = [z for z in EQ_CATALOG_REGIONS]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(_pull, pull_zones))
+    if world_result is not None:
+        results.append(world_result)
+
+    stats = _eq_catalog_stats()
+    return {
+        "message": "تم تحديث الكتالوج التاريخي",
+        "per_region": {rid: {"inserted": n, "error": err} for rid, n, err in results},
+        "catalog": stats,
+    }
+
+
+@app.get("/api/earthquake-intel/catalog/stats")
+def earthquake_catalog_stats(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """📚 حالة الكتالوج التاريخي المحلي (عدد/تغطية/لكل منطقة) — أدوار التشغيل."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_eq_intel_access(role)
+    return _eq_catalog_stats()
+
+
+class EqIntelClearAllRequest(ClearAllRequest):
+    pass
+
+
+@app.post("/api/earthquake-intel/clear-all")
+def clear_all_earthquake_intel(
+    data: EqIntelClearAllRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """🗑️ مسح سجل استخبارات الزلازل بالكامل — المالك فقط + رمز التأكيد (نفس نمط باقي الصفحات)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    require_owner_for_clear(user_id)
+    validate_clear_confirmation(data)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM earthquake_intel")
+            total_count = cursor.fetchone()[0]
+
+            cursor.execute("DELETE FROM earthquake_intel")
+
+            create_audit_log(
+                cursor,
+                user_id,
+                "مسح سجل استخبارات الزلازل",
+                mission_id=None,
+                entity_type="earthquake",
+                entity_id=None,
+                details={
+                    "action_text": (
+                        f"قام المالك بمسح سجل استخبارات الزلازل نهائياً. "
+                        f"إجمالي الرصدات المحذوفة: {total_count}"
+                    )
+                },
+            )
+
+            connection.commit()
+
+            return {
+                "message": "تم مسح سجل استخبارات الزلازل بنجاح",
+                "deleted_count": total_count,
+            }
+
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=f"حدث خطأ أثناء مسح السجل: {str(e)}")
+    finally:
+        connection.close()
+
+
+def _eq_forecast_poisson_prob(lmbda):
+    """احتمال حدوث حدث واحد على الأقل خلال المدة (بواسون): 1 − e^−λ — كنسبة 0-100."""
+    try:
+        lam = max(0.0, float(lmbda or 0.0))
+    except Exception:
+        return 0.0
+    if lam <= 0:
+        return 0.0
+    import math
+    if lam >= 20:
+        return 100.0
+    return round(100.0 * (1.0 - math.exp(-lam)), 1)
+
+
+def _eq_forecast_blend(hist_weekly, recent_weekly):
+    """دمج المعدلات: 45% تاريخي + 55% حديث. يرجع (λ الأسبوعية، نسبة الشذوذ أو None)."""
+    try:
+        h = max(0.0, float(hist_weekly or 0.0))
+        r = max(0.0, float(recent_weekly or 0.0))
+    except Exception:
+        return 0.0, None
+    lam = 0.45 * h + 0.55 * r
+    ratio = (r / h) if h > 0.01 else None
+    return lam, ratio
+
+
+def _eq_forecast_trend(ratio, hist_weekly, recent_weekly):
+    """اتجاه النشاط: مرتفع (شذوذ ≥ 2×) / طبيعي / هادئ."""
+    try:
+        h = float(hist_weekly or 0.0)
+        r = float(recent_weekly or 0.0)
+    except Exception:
+        return "هادئ"
+    if h <= 0.01 and r <= 0.01:
+        return "هادئ"
+    if ratio is None:
+        return "مرتفع" if r > 0.01 else "هادئ"   # تاريخ ساكن وحديث نشط ⇒ ارتفاع جديد
+    if ratio >= 2.0:
+        return "مرتفع"
+    if ratio >= 0.5:
+        return "طبيعي"
+    return "هادئ"
+
+
+def _eq_forecast_zone_risk(p45_pct, swarm_flag):
+    """خطر الأسبوع للمنطقة: مرتفع / متوسط / منخفض من احتمال M≥4.5 + علم العنقود."""
+    try:
+        p = float(p45_pct or 0.0)
+    except Exception:
+        p = 0.0
+    if (swarm_flag and p >= 30) or p >= 60:
+        return "مرتفع"
+    if p >= 20:
+        return "متوسط"
+    return "منخفض"
+
+
+def _eq_forecast_count(zone, minmag, start_days_ago, end_days_ago, now_cairo):
+    """عدّاد USGS الخفيف (count endpoint): عدد الأحداث M≥minmag داخل دائرة المنطقة.
+    منطقة «العالم كله» (is_world) تُعدّ بلا حدود جغرافية — كل زلازل العالم."""
+    import requests as _requests
+    params = {
+        "format": "text",
+        "starttime": (now_cairo - timedelta(days=start_days_ago)).date().isoformat(),
+        "endtime": (now_cairo - timedelta(days=end_days_ago)).date().isoformat(),
+        "minmagnitude": minmag,
+    }
+    if not zone.get("is_world"):
+        params.update({
+            "latitude": zone["lat"],
+            "longitude": zone["lon"],
+            "maxradiuskm": zone["radius_km"],
+        })
+    resp = _requests.get(
+        "https://earthquake.usgs.gov/fdsnws/event/1/count",
+        params=params, timeout=12,
+        headers={"User-Agent": "EOC-Earthquake-Intel/1.0"},
+    )
+    if not resp.ok:
+        raise RuntimeError(f"count HTTP {resp.status_code}")
+    return int(resp.text.strip())
+
+
+def _eq_world_stats_from_catalog(now_cairo):
+    """🌍 إحصاءات «العالم كله» من الكتالوج المحلي (30 سنة عالمية) — إحصاء عميق ذو قيمة:
+    الإجمالي والمتوسط اليومي، توزيع القوى (M≥5/6/7)، أقوى زلزال مسجل بمكانه وتاريخه،
+    متوسط أقوى زلزال سنوي، ومؤشر النشاط الحالي (آخر 28 يوماً مقابل المعدل التاريخي)."""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                  COUNT(*) FILTER (WHERE magnitude >= 4.0 AND occurred_at < %s),
+                  COUNT(*) FILTER (WHERE magnitude >= 4.5 AND occurred_at < %s),
+                  COUNT(*) FILTER (WHERE magnitude >= 4.0 AND occurred_at >= %s),
+                  COUNT(*) FILTER (WHERE magnitude >= 5.0),
+                  COUNT(*) FILTER (WHERE magnitude >= 6.0),
+                  COUNT(*) FILTER (WHERE magnitude >= 7.0),
+                  MAX(magnitude),
+                  COUNT(*) FILTER (WHERE magnitude >= 4.0)
+                FROM earthquake_catalog
+                WHERE occurred_at IS NOT NULL AND magnitude IS NOT NULL;
+            """, (
+                now_cairo - timedelta(days=EQ_FORECAST_RECENT_DAYS),
+                now_cairo - timedelta(days=EQ_FORECAST_RECENT_DAYS),
+                now_cairo - timedelta(days=EQ_FORECAST_RECENT_DAYS),
+            ))
+            hist40, hist45, recent40, m5, m6, m7, strongest_mag, total40 = cursor.fetchone()
+            if not total40:
+                return None
+            strongest_place = strongest_at = None
+            if strongest_mag is not None:
+                cursor.execute("""
+                    SELECT place, occurred_at FROM earthquake_catalog
+                    WHERE magnitude = %s AND place IS NOT NULL
+                    ORDER BY occurred_at DESC LIMIT 1;
+                """, (strongest_mag,))
+                strongest_place, strongest_at = cursor.fetchone() or (None, None)
+            cursor.execute("""
+                SELECT AVG(year_max) FROM (
+                    SELECT date_part('year', occurred_at) AS y, MAX(magnitude) AS year_max
+                    FROM earthquake_catalog
+                    WHERE magnitude IS NOT NULL AND occurred_at IS NOT NULL
+                    GROUP BY date_part('year', occurred_at)
+                ) t;
+            """)
+            yearly_max_avg = cursor.fetchone()[0]
+            total_days = max(1, EQ_INTEL_HIST_YEARS * 365)
+            expected28 = (hist40 / total_days) * EQ_FORECAST_RECENT_DAYS
+            return {
+                "hist40": int(hist40 or 0), "hist45": int(hist45 or 0),
+                "recent40": int(recent40 or 0), "swarm35": 0,
+                # 📈 الإجمالي الحقيقي (كل الأزمنة) — يكبر مباشرة مع كل رصد يومي جديد
+                "total40": int(total40 or 0),
+                "m5": int(m5 or 0), "m6": int(m6 or 0), "m7": int(m7 or 0),
+                "strongest_mag": (float(strongest_mag) if strongest_mag is not None else None),
+                "strongest_place": strongest_place,
+                "strongest_at": fmt_dt(strongest_at) if strongest_at else None,
+                "yearly_max_avg": (round(float(yearly_max_avg), 1) if yearly_max_avg is not None else None),
+                "daily_avg": round(total40 / total_days, 1),
+                "expected28": round(expected28, 1),
+                "activity_ratio": (round(recent40 / expected28, 2) if expected28 >= 1 else None),
+                "hist_years": EQ_INTEL_HIST_YEARS,
+                "recent_days": EQ_FORECAST_RECENT_DAYS,
+            }
+    finally:
+        connection.close()
+
+
+def _eq_forecast_zone_stats(zone, now_cairo):
+    """إحصاءات منطقة واحدة (مع ذاكرة 3 ساعات). يرجع dict أو None عند أي فشل — بلا انهيار."""
+    cache_key = zone["id"]
+    import time as _time
+    now_ts = _time.time()
+    cached = _EQ_FORECAST_MEM_CACHE.get(cache_key)
+    if cached and (now_ts - cached[0]) < _EQ_FORECAST_MEM_TTL:
+        return cached[1]
+    try:
+        hist_window_days = EQ_FORECAST_HIST_YEARS * 365
+        hist40 = _eq_forecast_count(zone, 4.0, hist_window_days, EQ_FORECAST_RECENT_DAYS, now_cairo)
+        hist45 = _eq_forecast_count(zone, 4.5, hist_window_days, EQ_FORECAST_RECENT_DAYS, now_cairo)
+        recent40 = _eq_forecast_count(zone, 4.0, EQ_FORECAST_RECENT_DAYS, 0, now_cairo)
+        swarm35 = _eq_forecast_count(zone, 3.5, 2, 0, now_cairo)
+        stats = {
+            "hist40": hist40, "hist45": hist45,
+            "recent40": recent40, "swarm35": swarm35,
+            "hist_years": EQ_FORECAST_HIST_YEARS,
+            "recent_days": EQ_FORECAST_RECENT_DAYS,
+        }
+        _EQ_FORECAST_MEM_CACHE[cache_key] = (now_ts, stats)
+        return stats
+    except Exception as e:
+        print(f"eq forecast stats failed for {zone['id']}: {e}")
+        return None
+
+
+@app.get("/api/earthquake-intel/forecast")
+def forecast_earthquake_intel(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """🔮 توقعات الأسبوع القادم لكل منطقة رصد:
+    - العدد المتوقع (M≥4) + احتمالات (≥1 حدث) لنطاقات M≥4 / M≥4.5 / M≥5 (بواسون).
+    - اتجاه النشاط من نسبة الشذوذ (حديث ÷ تاريخي) + علم النشاط العنقودي (48 ساعة).
+    - منحنى تراكمي يومي (7 أيام) لاحتمال M≥4 — للحساب والمتابعة.
+    منطقة تفشل جلبها ⇒ model_ok=false دون إسقاط البقية (no-fail)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    role = get_user_role(user_id)
+    require_eq_intel_access(role)
+
+    now_cairo = datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+    hist_weeks = (EQ_FORECAST_HIST_YEARS * 365) / 7.0
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _stats_pair(zone):
+        # 🌍 «العالم كله»: الحساب من الكتالوج المحلي المعبَّأ (استعلامات فورية) —
+        #    عدّاد USGS العالمي يستغرق ~30 ثانية فيفشل دائماً على المهلة القصيرة.
+        if zone.get("is_world") and _eq_catalog_ready_cached():
+            try:
+                stats = _eq_world_stats_from_catalog(now_cairo)
+                if stats:
+                    return zone, stats
+            except Exception as e:
+                print(f"eq world catalog stats failed (falling back to USGS): {e}")
+        return zone, _eq_forecast_zone_stats(zone, now_cairo)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        pairs = list(pool.map(_stats_pair, EQ_FORECAST_ZONES))
+
+    zones_out = []
+    for zone, stats in pairs:
+        base = {
+            "id": zone["id"], "ar": zone["ar"], "en": zone["en"],
+            "latitude": zone["lat"], "longitude": zone["lon"], "radius_km": zone["radius_km"],
+        }
+        if not stats:
+            zones_out.append({**base, "model_ok": False})
+            continue
+        # 🌍 «العالم كله»: البواسون يشبع (المعدل العالمي ضخم ⇒ النسب = 100% بلا قيمة).
+        #    نمرر الإحصاء العميق من الكتالوج (30 سنة) كما هو بلا حسابات أسبوع بلا معنى.
+        if zone.get("is_world"):
+            zones_out.append({**base, **stats, "model_ok": True, "is_world": True})
+            continue
+        hist_weekly40 = stats["hist40"] / hist_weeks
+        hist_weekly45 = stats["hist45"] / hist_weeks
+        recent_weekly40 = stats["recent40"] / 4.0
+        lam40, ratio = _eq_forecast_blend(hist_weekly40, recent_weekly40)
+        lam45 = 0.45 * hist_weekly45 + 0.55 * (recent_weekly40 / 3.16)   # قانون غوتنبرغ-ريختر (b=1)
+        lam50 = lam45 / 3.16
+        p40 = _eq_forecast_poisson_prob(lam40)
+        p45 = _eq_forecast_poisson_prob(lam45)
+        p50 = _eq_forecast_poisson_prob(lam50)
+        trend = _eq_forecast_trend(ratio, hist_weekly40, recent_weekly40)
+        daily_expected = (stats["recent40"] / 28.0)
+        # 🌍 «العالم كله»: علم النشاط العنقودي بلا معنى عالمياً (النشاط دائماً متواصل) — نكبته
+        swarm_flag = False if zone.get("is_world") else stats["swarm35"] >= max(3, round(daily_expected * 2.5))
+        zones_out.append({
+            **base,
+            "model_ok": True,
+            "expected_week_m4": round(lam40, 2),
+            "prob_m4_pct": p40,
+            "prob_m45_pct": p45,
+            "prob_m5_pct": p50,
+            "activity_trend": trend,
+            "anomaly_ratio": (round(ratio, 2) if ratio is not None else None),
+            "swarm_flag": swarm_flag,
+            "week_risk": _eq_forecast_zone_risk(p45, swarm_flag),
+            "daily_cumulative_m4": [_eq_forecast_poisson_prob(lam40 * d / 7.0) for d in range(1, 8)],
+            "hist_counts": {"m40": stats["hist40"], "m45": stats["hist45"], "recent_m40": stats["recent40"], "swarm48_m35": stats["swarm35"]},
+        })
+
+    ranked = sorted(
+        [z for z in zones_out if z.get("model_ok") and not z.get("is_world")],
+        key=lambda z: ({"مرتفع": 3, "متوسط": 2, "منخفض": 1}.get(z["week_risk"], 0), z["prob_m45_pct"]),
+        reverse=True,
+    )
+    return {
+        "generated_at": fmt_dt(now_cairo),
+        "horizon_days": 7,
+        "model": {
+            "type": "statistical_poisson",
+            "hist_years": EQ_FORECAST_HIST_YEARS,
+            "recent_days": EQ_FORECAST_RECENT_DAYS,
+            "blend": {"hist": 0.45, "recent": 0.55},
+            "note_ar": "نموذج إحصائي استرشادي (معدلات 10 سنوات + آخر 28 يوماً بتوزيع بواسون) للحساب والمتابعة — وليس تنبؤاً مؤكداً.",
+        },
+        "top_zones": [z["id"] for z in ranked[:3]],
+        "zones": zones_out,
+        "catalog_baseline": _eq_catalog_baseline_zones(),
+        "catalog": _eq_catalog_stats(),
+    }
 
 
 # =====================================================================

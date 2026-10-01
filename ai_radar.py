@@ -35,6 +35,9 @@ SYSTEM_API_URL = "https://eoc-system-b12f.vercel.app/api/ai-news"
 #    بديلة عند 429/404/503 + تحليل احتياطي محلي مضمون آخر الطريق.
 GEMINI_DAILY_LIMIT = int(os.environ.get("GEMINI_DAILY_LIMIT", "60") or 60)
 GEMINI_CALLS_PER_MODEL_CAP = int(os.environ.get("GEMINI_CALLS_PER_MODEL_CAP", "20") or 20)
+# ⏱️ نافذة الرصد: الكرون كل ساعتين ⇒ نافذة 1 ساعة كانت تفقد ما نُشر بين الجولات.
+#    3 ساعات (قابلة للضبط) تغلق الفجوة مع تكرار الجولات، والتكرار محمي بالروابط.
+RADAR_MAX_AGE_HOURS = int(os.environ.get("RADAR_MAX_AGE_HOURS", "3") or 3)
 gemini_calls_today = 0
 gemini_calls_by_model = {}
 
@@ -124,7 +127,7 @@ def guess_governorate(text):
 # 2. RSS Feed Network
 # ==========================================
 search_query = 'حريق OR حادث OR عاجل OR مصرع OR انفجار OR انهيار'
-encoded_query = urllib.parse.quote(f"{search_query} when:1h")
+encoded_query = urllib.parse.quote(f"{search_query} when:{RADAR_MAX_AGE_HOURS}h")
 GOOGLE_NEWS_EGYPT = f"https://news.google.com/rss/search?q={encoded_query}&hl=ar&gl=EG&ceid=EG:ar"
 
 RSS_FEEDS = {
@@ -533,7 +536,7 @@ def scan_single_source(publisher, url, now_utc):
             try:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
-                    if now_utc - pub_date > timedelta(hours=2):
+                    if now_utc - pub_date > timedelta(hours=RADAR_MAX_AGE_HOURS):
                         continue
             except Exception:
                 pass
@@ -542,7 +545,9 @@ def scan_single_source(publisher, url, now_utc):
             if news_link in processed_news_links:
                 continue
 
-            if any(k in entry.title for k in KEYWORDS):
+            # 🔎 المطابقة على العنوان أو الملخص (عناوين كثيرة بلا كلمة مفتاحية نصية)
+            haystack = f"{entry.title} {entry.get('summary', '')}"
+            if any(k in haystack for k in KEYWORDS):
                 print(f"🚨 [{publisher}] رصد: {entry.title}")
                 full_article_text, image_url = scrape_full_article(news_link)
                 combined_text = full_article_text if len(full_article_text) > 50 else entry.get('summary', '')
@@ -563,6 +568,10 @@ def scan_single_source(publisher, url, now_utc):
 # ==========================================
 # 6. Send Report to API
 # ==========================================
+# 📊 عدّادات الجولة — تُطبع في نهاية التشغيل لتشخيص أي فشل إرسال فوراً من لوج GitHub
+send_stats = {"ok": 0, "dup": 0, "fail": 0, "auth_fail": 0}
+
+
 def _build_tactical_report(article, ai_data):
     """نص التقرير التكتيكي المعروض في الواجهة (خطورة + إحداثيات + توصيات + مصدر التحليل + صورة)."""
     severity = ai_data.get("severity_score", "?")
@@ -639,16 +648,25 @@ def send_report(article, ai_data):
         headers_api = {"Authorization": f"Bearer {SYSTEM_TOKEN}", "Content-Type": "application/json"}
         res = requests.post(SYSTEM_API_URL, json=payload, headers=headers_api, timeout=15)
         if res.status_code in [200, 201]:
+            send_stats["ok"] += 1
             print(f"  ✅ إرسال ناجح: {article['title'][:60]}")
         elif "duplicate key" in (res.text or ""):
             # 🛡️ لو السيرفر القديم رفض التكرار 500 — الخبر أصلاً محفوظ ⇒ يُعدّ نجاحاً
+            send_stats["dup"] += 1
             print(f"  ✅ الخبر محفوظ مسبقاً (تكرار رابط): {article['title'][:60]}")
+        elif res.status_code in (401, 403):
+            send_stats["auth_fail"] += 1
+            send_stats["fail"] += 1
+            print(f"  🛑 SYSTEM_TOKEN مرفوض من السيرفر ({res.status_code}) — راجع Secret في GitHub: {res.text[:120]}")
+            processed_news_links.discard(article["link"])
         else:
-            print(f"  ⚠️ خطأ إرسال ({res.status_code}): {res.text[:100]}")
+            send_stats["fail"] += 1
+            print(f"  ⚠️ خطأ إرسال ({res.status_code}): {res.text[:150]}")
             # Don't add to processed set if POST failed — retry next run
             processed_news_links.discard(article["link"])
     except Exception as e:
-        print(f"  ⚠️ فشل الاتصال: {e}")
+        send_stats["fail"] += 1
+        print(f"  ⚠️ فشل الاتصال بالسيرفر: {e}")
         processed_news_links.discard(article["link"])
 
 # ==========================================
@@ -657,10 +675,14 @@ def send_report(article, ai_data):
 def run_ai_scanner():
     global gemini_calls_today
 
-    if not GEMINI_API_KEY or not SYSTEM_TOKEN:
-        print("⚠️ المفاتيح مفقودة! تأكد من GEMINI_API_KEY و SYSTEM_TOKEN")
-        return
+    # 🛡️ لا نوقف المسح أبداً لمفتاح ناقص: التحليل الاحتياطي المحلي يضمن التصنيف،
+    #    وSYSTEM_TOKEN يلزم فقط لخطوة الإرسال (نُكمل ونطبع تشخيصاً صريحاً).
+    if not GEMINI_API_KEY:
+        print("⚠️ GEMINI_API_KEY غير مُعد — التحليل سيكون آلياً محلياً مضموناً (الإرسال يعمل عادي)")
+    if not SYSTEM_TOKEN:
+        print("🛑 SYSTEM_TOKEN غير مُعد — سيتم المسح والتحليل بلا إرسال! راجع Secrets في GitHub")
 
+    send_stats.update({"ok": 0, "dup": 0, "fail": 0, "auth_fail": 0})
     gemini_calls_today = 0
     gemini_calls_by_model.clear()
     dead_models.clear()
@@ -701,7 +723,8 @@ def run_ai_scanner():
         ai_results = analyze_batch_with_ai(batch)
 
         for article, ai_data in zip(batch, ai_results):
-            send_report(article, ai_data)
+            if SYSTEM_TOKEN:
+                send_report(article, ai_data)
             time.sleep(0.3)  # Small delay between API posts
 
         # Pause between Gemini batches to avoid rate limits
@@ -709,6 +732,12 @@ def run_ai_scanner():
             time.sleep(1)
 
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء من المسح (Gemini calls: {gemini_calls_today}/{GEMINI_DAILY_LIMIT})")
+    # 📊 ملخص الجولة — أول ما تقرأه في اللوج لتعرف فوراً هل وصلت الأخبار أم لا ولماذا
+    print(f"\n📈 ملخص الجولة: رُصد {len(all_articles)} خبر | أُرسل بنجاح {send_stats['ok']} | مكرر محفوظ {send_stats['dup']} | فشل إرسال {send_stats['fail']}")
+    if send_stats["auth_fail"]:
+        print("🛑 تشخيص: فشل إرسال 401/403 ⇒ SYSTEM_TOKEN في Secrets غير صحيح/فارغ — صححه ثم أعد التشغيل")
+    elif len(all_articles) and send_stats["ok"] == 0 and send_stats["fail"] == 0 and not SYSTEM_TOKEN:
+        print("🛑 تشخيص: لا SYSTEM_TOKEN ⇒ لم يُرسل شيء بالتصميم — أضف الـ Secret")
 
     # Phase 3: إصلاح الأخبار القديمة التي فشل تحليلها قبل هذا الإصلاح (لا يبقى خبر بلا تحليل)
     try:
@@ -720,7 +749,8 @@ def run_ai_scanner():
 # ==========================================
 # 8. Repair Engine — إعادة تحليل كل خبر فشل تحليله سابقاً
 # ==========================================
-RADAR_REPAIR_LIMIT = int(os.environ.get("RADAR_REPAIR_LIMIT", "400") or 400)
+# 🛠️ حد الإصلاح لكل جولة: الجديد أولًا — الإصلاح لا يأكل ميزانية الجديد (كان 400)
+RADAR_REPAIR_LIMIT = int(os.environ.get("RADAR_REPAIR_LIMIT", "50") or 50)
 
 
 def _needs_repair(news):
