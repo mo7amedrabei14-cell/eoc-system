@@ -112,8 +112,12 @@ def get_effective_permissions(role_id: int):
     finally:
         connection.close()
 
-def get_user_branches(user_id: int):
-    connection = get_connection()
+def get_user_branches(user_id: int, connection=None):
+    # ♻️ إعادة استخدام اختيارية للاتصال: لو مُرِّر اتصال من نفس الطلب نستخدمه بلا فتح/إغلاق إضافي
+    #    (اتصال واحد للطلب كله)، وإلا فالسلوك القديم حرفياً — اتصال خاص يُفتح ويُغلق هنا.
+    owns_connection = connection is None
+    if owns_connection:
+        connection = get_connection()
 
     try:
         with connection.cursor() as cursor:
@@ -145,10 +149,14 @@ def get_user_branches(user_id: int):
             ]
 
     finally:
-        connection.close()
+        if owns_connection:
+            connection.close()
 
-def get_user_role(user_id: int):
-    connection = get_connection()
+def get_user_role(user_id: int, connection=None):
+    # ♻️ نفس نمط get_user_branches: اتصال مُمرَّر اختيارياً — بلا تمرير = السلوك القديم كما هو.
+    owns_connection = connection is None
+    if owns_connection:
+        connection = get_connection()
 
     try:
         with connection.cursor() as cursor:
@@ -177,7 +185,8 @@ def get_user_role(user_id: int):
             }
 
     finally:
-        connection.close()
+        if owns_connection:
+            connection.close()
 
 def check_permission(user_id: int, permission_code: str):
     role = get_user_role(user_id)

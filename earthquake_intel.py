@@ -28,7 +28,7 @@ except ImportError:
 import requests
 
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN", "").strip()
-SYSTEM_API_URL = (os.environ.get("SYSTEM_API_URL") or "https://eoc-system-b12f.vercel.app").rstrip("/")
+SYSTEM_API_URL = (os.environ.get("SYSTEM_API_URL") or "eoc-system-qaol.vercel.app").rstrip("/")
 INGEST_URL = SYSTEM_API_URL + "/api/earthquake-intel/ingest"
 
 # تغذية USGS: كل الزلازل في آخر ساعة (الأحدث) — وكل زلازل اليوم احتياطاً

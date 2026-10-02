@@ -979,6 +979,106 @@ def root():
     return {"system": "EOC System", "status": "online", "boot_id": BOOT_ID}
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# 🧊 كفاءة القراءة — كاش خادمي قصير مُبطَل بالأحداث (بلا أي تغيير في السلوك الظاهر)
+#
+#    الطلبات الدورية المتزامنة (عدة تابات/مستخدمين في نفس الثانية) تُخدَم من الذاكرة
+#    بدل قاعدة البيانات، وأي حدث جديد في قناة الريال تايم (MAX(event_id) يزيد) يُبطل
+#    الكاش فوراً ⇒ المستخدم الذي استلم حدثاً لا يرى بيانات قديمة أبداً. الـ TTL هو
+#    سقف أمان فقط (3 ثوانٍ افتراضياً) — الإبطال الحقيقي بالأحداث.
+# ═══════════════════════════════════════════════════════════════════════════
+import time as _perf_time
+
+_SERVER_CACHE: dict = {}
+_SERVER_CACHE_LOCK = threading.Lock()
+_WM_CACHE = {"ts": 0.0, "value": None}
+_REALTIME_CACHE_TTL = 3.0
+
+# 🩺 كاش فحص القاعدة للنبضة — النبضة كل 20 ثانية لا تفتح اتصالاً في كل مرة
+_HEALTH_DB_TTL = 12.0
+_HEALTH_DB_CACHE = {"ts": 0.0, "ok": False, "error": None, "checked": False}
+
+# 🌍 كاش استطلع تغذية USGS لمؤشر الحالة — نداء مركزي واحد للنظام كله كل دقيقة
+#    بدل نداء لكل مستخدم/تاب (مؤشر حالة فقط — الرصد نفسه لا يعتمد عليه إطلاقاً)
+_EQ_FEED_PROBE_TTL = 60.0
+_EQ_FEED_PROBE_CACHE = {"ts": 0.0, "data": None}
+
+# 🤖 كاش حالة آخر تشغيل لورك فلو الأخبار (GitHub) — نداء مركزي مخبأ بدل نداء من كل متصفح
+_GITHUB_LASTRUN_CACHE = {"ts": 0.0, "data": None}
+
+
+def _realtime_watermark() -> int:
+    """آخر event_id في realtime_events — مخبأ ثانيتين حتى لا يفتح اتصالاً مع كل نداء."""
+    now = _perf_time.time()
+    if _WM_CACHE["value"] is not None and (now - _WM_CACHE["ts"]) < 2.0:
+        return _WM_CACHE["value"]
+    value = None
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT COALESCE(MAX(event_id), 0) FROM realtime_events;")
+                value = int(cursor.fetchone()[0] or 0)
+        finally:
+            connection.close()
+    except Exception:
+        value = _WM_CACHE["value"] if _WM_CACHE["value"] is not None else 0
+    _WM_CACHE["ts"] = now
+    _WM_CACHE["value"] = value
+    return value
+
+
+def _cache_read(key: str, ttl: float = _REALTIME_CACHE_TTL):
+    """payload المخبأ أو None — يُبطل تلقائياً عند انتهاء TTL أو وصول أي حدث جديد."""
+    try:
+        with _SERVER_CACHE_LOCK:
+            entry = _SERVER_CACHE.get(key)
+        if not entry:
+            return None
+        filled_ts, filled_wm, payload = entry
+        if (_perf_time.time() - filled_ts) > ttl:
+            return None
+        if filled_wm != _realtime_watermark():
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+def _cache_write(key: str, payload):
+    try:
+        with _SERVER_CACHE_LOCK:
+            _SERVER_CACHE[key] = (_perf_time.time(), _realtime_watermark(), payload)
+    except Exception:
+        pass
+
+
+def _probe_database_health():
+    """🩺 فحص قاعدة البيانات مع كاش 12 ثانية — يُرجع (ok, error).
+    نفس منطق النبضة القديم حرفياً (اتصال + SELECT 1 + إغلاق)، لكن الاتصال يُفتح فقط
+    عند انتهاء صلاحية الكاش — النبضة كل 20 ثانية من كل تاب لا تفتح اتصالاً كل مرة."""
+    if _HEALTH_DB_CACHE["checked"] and (_perf_time.time() - _HEALTH_DB_CACHE["ts"]) < _HEALTH_DB_TTL:
+        return _HEALTH_DB_CACHE["ok"], _HEALTH_DB_CACHE["error"]
+    db_ok = False
+    db_error = None
+    try:
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1;")
+                cursor.fetchone()
+            db_ok = True
+        finally:
+            connection.close()
+    except Exception as e:
+        db_error = _redact_error(str(e))[:200]
+    _HEALTH_DB_CACHE["ts"] = _perf_time.time()
+    _HEALTH_DB_CACHE["ok"] = db_ok
+    _HEALTH_DB_CACHE["error"] = db_error
+    _HEALTH_DB_CACHE["checked"] = True
+    return db_ok, db_error
+
+
 @app.get("/api/health")
 def health():
     """🩺 نبضة السيرفر — بدون مصادقة، بدون كتابة، وبدون انتظار تهيئة المخطط.
@@ -990,6 +1090,22 @@ def health():
     - لا يرد خالص = السيرفر نفسه واقع/بيعمل رستر.
     `boot_id` بيتغير مع كل تشغيلة، فبه نعرف الرستر ونطلب Ctrl+Shift+R.
     """
+    # ♻️ فحص القاعدة مع كاش 12 ثانية (اتصال فقط عند انتهاء الصلاحية) — نفس الاستجابة حرفياً
+    db_ok, db_error = _probe_database_health()
+    return {
+        "status": "online" if db_ok else "degraded",
+        "service": "EOC System",
+        "boot_id": BOOT_ID,
+        "revision": APP_REVISION,
+        "started_at": BOOT_STARTED_AT.isoformat(),
+        "uptime_seconds": round((datetime.now(timezone.utc) - BOOT_STARTED_AT).total_seconds(), 1),
+        "server_time": datetime.now(timezone.utc).isoformat(),
+        "cairo_time": datetime.now(ZoneInfo("Africa/Cairo")).isoformat(),
+        "database": {"ok": db_ok, "error": db_error},
+        "schema_ready": _schema_ready.is_set(),
+        "schema_error": _schema_error["message"],
+    }
+    # ── المسار القديم أسفله لم يعد يُنفَّذ (غير قابل للوصول) وأُبقي كمرجع ──
     db_ok = False
     db_error = None
     try:
@@ -1143,33 +1259,32 @@ def get_dashboard_stats(credentials: HTTPAuthorizationCredentials = Depends(secu
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
 
+    # 🧊 كاش مُبطَل بالأحداث — نفس الأرقام حرفياً؛ أي حدث جديد في النظام يُبطلها فوراً
+    cached_stats = _cache_read("dashboard:stats")
+    if cached_stats is not None:
+        return cached_stats
+
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            # 💡 سحب الإحصائيات الدقيقة للسايكل
-            cursor.execute("SELECT COUNT(*) FROM missions WHERE status = 'Under Review'")
-            under_review = cursor.fetchone()[0]
-
-            cursor.execute("SELECT COUNT(*) FROM missions WHERE status = 'Approved'")
-            approved = cursor.fetchone()[0]
-
-            cursor.execute("SELECT COUNT(*) FROM missions WHERE status = 'Completed'")
-            completed = cursor.fetchone()[0]
-
-            cursor.execute("SELECT COUNT(*) FROM missions WHERE status IN ('Draft', 'Returned')")
-            drafts = cursor.fetchone()[0]
-
-            cursor.execute("SELECT COUNT(*) FROM missions WHERE status NOT IN ('Completed', 'Closed', 'Canceled')")
-            active_missions = cursor.fetchone()[0]
-
-            cursor.execute("SELECT COUNT(*) FROM volunteers WHERE is_active = TRUE")
-            ready_teams = cursor.fetchone()[0]
+            # 💡 نفس الأعداد الستة السابقة في استعلام واحد (COUNT FILTER + subquery) — نتائج مطابقة تماماً
+            cursor.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE status = 'Under Review'),
+                    COUNT(*) FILTER (WHERE status = 'Approved'),
+                    COUNT(*) FILTER (WHERE status = 'Completed'),
+                    COUNT(*) FILTER (WHERE status IN ('Draft', 'Returned')),
+                    COUNT(*) FILTER (WHERE status NOT IN ('Completed', 'Closed', 'Canceled')),
+                    (SELECT COUNT(*) FROM volunteers WHERE is_active = TRUE)
+                FROM missions;
+            """)
+            under_review, approved, completed, drafts, active_missions, ready_teams = cursor.fetchone()
 
             if active_missions > 50: emergency_level = "حالة قصوى (أحمر)"
             elif active_missions > 20: emergency_level = "تأهب (أصفر)"
             else: emergency_level = "مستقر (أخضر)"
 
-            return {
+            payload = {
                 "active_missions": active_missions, 
                 "ready_teams": ready_teams, 
                 "emergency_level": emergency_level,
@@ -1178,6 +1293,8 @@ def get_dashboard_stats(credentials: HTTPAuthorizationCredentials = Depends(secu
                 "completed": completed,
                 "drafts": drafts
             }
+            _cache_write("dashboard:stats", payload)
+            return payload
     except Exception as e:
         print(e)
         return {"active_missions": 0, "ready_teams": 0, "emergency_level": "مستقر", "under_review": 0, "approved": 0, "completed": 0, "drafts": 0}
