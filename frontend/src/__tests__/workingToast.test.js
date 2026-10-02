@@ -59,7 +59,8 @@ test('⚡ ضغطة زر ⇒ الحبة تظهر بنص «جاري تنفيذ ا�
   seen.length = 0;
   const buttonLike = { closest: () => true };
   for (const fn of (docListeners.get('click') || [])) fn({ type: 'click', target: buttonLike });
-  const p = globalThis.window.fetch('/api/missions'); // طلب ناتج عن الضغطة
+  // ⚡ قاعدة v5: الحبة للأكشنز فقط (POST/PUT/DELETE) — الضغطة تُنتج أكشناً لا تحميل بيانات
+  const p = globalThis.window.fetch('/api/missions', { method: 'POST' });
   await sleep(10);
   const show = seen.find(s => s.type === WORKING_EVENTS.SHOW);
   assert.ok(show, 'الحبة لم تظهر مع ضغطة الزر!');

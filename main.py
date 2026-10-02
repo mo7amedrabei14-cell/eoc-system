@@ -1301,6 +1301,69 @@ def get_dashboard_stats(credentials: HTTPAuthorizationCredentials = Depends(secu
     finally:
         connection.close()
 
+
+@app.get("/api/dashboard/bundle")
+def get_dashboard_bundle(date: Optional[str] = None, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """📦 حزمة الصفحة الرئيسية: 9 نداءات في طلب واحد — باستدعاء نفس دوال الـ endpoints
+    القديمة حرفياً (منطق واحد وصفر تكرار). أي قسم يفشل أو غير مصرح يُرجَع null تماماً
+    كما لو أن نداءه المنفرد فشل عند الواجهة. الـ endpoints القديمة تعمل كما هي."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    bundle_date = date or datetime.now(ZoneInfo("Africa/Cairo")).strftime("%Y-%m-%d")
+    sections: Dict[str, Any] = {}
+
+    def _sec(name: str, fn):
+        try:
+            sections[name] = fn()
+        except Exception:
+            sections[name] = None
+
+    _sec("missions", lambda: get_missions(credentials=credentials))
+    _sec("local_news", lambda: get_local_news(credentials=credentials))
+    _sec("global_disasters", lambda: get_global_disasters(credentials=credentials))
+    _sec("earthquakes_global", lambda: get_global_eqs(credentials=credentials))
+    _sec("earthquakes_egypt", lambda: get_egypt_eqs(credentials=credentials))
+    _sec("ai_news", lambda: get_ai_news(credentials=credentials))
+    _sec("weather_daily", lambda: get_weather_daily(date=bundle_date, credentials=credentials))
+    _sec("earthquake_intel", lambda: get_earthquake_intel(limit=500, from_date=None, to_date=None, credentials=credentials))
+    _sec("earthquake_intel_status", lambda: get_earthquake_intel_status(credentials=credentials))
+    return sections
+
+
+@app.get("/api/ai-news/last-run")
+def get_ai_news_last_run(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """🤖 حالة آخر تشغيل لورك فلو رادار الأخبار — نفس القيمة التي كان المتصفح يجلبها
+    مباشرة من api.github.com، لكن مركزية من الخادم مع كاش 5 دقائق (نفس دورية الواجهة)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401)
+
+    now_ts = _perf_time.time()
+    cached = _GITHUB_LASTRUN_CACHE
+    if cached["data"] is None or (now_ts - cached["ts"]) >= 300.0:
+        try:
+            import requests as _requests
+            resp = _requests.get(
+                "https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/runs?per_page=1",
+                timeout=10,
+                headers={"Accept": "application/vnd.github+json", "User-Agent": "EOC-System"},
+            )
+            if resp.ok:
+                runs = resp.json().get("workflow_runs") or []
+                cached["data"] = {"updated_at": (runs[0].get("updated_at") if runs else None)}
+            else:
+                cached["data"] = {"updated_at": None}
+            cached["ts"] = now_ts
+        except Exception:
+            # فشل عابر: نُبقي آخر قيمة معروفة ولا نُحدّث ts (إعادة محاولة في النداء التالي)
+            if cached["data"] is None:
+                cached["data"] = {"updated_at": None}
+    return cached["data"]
+
+
 @app.get("/api/volunteers/all")
 def get_all_volunteers(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
@@ -2717,7 +2780,13 @@ def get_missions(
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
     
-    role = get_user_role(user_id)
+    connection = get_connection()
+    try:
+        # ♻️ اتصال واحد للطلب كله: الدور + الاستعلام الرئيسي على نفس الاتصال
+        role = get_user_role(user_id, connection=connection)
+    except Exception:
+        connection.close()
+        raise
     if not role: raise HTTPException(status_code=403)
 
     role_name = role["role_name"]
@@ -2728,7 +2797,6 @@ def get_missions(
     #    فارغ/غير مُرسَل ⇒ لا تأثير إطلاقاً (الاستعلام كما كان تماماً).
     p_search = (participant_name or "").strip()
     p_search_like = f"%{p_search}%" if p_search else None
-    connection = get_connection()
     try:
         with connection.cursor() as cursor:
             base_query = """
@@ -2773,7 +2841,7 @@ def get_missions(
                     query = base_query + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
                     cursor.execute(query)
             else:
-                user_branches = get_user_branches(user_id)
+                user_branches = get_user_branches(user_id, connection=connection)
                 branch_ids = [b["branch_id"] for b in user_branches]
                 if not branch_ids: return []
                 # 💡 الإصلاح الأول: استخدام = ANY(%s) بدل IN %s
@@ -5471,7 +5539,13 @@ def get_realtime_events(
     if not user_id:
         raise HTTPException(status_code=401)
 
-    role = get_user_role(user_id)
+    connection = get_connection()
+    try:
+        # ♻️ اتصال واحد للطلب كله: الدور + الاستعلام الرئيسي (والفروع للمتطوع) على نفس الاتصال
+        role = get_user_role(user_id, connection=connection)
+    except Exception:
+        connection.close()
+        raise
     is_privileged = bool(role) and role["role_name"].upper() in [
         "OWNER", "MANAGER", "SUPERVISOR", "JOKER", "OPERATION", "المالك", "مشرف", "جوكر", "أوبريشن",
     ]
@@ -5479,7 +5553,6 @@ def get_realtime_events(
     #    (youth_completion) ولا يرى أي أحداث عامة أخرى (مهام/أخبار/كوارث/تحديثات نظام).
     is_youth_channel = bool(role) and role["role_name"].strip().upper() == "READ_ONLY_MISSIONS"
 
-    connection = get_connection()
     try:
         with connection.cursor() as cursor:
             if init:
@@ -5523,7 +5596,7 @@ def get_realtime_events(
                     (after_id, user_id, user_id, Jsonb({"youth_completion": True}), limit),
                 )
             else:
-                branch_ids = [b["branch_id"] for b in get_user_branches(user_id)]
+                branch_ids = [b["branch_id"] for b in get_user_branches(user_id, connection=connection)]
                 cursor.execute(
                     """
                     SELECT e.event_id, e.event_type, e.action, e.actor_user_id,
@@ -5687,16 +5760,22 @@ class LocalNewsModel(BaseModel):
 
 @app.get("/api/local-news")
 def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    # 🧊 كاش مُبطَل بالأحداث — نفس النتيجة حرفياً؛ أي خبر جديد (حدث لحظي) يُبطلها فوراً
+    cached = _cache_read("local_news")
+    if cached is not None:
+        return cached
+
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
     
-    role = get_user_role(user_id)
-    if not role: raise HTTPException(status_code=403)
-
-    role_name = role["role_name"]
     connection = get_connection()
     try:
+        # ♻️ اتصال واحد للطلب كله: الدور + الفروع + الاستعلام الرئيسي على نفس الاتصال
+        role = get_user_role(user_id, connection=connection)
+        if not role: raise HTTPException(status_code=403)
+
+        role_name = role["role_name"]
         with connection.cursor() as cursor:
             # الصلاحيات: المالك والجوكر والمشرف بيشوفوا كله، الفرع بيشوف أخباره بس
             base_query = """
@@ -5708,7 +5787,7 @@ def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)
                 query = base_query + " ORDER BY n.created_at DESC;"
                 cursor.execute(query)
             else:
-                user_branches = get_user_branches(user_id)
+                user_branches = get_user_branches(user_id, connection=connection)
                 branch_ids = [b["branch_id"] for b in user_branches]
                 if not branch_ids: return []
                 query = base_query + " WHERE (n.branch_id = ANY(%s) OR n.branch_id IS NULL) ORDER BY n.created_at DESC;"
@@ -5726,7 +5805,10 @@ def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)
                         news_data[k] = str(v)
                 result.append(news_data)
                 
+            _cache_write("local_news", result)
             return result
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error fetching news: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء جلب الأخبار")
@@ -6281,6 +6363,11 @@ class GlobalDisasterModel(BaseModel):
 
 @app.get("/api/global-disasters")
 def get_global_disasters(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    # 🧊 كاش مُبطَل بالأحداث — نفس النتيجة حرفياً؛ أي كارثة جديدة تُبطلها فوراً
+    cached = _cache_read("global_disasters")
+    if cached is not None:
+        return cached
+
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
@@ -6298,6 +6385,7 @@ def get_global_disasters(credentials: HTTPAuthorizationCredentials = Depends(sec
                     if v is not None and not isinstance(v, (str, int, float, bool)): 
                         data[k] = str(v)
                 result.append(data)
+            _cache_write("global_disasters", result)
             return result
     finally:
         connection.close()
@@ -6800,6 +6888,12 @@ def _ensure_ai_news_observed_at(cursor):
 
 @app.get("/api/ai-news")
 def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    # 🧊 كاش 120 ثانية مُبطَل بالأحداث: المصدر (رادار الذكاء) يتحرك كل ساعتين، وأي خبر
+    #    جديد يبث حدثاً لحظياً يُبطل الكاش فوراً — نفس الـ response حرفياً.
+    cached = _cache_read("ai_news", 120.0)
+    if cached is not None:
+        return cached
+
     token = credentials.credentials
     import os
     system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
@@ -6823,6 +6917,7 @@ def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
                     if v is not None and not isinstance(v, (str, int, float, bool)): 
                         data[k] = str(v)
                 result.append(data)
+            _cache_write("ai_news", result)
             return result
     finally:
         connection.close()
@@ -7432,7 +7527,7 @@ def get_user_region_scope(role):
     return "ALL"
 
 
-def weather_region_scope(user_id, role):
+def weather_region_scope(user_id, role, connection=None):
     """
     نطاق «أقاليم» لمستخدم الطقس (RLS): None = عام (يرى كل المحافظات)،
     وإلا مجموعة أقاليم {hq, canal, delta, saeed} = اتحاد فروع المستخدم — لا تصعّد أبداً.
@@ -7442,7 +7537,7 @@ def weather_region_scope(user_id, role):
         return None
 
     regions = set()
-    for b in get_user_branches(user_id):
+    for b in get_user_branches(user_id, connection=connection):
         r = BRANCH_ID_TO_REGION.get(b["branch_id"])
         if r:
             regions.add(r)
@@ -7540,14 +7635,14 @@ def get_weather(date: str, credentials: HTTPAuthorizationCredentials = Depends(s
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    role = get_user_role(user_id)
-    require_weather_eligible(role)
-    forecast_date = validate_forecast_date(date)
-    scope = weather_region_scope(user_id, role)
-    allowed_branch_ids = _weather_scope_branch_param(scope)
-
     connection = get_connection()
     try:
+        # ♻️ اتصال واحد للطلب كله: الدور + النطاق + الاستعلام الرئيسي
+        role = get_user_role(user_id, connection=connection)
+        require_weather_eligible(role)
+        forecast_date = validate_forecast_date(date)
+        scope = weather_region_scope(user_id, role, connection=connection)
+        allowed_branch_ids = _weather_scope_branch_param(scope)
         with connection.cursor() as cursor:
             if allowed_branch_ids is None:
                 cursor.execute(
@@ -7601,6 +7696,8 @@ def get_weather(date: str, credentials: HTTPAuthorizationCredentials = Depends(s
                 }
                 for r in rows
             ]
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error fetching weather: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء جلب توقعات الطقس")
@@ -7614,16 +7711,17 @@ def get_weather_daily(date: str, credentials: HTTPAuthorizationCredentials = Dep
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    role = get_user_role(user_id)
-    require_weather_eligible(role)
-    forecast_date = validate_forecast_date(date)
-    scope = weather_region_scope(user_id, role)
-    allowed_branch_ids = _weather_scope_branch_param(scope)
-
-    # تجميع يومي آلي: absolute Daily Min = أقل Min عبر الورديات، Daily Max = أكبر Max عبر الورديات.
-    # MIN/MAX في PostgreSQL تتخطى القيم NULL تلقائياً (null-safe بدون تعطل).
     connection = get_connection()
     try:
+        # ♻️ اتصال واحد للطلب كله: الدور + النطاق + الاستعلام الرئيسي
+        role = get_user_role(user_id, connection=connection)
+        require_weather_eligible(role)
+        forecast_date = validate_forecast_date(date)
+        scope = weather_region_scope(user_id, role, connection=connection)
+        allowed_branch_ids = _weather_scope_branch_param(scope)
+
+        # تجميع يومي آلي: absolute Daily Min = أقل Min عبر الورديات، Daily Max = أكبر Max عبر الورديات.
+        # MIN/MAX في PostgreSQL تتخطى القيم NULL تلقائياً (null-safe بدون تعطل).
         with connection.cursor() as cursor:
             if allowed_branch_ids is None:
                 cursor.execute(
@@ -7679,6 +7777,8 @@ def get_weather_daily(date: str, credentials: HTTPAuthorizationCredentials = Dep
                 }
                 for r in rows
             ]
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error fetching weather daily: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ داخلي أثناء تجميع الطقس اليومي")
@@ -8974,61 +9074,140 @@ def _eq_intel_ingest_events(events, source="usgs"):
 #    المحرك يعمل داخل السيرفر نفسه: يقرأ تغذية USGS كل دقيقة ويُدخل الزلازل عبر نفس
 #    نواة الاستقبال (فريد source+external_id ⇒ لا تكرار حتى لو تعددت المحركات).
 #    للإيقاف: EOC_EQ_LOCAL_ENGINE=0
+# 🛡️ مصدر استطلاع واحد: قفل advisory على القاعدة — دورة واحدة فقط تنفّذ في أي لحظة
+#    مهما تعددت النسخ/الخيوط/الكرن. بلا أي تغيير في منطق الإدخال (dedupe يظل الصمام الأخير).
+_EQ_ENGINE_LOCK_KEY = 772833001
+
+
+def _eq_intel_engine_cycle(reason: str = "engine"):
+    """⚙️ دورة استيعاب واحدة كاملة: جلب تغذيتي USGS + إدخال عبر النواة المشتركة.
+
+    يُستخدم من: خيط المحرك الدوري (30 ثانية) + نقطة tick الخارجية (كرن أي استضافة).
+    نفس النواة بالحرف: فريد (source, external_id) + cutoff + مرآة الكتالوج + بث لحظي.
+
+    🛡️ قفل القيادة: على الاتصال المباشر نستخدم pg_try_advisory_lock لمنع تكرار
+       الاستطلاع بين النسخ. على transaction pooling (PgBouncer) تُتخطى القفل الجلسي
+       بامتياز (الأقفال الجلسية غير مضمونة هناك) — والـ dedupe يحمي البيانات دائماً.
+    """
+    import time as _t
+    import requests as _requests
+
+    lock_conn = None
+    acquired = True
+    try:
+        if _is_pooled(os.getenv("DATABASE_URL") or ""):
+            acquired = True   # transaction pooling: الأقفال الجلسية غير مضمونة — dedupe يحمي
+        else:
+            try:
+                lock_conn = get_connection()
+                with lock_conn.cursor() as _lc:
+                    _lc.execute("SELECT pg_try_advisory_lock(%s);", (_EQ_ENGINE_LOCK_KEY,))
+                    acquired = bool(_lc.fetchone()[0])
+            except Exception as _lock_err:
+                print(f"EQ engine leader lock unavailable ({str(_lock_err)[:90]}) — proceeding (dedupe-safe)")
+                lock_conn = None
+                acquired = True
+        if not acquired:
+            return {"ok": True, "skipped": True, "reason": "another engine holds the leader lock"}
+
+        # 🚀 دمج التغذيتين معاً: all_hour (الأحدث) + all_day (لتقاط الأحداث اللي
+        #    USGS نشرها متأخراً — بره نافذة الساعة لكن داخل نافذة التجاهل 180 دقيقة).
+        #    الفريد (source, external_id) + cutoff يمنعان أي تكرار أو أحداث قديمة.
+        features_by_id = {}
+        for feed_url in EQ_INTEL_FEEDS:
+            try:
+                resp = _requests.get(feed_url, timeout=15, headers={"User-Agent": "EOC-Earthquake-Intel/1.0"})
+                if resp.ok:
+                    for f in ((resp.json() or {}).get("features", []) or []):
+                        fid = (f or {}).get("id") or (((f or {}).get("properties") or {}).get("code") or "")
+                        if fid:
+                            features_by_id[fid] = f
+            except Exception:
+                continue
+        features = list(features_by_id.values()) if features_by_id else None
+        feed_events = 0
+        inserted = 0
+        if features:
+            events = []
+            _t0 = _t.time()
+            for f in features:
+                props = (f or {}).get("properties") or {}
+                geom = (f or {}).get("geometry") or {}
+                coords = (geom.get("coordinates") or [None, None, None])
+                lon, lat, depth = (list(coords) + [None, None, None])[:3]
+                events.append({
+                    "external_id": f.get("id") or props.get("code") or "",
+                    "occurred_at": props.get("time"),
+                    "magnitude": props.get("mag"),
+                    "depth_km": depth,
+                    "place": props.get("place") or "",
+                    "latitude": lat,
+                    "longitude": lon,
+                })
+            inserted = _eq_intel_ingest_events(events, "usgs")
+            feed_events = len(events)
+            print(f"EQ engine({reason}): feed={feed_events} new={inserted} in {_t.time()-_t0:.1f}s")
+        return {"ok": True, "feed_events": feed_events, "inserted": inserted}
+    finally:
+        if lock_conn is not None:
+            try:
+                if acquired:
+                    with lock_conn.cursor() as _lc:
+                        _lc.execute("SELECT pg_advisory_unlock(%s);", (_EQ_ENGINE_LOCK_KEY,))
+            except Exception:
+                pass
+            try:
+                lock_conn.close()
+            except Exception:
+                pass
+
+
 def _eq_intel_local_engine_loop():
     import time as _time
-    import requests as _requests
     if (os.getenv("EOC_EQ_LOCAL_ENGINE", "1").strip().lower() in ("0", "false", "off")):
         print("EQ local engine disabled (EOC_EQ_LOCAL_ENGINE=0)")
         return
     _schema_ready.wait(timeout=60)  # ننتظر جاهزية الجداول قبل أول دورة
     while True:
         try:
-            # 🚀 دمج التغذيتين معاً: all_hour (الأحدث) + all_day (لتقاط الأحداث اللي
-            #    USGS نشرها متأخراً — بره نافذة الساعة لكن داخل نافذة التجاهل 180 دقيقة).
-            #    الفريد (source, external_id) + cutoff يمنعان أي تكرار أو أحداث قديمة.
-            features_by_id = {}
-            for feed_url in EQ_INTEL_FEEDS:
-                try:
-                    resp = _requests.get(feed_url, timeout=15, headers={"User-Agent": "EOC-Earthquake-Intel/1.0"})
-                    if resp.ok:
-                        for f in ((resp.json() or {}).get("features", []) or []):
-                            fid = (f or {}).get("id") or (((f or {}).get("properties") or {}).get("code") or "")
-                            if fid:
-                                features_by_id[fid] = f
-                except Exception:
-                    continue
-            features = list(features_by_id.values()) if features_by_id else None
-            if features:
-                events = []
-                import time as _t
-                _t0 = _t.time()
-                for f in features:
-                    props = (f or {}).get("properties") or {}
-                    geom = (f or {}).get("geometry") or {}
-                    coords = (geom.get("coordinates") or [None, None, None])
-                    lon, lat, depth = (list(coords) + [None, None, None])[:3]
-                    events.append({
-                        "external_id": f.get("id") or props.get("code") or "",
-                        "occurred_at": props.get("time"),
-                        "magnitude": props.get("mag"),
-                        "depth_km": depth,
-                        "place": props.get("place") or "",
-                        "latitude": lat,
-                        "longitude": lon,
-                    })
-                inserted = _eq_intel_ingest_events(events, "usgs")
-                print(f"EQ local engine: feed={len(events)} new={inserted} in {_t.time()-_t0:.1f}s")
+            _eq_intel_engine_cycle("thread")
         except Exception as e:
             print(f"EQ local engine cycle failed: {e}")
         _time.sleep(EQ_INTEL_POLL_SECONDS)
 
 
-_EQ_INTEL_ENGINE_THREAD = threading.Thread(
-    target=_eq_intel_local_engine_loop,
-    name="eoc-eq-intel-engine",
-    daemon=True,
-)
-_EQ_INTEL_ENGINE_THREAD.start()
+# 🛡️ إقلاع مرة واحدة فقط لكل عملية — الخيط هو محرك الدورية على الاستضافة الدائمة
+_EQ_INTEL_ENGINE_THREAD = None
+if _EQ_INTEL_ENGINE_THREAD is None or not _EQ_INTEL_ENGINE_THREAD.is_alive():
+    _EQ_INTEL_ENGINE_THREAD = threading.Thread(
+        target=_eq_intel_local_engine_loop,
+        name="eoc-eq-intel-engine",
+        daemon=True,
+    )
+    _EQ_INTEL_ENGINE_THREAD.start()
+
+
+@app.post("/api/earthquake-intel/engine/tick")
+def eq_intel_engine_tick(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """⚙️ دورة استيعاب واحدة عند الطلب (SYSTEM_TOKEN فقط) — لجدولة خارجية بدقيقة
+    (Vercel Cron / كرون أي استضافة دائمة) أو اختبار يدوي.
+
+    🛡️ مصدر واحد: لو محرك الخيط المحلي حي في هذه العملية فالمحرك هو المسؤول عن الدورية
+       ويُتخطى الاستطلاع هنا (skipped) — فلا استطلاع مزدوج أبداً بين الخيط والكرن.
+    """
+    token = credentials.credentials
+    system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    if not (system_token and token.strip() == system_token):
+        raise HTTPException(status_code=403, detail="تشغيل دورة المحرك متاح للنظام فقط")
+
+    try:
+        _thread = globals().get("_EQ_INTEL_ENGINE_THREAD")
+        if _thread is not None and _thread.is_alive():
+            return {"ok": True, "skipped": True, "reason": "local_thread_active"}
+    except Exception:
+        pass
+
+    return _eq_intel_engine_cycle("tick")
 
 
 @app.get("/api/earthquake-intel")
@@ -9044,8 +9223,13 @@ def get_earthquake_intel(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    role = get_user_role(user_id)
-    require_eq_intel_access(role)
+
+    # 🧊 كاش مُبطَل بالأحداث — أي زلزال جديد (حدث لحظي) يُبطلها فوراً؛ نفس النتيجة حرفياً
+    _eq_cache_key = f"eq_intel:{limit}:{from_date}:{to_date}"
+    _eq_cached = _cache_read(_eq_cache_key)
+    if _eq_cached is not None:
+        return _eq_cached
+
     try:
         limit = max(0, int(limit))      # 🌍 0 = السجل كله (بلا حد)
     except Exception:
@@ -9066,6 +9250,9 @@ def get_earthquake_intel(
 
     connection = get_connection()
     try:
+        # ♻️ اتصال واحد للطلب كله: الدور + الاستعلام الرئيسي على نفس الاتصال
+        role = get_user_role(user_id, connection=connection)
+        require_eq_intel_access(role)
         with connection.cursor() as cursor:
             cursor.execute(f"""
                 SELECT eq_intel_id, source, external_id, occurred_at, magnitude,
@@ -9079,7 +9266,7 @@ def get_earthquake_intel(
                 {'LIMIT %s' if limit > 0 else ''};
             """, (*params, limit) if limit > 0 else (*params,))
             rows = cursor.fetchall()
-            return [
+            payload = [
                 {
                     "eq_intel_id": r[0],
                     "source": r[1],
@@ -9107,6 +9294,10 @@ def get_earthquake_intel(
                 }
                 for r in rows
             ]
+            _cache_write(_eq_cache_key, payload)
+            return payload
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error loading earthquake intel: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء تحميل استخبارات الزلازل")
@@ -9118,37 +9309,58 @@ def get_earthquake_intel(
 def get_earthquake_intel_status(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """مؤشر صحة المراقبة: آخر تشغيل للمحرك + حرفية التغذية (مدققة من USGS مباشرة)."""
+    """مؤشر صحة المراقبة: آخر تشغيل للمحرك + حرفية التغذية (مدققة من USGS — مركزياً)."""
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    role = get_user_role(user_id)
-    require_eq_intel_access(role)
 
-    feed_freshness = None
-    feed_count = None
-    try:
-        import requests as _requests
-        resp = _requests.get(EQ_INTEL_FEEDS[0], timeout=6)
-        if resp.ok:
-            data = resp.json()
-            feed_count = len(data.get("features", []))
-            stamp = data.get("metadata", {}).get("generated")
-            if stamp:
-                generated = datetime.fromtimestamp(int(stamp), tz=ZoneInfo("UTC"))
-                now_utc = datetime.now(ZoneInfo("UTC"))
-                feed_freshness = int((now_utc - generated).total_seconds())
-    except Exception as e:
-        print(f"eq intel feed probe failed: {e}")
-
-    # 🛡️ «آخر دورة ناجحة» من القاعدة نفسها (ليس من الذاكرة فقط):
-    #    ذاكرة المحرك تُمسح بإعادة تشغيل السيرفر — آخر استقبال فعلي في DB هو الحقيقة.
     connection = get_connection()
     try:
+        # ♻️ اتصال واحد للطلب كله: الدور + استعلام القاعدة على نفس الاتصال
+        role = get_user_role(user_id, connection=connection)
+        require_eq_intel_access(role)
+
+        # 🧊 مركزية استطلع USGS: كاش 60 ثانية — نداء واحد للنظام كله بدل نداء لكل مستخدم/تاب.
+        #    نفس الـ response shape حرفياً؛ freshness قد تتأخر ≤60 ثانية (مؤشر حالة وليس رصداً).
+        feed_freshness = None
+        feed_count = None
+        now_ts = _perf_time.time()
+        probe = None
+        if _EQ_FEED_PROBE_CACHE["data"] is not None and (now_ts - _EQ_FEED_PROBE_CACHE["ts"]) < _EQ_FEED_PROBE_TTL:
+            probe = _EQ_FEED_PROBE_CACHE["data"]
+        else:
+            try:
+                import requests as _requests
+                resp = _requests.get(EQ_INTEL_FEEDS[0], timeout=6)
+                if resp.ok:
+                    data = resp.json()
+                    _count = len(data.get("features", []))
+                    _fresh = None
+                    stamp = data.get("metadata", {}).get("generated")
+                    if stamp:
+                        generated = datetime.fromtimestamp(int(stamp), tz=ZoneInfo("UTC"))
+                        now_utc = datetime.now(ZoneInfo("UTC"))
+                        _fresh = int((now_utc - generated).total_seconds())
+                    probe = {"count": _count, "freshness": _fresh}
+                else:
+                    probe = {"count": None, "freshness": None}
+                _EQ_FEED_PROBE_CACHE["ts"] = now_ts
+                _EQ_FEED_PROBE_CACHE["data"] = probe
+            except Exception as e:
+                print(f"eq intel feed probe failed: {e}")
+                probe = {"count": None, "freshness": None}   # نفس سلوك الفشل القديم (لا كاش للفشل)
+        if probe:
+            feed_count = probe.get("count")
+            feed_freshness = probe.get("freshness")
+
+        # 🛡️ «آخر دورة ناجحة» من القاعدة نفسها (ليس من الذاكرة فقط):
+        #    ذاكرة المحرك تُمسح بإعادة تشغيل السيرفر — آخر استقبال فعلي في DB هو الحقيقة.
         with connection.cursor() as cursor:
             cursor.execute("SELECT COUNT(*), MAX(created_at) FROM earthquake_intel;")
             total_rows, last_ingest = cursor.fetchone()
+    except HTTPException:
+        raise
     except Exception:
         total_rows, last_ingest = 0, None
     finally:
@@ -9674,10 +9886,12 @@ def _eq_catalog_local_hist(lat, lon, event_date, radius_km=EQ_INTEL_HIST_RADIUS_
         return None
 
 
-def _eq_catalog_stats():
+def _eq_catalog_stats(connection=None):
     """حالة الكتالوج المحلي: العدد الإجمالي + تغطيته الزمنية + عدد لكل منطقة."""
+    owns_connection = connection is None
     try:
-        connection = get_connection()
+        if owns_connection:
+            connection = get_connection()
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
@@ -9698,7 +9912,8 @@ def _eq_catalog_stats():
                     "ready": bool(total and total > 0),
                 }
         finally:
-            connection.close()
+            if owns_connection:
+                connection.close()
     except Exception as e:
         print(f"eq catalog stats failed: {e}")
         return {"total": 0, "coverage_from": None, "coverage_to": None, "per_region": {}, "ready": False}
@@ -9971,9 +10186,14 @@ def earthquake_catalog_stats(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    role = get_user_role(user_id)
-    require_eq_intel_access(role)
-    return _eq_catalog_stats()
+    connection = get_connection()
+    try:
+        # ♻️ اتصال واحد للطلب كله: الدور + إحصاءات الكتالوج على نفس الاتصال
+        role = get_user_role(user_id, connection=connection)
+        require_eq_intel_access(role)
+        return _eq_catalog_stats(connection=connection)
+    finally:
+        connection.close()
 
 
 class EqIntelClearAllRequest(ClearAllRequest):

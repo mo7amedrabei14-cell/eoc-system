@@ -17,6 +17,7 @@ import { BASE } from './apiBase.js';
 
 export const HEALTH_PATH = '/api/health';
 export const DEFAULT_POLL_MS = 20000;      // الوضع الطبيعي: نبضة كل 20 ثانية (طلب GET خفيف جداً)
+export const HIDDEN_POLL_MS = 60000;       // التاب المخفي: نبضة كل 60 ثانية — العودة = فحص فوري
 export const SUSPECT_POLL_MS = 4000;       // أول فشل = «مش متأكدين» ⇒ نعيد بسرعة للتأكد (مش نستنى الدورة)
 export const BLOCKED_POLL_MS = 5000;       // أثناء الوقوع: نجرب كل 5 ثواني حتى نعرف الرجوع فوراً
 export const TIMEOUT_MS = 12000;           // أطول من connect_timeout=10s (db.py) حتى لا نعلن وقوعاً زائفاً

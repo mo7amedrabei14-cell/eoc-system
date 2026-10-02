@@ -2,9 +2,12 @@ name: Earthquake Intelligence Runner 🌍
 
 on:
   schedule:
-    # ⚠️ GitHub Actions: الحد الأدنى الفعلي للجدولة كل 5 دقائق
-    # (الزلزال يظهر في تغذية USGS خلال ثوانٍ — ولو احتجت دورة أسرع شغّل
-    #  earthquake_intel.py بمهمة مجدولة محلية أو Vercel Cron كل دقيقة)
+    # ⚠️ مصدر استيعاب واحد: هذا الكرن يستدعي دورة المحرك داخل الخادم (tick) —
+    #    ولو كان الخيط المحلي حياً في الخادم (استضافة دائمة) تُرجع الدورة skipped
+    #    تلقائياً فلا استطلاع مزدوج أبداً.
+    #    ✔️ اتركه مفعلاً طالما Backend على Serverless (هو ضمان الاستمرارية هناك).
+    #    ✂️ يمكنك حذف جدول schedule كاملاً بعد الانتقال لاستضافة دائمة يؤكد
+    #       /api/earthquake-intel/status وجود engine.mode = "local_thread".
     - cron: '*/5 * * * *'
   workflow_dispatch:
 
@@ -29,5 +32,5 @@ jobs:
       - name: تشغيل محرك رصد الزلازل
         env:
           SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
-          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'eoc-system-qaol.vercel.app' }}
+          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-qaol.vercel.app' }}
         run: python earthquake_intel.py

@@ -63,7 +63,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip()
 
 SYSTEM_API_URL = os.environ.get(
-    "SYSTEM_API_URL", "eoc-system-qaol.vercel.app"
+    "SYSTEM_API_URL", "https://eoc-system-qaol.vercel.app"
 ).rstrip("/")
 
 OPEN_METEO_FORECAST = "https://api.open-meteo.com/v1/forecast"

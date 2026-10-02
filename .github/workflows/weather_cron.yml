@@ -27,7 +27,7 @@ jobs:
       - name: تشغيل محرك استخبارات الطقس
         env:
           SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
-          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'eoc-system-qaol.vercel.app' }}
+          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-qaol.vercel.app' }}
           HISTORY_WINDOW_DAYS: ${{ secrets.HISTORY_WINDOW_DAYS || '3' }}
           MIN_SAMPLES: ${{ secrets.MIN_SAMPLES || '20' }}
         run: python weather_intel.py

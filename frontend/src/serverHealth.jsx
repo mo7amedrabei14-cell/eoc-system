@@ -19,6 +19,7 @@ import { createPortal } from 'react-dom';
    ───────────────────────────────────────────────────────────────────────────── */
 import {
   DEFAULT_POLL_MS,
+  HIDDEN_POLL_MS,
   SUSPECT_POLL_MS,
   BLOCKED_POLL_MS,
   FAIL_THRESHOLD,
@@ -137,20 +138,25 @@ export function useServerHealth({ enabled = true, pollMs = DEFAULT_POLL_MS, fail
       //    زيادة فوراً، حتى لا نبقى على شاشة «شغالة» وهي ميتة.
       const wait = blockingRef.current
         ? BLOCKED_POLL_MS
-        : (failRef.current > 0 ? SUSPECT_POLL_MS : pollMs);
+        : (failRef.current > 0 ? SUSPECT_POLL_MS : (document.hidden ? HIDDEN_POLL_MS : pollMs));
       timerRef.current = setTimeout(loop, wait);
     };
     loop();
 
-    // رجوع الشبكة عند المتصفح ⇒ نبضة فورية (بدل انتظار الدورة الجاية)
+    // رجوع الشبكة/التركيز/إظهار التاب ⇒ نبضة فورية (بدل انتظار الدورة الجاية)
     const onNetworkChange = () => { if (!cancelled) poll(); };
+    const onActive = () => { if (!cancelled && !document.hidden) poll(); };
     window.addEventListener('online', onNetworkChange);
     window.addEventListener('offline', onNetworkChange);
+    window.addEventListener('focus', onActive);
+    document.addEventListener('visibilitychange', onActive);
     return () => {
       cancelled = true;
       clearTimeout(timerRef.current);
       window.removeEventListener('online', onNetworkChange);
       window.removeEventListener('offline', onNetworkChange);
+      window.removeEventListener('focus', onActive);
+      document.removeEventListener('visibilitychange', onActive);
     };
   }, [enabled, poll, pollMs]);
 

@@ -2105,7 +2105,8 @@ if (e.event_type === 'system_refresh') {
             }
           }
         }
-        pollBackoffRef.current = 4000;
+        // 🔄 التاب الظاهر = 4 ثوانٍ كما هو حرفياً · المخفي = 30 ثانية (وعند العودة جولة فورية)
+        pollBackoffRef.current = document.hidden ? 30000 : 4000;
         if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
       } catch (e) {
         // network failure → backoff تصاعدي (لغاية 30 ثانية) ثم معاودة تلقائية
@@ -2123,12 +2124,26 @@ if (e.event_type === 'system_refresh') {
       }, pollBackoffRef.current);
     };
 
+    // 🔄 استكمال فوري عند العودة/التركيز/رجوع الاتصال — لا تأخير لأي إشعار
+    //    (pollInFlightRef يمنع التداخل، والطلب يستأنف من نفس watermark فلا فقد ولا تكرار)
+    const onRealtimeActive = () => {
+      if (realtimeUnmountedRef.current || document.hidden) return;
+      pollBackoffRef.current = 4000;
+      poll();
+    };
+    document.addEventListener('visibilitychange', onRealtimeActive);
+    window.addEventListener('online', onRealtimeActive);
+    window.addEventListener('focus', onRealtimeActive);
+
     poll();
     schedule();
 
     return () => {
       realtimeUnmountedRef.current = true;
       if (pollTimer) clearTimeout(pollTimer);
+      document.removeEventListener('visibilitychange', onRealtimeActive);
+      window.removeEventListener('online', onRealtimeActive);
+      window.removeEventListener('focus', onRealtimeActive);
     };
   }, [userData]);
 
@@ -2980,11 +2995,12 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   useEffect(() => {
     const fetchLastRun = async () => {
       try {
-        const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/runs?per_page=1');
+        // ♻️ عبر الخادم (كاش 5 دقائق مركزي) بدل ضرب api.github.com من كل متصفح — نفس القيمة المعروضة
+        const res = await fetch(`${BASE}/api/ai-news/last-run`, { headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` } });
         if (res.ok) {
           const data = await res.json();
-          if (data.workflow_runs && data.workflow_runs.length > 0) {
-            const dateObj = new Date(data.workflow_runs[0].updated_at);
+          if (data && data.updated_at) {
+            const dateObj = new Date(data.updated_at);
             const nowD = new Date();
             const isToday = dateObj.getDate() === nowD.getDate() && dateObj.getMonth() === nowD.getMonth();
             const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -2995,8 +3011,18 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
       } catch (e) { setLastRunTime('غير متاح'); }
     };
     fetchLastRun();
-    const interval = setInterval(fetchLastRun, 300000); // ⏱️ كل 5 دقايق (حماية من rate-limit جيت هاب)
-    return () => clearInterval(interval);
+    // ⏱️ كل 5 دقايق للتاب الظاهر كما هو · المخفي تُتخطى الدورات + فوري عند العودة
+    const interval = setInterval(() => { if (!document.hidden) fetchLastRun(); }, 300000);
+    const onLastRunActive = () => { if (!document.hidden) fetchLastRun(); };
+    document.addEventListener('visibilitychange', onLastRunActive);
+    window.addEventListener('focus', onLastRunActive);
+    window.addEventListener('online', onLastRunActive);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onLastRunActive);
+      window.removeEventListener('focus', onLastRunActive);
+      window.removeEventListener('online', onLastRunActive);
+    };
   }, []);
 
 
@@ -3004,23 +3030,55 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   // 🔄 محمّل واحد لكل أرقام الصفحة — كل نداء بيتحدّث لوحده (allSettled)
   //    فشل نداء واحد ما يوقفش تحديث الباقي (وده كان سبب إن الأرقام تفضل قديمة)
   // ════════════════════════════════════════════════════════════════════
+  const homeLoadInFlightRef = useRef(false);
   const loadHomeIndicators = useCallback(async () => {
-    const token = sessionStorage.getItem('access_token');
-    const get = (path, pick) => fetch(`${BASE}${path}`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data != null) pick(data); })
-      .catch(() => {});
-    await Promise.allSettled([
-      get('/api/missions',           (d) => setMissions(Array.isArray(d) ? d : [])),
-      get('/api/local-news',         (d) => setNews(Array.isArray(d) ? d : [])),
-      get('/api/global-disasters',   (d) => setGlobalDisasters(Array.isArray(d) ? d : [])),
-      get('/api/earthquakes/global', (d) => setGlobalEqs(Array.isArray(d) ? d : [])),
-      get('/api/earthquakes/egypt',  (d) => setEgyptEqs(Array.isArray(d) ? d : [])),
-      get('/api/ai-news',            (d) => setAiNewsList(Array.isArray(d) ? d : [])),
-      get(`/api/weather/daily?date=${filterDate || getLocalDate()}`, (d) => setDailyWeather(Array.isArray(d) ? d : [])),
-      get('/api/earthquake-intel?limit=500', (d) => setEqIntelList(Array.isArray(d) ? d : [])),
-      get('/api/earthquake-intel/status', (d) => setEqIntelStatus(d)),
-    ]);
+    // 🛡️ single-flight: لو الجولة السابقة لم تنتهِ لا نبدأ نسخة ثانية (منع طلبات مكررة)
+    if (homeLoadInFlightRef.current) return;
+    homeLoadInFlightRef.current = true;
+    try {
+      const token = sessionStorage.getItem('access_token');
+      // 📦 المسار المفضّل: حزمة واحدة (9 نداءات ← 1) بنفس البيانات حرفياً — مع fallback كامل
+      //    للنداءات المنفردة لو الحزمة فشلت، والأقسام غير المصرّح بها تُترك كما هي (null)
+      //    تماماً كما لو أن نداءها المنفرد فشل.
+      let bundled = false;
+      try {
+        const res = await fetch(`${BASE}/api/dashboard/bundle?date=${encodeURIComponent(filterDate || getLocalDate())}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const b = await res.json();
+          if (b && typeof b === 'object' && !Array.isArray(b)) {
+            bundled = true;
+            if (Array.isArray(b.missions)) setMissions(b.missions);
+            if (Array.isArray(b.local_news)) setNews(b.local_news);
+            if (Array.isArray(b.global_disasters)) setGlobalDisasters(b.global_disasters);
+            if (Array.isArray(b.earthquakes_global)) setGlobalEqs(b.earthquakes_global);
+            if (Array.isArray(b.earthquakes_egypt)) setEgyptEqs(b.earthquakes_egypt);
+            if (Array.isArray(b.ai_news)) setAiNewsList(b.ai_news);
+            if (Array.isArray(b.weather_daily)) setDailyWeather(b.weather_daily);
+            if (Array.isArray(b.earthquake_intel)) setEqIntelList(b.earthquake_intel);
+            if (b.earthquake_intel_status && typeof b.earthquake_intel_status === 'object') setEqIntelStatus(b.earthquake_intel_status);
+          }
+        }
+      } catch { bundled = false; }
+      if (!bundled) {
+        const get = (path, pick) => fetch(`${BASE}${path}`, { headers: { 'Authorization': `Bearer ${token}` } })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => { if (data != null) pick(data); })
+          .catch(() => {});
+        await Promise.allSettled([
+          get('/api/missions',           (d) => setMissions(Array.isArray(d) ? d : [])),
+          get('/api/local-news',         (d) => setNews(Array.isArray(d) ? d : [])),
+          get('/api/global-disasters',   (d) => setGlobalDisasters(Array.isArray(d) ? d : [])),
+          get('/api/earthquakes/global', (d) => setGlobalEqs(Array.isArray(d) ? d : [])),
+          get('/api/earthquakes/egypt',  (d) => setEgyptEqs(Array.isArray(d) ? d : [])),
+          get('/api/ai-news',            (d) => setAiNewsList(Array.isArray(d) ? d : [])),
+          get(`/api/weather/daily?date=${filterDate || getLocalDate()}`, (d) => setDailyWeather(Array.isArray(d) ? d : [])),
+          get('/api/earthquake-intel?limit=500', (d) => setEqIntelList(Array.isArray(d) ? d : [])),
+          get('/api/earthquake-intel/status', (d) => setEqIntelStatus(d)),
+        ]);
+      }
+    } finally {
+      homeLoadInFlightRef.current = false;
+    }
   }, [filterDate]);
 
   // ① فتح الصفحة + ② أي حدث لحظي + ③ تغيير التاريخ — كله من نفس المكان
@@ -3031,10 +3089,20 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
     liveUpdateVersion.eq_intel,
   ]);
 
-  // ④ شبكة أمان: تحديث صامت دوري — يضمن إن الأرقام تتحدّث حتى لو ضاع أي حدث لحظي
+  // ④ شبكة أمان: تحديث صامت دوري — الظاهر كل 60 ثانية كما هو حرفياً · المخفي تُتخطى الدورات
+  //    (~120 ثانية) مع جولة فورية عند العودة/التركيز/رجوع الاتصال ⇒ صفر تأثير على المستخدم
   useEffect(() => {
-    const t = setInterval(loadHomeIndicators, 60000);
-    return () => clearInterval(t);
+    const t = setInterval(() => { if (!document.hidden) loadHomeIndicators(); }, 60000);
+    const onHomeActive = () => { if (!document.hidden) loadHomeIndicators(); };
+    window.addEventListener('online', onHomeActive);
+    window.addEventListener('focus', onHomeActive);
+    document.addEventListener('visibilitychange', onHomeActive);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('online', onHomeActive);
+      window.removeEventListener('focus', onHomeActive);
+      document.removeEventListener('visibilitychange', onHomeActive);
+    };
   }, [loadHomeIndicators]);
 
   const filterMissionBranch = selectedBranchName; 
@@ -3596,6 +3664,37 @@ function BranchesAndInventoryView({ branches }) {
 
 // 📊 داشبورد Power BI (Publish to web) — تاب مستقل بيحدّث نفسه كل ساعة
 const POWERBI_EMBED_URL = 'https://app.powerbi.com/view?r=eyJrIjoiYmE0ODc0Y2QtMmYyYy00YTZjLTkzZTEtMDBmMTZlMDBlNWRiIiwidCI6IjAyNjU5ODhhLWU0MDQtNGRkYy1hMmEwLTY2MjUwNWMzYjc4ZiIsImMiOjh9';
+// ═══════════════════════════════════════════════════════════════════════════
+// ♻️ مؤقت دوري ذكي لشبكات أمان التبويبات (كفاءة بلا أي تغيير ملحوظ):
+//    • التاب الظاهر: نفس الفاصل حرفياً (سرعة التحديث كما هي)
+//    • التاب المخفي: تُتخطى الدورات (≈ ضعف الفاصل) — لا يراه أحد
+//    • العودة/التركيز/رجوع الاتصال: جولة فورية ⇒ صفر تأثير عند عودة المستخدم
+//    • single-flight: لو الجولة السابقة لم تنتهِ لا يبدأ طلباً مكرراً جديداً
+// ═══════════════════════════════════════════════════════════════════════════
+const useSmartPoll = (fn, ms) => {
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
+  const inFlightRef = useRef(false);
+  useEffect(() => {
+    const run = async () => {
+      if (document.hidden || inFlightRef.current) return;
+      inFlightRef.current = true;
+      try { await fnRef.current(); } finally { inFlightRef.current = false; }
+    };
+    const t = setInterval(run, ms);
+    const onActive = () => { if (!document.hidden) run(); };
+    window.addEventListener('online', onActive);
+    window.addEventListener('focus', onActive);
+    document.addEventListener('visibilitychange', onActive);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('online', onActive);
+      window.removeEventListener('focus', onActive);
+      document.removeEventListener('visibilitychange', onActive);
+    };
+  }, [ms]);
+};
+
 const POWERBI_REFRESH_MS = 60 * 60 * 1000;   // كل ساعة
 
 function PowerBiView({ lang = 'ar' }) {
@@ -4070,12 +4169,8 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
     fetchMissions(true);
   }, [liveUpdateVersion]);
 
-    // 🛡️ شبكة أمان: تحديث صامت دوري
-  useEffect(() => {
-    const t = setInterval(() => { fetchMissions(true); }, 60000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // 🛡️ شبكة أمان: تحديث صامت دوري (ظاهر = 60s كما هو · مخفي = تخطى + جولة فورية عند العودة)
+  useSmartPoll(() => fetchMissions(true), 60000);
 
 
   // 🔄 إذا كانت تفاصيل مهمة مفتوحة حاليًا وتغيّرت من مستخدم آخر (حدث لحظي يخصّها)،
@@ -4292,10 +4387,17 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
     window.addEventListener('online', retryOutbox);
     // 🩺 رجوع السيرفر (بعد انقطاع حقيقي) ⇒ إرسال فوري بدل انتظار الدورة الجاية
     window.addEventListener('eoc:server-recovered', retryOutbox);
-    const t = setInterval(retryOutbox, 20000);
+    // 🔄 الظاهر: كل 20 ثانية كما هو حرفياً · المخفي: تُتخطى الدورات (~60 ثانية)
+    //    مع مزامنة فورية عند العودة/التركيز (retryInFlightRef يمنع التداخل أصلاً)
+    const t = setInterval(() => { if (!document.hidden) retryOutbox(); }, 20000);
+    const onOutboxActive = () => { if (!document.hidden) retryOutbox(); };
+    window.addEventListener('focus', onOutboxActive);
+    document.addEventListener('visibilitychange', onOutboxActive);
     return () => {
       window.removeEventListener('online', retryOutbox);
       window.removeEventListener('eoc:server-recovered', retryOutbox);
+      window.removeEventListener('focus', onOutboxActive);
+      document.removeEventListener('visibilitychange', onOutboxActive);
       clearInterval(t);
     };
   }, [retryOutbox]);
@@ -7848,17 +7950,14 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       .catch(() => {});
   }, [liveUpdateVersion]);
 
-    // 🛡️ شبكة أمان: تحديث صامت دوري لسجل النظام
-  useEffect(() => {
-    const t = setInterval(() => {
-      const token = sessionStorage.getItem('access_token');
-      fetch(`${BASE}/api/audit-logs`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.ok ? res.json() : [])
-        .then(data => { if (Array.isArray(data)) setLogs(data); })
-        .catch(() => {});
-    }, 60000);
-    return () => clearInterval(t);
-  }, []);
+    // 🛡️ شبكة أمان: تحديث صامت دوري لسجل النظام (ظاهر = 60s كما هو)
+  useSmartPoll(() => {
+    const token = sessionStorage.getItem('access_token');
+    fetch(`${BASE}/api/audit-logs`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => { if (Array.isArray(data)) setLogs(data); })
+      .catch(() => {});
+  }, 60000);
 
 
   const filteredLogs = logs.filter(log => {
@@ -8056,12 +8155,8 @@ const [nd, setNd] = useState({
     if (isFirstLiveNewsRef.current) { isFirstLiveNewsRef.current = false; return; }
     fetchNews(true);
 
-  // 🛡️ شبكة أمان: تحديث صامت دوري
-  useEffect(() => {
-    const t = setInterval(() => { fetchNews(true); }, 60000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 🛡️ شبكة أمان: تحديث صامت دوري (ظاهر = 60s كما هو · مخفي = تخطى + فوري عند العودة)
+  useSmartPoll(() => fetchNews(true), 60000);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdateVersion]);
@@ -8910,12 +9005,8 @@ const visibleBranches = (
   // تحديث لحظي: مستخدم آخر حفظ توقعات أو أنهى وردية → refetch صامت
   useEffect(() => { if (liveUpdateVersion > 0) { loadGrid(true); loadDaily(true); } }, [liveUpdateVersion]);
 
-    // 🛡️ شبكة أمان: تحديث صامت دوري
-  useEffect(() => {
-    const t = setInterval(() => { loadGrid(true); loadDaily(true); }, 60000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // 🛡️ شبكة أمان: تحديث صامت دوري (ظاهر = 60s كما هو · مخفي = تخطى + فوري عند العودة)
+  useSmartPoll(() => { loadGrid(true); loadDaily(true); }, 60000);
 
   // التنبيهات غير الحاجبة: تنغلق تلقائيًا بدل أن تحجب الشاشة وتدفع المستخدم لـ Refresh
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
@@ -9041,7 +9132,8 @@ const visibleBranches = (
     const onLeave = () => { flushToDisk(); retry(); };
     retry();
     syncFromServer();
-    const t = setInterval(() => { retry(); syncFromServer(); }, 30000);
+    // 🔄 الظاهر: كل 30 ثانية كما هو · المخفي: تُتخطى الدورات (العودة/الاتصال = مزامنة فورية بالأدنى)
+    const t = setInterval(() => { if (!document.hidden) { retry(); syncFromServer(); } }, 30000);
     window.addEventListener('online', retry);
     window.addEventListener('eoc:server-recovered', retry);
     window.addEventListener('pagehide', onLeave);
@@ -9758,13 +9850,17 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
       if (countGovPending(merged)) flushRef.current({ retryAll: true });
     };
     recover();
-    const poll = setInterval(() => loadRows(true), 60000);
+    // 🔄 الظاهر: كل 60 ثانية كما هو · المخفي: تُتخطى الدورات + جولة فورية عند العودة
+    const poll = setInterval(() => { if (!document.hidden) loadRows(true); }, 60000);
     const retryTimer = setInterval(retry, 30000);
     const onLeave = () => { saveGovPending(pendingRef.current); retry(); };
+    const onGovActive = () => { if (!document.hidden) loadRows(true); };
     window.addEventListener('online', retry);
     window.addEventListener('eoc:server-recovered', retry);
     window.addEventListener('pagehide', onLeave);
     document.addEventListener('visibilitychange', onLeave);
+    document.addEventListener('visibilitychange', onGovActive);
+    window.addEventListener('focus', onGovActive);
     return () => {
       clearInterval(poll);
       clearInterval(retryTimer);
@@ -9772,6 +9868,8 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
       window.removeEventListener('eoc:server-recovered', retry);
       window.removeEventListener('pagehide', onLeave);
       document.removeEventListener('visibilitychange', onLeave);
+      document.removeEventListener('visibilitychange', onGovActive);
+      window.removeEventListener('focus', onGovActive);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -10255,11 +10353,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   useEffect(() => { if (canAccess && liveUpdateVersion > 0) fetchHandovers(); }, [liveUpdateVersion, canAccess, fetchHandovers]);
 
     // 🛡️ شبكة أمان: تحديث صامت دوري
-  useEffect(() => {
-    if (!canAccess) return undefined;
-    const t = setInterval(() => { fetchHandovers(); }, 60000);
-    return () => clearInterval(t);
-  }, [canAccess, fetchHandovers]);
+  // 🛡️ شبكة أمان: تحديث صامت دوري (ظاهر = 60s كما هو · مخفي = تخطى + فوري عند العودة)
+  useSmartPoll(() => { if (canAccess) fetchHandovers(); }, 60000);
 
 
   const [focusedRowId, setFocusedRowId] = useState(null);
@@ -10880,12 +10975,8 @@ const [clearAllCode, setClearAllCode] = useState('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdateVersion]);
 
-  // 🛡️ شبكة أمان: تحديث صامت دوري للكوارث العالمية
-  useEffect(() => {
-    const t = setInterval(() => { fetchDisasters(true); }, 60000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 🛡️ شبكة أمان: تحديث صامت دوري للكوارث العالمية (ظاهر = 60s كما هو)
+  useSmartPoll(() => fetchDisasters(true), 60000);
 
   const [focusedRowId, setFocusedRowId] = useState(null);
   useEffect(() => {
@@ -11473,19 +11564,11 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdateVersion]);
 
-  // 🛡️ شبكة أمان: تحديث صامت دوري كل 60 ثانية
-  useEffect(() => {
-    const t = setInterval(() => { fetchQuakes(true); fetchCatalogStats(); }, 60000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 🛡️ شبكة أمان: تحديث صامت دوري كل 60 ثانية (ظاهر = 60s كما هو · مخفي = تخطى + فوري عند العودة)
+  useSmartPoll(() => { fetchQuakes(true); fetchCatalogStats(); }, 60000);
 
-  // 📊 التحليل التاريخي يُحدَّث دورياً كل 5 دقائق (مقارنة 30 سنة مكلفة نسبياً)
-  useEffect(() => {
-    const t = setInterval(() => { fetchAnalysis(true); }, 300000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 📊 التحليل التاريخي يُحدَّث دورياً كل 5 دقائق (مقارنة 30 سنة مكلفة نسبياً) — الظاهر كما هو
+  useSmartPoll(() => fetchAnalysis(true), 300000);
 
   const fmtTime12 = (dt) => {
     if (!dt) return '-';

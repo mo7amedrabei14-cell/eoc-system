@@ -20,7 +20,7 @@ except ImportError:
 # ==========================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN")
-SYSTEM_API_URL = "https://eoc-system-qaol.vercel.app/api/ai-news"
+SYSTEM_API_URL = "https://eoc-system-qaol.vercel.appapi/ai-news"
 
 # ==========================================
 # Quota & Model Chain — كل النماذج هنا مجانية (Free Tier فقط)
