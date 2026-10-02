@@ -63,6 +63,20 @@ security = HTTPBearer()
 #    قبل وجود توكن لا بد أن يُبلَّغ أيضاً) — auto_error=False يجعل الترويسة اختيارية.
 security_optional = HTTPBearer(auto_error=False)
 
+
+def _is_pooled(database_url: str) -> bool:
+    """هل قاعدة البيانات تعمل عبر transaction pooling (PgBouncer/Pooler)؟"""
+    if not database_url:
+        return False
+    host = (urlparse(database_url).hostname or "").lower()
+    url = database_url.lower()
+    if any(marker in host for marker in ("pgbouncer", "pooler")):
+        return True
+    if any(marker in url for marker in ("pgbouncer", "pooler", "transaction-pooling", "transaction")):
+        return True
+    return False
+
+
 CLEAR_ALL_CONFIRMATION_CODE = "301014"
 
 
