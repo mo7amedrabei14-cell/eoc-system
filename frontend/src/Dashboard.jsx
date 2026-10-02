@@ -11288,6 +11288,14 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
   const [filterTo, setFilterTo] = useState('');
 
   const [quakes, setQuakes] = useState([]);
+    // 🌍 استخراج الدولة من نص المكان — USGS بصيغة «منطقة، دولة» غالباً (Hokkaido, Japan)
+  const eqCountryFromPlace = (place) => {
+    const p = String(place || '').trim();
+    if (!p) return '';
+    const parts = p.split(',');
+    return (parts.length > 1 ? parts[parts.length - 1] : parts[0]).trim();
+  };
+
   const [analysis, setAnalysis] = useState(null);
   // 🔕 تنبيه الإجراءات (مسح الكل/التصدير) — إخفاء تلقائي بعد 7 ثوانٍ
   const [customAlert, setCustomAlert] = useState(null);
@@ -11718,7 +11726,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
                   <p className="text-[10px] text-[var(--muted)]">{T('زلزالات M≥5 / M≥6 / M≥7', 'M≥5 / M≥6 / M≥7 quakes')}</p>
-                  <p className="text-lg font-extrabold text-[var(--ink)]">{Number(worldZone.m5 || 0).toLocaleString('en')} / {Number(worldZone.m6 || 0).toLocaleString('en')} / {Number(worldZone.m7 || 0).toLocaleString('en')}</p>
+                  <p dir="ltr" className="text-lg font-extrabold text-[var(--ink)]">{Number(worldZone.m5 || 0).toLocaleString('en')} / {Number(worldZone.m6 || 0).toLocaleString('en')} / {Number(worldZone.m7 || 0).toLocaleString('en')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
                   <p className="text-[10px] text-[var(--muted)]">{T('النشاط الحالي (28 يوم)', 'Current activity (28d)')}</p>
@@ -11985,6 +11993,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                 <span className={`text-lg font-extrabold w-14 ${magColor(q.magnitude)}`}>{q.magnitude != null ? fmtMag(q.magnitude) : '؟'}</span>
                 <span className="text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--muted)]">{q.status || ''}</span>
                 <span dir="ltr" className="text-sm text-[var(--ink)] flex-1 min-w-40 text-right">{q.place || T('غير محدد', 'Unknown')}</span>
+                {eqCountryFromPlace(q.place) && <span className="text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-orange-400 font-bold">🌍 {eqCountryFromPlace(q.place)}</span>}
                 {q.distance_km != null && <span className="text-xs text-[var(--muted)]" title={T('المسافة عن وسط القارة (وسط مصر)', 'Distance from continental center (Egypt)')}>📍 {Math.round(q.distance_km).toLocaleString('en')} {T('كم', 'km')}</span>}
                 {q.sound_alert && <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold">🔔 {T('صوت', 'Sound')}</span>}
                 <span className="text-xs text-[var(--muted)] whitespace-nowrap">🕐 {fmtTime12(q.occurred_at)}</span>
@@ -13851,6 +13860,8 @@ function AINewsMonitorView({ branches, isOwner, lang = 'ar', focusTarget = null 
   const [isScanning, setIsScanning] = useState(false);
   const [selectedAiNewsId, setSelectedAiNewsId] = useState(null); // للفلترة من الخريطة
   const [selectedCountry, setSelectedCountry] = useState('all');
+  // 🔎 فلتر النطاق: الكل / خبر محلي / خبر عالمي
+  const [newsScopeFilter, setNewsScopeFilter] = useState('all');
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 const [clearAllCode, setClearAllCode] = useState('');
   const [aiNewsToDelete, setAiNewsToDelete] = useState(null);
@@ -13929,7 +13940,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     const sourceList = filterDate ? dateFilteredNews : aiNewsList;
     if (sourceList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
     const aiNewsRows = sourceList.map(n => ({
-      "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وقت رصد الخبر": n.observed_at ? formatDateTime(n.observed_at) : '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
+      "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وقت رصد الخبر": n.observed_at ? formatDateTime(n.observed_at) : '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "النطاق": n.news_scope || 'خبر عالمي', "ناشر الخبر": n.news_publisher || '',
       "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
       "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
     }));
@@ -13999,9 +14010,13 @@ const availableCountries = [...new Set(
     .filter(Boolean)
 )].sort((a, b) => a.localeCompare(b, 'ar'));
 
-const filteredNews = selectedCountry === 'all'
+const scopeFilteredNews = newsScopeFilter === 'all'
   ? dateFilteredNews
-  : dateFilteredNews.filter(n => n.governorate === selectedCountry);
+  : dateFilteredNews.filter(n => (n.news_scope || 'خبر عالمي') === newsScopeFilter);
+
+const filteredNews = selectedCountry === 'all'
+  ? scopeFilteredNews
+  : scopeFilteredNews.filter(n => n.governorate === selectedCountry);
 
 const tableNews = selectedAiNewsId
   ? filteredNews.filter(n => n.id === selectedAiNewsId)
@@ -14215,6 +14230,14 @@ const totalAiCountries = new Set(
           <div className="flex items-center gap-2">
             <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
             {filterDate && <button onClick={() => setFilterDate('')} className="text-xs text-purple-400 hover:text-white bg-purple-500/10 px-2 py-2 rounded-lg">الكل</button>}
+            <div className="flex items-center gap-1 bg-[var(--surface-3)] rounded-xl p-1 border border-[var(--border)]">
+              {[['all', 'الكل'], ['خبر محلي', 'محلي'], ['خبر عالمي', 'عالمي']].map(([val, label]) => (
+                <button key={val} onClick={() => setNewsScopeFilter(val)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${newsScopeFilter === val ? 'bg-purple-600 text-white shadow' : 'text-[var(--muted-2)] hover:text-white'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
             {isOwner && (
@@ -14247,6 +14270,7 @@ const totalAiCountries = new Set(
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">وقت الرصد</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-purple-400">نوع الخبر</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-center">النطاق</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المحافظة</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[250px]">وصف الحادث</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">الناشر</th>
@@ -14261,6 +14285,9 @@ const totalAiCountries = new Set(
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(n.incident_date)}</td>
                   <td data-label="وقت الرصد" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-mono text-xs">{n.observed_at ? formatDateTime(n.observed_at) : '—'}</td>
                   <td data-label="نوع الخبر" className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
+                  <td data-label="النطاق" className="p-4 border-l border-[var(--border)] text-center">
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${(n.news_scope || 'خبر عالمي') === 'خبر محلي' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-orange-500/15 text-orange-400 border-orange-500/30'}`}>{n.news_scope || 'خبر عالمي'}</span>
+                  </td>
                     {n.news_type}
                     {aiData && aiData.severity && <span className="block mt-1 bg-[var(--danger-soft)] text-[var(--accent)] px-2 py-0.5 rounded text-[10px] w-max">خطورة: {aiData.severity}/10</span>}
                   </td>
@@ -14288,7 +14315,7 @@ const totalAiCountries = new Set(
                   </td>
                 </tr>
               )
-              }) : <tr><td colSpan="7" className="p-8 text-center text-[var(--faint)] font-bold">لا توجد أخبار مطابقة...</td></tr>}
+              }) : <tr><td colSpan="8" className="p-8 text-center text-[var(--faint)] font-bold">لا توجد أخبار مطابقة...</td></tr>}
             </tbody>
           </table>
         </div>

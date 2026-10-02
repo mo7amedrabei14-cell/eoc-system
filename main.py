@@ -6643,10 +6643,42 @@ class AINewsModel(BaseModel):
 _AI_NEWS_SCHEMA_READY = False
 
 
+# 🇪🇬 محافظات مصر معروفة — أي خبر جاي من واحدة منهم = محلي، غير كده عالمي
+EGYPT_GOV_LABELS = (
+    "القاهرة", "الجيزة", "الإسكندرية", "الاسكندرية", "القليوبية", "الفيوم", "المنيا",
+    "أسيوط", "اسيوط", "سوهاج", "قنا", "الأقصر", "الاقصر", "أسوان", "اسوان",
+    "البحر الأحمر", "البحيرة", "الدقهلية", "دمياط", "الشرقية", "كفر الشيخ",
+    "الغربية", "غربية", "المنوفية", "بني سويف", "بورسعيد", "الإسماعيلية",
+    "الاسماعيلية", "السويس", "شمال سيناء", "جنوب سيناء", "مطروح", "الوادي الجديد",
+)
+
+
+def _ai_news_scope_label(governorate) -> str:
+    """خبر محلي لو المحافظة من محافظات مصر — عالمي لأي حاجة تانية أو فاضية."""
+    g = str(governorate or "").strip()
+    if not g or g == "-" or g == "غير محدد":
+        return "خبر عالمي"
+    for k in EGYPT_GOV_LABELS:
+        if g == k or k in g or g in k:
+            return "خبر محلي"
+    return "خبر عالمي"
+
+
 def _ensure_ai_news_observed_at(cursor):
     global _AI_NEWS_SCHEMA_READY
     if not _AI_NEWS_SCHEMA_READY:
         cursor.execute("ALTER TABLE public.ai_news ADD COLUMN IF NOT EXISTS observed_at timestamp without time zone")
+        cursor.execute("ALTER TABLE public.ai_news ADD COLUMN IF NOT EXISTS news_scope text")
+        # 🔙 ترقية السجلات القديمة مرة واحدة (بما فيها إصلاح أي صف فاضي)
+        cursor.execute("""
+            UPDATE ai_news SET news_scope = CASE
+                WHEN TRIM(COALESCE(governorate, '')) = '' OR TRIM(COALESCE(governorate, '')) = '-'
+                  OR TRIM(COALESCE(governorate, '')) = 'غير محدد' THEN 'خبر عالمي'
+                WHEN TRIM(governorate) = ANY(%s) THEN 'خبر محلي'
+                ELSE 'خبر عالمي'
+            END
+            WHERE news_scope IS NULL OR news_scope = '';
+        """, (list(EGYPT_GOV_LABELS),))
         _AI_NEWS_SCHEMA_READY = True
 
 @app.get("/api/ai-news")
@@ -6703,8 +6735,8 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                 INSERT INTO ai_news (
                     incident_date, incident_month, incident_description, news_type, news_publisher,
                     street_name, area_name, governorate, hospital_name, injured_count, deaths_count,
-                    news_updates, news_link, data_entry_name, observed_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s::text, '')::timestamp, (now() AT TIME ZONE 'Africa/Cairo')))
+                    news_updates, news_link, data_entry_name, observed_at, news_scope
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s::text, '')::timestamp, (now() AT TIME ZONE 'Africa/Cairo')), %s)
                 ON CONFLICT (news_link) DO UPDATE SET
                     incident_date = EXCLUDED.incident_date,
                     incident_month = EXCLUDED.incident_month,
@@ -6719,7 +6751,8 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                     deaths_count = EXCLUDED.deaths_count,
                     news_updates = EXCLUDED.news_updates,
                     data_entry_name = EXCLUDED.data_entry_name,
-                    observed_at = EXCLUDED.observed_at
+                    observed_at = EXCLUDED.observed_at,
+                    news_scope = EXCLUDED.news_scope
                 WHERE btrim(coalesce(ai_news.news_type, '')) = ''
                    OR btrim(ai_news.news_type) = '-'
                    OR ai_news.news_type LIKE %s
@@ -6730,6 +6763,7 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
                 news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''),
+                _ai_news_scope_label(news.governorate),
                 "%فشل التحليل%", ["غير مصنف", "أخرى / غير مصنف"],
             ))
             row = cursor.fetchone()
@@ -6791,14 +6825,14 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
                 UPDATE ai_news SET
                     incident_date=%s, incident_month=%s, incident_description=%s, news_type=%s, news_publisher=%s,
                     street_name=%s, area_name=%s, governorate=%s, hospital_name=%s, injured_count=%s, deaths_count=%s,
-                    news_updates=%s, news_link=%s, data_entry_name=%s,
+                    news_updates=%s, news_link=%s, data_entry_name=%s, news_scope=%s,
                     observed_at=COALESCE(NULLIF(%s::text, '')::timestamp, observed_at)
                 WHERE id=%s;
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
-                news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''), news_id
+                news.news_link, news.data_entry_name, _ai_news_scope_label(news.governorate), news_id
             ))
 
             connection.commit()
@@ -9080,7 +9114,7 @@ def export_earthquake_intel_log(
     wb = Workbook(write_only=True)
     ws = wb.create_sheet("سجل الزلازل")
     ws.append([
-        "التاريخ", "الوقت", "الشدة (ريختر)", "العمق (كم)", "المكان",
+        "التاريخ", "الوقت", "الشدة (ريختر)", "العمق (كم)", "المكان", "الدولة",
         "خط العرض", "خط الطول", "المسافة عن مصر (كم)", "التصنيف",
         "الخطورة (0-100)", "مستوى الخطورة", "أقوى حدث تاريخي (±15 يوم)",
         "عدد أحداث الفترة", "المصدر", "الرابط الرسمي",
@@ -9088,6 +9122,12 @@ def export_earthquake_intel_log(
 
     seen = set()
     written = 0
+    def _eq_country_from_place(place):
+        p = str(place or "").strip()
+        if not p:
+            return ""
+        parts = [x.strip() for x in p.split(",") if x.strip()]
+        return parts[-1] if parts else p
 
     def _row_from(occurred_at, magnitude, depth_km, place, lat, lon, dist, hist_max, hist_count, source, external_id, detail_url):
         dt = fmt_dt(occurred_at)
@@ -9097,7 +9137,7 @@ def export_earthquake_intel_log(
             {"hist_max_mag": hist_max, "hist_window_count": hist_count} if hist_max is not None else None,
         )
         return [
-            date_part, time_part, magnitude, depth_km, place,
+            date_part, time_part, magnitude, depth_km, place, _eq_country_from_place(place),
             lat, lon,
             (round(float(dist)) if dist is not None else None),
             _eq_intel_status_label(magnitude),
