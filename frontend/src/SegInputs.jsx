@@ -248,6 +248,25 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // 💾 استرجاع المسودة: تحديث داخلي مباشر عبر حدث مخصص — lastSyncedValue أولاً
+  //    يمنع إطلاق onChange (لا يُعدّل تلامس الحقل)، والعرض يتحدّث فوراً
+  useEffect(() => {
+    if (!id) return;
+    const h = (e) => {
+      if (!e?.detail || e.detail.id !== id) return;
+      const m = String(e.detail.value || '').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (!m) return;
+      const iso = `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+      lastSyncedValue.current = iso;
+      setSegs([pad(+m[3]), pad(+m[2]), m[1]]);
+      setView({ y: +m[1], mo: +m[2] });
+      setSelDate(iso);
+      setMachine(iso);
+    };
+    document.addEventListener('eoc:seg-set', h);
+    return () => document.removeEventListener('eoc:seg-set', h);
+  }, [id]);
+
   const segDefs = DATE_SEGS;
 
   const setSeg = (idx, val) => {
@@ -514,6 +533,23 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+
+  // 💾 استرجاع المسودة — نفس آلية التاريخ بالحرف
+  useEffect(() => {
+    if (!id) return;
+    const h = (e) => {
+      if (!e?.detail || e.detail.id !== id) return;
+      const n = normTime(String(e.detail.value || ''));
+      if (!n) return;
+      lastSyncedValue.current = n;
+      setSegs(parseTimeSegs(to12Display(n)));
+      setClock(n);
+      setAmpm(meridian(n));
+      setMachine(n);
+    };
+    document.addEventListener('eoc:seg-set', h);
+    return () => document.removeEventListener('eoc:seg-set', h);
+  }, [id]);
 
   const segDefs = TIME_SEGS;
 
@@ -814,6 +850,29 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+
+  // 💾 استرجاع المسودة — تاريخ + وقت معاً (clock/ampm يتزامنان تلقائياً من segs)
+  useEffect(() => {
+    if (!id) return;
+    const h = (e) => {
+      if (!e?.detail || e.detail.id !== id) return;
+      const v = String(e.detail.value || '').trim();
+      const m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2}))?/);
+      if (!m) return;
+      lastSyncedValue.current = v;
+      if (m[4] !== undefined) {
+        const h24 = +m[4];
+        setSegs([pad(+m[3]), pad(+m[2]), m[1], pad(h24 % 12 || 12), m[5], h24 < 12 ? 'AM' : 'PM']);
+      } else {
+        setSegs([pad(+m[3]), pad(+m[2]), m[1], '', '', 'AM']);
+      }
+      setSelDate(`${m[1]}-${pad(+m[2])}-${pad(+m[3])}`);
+      setCalView({ y: +m[1], mo: +m[2] });
+      setMachine(v);
+    };
+    document.addEventListener('eoc:seg-set', h);
+    return () => document.removeEventListener('eoc:seg-set', h);
+  }, [id]);
 
   const segDefs = DT_SEGS;
 

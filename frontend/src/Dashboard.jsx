@@ -4208,6 +4208,15 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       if (st.fieldStatus === 'مكتملة' || st.fieldStatus === 'نشطة') setFieldStatus(st.fieldStatus);
       // حقول الـ DOM: ننتظر رسم الصفوف الديناميكية ثم نطبّق القيم (أفضل جهد، بلا أعطال)
       await applyFieldsWhenReady(formBodyRef.current, payload?.dom || {});
+      // 💾 حقول SegInputs الستة: كتابة الـDOM المباشرة تُبطَل بأول إعادة عرض —
+      //    نبثّ حدثاً مخصصاً يستلمه الحقل نفسه ويحدّث حالته الداخلية بالقيمة الصحيحة
+      const SEG_RESTORE = ['f_exit_date', 'f_arrival_date', 'f_completion_date', 'f_departure_time', 'f_arrival_time', 'f_completion_time'];
+      const domVals = payload?.dom || {};
+      SEG_RESTORE.forEach((fid) => {
+        const val = String(domVals[fid] ?? '').trim();
+        if (!val) return;   // فارغ في المسودة ⇒ لا حاجة للاسترجاع
+        try { document.dispatchEvent(new CustomEvent('eoc:seg-set', { detail: { id: fid, value: val } })); } catch { /* تجاهل */ }
+      });
       setCustomAlert('تم استرجاع المسودة المحفوظة — راجع البيانات ثم اضغط حفظ.');
     },
   });
