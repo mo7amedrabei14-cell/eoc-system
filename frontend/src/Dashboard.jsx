@@ -478,7 +478,7 @@ const ENGLISH_UI = {
   'الروبوت نشط (دوريات المسح تعمل)': 'Robot active (scanning patrols running)',
   'آخر فحص:': 'Last scan:',
   'إجمالي الأخبار المرصودة': 'Total monitored reports',
-  'الدول المرصودة': 'Monitored countries',
+  'الدول / المحافظات المرصودة': 'Monitored countries',
   'خريطة الرصد اللحظي للذكاء الاصطناعي': 'AI real-time monitoring map',
   'إلغاء الفلترة (عرض كل الأخبار)': 'Clear filter (show all news)',
   'خطورة:': 'Severity:',
@@ -3427,10 +3427,10 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
           </div>
         </TiltCard>
 
-        {/* الدول المرصودة */}
+        {/* الدول / المحافظات المرصودة */}
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10">
-            <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول المرصودة</h3>
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول / المحافظات المرصودة</h3>
             <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
@@ -8229,15 +8229,14 @@ const [nd, setNd] = useState({
 
   useEffect(() => { fetchNews(); }, []);
 
+  // 🛡️ شبكة أمان: تحديث صامت دوري (ظاهر = 60s كما هو · مخفي = تخطى + فوري عند العودة)
+  useSmartPoll(() => fetchNews(true), 60000);
+
   // 🔄 تحديث لحظي: إضافة/تعديل من مستخدم آخر تنعكس فورًا بدون الخروج من الصفحة
   const isFirstLiveNewsRef = useRef(true);
   useEffect(() => {
     if (isFirstLiveNewsRef.current) { isFirstLiveNewsRef.current = false; return; }
     fetchNews(true);
-
-  // 🛡️ شبكة أمان: تحديث صامت دوري (ظاهر = 60s كما هو · مخفي = تخطى + فوري عند العودة)
-  useSmartPoll(() => fetchNews(true), 60000);
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdateVersion]);
 
@@ -9083,7 +9082,6 @@ const visibleBranches = (
 
   // كل تغيير (وردية/تاريخ) → نحفظ أي رقم متكتب قبل التبديل (على الوردية القديمة)، وبعدين لوح نظيف وجلب جديد
   useEffect(() => {
-    flushRef.current();
     touchedRef.current = new Set();
     loadGrid(false).then(() => {
       // 🧷 لو فيه أرقام معلقة لسه ما اتأكدش حفظها لنفس الوردية/التاريخ: نرجّعها
@@ -9181,16 +9179,19 @@ const visibleBranches = (
   /** رفع المجموعات المعلقة: مجموعة (تاريخ|وردية) كل مرة في طلب واحد.
    *  - `retryAll` = جولة إعادة محاولة شاملة (كل التواريخ/الورديات المعلقة).
    *  - الحذف من المخزن يحدث *بعد* تأكيد السيرفر فقط — لا فقد بيانات في أي حالة. */
-  const flushWeatherSave = async ({ retryAll = false } = {}) => {
+  const flushWeatherSave = async ({ retryAll = false, manual = false } = {}) => {
     if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     const snap = autoSaveSnapRef.current;
     autoSaveSnapRef.current = null;
     if (!snap && !retryAll) return;
-    if (submitLockRef.current) { autoSaveSnapRef.current = snap || autoSaveSnapRef.current; autoSaveTimerRef.current = setTimeout(() => flushRef.current({ retryAll }), 800); return; } // في حفظ شغال → نأجّل
+    if (submitLockRef.current) { autoSaveSnapRef.current = snap || autoSaveSnapRef.current; autoSaveTimerRef.current = setTimeout(() => flushRef.current({ retryAll, manual }), 800); return; }
     const groups = Object.entries(pendingRowsRef.current)
       .filter(([gk]) => (retryAll || !snap ? true : gk === `${snap.date}|${snap.shift}`))
       .map(([gk, rowsByBranch]) => { const [date, shiftKey] = gk.split('|'); return { date, shift: shiftKey, rowsByBranch }; });
-    if (!groups.length) return;
+    if (!groups.length) {
+      if (manual) setCustomAlert(lang === 'ar' ? 'لا توجد أرقام لحفظها — اكتب القيم في الجدول أولاً.' : 'Nothing to save — enter values first.');
+      return;
+    }
     submitLockRef.current = true;
     setSavingWeather(true);
     const token = sessionStorage.getItem('access_token');
@@ -9224,8 +9225,10 @@ const visibleBranches = (
         })
         .filter(r => {
           const hasVal = WEATHER_METRICS.some(m => r[`${m.key}_min`] != null || r[`${m.key}_max`] != null);
-          if (hasVal) sentByBranch[String(r.branch_id)] = r.__sent;
-          return hasVal;
+          // ✍️ صف اتلمس فعلاً لازم يتبعت حتى لو كل خلاياه اتمسحت عمداً — المسح المقصود يوصل للسيرفر
+          const hasTouched = r.__sent && Object.keys(r.__sent).length > 0;
+          if (hasVal || hasTouched) sentByBranch[String(r.branch_id)] = r.__sent;
+          return hasVal || hasTouched;
         })
         .map(({ __sent, ...r }) => r);
       // 🧹 صفوف كلّ خلاياها اتمسحت عمداً (المستخدم صفّرها بنفسه) ⇒ لا داعي لإبقائها معلّقة للأبد.
@@ -9235,7 +9238,7 @@ const visibleBranches = (
         const res = await fetch(`${BASE}/api/weather/batch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ date: group.date, shift: group.shift, rows: bodyRows, silent: true }),
+          body: JSON.stringify({ date: group.date, shift: group.shift, rows: bodyRows, silent: !manual }),
         });
         if (res.ok) {
           // ✅ تأكيد الحفظ فقط حينها نمسحها — وعلى مستوى الخلية لا الصف:
@@ -9255,7 +9258,13 @@ const visibleBranches = (
     }
     submitLockRef.current = false;
     setSavingWeather(false);
-    if (savedCount) loadDaily(true);
+    if (savedCount) {
+      loadDaily(true);
+      if (manual) {
+        loadGrid(true);
+        setCustomAlert(lang === 'ar' ? `✅ تم حفظ التوقعات بنجاح — ${savedCount} محافظة` : `✅ Saved — ${savedCount} governorates`);
+      }
+    }
     if (failedGroups) setCustomAlert(lang === 'ar'
       ? '⚠️ فيه أرقام لسه ما اتأكدش حفظها — هي محفوظة عندك وستُعاد تلقائياً أول ما الاتصال يرجع.'
       : '⚠️ Some values are not confirmed yet — kept on your device and will be retried automatically.');
@@ -9264,36 +9273,36 @@ const visibleBranches = (
   const flushRef = useRef(flushWeatherSave);
   flushRef.current = flushWeatherSave;
 
-  // 🔁 إعادة المحاولة تلقائياً: كل 30 ثانية + عند رجوع النت/السيرفر + لحظة مغادرة الصفحة
+  // 🧷 المسودات فقط: حفظ محلي لحظة مغادرة الصفحة + دمج مسودات الأجهزة الأخرى.
+  //    ⛔ مفيش أي إرسال تلقائي — الحفظ على السيرفر بزر «حفظ التوقعات» بس.
   useEffect(() => {
-    // ✍️ كتابة فورية على القرص — تُنادى لحظة مغادرة الصفحة (قبل ما يتبخر المؤقت المؤجل)
     const flushToDisk = () => {
       if (pendingWriteTimerRef.current) clearTimeout(pendingWriteTimerRef.current);
       saveWeatherPending(pendingRowsRef.current);
     };
-    const retry = () => { if (countPending(pendingRowsRef.current)) flushRef.current({ retryAll: true }); };
-    // ☁️ خلايا معلّقة من جهاز آخر لنفس الحساب: نجيبها من السيرفر ونسلّم حفظها من هنا
     const syncFromServer = async () => {
-      const merged = await syncWeatherPendingFromServer();
-      pendingRowsRef.current = merged;
-      setPendingWeatherCount(countPending(merged));
-      if (countPending(merged)) retry();
+      try {
+        const remote = await syncWeatherPendingFromServer();
+        const local = pendingRowsRef.current || {};
+        const merged = { ...remote };
+        Object.entries(local).forEach(([gk, group]) => {
+          // 🧷 المحلي يكسب دايماً: أرقامي لسه ما اتحفظش — مزامنة السيرفر ما تمسحهاش
+          merged[gk] = { ...(remote[gk] || {}), ...group };
+        });
+        pendingRowsRef.current = merged;
+        setPendingWeatherCount(countPending(merged));
+      } catch { /* مفيش نت — المسودة المحلية زي ما هي */ }
     };
-    const onLeave = () => { flushToDisk(); retry(); };
-    retry();
     syncFromServer();
-    // 🔄 الظاهر: كل 30 ثانية كما هو · المخفي: تُتخطى الدورات (العودة/الاتصال = مزامنة فورية بالأدنى)
-    const t = setInterval(() => { if (!document.hidden) { retry(); syncFromServer(); } }, 30000);
-    window.addEventListener('online', retry);
-    window.addEventListener('eoc:server-recovered', retry);
-    window.addEventListener('pagehide', onLeave);
-    document.addEventListener('visibilitychange', onLeave);
+    const t = setInterval(() => { if (!document.hidden) syncFromServer(); }, 30000);
+    window.addEventListener('eoc:server-recovered', syncFromServer);
+    window.addEventListener('pagehide', flushToDisk);
+    document.addEventListener('visibilitychange', flushToDisk);
     return () => {
       clearInterval(t);
-      window.removeEventListener('online', retry);
-      window.removeEventListener('eoc:server-recovered', retry);
-      window.removeEventListener('pagehide', onLeave);
-      document.removeEventListener('visibilitychange', onLeave);
+      window.removeEventListener('eoc:server-recovered', syncFromServer);
+      window.removeEventListener('pagehide', flushToDisk);
+      document.removeEventListener('visibilitychange', flushToDisk);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -9339,10 +9348,7 @@ const visibleBranches = (
     setFormValues(prev => ({ ...prev, [bid]: { ...(prev[bid] || {}), [field]: value } }));
     // 🧷 نسجّلها محلياً فوراً — من هنا الشغل مش ممكن يضيع مهما حصل
     putPending(filterDate, shift, bid, field, value);
-    // 🕐 نستنى توقف الكتابة ثانية واحدة وبعدها نحفظ — عشان سرعة الكتابة متبقاش طلبات كتير
-    autoSaveSnapRef.current = { date: filterDate, shift };
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => flushRef.current(), 1000);
+    // ⛔ مفيش حفظ تلقائي — الأرقام بتتفضل مسودة على الجهاز لحد ضغط «حفظ التوقعات»
   };
 
   // 🪞 القيمة المعروضة = القيمة التي ستُحفظ، دائماً. نقرأ من المخزن المعلّق فوق
@@ -9664,6 +9670,16 @@ const visibleBranches = (
       </div>
 
       {/* — جدول الإدخال: المحافظة + 6 مقاييس × (صغرى/عظمى) — */}
+            {pendingWeatherCount > 0 && (
+        <div className="animate-pulse rounded-2xl border-2 border-[var(--accent)] bg-[var(--accent-soft)] px-6 py-4 text-center">
+          <span className="text-lg md:text-xl font-extrabold text-[var(--ink)]">
+            📢 {T('لحفظ الطقس اضغط على زر «حفظ التوقعات» بالأسفل', 'To save, press the Save Forecasts button below')}
+          </span>
+          <span className="block text-xs font-bold text-[var(--muted)] mt-1">
+            {T(`عندك ${pendingWeatherCount} رقم لسه ما اتبعتش`, `${pendingWeatherCount} value(s) not sent yet`)}
+          </span>
+        </div>
+      )}
       <div className="card-surface p-4 md:p-6 rounded-3xl border border-[var(--border)]">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
@@ -9718,8 +9734,21 @@ const visibleBranches = (
         )}
         <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
           <span className="text-xs text-[var(--muted)]">{T('عدد المحافظات المرئية', 'Visible governorates')}: <b className="text-[var(--ink)]">{visibleBranches.length}</b> {scopeRegionLabel && !isGlobalWeather ? `(${T('نطاق ' + scopeRegionLabel, 'Region ' + scopeRegionLabel)})` : ''}</span>
-          <span className={`ops-chip shrink-0 ${savingWeather ? 'text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]' : 'text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]'}`}>
-            <span className="live-dot" /> {savingWeather ? T('جارٍ الحفظ…', 'Saving…') : T('الحفظ تلقائي ✓', 'Autosave on ✓')}
+          <button
+            type="button"
+            onClick={() => flushRef.current({ retryAll: true, manual: true })}
+            disabled={savingWeather}
+            data-tip={T('بيبعت كل الأرقام المكتوبة في كل الورديات دفعة واحدة ويسجّل العملية في سجل النظام', 'Sends all values across all shifts at once and logs it')}
+            className="btn-primary glow-accent shrink-0 px-6 py-2.5 text-base"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
+            <span>{savingWeather ? T('جارٍ الحفظ…', 'Saving…') : T('حفظ التوقعات', 'Save Forecasts')}</span>
+            {pendingWeatherCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-white/25 text-xs font-extrabold tabular-nums">{pendingWeatherCount}</span>
+            )}
+          </button>
+          <span className={`ops-chip shrink-0 ${pendingWeatherCount > 0 ? 'text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]' : 'text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]'}`}>
+            <span className="live-dot" /> {pendingWeatherCount > 0 ? T('فيه أرقام لسه متحفظش — اضغط «حفظ التوقعات»', 'Unsaved values — press Save Forecasts') : T('كل الأرقام محفوظة ✓', 'All saved ✓')}
           </span>
           {pendingWeatherCount > 0 && (
             <span className="ops-chip shrink-0 text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]" title={T('أرقام محفوظة على جهازك ولسه ما اتأكدش حفظها على السيرفر — هتتبعت تلقائياً', 'Values kept on your device and not yet confirmed on the server — will be retried automatically')}>
@@ -11854,6 +11883,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
 
   // 🥇 مشتقات الكروت: أقوى حدث + آخر رصد (حسب الفلتر)
   const eqStrongest = quakes.reduce((best, q) => ((Number(q.magnitude) || 0) > (Number(best?.magnitude) || 0) ? q : best), null);
+    const eqMaxRisk = quakes.reduce((mx, q) => Math.max(mx, Number(q.risk_score) || 0), 0);
   const eqLatest = quakes[0] || null;
 
   // 🗓️ أيام الأسبوع المستهدف في التوقعات (7 أيام من لحظة التوليد) — تاريخ + اسم اليوم تحت كل بار
@@ -11919,7 +11949,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
             <div className="p-1.5 rounded-xl text-orange-400 bg-orange-400/10 border border-orange-400/20 shrink-0"><AlertIcon /></div>
           </div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
-            <p className="kpi-value text-3xl text-orange-500">{summary.max_risk ?? 0}</p>
+            <p className="kpi-value text-3xl text-orange-500">{eqMaxRisk}</p>
             <span className="kpi-sub">38% شدة · 30% قرب · 32% تاريخ</span>
           </div>
         </TiltCard>
@@ -12624,7 +12654,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in-up">
         <StatCard title="الزلازل العالمية المرصودة" value={filteredGlobalEqs.length} color="text-[var(--accent)]" borderHighlight />
-        <StatCard title="الدول المرصودة" value={uniqueCountriesCount} color="text-orange-400" />
+        <StatCard title="الدول / المحافظات المرصودة" value={uniqueCountriesCount} color="text-orange-400" />
         <StatCard title="زلازل مصر المرصودة" value={filteredEgyptEqs.length} color="text-green-500" />
         <StatCard title="أقوى هزة / زلزال" value={maxMagnitude > 0 ? `${maxMagnitude} ريختر` : '-'} color="text-[var(--data)]" />
       </div>
@@ -12821,8 +12851,8 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <FormGroup label="المنطقة"><StyledInput value={gForm.region} onChange={e => setGForm({...gForm, region: e.target.value})} /></FormGroup>
                 <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={gForm.magnitude} onChange={e => setGForm({...gForm, magnitude: e.target.value})} className="border-[var(--accent)]/50" /></FormGroup>
                 <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={gForm.depth_km} onChange={e => setGForm({...gForm, depth_km: e.target.value})} /></FormGroup>
-                <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={gForm.latitude} onChange={e => setGForm({...gForm, latitude: e.target.value})} /></FormGroup>
-                <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={gForm.longitude} onChange={e => setGForm({...gForm, longitude: e.target.value})} /></FormGroup>
+                <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="text" inputMode="decimal" dir="ltr" value={gForm.latitude} onChange={e => setGForm(prev => ({ ...prev, latitude: e.target.value }))} /></FormGroup>
+                <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="text" inputMode="decimal" dir="ltr" value={gForm.longitude} onChange={e => setGForm(prev => ({ ...prev, longitude: e.target.value }))} /></FormGroup>
               </div>
             </div>
             <div className="flex flex-col-reverse md:flex-row justify-end gap-3 mt-4 [&>button]:w-full md:[&>button]:w-auto p-4 border-t border-[var(--border)] shrink-0">
@@ -12847,8 +12877,8 @@ const [clearAllCode, setClearAllCode] = useState('');
                 <FormGroup label="المنطقة داخل مصر"><StyledInput value={eForm.region} onChange={e => setEForm({...eForm, region: e.target.value})} /></FormGroup>
                 <FormGroup label="القوة (ريختر) - إلزامي"><StyledInput type="number" step="0.1" value={eForm.magnitude} onChange={e => setEForm({...eForm, magnitude: e.target.value})} className="border-green-500/50" /></FormGroup>
                 <FormGroup label="العمق (سيتم إضافة KM آلياً)"><StyledInput type="number" placeholder="مثال: 10" value={eForm.depth_km} onChange={e => setEForm({...eForm, depth_km: e.target.value})} /></FormGroup>
-                <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="number" step="any" value={eForm.latitude} onChange={e => setEForm({...eForm, latitude: e.target.value})} /></FormGroup>
-                <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="number" step="any" value={eForm.longitude} onChange={e => setEForm({...eForm, longitude: e.target.value})} /></FormGroup>
+                <FormGroup label="Latitude (دوائر العرض)"><StyledInput type="text" inputMode="decimal" dir="ltr" value={eForm.latitude} onChange={e => setEForm(prev => ({ ...prev, latitude: e.target.value }))} /></FormGroup>
+                <FormGroup label="Longitude (خطوط الطول)"><StyledInput type="text" inputMode="decimal" dir="ltr" value={eForm.longitude} onChange={e => setEForm(prev => ({ ...prev, longitude: e.target.value }))} /></FormGroup>
               </div>
             </div>
             <div className="p-4 md:p-5 border-t border-[var(--border)] bg-[var(--surface-2)] shrink-0 flex flex-col-reverse md:flex-row justify-end gap-3 [&>button]:w-full md:[&>button]:w-auto">
@@ -14444,7 +14474,7 @@ const totalAiCountries = new Set(
         {/* عدد الدول */}
         <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
           <div className="flex items-center justify-between mb-3 relative z-10">
-            <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول المرصودة</h3>
+            <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول / المحافظات المرصودة</h3>
             <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
               <svg
                 className="w-6 h-6"

@@ -3925,14 +3925,3 @@ select.field {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
-
-/* 2) كلاسات التويند الخاصة بالبلور (backdrop-blur / blur) */
-[class*="backdrop-blur"], [class*="blur-"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  filter: none !important;
-}
-
-/* 3) الأسطح الزجاجية تبقى معتمة — من غير ما يظهر خلفها محتوى */
-.glass-header { background: var(--surface) !important; }
-.modal-card, .toast-item { background: var(--surface) !important; }

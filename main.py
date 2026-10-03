@@ -5965,7 +5965,7 @@ def create_local_news(news: LocalNewsModel, credentials: HTTPAuthorizationCreden
 
             # 💡 تسجيل اللوج الخاص بالأخبار فقط (مفصول عن المهام)
             try:
-                create_audit_log(cursor, user_id, "إضافة خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"})
+                create_audit_log(cursor, user_id, "إضافة خبر", mission_id=None, entity_type="local_news", entity_id=news_id, details={"action_text": f"قام بإضافة خبر محلي جديد في منطقة: {news.area_name or 'غير محدد'}"}, realtime=False)
             except Exception as e:
                 print(f"Audit Error: {e}")
 
@@ -6532,7 +6532,7 @@ def create_global_disaster(disaster: GlobalDisasterModel, credentials: HTTPAutho
 
             # تسجيل اللوج الخاص بالكوارث العالمية
             try:
-                create_audit_log(cursor, user_id, "رصد كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام برصد كارثة جديدة ({disaster.disaster_type}) في: {disaster.country}"})
+                create_audit_log(cursor, user_id, "رصد كارثة عالمية", mission_id=None, entity_type="global_disaster", entity_id=disaster_id, details={"action_text": f"قام برصد كارثة جديدة ({disaster.disaster_type}) في: {disaster.country}"}, realtime=False)
             except Exception as e: pass
 
             # 📡 بث لحظي — كروت الداشبورد (ومنها حساب إدارة الشباب) تتحدث من نفسها
@@ -7918,7 +7918,9 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
     # تحقق أمني قبل أي كتابة: لا يُنشئ مستخدم إقليمي صفاً لمحافظة خارج نطاقه أبداً.
     valid_rows = []
     for row in payload.rows:
-        if row.is_empty():
+        # ✍️ مسح مقصود: صف كل خلاياه اتبعتت بـ null لازم يعالَج — مفيش is_empty هنا
+        #    عشان الصف «ممسوح عمداً» مش معناه «مفيش حاجة»
+        if not row.provided_metrics():
             continue
         if row.shift != payload.shift:
             raise HTTPException(status_code=400, detail="يجب أن تكون كل الصفوف لنفس الوردية")
@@ -7978,6 +7980,24 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
                     )
                 except Exception as e:
                     print(f"Weather realtime error: {e}")
+
+                                    # 🧾 الحفظ اليدوي يتسجّل في سجل النظام (realtime=False — الإشعار اللحظي اتبعت فوق)
+                try:
+                    create_audit_log(
+                        cursor,
+                        user_id,
+                        "حفظ توقعات الطقس",
+                        mission_id=None,
+                        entity_type="weather",
+                        entity_id=None,
+                        details={
+                            "action_text": f"حفظ توقعات وردية {payload.shift} ليوم {forecast_date} لعدد {len(valid_rows)} محافظة"
+                        },
+                        realtime=False,
+                    )
+                except Exception as e:
+                    print(f"Weather audit error: {e}")
+
 
             connection.commit()
             return {"message": f"تم حفظ توقعات {len(valid_rows)} محافظة بنجاح", "saved": len(valid_rows)}
