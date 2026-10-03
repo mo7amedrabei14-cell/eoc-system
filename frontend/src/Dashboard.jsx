@@ -9398,7 +9398,14 @@ const visibleBranches = (
       WEATHER_METRICS.forEach(m => {
         WEATHER_METRIC_FIELDS(m).forEach(f => {
           const v = r[f];
-          o[f] = (v !== '' && v != null) ? Number(v) : null;
+          if (v === '' || v == null) { o[f] = null; return; }
+          // 🛡️ نفس حارس الحفظ اللحظي: قيمة غير رقمية (نص عابر أو خطأ لصق) لا
+          //    تُترجَم إلى null أبداً — JSON.stringify(NaN) = null فكانت تصبح عند
+          //    السيرفر «امسح هذه الخلية» أي حذفاً حقيقياً لرقم محفوظ. تُترك كما
+          //    هي وتُستثنى من الإرسال فقط.
+          const n = Number(v);
+          if (!Number.isFinite(n)) return;
+          o[f] = n;
         });
       });
       return o;
@@ -10318,7 +10325,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
                         <input id={`gcell_${rIdx}_0`} value={r.reason || ''} onChange={e => setField(b.id, 'reason', e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 0)} placeholder={GOV_REASON_DEFAULT} className={cellCls} />
                       </td>
                       <td className="p-2">
-                        <input id={`gcell_${rIdx}_1`} type="number" min="0" max="999" inputMode="numeric" value={r.contact_count} onChange={e => setField(b.id, 'contact_count', e.target.value === '' ? '' : Math.max(0, Math.min(999, Number(e.target.value))))} onKeyDown={e => gridNavKey(e, rIdx, 1)} className={`${cellCls} w-20`} placeholder="—" />
+                        <input id={`gcell_${rIdx}_1`} type="text" inputMode="numeric" autoComplete="off" value={r.contact_count ?? ''} onChange={e => { const raw = e.target.value; if (raw === '') return setField(b.id, 'contact_count', ''); if (!/^\d{0,3}$/.test(raw)) return; setField(b.id, 'contact_count', raw); }} onKeyDown={e => gridNavKey(e, rIdx, 1)} className={`${cellCls} w-20`} placeholder="—" />
                       </td>
                       {GOV_CHANNELS.map((c, cIdx) => {
                         const on = !!String(r[c.key] || '').trim();

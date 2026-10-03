@@ -9555,7 +9555,7 @@ def get_earthquake_intel(
                  SELECT eq_intel_id, source, external_id, occurred_at, magnitude,
                         depth_km, place, latitude, longitude, distance_km,
                         sound_alert, created_at, hist_max_mag, hist_window_count, hist_scanned_at,
-                        COALESCE(CASE WHEN source = 'usgs' AND external_id <> '' THEN 'https://earthquake.usgs.gov/earthquakes/eventpage/' || external_id END, CASE WHEN source = 'emsc' AND external_id LIKE 'emsc-%' THEN 'https://www.seismicportal.eu/eventdetails.html?unid=' || substring(external_id from 6) END, CASE WHEN source = 'emsc' THEN raw->>'detail_url' END)
+                        COALESCE(CASE WHEN source = 'usgs' AND external_id <> '' THEN 'https://earthquake.usgs.gov/earthquakes/eventpage/' || external_id END, CASE WHEN source = 'emsc' AND external_id LIKE 'emsc-%%' THEN 'https://www.seismicportal.eu/eventdetails.html?unid=' || substring(external_id from 6) END, CASE WHEN source = 'emsc' THEN raw->>'detail_url' END)
                  FROM earthquake_intel
                 {'WHERE ' + ' AND '.join(where) if where else ''}
                 ORDER BY occurred_at DESC NULLS LAST, eq_intel_id DESC
