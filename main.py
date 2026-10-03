@@ -7107,7 +7107,15 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
             # الإشعار اللحظي عند الإدراج الجديد فقط — إعادة الإرسال/الإصلاح بلا إشعار (منع التكرار)
             if is_new:
                 try:
-                    _ai_news_text = f"محرك الذكاء الاصطناعي رصد خبراً جديداً ({news.news_type}) في: {news.governorate}"
+                    # 📰 وصف الخبر جوه الإشعار: الناس بتقرا من التوست مباشرة من غير ما تدخل الصفحة
+                    _desc = " ".join(str(news.incident_description or "").split())
+                    if len(_desc) > 140:
+                        _desc = _desc[:140].rstrip() + "…"
+                    _scope = _ai_news_scope_label(news.governorate)
+                    _ai_news_text = (
+                        f"{_scope} ({news.news_type or 'غير مصنف'}) في: {news.governorate or 'خارج مصر'}"
+                        + (f" — {_desc}" if _desc else "")
+                    )
                     create_realtime_event(
                         cursor,
                         event_type="ai_news",
