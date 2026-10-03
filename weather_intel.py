@@ -936,7 +936,7 @@ def build_ai_input(loc, fc, stats, frequencies, anomalies, hazards, target_day):
 # ── 7) الإرسال النهائي (معاملة واحدة) ───────────────────────────────────────
 def send_ingest(payload):
     try:
-        r = http_post(f"{SYSTEM_API_URL}/api/weather-intel/ingest", headers=api_headers(), json_body=payload, timeout=60)
+        r = http_post(f"{SYSTEM_API_URL}/api/weather-intel/ingest", headers=api_headers(), json_body=payload, timeout=120)
         if r.status_code not in (200, 201):
             print(f"⚠️ ingest فشل ({r.status_code}): {r.text[:300]}")
             return False

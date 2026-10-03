@@ -11266,38 +11266,32 @@ def ingest_weather_intel(
 
             # 2. Insert recent history rows (if any)
             if payload.history_rows:
-                for h in payload.history_rows:
-                    cursor.execute("""
-                        INSERT INTO weather_history_daily
-                        (location_id, record_date, tmax, tmin, precip_mm, wind_max_kph,
-                         wind_gusts_kph, humidity_mean_pct, cloud_cover_mean_pct, data_source)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (location_id, record_date, data_source) DO NOTHING
-                    """, (
-                        h.get("location_id"),
-                        h.get("record_date"),
-                        h.get("tmax"),
-                        h.get("tmin"),
-                        h.get("precip_mm"),
-                        h.get("wind_max_kph"),
-                        h.get("wind_gusts_kph"),
-                        h.get("humidity_mean_pct"),
-                        h.get("cloud_cover_mean_pct"),
-                        h.get("data_source", "era5-archive")
-                    ))
+                cursor.executemany("""
+                    INSERT INTO weather_history_daily
+                    (location_id, record_date, tmax, tmin, precip_mm, wind_max_kph,
+                     wind_gusts_kph, humidity_mean_pct, cloud_cover_mean_pct, data_source)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (location_id, record_date, data_source) DO NOTHING
+                """, [
+                    (h.get("location_id"), h.get("record_date"), h.get("tmax"),
+                     h.get("tmin"), h.get("precip_mm"), h.get("wind_max_kph"),
+                     h.get("wind_gusts_kph"), h.get("humidity_mean_pct"),
+                     h.get("cloud_cover_mean_pct"), h.get("data_source", "era5-archive"))
+                    for h in payload.history_rows
+                ])
 
             # 2b. صفوف تاريخ الطبقات الإضافية (غبار/PM2.5/موج/سيول)
             if payload.extra_history_rows:
-                for h in payload.extra_history_rows:
-                    cursor.execute("""
-                        INSERT INTO weather_extra_history (location_id, record_date, layer, value, data_source)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ON CONFLICT (location_id, record_date, layer) DO UPDATE SET
-                            value = COALESCE(EXCLUDED.value, weather_extra_history.value)
-                    """, (
-                        h.get("location_id"), h.get("record_date"), h.get("layer"),
-                        h.get("value"), h.get("data_source", "open-meteo")
-                    ))
+                cursor.executemany("""
+                    INSERT INTO weather_extra_history (location_id, record_date, layer, value, data_source)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (location_id, record_date, layer) DO UPDATE SET
+                        value = COALESCE(EXCLUDED.value, weather_extra_history.value)
+                """, [
+                    (h.get("location_id"), h.get("record_date"), h.get("layer"),
+                     h.get("value"), h.get("data_source", "open-meteo"))
+                    for h in payload.extra_history_rows
+                ])
 
             # 3. Insert forecast snapshots & map location_id -> snapshot_id
             loc_snap_map = {}
@@ -11345,74 +11339,53 @@ def ingest_weather_intel(
 
             # 4. Insert statistics
             if payload.statistics:
-                for st in payload.statistics:
-                    cursor.execute("""
-                        INSERT INTO weather_statistics
-                        (weather_run_id, location_id, target_date, metric, history_source,
-                         window_days, methodology_version, period_start, period_end,
-                         sample_count, mean, median, min, max, p10, p25, p75, p90, stddev)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (weather_run_id, location_id, target_date, metric) DO UPDATE SET
-                            sample_count = EXCLUDED.sample_count,
-                            mean = EXCLUDED.mean,
-                            median = EXCLUDED.median,
-                            min = EXCLUDED.min,
-                            max = EXCLUDED.max,
-                            p10 = EXCLUDED.p10,
-                            p25 = EXCLUDED.p25,
-                            p75 = EXCLUDED.p75,
-                            p90 = EXCLUDED.p90,
-                            stddev = EXCLUDED.stddev
-                    """, (
-                        run_id,
-                        st.get("location_id"),
-                        st.get("target_date", payload.target_date),
-                        st.get("metric"),
-                        st.get("history_source", "era5-reanalysis"),
-                        st.get("window_days", 3),
-                        st.get("methodology_version", "v1"),
-                        st.get("period_start"),
-                        st.get("period_end"),
-                        st.get("sample_count", 0),
-                        st.get("mean"),
-                        st.get("median"),
-                        st.get("min"),
-                        st.get("max"),
-                        st.get("p10"),
-                        st.get("p25"),
-                        st.get("p75"),
-                        st.get("p90"),
-                        st.get("stddev")
-                    ))
+                cursor.executemany("""
+                    INSERT INTO weather_statistics
+                    (weather_run_id, location_id, target_date, metric, history_source,
+                     window_days, methodology_version, period_start, period_end,
+                     sample_count, mean, median, min, max, p10, p25, p75, p90, stddev)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (weather_run_id, location_id, target_date, metric) DO UPDATE SET
+                        sample_count = EXCLUDED.sample_count,
+                        mean = EXCLUDED.mean,
+                        median = EXCLUDED.median,
+                        min = EXCLUDED.min,
+                        max = EXCLUDED.max,
+                        p10 = EXCLUDED.p10,
+                        p25 = EXCLUDED.p25,
+                        p75 = EXCLUDED.p75,
+                        p90 = EXCLUDED.p90,
+                        stddev = EXCLUDED.stddev
+                """, [
+                    (run_id, st.get("location_id"), st.get("target_date", payload.target_date),
+                     st.get("metric"), st.get("history_source", "era5-reanalysis"),
+                     st.get("window_days", 3), st.get("methodology_version", "v1"),
+                     st.get("period_start"), st.get("period_end"), st.get("sample_count", 0),
+                     st.get("mean"), st.get("median"), st.get("min"), st.get("max"),
+                     st.get("p10"), st.get("p25"), st.get("p75"), st.get("p90"), st.get("stddev"))
+                    for st in payload.statistics
+                ])
 
             # 5. Insert frequencies
             if payload.frequencies:
-                for f in payload.frequencies:
-                    cursor.execute("""
-                        INSERT INTO weather_frequencies
-                        (weather_run_id, location_id, target_date, metric, threshold_value,
-                         threshold_unit, threshold_desc_ar, qualifying_count, total_count,
-                         frequency_pct, period_start, period_end, methodology)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (weather_run_id, location_id, target_date, metric, threshold_value) DO UPDATE SET
-                            qualifying_count = EXCLUDED.qualifying_count,
-                            total_count = EXCLUDED.total_count,
-                            frequency_pct = EXCLUDED.frequency_pct
-                    """, (
-                        run_id,
-                        f.get("location_id"),
-                        f.get("target_date", payload.target_date),
-                        f.get("metric"),
-                        f.get("threshold_value"),
-                        f.get("threshold_unit"),
-                        f.get("threshold_desc_ar"),
-                        f.get("qualifying_count", 0),
-                        f.get("total_count", 0),
-                        f.get("frequency_pct"),
-                        f.get("period_start"),
-                        f.get("period_end"),
-                        f.get("methodology")
-                    ))
+                cursor.executemany("""
+                    INSERT INTO weather_frequencies
+                    (weather_run_id, location_id, target_date, metric, threshold_value,
+                     threshold_unit, threshold_desc_ar, qualifying_count, total_count,
+                     frequency_pct, period_start, period_end, methodology)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (weather_run_id, location_id, target_date, metric, threshold_value) DO UPDATE SET
+                        qualifying_count = EXCLUDED.qualifying_count,
+                        total_count = EXCLUDED.total_count,
+                        frequency_pct = EXCLUDED.frequency_pct
+                """, [
+                    (run_id, f.get("location_id"), f.get("target_date", payload.target_date),
+                     f.get("metric"), f.get("threshold_value"), f.get("threshold_unit"),
+                     f.get("threshold_desc_ar"), f.get("qualifying_count", 0),
+                     f.get("total_count", 0), f.get("frequency_pct"),
+                     f.get("period_start"), f.get("period_end"), f.get("methodology"))
+                    for f in payload.frequencies
+                ])
 
             # 6. Insert assessments
             if payload.assessments:
@@ -11463,18 +11436,6 @@ def ingest_weather_intel(
                     "total": payload.total_locations
                 }
             )
-            # 📡 بث لحظي: «تم تحديث استخبارات الطقس» — النقر على الإشعار يفتح الصفحة
-            try:
-                create_realtime_event(
-                    cursor,
-                    event_type="weather_intel",
-                    action=f"تم تحديث استخبارات الطقس ليوم {payload.target_date} — {payload.successful_locations}/{payload.total_locations} محافظة",
-                    actor_user_id=None,
-                    entity_id=run_id,
-                    details={"action_text": f"اكتمل تحديث استخبارات الطقس ليوم {payload.target_date} (حالة: {payload.status})"},
-                )
-            except Exception:
-                pass
             # 📡 بث لحظي: «تم تحديث استخبارات الطقس» — النقر على الإشعار يفتح الصفحة
             try:
                 create_realtime_event(
