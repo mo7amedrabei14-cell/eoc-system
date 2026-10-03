@@ -11105,29 +11105,29 @@ def get_weather_intel_extra_history(
     t = _date.fromisoformat(target_date)
     lo = t - _td(days=window)
     hi = t + _td(days=window)
+    # 🗝️ مفاتيح (شهر×100+يوم) لأيام النافذة — نفس الأيام تُقرأ من كل السنين دفعة واحدة
+    #    (المنطق القديم كان يحصر النطاق في سنة الهدف فقط ⇒ رجّع 7 أيام بدل 30 سنة!)
+    md_keys = []
+    _d = lo
+    while _d <= hi:
+        md_keys.append(_d.month * 100 + _d.day)
+        _d += _td(days=1)
     connection = get_connection()
     try:
         rows_out = []
         with connection.cursor() as cursor:
-            for y in range(lo.year - 31, t.year + 1):
-                try:
-                    y_lo = max(lo, _date(y, lo.month, lo.day))
-                    y_hi = min(hi, _date(y, 12, 31))
-                except ValueError:
-                    continue
-                if y_lo > y_hi:
-                    continue
-                cursor.execute("""
-                    SELECT record_date, layer, value, data_source
-                    FROM weather_extra_history
-                    WHERE location_id = %s AND record_date BETWEEN %s AND %s
-                    ORDER BY record_date ASC
-                """, (location_id, y_lo, y_hi))
-                for rd, layer, val, src in cursor.fetchall():
-                    rows_out.append({"record_date": str(rd), "layer": layer,
-                                     "value": float(val) if val is not None else None,
-                                     "data_source": src})
-        return {"rows": rows_out}
+            cursor.execute("""
+                SELECT record_date, layer, value, data_source
+                FROM weather_extra_history
+                WHERE location_id = %s
+                  AND record_date >= %s
+                  AND (EXTRACT(MONTH FROM record_date) * 100 + EXTRACT(DAY FROM record_date)) = ANY(%s::int[])
+                ORDER BY record_date ASC
+            """, (location_id, _date(lo.year - 31, 1, 1), md_keys))
+            for rd, layer, val, src in cursor.fetchall():
+                rows_out.append({"record_date": str(rd), "layer": layer,
+                                 "value": float(val) if val is not None else None,
+                                 "data_source": src})        return {"rows": rows_out}
     except Exception as e:
         print(f"Error extra-history: {e}")
         raise HTTPException(status_code=500, detail="فشل جلب تاريخ الطبقات الإضافية")
