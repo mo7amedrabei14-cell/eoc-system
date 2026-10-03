@@ -3893,3 +3893,46 @@ select.field {
   text-underline-offset: 3px;
 }
 .sig-detail-link:hover { filter: brightness(1.2); }
+/* ═══════════ 🧱 ثبات تام: لا رفع عند المرور ولا انزلاق دخول ═══════════ */
+
+/* 1) عند المرور: أي كارت أو زر يفضل ثابت في مكانه */
+[class*="card"]:hover, [class*="btn"]:hover, [class*="chip"]:hover,
+.nav-item:hover, .icon-btn:hover, .action-btn:hover, .toast-item:hover,
+.toast-stack-chip:hover, .seg-pill:hover, .sidebar-brand:hover {
+  transform: none !important;
+}
+
+/* 2) نفس العناصر: ممنوع أي إزاحة حتى من حركات الدخول */
+.card-surface, .card-surface-interactive, .hover-lift, .kpi-card, .spot-card,
+.toast-item, .btn-primary, .btn-accent, .icon-btn, .action-btn, .nav-item,
+.chip, .seg-pill, .modal-card, .sidebar-brand {
+  transform: none !important;
+}
+
+/* 3) الحركات الدخولة (انزلاق من تحت / فتح جوا) — العنصر يظهر فورًا */
+.modal-card, .modal-card > *, .toast-item, .palette-pop,
+[class*="animate-fade"], [class*="animate-slide"] {
+  animation: none !important;
+}
+
+/* 4) زخارف التوهج الجانبية على الكروت — بتظهر غلط لما الحركة تتلغي */
+.hover-lift::after, .kpi-card::after { display: none !important; }
+
+/* ═══════════ 🚫 إلغاء البلور فقط — الألوان والحركات زي ما هي ═══════════ */
+
+/* 1) أي تأثير blur خلفي لأي عنصر */
+*, *::before, *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 2) كلاسات التويند الخاصة بالبلور (backdrop-blur / blur) */
+[class*="backdrop-blur"], [class*="blur-"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+}
+
+/* 3) الأسطح الزجاجية تبقى معتمة — من غير ما يظهر خلفها محتوى */
+.glass-header { background: var(--surface) !important; }
+.modal-card, .toast-item { background: var(--surface) !important; }

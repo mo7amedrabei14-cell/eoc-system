@@ -1,12 +1,12 @@
 {
   "report_version": 1,
-  "generated_at": "2026-09-24T11:09:16.210135+03:00",
+  "generated_at": "2026-10-03T09:17:57.081405+03:00",
   "database_source_of_truth": true,
   "canonical_identity": "weather_locations.id",
   "data_source": "era5-archive",
   "configured_range": {
     "start": "1996-01-01",
-    "end": "2026-09-23"
+    "end": "2026-10-02"
   },
   "expected_location_count": 27,
   "actual_location_count": 27,
@@ -16,8 +16,8 @@
     "locations_completed": 27,
     "locations_with_remaining_gaps": 0,
     "locations_with_errors": 0,
-    "rows_existing_before": 302994,
-    "rows_inserted": 54,
+    "rows_existing_before": 303129,
+    "rows_inserted": 162,
     "rows_skipped_existing": 0,
     "http_429_count": 0
   },
@@ -28,24 +28,24 @@
       "name_en": "Cairo",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:21.067299+03:00",
-      "finished_at": "2026-09-24T11:09:16.209944+03:00",
+      "started_at": "2026-10-03T09:16:04.239354+03:00",
+      "finished_at": "2026-10-03T09:17:57.081293+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 2,
@@ -53,24 +53,24 @@
       "name_en": "Giza",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:25.148108+03:00",
-      "finished_at": "2026-09-24T11:09:16.209972+03:00",
+      "started_at": "2026-10-03T09:16:08.445006+03:00",
+      "finished_at": "2026-10-03T09:17:57.081327+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 3,
@@ -78,24 +78,24 @@
       "name_en": "Alexandria",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:28.470487+03:00",
-      "finished_at": "2026-09-24T11:09:16.209978+03:00",
+      "started_at": "2026-10-03T09:16:12.535482+03:00",
+      "finished_at": "2026-10-03T09:17:57.081331+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 4,
@@ -103,24 +103,24 @@
       "name_en": "Minya",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:32.187579+03:00",
-      "finished_at": "2026-09-24T11:09:16.209983+03:00",
+      "started_at": "2026-10-03T09:16:16.684749+03:00",
+      "finished_at": "2026-10-03T09:17:57.081334+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 5,
@@ -128,24 +128,24 @@
       "name_en": "Assiut",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:35.460158+03:00",
-      "finished_at": "2026-09-24T11:09:16.209989+03:00",
+      "started_at": "2026-10-03T09:16:20.793330+03:00",
+      "finished_at": "2026-10-03T09:17:57.081337+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 6,
@@ -153,24 +153,24 @@
       "name_en": "Sohag",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:38.716947+03:00",
-      "finished_at": "2026-09-24T11:09:16.209993+03:00",
+      "started_at": "2026-10-03T09:16:24.867801+03:00",
+      "finished_at": "2026-10-03T09:17:57.081340+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 7,
@@ -178,24 +178,24 @@
       "name_en": "Qena",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:42.082768+03:00",
-      "finished_at": "2026-09-24T11:09:16.210028+03:00",
+      "started_at": "2026-10-03T09:16:29.071742+03:00",
+      "finished_at": "2026-10-03T09:17:57.081343+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 8,
@@ -203,24 +203,24 @@
       "name_en": "Luxor",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:46.895222+03:00",
-      "finished_at": "2026-09-24T11:09:16.210047+03:00",
+      "started_at": "2026-10-03T09:16:33.251497+03:00",
+      "finished_at": "2026-10-03T09:17:57.081346+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 9,
@@ -228,24 +228,24 @@
       "name_en": "Aswan",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:52.402229+03:00",
-      "finished_at": "2026-09-24T11:09:16.210055+03:00",
+      "started_at": "2026-10-03T09:16:37.330383+03:00",
+      "finished_at": "2026-10-03T09:17:57.081349+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 19,
@@ -253,24 +253,24 @@
       "name_en": "Qalyubia",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:55.774340+03:00",
-      "finished_at": "2026-09-24T11:09:16.210061+03:00",
+      "started_at": "2026-10-03T09:16:41.499620+03:00",
+      "finished_at": "2026-10-03T09:17:57.081352+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 20,
@@ -278,24 +278,24 @@
       "name_en": "Beheira",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:07:59.062058+03:00",
-      "finished_at": "2026-09-24T11:09:16.210064+03:00",
+      "started_at": "2026-10-03T09:16:45.598164+03:00",
+      "finished_at": "2026-10-03T09:17:57.081355+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 21,
@@ -303,24 +303,24 @@
       "name_en": "Matrouh",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:02.417927+03:00",
-      "finished_at": "2026-09-24T11:09:16.210067+03:00",
+      "started_at": "2026-10-03T09:16:49.657545+03:00",
+      "finished_at": "2026-10-03T09:17:57.081358+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 22,
@@ -328,24 +328,24 @@
       "name_en": "North Sinai",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:07.148751+03:00",
-      "finished_at": "2026-09-24T11:09:16.210070+03:00",
+      "started_at": "2026-10-03T09:16:53.741767+03:00",
+      "finished_at": "2026-10-03T09:17:57.081363+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 23,
@@ -353,24 +353,24 @@
       "name_en": "South Sinai",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:13.395086+03:00",
-      "finished_at": "2026-09-24T11:09:16.210074+03:00",
+      "started_at": "2026-10-03T09:16:57.997127+03:00",
+      "finished_at": "2026-10-03T09:17:57.081366+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 24,
@@ -378,24 +378,24 @@
       "name_en": "Suez",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:21.822475+03:00",
-      "finished_at": "2026-09-24T11:09:16.210079+03:00",
+      "started_at": "2026-10-03T09:17:02.150190+03:00",
+      "finished_at": "2026-10-03T09:17:57.081369+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 25,
@@ -403,24 +403,24 @@
       "name_en": "Sharqia",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:27.731184+03:00",
-      "finished_at": "2026-09-24T11:09:16.210084+03:00",
+      "started_at": "2026-10-03T09:17:06.217547+03:00",
+      "finished_at": "2026-10-03T09:17:57.081372+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 26,
@@ -428,24 +428,24 @@
       "name_en": "Ismailia",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:33.103657+03:00",
-      "finished_at": "2026-09-24T11:09:16.210089+03:00",
+      "started_at": "2026-10-03T09:17:10.352231+03:00",
+      "finished_at": "2026-10-03T09:17:57.081375+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 27,
@@ -453,24 +453,24 @@
       "name_en": "Port Said",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:36.396706+03:00",
-      "finished_at": "2026-09-24T11:09:16.210094+03:00",
+      "started_at": "2026-10-03T09:17:14.456957+03:00",
+      "finished_at": "2026-10-03T09:17:57.081378+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 28,
@@ -478,24 +478,24 @@
       "name_en": "Monufia",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:40.165585+03:00",
-      "finished_at": "2026-09-24T11:09:16.210098+03:00",
+      "started_at": "2026-10-03T09:17:18.580438+03:00",
+      "finished_at": "2026-10-03T09:17:57.081381+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 29,
@@ -503,24 +503,24 @@
       "name_en": "Gharbia",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:44.208371+03:00",
-      "finished_at": "2026-09-24T11:09:16.210102+03:00",
+      "started_at": "2026-10-03T09:17:22.674735+03:00",
+      "finished_at": "2026-10-03T09:17:57.081383+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 30,
@@ -528,24 +528,24 @@
       "name_en": "Dakahlia",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:47.952943+03:00",
-      "finished_at": "2026-09-24T11:09:16.210106+03:00",
+      "started_at": "2026-10-03T09:17:26.824453+03:00",
+      "finished_at": "2026-10-03T09:17:57.081386+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 31,
@@ -553,24 +553,24 @@
       "name_en": "Kafr El-Sheikh",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:51.764979+03:00",
-      "finished_at": "2026-09-24T11:09:16.210110+03:00",
+      "started_at": "2026-10-03T09:17:30.852615+03:00",
+      "finished_at": "2026-10-03T09:17:57.081389+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 32,
@@ -578,24 +578,24 @@
       "name_en": "Damietta",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:55.356263+03:00",
-      "finished_at": "2026-09-24T11:09:16.210114+03:00",
+      "started_at": "2026-10-03T09:17:34.981828+03:00",
+      "finished_at": "2026-10-03T09:17:57.081392+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 33,
@@ -603,24 +603,24 @@
       "name_en": "Beni Suef",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:08:58.729718+03:00",
-      "finished_at": "2026-09-24T11:09:16.210118+03:00",
+      "started_at": "2026-10-03T09:17:39.067103+03:00",
+      "finished_at": "2026-10-03T09:17:57.081394+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 34,
@@ -628,24 +628,24 @@
       "name_en": "Fayoum",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:09:02.106003+03:00",
-      "finished_at": "2026-09-24T11:09:16.210123+03:00",
+      "started_at": "2026-10-03T09:17:43.284820+03:00",
+      "finished_at": "2026-10-03T09:17:57.081397+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 35,
@@ -653,24 +653,24 @@
       "name_en": "New Valley",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:09:05.489217+03:00",
-      "finished_at": "2026-09-24T11:09:16.210127+03:00",
+      "started_at": "2026-10-03T09:17:47.188208+03:00",
+      "finished_at": "2026-10-03T09:17:57.081400+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     },
     {
       "location_id": 36,
@@ -678,24 +678,24 @@
       "name_en": "Red Sea",
       "requested_ranges": [
         {
-          "start_date": "2026-09-22",
-          "end_date": "2026-09-23"
+          "start_date": "2026-09-27",
+          "end_date": "2026-10-02"
         }
       ],
-      "rows_existing_before": 11222,
-      "rows_inserted": 2,
+      "rows_existing_before": 11227,
+      "rows_inserted": 6,
       "rows_skipped_existing": 0,
       "errors": [],
       "http_429_count": 0,
-      "last_successful_date": "2026-09-23",
-      "latest_archive_date": "2026-09-23",
+      "last_successful_date": "2026-10-02",
+      "latest_archive_date": "2026-10-02",
       "latest_archive_date_verified": false,
-      "started_at": "2026-09-24T11:09:08.975533+03:00",
-      "finished_at": "2026-09-24T11:09:16.210131+03:00",
+      "started_at": "2026-10-03T09:17:51.392713+03:00",
+      "finished_at": "2026-10-03T09:17:57.081403+03:00",
       "status": "completed",
-      "missing_days_before": 2,
+      "missing_days_before": 6,
       "remaining_gap_count": 0,
-      "remaining_latest_record_date": "2026-09-23"
+      "remaining_latest_record_date": "2026-10-02"
     }
   ]
 }
