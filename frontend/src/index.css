@@ -3915,9 +3915,6 @@ select.field {
   animation: none !important;
 }
 
-/* 4) زخارف التوهج الجانبية على الكروت — بتظهر غلط لما الحركة تتلغي */
-.hover-lift::after, .kpi-card::after { display: none !important; }
-
 /* ═══════════ 🚫 إلغاء البلور فقط — الألوان والحركات زي ما هي ═══════════ */
 
 /* 1) أي تأثير blur خلفي لأي عنصر */
