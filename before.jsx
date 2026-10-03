@@ -849,7 +849,7 @@ useEffect(() => {
 
     const checkLiveUpdates = async () => {
       try {
-        const res = await fetch('https://eoc-system-qaol.vercel.appapi/live-updates', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('https://eoc-system-qaol.vercel.app/api/live-updates', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
@@ -940,7 +940,7 @@ useEffect(() => {
 
     const fetchData = async () => {
       try {
-        const branchesRes = await fetch('https://eoc-system-qaol.vercel.appapi/branches/locations', {
+        const branchesRes = await fetch('https://eoc-system-qaol.vercel.app/api/branches/locations', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -969,7 +969,7 @@ useEffect(() => {
         }
         
         // 💡 سحب إحصائيات الداش بورد
-        const statsRes = await fetch('https://eoc-system-qaol.vercel.appapi/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
+        const statsRes = await fetch('https://eoc-system-qaol.vercel.app/api/dashboard/stats', { headers: { 'Authorization': `Bearer ${token}` } });
         if (statsRes.ok) setDashboardStats(await statsRes.json());
         
       } catch (error) { console.error("فشل في جلب البيانات:", error); }
@@ -1271,11 +1271,11 @@ function HomeView({ branches = [] }) {
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     Promise.all([
-      fetch('https://eoc-system-qaol.vercel.appapi/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-qaol.vercel.appapi/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-qaol.vercel.appapi/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-qaol.vercel.appapi/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
-      fetch('https://eoc-system-qaol.vercel.appapi/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
+      fetch('https://eoc-system-qaol.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-qaol.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-qaol.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-qaol.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : []),
+      fetch('https://eoc-system-qaol.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.ok ? res.json() : [])
     ]).then(([missionsData, newsData, globalData, gEqs, eEqs]) => {
       setMissions(missionsData);
       setNews(newsData);
@@ -1638,7 +1638,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-qaol.vercel.appapi/missions', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('https://eoc-system-qaol.vercel.app/api/missions', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) { localStorage.clear(); window.location.href = '/'; return; }
       if (res.ok) setMissionsList(await res.json());
     } catch (error) { console.error("Error:", error); } 
@@ -1686,7 +1686,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
   const handleViewMission = async (missionId) => {
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`https://eoc-system-qaol.vercel.appapi/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system-qaol.vercel.app/api/missions/${missionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setCurrentMissionData(data);
@@ -1737,7 +1737,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
     if (!missionToDelete) return;
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch(`https://eoc-system-qaol.vercel.appapi/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system-qaol.vercel.app/api/missions/${missionToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) { setMissionToDelete(null); fetchMissions(); } 
     } catch (error) { alert("خطأ في الاتصال بالسيرفر!"); }
   };
@@ -1758,7 +1758,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
 
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-qaol.vercel.appapi/missions/clear-all", {
+      const res = await fetch("https://eoc-system-qaol.vercel.app/api/missions/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1986,7 +1986,7 @@ const [isModalOpen, setIsModalOpen] = useState(false);
        }
 
        const isUpdate = currentMissionData !== null;
-       const url = isUpdate ? `https://eoc-system-qaol.vercel.appapi/missions/${currentMissionData.mission_id}` : 'https://eoc-system-qaol.vercel.appapi/missions';
+       const url = isUpdate ? `https://eoc-system-qaol.vercel.app/api/missions/${currentMissionData.mission_id}` : 'https://eoc-system-qaol.vercel.app/api/missions';
        const method = isUpdate ? 'PUT' : 'POST';
 
        const res = await fetch(url, {
@@ -2746,7 +2746,7 @@ function AuditLogsView({ isOwner }) {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    fetch('https://eoc-system-qaol.vercel.appapi/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch('https://eoc-system-qaol.vercel.app/api/audit-logs', { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.ok ? res.json() : [])
       .then(data => { setLogs(data); setIsLoading(false); })
       .catch(() => setIsLoading(false));
@@ -2765,7 +2765,7 @@ function AuditLogsView({ isOwner }) {
   const handleExportLogs = async () => {
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-qaol.vercel.appapi/audit-logs/export', {
+      const res = await fetch('https://eoc-system-qaol.vercel.app/api/audit-logs/export', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -2911,7 +2911,7 @@ const [nd, setNd] = useState({
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-qaol.vercel.appapi/local-news', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('https://eoc-system-qaol.vercel.app/api/local-news', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setNewsList(await res.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -2966,7 +2966,7 @@ const [nd, setNd] = useState({
   const confirmDelete = async () => {
     if (!newsToDelete) return;
     const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system-qaol.vercel.appapi/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    await fetch(`https://eoc-system-qaol.vercel.app/api/local-news/${newsToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     setNewsToDelete(null); fetchNews();
   };
 }

@@ -15,7 +15,7 @@ function LocalNewsView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
 
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-qaol.vercel.appapi/local-news/clear-all", {
+      const res = await fetch("https://eoc-system-qaol.vercel.app/api/local-news/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -391,7 +391,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const res = await fetch('https://eoc-system-qaol.vercel.appapi/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch('https://eoc-system-qaol.vercel.app/api/global-disasters', { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) setDisasters(await res.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -408,7 +408,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
   const confirmDelete = async () => {
     if (!disasterToDelete) return;
     const token = localStorage.getItem('access_token');
-    await fetch(`https://eoc-system-qaol.vercel.appapi/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    await fetch(`https://eoc-system-qaol.vercel.app/api/global-disasters/${disasterToDelete}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     setDisasterToDelete(null); fetchDisasters();
   };
 
@@ -420,7 +420,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
 
     const payload = { ...gd, incident_month: getMonthName(gd.incident_date) };
     const token = localStorage.getItem('access_token');
-    const url = gd.disaster_id ? `https://eoc-system-qaol.vercel.appapi/global-disasters/${gd.disaster_id}` : 'https://eoc-system-qaol.vercel.appapi/global-disasters';
+    const url = gd.disaster_id ? `https://eoc-system-qaol.vercel.app/api/global-disasters/${gd.disaster_id}` : 'https://eoc-system-qaol.vercel.app/api/global-disasters';
     const method = gd.disaster_id ? 'PUT' : 'POST';
 
     const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
@@ -504,7 +504,7 @@ function GlobalDisastersView({ isOwner, isSupervisor, isJoker, isVolunteer }) {
 
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-qaol.vercel.appapi/global-disasters/clear-all", {
+      const res = await fetch("https://eoc-system-qaol.vercel.app/api/global-disasters/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -744,9 +744,9 @@ const [clearAllCode, setClearAllCode] = useState('');
     setIsLoading(true);
     const token = localStorage.getItem('access_token');
     try {
-      const resG = await fetch('https://eoc-system-qaol.vercel.appapi/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } });
+      const resG = await fetch('https://eoc-system-qaol.vercel.app/api/earthquakes/global', { headers: { 'Authorization': `Bearer ${token}` } });
       if (resG.ok) setGlobalEqs(await resG.json());
-      const resE = await fetch('https://eoc-system-qaol.vercel.appapi/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } });
+      const resE = await fetch('https://eoc-system-qaol.vercel.app/api/earthquakes/egypt', { headers: { 'Authorization': `Bearer ${token}` } });
       if (resE.ok) setEgyptEqs(await resE.json());
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -805,7 +805,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       if (parsedData.length > 0) {
         setIsLoading(true);
         const token = localStorage.getItem('access_token');
-        const res = await fetch('https://eoc-system-qaol.vercel.appapi/earthquakes/global/bulk', {
+        const res = await fetch('https://eoc-system-qaol.vercel.app/api/earthquakes/global/bulk', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
         });
         if (res.ok) { setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); } 
@@ -832,7 +832,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch("https://eoc-system-qaol.vercel.appapi/earthquakes/clear-all", {
+      const res = await fetch("https://eoc-system-qaol.vercel.app/api/earthquakes/clear-all", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -869,7 +869,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     };
 
     const token = localStorage.getItem('access_token');
-    const url = gForm.eq_id ? `https://eoc-system-qaol.vercel.appapi/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system-qaol.vercel.appapi/earthquakes/global';
+    const url = gForm.eq_id ? `https://eoc-system-qaol.vercel.app/api/earthquakes/global/${gForm.eq_id}` : 'https://eoc-system-qaol.vercel.app/api/earthquakes/global';
     try {
       const res = await fetch(url, { method: gForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { setIsGlobalModalOpen(false); fetchEarthquakes(); setCustomAlert(gForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
@@ -888,7 +888,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     };
 
     const token = localStorage.getItem('access_token');
-    const url = eForm.eq_id ? `https://eoc-system-qaol.vercel.appapi/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system-qaol.vercel.appapi/earthquakes/egypt';
+    const url = eForm.eq_id ? `https://eoc-system-qaol.vercel.app/api/earthquakes/egypt/${eForm.eq_id}` : 'https://eoc-system-qaol.vercel.app/api/earthquakes/egypt';
     try {
       const res = await fetch(url, { method: eForm.eq_id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
       if (res.ok) { setIsEgyptModalOpen(false); fetchEarthquakes(); setCustomAlert(eForm.eq_id ? "تم حفظ التعديل بنجاح!" : "تمت الإضافة بنجاح!"); } 
@@ -896,8 +896,8 @@ const [clearAllCode, setClearAllCode] = useState('');
     } catch(e) { setCustomAlert("خطأ في الاتصال بالسيرفر"); }
   };
 
-  const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-qaol.vercel.appapi/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
-  const deleteEgyptEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-qaol.vercel.appapi/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
+  const deleteGlobalEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-qaol.vercel.app/api/earthquakes/global/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
+  const deleteEgyptEq = async (id) => { const token = localStorage.getItem('access_token'); await fetch(`https://eoc-system-qaol.vercel.app/api/earthquakes/egypt/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }); fetchEarthquakes(); };
 
   const handleExportGlobalEqs = () => {
     if (filteredGlobalEqs.length === 0) return setCustomAlert("لا توجد زلازل عالمية للتصدير حالياً.");
@@ -1245,7 +1245,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     const fetchAiNews = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await fetch('https://eoc-system-qaol.vercel.appapi/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('https://eoc-system-qaol.vercel.app/api/ai-news', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) setAiNewsList(await res.json());
       } catch (err) {}
     };
@@ -1282,7 +1282,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`https://eoc-system-qaol.vercel.appapi/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`https://eoc-system-qaol.vercel.app/api/ai-news/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         setCustomAlert("تم الحذف بنجاح!");
         setAiNewsList(prev => prev.filter(item => item.id !== id));
@@ -1302,7 +1302,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     setIsScanning(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('https://eoc-system-qaol.vercel.appapi/trigger-ai-radar', {
+      const res = await fetch('https://eoc-system-qaol.vercel.app/api/trigger-ai-radar', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -1387,7 +1387,7 @@ const totalAiCountries = new Set(
       const token = localStorage.getItem("access_token");
 
       const res = await fetch(
-        "https://eoc-system-qaol.vercel.appapi/ai-news/clear-all",
+        "https://eoc-system-qaol.vercel.app/api/ai-news/clear-all",
         {
           method: "POST",
           headers: {
@@ -1831,7 +1831,7 @@ function HumanResourcesView({ branches, isOwner }) {
     const fetchHR = async () => {
       const token = localStorage.getItem('access_token');
       try {
-        const res = await fetch('https://eoc-system-qaol.vercel.appapi/human-resources', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('https://eoc-system-qaol.vercel.app/api/human-resources', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
           setHrList(await res.json());
         }

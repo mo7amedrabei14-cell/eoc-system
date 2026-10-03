@@ -36,7 +36,7 @@
 To perform a real end-to-end test that makes an actual Gemini API request and validates the response, the following are needed:
 
 1. A valid `SYSTEM_TOKEN` to allow the script to fetch locations and configuration from the EOC System API.
-2. Access to a running EOC System API endpoint (currently pointed to `https://eoc-system-qaol.vercel.app` in the environment) that returns valid locations and configuration.
+2. Access to a running EOC System API endpoint (currently pointed to `https://eoc-system-qaol.vercel.app/` in the environment) that returns valid locations and configuration.
 3. With those in place, the script will proceed to:
    - Fetch locations and configuration.
    - Determine the target date (tomorrow in Cairo time).
