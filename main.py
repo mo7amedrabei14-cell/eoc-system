@@ -11127,7 +11127,8 @@ def get_weather_intel_extra_history(
             for rd, layer, val, src in cursor.fetchall():
                 rows_out.append({"record_date": str(rd), "layer": layer,
                                  "value": float(val) if val is not None else None,
-                                 "data_source": src})        return {"rows": rows_out}
+                                 "data_source": src})
+        return {"rows": rows_out}
     except Exception as e:
         print(f"Error extra-history: {e}")
         raise HTTPException(status_code=500, detail="فشل جلب تاريخ الطبقات الإضافية")
