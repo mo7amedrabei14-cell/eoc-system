@@ -3,7 +3,8 @@ from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Depends, HTTPException, status, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+import asyncio
 from pydantic import BaseModel, field_validator
 from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
@@ -1012,10 +1013,8 @@ _REALTIME_CACHE_TTL = 3.0
 _HEALTH_DB_TTL = 12.0
 _HEALTH_DB_CACHE = {"ts": 0.0, "ok": False, "error": None, "checked": False}
 
-# 🌍 كاش استطلع تغذية USGS لمؤشر الحالة — نداء مركزي واحد للنظام كله كل دقيقة
-#    بدل نداء لكل مستخدم/تاب (مؤشر حالة فقط — الرصد نفسه لا يعتمد عليه إطلاقاً)
-_EQ_FEED_PROBE_TTL = 60.0
-_EQ_FEED_PROBE_CACHE = {"ts": 0.0, "data": None}
+# 🌍 حرفية تغذية USGS لمؤشر الحالة لم تعد تُستطلَع من نقطة الحالة إطلاقاً:
+#    يسجّلها محرك الاستيعاب نفسه داخل EQ_INTEL_STATE أثناء دورته ⇒ صفر نداء خارجي.
 
 # 🤖 كاش حالة آخر تشغيل لورك فلو الأخبار (GitHub) — نداء مركزي مخبأ بدل نداء من كل متصفح
 _GITHUB_LASTRUN_CACHE = {"ts": 0.0, "data": None}
@@ -5407,12 +5406,13 @@ def get_audit_logs(skip: int = 0, limit: int = 0, credentials: HTTPAuthorization
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
     
-    role = get_user_role(user_id)
-    if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
-        raise HTTPException(status_code=403, detail="هذه الصفحة متاحة للمالك فقط")
-
     connection = get_connection()
     try:
+        # ♻️ اتصال واحد للطلب كله: فحص الدور + الاستعلام على نفس الاتصال (بلا اتصال ثانٍ)
+        role = get_user_role(user_id, connection=connection)
+        if not role or role["role_name"].upper() not in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]:
+            raise HTTPException(status_code=403, detail="هذه الصفحة متاحة للمالك فقط")
+
         with connection.cursor() as cursor:
             # ضفنا l.entity_type عشان نفلتر بيه
             query = """
@@ -5491,11 +5491,12 @@ def get_live_updates(credentials: HTTPAuthorizationCredentials = Depends(securit
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
 
-    role = get_user_role(user_id)
-    is_privileged = bool(role) and role["role_name"].upper() in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]
-
     connection = get_connection()
     try:
+        # ♻️ اتصال واحد للطلب كله: فحص الدور + الاستعلام على نفس الاتصال (بلا اتصال ثانٍ)
+        role = get_user_role(user_id, connection=connection)
+        is_privileged = bool(role) and role["role_name"].upper() in ["OWNER", "MANAGER", "SUPERVISOR", "JOKER", "المالك"]
+
         with connection.cursor() as cursor:
             if is_privileged:
                 cursor.execute("""
@@ -5674,6 +5675,99 @@ def get_realtime_events(
         return {"events": [], "latest_id": after_id}
     finally:
         connection.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 📡 قناة الدفع (SSE) — الطبقة الأولى، والاستطلاع 4 ثوانٍ يبقى الطبقة الثانية
+# ═══════════════════════════════════════════════════════════════════════════
+# القواعد الحاكمة لهذه القناة (مطلب #1):
+#   • إضافة فقط — لا تحذف ولا تختصر الاستطلاع 4 ثوانٍ إطلاقاً.
+#   • نفس منطق الرؤية في /api/realtime/events حرفياً (نفس الـ SQL ونفس الفرز) ⇒
+#     ما يصل بالدفع هو نفسه ما كان يصل بالاستطلاع، لا أكثر ولا أقل. لا جديد،
+#     لا إعادة ترتيب، لا تكرار: نفس الاستعلام، نفس ASC بـ event_id.
+#   • الخادم لا "يدفع" الحدث لحظة ولادته: هو يقرأ من القاعدة على نبضه، ولا
+#     يفترض وصول شيء، فالواقع يبقى مصدر الحقيقة دائماً.
+#   • العميل يحتفظ بعلامته المائية (after_id) ⇒ لو انقطع الاتصال وأُعيد تشغيل
+#     الدفع، يكمل من نفس النقطة بلا فجوة ولا إعادة تسليم لما رآه أصلاً.
+#   • الاستطلاع يبقى هو المرجع الوحيد عند فشل الدفع؛ لا تعارض ولا سباق إشعارين.
+#   • الحماية: نفس مصادقة Bearer + نفس استعلامات الصلاح — لا تسريب أحداث لأحد.
+
+_SSE_HEARTBEAT_SECONDS = 15      # نبضة resurrect تُبقي الوصلة حية عبر الـ proxies
+_SSE_POLL_SECONDS = 2.0          # مدى استطلاع القاعدة خلف كل استجابة
+_SSE_MAX_LIFETIME_SECONDS = 55   # إغلاق مجدول ⇒ يبقى الاتصال بإطار HTTP واحد
+
+
+@app.get("/api/realtime/stream")
+async def stream_realtime_events(
+    after_id: int = 0,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """📡 بث الأحداث اللحظية (Server-Sent Events) — إكمال للاستطلاع، لا بديل عنه.
+
+    🔁 المبدأ: نفس استعلام /api/realtime/events بالضبط (نفس الرؤية، نفس الفرز،
+       نفس المحاكاة الذاتي). الفرق الوحيد: هنا يُعاد كل حدث في اللحظة التي يصل
+       فيه، بدل انتظار أقرب جولة استطلاع.
+    🔒 نفس المصادقة ونفس قواعد الصلاح — لا تسريب.
+    ⏱️ يُغلق الاتصال كل 55 ثانية عمداً: على Vercel/WorkersConnection بغير هذا
+       يقطع الـ proxy الاتصال، وتبدأ إعادة اتصال لا تنتهي. الضرب المجدول أرخص
+       وأثبت من إعادة الاتصال على كل عميل.
+    """
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+
+    async def event_stream():
+        last_seen = int(after_id)
+        started = _perf_time.time()
+        last_beat = started
+        while True:
+            # نفس نداء التاريخ الحقيقي (DB) — asyncio.to_thread كي لا تُجمَّد حلقة الأحداث
+            try:
+                batch = await asyncio.to_thread(
+                    get_realtime_events,
+                    after_id=last_seen,
+                    limit=100,
+                    init=0,
+                    credentials=credentials,
+                )
+            except Exception as e:
+                print(f"SSE poll error: {e}")
+                batch = {"events": [], "latest_id": last_seen}
+
+            for ev in batch.get("events", []):
+                # نفس الحقول التي يرسلها الاستطلاع حرفياً، فالكود لا يحتاج
+                # تمييز أيّ من المسارين.
+                ev = dict(ev)
+
+                yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
+                last_seen = int(ev.get("event_id") or last_seen)
+
+            now = _perf_time.time()
+            # نبضة إحياء: سطر تعليق فقط، لا يحمل حدثاً — فلا توست ولا صوت منه،
+            # والغرض الوحيد إبقاء الوصلة حية عبر الـ proxies ومنع إعادة الاتصال.
+            if (now - last_beat) >= _SSE_HEARTBEAT_SECONDS:
+                yield ": keep-alive\n\n"
+                last_beat = now
+
+            if (now - started) >= _SSE_MAX_LIFETIME_SECONDS:
+                # ✋ إعادة اتصال من العميل، لا قطع مفاجئ من طرفنا.
+                #    العميل يعيد الاتصال فوراً ويحمل معه نفس الـ watermark ⇒ لا فجوة.
+                yield f"event: eof\ndata: {json.dumps({'latest_id': last_seen})}\n\n"
+                break
+
+            if not batch.get("events"):
+                await asyncio.sleep(_SSE_POLL_SECONDS)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 @app.get("/api/audit-logs/export")
 def export_audit_logs(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -8494,10 +8588,15 @@ EQ_INTEL_ORIGIN_LAT = 27.0
 EQ_INTEL_ORIGIN_LON = 30.0
 
 # مؤقت حالة المحرك في الذاكرة (لا شيء دائم — الكرون هو الحقيقة)
+# 🌍 حرفية التغذية تُسجَّل أثناء *دورة الاستيعاب نفسها* لا بنداء USGS إضافي من
+#    نقطة الحالة — فالحالة تقرأ آخر نتيجة استيعاب بدل أن تضرب المصدر بنفسها.
 EQ_INTEL_STATE = {
     "last_run_at": None,
     "last_status": None,
     "last_error": None,
+    "feed_count": None,
+    "feed_generated": None,      # طابع USGS المولَّد (epoch ms)
+    "feed_probed_at": None,      # متى سُجّلت آخر قراءة للتغذية (epoch s)
 }
 
 
@@ -8949,6 +9048,37 @@ def _eq_intel_ingest_events(events, source="usgs"):
                     continue
                 if norm["occurred_at"] and norm["occurred_at"] < cutoff:
                     continue  # قديم من إعادة تشغيل التغذية — تجاهله
+
+                                # 🧲 مضاد تكرار المصدرين: نفس الزلزال ممكن يوصلك من EMSC وبعده من USGS
+                #    (أو العكس) بمعرّفين مختلفين تماماً — نقارن هندسياً: ±5 دقائق زمني
+                #    + مسافة ≤150 كم + فرق قوة ≤0.8 ⇒ الأول الجاي كفى؛ الثاني يُتجاهل
+                #    (بلا صف جديد وبلا إشعار ثاني). الفشل في المقارنة ما يمنعش الاستقبال.
+                if norm["occurred_at"] is not None and norm["latitude"] is not None and norm["longitude"] is not None:
+                    try:
+                        cursor.execute("""
+                            SELECT latitude, longitude, magnitude
+                            FROM earthquake_intel
+                            WHERE source <> %s
+                              AND occurred_at BETWEEN %s::timestamp - interval '5 minutes'
+                                                  AND %s::timestamp + interval '5 minutes'
+                              AND latitude  BETWEEN %s - 2.0 AND %s + 2.0
+                              AND longitude BETWEEN %s - 3.0 AND %s + 3.0
+                            LIMIT 20;
+                        """, (source or "usgs", norm["occurred_at"], norm["occurred_at"],
+                              norm["latitude"], norm["latitude"],
+                              norm["longitude"], norm["longitude"]))
+                        _dup = False
+                        for _r in cursor.fetchall():
+                            _d = _eq_intel_haversine_km(norm["latitude"], norm["longitude"], _r[0], _r[1]) or 99999
+                            _mag_d = abs(float(norm["magnitude"] if norm["magnitude"] is not None else 0) - float(_r[2] if _r[2] is not None else 0))
+                            if _d <= 150 and _mag_d <= 0.8:
+                                _dup = True
+                                break
+                        if _dup:
+                            continue   # جاش من المصدر الثاني — الأول غطّاه بإشعار واحد
+                    except Exception as _fde:
+                        print(f"eq cross-source dedup check failed: {_fde}")
+
                 dist = _eq_intel_haversine_km(
                     norm["latitude"], norm["longitude"],
                     EQ_INTEL_ORIGIN_LAT, EQ_INTEL_ORIGIN_LON,
@@ -8964,6 +9094,9 @@ def _eq_intel_ingest_events(events, source="usgs"):
                 mag_val = float(mag) if mag is not None else 0.0
                 dist_val = float(dist) if dist is not None else 99999.0
                 score_val = float(risk_now.get("risk_score") or 0)
+                # 🔔 بوابات الإشعار (بدل إغراق كل زلزال عالمي):
+                #    يُبث ويُقيَّد في الأوديت فقط إذا: قوته ≥ 4، أو قريب من مصر (≤ 1500 كم)،
+                #    أو درجة خطورته ≥ 25 (مستوى متوسطة فأعلى). البقية تُخزَّن في السجل فقط.
                 should_notify = (
                     mag_val >= EQ_NOTIFY_MIN_MAG
                     or dist_val <= EQ_NOTIFY_PROXIMITY_KM
@@ -9026,6 +9159,9 @@ def _eq_intel_ingest_events(events, source="usgs"):
                 detail_url = None
                 if (source or "usgs") == "usgs" and norm["external_id"]:
                     detail_url = f"https://earthquake.usgs.gov/earthquakes/eventpage/{norm['external_id']}"
+                elif (source or "") == "emsc" and norm["external_id"].startswith("emsc-"):
+                    # 🔗 رابط تفاصيل EMSC للزيارات — unid هوية الحدث الفريدة (تُقرأ من external_id بعد إزالة البادئة emsc-)
+                    detail_url = f"https://www.seismicportal.eu/eventdetails.html?unid={norm['external_id'].removeprefix('emsc-')}"
                 details = {
                     "action_text": f"{status_label} بقوة {mag_txt} درجة — {place_txt}" + (f" ({time_txt})" if time_txt else ""),
                     "earthquake": {
@@ -9075,6 +9211,9 @@ def _eq_intel_ingest_events(events, source="usgs"):
                     except Exception as audit_err:
                         # توثيق الزلزال لا يُعطّل استقباله أبداً
                         print(f"eq intel audit log failed: {audit_err}")
+            # 💾 commit واحد لكل الدورة: يحفظ صفوف الزلازل + أحداث الريال تايم معاً
+            #    ذرّياً. بدونه، connection.close() في الـ finally يرسل DISCARD فتفقد
+            #    الدورة كلها (الصفوف والحدث اللحظي) رغم نجاح الكود.
             connection.commit()
             EQ_INTEL_STATE["last_run_at"] = datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None).isoformat(timespec="seconds")
             EQ_INTEL_STATE["last_status"] = "ok"
@@ -9142,16 +9281,29 @@ def _eq_intel_engine_cycle(reason: str = "engine"):
         #    USGS نشرها متأخراً — بره نافذة الساعة لكن داخل نافذة التجاهل 180 دقيقة).
         #    الفريد (source, external_id) + cutoff يمنعان أي تكرار أو أحداث قديمة.
         features_by_id = {}
+        feed_meta = None
         for feed_url in EQ_INTEL_FEEDS:
             try:
                 resp = _requests.get(feed_url, timeout=15, headers={"User-Agent": "EOC-Earthquake-Intel/1.0"})
                 if resp.ok:
-                    for f in ((resp.json() or {}).get("features", []) or []):
+                    payload = resp.json() or {}
+                    # 🌍 نفس قراءة USGS الأولى (all_hour) تُشتق منها حرفية التغذية
+                    #    وتُخزَّن هنا — فلا يضرب نقطة الحالة الـ USGS بنفسها أبداً.
+                    if feed_meta is None and feed_url == EQ_INTEL_FEEDS[0]:
+                        feed_meta = {
+                            "count": len(payload.get("features", []) or []),
+                            "generated": payload.get("metadata", {}).get("generated"),
+                        }
+                    for f in (payload.get("features", []) or []):
                         fid = (f or {}).get("id") or (((f or {}).get("properties") or {}).get("code") or "")
                         if fid:
                             features_by_id[fid] = f
             except Exception:
                 continue
+        if feed_meta:
+            EQ_INTEL_STATE["feed_count"] = feed_meta.get("count")
+            EQ_INTEL_STATE["feed_generated"] = feed_meta.get("generated")
+            EQ_INTEL_STATE["feed_probed_at"] = _perf_time.time()
         features = list(features_by_id.values()) if features_by_id else None
         feed_events = 0
         inserted = 0
@@ -9237,7 +9389,99 @@ def _start_eq_local_engine() -> bool:
     return True
 
 
+# 🖥️ إقلاع المحرك المحلي الدوري — استضافة دائمة فقط (worker/حاوية/محلي).
+#    على Serverless لا يبدأ إطلاقاً: الاستدعاء البارد ينهي العملية بعد ثوانٍ،
+#    والخيط الميت يُضيّع الاستطلاع فقط. هناك الـ tick الخارجي هو المصدر.
+#    الدالة نفسها تحرس الشرطين (_is_serverless_runtime + EOC_EQ_LOCAL_ENGINE)
+#    وتعيد False بلا خطأ إن لم تتحقق.
 _start_eq_local_engine()
+
+# ── 📡 مصدر EMSC اللحظي (دفع WebSocket فوري) — تكميل لـUSGS مش بديل:
+#    USGS بعلن الأحداث غير الأمريكية متأخراً أحياناً (+20-70 دقيقة)؛ EMSC يدفع خلال
+#    ثواني/دقايق من حلّه تلقائياً. يُستقبل عبر نفس نواة الاستقبال (source='emsc')،
+#    ومضاد التكرار الهندسي داخل نفس النواة يمنع التكرار عند وصول الحدث من المصدرين.
+#    للإيقاف: EOC_EQ_EMSC_ENGINE=0 — يتطلب: pip install websocket-client
+EMSC_STATE = {"ws_connected": False, "last_error": None, "last_event_at": None, "last_event_text": ""}
+
+def _emsc_ws_loop():
+    """🔌 مستقبِل دفع فوري من EMSC standing-order — إعادة اتصال تلقائية مهما حدث."""
+    import time as _time, json as _json
+    try:
+        import websocket as _wslib   # مكتبة websocket-client
+    except ImportError:
+        print("EMSC engine disabled: pip install websocket-client")
+        return
+    if os.getenv("EOC_EQ_EMSC_ENGINE", "1").strip().lower() in ("0", "false", "off"):
+        print("EMSC engine disabled (EOC_EQ_EMSC_ENGINE=0)")
+        return
+    _schema_ready.wait(timeout=60)
+    url = "wss://www.seismicportal.eu/standing_order/websocket"
+    _retry = 5
+    while True:
+        try:
+            conn = _wslib.create_connection(url, timeout=30)
+            conn.settimeout(30)              # recv يرفع timeout دورياً ⇒ نبعث ping
+            EMSC_STATE["ws_connected"] = True
+            EMSC_STATE["last_error"] = None
+            _retry = 5
+            print("EMSC engine: connected ✅")
+            while True:
+                try:
+                    raw = conn.recv()
+                except Exception:
+                    try:
+                        conn.ping()          # نبض حتى ماينقطش الاتصال كسولا
+                        continue
+                    except Exception:
+                        break                # الاتصال مات ⇒ خز لإعادة الاتصال
+                try:
+                    msg = _json.loads(raw)
+                    if (msg.get("action") or "").lower() == "delete":
+                        continue
+                    d = msg.get("data") or {}
+                    props = d.get("properties") or {}
+                    coords = (d.get("geometry") or {}).get("coordinates") or []
+                    _lon_geo, _lat_geo = (list(coords) + [None, None])[:2]
+                    _unid = props.get("unid") or d.get("id") or props.get("source_id") or ""
+                    if not _unid:
+                        continue
+                    ev = {
+                        "external_id": f"emsc-{_unid}",
+                        "occurred_at": props.get("time"),
+                        "magnitude": props.get("mag"),
+                        "depth_km": props.get("depth"),
+                        "place": props.get("flynn_region") or "",
+                        "latitude": (props.get("lat") if props.get("lat") is not None else _lat_geo),
+                        "longitude": (props.get("lon") if props.get("lon") is not None else _lon_geo),
+                    }
+                    n = _eq_intel_ingest_events([ev], "emsc")
+                    if n:
+                        EMSC_STATE["last_event_at"] = datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None).isoformat(timespec="seconds")
+                        EMSC_STATE["last_event_text"] = f"M{ev.get('magnitude')} — {ev.get('place')}"
+                        print(f"EMSC engine ✅ new: {EMSC_STATE['last_event_text']}")
+                except Exception as e:
+                    EMSC_STATE["last_error"] = str(e)[:160]
+                    print(f"EMSC msg failed: {e}")
+        except Exception as e:
+            EMSC_STATE["ws_connected"] = False
+            EMSC_STATE["last_error"] = str(e)[:160]
+            print(f"EMSC engine reconnect in {_retry}s: {e}")
+            _time.sleep(_retry)
+            _retry = min(_retry * 2, 300)    # تراجع أُسّي حتى 5 دقايق سقف
+
+_EQ_EMSC_ENGINE_THREAD = None
+# 🛡️ بوابة الاستضافة: مقبس EMSC دائم لا يمكنه العيش على serverless — كل
+#    استدعاء بارد يفتح وصلة جديدة ويهدرها. يشتغل فقط على استضافة دائمة
+#    (worker/حاوية/محلي). العامل الدائم هو المكان الطبيعي لهذا المقبس.
+if not _is_serverless_runtime():
+    _EQ_EMSC_ENGINE_THREAD = threading.Thread(
+        target=_emsc_ws_loop,
+        name="eoc-emsc-engine",
+        daemon=True,
+    )
+    _EQ_EMSC_ENGINE_THREAD.start()
+else:
+    print("EMSC engine NOT started (serverless runtime — worker دائم هو المصدر الوحيد للمقبس)")
 
 
 @app.post("/api/earthquake-intel/engine/tick")
@@ -9308,12 +9552,11 @@ def get_earthquake_intel(
         require_eq_intel_access(role)
         with connection.cursor() as cursor:
             cursor.execute(f"""
-                SELECT eq_intel_id, source, external_id, occurred_at, magnitude,
-                       depth_km, place, latitude, longitude, distance_km,
-                       sound_alert, created_at, hist_max_mag, hist_window_count, hist_scanned_at,
-                       CASE WHEN source = 'usgs' AND external_id <> ''
-                            THEN 'https://earthquake.usgs.gov/earthquakes/eventpage/' || external_id END
-                FROM earthquake_intel
+                 SELECT eq_intel_id, source, external_id, occurred_at, magnitude,
+                        depth_km, place, latitude, longitude, distance_km,
+                        sound_alert, created_at, hist_max_mag, hist_window_count, hist_scanned_at,
+                        COALESCE(CASE WHEN source = 'usgs' AND external_id <> '' THEN 'https://earthquake.usgs.gov/earthquakes/eventpage/' || external_id END, CASE WHEN source = 'emsc' AND external_id LIKE 'emsc-%' THEN 'https://www.seismicportal.eu/eventdetails.html?unid=' || substring(external_id from 6) END, CASE WHEN source = 'emsc' THEN raw->>'detail_url' END)
+                 FROM earthquake_intel
                 {'WHERE ' + ' AND '.join(where) if where else ''}
                 ORDER BY occurred_at DESC NULLS LAST, eq_intel_id DESC
                 {'LIMIT %s' if limit > 0 else ''};
@@ -9362,7 +9605,11 @@ def get_earthquake_intel(
 def get_earthquake_intel_status(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
-    """مؤشر صحة المراقبة: آخر تشغيل للمحرك + حرفية التغذية (مدققة من USGS — مركزياً)."""
+    """مؤشر صحة المراقبة: آخر تشغيل للمحرك + حرفية التغذية.
+
+    🔒 قراءة حالة فقط (READ-ONLY): لا تضرب USGS ولا تُدخل أي رصد.
+       حرفية التغذية تُقرأ من آخر دورة استيعاب سجّلها المحرك نفسه، فالتكلفة صفر
+       على كل مستخدم/تبويب مهما بلغ عددهم. نفس الـ response shape حرفياً."""
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id:
@@ -9374,38 +9621,16 @@ def get_earthquake_intel_status(
         role = get_user_role(user_id, connection=connection)
         require_eq_intel_access(role)
 
-        # 🧊 مركزية استطلع USGS: كاش 60 ثانية — نداء واحد للنظام كله بدل نداء لكل مستخدم/تاب.
-        #    نفس الـ response shape حرفياً؛ freshness قد تتأخر ≤60 ثانية (مؤشر حالة وليس رصداً).
+        # 🧊 حرفية التغذية من آخر دورة استيعاب (لا نداء خارجي إطلاقاً من هنا).
+        feed_count = EQ_INTEL_STATE.get("feed_count")
         feed_freshness = None
-        feed_count = None
-        now_ts = _perf_time.time()
-        probe = None
-        if _EQ_FEED_PROBE_CACHE["data"] is not None and (now_ts - _EQ_FEED_PROBE_CACHE["ts"]) < _EQ_FEED_PROBE_TTL:
-            probe = _EQ_FEED_PROBE_CACHE["data"]
-        else:
+        stamp = EQ_INTEL_STATE.get("feed_generated")
+        if stamp:
             try:
-                import requests as _requests
-                resp = _requests.get(EQ_INTEL_FEEDS[0], timeout=6)
-                if resp.ok:
-                    data = resp.json()
-                    _count = len(data.get("features", []))
-                    _fresh = None
-                    stamp = data.get("metadata", {}).get("generated")
-                    if stamp:
-                        generated = datetime.fromtimestamp(int(stamp), tz=ZoneInfo("UTC"))
-                        now_utc = datetime.now(ZoneInfo("UTC"))
-                        _fresh = int((now_utc - generated).total_seconds())
-                    probe = {"count": _count, "freshness": _fresh}
-                else:
-                    probe = {"count": None, "freshness": None}
-                _EQ_FEED_PROBE_CACHE["ts"] = now_ts
-                _EQ_FEED_PROBE_CACHE["data"] = probe
-            except Exception as e:
-                print(f"eq intel feed probe failed: {e}")
-                probe = {"count": None, "freshness": None}   # نفس سلوك الفشل القديم (لا كاش للفشل)
-        if probe:
-            feed_count = probe.get("count")
-            feed_freshness = probe.get("freshness")
+                generated = datetime.fromtimestamp(int(stamp), tz=ZoneInfo("UTC"))
+                feed_freshness = int((datetime.now(ZoneInfo("UTC")) - generated).total_seconds())
+            except Exception:
+                feed_freshness = None
 
         # 🛡️ «آخر دورة ناجحة» من القاعدة نفسها (ليس من الذاكرة فقط):
         #    ذاكرة المحرك تُمسح بإعادة تشغيل السيرفر — آخر استقبال فعلي في DB هو الحقيقة.

@@ -2,12 +2,24 @@ name: Earthquake Intelligence Runner 🌍
 
 on:
   schedule:
-    # ⚠️ مصدر استيعاب واحد: هذا الكرن يستدعي دورة المحرك داخل الخادم (tick) —
-    #    ولو كان الخيط المحلي حياً في الخادم (استضافة دائمة) تُرجع الدورة skipped
-    #    تلقائياً فلا استطلاع مزدوج أبداً.
-    #    ✔️ اتركه مفعلاً طالما Backend على Serverless (هو ضمان الاستمرارية هناك).
-    #    ✂️ يمكنك حذف جدول schedule كاملاً بعد الانتقال لاستضافة دائمة يؤكد
-    #       /api/earthquake-intel/status وجود engine.mode = "local_thread".
+    # ⚠️ مصدر استيعاب واحد فقط — لا يعمل شيء آخر بجانبه في نفس الوقت.
+    #
+    #    🚫 NOT a real-time path. GitHub Actions does not support schedules
+    #    below 5 minutes. `*/1` is accepted by the parser but is throttled and
+    #    silently delayed by the platform, so it delivers neither 1-minute nor
+    #    reliable 5-minute latency — it only adds load. Reverted to */5.
+    #
+    #    This cron is the CONTINUITY PATH ONLY. It fires the engine tick on the
+    #    serverless backend, where no permanent in-process thread can live.
+    #    If the engine's own local thread is alive (engine.mode = "local_thread")
+    #    the tick returns `skipped`: mutual exclusion is enforced by a
+    #    transaction-scoped advisory lock in code, not by convention, so exactly
+    #    one ingester ever runs (verified by _test_eq_ingest.py).
+    #
+    #    ⇒ TO REACH THE ~30s TARGET: move ingestion to a permanent worker
+    #      (option A in the architecture decision), then DELETE this schedule
+    #      block entirely and keep only `workflow_dispatch` below for manual and
+    #      emergency runs. Two schedulers must never both be active.
     - cron: '*/5 * * * *'
   workflow_dispatch:
 

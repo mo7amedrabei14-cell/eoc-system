@@ -1900,6 +1900,15 @@ useEffect(() => {
         gov_contacts: prev.gov_contacts + (e.event_type === 'gov_contact' ? 1 : 0),
       }));
 
+            // 🕘 حاجب الإشعارات القديمة: أي حدث حصل من أكثر من 5 دقايق (تراكم أثناء
+      //    رستر السيرفر) يحدّث الأرقام بس — من غير توست ولا جرس ولا صوت.
+      //    للزلازل بنقيس وقت الزلزال نفسه (occurred_at) مش وقت التسجيل.
+      try {
+        const _q = (e.details && typeof e.details === 'object' && e.details.earthquake) ? e.details.earthquake.occurred_at : null;
+        const _t = new Date(String(_q || e.created_at || '').replace(' ', 'T')).getTime();
+        if (Number.isFinite(_t) && (Date.now() - _t) > 5 * 60 * 1000) return;
+      } catch { /* تاريخ غير مفهوم ⇒ نكمل عادي */ }
+
             // 🧾 حدث سجل النظام: يحدّث شاشة السجل المفتوحة لحظياً — بلا توست ولا جرس
       if (e.event_type === 'audit') {
         setLiveUpdateVersion(prev => ({ ...prev, audit: prev.audit + 1 }));
@@ -1916,24 +1925,18 @@ useEffect(() => {
       const eventKey = logicalEventKey(e);
       if (shouldSuppressDuplicate(recentKeysRef.current, eventKey, nowTs)) return;
       rememberEventKey(recentKeysRef.current, eventKey, nowTs);
-if (e.event_type === 'system_refresh') {
-  setCustomAlert('سيتم تحديث النظام خلال ثانيتين...');
-
-  window.setTimeout(() => {
-    window.location.reload();
-  }, 2000);
-
-  return;
-}
       if (seenEventIdsRef.current.size > 2000) {
         seenEventIdsRef.current = new Set([...seenEventIdsRef.current].slice(-1500));
       }
 
       // 🔄 أمر تحديث شامل من المالك: Reload لكل الأجهزة والحسابات (حتى لو الحدث منك انت)
+      //    (كان هنا كتلة reload ثانية فوق هذه فيتحدث سلوك واحد مكرر — حُذفت المكرر،
+      //     والسلوك كما هو: تنبيه + إعادة تحميل واحدة بعد 1.2 ثانية)
       if (e.event_type === 'system_refresh') {
         const seenKey = `eoc_sys_refresh_${e.event_id}`;
         if (!sessionStorage.getItem(seenKey)) {
           sessionStorage.setItem(seenKey, '1');
+          setCustomAlert('سيتم تحديث النظام خلال ثانيتين...');
           setTimeout(() => window.location.reload(), 1200);
         }
         return;
@@ -2110,7 +2113,7 @@ if (e.event_type === 'system_refresh') {
         if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
       } catch (e) {
         // network failure → backoff تصاعدي (لغاية 30 ثانية) ثم معاودة تلقائية
-        pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 30000);
+        pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 10000);
         if (!realtimeUnmountedRef.current) setRealtimeConnected(false);
       } finally {
         pollInFlightRef.current = false;
@@ -2124,12 +2127,86 @@ if (e.event_type === 'system_refresh') {
       }, pollBackoffRef.current);
     };
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // 📡 قناة الدفع (SSE) — إضافة فوق الاستطلاع لا بديل عنه
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ ثلاث قواعد تحمي عدم تكرار الإشعار، وهي السبب في أن الإضافة هنا آمنة:
+    //   1) الدفع والاستطلاع يمرّان بنفس notifyRealtime ⇒ منطق التوست والصوت واحد.
+    //   2) seenEventIdsRef (داخل notifyRealtime) يرفض أي event_id رآه أحد المسارين،
+    //      فحتى لو سبقت استجابة الدفع جولة الاستطلاع، يُسقَط الثاني بلا توست ثانٍ.
+    //   3) كلا المسارين يقدّم نفس lastEventIdRef ⇒ لا إعادة جلب لما استُلم بالفعل.
+    // ⇒ الجواب: لا يمكن أن يوصل إشعاران لنفس الحدث مهما تداخل المساران.
+    //
+    // 📌 الاستطلاع 4 ثوانٍ أعلاه لم يُمسّ: لم نخفّضه ولا نوقفه عند نجاح الدفع.
+    //    هو شبكة الأمان التي تمسك لو انقطع الدفع، ولو نجحت هي فالكلفة طلبات فقط
+    //    (لا إشعارات مكررة) — وهذا هو المقايضة المطلوبة صراحةً.
+    let sseAbort = null;
+    let sseStopped = false;
+
+    // EventSource لا يرسل ترويسة Authorization، فنقرأ البث بـ fetch + ReadableStream
+    // (نفس المصادقة ونفس الـ Bearer — لا token في الـ URL ولا في أي query).
+    const startPush = async () => {
+      if (sseStopped) return;
+      sseAbort?.abort();
+      const ctrl = new AbortController();
+      sseAbort = ctrl;
+      try {
+        if (lastEventIdRef.current === null) await poll();   // تهيئة الـ watermark قبل الاشتراك
+        const res = await fetch(
+          `${BASE}/api/realtime/stream?after_id=${lastEventIdRef.current || 0}`,
+          {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'text/event-stream' },
+            signal: ctrl.signal,
+          },
+        );
+        if (!res.ok || !res.body) throw new Error(`stream status ${res.status}`);
+        if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done || sseStopped) break;
+          buf += decoder.decode(value, { stream: true });
+          // SSE مفصول بسطرين فارغين — ن.process كل ما اكتمل فقط
+          let cut;
+          while ((cut = buf.indexOf('\n\n')) !== -1) {
+            const raw = buf.slice(0, cut);
+            buf = buf.slice(cut + 2);
+            for (const line of raw.split('\n')) {
+              if (!line.startsWith('data:')) continue;     // 'eof' و keep-alive لا يحملان بيانات حدث
+              let payload;
+              try { payload = JSON.parse(line.slice(5).trim()); } catch { continue; }
+              if (!payload || payload.event_type === undefined) continue;   // رسالة eof: Watermark فقط
+              notifyRealtime(payload);                       // نفس المسار تماماً
+              const idNum = Number(payload.event_id);
+              // نفس منطق الـ watermark — تقدّم فقط، فلا نرجع لما رآه الاستطلاع
+              if (Number.isFinite(idNum) && idNum > (lastEventIdRef.current || 0)) {
+                lastEventIdRef.current = idNum;
+              }
+            }
+          }
+        }
+        // ✋ إغلاق مجدول من الخادم (55 ثانية) أو قطع شبكة — نعيد الاشتراك فوراً
+        //    بنفس الـ watermark ⇒ لا فجوة، ولا إعادة تسليم لما رُئي.
+        if (!sseStopped && !realtimeUnmountedRef.current) setTimeout(startPush, 300);
+      } catch (e) {
+        if (ctrl.signal.aborted || sseStopped) return;
+        if (!realtimeUnmountedRef.current) setRealtimeConnected(false);
+        // ⚠️ لا نُسقط الاستطلاع أبداً: هو يعمل أصلاً بالتوازي، وهو المرجع
+        //    حتى لو انقطع الدفع كلياً. هنا فقط نعيد محاولة الاشتراك.
+        setTimeout(startPush, 5000);
+      }
+    };
+
     // 🔄 استكمال فوري عند العودة/التركيز/رجوع الاتصال — لا تأخير لأي إشعار
     //    (pollInFlightRef يمنع التداخل، والطلب يستأنف من نفس watermark فلا فقد ولا تكرار)
     const onRealtimeActive = () => {
       if (realtimeUnmountedRef.current || document.hidden) return;
       pollBackoffRef.current = 4000;
       poll();
+      startPush();               // إعادة اشتراك فوراً بعد العودة من التبويب المخفي
     };
     document.addEventListener('visibilitychange', onRealtimeActive);
     window.addEventListener('online', onRealtimeActive);
@@ -2137,9 +2214,12 @@ if (e.event_type === 'system_refresh') {
 
     poll();
     schedule();
+    startPush();
 
     return () => {
       realtimeUnmountedRef.current = true;
+      sseStopped = true;
+      sseAbort?.abort();
       if (pollTimer) clearTimeout(pollTimer);
       document.removeEventListener('visibilitychange', onRealtimeActive);
       window.removeEventListener('online', onRealtimeActive);
@@ -8956,22 +9036,41 @@ const visibleBranches = (
         // جدول الإدخال لا يملأ إلا قيم الوردية المختارة فقط.
         const shiftRows = (data || []).filter(r => r.shift === shift);
         setRows(shiftRows);
-        const m = {};
-        shiftRows.forEach(r => {
-          m[r.branch_id] = {
-            temp_min: r.temp_min ?? '', temp_max: r.temp_max ?? '',
-            wind_min: r.wind_min ?? '', wind_max: r.wind_max ?? '',
-            rain_min: r.rain_min ?? '', rain_max: r.rain_max ?? '',
-            humidity_min: r.humidity_min ?? '', humidity_max: r.humidity_max ?? '',
-            clouds_min: r.clouds_min ?? '', clouds_max: r.clouds_max ?? '',
-            aqi_min: r.aqi_min ?? '', aqi_max: r.aqi_max ?? '',
-          };
+        // 🛡️ القاعدة الذهبية: بيانات السيرفر تُدمج *تحت* ما كتبه المستخدم، لا فوقه.
+        //    أي خانة في المخزن المعلق (أو لسه متلمسة في الجلسة) لا يقبطها أي تحميل،
+        //    مهما جاء التحديث: 60 ثانية · حدث لحظي · رجوع النت · تركيز النافذة.
+        //    بدون هذا الدمج كان كل تحديث سليلي بيمسح الأرقام أثناء الكتابة.
+        const gk = `${filterDate}|${shift}`;
+        const pending = (pendingRowsRef.current || {})[gk] || {};
+        setFormValues(prev => {
+          const m = {};
+          shiftRows.forEach(r => {
+            const bid = String(r.branch_id);
+            const p = pending[bid] || {};
+            const wasTouched = touchedRef.current.has(r.branch_id) || touchedRef.current.has(Number(bid));
+            m[bid] = {
+              temp_min: r.temp_min ?? '', temp_max: r.temp_max ?? '',
+              wind_min: r.wind_min ?? '', wind_max: r.wind_max ?? '',
+              rain_min: r.rain_min ?? '', rain_max: r.rain_max ?? '',
+              humidity_min: r.humidity_min ?? '', humidity_max: r.humidity_max ?? '',
+              clouds_min: r.clouds_min ?? '', clouds_max: r.clouds_max ?? '',
+              aqi_min: r.aqi_min ?? '', aqi_max: r.aqi_max ?? '',
+            };
+            Object.entries(p).forEach(([f, v]) => { m[bid][f] = v; });          // المعلّق أولاً
+            if (wasTouched) WEATHER_METRICS.forEach(mt => WEATHER_METRIC_FIELDS(mt).forEach(f => {
+              if (f in prev[bid]) m[bid][f] = prev[bid][f];                    // أو آخر ما كتبه المستخدم
+            }));
+          });
+          return m;
         });
-        setFormValues(m);
       } else {
-        setRows([]); setFormValues({});
+        setRows([]);
+        setFormValues(prev => (Object.keys(prev).length ? prev : {}));
       }
-    } catch (e) { setRows([]); setFormValues({}); }
+    } catch (e) {
+      setRows([]);
+      setFormValues(prev => (Object.keys(prev).length ? prev : {}));
+    }
     finally { setIsLoading(false); }
   };
   const loadDaily = async (silent = false) => {
@@ -9050,6 +9149,34 @@ const visibleBranches = (
     if (Object.keys(nextGroup).length) next[gk] = nextGroup; else delete next[gk];
     persistPending(next);
   };
+  /** 🛡️ الحذف المؤكَّد على مستوى الخلية — أساس منع المسح.
+   * _sentByBranch = { branchId: { field: value_we_sent } } exactly as it went out.
+   *  A cell is removed ONLY if its current pending value still equals the sent one.
+   *  Anything typed during the request round-trip has a different value, so it
+   *  survives and goes out in the next flush. Deleting by branch_id (the old
+   *  behaviour) threw those newer keystrokes away — that is the data loss. */
+  const dropPendingCells = (date, shiftKey, sentByBranch) => {
+    const gk = `${date}|${shiftKey}`;
+    const store = pendingRowsRef.current || {};
+    const group = store[gk];
+    if (!group) return;
+    const nextGroup = { ...group };
+    let changed = false;
+    Object.entries(sentByBranch || {}).forEach(([bid, sent]) => {
+      const cur = nextGroup[String(bid)];
+      if (!cur) return;
+      const next = { ...cur };
+      Object.entries(sent || {}).forEach(([f, sentVal]) => {
+        if (String(cur[f]) === String(sentVal)) { delete next[f]; changed = true; }
+      });
+      if (Object.keys(next).length) nextGroup[String(bid)] = next;
+      else { delete nextGroup[String(bid)]; changed = true; }
+    });
+    if (!changed) return;
+    const next = { ...store };
+    if (Object.keys(nextGroup).length) next[gk] = nextGroup; else delete next[gk];
+    persistPending(next);
+  };
 
   /** رفع المجموعات المعلقة: مجموعة (تاريخ|وردية) كل مرة في طلب واحد.
    *  - `retryAll` = جولة إعادة محاولة شاملة (كل التواريخ/الورديات المعلقة).
@@ -9074,18 +9201,36 @@ const visibleBranches = (
       //    ولا تُرسَل أي خانة لم تُلمَس إطلاقاً ⇒ السيرفر يحفظ عليها قيمتها المخزَّنة.
       //    (سابقاً كان الصف يُرسَل كاملاً بقيم formValues المحلية، فأي خانة غير محمَّلة
       //     محلياً تُكتب NULL وتمحو توقعات محفوظة — «الطقس يُمسح تلقائياً».)
+      // sentByBranch: بالضبط ما خرج على الشبكة، لكل خلية على حدة — هو الذي يبرر المسح لاحقاً.
+      const sentByBranch = {};
       const bodyRows = Object.entries(group.rowsByBranch || {})
         .map(([bid, row]) => {
           const o = { branch_id: Number(bid), shift: group.shift };
+          const sent = {};
           WEATHER_METRICS.forEach(m => WEATHER_METRIC_FIELDS(m).forEach(f => {
             if (!(f in (row || {}))) return;      // لم تُلمَس ⇒ لا تُرسَل (ولا تُمحى)
             const v = row[f];
-            o[f] = (v !== '' && v != null) ? Number(v) : null;
+            if (v === '' || v == null) { o[f] = null; sent[f] = v; return; }  // مسح مقصود
+            const n = Number(v);
+            // 🛡️ قيمة غير رقمية (نص عابر أو خطأ لصق) لا تُترجَم إلى null أبداً:
+            //    JSON.stringify(NaN) = null، فكانت تصبح عند السيرفر «امسح هذه الخلية»
+            //    أي حذف حقيقي لرقم محفوظ. تُترك الخلية كما هي وتُرفض من الإرسال فقط.
+            if (!Number.isFinite(n)) return;
+            o[f] = n;
+            sent[f] = v;
           }));
+          o.__sent = sent;
           return o;
         })
-        .filter(r => WEATHER_METRICS.some(m => r[`${m.key}_min`] != null || r[`${m.key}_max`] != null));
-      if (!bodyRows.length) { dropPending(group.date, group.shift, Object.keys(group.rowsByBranch || {})); continue; }
+        .filter(r => {
+          const hasVal = WEATHER_METRICS.some(m => r[`${m.key}_min`] != null || r[`${m.key}_max`] != null);
+          if (hasVal) sentByBranch[String(r.branch_id)] = r.__sent;
+          return hasVal;
+        })
+        .map(({ __sent, ...r }) => r);
+      // 🧹 صفوف كلّ خلاياها اتمسحت عمداً (المستخدم صفّرها بنفسه) ⇒ لا داعي لإبقائها معلّقة للأبد.
+      const clearedIds = Object.keys(group.rowsByBranch || {}).filter(bid => !(String(bid) in sentByBranch));
+      if (!bodyRows.length) { dropPending(group.date, group.shift, clearedIds); continue; }
       try {
         const res = await fetch(`${BASE}/api/weather/batch`, {
           method: 'POST',
@@ -9093,11 +9238,16 @@ const visibleBranches = (
           body: JSON.stringify({ date: group.date, shift: group.shift, rows: bodyRows, silent: true }),
         });
         if (res.ok) {
-          // ✅ تأكيد الحفظ فقط حينها نمسحها من المخزن المحلي
-          const savedIds = bodyRows.map(r => String(r.branch_id));
-          dropPending(group.date, group.shift, savedIds);
-          savedCount += savedIds.length;
-          touchedRef.current = new Set([...touchedRef.current].filter(bid => !savedIds.includes(String(bid))));
+          // ✅ تأكيد الحفظ فقط حينها نمسحها — وعلى مستوى الخلية لا الصف:
+          //    أي رقم اتكتب أثناء رحلة الطلب يختلف عن المُرسل ⇒ يبقى معلّقاً ويذهب في الجولة التالية.
+          dropPendingCells(group.date, group.shift, sentByBranch);
+          dropPending(group.date, group.shift, clearedIds);
+          savedCount += bodyRows.length;
+          const confirmed = new Set(Object.entries(sentByBranch).map(([bid, s]) => {
+            const cur = ((pendingRowsRef.current || {})[`${group.date}|${group.shift}`] || {})[bid] || {};
+            return Object.keys(s).every(f => !(f in cur)) ? bid : null;
+          }).filter(Boolean));
+          touchedRef.current = new Set([...touchedRef.current].filter(bid => !confirmed.has(String(bid))));
         } else {
           failedGroups += 1;
         }
@@ -9195,10 +9345,14 @@ const visibleBranches = (
     autoSaveTimerRef.current = setTimeout(() => flushRef.current(), 1000);
   };
 
-  const cellVal = (bid, field) => {
-    const v = (formValues[bid] || {})[field];
-    return v ?? '';
-  };
+  // 🪞 القيمة المعروضة = القيمة التي ستُحفظ، دائماً. نقرأ من المخزن المعلّق فوق
+  //    formValues لأن هناك يكتب المستخدم أسرع من دورة الرسم، ومن لا يُقرأ منه
+  //    يظل رقم مكتوب على الشاشة بلا حفظ — وهو بالضبط «أرقام بتتشيل».
+    const cellVal = (bid, field) => {
+      const pend = ((pendingRowsRef.current || {})[`${filterDate}|${shift}`] || {})[bid];
+      const v = (pend && field in pend) ? pend[field] : (formValues[bid] || {})[field];
+      return v ?? '';
+    };
 
   // ⌨️ تنقّل بين الخلايا بالأسهم زي جوجل شيت (شبكة: صفوف المحافظات × أعمدة الصغرى/العظمى)
   const weatherGridKeyDown = (e, row, col) => {
@@ -9545,8 +9699,8 @@ const visibleBranches = (
                     <td className="wx-sticky-col p-2 font-bold text-[var(--ink)] whitespace-nowrap">{govLabel(b)}</td>
                     {WEATHER_METRICS.map((m, mIdx) => (
                       <Fragment key={m.key}>
-                        <td className="p-2"><input id={`wcell_${rowIdx}_${mIdx * 2}`} type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_min`)} onChange={e => setCell(b.id, `${m.key}_min`, e.target.value)} onKeyDown={e => weatherGridKeyDown(e, rowIdx, mIdx * 2)} className={cellCls} placeholder="—" /></td>
-                        <td className="p-2"><input id={`wcell_${rowIdx}_${mIdx * 2 + 1}`} type="number" step="any" min="0" inputMode="decimal" value={cellVal(b.id, `${m.key}_max`)} onChange={e => setCell(b.id, `${m.key}_max`, e.target.value)} onKeyDown={e => weatherGridKeyDown(e, rowIdx, mIdx * 2 + 1)} className={cellCls} placeholder="—" /></td>
+                        <td className="p-2"><input id={`wcell_${rowIdx}_${mIdx * 2}`} type="text" inputMode="decimal" autoComplete="off" value={cellVal(b.id, `${m.key}_min`)} onChange={e => setCell(b.id, `${m.key}_min`, e.target.value)} onKeyDown={e => weatherGridKeyDown(e, rowIdx, mIdx * 2)} className={cellCls} placeholder="—" /></td>
+                        <td className="p-2"><input id={`wcell_${rowIdx}_${mIdx * 2 + 1}`} type="text" inputMode="decimal" autoComplete="off" value={cellVal(b.id, `${m.key}_max`)} onChange={e => setCell(b.id, `${m.key}_max`, e.target.value)} onKeyDown={e => weatherGridKeyDown(e, rowIdx, mIdx * 2 + 1)} className={cellCls} placeholder="—" /></td>
                       </Fragment>
                     ))}
                   </tr>
@@ -9714,6 +9868,29 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
     if (Object.keys(nextGroup).length) next[date] = nextGroup; else delete next[date];
     setPending(next);
   };
+  /** 🛡️ نفس قاعدة منع المسح في شبكة الطقس: لا يُمسح إلا ما خرج فعلاً وبنفس القيمة.
+   *  الحذف بالفرع كان يمسح أي كتابة جديدة جاءت أثناء رحلة الطلب. */
+  const dropPendingCells = (date, sentByBranch) => {
+    const store = pendingRef.current || {};
+    const group = store[date];
+    if (!group) return;
+    const nextGroup = { ...group };
+    let changed = false;
+    Object.entries(sentByBranch || {}).forEach(([bid, sent]) => {
+      const cur = nextGroup[String(bid)];
+      if (!cur) return;
+      const next = { ...cur };
+      Object.entries(sent || {}).forEach(([f, sentVal]) => {
+        if (String(cur[f]) === String(sentVal)) { delete next[f]; changed = true; }
+      });
+      if (Object.keys(next).length) nextGroup[String(bid)] = next;
+      else { delete nextGroup[String(bid)]; changed = true; }
+    });
+    if (!changed) return;
+    const next = { ...store };
+    if (Object.keys(nextGroup).length) next[date] = nextGroup; else delete next[date];
+    setPending(next);
+  };
 
   // 🏷️ تجهيز صفوف اليوم: كل محافظة مرئية يصير لها صف بنص «سبب الاتصال» الافتراضي
   //    (نص حقيقي في القاعدة ⇒ يظهر في تصدير Excel)، وما نمسش أي سبب مخصص محفوظ.
@@ -9784,19 +9961,29 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
     try {
       for (const date of dates) {
       const group = store[date] || {};
+      const sentByBranch = {};
       const bodyRows = Object.entries(group)
         .map(([bid, vals]) => {
           const out = { branch_id: Number(bid) };
+          const sent = {};
           GOV_CONTACT_FIELDS.forEach((f) => {
             if (!(f in vals)) return;
             // 🛡️ الرقم الفاضي يُرسَل null مش نص فاضي — وإلا السيرفر يرفض الدفعة 422
             const v = vals[f];
             out[f] = (f === 'contact_count' && (v === '' || v == null)) ? null : v;
+            sent[f] = v;
           });
+          out.__sent = sent;
           return out;
         })
-        .filter(r => GOV_CONTACT_FIELDS.some(f => f in r));
-      if (!bodyRows.length) { dropPending(date, Object.keys(group)); continue; }
+        .filter(r => {
+          const has = GOV_CONTACT_FIELDS.some(f => f in r);
+          if (has) sentByBranch[String(r.branch_id)] = r.__sent;
+          return has;
+        })
+        .map(({ __sent, ...r }) => r);
+      const clearedIds = Object.keys(group).filter(bid => !(String(bid) in sentByBranch));
+      if (!bodyRows.length) { dropPending(date, clearedIds); continue; }
       try {
         const res = await fetch(`${url}/batch`, {
           method: 'POST',
@@ -9806,7 +9993,8 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
         });
         if (res.ok) {
           const ids = bodyRows.map(r => String(r.branch_id));
-          dropPending(date, ids);
+          dropPendingCells(date, sentByBranch);
+          dropPending(date, clearedIds);
           ids.forEach(bid => dirtyRef.current.delete(`${date}|${bid}`));
           saved += ids.length;
         } else { failed += 1; }
@@ -11996,7 +12184,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                             {(Number(ev.risk_score) || 0) >= 50 && <b style={{ color: '#ef4444' }}>👀 يستحق المراقبة الآن<br /></b>}
                             أقوى تاريخي لنفس الفترة: {ev.hist_max_mag != null ? `${ev.hist_max_mag} ريختر` : '؟'}<br />
                             عدد أحداث الفترة: {ev.hist_window_count ?? '؟'}
-                            {ev.detail_url && <><br /><a href={ev.detail_url} target="_blank" rel="noreferrer" style={{ color: '#ef4444', fontWeight: 700 }}>تفاصيل الزلزال على USGS ↗</a></>}
+                            {ev.detail_url && <><br /><a href={ev.detail_url} target="_blank" rel="noreferrer" style={{ color: '#ef4444', fontWeight: 700 }}>تفاصيل الزلزال ↗</a></>}
                           </div>
                         </Popup>
                       </Circle>
@@ -13960,12 +14148,13 @@ const [clearAllCode, setClearAllCode] = useState('');
   useEffect(() => {
     const fetchLastRun = async () => {
       try {
-        const res = await fetch('https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/runs?per_page=1');
+        // ♻️ عبر الخادم (كاش مركزي) بدل الضرب المباشر على api.github.com من كل متصفح.
+        //    نفس القيمة المعروضة تماماً: الخادم يرجّع {updated_at} لآخر تشغيل.
+        const res = await fetch(`${BASE}/api/ai-news/last-run`, { headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` } });
         if (res.ok) {
           const data = await res.json();
-          if (data.workflow_runs && data.workflow_runs.length > 0) {
-            const lastRun = data.workflow_runs[0];
-            const dateObj = new Date(lastRun.updated_at);
+          if (data && data.updated_at) {
+            const dateObj = new Date(data.updated_at);
             const now = new Date();
             const isToday = dateObj.getDate() === now.getDate() && dateObj.getMonth() === now.getMonth();
             const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -13976,8 +14165,16 @@ const [clearAllCode, setClearAllCode] = useState('');
       } catch (e) { setLastRunTime('غير متاح'); }
     };
     fetchLastRun();
-    const interval = setInterval(fetchLastRun, 60000); 
-    return () => clearInterval(interval);
+    // ⏱️ 5 دقايق (دورية الخادم نفسه) بدل 60 ثانية لكل متصفح + تخطي التاب المخفي
+    const interval = setInterval(() => { if (!document.hidden) fetchLastRun(); }, 300000);
+    const onLastRunActive = () => { if (!document.hidden) fetchLastRun(); };
+    document.addEventListener('visibilitychange', onLastRunActive);
+    window.addEventListener('online', onLastRunActive);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onLastRunActive);
+      window.removeEventListener('online', onLastRunActive);
+    };
   }, []);
   
   // 💡 تجربة المستخدم الحية (Live UX): تحديث الأخبار والخريطة تلقائياً في الخلفية
