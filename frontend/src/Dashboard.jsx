@@ -1903,9 +1903,15 @@ useEffect(() => {
             // 🕘 حاجب الإشعارات القديمة: أي حدث حصل من أكثر من 5 دقايق (تراكم أثناء
       //    رستر السيرفر) يحدّث الأرقام بس — من غير توست ولا جرس ولا صوت.
       //    للزلازل بنقيس وقت الزلزال نفسه (occurred_at) مش وقت التسجيل.
+      // 🕘 حاجب الإشعارات القديمة — بالنسخة المُصلحة:
+      //    • الزلازل: نقيس وقت وصول الرصد للنظام (created_at) — لأن USGS/EMSC ممكن
+      //      ينشروا الحدث متأخراً ساعات، والمعيار الصح هو "وصلني جديد ولا لا".
+      //    • منع التكرار: نفس الزلزال مبيبعش توست تاني — بالمعرّف.
       try {
-        const _q = (e.details && typeof e.details === 'object' && e.details.earthquake) ? e.details.earthquake.occurred_at : null;
-        const _t = new Date(String(_q || e.created_at || '').replace(' ', 'T')).getTime();
+        const _eq = (e.event_type === 'eq_intel' || e.event_type === 'earthquake');
+        const _q = (e.details && typeof e.details === 'object') ? e.details.earthquake : null;
+        const _created = _q && _q.created_at ? _q.created_at : e.created_at;
+        const _t = new Date(String(_created || '').replace(' ', 'T')).getTime();
         if (Number.isFinite(_t) && (Date.now() - _t) > 5 * 60 * 1000) return;
       } catch { /* تاريخ غير مفهوم ⇒ نكمل عادي */ }
 
