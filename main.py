@@ -2831,11 +2831,18 @@ def get_missions(
             
             # 🔎 فلتر اسم المشارك (قراءة فقط): EXISTS داخل المكان الإقليمي نفسه —
             #    لا يكرر المهمة (EXISTS منطقية)، ولا يلمس العدّادات أو أي منطق آخر.
+            # 🔎 البحث بالاسم أو رقم العضوية (كلاهما جوّا mission_participants):
+            #    membership_number = الرقم الرسمي، وparticipation_role يحمل الرقم
+            #    للمتطوعين في الصفوف القديمة — نطابق الثلاثة معاً (فارغ = لا تأثير).
             participant_filter = """
                 AND EXISTS (
                     SELECT 1 FROM mission_participants pf
                     WHERE pf.mission_id = m.mission_id
-                      AND pf.full_name ILIKE %s
+                      AND (
+                          pf.full_name ILIKE %s
+                          OR COALESCE(pf.membership_number, '') ILIKE %s
+                          OR COALESCE(pf.participation_role, '') ILIKE %s
+                      )
                 )
             """
             if (
@@ -2850,7 +2857,7 @@ def get_missions(
                 #    — لا «تاريخ المهمة» (exit_date) ولا created_at. fallback: created_at (قديم بلا تاريخ إنشاء)
                 if p_search_like:
                     query = base_query + " WHERE 1=1" + participant_filter + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
-                    cursor.execute(query, (p_search_like,))
+                    cursor.execute(query, (p_search_like, p_search_like, p_search_like))
                 else:
                     query = base_query + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
                     cursor.execute(query)
@@ -2861,7 +2868,7 @@ def get_missions(
                 # 💡 الإصلاح الأول: استخدام = ANY(%s) بدل IN %s
                 if p_search_like:
                     query = base_query + " WHERE m.branch_id = ANY(%s)" + participant_filter + " ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
-                    cursor.execute(query, (branch_ids, p_search_like))
+                    cursor.execute(query, (branch_ids, p_search_like, p_search_like, p_search_like))
                 else:
                     query = base_query + " WHERE m.branch_id = ANY(%s) ORDER BY COALESCE(m.creation_datetime, m.created_at) DESC;"
                     cursor.execute(query, (branch_ids,))
