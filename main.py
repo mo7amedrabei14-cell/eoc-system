@@ -700,6 +700,41 @@ def ensure_gov_contacts_schema():
     finally:
         connection.close()
 
+def ensure_weather_extra_history_schema():
+    """🌪️ تاريخ الطبقات الإضافية (غبار/PM2.5/موج/سيول) — خطوة خفيفة منفصلة.
+    ⚠️ لا نرفع SCHEMA_VERSION — نفس أسلوب ensure_workspace_schema."""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT to_regclass('public.weather_extra_history');")
+            if cursor.fetchone()[0] is None:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS weather_extra_history (
+                        id          BIGSERIAL PRIMARY KEY,
+                        location_id INTEGER NOT NULL REFERENCES weather_locations(id),
+                        record_date DATE NOT NULL,
+                        layer       VARCHAR(24) NOT NULL CHECK (layer IN ('dust','pm25','wave','flood')),
+                        value       NUMERIC(10,3),
+                        data_source VARCHAR(50) NOT NULL DEFAULT 'open-meteo',
+                        created_at  TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    );
+                """)
+                cursor.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_weather_extra_history
+                        ON weather_extra_history (location_id, record_date, layer);
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_weather_extra_hist_loc_date
+                        ON weather_extra_history (location_id, record_date DESC);
+                """)
+                connection.commit()
+                print("weather extra history schema: weather_extra_history created")
+    except Exception as e:
+        connection.rollback()
+        print(f"ensure_weather_extra_history_schema error (will retry next boot): {e}")
+    finally:
+        connection.close()
+
 
 def ensure_client_errors_schema():
     """🧯 جدول بلاغات أخطاء الواجهة (تشخيص «الشاشة البيضا») — خطوة خفيفة منفصلة.
@@ -777,6 +812,7 @@ def _bootstrap_schema_in_background():
         ensure_gov_contacts_schema()   # 📞 جدول سجل التواصل مع المحافظات (خفيفة منفصلة)
         ensure_earthquake_intel_schema()  # 🌍 جدول استخبارات الزلازل (خفيفة منفصلة)
         ensure_earthquake_catalog_schema()  # 📚 كتالوج 30 سنة التاريخي (خفيفة منفصلة)
+        ensure_weather_extra_history_schema()  # 🌪️ تاريخ الطبقات الإضافية (خفيفة منفصلة)
         _schema_error["message"] = None
     except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
         _schema_error["message"] = str(e)[:200]
@@ -9130,8 +9166,10 @@ def _eq_intel_ingest_events(events, source="usgs"):
                     or dist_val <= EQ_NOTIFY_PROXIMITY_KM
                     or score_val >= EQ_NOTIFY_RISK_SCORE
                 )
-                # 🔊 الصوت الإنذاري حصراً لما فوق 4 ريختر (بلا استثناء — طلب صريح)
-                sound = mag_val >= 4.0
+                # 🔊 الصوت مع كل إشعار + نوعه: "quake" للقوة ≥4 (النغمة العادية)
+                #    و"egypt_risk" للقريب من مصر/الخطير عليها بأي قوة (سيرين مختلفة)
+                sound = should_notify
+                sound_kind = "quake" if mag_val >= 4.0 else "egypt_risk"
                 status_label = _eq_intel_status_label(mag)
                 cursor.execute("""
                     INSERT INTO earthquake_intel
@@ -9199,6 +9237,7 @@ def _eq_intel_ingest_events(events, source="usgs"):
                         "occurred_at": time_txt,
                         "distance_km": dist,
                         "sound_alert": sound,
+                        "sound_kind": sound_kind,
                         "detail_url": detail_url,
                     },
                 }
@@ -10877,6 +10916,7 @@ class WeatherIntelIngestModel(BaseModel):
     statistics: Optional[List[Dict[str, Any]]] = None
     frequencies: Optional[List[Dict[str, Any]]] = None
     assessments: Optional[List[Dict[str, Any]]] = None
+    extra_history_rows: Optional[List[Dict[str, Any]]] = None
 
 def get_weather_intel_auth(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -11051,6 +11091,49 @@ def update_weather_intel_location(
     finally:
         connection.close()
 
+@app.get("/api/weather-intel/extra-history")
+def get_weather_intel_extra_history(
+    location_id: int,
+    target_date: str,
+    window: int = 3,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    user_id, role, is_sys = get_weather_intel_auth(credentials)
+    if not is_sys:
+        require_weather_eligible(role)
+    from datetime import date as _date, timedelta as _td
+    t = _date.fromisoformat(target_date)
+    lo = t - _td(days=window)
+    hi = t + _td(days=window)
+    connection = get_connection()
+    try:
+        rows_out = []
+        with connection.cursor() as cursor:
+            for y in range(lo.year - 31, t.year + 1):
+                try:
+                    y_lo = max(lo, _date(y, lo.month, lo.day))
+                    y_hi = min(hi, _date(y, 12, 31))
+                except ValueError:
+                    continue
+                if y_lo > y_hi:
+                    continue
+                cursor.execute("""
+                    SELECT record_date, layer, value, data_source
+                    FROM weather_extra_history
+                    WHERE location_id = %s AND record_date BETWEEN %s AND %s
+                    ORDER BY record_date ASC
+                """, (location_id, y_lo, y_hi))
+                for rd, layer, val, src in cursor.fetchall():
+                    rows_out.append({"record_date": str(rd), "layer": layer,
+                                     "value": float(val) if val is not None else None,
+                                     "data_source": src})
+        return {"rows": rows_out}
+    except Exception as e:
+        print(f"Error extra-history: {e}")
+        raise HTTPException(status_code=500, detail="فشل جلب تاريخ الطبقات الإضافية")
+    finally:
+        connection.close()
+
 
 @app.get("/api/weather-intel/config")
 def get_weather_intel_config(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -11201,6 +11284,19 @@ def ingest_weather_intel(
                         h.get("humidity_mean_pct"),
                         h.get("cloud_cover_mean_pct"),
                         h.get("data_source", "era5-archive")
+                    ))
+
+            # 2b. صفوف تاريخ الطبقات الإضافية (غبار/PM2.5/موج/سيول)
+            if payload.extra_history_rows:
+                for h in payload.extra_history_rows:
+                    cursor.execute("""
+                        INSERT INTO weather_extra_history (location_id, record_date, layer, value, data_source)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (location_id, record_date, layer) DO UPDATE SET
+                            value = COALESCE(EXCLUDED.value, weather_extra_history.value)
+                    """, (
+                        h.get("location_id"), h.get("record_date"), h.get("layer"),
+                        h.get("value"), h.get("data_source", "open-meteo")
                     ))
 
             # 3. Insert forecast snapshots & map location_id -> snapshot_id
@@ -11367,6 +11463,30 @@ def ingest_weather_intel(
                     "total": payload.total_locations
                 }
             )
+            # 📡 بث لحظي: «تم تحديث استخبارات الطقس» — النقر على الإشعار يفتح الصفحة
+            try:
+                create_realtime_event(
+                    cursor,
+                    event_type="weather_intel",
+                    action=f"تم تحديث استخبارات الطقس ليوم {payload.target_date} — {payload.successful_locations}/{payload.total_locations} محافظة",
+                    actor_user_id=None,
+                    entity_id=run_id,
+                    details={"action_text": f"اكتمل تحديث استخبارات الطقس ليوم {payload.target_date} (حالة: {payload.status})"},
+                )
+            except Exception:
+                pass
+            # 📡 بث لحظي: «تم تحديث استخبارات الطقس» — النقر على الإشعار يفتح الصفحة
+            try:
+                create_realtime_event(
+                    cursor,
+                    event_type="weather_intel",
+                    action=f"تم تحديث استخبارات الطقس ليوم {payload.target_date} — {payload.successful_locations}/{payload.total_locations} محافظة",
+                    actor_user_id=None,
+                    entity_id=run_id,
+                    details={"action_text": f"اكتمل تحديث استخبارات الطقس ليوم {payload.target_date} (حالة: {payload.status})"},
+                )
+            except Exception:
+                pass
             connection.commit()
             return {"message": "تم حفظ تقرير استخبارات الطقس بنجاح", "run_id": run_id}
     except Exception as e:
@@ -11535,7 +11655,7 @@ def get_weather_intel_assessments(
             cursor.execute("""
                 SELECT id, location_id, target_date, data_source, fetched_at,
                        tmax, tmin, precip_mm, precip_prob_pct, wind_max_kph,
-                       wind_gusts_kph, humidity_mean_pct, cloud_cover_mean_pct, weather_code
+                       wind_gusts_kph, humidity_mean_pct, cloud_cover_mean_pct, weather_code, raw_json
                 FROM weather_forecast_snapshots
                 WHERE weather_run_id = %s
                 ORDER BY location_id ASC
@@ -11562,6 +11682,7 @@ def get_weather_intel_assessments(
                     "humidity_mean_pct": float(sr[11]) if sr[11] is not None else None,
                     "cloud_cover_mean_pct": float(sr[12]) if sr[12] is not None else None,
                     "weather_code": sr[13],
+                    "raw_json": sr[14] if sr[14] is not None else {},
                 })
 
             # 5. Fetch statistics

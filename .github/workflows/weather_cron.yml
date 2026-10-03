@@ -2,10 +2,8 @@ name: Weather Intelligence Daily Runner 🌤️
 
 on:
   schedule:
-    # 06:00 UTC = 08:00 Cairo (UTC+2 شتاءً) أو 09:00 Cairo (UTC+3 صيفاً بتوقيت مصر الصيفي: آخر جمعة من أبريل إلى آخر خميس من أكتوبر)
-    - cron: '0 6 * * *'
+    - cron: "0 */2 * * *"   # كل ساعتين
   workflow_dispatch:
-
 jobs:
   weather-intel:
     runs-on: ubuntu-latest

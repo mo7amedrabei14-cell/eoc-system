@@ -61,6 +61,7 @@ import {
   EQ_INTEL_EXTRA_TOASTS,
   unlockEarthquakeSound,
   playEarthquakeAlarm,
+  playEgyptRiskAlarm,
 } from './liveToast';
 import { showWorking, hideWorking, resetWorking, withWorking, installWorkingAuto, setWorkingSuppressed, WORKING_EVENTS } from './workingToast';
 
@@ -1953,7 +1954,7 @@ useEffect(() => {
       //    ثم return فوراً: لا يمر بمسار التوست العام فلا يتكرر الإشعار أبداً.
       if (e.event_type === 'eq_intel') {
         const eqMeta = (e.details && typeof e.details === 'object' && !Array.isArray(e.details)) ? e.details.earthquake : null;
-        if (eqMeta?.sound_alert) playEarthquakeAlarm();
+        if (eqMeta?.sound_alert) (eqMeta.sound_kind === 'egypt_risk' ? playEgyptRiskAlarm : playEarthquakeAlarm)();
         setToasts(prev => {
           const wid = `eqw-${e.event_id}`;
           if (prev.some(t => t.id === wid)) return prev;
@@ -2349,7 +2350,7 @@ useEffect(() => {
   //    - tab/type/id = الوجهة وصفّها، nonce = عداد يضمن إعادة الاشتعال لنفس الصف مرتين
   //    - id يقبل null (إشعار بلا entity_id) → تُفتح الصفحة فقط دون أي تتبع (سقوط آمن).
   const [focusTarget, setFocusTarget] = useState(null);
-  const EVENT_TAB_MAP = { mission: 'missions', local_news: 'local_news', global_disaster: 'global_disasters', earthquake: 'earthquakes', eq_intel: 'eq_intel', ai_news: 'ai_news', handover: 'handover', weather: 'weather', audit: 'audit', gov_contact: 'gov_contacts' };
+  const EVENT_TAB_MAP = { mission: 'missions', local_news: 'local_news', global_disaster: 'global_disasters', earthquake: 'earthquakes', eq_intel: 'eq_intel', ai_news: 'ai_news', handover: 'handover', weather: 'weather', audit: 'audit', gov_contact: 'gov_contacts', weather_intel: 'weather_intel' };
 
   // فتح الإشعار (توست أو جرس): تنقّل للصفحة، واطلب تتبّع الصف لو لنا معرف.
   const handleNotificationOpen = (n) => {
@@ -12977,6 +12978,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
       gusts: safeScalar(source.wind_gusts_kph),
       humidity: safeScalar(source.humidity_mean_pct),
       cloud: safeScalar(source.cloud_cover_mean_pct),
+      raw_json: isObject(source.raw_json) ? source.raw_json : {},
       precip_mm: safeScalar(source.precip_mm),
       precip_prob_pct: safeScalar(source.precip_prob_pct),
       wind_max_kph: safeScalar(source.wind_max_kph),
@@ -13502,7 +13504,11 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     humidity: { ar: 'الرطوبة النسبية', en: 'Relative Humidity', unit: '%' },
     humidity_mean_pct: { ar: 'الرطوبة النسبية', en: 'Relative Humidity', unit: '%' },
     cloud: { ar: 'الغطاء السحابي', en: 'Cloud Cover', unit: '%' },
-    cloud_cover_mean_pct: { ar: 'الغطاء السحابي', en: 'Cloud Cover', unit: '%' }
+    cloud_cover_mean_pct: { ar: 'الغطاء السحابي', en: 'Cloud Cover', unit: '%' },
+    dust: { ar: 'الغبار', en: 'Dust', unit: isAr ? 'ميكروغرام/م³' : 'µg/m³' },
+    pm25: { ar: 'تلوث الهواء PM2.5', en: 'PM2.5', unit: isAr ? 'ميكروغرام/م³' : 'µg/m³' },
+    wave: { ar: 'ارتفاع الموج', en: 'Wave Height', unit: isAr ? 'م' : 'm' },
+    flood: { ar: 'التصريف النهري (سيول)', en: 'River Discharge', unit: isAr ? 'م³/ث' : 'm³/s' }
   };
 
   const ANOMALY_DICT = {
@@ -13941,7 +13947,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                   {/* أ) بلاطات التوقعات المرصودة (Forecast Tiles) */}
                   <div>
                     <h4 className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider mb-3 flex items-center gap-1.5">🌤️ {T('التوقعات المرصودة ليوم الغد (Open-Meteo Forecast)', 'Next-Day Forecast Observations (Open-Meteo)')}</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('درجة الحرارة', 'Temperature')}</span><span>🌡️</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-red-400">{fc.tmax ?? '—'}°</span><span className="text-xs font-bold text-blue-400">/ {fc.tmin ?? '—'}°C</span></div>
@@ -13958,11 +13964,26 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                         <p className="text-[10px] text-[var(--faint)] mt-1">{T('الهبات:', 'Gusts:')} {fc.wind_gusts_kph ?? '—'} {isAr ? 'كم/س' : 'km/h'}</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('الغبار و PM2.5', 'Dust & PM2.5')}</span><span>🌪️</span></div>
+                        <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-orange-400">{fc.raw_json?.extra?.air?.dust_max ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">µg/m³</span></div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">PM2.5: {fc.raw_json?.extra?.air?.pm25_max ?? '—'} µg/m³</p>
+                      </div>
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('ارتفاع الموج', 'Wave Height')}</span><span>🌊</span></div>
+                        <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-sky-400">{fc.raw_json?.extra?.marine?.wave_height_max ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'م' : 'm'}</span></div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('للمحافظات الساحلية فقط', 'Coastal only')}</p>
+                      </div>
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
+                        <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('خطر السيول', 'Flood Risk')}</span><span>💧</span></div>
+                        <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-teal-400">{fc.raw_json?.extra?.flood?.river_discharge_max ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'م³/ث' : 'm³/s'}</span></div>
+                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('التصريف النهري المتوقع', 'Expected river discharge')}</p>
+                      </div>
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('الرطوبة النسبية', 'Humidity')}</span><span>💧</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-indigo-400">{fc.humidity_mean_pct ?? '—'}%</span></div>
                         <p className="text-[10px] text-[var(--faint)] mt-1">{fc.humidity_mean_pct >= 75 ? <span className="text-amber-400 font-bold">{T('رطوبة جوية مرتفعة', 'High Humidity')}</span> : T('متوسط اليوم', 'Daily mean')}</p>
                       </div>
-                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)] col-span-2 sm:col-span-1">
+                      <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('حالة السماء', 'Sky Condition')}</span><span>☁️</span></div>
                         <div className="text-sm font-black text-[var(--ink)] truncate">{getWmoDescription(fc.weather_code)}</div>
                         <p className="text-[10px] text-[var(--faint)] mt-1">{T('الغيوم:', 'Clouds:')} {fc.cloud_cover_mean_pct ?? 0}%</p>
@@ -13998,7 +14019,8 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                           ) : (
                             stats.map(s => {
                               const metricInfo = METRIC_DICT[s.metric] || { ar: s.metric, en: s.metric, unit: '' };
-                              const forecastVal = fc[s.metric];
+                              const EXTRA_FC = { dust: fc.raw_json?.extra?.air?.dust_max, pm25: fc.raw_json?.extra?.air?.pm25_max, wave: fc.raw_json?.extra?.marine?.wave_height_max, flood: fc.raw_json?.extra?.flood?.river_discharge_max };
+                              const forecastVal = fc[s.metric] ?? EXTRA_FC[s.metric];
                               const anomClass = anomalies[s.metric]?.category || anomalies[s.metric]?.class || 'normal';
                               const anomBadge = ANOMALY_DICT[anomClass] || ANOMALY_DICT.normal;
                               const isRecordBreak = (s.max !== null && forecastVal != null && forecastVal > s.max) || (s.min !== null && forecastVal != null && forecastVal < s.min);

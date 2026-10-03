@@ -220,3 +220,31 @@ export function shouldPurgeToast(t, now = Date.now(), exitMs = 320) {
   if (!t || !t.closing) return false;
   return now - (t.closingAt ?? 0) >= exitMs;
 }
+
+// 🇪🇬 صوت «خطر على مصر» — سيرين صاعدة/هابطة مميزة تماماً عن نغمة الزلزال العادية
+export function playEgyptRiskAlarm() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const t0 = ctx.currentTime;
+    // صعود ونزول مرتين — نمط سيرين واضح
+    osc.frequency.setValueAtTime(600, t0);
+    osc.frequency.linearRampToValueAtTime(1200, t0 + 0.5);
+    osc.frequency.linearRampToValueAtTime(600, t0 + 1.0);
+    osc.frequency.linearRampToValueAtTime(1200, t0 + 1.5);
+    osc.frequency.linearRampToValueAtTime(600, t0 + 2.0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.25, t0 + 0.1);
+    gain.gain.setValueAtTime(0.25, t0 + 1.8);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.2);
+    osc.start(t0);
+    osc.stop(t0 + 2.2);
+    setTimeout(() => { try { ctx.close(); } catch {} }, 2500);
+  } catch { /* الصوت لا يفشل الواجهة أبداً */ }
+}

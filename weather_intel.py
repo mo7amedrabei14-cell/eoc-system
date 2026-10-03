@@ -24,6 +24,7 @@ import uuid
 from datetime import datetime, timedelta
 from statistics import mean, median, stdev
 from zoneinfo import ZoneInfo
+import requests
 
 try:
     from dotenv import load_dotenv
@@ -37,6 +38,13 @@ SELECTED_AI_MODEL = None
 SELECTED_AI_MAX_TOKENS = None
 SELECTED_AI_API_KEY = None
 SELECTED_AI_BASE_URL = None
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+_http = requests.Session()
+_retry = Retry(total=3, backoff_factor=2, status_forcelist=[429, 500, 502, 503, 504])
+_http.mount("https://", HTTPAdapter(max_retries=_retry))
+
 
 
 def optional_positive_int(name):
@@ -68,6 +76,9 @@ SYSTEM_API_URL = os.environ.get(
 
 OPEN_METEO_FORECAST = "https://api.open-meteo.com/v1/forecast"
 OPEN_METEO_ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
+AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
+MARINE_URL = "https://marine-api.open-meteo.com/v1/marine"
+FLOOD_URL = "https://flood-api.open-meteo.com/v1/flood"
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_MODELS_URL = "https://api.anthropic.com/v1/models"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -90,7 +101,24 @@ METRIC_DEFS = {
     "humidity": {"title_ar": "متوسط الرطوبة",       "unit": "%",    "dir": "high", "forecast": "relative_humidity_2m_mean", "archive": "relative_humidity_2m_mean", "optional": False},
     "gusts":    {"title_ar": "هبات الرياح",         "unit": "كم/س", "dir": "high", "forecast": "wind_gusts_10m_max",      "archive": "wind_gusts_10m_max",   "optional": True},
     "cloud":    {"title_ar": "الغطاء السحابي",      "unit": "%",    "dir": "info", "forecast": "cloud_cover_mean",        "archive": None,                   "optional": True},
+    "dust":     {"title_ar": "الغبار",               "unit": "µg/m³", "dir": "high", "forecast": None, "archive": None, "optional": True},
+    "pm25":     {"title_ar": "تلوث الهواء PM2.5",    "unit": "µg/m³", "dir": "high", "forecast": None, "archive": None, "optional": True},
+    "wave":     {"title_ar": "ارتفاع الموج",         "unit": "م",     "dir": "high", "forecast": None, "archive": None, "optional": True},
+    "flood":    {"title_ar": "التصريف النهري (سيول)", "unit": "م³/ث",  "dir": "high", "forecast": None, "archive": None, "optional": True},
 }
+
+# 🌪️ الطبقات الإضافية — نفس شكل METRIC_DEFS (تاريخ: سيول 1984+ · موج 1996+ · PM2.5 2013+)
+EXTRA_METRIC_DEFS = {
+    "dust":  {"title_ar": "تركيز الغبار",      "unit": "µg/m³", "dir": "high"},
+    "pm25":  {"title_ar": "تلوث الهواء PM2.5", "unit": "µg/m³", "dir": "high"},
+    "wave":  {"title_ar": "ارتفاع الموج",      "unit": "م",     "dir": "high"},
+    "flood": {"title_ar": "التصريف النهري",    "unit": "م³/ث",  "dir": "high"},
+}
+
+def metric_def(m):
+    """قاموس موحد آمن — يشتغل مع المتريات الأساسية والإضافية بلا KeyError."""
+    return METRIC_DEFS.get(m) or EXTRA_METRIC_DEFS.get(m)
+
 
 WMO_LABELS = {
     0: ("سماء صافية", "Clear sky"), 1: ("غائم جزئيًا", "Mainly clear"), 2: ("غائم جزئيًا", "Partly cloudy"),
@@ -151,10 +179,9 @@ def window_dates(target_day, window, min_year=BACKFILL_MIN_YEAR):
     return out
 
 
-def http_get(url, headers=None, params=None, timeout=30):
-    """GET آمن مع check على النتيجة — يرمي على الفشل (لا silent)."""
-    import requests
-    r = requests.get(url, headers=headers or {}, params=params or {}, timeout=timeout)
+def http_get(url, headers=None, params=None, timeout=60):
+    """GET آمن — عبر جلسة الريتري: 3 محاولات تلقائية قبل أي فشل."""
+    r = _http.get(url, headers=headers or {}, params=params or {}, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
@@ -329,10 +356,11 @@ def fetch_forecast(lat, lon, target_day):
     params = {
         "latitude": lat, "longitude": lon,
         "daily": daily,
+        "hourly": "temperature_2m,precipitation,wind_speed_10m",
         "timezone": "Africa/Cairo",
         "start_date": str(target_day), "end_date": str(target_day),
     }
-    data = http_get(url, params=params, timeout=30)
+    data = http_get(url, params=params, timeout=60)
     daily_block = data.get("daily", {})
     fc = {
         "tmax": numeric(first(daily_block.get("temperature_2m_max"))),
@@ -345,8 +373,127 @@ def fetch_forecast(lat, lon, target_day):
         "cloud": numeric(first(daily_block.get("cloud_cover_mean"))),
         "weather_code": first(daily_block.get("weather_code")),
     }
+    # ⏰ ذروة الساعات: إمتى المطر/الرياح/الحرارة توصل القمة
+    hourly_block = data.get("hourly", {})
+    def _peak(key):
+        arr = hourly_block.get(key) or []
+        times = hourly_block.get("time") or []
+        bi, bv = None, None
+        for i, v in enumerate(arr):
+            if v is None:
+                continue
+            if bv is None or v > bv:
+                bi, bv = i, v
+        if bi is None:
+            return None, None
+        return round(bv, 1), (str(times[bi]).split("T")[-1] if bi < len(times) else None)
+    p_mm, p_t = _peak("precipitation")
+    w_k, w_t = _peak("wind_speed_10m")
+    _, t_t = _peak("temperature_2m")
+    fc["hourly"] = {"precip_peak_mm": p_mm, "precip_peak_time": p_t,
+                    "wind_peak_kph": w_k, "wind_peak_time": w_t, "tmax_time": t_t}
     return fc, data
 
+
+def fetch_extra_layers(lat, lon, target_day, hist_start=None):
+    """طبقات إضافية: قيم يوم الهدف + تاريخ حديث (من hist_start) — طلب واحد لكل طبقة.
+    يعيد (out, rows) — rows = صفوف تاريخية لجدول weather_extra_history."""
+    out = {}
+    rows = []
+    end_s = str(target_day)
+    start_s = str(hist_start) if hist_start else end_s
+    try:
+        aq = http_get(AIR_QUALITY_URL, params={
+            "latitude": lat, "longitude": lon, "hourly": "pm2_5,dust",
+            "timezone": "Africa/Cairo", "start_date": start_s, "end_date": end_s,
+        }, timeout=60)
+        hrs = aq.get("hourly", {})
+        pm_by_day, du_by_day = {}, {}
+        for t, pmv, duv in zip(hrs.get("time") or [], hrs.get("pm2_5") or [], hrs.get("dust") or []):
+            d = str(t)[:10]
+            if pmv is not None:
+                pm_by_day[d] = max(pm_by_day.get(d, -1e9), float(pmv))
+            if duv is not None:
+                du_by_day[d] = max(du_by_day.get(d, -1e9), float(duv))
+        out["air"] = {"pm25_max": round(pm_by_day[end_s], 1) if end_s in pm_by_day else None,
+                      "dust_max": round(du_by_day[end_s], 1) if end_s in du_by_day else None}
+        for d, v in pm_by_day.items():
+            if d < end_s:
+                rows.append({"record_date": d, "layer": "pm25", "value": round(v, 2)})
+        for d, v in du_by_day.items():
+            if d < end_s:
+                rows.append({"record_date": d, "layer": "dust", "value": round(v, 2)})
+    except Exception:
+        out["air"] = None
+    try:
+        mr = http_get(MARINE_URL, params={
+            "latitude": lat, "longitude": lon, "daily": "wave_height_max",
+            "timezone": "Africa/Cairo", "start_date": start_s, "end_date": end_s,
+        }, timeout=60)
+        dly = mr.get("daily", {})
+        wv = {}
+        for d, v in zip(dly.get("time") or [], dly.get("wave_height_max") or []):
+            if v is not None:
+                wv[str(d)] = float(v)
+        out["marine"] = {"wave_height_max": round(wv[end_s], 2) if end_s in wv else None}
+        for d, v in wv.items():
+            if d < end_s:
+                rows.append({"record_date": d, "layer": "wave", "value": round(v, 3)})
+    except Exception:
+        out["marine"] = None
+    try:
+        fl = http_get(FLOOD_URL, params={
+            "latitude": lat, "longitude": lon, "daily": "river_discharge",
+            "start_date": start_s, "end_date": end_s,
+        }, timeout=60)
+        dly = fl.get("daily", {})
+        fv = {}
+        for d, v in zip(dly.get("time") or [], dly.get("river_discharge") or []):
+            if v is not None:
+                fv[str(d)] = float(v)
+        out["flood"] = {"river_discharge_max": round(fv[end_s], 1) if end_s in fv else None}
+        for d, v in fv.items():
+            if d < end_s:
+                rows.append({"record_date": d, "layer": "flood", "value": round(v, 2)})
+    except Exception:
+        out["flood"] = None
+    return out, rows
+
+
+def fetch_extra_history(location_id, target_day, window):
+    """خط مرجعي 30 سنة للطبقات الإضافية من قاعدة البيانات."""
+    rows = http_get(
+        f"{SYSTEM_API_URL}/api/weather-intel/extra-history",
+        headers=api_headers(),
+        params={"location_id": location_id, "target_date": str(target_day), "window": window},
+        timeout=30,
+    )
+    return rows.get("rows", []) if isinstance(rows, dict) else (rows or [])
+
+
+def build_extra_baseline(db_rows, recent_rows, target_day, window):
+    """إحصاءات النافذة (±window عبر السنين) لكل طبقة إضافية — نفس منهجية compute_statistics."""
+    by_layer_date = {}
+    for row in (db_rows or []):
+        if row.get("value") is None:
+            continue
+        by_layer_date.setdefault(row["layer"], {})[str(row["record_date"])] = float(row["value"])
+    for row in (recent_rows or []):
+        if row.get("value") is None:
+            continue
+        by_layer_date.setdefault(row["layer"], {})[str(row["record_date"])] = float(row["value"])
+    window_set = {str(d) for d in window_dates(target_day, window)}
+    stats = {}
+    for layer, by_date in by_layer_date.items():
+        vals = [by_date[d] for d in sorted(window_set) if d in by_date]
+        if not vals:
+            continue
+        dates = sorted(d for d in window_set if d in by_date)
+        st = compute_statistics(vals, window, dates[0], dates[-1],
+                                history_source=f"open-meteo-{layer}")
+        st["layer"] = layer
+        stats[layer] = st
+    return stats
 
 def first(arr):
     if not arr:
@@ -366,7 +513,7 @@ def fetch_archive_recent(location_id, lat, lon, start_day, end_day):
         "daily": daily, "timezone": "Africa/Cairo",
         "start_date": str(start_day), "end_date": str(end_day),
     }
-    data = http_get(OPEN_METEO_ARCHIVE, params=params, timeout=30)
+    data = http_get(OPEN_METEO_ARCHIVE, params=params, timeout=60)
     blk = data.get("daily", {})
     n = len(blk.get("time", []) or [])
     out = []
@@ -525,6 +672,26 @@ def detect_hazards(fc, config):
         elif int(wcode) in f_codes:
             out.append({"code": "fog", "level": "low", "title_ar": "ضباب",
                         "detail_ar": f"التوقعات تشير إلى {label} (رمز WMO {wcode}) — فئة فعلية من التوقعات فقط، لا خط تاريخي", "unit": ""})
+    # 🌪️ طبقات إضافية: غبار/تلوث + أمواج + سيول (عتبات قابلة للضبط من weather_intel_config)
+    air = fc.get("air") or {}
+    v = cfg_f(config, "hazard.dust_high_ugm3", 80.0)
+    if air.get("dust_max") is not None and air["dust_max"] >= v:
+        out.append({"code": "dust", "level": "medium", "title_ar": "غبار مرتفع",
+                    "detail_ar": f"تركيز الغبار المتوقع {air['dust_max']} µg/m³ يبلغ/يتجاوز {v:g}", "unit": "µg/m³"})
+    v = cfg_f(config, "hazard.pm25_high_ugm3", 55.0)
+    if air.get("pm25_max") is not None and air["pm25_max"] >= v:
+        out.append({"code": "pm25", "level": "medium", "title_ar": "تلوث هواء (PM2.5)",
+                    "detail_ar": f"PM2.5 المتوقع {air['pm25_max']} µg/m³ يبلغ/يتجاوز {v:g}", "unit": "µg/m³"})
+    mr = fc.get("marine") or {}
+    v = cfg_f(config, "hazard.wave_high_m", 2.5)
+    if mr.get("wave_height_max") is not None and mr["wave_height_max"] >= v:
+        out.append({"code": "high_waves", "level": "medium", "title_ar": "أمواج عالية",
+                    "detail_ar": f"ارتفاع الموج المتوقع {mr['wave_height_max']} م يبلغ/يتجاوز {v:g}", "unit": "م"})
+    fl = fc.get("flood") or {}
+    v = cfg_f(config, "hazard.flood_discharge_m3s", 400.0)
+    if fl.get("river_discharge_max") is not None and fl["river_discharge_max"] >= v:
+        out.append({"code": "flood_risk", "level": "medium", "title_ar": "خطر سيول",
+                    "detail_ar": f"التصريف النهري {fl['river_discharge_max']} م³/ث يبلغ/يتجاوز {v:g}", "unit": "م³/ث"})
     return out
 
 
@@ -761,6 +928,8 @@ def build_ai_input(loc, fc, stats, frequencies, anomalies, hazards, target_day):
         "frequencies": frequencies,
         "anomalies": anomalies,
         "hazards": hazards,
+        "extra_layers": {"air_quality": fc.get("air"), "marine": fc.get("marine"),
+                         "flood": fc.get("flood"), "hourly_peaks": fc.get("hourly")},
     }
 
 
@@ -877,6 +1046,8 @@ def run_pipeline():
     ok_count = err_count = 0
     error_details = {}
     history_rows_to_ingest = []   # صفوف الأرشيف الحديث (best-effort) تُثبَّت في نفس التشغيل
+    extra_history_rows_all = []   # صفوف تاريخ الطبقات الإضافية (تُحفظ في weather_extra_history)
+    extra_recent_by_loc = {}      # آخر 7 أيام لكل موقع — تدخل في الخط المرجعي
     snapshots, statistics, frequencies, assessments = [], [], [], []
 
     for idx, loc in enumerate(locations, 1):
@@ -902,6 +1073,18 @@ def run_pipeline():
 
             # — التوقعات (مصدر خارجي) — أي فشل = تخطي الموقع بلا تقييم زائف —
             fc, raw = fetch_forecast(loc.get("latitude"), loc.get("longitude"), target_day)
+            # 🌪️ الطبقات الإضافية: قيم يوم الهدف + تاريخ حديث (آخر 7 أيام) في نفس الطلب
+            try:
+                _extra, _extra_rows = fetch_extra_layers(
+                    loc.get("latitude"), loc.get("longitude"), target_day,
+                    hist_start=run_date - timedelta(days=6))
+                fc.update(_extra)
+                extra_history_rows_all.extend(
+                    [dict(r, location_id=lid, data_source="open-meteo") for r in _extra_rows])
+                extra_recent_by_loc[lid] = [dict(r, location_id=lid) for r in _extra_rows]
+            except Exception:
+                fc["air"] = fc["marine"] = fc["flood"] = None
+                extra_recent_by_loc[lid] = []
 
             # — الخط المرجعي من DB (+ أيام الأرشيف الحديثة المكتملة) —
             try:
@@ -921,6 +1104,26 @@ def run_pipeline():
                 dir_ = METRIC_DEFS[m]["dir"]
                 anomalies[m] = classify_anomaly(fc.get(m), st, direction=dir_, min_samples=MIN_SAMPLES)
             hazards = detect_hazards(fc, config)
+
+            # 🌪️ الخط المرجعي + الشذوذ للطبقات الإضافية: تاريخ 30 سنة من القاعدة
+            #    + آخر 7 أيام → نفس منهجية المئينات بالظبط (P10/P25/P75/P90)
+            EXTRA_LAYERS = (
+                ("dust", "air", "dust_max"),
+                ("pm25", "air", "pm25_max"),
+                ("wave", "marine", "wave_height_max"),
+                ("flood", "flood", "river_discharge_max"),
+            )
+            try:
+                _extra_db = fetch_extra_history(lid, target_day, HISTORY_WINDOW_DAYS)
+            except Exception:
+                _extra_db = []
+            extra_stats = build_extra_baseline(_extra_db, extra_recent_by_loc.get(lid, []), target_day, HISTORY_WINDOW_DAYS)
+            for _layer, _grp, _key in EXTRA_LAYERS:
+                _st = extra_stats.get(_layer)
+                if not _st:
+                    continue
+                stats[_layer] = _st
+                anomalies[_layer] = classify_anomaly((fc.get(_grp) or {}).get(_key), _st, direction="high", min_samples=MIN_SAMPLES)
 
             # — تقييم الذكاء الاصطناعي (فشله لا يمنع حفظ النتائج الحتمية) —
             ai_parsed, ai_raw, ai_error = None, "", None
@@ -951,6 +1154,11 @@ def run_pipeline():
                 "humidity_mean_pct": fc.get("humidity"), "cloud_cover_mean_pct": fc.get("cloud"),
                 "weather_code": fc.get("weather_code"),
             })
+            try:
+                raw["extra"] = {"air": fc.get("air"), "marine": fc.get("marine"),
+                                "flood": fc.get("flood"), "hourly": fc.get("hourly")}
+            except Exception:
+                pass
             for m, st in stats.items():
                 statistics.append({
                     "location_id": lid, "target_date": str(target_day), "metric": m,
@@ -991,6 +1199,7 @@ def run_pipeline():
         "snapshots": snapshots, "statistics": statistics,
         "frequencies": frequencies, "assessments": assessments,
         "history_rows": history_rows_to_ingest,
+        "extra_history_rows": extra_history_rows_all,
     }
     if not send_ingest(payload):
         return 1
