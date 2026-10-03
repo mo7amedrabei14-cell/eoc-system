@@ -15137,14 +15137,12 @@ export function WorkingToast() {
   }, []);
   if (!text) return null;
   return (
-    <div className="fixed bottom-5 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 z-[200] pointer-events-none animate-fade-in-up">
-      <div className="working-pill flex items-center justify-center gap-2.5 ps-3 pe-8 py-1 min-w-[300px] text-base font-extrabold text-[var(--accent)] [text-shadow:0_0_10px_currentColor]">
-        <span className="working-spinbox" aria-hidden="true">
-          <svg viewBox="0 0 50 50" className="working-spin">
-            <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" strokeDasharray="64 62" />
-          </svg>
-        </span>
-        {text}
+    <div className="fixed bottom-5 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 z-[200] pointer-events-none">
+      <div className="working-pill">
+        <span className="working-orbit" aria-hidden="true"><i /><i /></span>
+        <span className="working-text">{text}</span>
+        <span className="working-dots" aria-hidden="true"><i /><i /><i /></span>
+        <span className="working-line" aria-hidden="true" />
       </div>
     </div>
   );
