@@ -9106,30 +9106,37 @@ def _eq_intel_engine_cycle(reason: str = "engine"):
     يُستخدم من: خيط المحرك الدوري (30 ثانية) + نقطة tick الخارجية (كرن أي استضافة).
     نفس النواة بالحرف: فريد (source, external_id) + cutoff + مرآة الكتالوج + بث لحظي.
 
-    🛡️ قفل القيادة: على الاتصال المباشر نستخدم pg_try_advisory_lock لمنع تكرار
-       الاستطلاع بين النسخ. على transaction pooling (PgBouncer) تُتخطى القفل الجلسي
-       بامتياز (الأقفال الجلسية غير مضمونة هناك) — والـ dedupe يحمي البيانات دائماً.
+    🛡️ قفل القيادة: قفل على مستوى *المعاملة* (xact) نُبقي معاملته مفتوحة طوال الدورة.
+       يعمل مع الاتصال المباشر ومع PgBouncer (transaction pooling) معاً — بعكس الأقفال
+       الجلسية التي tx pooling يكسرها. أي خطأ في القفل لا يوقف الرصد (dedupe يحمي).
     """
     import time as _t
     import requests as _requests
 
+    # 🛡️ قفل القيادة — يعمل في كل الطبقات (اتصال مباشر أو PgBouncer transaction pooling).
+    #    نستخدم قفلاً على مستوى *المعاملة* (xact) ونُبقي معاملته مفتوحة طوال الدورة:
+    #      • اتصال مباشر  → القفل محجوز حتى rollback ⇒ حماية كاملة بين النسخ.
+    #      • PgBouncer tx → المعاملة المفتوحة تثبّت اتصال خادم واحد، فيبقى القفل محجوزاً
+    #        حتى rollback ⇒ نفس الحماية (بعكس الأقفال الجلسية التي تكسرها tx pooling).
+    #    أي خطأ في أخذ القفل لا يوقف الرصد أبداً (الـ dedupe يبقى الصمام الأخير).
     lock_conn = None
-    acquired = True
     try:
-        if _is_pooled(os.getenv("DATABASE_URL") or ""):
-            acquired = True   # transaction pooling: الأقفال الجلسية غير مضمونة — dedupe يحمي
-        else:
-            try:
-                lock_conn = get_connection()
-                with lock_conn.cursor() as _lc:
-                    _lc.execute("SELECT pg_try_advisory_lock(%s);", (_EQ_ENGINE_LOCK_KEY,))
-                    acquired = bool(_lc.fetchone()[0])
-            except Exception as _lock_err:
-                print(f"EQ engine leader lock unavailable ({str(_lock_err)[:90]}) — proceeding (dedupe-safe)")
-                lock_conn = None
-                acquired = True
-        if not acquired:
-            return {"ok": True, "skipped": True, "reason": "another engine holds the leader lock"}
+        try:
+            lock_conn = get_connection()
+            with lock_conn.cursor() as _lc:
+                _lc.execute("SELECT pg_try_advisory_xact_lock(%s);", (_EQ_ENGINE_LOCK_KEY,))
+                acquired = bool(_lc.fetchone()[0])
+            if not acquired:
+                # تُترك المعاملة بلا commit ⇒ يتحرر القفل بالإغلاق التلقائي، بلا تسريب.
+                return {"ok": True, "skipped": True, "reason": "another engine holds the leader lock"}
+        except Exception as _lock_err:
+            print(f"EQ engine leader lock unavailable ({str(_lock_err)[:90]}) — proceeding (dedupe-safe)")
+            if lock_conn is not None:
+                try:
+                    lock_conn.close()
+                except Exception:
+                    pass
+            lock_conn = None
 
         # 🚀 دمج التغذيتين معاً: all_hour (الأحدث) + all_day (لتقاط الأحداث اللي
         #    USGS نشرها متأخراً — بره نافذة الساعة لكن داخل نافذة التجاهل 180 دقيقة).
@@ -9170,24 +9177,36 @@ def _eq_intel_engine_cycle(reason: str = "engine"):
             print(f"EQ engine({reason}): feed={feed_events} new={inserted} in {_t.time()-_t0:.1f}s")
         return {"ok": True, "feed_events": feed_events, "inserted": inserted}
     finally:
+        # 🔓 القفل على مستوى المعاملة (xact): لا حاجة لفتحه يدوياً — أي rollback/commit
+        #    (أو إغلاق الاتصال) يحرّره تلقائياً ⇒ لا قفل عالق ولا تسريب اتصال.
         if lock_conn is not None:
-            try:
-                if acquired:
-                    with lock_conn.cursor() as _lc:
-                        _lc.execute("SELECT pg_advisory_unlock(%s);", (_EQ_ENGINE_LOCK_KEY,))
-            except Exception:
-                pass
             try:
                 lock_conn.close()
             except Exception:
                 pass
 
 
+def _is_serverless_runtime() -> bool:
+    """هل هذه العملية تعمل على استضافة Serverless/Function بلا عملية دائمة؟
+
+    📌 لا يمكن الاعتماد على thread هنا: على Vercel/AWS Lambda تُجمَّد الخيوط بعد
+    انتهاء الاستجابة، فلا تعمل إلا لحظة واحدة. والأسوأ أن وجود خيط «حي» يجعل نقطة
+    tick تُرجع skipped — فيتوقف الرصد كلياً في الإنتاج. لذا نمنع إقلاعه هناك ونُبقي
+    محرّك الاستطلاع على cron خارجي (الوضع المرجعي المُتحقَّق منه فعلياً).
+    """
+    if (os.getenv("EOC_EQ_LOCAL_ENGINE", "").strip().lower() in ("1", "true", "yes", "on")):
+        return False   # تفعيل صريح من المستخدم ⇒ يُحترم (استضافة دائمة)
+    if (os.getenv("EOC_SERVERLESS", "").strip().lower() in ("1", "true", "yes", "on")):
+        return True
+    return bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+
+
+_EQ_INTEL_ENGINE_THREAD = None
+
+
 def _eq_intel_local_engine_loop():
+    """🖥️ حلقة الرصد الدوري — تعمل فقط على استضافة تضمن استمرار العملية."""
     import time as _time
-    if (os.getenv("EOC_EQ_LOCAL_ENGINE", "1").strip().lower() in ("0", "false", "off")):
-        print("EQ local engine disabled (EOC_EQ_LOCAL_ENGINE=0)")
-        return
     _schema_ready.wait(timeout=60)  # ننتظر جاهزية الجداول قبل أول دورة
     while True:
         try:
@@ -9197,15 +9216,28 @@ def _eq_intel_local_engine_loop():
         _time.sleep(EQ_INTEL_POLL_SECONDS)
 
 
-# 🛡️ إقلاع مرة واحدة فقط لكل عملية — الخيط هو محرك الدورية على الاستضافة الدائمة
-_EQ_INTEL_ENGINE_THREAD = None
-if _EQ_INTEL_ENGINE_THREAD is None or not _EQ_INTEL_ENGINE_THREAD.is_alive():
+def _start_eq_local_engine() -> bool:
+    """يُقلع خيط الرصد الدوري — فقط على استضافة تضمن استمرار العملية.
+
+    يُرجع True لو اشتغل. على Serverless يُتخطى بالكامل عمداً (انظر _is_serverless_runtime)
+    حتى لا يُجمَّد الخيط ولا يخدع نقطة tick فيوقف الرصد كله."""
+    global _EQ_INTEL_ENGINE_THREAD
+    if _is_serverless_runtime():
+        print("EQ local engine NOT started (serverless runtime — external cron is the single source)")
+        return False
+    if (os.getenv("EOC_EQ_LOCAL_ENGINE", "1").strip().lower() in ("0", "false", "off")):
+        print("EQ local engine disabled (EOC_EQ_LOCAL_ENGINE=0)")
+        return False
     _EQ_INTEL_ENGINE_THREAD = threading.Thread(
         target=_eq_intel_local_engine_loop,
         name="eoc-eq-intel-engine",
         daemon=True,
     )
     _EQ_INTEL_ENGINE_THREAD.start()
+    return True
+
+
+_start_eq_local_engine()
 
 
 @app.post("/api/earthquake-intel/engine/tick")

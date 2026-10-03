@@ -9,6 +9,6 @@ const ENV = import.meta.env || {};
 
 export const BASE = ENV.VITE_API_BASE !== undefined
   ? ENV.VITE_API_BASE
-  : (ENV.DEV ? '' : 'https://eoc-system-qaol.vercel.app/');
+  : (ENV.DEV ? '' : 'https://eoc-system-qaol.vercel.app');
 
 export default BASE;
