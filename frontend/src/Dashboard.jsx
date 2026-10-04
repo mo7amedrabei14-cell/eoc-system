@@ -1950,11 +1950,13 @@ useEffect(() => {
       }
 
       // 🚨 استخبارات الزلازل: الباك إند يبث فقط ما يستحق الإشعار (≥4 ريختر أو قريب من مصر
-      //    أو خطورة ≥25) — والصوت حصراً لما فوق 4 ريختر (sound_alert من السيرفر).
+      //    أو خطورة ≥25) — الصوت: سيرين خطر مصر للقريب منها (بأي قوة)، ونغمة الزلزال القوي للباقي ≥4.
       //    ثم return فوراً: لا يمر بمسار التوست العام فلا يتكرر الإشعار أبداً.
       if (e.event_type === 'eq_intel') {
         const eqMeta = (e.details && typeof e.details === 'object' && !Array.isArray(e.details)) ? e.details.earthquake : null;
-        if (eqMeta?.sound_alert) (eqMeta.sound_kind === 'egypt_risk' ? playEgyptRiskAlarm : playEarthquakeAlarm)();
+        // 🏷️ صنف الإشعار من السيرفر: egypt_risk (خطر على مصر) / strong_quake (≥4) / watch
+        const eqKind = String(eqMeta?.notify_kind || (eqMeta?.sound_kind === 'egypt_risk' ? 'egypt_risk' : ''));
+        if (eqMeta?.sound_alert) (eqKind === 'egypt_risk' ? playEgyptRiskAlarm : playEarthquakeAlarm)();
         setToasts(prev => {
           const wid = `eqw-${e.event_id}`;
           if (prev.some(t => t.id === wid)) return prev;
@@ -1963,6 +1965,8 @@ useEffect(() => {
             eventId: e.event_id,
             user: 'نظام الرصد الزلزالي',
             action: String(e.action || 'زلزال جديد'),
+            // 🎨 إشعار الزلزال القوي ≠ إشعار خطر مصر: أيقونة + صنف مميزان لكل حالة
+            eqKind,
             details: eqMeta
               ? [`${eqMeta.magnitude != null ? eqMeta.magnitude : '؟'} ريختر`, eqMeta.place || ''].filter(Boolean).join(' — ')
               : (typeof e.details === 'string' ? e.details : ''),
@@ -2544,12 +2548,15 @@ useEffect(() => {
 
         {[...visibleToasts, ...closingToasts].map(toastItem => {
           const vis = notifyVisual(toastItem.event_type);
+          // 🚨 خطر مصر = نبرة حمراء صريحة تختلف عن الأصفر الافتراضي للزلازل
+          const eqTone = toastItem.event_type === 'eq_intel' && toastItem.eqKind === 'egypt_risk' ? 'danger' : null;
+          const effTone = eqTone || vis.tone;
           const age = formatEventAge(toastItem.created_at, language);
-          const shape = vis.tone === 'warn' ? 'sig-shape-plate'
-            : (vis.tone === 'accent' || vis.tone === 'quake') ? 'sig-shape-frame'
-            : vis.tone === 'ok' ? 'sig-shape-seal'
+          const shape = effTone === 'warn' ? 'sig-shape-plate'
+            : (effTone === 'accent' || effTone === 'quake') ? 'sig-shape-frame'
+            : effTone === 'ok' ? 'sig-shape-seal'
             : '';
-          const force = (vis.tone === 'accent' || vis.tone === 'quake') ? 3 : (vis.tone === 'warn' || vis.tone === 'ai') ? 2 : vis.tone === 'ok' ? 0 : 1;
+          const force = eqTone === 'danger' ? 3 : (effTone === 'accent' || effTone === 'quake') ? 3 : (effTone === 'warn' || vis.tone === 'ai') ? 2 : effTone === 'ok' ? 0 : 1;
           const headline = toastItem.isAi
             ? (language === 'en' ? 'New AI signal detected' : 'الذكاء الاصطناعي وجد خبراً جديداً')
             : toastItem.action;
@@ -2557,7 +2564,8 @@ useEffect(() => {
             <SignalNote
               key={toastItem.id}
               item={toastItem}
-              tone={vis.tone}
+              tone={effTone}
+              glyphOverride={eqTone === 'danger' ? '⚠' : null}
               shape={shape}
               force={force}
               glyph={<LiveGlyph kind={vis.kind} />}
@@ -4173,9 +4181,38 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
   const missionsFetchSeqRef = useRef(0);
 
   const [missionsLoaded, setMissionsLoaded] = useState(false); // 🛡️ «لا توجد مهام» لا تُعرض قبل نجاح الجلب فعلاً
+  // 🩹 علاج «لازم أطلع وأدخل تاني عشان الداتا تحمل»:
+  //    كانت 4 محاولات ثم استسلام صامت ⇒ لو فشل الجلب الأول (serverless بارد/503 عابر) بقيت
+  //    السكلتونز للأبد حتى يخرج المستخدم ويدخل تاني. دلوقتي بعد استنفاد المحاولات نجدّد الجلب
+  //    تلقائياً كل 5 ثوانٍ ما دامت لا توجد بيانات بعد (والتاب المخفي ننتظر عودته — الاستطلاع
+  //    الذكي بيستدعي عند focus/visibilitychange). بعد ~دقيقة فشل متواصل نعرض رسالة خطأ +
+  //    زر «إعادة المحاولة» بدل سكلتونز صامتة بلا نهاية.
+  const missionsLoadedRef = useRef(false);   // نسخة ref من «وصلت داتا؟» تُقرأ من داخل المؤقتات
+  const missionsHealTimerRef = useRef(null);
+  const missionsHealRoundRef = useRef(0);
+  const [missionsLoadFailed, setMissionsLoadFailed] = useState(false);
 
-  const fetchMissions = async (silent = false, _retried = 0) => {
+  const scheduleMissionsHeal = (seq) => {
+    if (seq !== missionsFetchSeqRef.current) return;  // طلب أحدث تولّى المهمة أصلاً
+    if (missionsLoadedRef.current) return;            // وصلت بيانات ⇒ لا حاجة
+    if (missionsHealTimerRef.current) return;         // جولة إعادة محاولة مجدولة بالفعل
+    if (document.hidden) return;                      // مخفي ⇒ العودة تكفي (الاستطلاع الذكي)
+    if (missionsHealRoundRef.current >= 4) {          // ~دقيقة محاولات ⇒ رسالة + زر يدوي
+      setMissionsLoadFailed(true);
+      return;
+    }
+    missionsHealRoundRef.current += 1;
+    missionsHealTimerRef.current = setTimeout(() => {
+      missionsHealTimerRef.current = null;
+      fetchMissions(true, 0, true);
+    }, 5000);
+  };
+
+  const fetchMissions = async (silent = false, _retried = 0, _heal = false) => {
     const seq = ++missionsFetchSeqRef.current;
+    if (missionsHealTimerRef.current) { clearTimeout(missionsHealTimerRef.current); missionsHealTimerRef.current = null; }
+    // محاولة جديدة من طرف المستخدم/المؤقت/الحدث ⇒ ميزانية المحاولات تتجدد
+    if (!_heal) { missionsHealRoundRef.current = 0; setMissionsLoadFailed(false); }
     if (!silent) setIsLoading(true);
     const token = getStoredAccessToken();
     try {
@@ -4197,7 +4234,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       if (!res.ok && _retried < 4) {
         await new Promise(r => setTimeout(r, 900 * (_retried + 1)));
         if (seq !== missionsFetchSeqRef.current) return; // طلب أحدث حل محلنا
-        return fetchMissions(silent, _retried + 1);
+        return fetchMissions(silent, _retried + 1, _heal);
       }
       if (res.ok) {
         const data = await res.json();
@@ -4205,23 +4242,37 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
         if (seq !== missionsFetchSeqRef.current) return;
         setMissionsList(data);
         setMissionsLoaded(true);
+        missionsLoadedRef.current = true;
+        missionsHealRoundRef.current = 0;
+        setMissionsLoadFailed(false);
+      } else {
+        scheduleMissionsHeal(seq); // استُنفدت المحاولات دون نجاح ⇒ لا استسلام صامت
       }
     } catch {
       // 🛡️ فشل اتصال: نفس سياسة إعادة المحاولة — الصفحة لا تُظهر «لا مهام» بسبب انقطاع عابر
       if (_retried < 4) {
         await new Promise(r => setTimeout(r, 900 * (_retried + 1)));
         if (seq !== missionsFetchSeqRef.current) return;
-        return fetchMissions(silent, _retried + 1);
+        return fetchMissions(silent, _retried + 1, _heal);
       }
-      // Keep the Dashboard shell mounted when mission data is unavailable.
+      scheduleMissionsHeal(seq); // استُنفدت المحاولات دون نجاح ⇒ لا استسلام صامت
     }
     finally { if (!silent) setIsLoading(false); } // التصفير دائماً للطلبات غير الصامتة — لا هيكل تحميل عالق
   };
 
-  useEffect(() => { fetchMissions(); }, []);
+  useEffect(() => {
+    fetchMissions();
+    // 🧹 تنظيف مؤقت التعافي عند خروج التاب (يمنع محاولة معلّقة بعد unmount)
+    return () => { if (missionsHealTimerRef.current) clearTimeout(missionsHealTimerRef.current); };
+  }, []);
 
   // 🔎 بحث باسم المشارك/المتطوع — إعادة جلب من السيرفر بعد توقف الكتابة (read-only filter، لا يلمس أي منطق آخر)
+  //    ⚡ بدون جلب مكرر عند الربط نفسه: كان يُطلق طلباً كاملاً إضافياً بعد 350ms في كل فتح
+  //    للصفحة، يُلغى فيه رد الطلب الأول (تسلسل seq) ⇒ هدر نصف النقل وتأخير ظهور الداتا.
+  const lastSearchedTermRef = useRef(''); // القيمة التي فُعّل لها جلب فعلاً (تبدأ = الحالة الأولية)
   useEffect(() => {
+    if (participantSearch === lastSearchedTermRef.current) return; // نفس القيمة (خاصة عند الربط) ⇒ لا طلب
+    lastSearchedTermRef.current = participantSearch;
     const t = setTimeout(() => { fetchMissions(true); }, 350);
     return () => clearTimeout(t);
   }, [participantSearch]);
@@ -6524,6 +6575,20 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
             {(isLoading || !missionsLoaded) ? (
               <tr>
                 <td colSpan="16" className="p-6">
+                  {missionsLoadFailed ? (
+                    // 🩹 فشل متواصل بعد كل محاولات التعافي التلقائي ⇒ رسالة واضحة + إعادة محاولة
+                    //    يدوية بدل سكلتونز صامتة أجبرت المستخدم على الخروج وإعادة الدخول
+                    <div className="flex flex-col items-center justify-center gap-3 py-4 text-center">
+                      <span className="text-sm text-[var(--muted)]">تعذّر تحميل قائمة المهام — تحقق من الاتصال أو حالة السيرفر ثم أعد المحاولة.</span>
+                      <button
+                        type="button"
+                        onClick={() => fetchMissions()}
+                        className="px-4 py-2 rounded-xl bg-[var(--accent)] text-white font-bold text-sm hover:opacity-90 transition-opacity"
+                      >
+                        🔄 إعادة المحاولة
+                      </button>
+                    </div>
+                  ) : (
                   <div className="space-y-3 animate-fade-in">
                     {[0,1,2,3,4].map(i => (
                       <div key={i} className="flex items-center gap-3 px-2">
@@ -6536,6 +6601,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
                       </div>
                     ))}
                   </div>
+                  )}
                 </td>
               </tr>
             ) :
@@ -8944,6 +9010,21 @@ function WeatherForecastView({ branches = [], isOwner, isJoker, userRole, lang =
   const [customAlert, setCustomAlert] = useState(null);
   // 🔒 قفل الحفظ (متزامن) لمنع الضغط المزدوج
   const [savingWeather, setSavingWeather] = useState(false);
+  // 🪞 مرجع حي لحالة الحفظ — يستخدمه مراقب إعادة الإرسال التلقائي (خارج نطاق flush)
+  const savingWeatherRef = useRef(false);
+  savingWeatherRef.current = savingWeather;
+  // 🔄 نبضة إعادة إرسال بعد عودة الدخول: زيادة العداد تستدعي جولة إعادة شاملة لما يرتد الحساب
+  const [pendingRetryTick, setPendingRetryTick] = useState(0);
+  useEffect(() => {
+    if (pendingRetryTick === 0) return;
+    const t = setTimeout(() => {
+      if (document.hidden) return;
+      if (submitLockRef.current || savingWeatherRef.current) return;
+      if (countPending(pendingRowsRef.current) === 0) return;
+      flushRef.current({ retryAll: true, manual: false });
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [pendingRetryTick]);
   const submitLockRef = useRef(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [clearAllCode, setClearAllCode] = useState('');
@@ -9204,6 +9285,9 @@ const visibleBranches = (
     const token = sessionStorage.getItem('access_token');
     let savedCount = 0;
     let failedGroups = 0;
+    // 🧭 سبب فشل كل مجموعة — الرسالة للمستخدم تصف بالسبب الحقيقي بدل رسالة غامضة
+    const failureReasons = { auth: 0, server: 0, network: 0 };
+    try {
     for (const group of groups) {
       // 🛡️ حفظ جزئي بالحرف: تُرسَل *الخلايا التي لمّسها المستخدم فقط* (مخزن pending)،
       //    ولا تُرسَل أي خانة لم تُلمَس إطلاقاً ⇒ السيرفر يحفظ عليها قيمتها المخزَّنة.
@@ -9260,11 +9344,16 @@ const visibleBranches = (
           touchedRef.current = new Set([...touchedRef.current].filter(bid => !confirmed.has(String(bid))));
         } else {
           failedGroups += 1;
+          if (res.status === 401) failureReasons.auth += 1; else failureReasons.server += 1;
         }
-      } catch { failedGroups += 1; }
+      } catch { failedGroups += 1; failureReasons.network += 1; }
     }
-    submitLockRef.current = false;
-    setSavingWeather(false);
+    } finally {
+      // 🛡️ ضمانة مطلقة: مهما حدث (فشل/استثناء/return) — القفل يُفتح والحالة تُنظّف دائماً.
+      //    (كان القفل يعلق لو حصل استثناء خارج الحلقة فيبقى الزر معطلاً للأبد)
+      submitLockRef.current = false;
+      setSavingWeather(false);
+    }
     if (savedCount) {
       loadDaily(true);
       if (manual) {
@@ -9272,9 +9361,26 @@ const visibleBranches = (
         setCustomAlert(lang === 'ar' ? `✅ تم حفظ التوقعات بنجاح — ${savedCount} محافظة` : `✅ Saved — ${savedCount} governorates`);
       }
     }
-    if (failedGroups) setCustomAlert(lang === 'ar'
-      ? '⚠️ فيه أرقام لسه ما اتأكدش حفظها — هي محفوظة عندك وستُعاد تلقائياً أول ما الاتصال يرجع.'
-      : '⚠️ Some values are not confirmed yet — kept on your device and will be retried automatically.');
+    if (failedGroups) {
+      // 🧭 رسالة السبب الحقيقي — بنفس الرسالة القديمة عند الشبكة (وعد بالإعادة التلقائية صار صحيحاً الآن)
+      if (failureReasons.auth > 0) {
+        setCustomAlert(lang === 'ar'
+          ? '🔐 انتهت صلاحية الجلسة — سلّمك دخولك من جديد وأرقامك محفوظة على جهازك وسنكمل إرسالها تلقائياً فور عودة الدخول.'
+          : '🔐 Session expired — sign in again; your values are kept on this device and will be sent automatically after login.');
+        setPendingRetryTick(t => t + 1);        // يشغّل مراقب إعادة الإرسال بعد الدخول
+        try { window.dispatchEvent(new Event('eoc:weather-auth-blocked')); } catch { /* تجاهل */ }
+      } else if (failureReasons.network > 0) {
+        setCustomAlert(lang === 'ar'
+          ? '⚠️ فيه أرقام لسه ما اتأكدش حفظها (مشكلة اتصال) — هي محفوظة عندك وستُعاد تلقائياً أول ما الاتصال يرجع.'
+          : '⚠️ Some values are not confirmed yet (network) — kept on your device and will be retried automatically.');
+      } else {
+        setCustomAlert(lang === 'ar'
+          ? '⚠️ فيه أرقام لسه ما اتأكدش حفظها (السيرفر رفض مؤقتاً) — محفوظة عندك وستُعاد تلقائياً خلال دقائق.'
+          : '⚠️ Some values are not confirmed yet (server) — kept on your device and will be retried automatically.');
+      }
+    } else if (retryAll && !manual && typeof window !== 'undefined') {
+      try { window.dispatchEvent(new Event('eoc:weather-pending-flushed')); } catch { /* تجاهل */ }
+    }
   };
   // 🪞 مرجع حي لدالة الحفظ (المؤقتات بتستخدم آخر نسخة دايماً بلا مشاكل إغلاق قديم)
   const flushRef = useRef(flushWeatherSave);
@@ -9287,6 +9393,21 @@ const visibleBranches = (
       if (pendingWriteTimerRef.current) clearTimeout(pendingWriteTimerRef.current);
       saveWeatherPending(pendingRowsRef.current);
     };
+    // 🔄 إعادة إرسال تلقائية حقيقية (كانت الرسالة تعد بها ولم تكن موجودة):
+    //    رجوع النت · عودة التاب · دورية هادئة (كل دقيقتين فقط لو فيه معلّق والتاب ظاهر)
+    //    ⛔ لا إرسال والتاب مخفي — ولا أي إرسال وهو مفتوح مربوط بمستخدم (أرقام المستخدم أولاً)
+    const retryUnconfirmed = () => {
+      if (document.hidden) return;
+      if (submitLockRef.current || savingWeatherRef.current) return;
+      if (countPending(pendingRowsRef.current) === 0) return;
+      flushRef.current({ retryAll: true, manual: false });
+    };
+    const onOnlineRetry = () => { if (!document.hidden) retryUnconfirmed(); };
+    const onVisibleRetry = () => { if (!document.hidden) retryUnconfirmed(); };
+    const retryTimer = setInterval(retryUnconfirmed, 120000);
+    window.addEventListener('online', onOnlineRetry);
+    document.addEventListener('visibilitychange', onVisibleRetry);
+    window.addEventListener('eoc:server-recovered', onOnlineRetry);
     const syncFromServer = async () => {
       try {
         const remote = await syncWeatherPendingFromServer();
@@ -9307,6 +9428,10 @@ const visibleBranches = (
     document.addEventListener('visibilitychange', flushToDisk);
     return () => {
       clearInterval(t);
+      clearInterval(retryTimer);
+      window.removeEventListener('online', onOnlineRetry);
+      document.removeEventListener('visibilitychange', onVisibleRetry);
+      window.removeEventListener('eoc:server-recovered', onOnlineRetry);
       window.removeEventListener('eoc:server-recovered', syncFromServer);
       window.removeEventListener('pagehide', flushToDisk);
       document.removeEventListener('visibilitychange', flushToDisk);
@@ -15038,7 +15163,7 @@ const ACTION_SIGNALS = {
 //   عرض بالكامل: صفر منطق أعمال — نفس الـprops ونفس الـhandlers.
 function SignalNote({
   item, tone, shape, force, glyph, monogram, age, kicker, headline, detail,
-  lifeMs, isAi, paused, onDismiss, onOpen, onPause, onResume, language,
+  lifeMs, isAi, paused, onDismiss, onOpen, onPause, onResume, language, glyphOverride,
 }) {
   const [phase, setPhase] = useState('seed'); // seed → open → compact
   const openTimer = useRef(null);
@@ -15075,7 +15200,7 @@ function SignalNote({
       onBlur={release}
     >
       <span className="sig-thread" aria-hidden="true" />
-      <span className="sig-seed" aria-hidden="true">{glyph}</span>
+      <span className="sig-seed" aria-hidden="true">{glyphOverride || glyph}</span>
 
       <div className="sig-body">
         <div className="sig-top">

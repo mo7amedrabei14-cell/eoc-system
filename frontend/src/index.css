@@ -3471,6 +3471,11 @@ select.field {
 .sig-tone-quake  { --sig-c: #facc15; }
 .sig-tone-quake.sig-shape-frame{ border-color: color-mix(in srgb, #facc15 55%, var(--border-strong));
   box-shadow: 0 0 18px rgba(250, 204, 21, 0.22); }
+/* 🚨 نبرة خطر مصر: أحمر إنذاري صريح — تختلف تماماً عن الأصفر الافتراضي للزلازل */
+.sig-tone-danger { --sig-c: #ef4444; }
+.sig-tone-danger.sig-shape-frame{ border-color: color-mix(in srgb, #ef4444 60%, var(--border-strong));
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.35); }
+.sig-tone-danger .sig-kicker { color: #ef4444; }
 
 /* ── سابعاً: الرصيف العلوي اللي بتظهر فيه كل الإشارات ── */
 .sig-loom, .sig-dock-layer{

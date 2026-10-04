@@ -2,6 +2,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Depends, HTTPException, status, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 import asyncio
@@ -840,6 +841,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ⚡ ضغط GZip للردود الكبيرة (JSON يعلى 1KB يتكبّص — زي قائمة المهام ~397 صف × 17 عمود
+#    وكانت تنتقل بلا ضغط لأن Vercel لا يضغط ردود Python تلقائياً). تأثيره على الاستجابة
+#    المُدركة كبير على أي اتصال بطيء، وعلى السيرفر مقفول عند مستوى الاستجابة نفسها.
+#    ملاحظات مهمة:
+#      • يُضاف بعد CORS ⇒ GZip هو الأعلى في المتراكم فيضغط الرد النهائي وترويسات CORS تبقى
+#        سليمة (GZip ينسخ الترويسات ولا يمسّ content-length القديم).
+#      • starlette يستثني text/event-stream افتراضياً ⇒ SSE (نبضات 4 ثوانٍ) لا يتأثر إطلاقاً.
+#      • الردود الأصغر من 1KB تمرّ كما هي بدون أي تكلفة.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2848,20 +2859,47 @@ def get_missions(
     p_search_like = f"%{p_search}%" if p_search else None
     try:
         with connection.cursor() as cursor:
+            # ⚡ تحسين سرعة: كانت 5 استعلامات فرعية مترابطة (correlated subqueries)
+            #    تُنفَّذ لكل صف من الصفوف (~397 مهمة × 5 ≈ 2000 فحص فردي = 0.86 ثانية).
+            #    بقينا نجمّع mission_participants مرة واحدة وmission_vehicles مرة واحدة
+            #    في CTE ثم نعمل JOIN — النتيجة وترتيب الأعمدة (0..23) وشكل الرد مطابقون حرفياً.
+            #    شروط العدّادات/الفلاتر مساوية للاستعلام القديم بالضبط:
+            #      vol/non_vol/participants = نفس شرط roster_active والنوع،
+            #      team_codes = نفس شرط (team_code != '' AND roster_active) مع DISTINCT،
+            #      drivers/plates = بدون فلتر (يتجاهل NULL مثل STRING_AGG القديم).
+            #    STRING_AGG على مجموعة فارغة = NULL (كان NULL أيضاً ⇒ نفس سلوك "-"/"لا توجد سيارات").
             base_query = """
-                SELECT 
-                    m.mission_id, m.mission_code, m.mission_classification, m.created_at, m.mission_name, 
-                    (SELECT COUNT(*) FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.participant_type = 'volunteer' AND p.roster_active = true) as vol_count,
-                    (SELECT COUNT(*) FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.participant_type = 'non_volunteer' AND p.roster_active = true) as non_vol_count,
-                    (SELECT STRING_AGG(DISTINCT team_code::text, ' - ') FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.team_code != '' AND p.roster_active = true) as team_codes,
+                WITH p_agg AS (
+                    SELECT mission_id,
+                           COUNT(*) FILTER (WHERE participant_type = 'volunteer' AND roster_active = true) AS vol_count,
+                           COUNT(*) FILTER (WHERE participant_type = 'non_volunteer' AND roster_active = true) AS non_vol_count,
+                           COUNT(*) FILTER (WHERE roster_active = true) AS participants_count,
+                           STRING_AGG(DISTINCT team_code::text, ' - ') FILTER (WHERE team_code != '' AND roster_active = true) AS team_codes
+                    FROM mission_participants
+                    GROUP BY mission_id
+                ),
+                v_agg AS (
+                    SELECT mission_id,
+                           STRING_AGG(driver_name::text, ' - ') AS drivers,
+                           STRING_AGG(vehicle_number::text, ' - ') AS plates
+                    FROM mission_vehicles
+                    GROUP BY mission_id
+                )
+                SELECT
+                    m.mission_id, m.mission_code, m.mission_classification, m.created_at, m.mission_name,
+                    COALESCE(p.vol_count, 0) as vol_count,
+                    COALESCE(p.non_vol_count, 0) as non_vol_count,
+                    p.team_codes,
                     m.responsible_person,
-                    (SELECT STRING_AGG(driver_name::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as drivers,
-                    (SELECT STRING_AGG(vehicle_number::text, ' - ') FROM mission_vehicles v WHERE v.mission_id = m.mission_id) as plates,
+                    v.drivers,
+                    v.plates,
                     m.status, b.branch_name, m.mission_type, m.mission_location, m.data_source, m.departure_date, m.completion_date, m.notes, m.exit_date,
                     m.team_code, m.creation_datetime, m.closed_at,
-                    (SELECT COUNT(*) FROM mission_participants p WHERE p.mission_id = m.mission_id AND p.roster_active = true) as participants_count
+                    COALESCE(p.participants_count, 0) as participants_count
                 FROM missions m
                 LEFT JOIN branches b ON m.branch_id = b.branch_id
+                LEFT JOIN p_agg p ON p.mission_id = m.mission_id
+                LEFT JOIN v_agg v ON v.mission_id = m.mission_id
             """
             
             # 🔎 فلتر اسم المشارك (قراءة فقط): EXISTS داخل المكان الإقليمي نفسه —
@@ -8720,6 +8758,7 @@ EQ_INTEL_HIST_MINMAG = 4.5        # الحد الأدنى للكتالوج ال�
 EQ_NOTIFY_MIN_MAG = 4.0
 EQ_NOTIFY_PROXIMITY_KM = 1500
 EQ_NOTIFY_RISK_SCORE = 25
+EQ_EGYPT_SIREN_SCORE = 75   # 🇪🇬 سيرين «خطر حقيقي على مصر» = درجة حرجة فقط (≥ 75)
 EQ_AUDIT_MIN_MAG = 4.0
 EQ_AUDIT_PROXIMITY_KM = 1500
 EQ_AUDIT_RISK_SCORE = 25
@@ -9166,10 +9205,10 @@ def _eq_intel_ingest_events(events, source="usgs"):
                     or dist_val <= EQ_NOTIFY_PROXIMITY_KM
                     or score_val >= EQ_NOTIFY_RISK_SCORE
                 )
-                # 🔊 الصوت مع كل إشعار + نوعه: "quake" للقوة ≥4 (النغمة العادية)
-                #    و"egypt_risk" للقريب من مصر/الخطير عليها بأي قوة (سيرين مختلفة)
-                sound = should_notify
-                sound_kind = "quake" if mag_val >= 4.0 else "egypt_risk"
+                # 🔊 ثلاث طبقات: "quake" للقوة ≥4 (النغمة العادية)، و"egypt_risk"
+                #    للخطر الحقيقي على مصر فقط (درجة ≥ 75 = حرجة)، والباقي توست صامت.
+                sound = (mag_val >= EQ_NOTIFY_MIN_MAG or score_val >= EQ_EGYPT_SIREN_SCORE)
+                sound_kind = "egypt_risk" if score_val >= EQ_EGYPT_SIREN_SCORE else "quake"
                 status_label = _eq_intel_status_label(mag)
                 cursor.execute("""
                     INSERT INTO earthquake_intel
