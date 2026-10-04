@@ -9294,6 +9294,9 @@ const visibleBranches = (
     let failedGroups = 0;
     // 🧭 سبب فشل كل مجموعة — الرسالة للمستخدم تصف بالسبب الحقيقي بدل رسالة غامضة
     const failureReasons = { auth: 0, server: 0, network: 0 };
+    // 🛡️ درع النطاق: أي إرسال (تلقائي/إعادة) لا يرفع إلا محافظات نطاق المستخدم الحالي —
+    //    بقايا طابور من حساب آخر على نفس المتصفح لا تُرسَل فلا يعود 403 أبداً.
+    const allowedIds = new Set(visibleBranches.map(b => Number(b.id)));
     try {
     for (const group of groups) {
       // 🛡️ حفظ جزئي بالحرف: تُرسَل *الخلايا التي لمّسها المستخدم فقط* (مخزن pending)،
@@ -9303,6 +9306,7 @@ const visibleBranches = (
       // sentByBranch: بالضبط ما خرج على الشبكة، لكل خلية على حدة — هو الذي يبرر المسح لاحقاً.
       const sentByBranch = {};
       const bodyRows = Object.entries(group.rowsByBranch || {})
+        .filter(([bid]) => allowedIds.has(Number(bid)))
         .map(([bid, row]) => {
           const o = { branch_id: Number(bid), shift: group.shift };
           const sent = {};
