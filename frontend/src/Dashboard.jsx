@@ -1116,15 +1116,17 @@ const branchIcon = new L.DivIcon({
   iconAnchor: [8, 8]
 });
 
-// 💡 دالة تحويل الوقت لـ 12 ساعة (ص/م) في ملفات الإكسيل
+// 💡 دالة تحويل الوقت لـ 12 ساعة في ملفات الإكسيل — بنفس شكل الإدخال: 09:45 AM
 const format12H = (timeStr) => {
   if (!timeStr) return '';
-  let [h, m] = timeStr.split(':');
-  if (!h || !m) return timeStr;
-  h = parseInt(h, 10);
-  const ampm = h >= 12 ? 'م' : 'ص';
-  h = h % 12 || 12;
-  return `${h}:${m} ${ampm}`;
+  const parts = String(timeStr).split(':');
+  if (parts.length < 2) return timeStr;
+  const h = parseInt(parts[0], 10);
+  if (isNaN(h)) return timeStr;
+  const m = String(parts[1] || '').padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${String(h12).padStart(2, '0')}:${m} ${ampm}`;
 };
 
 // 💡 توحيد تنسيق "تاريخ + وقت" (متطلب #4/#8): العرض دائماً DD/MM/YYYY والوقت 12 ساعة
@@ -1133,6 +1135,64 @@ const format12H = (timeStr) => {
 // القاعدة العالمية: العرض 12 ساعة و DD/MM/YYYY — لا تُفهم DD/MM/YYYY أبداً كـ MM/DD/YYYY.
 // التفويض لوحدة timeutils.js — نقاط العرض كلها تمر من هنا (تعديل واحد يغيّر الكل).
 const formatDateTime = (val) => formatDateTime12(val);
+
+// ⏱️ مدة الإكسيل بصيغة ساعة:دقيقة:ثانية (0:02:00) — تقرأ الصيغة العربية المخزّنة
+//    («0 ساعة و 2 دقيقة») وتحوّلها — للإكسيل فقط، العرض في النظام زي ما هو.
+const durHMS = (s) => {
+  const str = String(s || '').trim();
+  if (!str) return '';
+  if (/^\d{1,3}:\d{2}(:\d{2})?$/.test(str)) return str;
+  const days = parseInt((str.match(/(\d+)\s*يوم/) || [])[1] || 0, 10);
+  const hrs  = parseInt((str.match(/(\d+)\s*ساعة/) || [])[1] || 0, 10);
+  const mins = parseInt((str.match(/(\d+)\s*دقيقة/) || [])[1] || 0, 10);
+  if (!days && !hrs && !mins && !/دقيقة|ساعة|يوم/.test(str)) return str;
+  const total = days * 1440 + hrs * 60 + mins;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}:00`;
+};
+
+// 📊 صف إكسيل موحّد (الأخبار المحلية + الرصد الآلي) — نفس الترتيب بالحرف،
+//    العمود دايماً موجود ولو قيمته مش متوفرة يطلع فاضي.
+const buildNewsRow = (n) => ({
+  "التاريخ": formatDateTime(n.incident_date),
+  "الشهر": n.incident_month || '',
+  "وصف الحادث": n.incident_description || '',
+  "نوع الخبر": n.news_type || '',
+  "ناشر الخبر": n.news_publisher || '',
+  "اسم الشارع": n.street_name || '',
+  "المنطقة": n.area_name || '',
+  "خطوط الطول والعرض": (n.latitude != null && n.longitude != null && n.latitude !== '' && n.longitude !== '') ? `${n.latitude}, ${n.longitude}` : '',
+  "المحافظة": n.governorate || '',
+  "الابلاغ": n.is_reported == null ? '' : (n.is_reported ? 'نعم' : 'لا'),
+  "توقيت ارسال الخبر": format12H(n.report_time),
+  "حالة الرد": n.is_responded == null ? '' : (n.is_responded ? 'نعم' : 'لا'),
+  "رد الفرع": n.branch_response_text || '',
+  "توقيت الرد": format12H(n.response_time),
+  "حالة توقيت الرد": n.response_time_points ?? '',
+  "زمن الرد": durHMS(n.response_duration),
+  "الاستجابة": n.is_field_response == null ? '' : (n.is_field_response ? 'نعم' : 'لا'),
+  "توقيت التحرك للاستجابة الميدانية من الفرع": format12H(n.movement_time),
+  "المدة بين الابلاغ و التحرك": durHMS(n.report_to_movement_duration),
+  "حالة المدة بين الابلاغ و التحرك": n.movement_points ?? '',
+  "توقيت الاستجابة الميدانية (اول متطوع يوصل)": format12H(n.field_arrival_time),
+  "حالة الاستجابة": n.field_response_points ?? '',
+  "زمن بدء الاستجابة": durHMS(n.report_to_arrival_duration),
+  "نوع الاستجابة": n.intervention_type || '',
+  "الفرع المتدخل": (n.is_field_response && n.intervening_branch) ? n.intervening_branch : '',
+  "اسم الاستمارة": n.mission_form_name || '',
+  "عدد المشاركين اذا تم الاستجابة": n.is_field_response ? (n.participants_count ?? '') : '',
+  "نوع تدخل الهلال الأحمر المصري": n.red_crescent_intervention || '',
+  "اسم المستشفى": n.hospital_name || '',
+  "عدد المصابين": n.injured_count ?? '',
+  "عدد الوفيات": n.deaths_count ?? '',
+  "تطورات الخبر": n.news_updates || '',
+  "لينك الخبر": n.news_link || '',
+  "اسم مدخل الخبر": n.data_entry_name || '',
+  "ملاحظات": n.notes || '',
+  "عرض": n.latitude ?? '',
+  "طول": n.longitude ?? '',
+  "المسافة بين مكان الحادث و الفرع": n.distance_km || ''
+});
+
 
 /* ════════════════════════════════════════════════════════════════
    خريطة أساس حسب الثيم — World_Light_Gray في الفاتح / World_Dark_Gray في الداكن
@@ -8391,8 +8451,8 @@ const [nd, setNd] = useState({
   if (actualTravelMins !== null && expectedTravelMins !== null) {
     const timeDiff = actualTravelMins - expectedTravelMins;
     if (timeDiff <= -15) fieldPoints = 7;
-    else if (timeDiff <= 0) fieldPoints = 5;
-    else if (timeDiff <= 15) fieldPoints = 3;
+    else if (timeDiff <= 15) fieldPoints = 5;
+    else if (timeDiff <= 30) fieldPoints = 3;
     else fieldPoints = 1;
   }
 
@@ -8421,6 +8481,7 @@ const [nd, setNd] = useState({
     if (!nd.incident_description) return setCustomAlert("عفواً، برجاء إدخال وصف الحادث لتوثيقه.");
     if (!nd.news_type) return setCustomAlert("عفواً، يجب تحديد نوع الخبر من القائمة.");
     if (!nd.governorate) return setCustomAlert("عفواً، يجب تحديد المحافظة التي وقع بها الحادث.");
+    if (!nd.data_entry_name || String(nd.data_entry_name).trim() === '') return setCustomAlert("عفواً، اسم مدخل الخبر إلزامي — برجاء إدخال الاسم قبل الحفظ.");
     
     if (nd.is_reported && !nd.report_time) {
       return setCustomAlert("لقد أشرت إلى أنه (تم الإبلاغ)!\nبرجاء إدخال توقيت إرسال الخبر لحساب مؤشرات الأداء بشكل صحيح.");
@@ -8543,33 +8604,13 @@ const [nd, setNd] = useState({
   };
   const handleExportExcel = async () => {
     if (newsList.length === 0) return setCustomAlert("لا توجد أخبار للتصدير حالياً.");
-    const newsRows = filteredNews.map(n => ({
-      "التاريخ": formatDateTime(n.incident_date), "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
-      "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": n.governorate || '',
-      "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(n.report_time), "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
-      "توقيت الرد": format12H(n.response_time), "حالة توقيت الرد": n.response_time_points || 0, "زمن الرد": n.response_duration || '',
-      "الاستجابة": n.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": format12H(n.movement_time), "المدة بين الابلاغ و التحرك": n.report_to_movement_duration || '',
-      "حالة المدة بين الابلاغ و التحرك": n.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": format12H(n.field_arrival_time), "حالة الاستجابة": n.field_response_points || 0,
-      "الزمن المتخذ لبدء الاستجابة": n.report_to_arrival_duration || '', "نوع الاستجابة": n.intervention_type || '', "الفرع المتدخل": n.intervening_branch || '',
-      "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
-      "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
-    }));
+    const newsRows = filteredNews.map((n) => buildNewsRow(n));
     try { await exportWorkbook([{ name: 'سجل الأخبار', ...gridFromRows(newsRows) }], `سجل_الأخبار_المحلية_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
   // تصدير خبر واحد — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
   const handleExportSingleNews = async (n) => {
-    const newsRow = [{
-      "التاريخ": formatDateTime(n.incident_date), "الشهر": n.incident_month || '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "ناشر الخبر": n.news_publisher || '',
-      "اسم الشارع": n.street_name || '', "المنطقة": n.area_name || '', "المحافظة": n.governorate || '',
-      "الابلاغ": n.is_reported ? 'نعم' : 'لا', "توقيت ارسال الخبر": format12H(n.report_time), "حالة الرد": n.is_responded ? 'نعم' : 'لا', "رد الفرع": n.branch_response_text || '',
-      "توقيت الرد": format12H(n.response_time), "حالة توقيت الرد": n.response_time_points || 0, "زمن الرد": n.response_duration || '',
-      "الاستجابة": n.is_field_response ? 'نعم' : 'لا', "توقيت التحرك للاستجابة الميدانية من الفرع": format12H(n.movement_time), "المدة بين الابلاغ و التحرك": n.report_to_movement_duration || '',
-      "حالة المدة بين الابلاغ و التحرك": n.movement_points || 0, "توقيت الاستجابة الميدانية (اول متطوع يوصل)": format12H(n.field_arrival_time), "حالة الاستجابة": n.field_response_points || 0,
-      "الزمن المتخذ لبدء الاستجابة": n.report_to_arrival_duration || '', "نوع الاستجابة": n.intervention_type || '', "الفرع المتدخل": n.intervening_branch || '',
-      "اسم الاستمارة": n.mission_form_name || '', "عدد المشاركين": n.participants_count || 0, "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
-      "تطورات الخبر": n.news_updates || '', "لينك الخبر": n.news_link || '', "اسم مدخل الخبر": n.data_entry_name || '', "ملاحظات": n.notes || '', "طول المسافة بين مكان الحادث و الفرع": n.distance_km || ''
-    }];
+    const newsRow = [buildNewsRow(n)];
     try { await exportWorkbook([{ name: 'تفاصيل الخبر', ...gridFromRows(newsRow) }], `خبر_${n.area_name || 'محلي'}_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الخبر بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
@@ -8593,7 +8634,7 @@ const [nd, setNd] = useState({
         <StatCard title="تم الإبلاغ عنها" value={filteredNews.filter(n => n.is_reported).length} color="text-purple-400" />
         <StatCard title="بلاغات تم الرد عليها" value={filteredNews.filter(n => n.is_responded).length} color="text-blue-400" />
         <StatCard title="استجابة ميدانية (تحرك)" value={filteredNews.filter(n => n.is_field_response).length} color="text-green-500" />
-        <StatCard title="متوسط نقاط الاستجابة" value={filteredNews.length ? Math.round(filteredNews.reduce((a,b)=>a+b.field_response_points,0)/filteredNews.length) : 0} color="text-[var(--data)]" />
+        <StatCard title="متوسط نقاط الاستجابة" value={(() => { const withResp = filteredNews.filter(n => n.is_field_response && Number(n.field_response_points) > 0); return withResp.length ? Math.round(withResp.reduce((a,b)=>a+(Number(b.field_response_points)||0),0)/withResp.length) : 0; })()} color="text-[var(--data)]" />
       </div>
 
       <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
@@ -11435,7 +11476,7 @@ const [clearAllCode, setClearAllCode] = useState('');
       "عدد المصابين": d.injured_count || 0,
       "عدد الوفيات": d.deaths_count || 0,
       "عدد المفقودين": d.missing_count || 0,
-      "تدخلات الجمعيات ": d.national_societies_interventions || '',
+      "تدخلات الجمعيات الوطنية": d.national_societies_interventions || '',
       "لينك الخبر": d.news_link || '',
       "تطورات الخبر": d.news_updates || '',
       "اسم مدخل الخبر": d.data_entry_name || '',
@@ -12657,7 +12698,8 @@ const [clearAllCode, setClearAllCode] = useState('');
           const res = await fetch(`${BASE}/api/earthquakes/global/bulk`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(parsedData)
           });
-          if (res.ok) { setCustomAlert(`تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); }
+          const bulkData = await res.json().catch(() => ({}));
+          if (res.ok) { setCustomAlert(bulkData.message || `تم استيراد ${parsedData.length} زلزال عالمي بنجاح من الشيت!`); fetchEarthquakes(); }
           else { setCustomAlert("حدث خطأ أثناء رفع الشيت للسيرفر."); setIsLoading(false); }
         } catch { setCustomAlert("خطأ في الاتصال بالسيرفر!"); setIsLoading(false); }
       }
@@ -14426,15 +14468,48 @@ const [clearAllCode, setClearAllCode] = useState('');
 
   const handleEdit = (n) => { setForm({...n}); setIsModalOpen(true); };
 
+    // 📤 صف بإعمدة الكوارث العالمية (للرصد الآلي — أخبار عالمية)
+  const buildAiGlobalRow = (n) => ({
+    "التاريخ": formatDateTime(n.incident_date),
+    "الشهر": n.incident_month || getMonthName(n.incident_date) || '',
+    "الخبر": n.incident_description || '',
+    "الدولة": n.governorate || n.country || '',
+    "نوع الكارثة": n.news_type || '',
+    "المناطق المتأثرة من الكارثة": n.area_name || n.affected_areas || '',
+    "المناطق المتوقعة الخطر": n.at_risk_areas || '',
+    "المصدر": n.news_publisher || '',
+    "عدد المصابين": n.injured_count ?? '',
+    "عدد الوفيات": n.deaths_count ?? '',
+    "عدد المفقودين": n.missing_count ?? '',
+    "تدخلات الجمعيات الوطنية": n.national_societies_interventions || '',
+    "لينك الخبر": n.news_link || '',
+    "تطورات الخبر": n.news_updates || '',
+    "اسم مدخل الخبر": n.data_entry_name || '',
+    "ملاحظات": n.notes || ''
+  });
+
+  // 📤 تصدير محلي فقط — نفس أعمدة سجل الأخبار المحلية (buildNewsRow) على الأخبار المحلية
+  const handleExportLocalExcel = async () => {
+    const base = filterDate ? dateFilteredNews : aiNewsList;
+    const sourceList = base.filter(n => (n.news_scope || 'خبر عالمي') === 'خبر محلي');
+    if (sourceList.length === 0) return setCustomAlert("لا توجد أخبار محلية في الفترة المعروضة للتصدير.");
+    try { await exportWorkbook([{ name: 'الأخبار المحلية', ...gridFromRows(sourceList.map((n) => buildNewsRow(n))) }], `الرصد_الآلي_محلي_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الأخبار المحلية بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+  };
+
+  // 📤 تصدير عالمي فقط — أعمدة الكوارث العالمية على الأخبار العالمية
+  const handleExportGlobalExcel = async () => {
+    const base = filterDate ? dateFilteredNews : aiNewsList;
+    const sourceList = base.filter(n => (n.news_scope || 'خبر عالمي') === 'خبر عالمي');
+    if (sourceList.length === 0) return setCustomAlert("لا توجد أخبار عالمية في الفترة المعروضة للتصدير.");
+    try { await exportWorkbook([{ name: 'الكوارث العالمية', ...gridFromRows(sourceList.map((n) => buildAiGlobalRow(n))) }], `الرصد_الآلي_عالمي_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير الأخبار العالمية بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
+  };
+
+
   const handleExportAllExcel = async () => {
     // 📅 التصدير الشامل يتبع فلتر التاريخ المعروض: يوم محدد → بيانات هذا اليوم فقط، بدون فلتر → كل السجلات
     const sourceList = filterDate ? dateFilteredNews : aiNewsList;
     if (sourceList.length === 0) return setCustomAlert("لا يوجد داتا لتصديرها.");
-    const aiNewsRows = sourceList.map(n => ({
-      "التاريخ": formatDateTime(n.incident_date), "الشهر": getMonthName(n.incident_date) || '', "وقت رصد الخبر": n.observed_at ? formatDateTime(n.observed_at) : '', "وصف الحادث": n.incident_description || '', "نوع الخبر": n.news_type || '', "النطاق": n.news_scope || 'خبر عالمي', "ناشر الخبر": n.news_publisher || '',
-      "المحافظة": n.governorate || '', "اسم المستشفى": n.hospital_name || '', "عدد المصابين": n.injured_count || 0, "عدد الوفيات": n.deaths_count || 0,
-      "تطورات الخبر (التقرير)": n.news_updates || '', "لينك الخبر": n.news_link || ''
-    }));
+    const aiNewsRows = sourceList.map((n) => buildNewsRow(n));
     try { await exportWorkbook([{ name: 'سجل الرصد الآلي', ...gridFromRows(aiNewsRows) }], `سجل_الذكاء_الاصطناعي_${filterDate || todayFileDate()}.xlsx`); setCustomAlert("تم تصدير السجل بنجاح!"); } catch { setCustomAlert("حدث خطأ أثناء التصدير."); }
   };
 
@@ -14734,6 +14809,8 @@ const totalAiCountries = new Set(
             {isOwner && (
               <>
                 <button onClick={handleExportAllExcel} className="bg-[var(--surface-3)] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[var(--surface-4)] shrink-0 justify-center"><ExcelIcon /> تصدير السجل</button>
+                <button onClick={handleExportLocalExcel} data-tip="تصدير الأخبار المحلية فقط — بنفس أعمدة سجل الأخبار المحلية" className="bg-[var(--surface-3)] text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[var(--surface-4)] shrink-0 justify-center"><ExcelIcon /> تصدير محلي</button>
+                <button onClick={handleExportGlobalExcel} data-tip="تصدير الأخبار العالمية فقط — بنفس أعمدة سجل الكوارث العالمية" className="bg-[var(--surface-3)] text-cyan-400 border border-cyan-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[var(--surface-4)] shrink-0 justify-center"><ExcelIcon /> تصدير عالمي</button>
                 <button onClick={handleManualScanTrigger} disabled={isScanning} className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 justify-center transition-all ${isScanning ? 'bg-purple-600/50 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'}`}>
                   {isScanning ? <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري المسح...</> : <><AIIcon className="w-4 h-4"/> إطلاق الرادار</>}
                 </button>

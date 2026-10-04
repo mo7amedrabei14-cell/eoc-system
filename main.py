@@ -6808,16 +6808,38 @@ def add_global_eqs_bulk(eqs: List[GlobalEqModel], credentials: HTTPAuthorization
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
+            # 🛡️ منع التكرار: بصمة (تاريخ + الدقيقة + الموقع) — المكرر من ملف سابق أو
+            #    داخل نفس الملف يُتجاهل، والجديد فقط يُدرج.
+            seen = set()
+            inserted = 0
             for eq in eqs:
+                _lat = round(eq.latitude, 1) if eq.latitude is not None else None
+                _lon = round(eq.longitude, 1) if eq.longitude is not None else None
+                _t = (eq.time or '')[:5]  # HH:MM — يتسامح مع اختلاف الثواني بين الملفات
+                fp = (eq.date, _t, _lat, _lon)
+                if fp in seen:
+                    continue
+                seen.add(fp)
+                cursor.execute("""
+                    SELECT 1 FROM global_earthquakes
+                    WHERE date = %s
+                      AND SUBSTRING(COALESCE(time, ''), 1, 5) = %s
+                      AND ROUND(COALESCE(latitude::numeric, 0), 1) = COALESCE(%s::numeric, 0)
+                      AND ROUND(COALESCE(longitude::numeric, 0), 1) = COALESCE(%s::numeric, 0)
+                    LIMIT 1
+                """, (eq.date, _t, _lat, _lon))
+                if cursor.fetchone():
+                    continue
                 cursor.execute("""
                     INSERT INTO global_earthquakes (date, month, time, country, magnitude, depth_km, region, status, longitude, latitude)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude))
-            try: create_audit_log(cursor, user_id, "رفع سجل زلازل", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"قام برفع ملف زلازل عالمية يحتوي على {len(eqs)} سجل"})
+                inserted += 1
+            try: create_audit_log(cursor, user_id, "رفع سجل زلازل", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"قام برفع ملف زلازل عالمية: {inserted} جديد من {len(eqs)} صف (المكرر اتتجاهل)"})
             except Exception: pass
-            _emit_live(cursor, event_type="earthquake", action="رفع سجل زلازل", actor_user_id=user_id, entity_id=None, details={"action_text": f"تم رفع ملف زلازل عالمية يحتوي على {len(eqs)} سجل"})
+            _emit_live(cursor, event_type="earthquake", action="رفع سجل زلازل", actor_user_id=user_id, entity_id=None, details={"action_text": f"تم رفع ملف زلازل عالمية: {inserted} جديد من {len(eqs)} صف"})
             connection.commit()
-            return {"message": f"تم إضافة {len(eqs)} زلزال بنجاح"}
+            return {"message": f"تم إضافة {inserted} زلزال جديد — تم تجاهل {len(eqs) - inserted} مكرر"}
     except Exception as e:
         connection.rollback()
         raise HTTPException(500, str(e))
