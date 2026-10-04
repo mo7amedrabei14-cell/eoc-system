@@ -9214,6 +9214,14 @@ const visibleBranches = (
   const pendingRowsRef = useRef(loadWeatherPending());
   const [pendingWeatherCount, setPendingWeatherCount] = useState(() => Object.values(loadWeatherPending()).reduce((n, g) => n + Object.keys(g || {}).length, 0));
   const countPending = (store) => Object.values(store || {}).reduce((n, g) => n + Object.keys(g || {}).length, 0);
+    // 🔢 عدّاد العرض: يخص محافظات نطاق المستخدم فقط — بقايا طابور حساب آخر على نفس
+  //    المتصفح (خارج المحافظات المرئية) لا تُعدّ في البادج ولا البانر.
+  const visiblePendingCount = useMemo(() => {
+    const allowed = new Set(visibleBranches.map(b => Number(b.id)));
+    return Object.values(pendingRowsRef.current || {}).reduce((n, g) =>
+      n + Object.keys(g || {}).filter(bid => allowed.has(Number(bid))).length, 0);
+  }, [pendingWeatherCount, visibleBranches]);
+
   // الكتابة على localStorage مؤجّلة 300ms (الحالة في الـ ref فورية): الكتابة
   // المتزامنة مع كل ضغطة زر في شبكة 27 محافظة كانت تسبب تقطيعاً في الكتابة.
   const pendingWriteTimerRef = useRef(null);
@@ -9815,13 +9823,13 @@ const visibleBranches = (
       </div>
 
       {/* — جدول الإدخال: المحافظة + 6 مقاييس × (صغرى/عظمى) — */}
-            {pendingWeatherCount > 0 && (
+            {visiblePendingCount > 0 && (
         <div className="animate-pulse rounded-2xl border-2 border-[var(--accent)] bg-[var(--accent-soft)] px-6 py-4 text-center">
           <span className="text-lg md:text-xl font-extrabold text-[var(--ink)]">
             📢 {T('لحفظ الطقس اضغط على زر «حفظ التوقعات» بالأسفل', 'To save, press the Save Forecasts button below')}
           </span>
           <span className="block text-xs font-bold text-[var(--muted)] mt-1">
-            {T(`عندك ${pendingWeatherCount} رقم لسه ما اتبعتش`, `${pendingWeatherCount} value(s) not sent yet`)}
+            {T(`عندك ${visiblePendingCount} رقم لسه ما اتبعتش`, `${visiblePendingCount} value(s) not sent yet`)}
           </span>
         </div>
       )}
@@ -9888,8 +9896,8 @@ const visibleBranches = (
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></svg>
             <span>{savingWeather ? T('جارٍ الحفظ…', 'Saving…') : T('حفظ التوقعات', 'Save Forecasts')}</span>
-            {pendingWeatherCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-white/25 text-xs font-extrabold tabular-nums">{pendingWeatherCount}</span>
+            {visiblePendingCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-white/25 text-xs font-extrabold tabular-nums">{visiblePendingCount}</span>
             )}
           </button>
           <span className={`ops-chip shrink-0 ${pendingWeatherCount > 0 ? 'text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)]' : 'text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]'}`}>
