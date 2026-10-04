@@ -369,7 +369,7 @@ const ENGLISH_UI = {
   'السجل': 'Register',
   'تصدير': 'Export',
   '+ إنشاء مهمة': '+ Create mission',
-  'بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة...': 'Quick search by mission name, location, code, or type...',
+  'بحث سريع باسم المهمة، المكان، الكود، ID، أو نوع المهمة...': 'Quick search by mission name, location, code, ID, or type...',
   'خط السير الأساسي': 'Main itinerary',
   'خط سير مخصص': 'Custom itinerary',
   'عادية': 'Regular',
@@ -5089,6 +5089,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       const c = classifyActivity(m.mission_name);
       return {
         "كود المهمة": missionCodeWithDay(m, filterDate),
+        "ID المهمة": m.mission_id,
         "مفتوحة / عادية": m.mission_classification || "عادية",
         "التاريخ": (m.exit_date && m.exit_date !== '-') ? formatDateTime(m.exit_date) : formatDateTime(m.created_at),
         "الفرع": m.branch,
@@ -5126,6 +5127,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       m.beneficiaries.forEach(b => {
         beneficiariesSheet.push({
           "كود المهمة": missionCodeWithDay(m, filterDate),
+          ...(withCategories ? { "ID المهمة": m.mission_id } : {}),
           "تصنيف المستفيدين": b.category_name,
           "الرقم (المباشر)": b.direct_count,
           "عنوان التصنيف": b.group_title || '',
@@ -5228,7 +5230,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
 
     // ── بانر العنوان ──
     cell(0, text(detail.mission_name) || 'استمارة مهمة', 'title'); merge(0, COLS - 1); next();
-    cell(0, `كود الاستمارة: ${detail.mission_code || '—'}   |   تاريخ المهمة: ${missionDateText || '—'}   |   ${statusAr}`); merge(0, COLS - 1); next();
+    cell(0, `كود الاستمارة: ${detail.mission_code || '—'}   |   ID: ${detail.mission_id || '—'}   |   تاريخ المهمة: ${missionDateText || '—'}   |   ${statusAr}`); merge(0, COLS - 1); next();
 
     // 1) البيانات الأساسية للمهمة
     band('البيانات الأساسية للمهمة');
@@ -5469,7 +5471,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
     const fieldStatusText = detail.field_operation_status || (detail.notes && detail.notes.includes('[حالة الميدان: مكتملة]') ? 'مكتملة' : 'نشطة');
 
     cell(0, text(detail.mission_name) || 'استمارة مهمة', 'title'); merge(0, COLS - 1); next();
-    cell(0, `كود الاستمارة: ${detail.mission_code || '—'}   |   تاريخ المهمة: ${missionDateText || '—'}   |   ${statusAr}`); merge(0, COLS - 1); next();
+    cell(0, `كود الاستمارة: ${detail.mission_code || '—'}   |   ID: ${detail.mission_id || '—'}   |   تاريخ المهمة: ${missionDateText || '—'}   |   ${statusAr}`); merge(0, COLS - 1); next();
 
     band('البيانات الأساسية للمهمة');
     fields([
@@ -5872,6 +5874,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
   };
 
   const handleSubmit = async (submitStatus) => {
+    if (isModalLoading) { setCustomAlert('⏳ بيانات الاستمارة لسه بتتحمّل — استنى ثانية وجرّب تاني.'); return; }
      // 📋 متطلب الحقول الإلزامية: أي إجراء يغيّر حالة المهمة (حفظ/إرسال/اعتماد/إنهاء)
      // ممنوع ما دام حقل إلزامي ناقص — ما عدا "الإرجاع" (قرار رافض للسوبرفايزر يعمل دائماً).
      // الفحص قبل القفل المتزامن حتى لا يعلق القفل عند العودة المبكرة.
@@ -6267,6 +6270,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
         (m.mission_name && m.mission_name.toLowerCase().includes(term)) ||
         (m.mission_location && m.mission_location.toLowerCase().includes(term)) ||
         (missionCodeWithDay(m, filterDate).toLowerCase().includes(term)) ||
+        (String(m.mission_id || '').includes(term)) ||
         (m.mission_type && m.mission_type.toLowerCase().includes(term))
       );
     }
@@ -6517,7 +6521,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
 
       <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-        <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
+        <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، ID، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {searchTerm && <button onClick={() => setSearchTerm('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
 
@@ -6557,7 +6561,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--accent)]">تاريخ المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--info)]">تصنيف المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--ok)]">فترة المهمة</th>
-              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">كود المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">كود المهمة / ID</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">التمركز (الفرع)</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 min-w-[550px]">اسم المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">السيارات والسائقين</th>
@@ -6617,7 +6621,10 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
                     <span className={isFinishedStatus(m.status) ? "text-[var(--faint)]" : "text-[var(--info)] animate-pulse"}>إلى: {isFinishedStatus(m.status) ? (m.completion_date !== '-' && m.completion_date ? formatDateTime(m.completion_date) : 'غير مسجل') : '(حتى الآن...)'}</span>
                   </div>
                 </td>
-                <td data-label="كود المهمة" className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">{missionCodeWithDay(m, filterDate)}</td>
+                <td data-label="كود المهمة" className="px-3 md:px-4 py-3 font-mono text-xs text-[var(--ink-2)] whitespace-nowrap align-middle border-b border-[var(--border)]/60">
+                  <div>{missionCodeWithDay(m, filterDate)}</div>
+                  <div className="text-xs font-bold text-[var(--muted)]">ID: {m.mission_id}</div>
+                </td>
                 <td data-label="التمركز (الفرع)" className="px-3 md:px-4 py-3 font-semibold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.branch}</td>
                 <td data-label="اسم المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60 min-w-[180px] max-w-[280px]">
                   <button
@@ -9343,10 +9350,12 @@ const visibleBranches = (
           }).filter(Boolean));
           touchedRef.current = new Set([...touchedRef.current].filter(bid => !confirmed.has(String(bid))));
         } else {
+          const errDetail = await res.json().catch(() => ({}));
+          console.error('⛔ حفظ طقس مرفوض', res.status, errDetail.detail, 'branch_ids:', bodyRows.map(r => r.branch_id));
           failedGroups += 1;
           if (res.status === 401) failureReasons.auth += 1; else failureReasons.server += 1;
         }
-      } catch { failedGroups += 1; failureReasons.network += 1; }
+      } catch (e) { console.error('⛔ حفظ طقس فشل شبكة', e); failedGroups += 1; failureReasons.network += 1; }
     }
     } finally {
       // 🛡️ ضمانة مطلقة: مهما حدث (فشل/استثناء/return) — القفل يُفتح والحالة تُنظّف دائماً.

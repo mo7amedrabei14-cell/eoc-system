@@ -3094,6 +3094,18 @@ def create_mission(
                     INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
                 """, (mission_id, route.group_title, none_if_empty(route.route_from), route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time), none_if_empty(route.departure_date), none_if_empty(route.arrival_date)))
+            # 🛡️ بوابة خط السير: أي حفظ (مسودة أو إرسال للجوكر) لازم عليه خط سير
+            #    محفوظ، أو إعلان صريح «لا يوجد خط سير» — الرفض برسالة واضحة.
+            _fb = getattr(mission, 'form_blocks', None)
+            if isinstance(_fb, str):
+                try: _fb = json.loads(_fb)
+                except Exception: _fb = None
+            _no_routes_declared = bool(mission.clear_details) or bool(_fb and isinstance(_fb, dict) and _fb.get('noRoutes'))
+            if not _no_routes_declared:
+                cursor.execute("SELECT COUNT(*) FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+                if cursor.fetchone()[0] == 0:
+                    raise HTTPException(status_code=400,
+                        detail="لا يمكن الحفظ بدون خط سير — أضف خط السير أولاً، أو اضغط «لا يوجد خط سير» بوضوح.")
 
             for vehicle in mission.vehicles:
                 cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
@@ -3641,6 +3653,20 @@ def update_mission(
                     cursor, mission_id, mission.routes,
                     getattr(mission, 'deleted_route_ids', None), mission.clear_details,
                 )
+
+            # 🛡️ بوابة خط السير: أي حفظ (مسودة أو إرسال للجوكر) لازم عليه خط سير
+            #    محفوظ، أو إعلان صريح «لا يوجد خط سير» — الرفض برسالة واضحة.
+            _fb = getattr(mission, 'form_blocks', None)
+            if isinstance(_fb, str):
+                try: _fb = json.loads(_fb)
+                except Exception: _fb = None
+            _no_routes_declared = bool(mission.clear_details) or bool(_fb and isinstance(_fb, dict) and _fb.get('noRoutes'))
+            if not _no_routes_declared:
+                cursor.execute("SELECT COUNT(*) FROM mission_itineraries WHERE mission_id = %s", (mission_id,))
+                if cursor.fetchone()[0] == 0:
+                    raise HTTPException(status_code=400,
+                        detail="لا يمكن الحفظ بدون خط سير — أضف خط السير أولاً، أو اضغط «لا يوجد خط سير» بوضوح.")
+
             if len(mission.vehicles) > 0 or mission.clear_details or mission.clear_vehicles:
                 cursor.execute("DELETE FROM mission_vehicles WHERE mission_id = %s", (mission_id,))
             if len(mission.beneficiaries) > 0 or mission.clear_details or mission.clear_beneficiaries:
