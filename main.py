@@ -58,7 +58,8 @@ from auth import (
     authorize,
     password_hash,
     get_session_generation,
-    invalidate_session_generation_cache
+    invalidate_session_generation_cache,
+    explain_token_failure
 )
 
 security = HTTPBearer()
@@ -5661,7 +5662,8 @@ def get_realtime_events(
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id:
-        raise HTTPException(status_code=401)
+        # 🚪 سبب الرفض يوصل للواجهة: logout_all / expired / invalid
+        raise HTTPException(status_code=401, detail=explain_token_failure(token))
 
     connection = get_connection()
     try:
@@ -5819,7 +5821,8 @@ async def stream_realtime_events(
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id:
-        raise HTTPException(status_code=401)
+        # 🚪 نفس السبب الواضح للواجهة (خروج جماعي/انتهت المدة)
+        raise HTTPException(status_code=401, detail=explain_token_failure(token))
 
     async def event_stream():
         last_seen = int(after_id)
@@ -5835,6 +5838,13 @@ async def stream_realtime_events(
                     init=0,
                     credentials=credentials,
                 )
+            except HTTPException as he:
+                # 🚪 الجلسة اتلغت (خروج جماعي/انتهت): نقفل البث فوراً بدل ما يفضل معلّق
+                #    ⇒ العميل يعيد الاتصال وياخد 401 بسببه ويبدأ العدّ التنازلي والخروج.
+                if he.status_code == 401:
+                    break
+                print(f"SSE poll error: {he}")
+                batch = {"events": [], "latest_id": last_seen}
             except Exception as e:
                 print(f"SSE poll error: {e}")
                 batch = {"events": [], "latest_id": last_seen}
@@ -12304,6 +12314,8 @@ def logout_all_users(
                 details={
                     "action_text": "أصدر المالك أمراً بتسجيل خروج جميع المستخدمين",
                     "logout_all": True,
+                    # ⏱️ مدة العدّاد اللي الواجهة تعرضها قبل الخروج الفعلي
+                    "logout_in_seconds": 5,
                 }
             )
 

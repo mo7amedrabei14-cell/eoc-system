@@ -307,3 +307,21 @@ def get_current_user_id(token: str):
 
     except Exception:
         return None
+
+def explain_token_failure(token: str) -> str:
+    """🚪 سبب رفض التوكن: logout_all (خروج جماعي) / expired / invalid."""
+    try:
+        payload = jwt.decode(
+            token, JWT_SECRET, algorithms=["HS256"], options={"verify_exp": False}
+        )
+        token_generation = int(payload.get("gen", 0) or 0)
+    except Exception:
+        return "invalid"
+
+    try:
+        if token_generation < get_session_generation():
+            return "logout_all"
+    except Exception:
+        pass
+
+    return "expired"

@@ -159,6 +159,10 @@ const clearStoredAuth = () => {
   }
 };
 
+// 🚪 خروج إجباري جارٍ (خروج جماعي/انتهاء جلسة)؟ كل معالجات 401 في الملف تستسلم له
+//    وتسيبه هو اللي ينفّذ الخروج بعد العدّاد — بدل قفزة صامتة لصفحة الدخول.
+let eocForcedLogoutActive = false;
+
 const YOUTH_ALLOWED_TABS = ['missions', 'human_resources'];
 const isYouthRole = (userRole) => String(userRole || '').trim().toUpperCase() === 'READ_ONLY_MISSIONS';
 
@@ -1621,6 +1625,10 @@ export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
 
+  // 🚪 الخروج الإجباري: إشعار + عدّاد تنازلي ثم خروج فعلي (بلا ريفريش)
+  const [forcedLogout, setForcedLogout] = useState(null);
+  const forcedLogoutRef = useRef(false);
+
   useEffect(() => {
     if (!customAlert) return undefined;
     const timeout = setTimeout(() => setCustomAlert(null), 7000);
@@ -1972,6 +1980,27 @@ useEffect(() => {
   const recentKeysRef = useRef(new Map());
   // 🚪 حارس خروج الجميع: الجهاز اللي ضغط الزرار لا يحصل عنده أي حاجة (لا خروج ولا رسالة)
   const logoutAllSelfRef = useRef(false);
+
+  // 🚪 الخروج الإجباري: رسالة + عدّاد تنازلي ثم خروج فعلي — يُنفَّذ مرة واحدة فقط
+  const beginForcedLogout = (seconds, reason) => {
+    if (forcedLogoutRef.current) return;
+    forcedLogoutRef.current = true;
+    eocForcedLogoutActive = true;
+    let left = Math.max(1, Number(seconds) || 5);
+    setForcedLogout({ seconds: left, reason: reason || 'انتهت صلاحية جلستك' });
+    const timer = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        clearInterval(timer);
+        clearStoredAuth();
+        setUserData(null);
+        navigate('/');
+        return;
+      }
+      setForcedLogout(prev => (prev ? { ...prev, seconds: left } : prev));
+    }, 1000);
+  };
+
   const pollInFlightRef = useRef(false);      // لا تداخل بين الطلبات
   const pollBackoffRef = useRef(4000);        // backoff لإعادة الاتصال
   const realtimeUnmountedRef = useRef(false);
@@ -2056,12 +2085,10 @@ useEffect(() => {
           const isLogoutAll = !!(e.details && typeof e.details === 'object' && !Array.isArray(e.details) && e.details.logout_all);
           if (isLogoutAll) {
             if (logoutAllSelfRef.current) return;   // 🖥️ جهاز المالك اللي ضغط
-            setCustomAlert('تم تسجيل خروجك بأمر من المالك — سجّل الدخول من جديد.');
-            setTimeout(() => {
-              clearStoredAuth();
-              setUserData(null);
-              navigate('/');                        // خروج فعلي داخل التطبيق — بلا ريفريش
-            }, 2000);
+            beginForcedLogout(
+              Number(e.details && e.details.logout_in_seconds) || 5,
+              'تم إنهاء الجلسة بأمر من المالك'
+            );
             return;
           }
 
@@ -2218,6 +2245,19 @@ useEffect(() => {
           ? `${BASE}/api/realtime/events?init=1`
           : `${BASE}/api/realtime/events?after_id=${lastEventIdRef.current}&limit=100`;
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.status === 401) {
+          // 🚪 جلسة ملغاة من السيرفر: تبنَّ التوكن الجديد لو اتغيّر (جهاز المالك)،
+          //    وإلا ابدأ الخروج الإجباري فوراً بدل مؤشر «غير متصل» الأبدي.
+          const freshToken = getStoredAccessToken();
+          if (freshToken && freshToken !== token) {
+            token = freshToken;
+            pollBackoffRef.current = 4000;
+          } else if (!logoutAllSelfRef.current) {
+            const why = await res.json().catch(() => ({}));
+            beginForcedLogout(5, why && why.detail === 'logout_all' ? 'تم إنهاء الجلسة بأمر من المالك' : 'انتهت صلاحية جلستك');
+          }
+          return;
+        }
         if (!res.ok) throw new Error(`realtime status ${res.status}`);
         const data = await res.json();
         if (init) {
@@ -2300,7 +2340,15 @@ useEffect(() => {
             signal: ctrl.signal,
           },
         );
-        if (!res.ok || !res.body) throw new Error(`stream status ${res.status}`);
+        if (!res.ok || !res.body) {
+          const err = new Error(`stream status ${res.status}`);
+          err.status = res.status;
+          if (res.status === 401) {
+            const why = await res.json().catch(() => ({}));
+            err.reason = why && why.detail;
+          }
+          throw err;
+        }
         if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
 
         const reader = res.body.getReader();
@@ -2334,6 +2382,19 @@ useEffect(() => {
         if (!sseStopped && !realtimeUnmountedRef.current) setTimeout(startPush, 300);
       } catch (e) {
         if (ctrl.signal.aborted || sseStopped) return;
+        if (e && e.status === 401) {
+          // 🚪 جلسة ملغاة: نفس منطق الاستطلاع (تبنّي التوكن الجديد للماك، وإلا خروج بعدّاد)
+          const freshToken = getStoredAccessToken();
+          if (freshToken && freshToken !== token) {
+            token = freshToken;
+            setTimeout(startPush, 300);
+            return;
+          }
+          if (!logoutAllSelfRef.current) {
+            beginForcedLogout(5, e.reason === 'logout_all' ? 'تم إنهاء الجلسة بأمر من المالك' : 'انتهت صلاحية جلستك');
+          }
+          return;
+        }
         const freshToken = getStoredAccessToken();
         if (freshToken && freshToken !== token) {
           // 🔐 نفس منطق الاستطلاع: التوكن اتغيّر ⇒ نتبنّى الجديد بلا «غير متصل»
@@ -2415,8 +2476,12 @@ useEffect(() => {
       return;
     }
 
-    setUserData(auth.user);
-    const flags = getRoleFlags(auth.user);
+      if (res.status === 401) {
+        clearStoredAuth();
+        // جلسة منتهية: إعادة توجيه كاملة لصفحة الدخول (لا يوجد navigate في هذا المكوّن)
+        window.location.assign('/');
+        return;
+      }
     const requestedTab = new URLSearchParams(window.location.search).get('tab');
     // 🔒 توجيه موحّد: حساب إدارة الشباب يبقى ضمن صفحاته الثلاث المسموحة دائماً
     setActiveTab(getDefaultTab(auth.user, requestedTab));
@@ -4421,6 +4486,8 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
         : `${BASE}/api/missions`;
       const res = await fetch(pUrl, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.status === 401) {
+        // 🚪 لو فيه خروج إجباري جارٍ بعدّاد: نسيب العدّاد يكمّل بدل قفزة فورية
+        if (eocForcedLogoutActive) return;
         clearStoredAuth();
         // جلسة منتهية: إعادة توجيه كاملة لصفحة الدخول (لا يوجد navigate في هذا المكوّن)
         window.location.assign('/');
@@ -7761,6 +7828,25 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
 />
 
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
+
+      {/* 🚪 خروج إجباري: إشعار + عدّاد تنازلي واضح ثم خروج فعلي */}
+      {forcedLogout && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm" dir={language === 'ar' ? 'rtl' : 'ltr'} role="alertdialog" aria-live="assertive">
+          <div className="w-[min(92vw,420px)] rounded-3xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-7 text-center shadow-2xl animate-fade-in">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--danger-soft)] text-[var(--accent)]">
+              <LogoutIcon />
+            </div>
+            <h3 className="text-lg font-extrabold text-[var(--ink)]">
+              {language === 'ar' ? 'سيتم تسجيل خروجك الآن' : 'Signing you out'}
+            </h3>
+            <p className="mt-2 text-sm font-semibold text-[var(--muted)]">{forcedLogout.reason}</p>
+            <div className="mt-5 text-5xl font-black tabular-nums text-[var(--accent)]">{forcedLogout.seconds}</div>
+            <p className="mt-1 text-xs font-bold text-[var(--muted-2)]">
+              {language === 'ar' ? 'ثانية' : 'seconds'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 🗜️ إضافة: تأكيد التصدير المضغوط */}
       <DownloadConfirmModal
