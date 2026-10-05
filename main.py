@@ -5763,7 +5763,9 @@ def get_realtime_events(
                     "entity_id": r[6],
                     # 🌍 أحداث الزلازل الاستخباراتية: القاموس الكامل (لازم details.earthquake.sound_alert
                     #    يوصل للواجهة لتفعيل الإنذار الصوتي) — بقية الأنواع: نص الحركة فقط كما كان.
-                    "details": (r[7] if (isinstance(r[7], dict) and r[1] == "eq_intel")
+                    # 🚪 system_refresh كذلك: لازم يوصل كـ **كائن** (فيه logout_all)
+                    #    مش كنص — وإلا حدث «خروج الجميع» يبقى بلا أثر في الواجهة.
+                    "details": (r[7] if (isinstance(r[7], dict) and r[1] in ("eq_intel", "system_refresh"))
                                 else (r[7].get("action_text", str(r[7])) if isinstance(r[7], dict) else str(r[7] or ""))),
                     "target_user_id": r[8],
                     "created_at": r[9].strftime("%Y-%m-%d %H:%M") if r[9] else "",

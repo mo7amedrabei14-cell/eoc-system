@@ -1970,13 +1970,17 @@ useEffect(() => {
   const seenEventIdsRef = useRef(new Set());  // حماية من أي تكرار أثناء إعادة المحاولة
   // 🛡️ خريطة «الأحداث المنطقية اللي اتعرّضت» — تمنع الإشعار المكرر (نفس الحركة بمعرّفين مختلفين)
   const recentKeysRef = useRef(new Map());
+  // 🚪 حارس خروج الجميع: الجهاز اللي ضغط الزرار لا يحصل عنده أي حاجة (لا خروج ولا رسالة)
+  const logoutAllSelfRef = useRef(false);
   const pollInFlightRef = useRef(false);      // لا تداخل بين الطلبات
   const pollBackoffRef = useRef(4000);        // backoff لإعادة الاتصال
   const realtimeUnmountedRef = useRef(false);
 
   // 💡 2. رادار الغرفة المركزية المتطور (قناة ريال تايم)
   useEffect(() => {
-    const token = sessionStorage.getItem('access_token');
+    // 🔁 التوكن متغيّر (مش ثابت): بعد «خروج الجميع» بيتغيّر توكن المالك في التخزين،
+    //    والجولة الجاية تتبنّاه بدل ما تفضل تبعت القديم ⇒ 401 ومؤشر «غير متصل»
+    let token = sessionStorage.getItem('access_token');
     if (!token || !userData) return;
 
     let pollTimer = null;
@@ -2047,19 +2051,17 @@ useEffect(() => {
         if (!sessionStorage.getItem(seenKey)) {
           sessionStorage.setItem(seenKey, '1');
 
-          // 🚪 خروج شامل بأمر المالك: امسح الجلسة وارجع لصفحة الدخول فوراً
-          //    (المسودات والاستمارات غير المُرسَلة على الجهاز لا تُمس)
+          // 🚪 خروج شامل بأمر المالك: كل الأجهزة والحسابات تخرج فعلاً + مسدج لطيف
+          //    (ما عدا الجهاز اللي ضغط الزرار — مفيش أي حاجة بتحصل عنده خالص)
           const isLogoutAll = !!(e.details && typeof e.details === 'object' && !Array.isArray(e.details) && e.details.logout_all);
           if (isLogoutAll) {
-            const mine = Number(userData?.user_id) > 0 && e.actor_user_id === Number(userData?.user_id);
-            if (mine) {
-              setCustomAlert('تم تسجيل خروج جميع المستخدمين. جلستك أنت سارية.');
-              return;
-            }
-            setCustomAlert('تم تسجيل خروج جميع المستخدمين بأمر من المالك. سجّل الدخول من جديد.');
-            clearStoredAuth();
-            setUserData(null);
-            setTimeout(() => window.location.assign('/'), 1500);
+            if (logoutAllSelfRef.current) return;   // 🖥️ جهاز المالك اللي ضغط
+            setCustomAlert('تم تسجيل خروجك بأمر من المالك — سجّل الدخول من جديد.');
+            setTimeout(() => {
+              clearStoredAuth();
+              setUserData(null);
+              navigate('/');                        // خروج فعلي داخل التطبيق — بلا ريفريش
+            }, 2000);
             return;
           }
 
@@ -2243,9 +2245,17 @@ useEffect(() => {
         pollBackoffRef.current = document.hidden ? 30000 : 4000;
         if (!realtimeUnmountedRef.current) setRealtimeConnected(true);
       } catch (e) {
-        // network failure → backoff تصاعدي (لغاية 30 ثانية) ثم معاودة تلقائية
-        pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 10000);
-        if (!realtimeUnmountedRef.current) setRealtimeConnected(false);
+        // 🔐 401 = التوكن اتغيّر (خروج جماعي) مش انقطاع شبكة: نتبنّى التوكن الجديد
+        //    فوراً ونكمل — **بدون** ما يظهر مؤشر «غير متصل» عند جهاز المالك.
+        const freshToken = getStoredAccessToken();
+        if (freshToken && freshToken !== token) {
+          token = freshToken;
+          pollBackoffRef.current = 4000;
+        } else {
+          // network failure → backoff تصاعدي (لغاية 30 ثانية) ثم معاودة تلقائية
+          pollBackoffRef.current = Math.min(pollBackoffRef.current * 2, 10000);
+          if (!realtimeUnmountedRef.current) setRealtimeConnected(false);
+        }
       } finally {
         pollInFlightRef.current = false;
       }
@@ -2286,7 +2296,7 @@ useEffect(() => {
         const res = await fetch(
           `${BASE}/api/realtime/stream?after_id=${lastEventIdRef.current || 0}`,
           {
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'text/event-stream' },
+            headers: { 'Authorization': `Bearer ${getStoredAccessToken() || token}`, 'Accept': 'text/event-stream' },
             signal: ctrl.signal,
           },
         );
@@ -2324,6 +2334,13 @@ useEffect(() => {
         if (!sseStopped && !realtimeUnmountedRef.current) setTimeout(startPush, 300);
       } catch (e) {
         if (ctrl.signal.aborted || sseStopped) return;
+        const freshToken = getStoredAccessToken();
+        if (freshToken && freshToken !== token) {
+          // 🔐 نفس منطق الاستطلاع: التوكن اتغيّر ⇒ نتبنّى الجديد بلا «غير متصل»
+          token = freshToken;
+          setTimeout(startPush, 300);
+          return;
+        }
         if (!realtimeUnmountedRef.current) setRealtimeConnected(false);
         // ⚠️ لا نُسقط الاستطلاع أبداً: هو يعمل أصلاً بالتوازي، وهو المرجع
         //    حتى لو انقطع الدفع كلياً. هنا فقط نعيد محاولة الاشتراك.
@@ -2527,11 +2544,16 @@ useEffect(() => {
   };
 
   // 🚪 تسجيل خروج جميع المستخدمين (المالك فقط): كل من فاتح النظام على أي جهاز يخرج
-  //    (ما نلمسش أي شغل غير مُرسَل — نمسح التوكن من الجهازين فقط)
+  //    بمسدج لطيف — أما جهازك أنت (اللي ضغط) مفيش أي حاجة بتحصل عنده خالص.
   const handleLogoutAll = async () => {
     if (!isOwner) return;
 
     const token = getStoredAccessToken();
+
+    // 🛡️ الجهاز ده هو اللي ضغط: البث الجاي منه مش بيعمل أي حاجة عنده
+    //    (15 ثانية كافية لأي تأخير في البث أو الاستطلاع)
+    logoutAllSelfRef.current = true;
+    window.setTimeout(() => { logoutAllSelfRef.current = false; }, 15000);
 
     try {
       const res = await fetch(`${BASE}/api/auth/logout-all`, {
@@ -2542,19 +2564,19 @@ useEffect(() => {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        logoutAllSelfRef.current = false;
         setCustomAlert(data.detail || 'فشل تنفيذ تسجيل خروج الجميع.');
         return;
       }
 
-      // 🔑 توكن جديد للمالك بالجيل الجديد — عشان تفضل انت داخل والتانيين كله يخرج
+      // 🔑 توكن جديد بجيل جديد — جهازك يفضل شغال زي ما هو (مفيش رسالة ولا انقطاع)
       if (data.access_token) {
         for (const storage of getBrowserStorages()) {
           try { storage.setItem('access_token', data.access_token); } catch { /* متصفح مقفول */ }
         }
       }
-
-      setCustomAlert(data.message || 'تم تسجيل خروج جميع المستخدمين.');
     } catch {
+      logoutAllSelfRef.current = false;
       setCustomAlert('تعذر الاتصال بالسيرفر.');
     }
   };
