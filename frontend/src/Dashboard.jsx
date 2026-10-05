@@ -2476,12 +2476,8 @@ useEffect(() => {
       return;
     }
 
-      if (res.status === 401) {
-        clearStoredAuth();
-        // جلسة منتهية: إعادة توجيه كاملة لصفحة الدخول (لا يوجد navigate في هذا المكوّن)
-        window.location.assign('/');
-        return;
-      }
+    setUserData(auth.user);
+    eocForcedLogoutActive = false;   // 🚪 جلسة جديدة سليمة ⇒ العلامة تتشال
     const requestedTab = new URLSearchParams(window.location.search).get('tab');
     // 🔒 توجيه موحّد: حساب إدارة الشباب يبقى ضمن صفحاته الثلاث المسموحة دائماً
     setActiveTab(getDefaultTab(auth.user, requestedTab));
@@ -2779,6 +2775,25 @@ useEffect(() => {
   return (
     <div ref={dashboardRootRef} data-theme={theme} className="app-shell min-h-screen bg-[var(--bg)] text-white font-sans selection:bg-[var(--accent)] selection:text-white flex overflow-hidden transition-colors duration-300" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
+
+      {/* 🚪 خروج إجباري: إشعار + عدّاد تنازلي واضح ثم خروج فعلي */}
+      {forcedLogout && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm" dir={language === 'ar' ? 'rtl' : 'ltr'} role="alertdialog" aria-live="assertive">
+          <div className="w-[min(92vw,420px)] rounded-3xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-7 text-center shadow-2xl animate-fade-in">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--danger-soft)] text-[var(--accent)]">
+              <LogoutIcon />
+            </div>
+            <h3 className="text-lg font-extrabold text-[var(--ink)]">
+              {language === 'ar' ? 'سيتم تسجيل خروجك الآن' : 'Signing you out'}
+            </h3>
+            <p className="mt-2 text-sm font-semibold text-[var(--muted)]">{forcedLogout.reason}</p>
+            <div className="mt-5 text-5xl font-black tabular-nums text-[var(--accent)]">{forcedLogout.seconds}</div>
+            <p className="mt-1 text-xs font-bold text-[var(--muted-2)]">
+              {language === 'ar' ? 'ثانية' : 'seconds'}
+            </p>
+          </div>
+        </div>
+      )}
 
       
       {/* ◈ منطقة الوعي — نَوْل الإشارة: الإشارة بتدخل بذرة وبتتنسج للخارج */}
@@ -7828,25 +7843,6 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
 />
 
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
-
-      {/* 🚪 خروج إجباري: إشعار + عدّاد تنازلي واضح ثم خروج فعلي */}
-      {forcedLogout && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm" dir={language === 'ar' ? 'rtl' : 'ltr'} role="alertdialog" aria-live="assertive">
-          <div className="w-[min(92vw,420px)] rounded-3xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-7 text-center shadow-2xl animate-fade-in">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--danger-soft)] text-[var(--accent)]">
-              <LogoutIcon />
-            </div>
-            <h3 className="text-lg font-extrabold text-[var(--ink)]">
-              {language === 'ar' ? 'سيتم تسجيل خروجك الآن' : 'Signing you out'}
-            </h3>
-            <p className="mt-2 text-sm font-semibold text-[var(--muted)]">{forcedLogout.reason}</p>
-            <div className="mt-5 text-5xl font-black tabular-nums text-[var(--accent)]">{forcedLogout.seconds}</div>
-            <p className="mt-1 text-xs font-bold text-[var(--muted-2)]">
-              {language === 'ar' ? 'ثانية' : 'seconds'}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* 🗜️ إضافة: تأكيد التصدير المضغوط */}
       <DownloadConfirmModal
