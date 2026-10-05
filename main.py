@@ -7466,7 +7466,8 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                         _desc = _desc[:140].rstrip() + "…"
                     _scope = _ai_news_scope_label(_loc, _ctx)
                     _ai_news_text = (
-                        f"{_scope} ({news.news_type or 'غير مصنف'}) في: {_loc or 'خارج مصر'}"
+                        f"{_scope} ({news.news_type or 'غير مصنف'})"
+                        + (f" في: {_loc}" if _loc else "")
                         + (f" — {_desc}" if _desc else "")
                     )
                     create_realtime_event(
