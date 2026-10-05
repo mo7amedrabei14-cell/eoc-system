@@ -1461,7 +1461,7 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
     const plain = rows.map((r) => {
       const arr = Array.isArray(r) ? r : (r && Array.isArray(r.cells) ? r.cells : []);
       const rowKind = (!Array.isArray(r) && r && r.kind) ? r.kind : null;
-      return { arr, rowKind, values: arr.map((s) => cellSpec(s).v) };
+      return { arr, rowKind, values: arr.map((s) => { const v = cellSpec(s).v; return v === '' ? null : v; }) };
     });
     plain.forEach(({ arr, rowKind, values }) => {
       ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
@@ -1540,7 +1540,7 @@ const buildWorkbookBufferZip = async (sheets) => {
     const plain = rows.map((r) => {
       const arr = Array.isArray(r) ? r : (r && Array.isArray(r.cells) ? r.cells : []);
       const rowKind = (!Array.isArray(r) && r && r.kind) ? r.kind : null;
-      return { arr, rowKind, values: arr.map((s) => cellSpec(s).v) };
+      return { arr, rowKind, values: arr.map((s) => { const v = cellSpec(s).v; return v === '' ? null : v; }) };
     });
     plain.forEach(({ arr, rowKind, values }) => {
       ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {

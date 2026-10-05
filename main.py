@@ -7177,12 +7177,36 @@ def _ar_norm(s):
           .replace("ى", "ي").replace("ئ", "ي").replace("ؤ", "و").replace("ة", "ه"))
     return re.sub(r"[^\w\u0600-\u06FF]", "", t, flags=re.UNICODE)
 
+
+def _ar_norm_words(s):
+    """زي _ar_norm لكن المسافات تبقى حدود كلمات (للمطابقة الجزئية الآمنة)."""
+    import unicodedata
+    t = unicodedata.normalize("NFKC", str(s or "")).strip().lower()
+    t = re.sub(r"[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]", "", t)
+    t = (t.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ٱ", "ا")
+          .replace("ى", "ي").replace("ئ", "ي").replace("ؤ", "و").replace("ة", "ه"))
+    t = re.sub(r"[^\w\u0600-\u06FF]+", " ", t, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", t).strip()
+
 _NORM_EGYPT = {_ar_norm(x): x for x in EGYPT_GOV_LIST}
 _NORM_GLOBAL = {_ar_norm(x): x for x in GLOBAL_LOCATIONS}
 _NORM_ALIASES = {_ar_norm(k): v for k, v in _LOCATION_ALIASES.items()}
 
+# فهرس المطابقة الجزئية: (الاسم ككلمات مطبّعة، الاسم المعتمد، أولوية) — الأطول أولاً ومصر قبل العالم
+_MATCH_INDEX = sorted(
+    [(_ar_norm_words(x), x, 0) for x in EGYPT_GOV_LIST]
+    + [(_ar_norm_words(x), x, 1) for x in GLOBAL_LOCATIONS]
+    + [(_ar_norm_words(k), v, 0) for k, v in _LOCATION_ALIASES.items() if v],
+    key=lambda item: (len(item[0]), -item[2]),
+    reverse=True,
+)
+
+# 🪤 عبارات محلية ملتبسة: «مصر» جوّاها حيّ/منطقة مش الدولة
+_LOCAL_TRAP_WORDS = ("مصر الجديده", "مصر القديمه")
+
+
 def normalize_ai_location(raw):
-    """اسم الموقع المعتمد من القايمتين (مصر الأول) أو '' لو خارج النطاق."""
+    """اسم الموقع المعتمد (1) بمطابقة تامة، أو (2) كاسم كامل داخل النص — الأطول أولاً."""
     t = _ar_norm(raw)
     if not t or t in {"-", "غيرمحدد"}:
         return ""
@@ -7192,6 +7216,18 @@ def normalize_ai_location(raw):
         return _NORM_GLOBAL[t]
     if t in _NORM_ALIASES:
         return _NORM_ALIASES[t]
+    words = _ar_norm_words(raw)
+    if not words:
+        return ""
+    padded = f" {words} "
+    for norm_name, canonical, _prio in _MATCH_INDEX:
+        if f" {norm_name} " in padded:
+            # «مصر» وحدها لا تُطابَق لو النص فيه «مصر الجديدة/القديمة»
+            if _ar_norm(canonical) == _ar_norm("مصر") and any(
+                f" {trap} " in padded for trap in _LOCAL_TRAP_WORDS
+            ):
+                continue
+            return canonical
     return ""
 
 
@@ -7498,13 +7534,14 @@ def normalize_legacy_ai_news(credentials: HTTPAuthorizationCredentials = Depends
     try:
         with connection.cursor() as cursor:
             _ensure_ai_news_observed_at(cursor)
-            cursor.execute("SELECT id, governorate FROM ai_news;")
+            cursor.execute("SELECT id, governorate, governorate_original FROM ai_news;")
             rows = cursor.fetchall()
             changed = cleared = 0
-            for _id, _raw in rows:
-                _orig = str(_raw or '').strip()
+            for _id, _cur, _saved in rows:
+                _cur = str(_cur or '').strip()
+                _orig = _cur or str(_saved or '').strip()
                 _loc = normalize_ai_location(_orig)
-                if _loc != _orig:
+                if _loc != _cur:
                     cursor.execute(
                         "UPDATE ai_news SET governorate_original = COALESCE(NULLIF(governorate_original,''), NULLIF(%s,'')), "
                         "governorate=%s, news_scope=%s WHERE id=%s;",
