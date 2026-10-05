@@ -2046,6 +2046,23 @@ useEffect(() => {
         const seenKey = `eoc_sys_refresh_${e.event_id}`;
         if (!sessionStorage.getItem(seenKey)) {
           sessionStorage.setItem(seenKey, '1');
+
+          // 🚪 خروج شامل بأمر المالك: امسح الجلسة وارجع لصفحة الدخول فوراً
+          //    (المسودات والاستمارات غير المُرسَلة على الجهاز لا تُمس)
+          const isLogoutAll = !!(e.details && typeof e.details === 'object' && !Array.isArray(e.details) && e.details.logout_all);
+          if (isLogoutAll) {
+            const mine = Number(userData?.user_id) > 0 && e.actor_user_id === Number(userData?.user_id);
+            if (mine) {
+              setCustomAlert('تم تسجيل خروج جميع المستخدمين. جلستك أنت سارية.');
+              return;
+            }
+            setCustomAlert('تم تسجيل خروج جميع المستخدمين بأمر من المالك. سجّل الدخول من جديد.');
+            clearStoredAuth();
+            setUserData(null);
+            setTimeout(() => window.location.assign('/'), 1500);
+            return;
+          }
+
           setCustomAlert('سيتم تحديث النظام خلال ثانيتين...');
           setTimeout(() => window.location.reload(), 1200);
         }
@@ -2509,6 +2526,39 @@ useEffect(() => {
     }
   };
 
+  // 🚪 تسجيل خروج جميع المستخدمين (المالك فقط): كل من فاتح النظام على أي جهاز يخرج
+  //    (ما نلمسش أي شغل غير مُرسَل — نمسح التوكن من الجهازين فقط)
+  const handleLogoutAll = async () => {
+    if (!isOwner) return;
+
+    const token = getStoredAccessToken();
+
+    try {
+      const res = await fetch(`${BASE}/api/auth/logout-all`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setCustomAlert(data.detail || 'فشل تنفيذ تسجيل خروج الجميع.');
+        return;
+      }
+
+      // 🔑 توكن جديد للمالك بالجيل الجديد — عشان تفضل انت داخل والتانيين كله يخرج
+      if (data.access_token) {
+        for (const storage of getBrowserStorages()) {
+          try { storage.setItem('access_token', data.access_token); } catch { /* متصفح مقفول */ }
+        }
+      }
+
+      setCustomAlert(data.message || 'تم تسجيل خروج جميع المستخدمين.');
+    } catch {
+      setCustomAlert('تعذر الاتصال بالسيرفر.');
+    }
+  };
+
   const handleLogout = () => {
     clearStoredAuth();
     setUserData(null);
@@ -2589,6 +2639,11 @@ useEffect(() => {
           en: language === 'ar' ? 'Switch to English' : 'Switch to Arabic',
           action: () => setLanguage(language === 'ar' ? 'en' : 'ar'),
         },
+        ...(isOwner ? [{
+          id: '__logout_all', icon: <LogoutIcon />,
+          ar: 'تسجيل خروج جميع المستخدمين', en: 'Sign out all users', danger: true,
+          action: handleLogoutAll,
+        }] : []),
         {
           id: '__logout', icon: <LogoutIcon />,
           ar: 'إنهاء الجلسة الآمنة', en: 'Sign out', danger: true,
@@ -2845,6 +2900,23 @@ useEffect(() => {
     )}
   </button>
 )}
+
+          {isOwner && (
+            <button
+              onClick={handleLogoutAll}
+              title={!isSidebarOpen ? "تسجيل خروج الجميع" : ""}
+              className={`nav-item nav-item-danger ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              {isSidebarOpen && (
+                <span className="font-semibold tracking-wide truncate">تسجيل خروج الجميع</span>
+              )}
+            </button>
+          )}
 
           <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`nav-item nav-item-danger ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}>
             <LogoutIcon />

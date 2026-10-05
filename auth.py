@@ -1,6 +1,6 @@
 import os
+import time
 from datetime import datetime, timedelta, timezone
-
 import jwt
 from dotenv import load_dotenv
 from pwdlib import PasswordHash
@@ -16,6 +16,49 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 if not JWT_SECRET:
     raise RuntimeError("JWT_SECRET is not configured")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🚪 «جيل الجلسات» (token generation) — أساس زر «تسجيل خروج الجميع» للمالك
+# كل توكن يحمل رقم الجيل اللي أُصدر فيه (gen)، و«خروج الجميع» بيزوّد الرقم في
+# القاعدة ⇒ كل توكن أقدم يُرفض فوراً على كل الأجهزة. مقارنة أرقام صحيحة فقط
+# (مفيش أي اعتماد على فروق ساعات الأجهزة)، ومفيش أي مساس بالشغل المحفوظ.
+# الكاش 5 ثوانٍ: يمنع قراءة القاعدة في كل طلب (نفس سبب إصلاح الأداء القديم)،
+# وأقصى تأخير للتبليغ على السيرفر 5 ثوانٍ، والواجهة بتخرج لحظياً بالبث اللحظي.
+# ─────────────────────────────────────────────────────────────────────────────
+SESSION_GEN_CACHE_TTL = 5.0
+_session_gen_cache = {"at": 0.0, "value": 0, "known": False}
+
+
+def get_session_generation() -> int:
+    """رقم جيل الجلسات الحالي من القاعدة (كاش 5 ثوانٍ)."""
+    now = time.monotonic()
+
+    if _session_gen_cache["known"] and (now - _session_gen_cache["at"]) < SESSION_GEN_CACHE_TTL:
+        return _session_gen_cache["value"]
+
+    try:
+        connection = get_connection()
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT token_generation FROM auth_control WHERE id = 1")
+                row = cursor.fetchone()
+                value = int(row[0]) if row and row[0] is not None else 0
+        finally:
+            connection.close()
+
+        _session_gen_cache.update({"at": now, "value": value, "known": True})
+        return value
+
+    except Exception:
+        # تعذّر القراءة (الجدول لسه ما اتعملش/لحظة ضغط): نحتفظ بآخر قيمة معروفة
+        # بدل ما نسقّط كل المستخدمين بـ 401 على النظام كله.
+        return _session_gen_cache["value"]
+
+
+def invalidate_session_generation_cache() -> None:
+    _session_gen_cache["at"] = 0.0
 
 
 def authenticate_user(username: str, password: str):
@@ -61,12 +104,14 @@ def authenticate_user(username: str, password: str):
         connection.close()
 
 
-def create_access_token(user_id: int):
+def create_access_token(user_id: int, generation: int | None = None):
     expires_at = datetime.now(timezone.utc) + timedelta(hours=8)
 
     payload = {
         "sub": str(user_id),
         "exp": expires_at,
+        # 🚪 رقم جيل الجلسة: أي توكن بجيل أقدم من جيل القاعدة يُرفض (خروج الجميع)
+        "gen": int(generation) if generation is not None else get_session_generation(),
     }
 
     return jwt.encode(
@@ -248,6 +293,16 @@ def get_current_user_id(token: str):
         user_id = payload.get("sub")
 
         if not user_id:
+            return None
+
+        # 🚪 خروج الجميع: أي توكن من جيل أقدم من جيل القاعدة يُعتبر منتهياً
+        # (التوكنات القديمة بلا gen = جيل 0، فتفضل شغالة زي ما هي لحد أول خروج جماعي)
+        try:
+            current_generation = get_session_generation()
+        except Exception:
+            current_generation = 0
+
+        if int(payload.get("gen", 0) or 0) < current_generation:
             return None
 
         return int(user_id)

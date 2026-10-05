@@ -56,7 +56,9 @@ from auth import (
     get_effective_permissions,
     get_user_branches,
     authorize,
-    password_hash
+    password_hash,
+    get_session_generation,
+    invalidate_session_generation_cache
 )
 
 security = HTTPBearer()
@@ -12230,6 +12232,96 @@ def force_refresh_system(
 
     finally:
         connection.close()
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 🚪 تسجيل خروج جميع المستخدمين — المالك فقط
+# ═══════════════════════════════════════════════════════════════════
+@app.post("/api/auth/logout-all")
+def logout_all_users(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """🚪 تسجيل خروج جميع المستخدمين — المالك فقط.
+
+    يزوّد «جيل الجلسات» في القاعدة ⇒ كل توكن أُصدر قبل اللحظة دي يُرفض فوراً
+    على كل الأجهزة والحسابات. المسودات والاستمارات غير المُرسَلة على الأجهزة
+    لا تُمس (الشغل المحفوظ يفضل زي ما هو). زر المُشغِّل نفسه يستلم توكن جديد
+    للجيل الجديد فيفضل داخل، وكل الأجهزة التانية (حتى باقي جلسات المالك) تخرج.
+    """
+    user_id = get_current_user_id(credentials.credentials)
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    role = get_user_role(user_id)
+    role_name = str(role.get("role_name", "")).strip().upper() if role else ""
+
+    if role_name not in {"OWNER", "المالك"}:
+        raise HTTPException(
+            status_code=403,
+            detail="هذا الإجراء متاح للمالك فقط"
+        )
+
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            # جدول سطر واحد خفيف — يُنشأ مرة واحدة (آمن للتكرار)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS auth_control (
+                    id INTEGER PRIMARY KEY,
+                    token_generation INTEGER NOT NULL DEFAULT 0,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+            cursor.execute(
+                "INSERT INTO auth_control (id, token_generation) VALUES (1, 0) ON CONFLICT (id) DO NOTHING"
+            )
+            cursor.execute(
+                """
+                UPDATE auth_control
+                SET token_generation = token_generation + 1,
+                    updated_at = NOW()
+                WHERE id = 1
+                RETURNING token_generation
+                """
+            )
+            new_generation = int(cursor.fetchone()[0])
+
+            # 📡 بث لحظي لكل الأجهزة المفتوحة (نفس نوع «تحديث النظام» الموجود
+            #    وهو مرئي لكل الأدوار من غير أي تعديل على استعلامات البث)
+            create_realtime_event(
+                cursor,
+                event_type="system_refresh",
+                action="تسجيل خروج جميع المستخدمين",
+                actor_user_id=user_id,
+                target_user_id=None,
+                mission_id=None,
+                details={
+                    "action_text": "أصدر المالك أمراً بتسجيل خروج جميع المستخدمين",
+                    "logout_all": True,
+                }
+            )
+
+            connection.commit()
+
+        # 🧹 إبطال كاش الجيل في هذه النسخة فوراً (بقية النسخ خلال 5 ثوانٍ)
+        invalidate_session_generation_cache()
+
+        # 🔑 توكن جديد للمالك بالجيل الجديد — عشان يفضل هو داخل
+        fresh_token = create_access_token(user_id, generation=new_generation)
+
+        return {
+            "message": "تم تسجيل خروج جميع المستخدمين. جلستك أنت سارية.",
+            "generation": new_generation,
+            "access_token": fresh_token,
+        }
+
+    finally:
+        connection.close()
+
 
 # ═══════════════════════════════════════════════════════════════════
 # 💾 حالة العمل على السيرفر (Workspace) — مسودات الاستمارات + طابور الإرسال
