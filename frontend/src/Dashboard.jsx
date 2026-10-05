@@ -7699,7 +7699,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
         show={downloadTarget !== null}
         title="تصدير الاستمارة"
         onCancel={() => setDownloadTarget(null)}
-        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); handleExportSingleMission(rec); }}
+        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); withWorking('جاري تجهيز ملف الإكسيل…', () => handleExportSingleMission(rec)); }}
       />
             {/* 🆕 نافذة اختيار: تحميل السجل الشامل بالتصنيفات أم بدونها */}
       <ExportChoiceModal
@@ -8957,7 +8957,7 @@ const [nd, setNd] = useState({
         show={downloadTarget !== null}
         title="تصدير الخبر"
         onCancel={() => setDownloadTarget(null)}
-        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); handleExportSingleNews(rec); }}
+        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); withWorking('جاري تجهيز ملف الإكسيل…', () => handleExportSingleNews(rec)); }}
       />
     </div>
   );
@@ -11371,7 +11371,7 @@ const onMatrixChange = (s, d, val) => {
         show={downloadTarget !== null}
         title={T('تنزيل سجل التسليم', 'Download record')}
         onCancel={() => setDownloadTarget(null)}
-        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); downloadSingle(rec); }}
+        onConfirm={() => { const rec = downloadTarget; setDownloadTarget(null); withWorking('جاري تجهيز ملف الإكسيل…', () => downloadSingle(rec)); }}
       />
       {/* 🗑️ نافذة تأكيد مسح جميع التسليمات */}
       <DangerConfirmModal
