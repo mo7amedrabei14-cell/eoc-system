@@ -1149,12 +1149,34 @@ const durHMS = (s) => {
   const total = days * 1440 + hrs * 60 + mins;
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}:00`;
 };
+// 🗓️ تاريخ التصدير: DD/MM/YYYY بالسلاش — نفس شكل الإدخال عند الشباب (05/10/2026)
+const exportDateSafe = (val) => {
+  if (!val) return '';
+  const s = String(val).trim();
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) { const p = (x) => String(x).padStart(2, '0'); return `${p(iso[3])}/${p(iso[2])}/${iso[1]}`; }
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmy) { const p = (x) => String(x).padStart(2, '0'); return `${p(dmy[1])}/${p(dmy[2])}/${dmy[3]}`; }
+  return s;
+};
+
+// 📅 اسم الشهر من التاريخ (ISO أو DD/MM) — احتياطي لما الحقل المخزّن يكون فاضي
+const monthNameSafe = (dateStr) => {
+  if (!dateStr) return '';
+  const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const iso = String(dateStr).split('T')[0].split('-');
+  if (iso.length === 3 && iso[0].length === 4) return months[Number(iso[1]) - 1] || '';
+  const dmy = String(dateStr).split('/');
+  if (dmy.length === 3) return months[Number(dmy[1]) - 1] || '';
+  return '';
+};
+
 
 // 📊 صف إكسيل موحّد (الأخبار المحلية + الرصد الآلي) — نفس الترتيب بالحرف،
 //    العمود دايماً موجود ولو قيمته مش متوفرة يطلع فاضي.
 const buildNewsRow = (n) => ({
-  "التاريخ": formatDateTime(n.incident_date),
-  "الشهر": n.incident_month || '',
+  "التاريخ": exportDateSafe(n.incident_date),
+  "الشهر": n.incident_month || monthNameSafe(n.incident_date),
   "وصف الحادث": n.incident_description || '',
   "نوع الخبر": n.news_type || '',
   "ناشر الخبر": n.news_publisher || '',
@@ -1451,7 +1473,8 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
   a.download = fileName;
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+  // ⏳ رسالة النجاح لا تظهر إلا بعد أن يلتقط المتصفح الملف فعلاً
+  return new Promise((resolve) => setTimeout(() => { URL.revokeObjectURL(url); a.remove(); resolve(); }, 1200));
 };
 
 // ⏳ مؤشر العمل العام لكل تصديرات الإكسيل في النظام (استثناء: المضغوط له مؤشره الخاص)
@@ -4502,14 +4525,32 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       // حقول الـ DOM: ننتظر رسم الصفوف الديناميكية ثم نطبّق القيم (أفضل جهد، بلا أعطال)
       await applyFieldsWhenReady(formBodyRef.current, payload?.dom || {});
       // 💾 حقول SegInputs الستة: كتابة الـDOM المباشرة تُبطَل بأول إعادة عرض —
-      //    نبثّ حدثاً مخصصاً يستلمه الحقل نفسه ويحدّث حالته الداخلية بالقيمة الصحيحة
+      //    نبثّ حدثاً مخصصاً يستلمه الحقل نفسه ويحدّث حالته الداخلية بالقيمة الصحيحة.
+      // 🛡️ البثّ يُعاد تلقائياً لحد ما يستقر الحقل على قيمته: الحقول قد تُرسم متأخرة
+      //    (صفوف ديناميكية/إعادة تركيب) فتضيع الدفعة الأولى، وتُمسح التواريخ والساعات
+      //    صامتاً. نتحقق من الناقل (input المخفي) ونعيد البثّ للحقل الذي لم يستقر فقط.
       const SEG_RESTORE = ['f_exit_date', 'f_arrival_date', 'f_completion_date', 'f_departure_time', 'f_arrival_time', 'f_completion_time'];
       const domVals = payload?.dom || {};
-      SEG_RESTORE.forEach((fid) => {
-        const val = String(domVals[fid] ?? '').trim();
-        if (!val) return;   // فارغ في المسودة ⇒ لا حاجة للاسترجاع
+      const sendSegSet = (fid, val) => {
         try { document.dispatchEvent(new CustomEvent('eoc:seg-set', { detail: { id: fid, value: val } })); } catch { /* تجاهل */ }
-      });
+      };
+      const segWanted = SEG_RESTORE
+        .map((fid) => ({ fid, val: String(domVals[fid] ?? '').trim() }))
+        .filter((x) => x.val);   // فارغ في المسودة ⇒ لا حاجة للاسترجاع
+      segWanted.forEach((x) => sendSegSet(x.fid, x.val));
+      let segRestores = 0;
+      const segTimer = setInterval(() => {
+        segRestores += 1;
+        const unsettled = segWanted.filter(({ fid, val }) => {
+          const el = document.getElementById(fid);
+          return !el || String(el.value || '').trim() !== val;
+        });
+        if (segRestores >= 12 || !unsettled.length || !formBodyRef.current) {
+          clearInterval(segTimer);
+          return;
+        }
+        unsettled.forEach(({ fid, val }) => sendSegSet(fid, val));
+      }, 150);
       setCustomAlert('تم استرجاع المسودة المحفوظة — راجع البيانات ثم اضغط حفظ.');
     },
   });
@@ -4927,7 +4968,9 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
         //    يذهب لمحرّره البسيط (من/إلى + تواريخ كاملة)؛ والباقي لمجموعات مخصصة.
         //    تحويل backend date/time → datetime-local للـ RouteCard UI
         // ⏰ الوقت من السيرفر بييجي بثواني (08:00:00) — نبعته HH:MM بس (نفس صيغة datetime-local)
-        const combineDateTime = (date, time) => (date && time ? `${date}T${String(time).slice(0, 5)}` : '');
+        // 🛡️ لو التاريخ موجود والوقت ناقص ما نرجّعش فارغ (يظهر كأن الخانة اتمسحت) —
+        //    نرجّع التاريخ وحده فالحقل يعرضه ويحفظه بدل مسح خانة من الأربع.
+        const combineDateTime = (date, time) => (date && time ? `${date}T${String(time).slice(0, 5)}` : (date || ''));
         // 🛡️ العنوان الأساسي يُعرَف بقيمته وبغيابه معاً: أي صف بعنوان NULL/فارغ هو
         //    «خط السير الأساسي» — صف قديم بلا عنوان كان يسقط في مجموعة مخصصة باسم
         //    «null» فيختفي من قسمه ويُفسد هوية اليوم المرتبط به.
@@ -7485,7 +7528,6 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
               {/* 👑 المالك (God Mode) — كل الأزرار ظاهرة دائماً بغض النظر عن حالة الاستمارة */}
               {isOwner ? (
                 <>
-                  <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-[var(--ink-2)] px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">مسودة</button>
                   <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال للجوكر</button>
                   <button type="button" onClick={() => { setReturnError(''); setReturnModalOpen(true); }} disabled={isSubmitting} className="btn-warn px-6 py-3 md:py-2.5 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرجاع للمتطوع</button>
                   <button onClick={() => handleSubmit('Approved')} disabled={isSubmitting} className="btn-success px-8 py-3 md:py-2.5 rounded-xl text-sm shadow-[0_0_18px_var(--ok-soft)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">تم مراجعة المهمة (مستمرة)</button>
@@ -7499,7 +7541,6 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
                   {/* 1. للمتطوع أو الإداري لو الاستمارة جديدة/مسودة/معادة — لا أزرار لحساب إدارة الشباب */}
                                     {(!currentMissionData || currentMissionData.status === 'Draft' || currentMissionData.status === 'Returned') && !isYouth && (
                     <>
-                      <button onClick={() => handleSubmit('Draft')} disabled={isSubmitting} className="bg-[var(--surface-3)] hover:bg-[var(--surface-4)] text-[var(--ink-2)] px-6 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">حفظ كمسودة</button>
                       {isVolunteer ? (
                         <button onClick={() => handleSubmit('Under Review')} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 md:py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-[0.97]">إرسال إلى الجوكر</button>
                       ) : (
@@ -7976,12 +8017,13 @@ const RouteCard = ({
   disabled = false
 }) => {
   // Use pre-computed datetime-local from handleViewMission, or fall back to combining date/time
+  // 🛡️ الناقص لا يُسقط الموجود: تاريخ بلا وقت يبقى معروضاً (ومحفوظاً) بدل خانة فارغة تبدو ممسوحة.
   const depDateTime = route.departure_datetime || (route.departure_date && route.departure_time
     ? `${route.departure_date}T${route.departure_time}`
-    : '');
+    : (route.departure_date || ''));
   const arrDateTime = route.arrival_datetime || (route.arrival_date && route.arrival_time
     ? `${route.arrival_date}T${route.arrival_time}`
-    : '');
+    : (route.arrival_date || ''));
 
   const handleDepChange = (e) => {
     const val = e.target.value; // YYYY-MM-DDTHH:MM
@@ -7990,7 +8032,14 @@ const RouteCard = ({
       return;
     }
     const [date, time] = val.split('T');
-    onChange?.({ ...route, departure_date: date, departure_time: time, departure_datetime: val });
+    // 🛡️ لا نصفّي «وقت التحرك» لو جاء تاريخ فقط (والعكس) — النصف المحمي يبقى في الحالة
+    //    وإلا ذهب للسيرفر null فتُمسح خانة من الأربع مع بقاء الخانة الأخرى.
+    onChange?.({
+      ...route,
+      departure_date: date || route.departure_date || '',
+      departure_time: time || route.departure_time || '',
+      departure_datetime: val,
+    });
   };
 
   const handleArrChange = (e) => {
@@ -8000,7 +8049,13 @@ const RouteCard = ({
       return;
     }
     const [date, time] = val.split('T');
-    onChange?.({ ...route, arrival_date: date, arrival_time: time, arrival_datetime: val });
+    // 🛡️ نفس الحارس — لا مسح لنصف بسبب نقص النصف الآخر
+    onChange?.({
+      ...route,
+      arrival_date: date || route.arrival_date || '',
+      arrival_time: time || route.arrival_time || '',
+      arrival_datetime: val,
+    });
   };
 
   const handleFromChange = (e) => onChange?.({ ...route, route_from: e.target.value });
@@ -11465,7 +11520,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleExportExcel = async () => {
     if (filteredDisasters.length === 0) return setCustomAlert("لا توجد كوارث للتصدير حالياً.");
     const disasterRows = filteredDisasters.map(d => ({
-      "التاريخ": formatDateTime(d.incident_date),
+      "التاريخ": exportDateSafe(d.incident_date),
       "الشهر": d.incident_month || '',
       "الخبر": d.news_title || '',
       "الدولة": d.country || '',
@@ -11488,7 +11543,7 @@ const [clearAllCode, setClearAllCode] = useState('');
   // 💡 تصدير الكارثة الفردية — يُستدعى من زر التنزيل في صف الجدول (البيانات من نفس الصف مباشرة)
   const handleExportSingleDisaster = async (d) => {
     const disasterRow = [{
-      "التاريخ": formatDateTime(d.incident_date),
+      "التاريخ": exportDateSafe(d.incident_date),
       "الشهر": d.incident_month || '',
       "الخبر": d.news_title || '',
       "الدولة": d.country || '',
@@ -12750,6 +12805,8 @@ const [clearAllCode, setClearAllCode] = useState('');
   const handleGlobalSubmit = async () => {
     if (!gForm.date) return setCustomAlert("التاريخ مطلوب");
     if (!gForm.magnitude) return setCustomAlert("القوة بالريختر مطلوبة");
+    // 🌍 الرصد اليدوي للزلازل العالمية: الدولة إلزامية (قبل القفل — نفس نمط date/magnitude)
+    if (!String(gForm.country || '').trim()) return setCustomAlert("الدولة مطلوبة");
     // 🔒 قفل متزامن: يمنع الضغط المزدوج/الحفظ المتكرر (نفس نمط باقي الأقسام)
     if (eqSubmitLockRef.current) return;
     eqSubmitLockRef.current = true;
@@ -13037,7 +13094,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <FormGroup label="التاريخ"><SegDateField value={gForm.date} onChange={e => setGForm({...gForm, date: e.target.value})} className="field" /></FormGroup>
                 <FormGroup label="التوقيت"><SegTimeField className="field" value={gForm.time} onChange={e => setGForm({...gForm, time: e.target.value})} /></FormGroup>
-                <FormGroup label="الدولة">
+                <FormGroup label="الدولة (مطلوب)">
                   <StyledSelect value={gForm.country} onChange={e => setGForm({...gForm, country: e.target.value})}>
                     <option value="" disabled>اختر الدولة...</option>
                     {COUNTRIES_LIST.map(c => <option key={c} value={c}>{c}</option>)}
@@ -14470,7 +14527,7 @@ const [clearAllCode, setClearAllCode] = useState('');
 
     // 📤 صف بإعمدة الكوارث العالمية (للرصد الآلي — أخبار عالمية)
   const buildAiGlobalRow = (n) => ({
-    "التاريخ": formatDateTime(n.incident_date),
+    "التاريخ": exportDateSafe(n.incident_date),
     "الشهر": n.incident_month || getMonthName(n.incident_date) || '',
     "الخبر": n.incident_description || '',
     "الدولة": n.governorate || n.country || '',

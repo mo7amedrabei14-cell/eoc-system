@@ -198,6 +198,8 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   const pillsRef = useRef(null);
   const armedSeg = useRef(-1);            // جزء وُضع عليه المؤشر: أول رقم يكتب يستبدل قيمته
   const lastSyncedValue = useRef(initial || '');
+  // 🛡️ لا يُبلَّغ «مسح» إلا بعد لمس المستخدم فعلاً — وإلا أسقطت إعادة الرسم أي قيمة محفوظة
+  const userEditedRef = useRef(false);
 
   // Build display from segments
   const display = segs[0] || segs[1] || segs[2]
@@ -210,7 +212,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
     // 🚨 مسح كامل → أفرغ القيمة الآلة أيضاً (لا نُبقي قيمة قديمة) حتى لا يُحفظ تاريخ قديم عند الإرسال
     if (!dd && !mm && !yyyy) {
       if (machine !== '') setMachine('');
-      if ('' !== lastSyncedValue.current) {
+      if (userEditedRef.current && '' !== lastSyncedValue.current) {
         lastSyncedValue.current = '';
         if (onChange) onChange({ target: { value: '' } });
       }
@@ -240,6 +242,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
       const iso = String(value || '');
       if (iso === lastSyncedValue.current) return; // already in sync
       lastSyncedValue.current = iso;
+      userEditedRef.current = false;  // 🔄 تحديث من الأعلى ⇒ ليس مسحاً من المستخدم
       const m = iso.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
       if (m) setSegs([pad(+m[3]), pad(+m[2]), m[1]]);
       else setSegs(['','','']);
@@ -270,6 +273,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
   const segDefs = DATE_SEGS;
 
   const setSeg = (idx, val) => {
+    userEditedRef.current = true;   // ✋ لمس المستخدم — فقط بعده يُبلَّغ أي «مسح»
     const next = [...segs]; next[idx] = val; setSegs(next);
   };
 
@@ -482,6 +486,8 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   const pillsRef = useRef(null);
   const armedSeg = useRef(-1);            // جزء وُضع عليه المؤشر: أول رقم يكتب يستبدل قيمته
   const lastSyncedValue = useRef(initMachine || '');
+  // 🛡️ لا يُبلَّغ «مسح» إلا بعد لمس المستخدم فعلاً — وإلا أسقط إعادة الرسم أي قيمة محفوظة
+  const userEditedRef = useRef(false);
 
   const display = segs[0] || segs[1]
     ? `${segs[0] || '__'}:${segs[1] || '__'} ${segs[2] || 'AM'}`
@@ -493,7 +499,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
     // 🚨 مسح كامل → أفرغ القيمة الآلة (ap يحتفظ دائماً بـ AM/PM، لذا الفحص على الساعتين والدقائق فقط)
     if (!hh && !mm) {
       if (machine !== '') setMachine('');
-      if ('' !== lastSyncedValue.current) {
+      if (userEditedRef.current && '' !== lastSyncedValue.current) {
         lastSyncedValue.current = '';
         if (onChange) onChange({ target: { value: '' } });
       }
@@ -522,6 +528,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
       const n = normTime(value) || '';
       if (n === lastSyncedValue.current) return; // already in sync
       lastSyncedValue.current = n;
+      userEditedRef.current = false;  // 🔄 تحديث من الأعلى ⇒ ليس مسحاً من المستخدم
       if (n) {
         setSegs(parseTimeSegs(to12Display(n)));
         setClock(n);
@@ -554,6 +561,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
   const segDefs = TIME_SEGS;
 
   const setSeg = (idx, val) => {
+    userEditedRef.current = true;   // ✋ لمس المستخدم — فقط بعده يُبلَّغ أي «مسح»
     const next = [...segs]; next[idx] = val; setSegs(next);
   };
 
@@ -754,11 +762,12 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
 export const SegDateTimeField = ({ value, onChange, defaultValue, id, className = '', disabled, max, twoIcons, ...props }) => {
   const initial = (value !== undefined && value !== null) ? value : (defaultValue || '');
   const initDisplay = initial ? formatDateTime12(initial) : '';
-  // Parse "DD/MM/YYYY HH:MM AM" → 5 segments
-  const initParsed = initDisplay.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})\s*(AM|PM)?$/i);
+  // 📅 يقبل تاريخاً بلا وقت (يعرضه) بدل إسقاطه للخانات الفارغة — وإلا بدت الخانة ممسوحة
+  const initParsed = initDisplay.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})\s*(AM|PM)?)?$/i);
   const initSegs = initParsed
     ? [initParsed[1].padStart(2, '0'), initParsed[2].padStart(2, '0'), initParsed[3].padStart(4, '0'),
-       initParsed[4].padStart(2, '0'), initParsed[5].padStart(2, '0'),
+       initParsed[4] ? initParsed[4].padStart(2, '0') : '',
+       initParsed[5] ? initParsed[5].padStart(2, '0') : '',
        (initParsed[6] || 'AM').toUpperCase()]
     : ['','','','','','AM'];
 
@@ -799,6 +808,8 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
     return m ? `${m[1]}-${pad(+m[2])}-${pad(+m[3])}T${pad(+m[4])}:${m[5]}` : initial;
   })();
   const lastSyncedValue = useRef(initMachine || '');
+  // 🛡️ لا يُبلَّغ «مسح» إلا بعد لمس المستخدم فعلاً — وإلا أسقط إعادة الرسم أي قيمة محفوظة
+  const userEditedRef = useRef(false);
 
   const display = `${segs[0] || '__'}/${segs[1] || '__'}/${segs[2] || '____'} ${segs[3] || '__'}:${segs[4] || '__'} ${segs[5] || 'AM'}`;
 
@@ -808,7 +819,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
     // 🚨 مسح كامل → أفرغ القيمة الآلة (ap يحتفظ دائماً بـ AM/PM، لذا الفحص على باقي الأجزاء فقط)
     if (!dd && !mm && !yyyy && !hh && !mm2) {
       if (machine !== '') setMachine('');
-      if ('' !== lastSyncedValue.current) {
+      if (userEditedRef.current && '' !== lastSyncedValue.current) {
         lastSyncedValue.current = '';
         if (onChange) onChange({ target: { value: '' } });
       }
@@ -839,13 +850,19 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
       const s = String(value || '');
       if (s === lastSyncedValue.current) return; // already in sync
       lastSyncedValue.current = s;
-      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:T(\d{1,2}):(\d{2}))/);
+      userEditedRef.current = false;  // 🔄 تحديث من الأعلى ⇒ ليس مسحاً من المستخدم
+      const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2}))/);
       if (m) {
         const h24 = +m[4], mm = pad(+m[5]);
         const ap = h24 < 12 ? 'AM' : 'PM';
         const hh = pad(h24 % 12 || 12);
         setSegs([pad(+m[3]), pad(+m[2]), m[1], hh, mm, ap]);
-      } else setSegs(['','','','','','AM']);
+      } else {
+        // 📅 تاريخ بلا وقت — نعرض التاريخ بدل إسقاطه للخانات الفارغة (تبدو ممسوحة)
+        const d = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (d) setSegs([pad(+d[3]), pad(+d[2]), d[1], '', '', 'AM']);
+        else setSegs(['','','','','','AM']);
+      }
       setMachine(s);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -877,6 +894,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
   const segDefs = DT_SEGS;
 
   const setSeg = (idx, val) => {
+    userEditedRef.current = true;   // ✋ لمس المستخدم — فقط بعده يُبلَّغ أي «مسح»
     const next = [...segs]; next[idx] = val; setSegs(next);
   };
 
