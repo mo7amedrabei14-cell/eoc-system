@@ -7085,23 +7085,17 @@ class AINewsModel(BaseModel):
 _AI_NEWS_SCHEMA_READY = False
 
 
-# 🇪🇬 محافظات مصر معروفة — أي خبر جاي من واحدة منهم = محلي، غير كده عالمي
+# 🇪🇬 المحافظات الـ27 المعتمدة — أي خبر جاي من واحدة منهم = محلي، غير كده عالمي
 EGYPT_GOV_LABELS = (
-    "القاهرة", "الجيزة", "الإسكندرية", "الاسكندرية", "القليوبية", "الفيوم", "المنيا",
-    "أسيوط", "اسيوط", "سوهاج", "قنا", "الأقصر", "الاقصر", "أسوان", "اسوان",
-    "البحر الأحمر", "البحيرة", "الدقهلية", "دمياط", "الشرقية", "كفر الشيخ",
-    "الغربية", "غربية", "المنوفية", "بني سويف", "بورسعيد", "الإسماعيلية",
-    "الاسماعيلية", "السويس", "شمال سيناء", "جنوب سيناء", "مطروح", "الوادي الجديد",
+    "القاهرة", "الجيزة", "القليوبية", "الإسكندرية", "مطروح", "البحيرة",
+    "جنوب سيناء", "شمال سيناء", "السويس", "الشرقية", "الإسماعيلية",
+    "بور سعيد", "المنوفية", "الغربية", "الدقهلية", "كفر الشيخ", "دمياط",
+    "المنيا", "بني سويف", "الفيوم", "أسيوط", "الوادي الجديد", "سوهاج",
+    "أسوان", "الأقصر", "البحر الأحمر", "قنا",
 )
 
-# 🇪🇬 المحافظات الـ27 بالأسماء المعتمدة (+ variants إملائية — التطبيع بيغطي أغلبها)
-EGYPT_GOV_LIST = (
-    "القاهرة", "الجيزة", "القليوبية", "الاسكندرية", "الإسكندرية", "مطروح", "البحيرة",
-    "جنوب سيناء", "شمال سيناء", "السويس", "الشرقية", "الإسماعيلية", "الاسماعيلية",
-    "بور سعيد", "بورسعيد", "المنوفية", "الغربية", "الدقهلية", "كفرالشيخ", "كفر الشيخ",
-    "دمياط", "المنيا", "بني سويف", "الفيوم", "أسيوط", "اسيوط", "الوادي الجديد",
-    "سوهاج", "أسوان", "اسوان", "الاقصر", "الأقصر", "البحر الاحمر", "البحر الأحمر", "قنا",
-)
+# نفس القائمة المحلية — مصدر واحد (التطبيع بيغطي اختلاف الهمزات والمسافات)
+EGYPT_GOV_LIST = EGYPT_GOV_LABELS
 
 # 🌍 المواقع العالمية المسموح بها في الرصد الآلي (دول + بحار + محيطات + مناطق)
 GLOBAL_LOCATIONS = (
@@ -7158,14 +7152,65 @@ GLOBAL_LOCATIONS = (
 
 # 🔤 أسماء إنجليزية شائعة جاية من أخبار أجنبية → اسم معتمد عربي
 _LOCATION_ALIASES = {
-    "cairo": "القاهرة", "giza": "الجيزة", "alexandria": "الاسكندرية",
-    "red sea": "البحر الاحمر", "mediterranean": "البحر الابيض المتوسط",
+    "cairo": "القاهرة", "giza": "الجيزة", "alexandria": "الإسكندرية",
+    "red sea": "البحر الأحمر", "mediterranean": "البحر الابيض المتوسط",
     "saudi arabia": "السعودية", "saudi": "السعودية", "uae": "الإمارات العربية المتحدة",
     "united arab emirates": "الإمارات العربية المتحدة", "usa": "الولايات المتحدة الأمريكية",
     "united states": "الولايات المتحدة الأمريكية", "uk": "المملكة المتحدة",
     "united kingdom": "المملكة المتحدة", "palestine": "الأراضي الفلسطينية",
     "turkey": "تركيا", "persian gulf": "الخليج الفارسي", "arabian sea": "بحر العرب",
     "arabian gulf": "الخليج الفارسي", "unknown": "", "unspecified": "", "na": "",
+    # تهجئة مختصرة لمحافظة الغربية
+    "غربية": "الغربية",
+    # مدن/محافظات أجنبية → الدولة المعتمدة
+    "غزة": "الأراضي الفلسطينية", "قطاع غزة": "الأراضي الفلسطينية", "محافظة غزة": "الأراضي الفلسطينية",
+    "حلب": "سوريا", "دير الزور": "سوريا", "ريف دمشق": "سوريا",
+    "كييف": "أوكرانيا",
+    "هرمزغان": "إيران",
+    "إسطنبول": "تركيا", "اسطنبول": "تركيا",
+    "بيروت": "لبنان",
+    "الرياض": "السعودية",
+    "أربيل": "العراق",
+    "أثينا": "اليونان",
+    "كاليفورنيا": "الولايات المتحدة الأمريكية",
+    "خيبر بختونخوا": "باكستان",
+    "هافانا": "كوبا",
+    "أديس أبابا": "إثيوبيا",
+    "الخرطوم": "السودان", "غرب كردفان": "السودان",
+    "تعز": "اليمن", "أمانة العاصمة": "اليمن", "صنعاء": "اليمن",
+    # إضافات سريعة لدول شائعة
+    "طهران": "إيران", "بغداد": "العراق", "باكو": "أذربيجان", "دمشق": "سوريا",
+    "الدوحة": "قطر", "مسقط": "عمان", "المنامة": "البحرين", "عمّان": "الأردن",
+    "تونس": "تونس", "الجزائر": "الجزائر", "طرابلس": "ليبيا", "بنغازي": "ليبيا",
+    "نيروبي": "كينيا", "لاغوس": "نيجيريا", "كابول": "أفغانستان", "كراتشي": "باكستان",
+    "مومباي": "الهند", "دلهي": "الهند", "شنغهاي": "الصين", "طوكيو": "اليابان",
+    "سيول": "كوريا الجنوبية", "سيدني": "أستراليا", "تورنتو": "كندا", "برلين": "ألمانيا",
+    "مدريد": "إسبانيا", "روما": "إيطاليا", "لندن": "المملكة المتحدة", "باريس": "فرنسا",
+    # ── مدن مصرية → المحافظة المعتمدة ──
+    "الغردقة": "البحر الأحمر", "سفاجا": "البحر الأحمر", "مرسى علم": "البحر الأحمر",
+    "رأس غارب": "البحر الأحمر", "القصير": "البحر الأحمر", "شلاتين": "البحر الأحمر",
+    "حلايب": "البحر الأحمر", "الجونة": "البحر الأحمر",
+    "شرم الشيخ": "جنوب سيناء", "دهب": "جنوب سيناء", "نويبع": "جنوب سيناء",
+    "سانت كاترين": "جنوب سيناء", "طابا": "جنوب سيناء",
+    "العلمين": "مطروح", "مرسى مطروح": "مطروح", "سيوة": "مطروح",
+    "دمنهور": "البحيرة", "كفر الدوار": "البحيرة",
+    "طنطا": "الغربية", "المحلة الكبرى": "الغربية",
+    "المنصورة": "الدقهلية", "ميت غمر": "الدقهلية",
+    "بنها": "القليوبية", "شبرا الخيمة": "القليوبية",
+    "شبين الكوم": "المنوفية",
+    "الزقازيق": "الشرقية", "بلبيس": "الشرقية", "العاشر من رمضان": "الشرقية",
+    "بورفؤاد": "بور سعيد",
+    "6 أكتوبر": "الجيزة", "الشيخ زايد": "الجيزة",
+    "حلوان": "القاهرة", "مدينة نصر": "القاهرة", "المعادي": "القاهرة",
+    "الخارجة": "الوادي الجديد", "الداخلة": "الوادي الجديد",
+    "إدفو": "أسوان", "كوم أمبو": "أسوان",
+    "أخميم": "سوهاج", "جرجا": "سوهاج", "طهطا": "سوهاج",
+    "ملوي": "المنيا", "بني مزار": "المنيا", "مغاغة": "المنيا",
+    "إسنا": "الأقصر", "أرمنت": "الأقصر",
+    "نجع حمادي": "قنا", "قفط": "قنا",
+    "سنورس": "الفيوم", "إطسا": "الفيوم",
+    "الواسطى": "بني سويف", "ناصر": "بني سويف",
+    "ديروط": "أسيوط", "منفلوط": "أسيوط", "أبنوب": "أسيوط",
 }
 
 def _ar_norm(s):
@@ -7205,10 +7250,18 @@ _MATCH_INDEX = sorted(
 _LOCAL_TRAP_WORDS = ("مصر الجديده", "مصر القديمه")
 
 
-def normalize_ai_location(raw):
-    """اسم الموقع المعتمد (1) بمطابقة تامة، أو (2) كاسم كامل داخل النص — الأطول أولاً."""
+# 🚫 قيم ليست موقعًا حقيقيًا — تُخزَّن فاضية دايماً
+_BLOCKED_LOCATIONS = (
+    "-", "غير محدد", "غير متوفر", "غير معروف", "مجهول", "لا يوجد", "بدون",
+    "خارج البلاد", "خارج الدولة", "بدون أصل", "الجنوب", "مصر",
+)
+_BLOCKED_NORM = {_ar_norm(x) for x in _BLOCKED_LOCATIONS}
+
+
+def normalize_ai_location(raw, publisher=None):
+    """محافظة مصرية أو دولة من قائمتي، أو مدينة معروفة → دولتها، وإلا دولة جديدة تُكتب كما هي."""
     t = _ar_norm(raw)
-    if not t or t in {"-", "غيرمحدد"}:
+    if not t or t in _BLOCKED_NORM:
         return ""
     if t in _NORM_EGYPT:
         return _NORM_EGYPT[t]
@@ -7217,30 +7270,40 @@ def normalize_ai_location(raw):
     if t in _NORM_ALIASES:
         return _NORM_ALIASES[t]
     words = _ar_norm_words(raw)
-    if not words:
-        return ""
-    padded = f" {words} "
-    for norm_name, canonical, _prio in _MATCH_INDEX:
-        if f" {norm_name} " in padded:
-            # «مصر» وحدها لا تُطابَق لو النص فيه «مصر الجديدة/القديمة»
-            if _ar_norm(canonical) == _ar_norm("مصر") and any(
-                f" {trap} " in padded for trap in _LOCAL_TRAP_WORDS
-            ):
-                continue
-            return canonical
-    return ""
+    if words:
+        padded = f" {words} "
+        for norm_name, canonical, _prio in _MATCH_INDEX:
+            if f" {norm_name} " in padded:
+                if _ar_norm(canonical) == _ar_norm("مصر") and any(
+                    f" {trap} " in padded for trap in _LOCAL_TRAP_WORDS
+                ):
+                    continue
+                return canonical
+    # 🆕 دولة جديدة مش في قائمتي → تُكتب كما هي
+    _out = re.sub(r"\s+", " ", str(raw or "").strip())[:120]
+    if publisher and _out and _ar_norm(_out) in _ar_norm(publisher):
+        return ""   # اسم الموقع الناشر مش مكان حادث
+    return _out
+
+# 🌊 مدن محافظة البحر الأحمر المصرية — دليل إن «البحر الأحمر» محافظة مش بحر
+_RED_SEA_EGYPT_HINTS = (
+    "الغردقه", "راس غارب", "سفاجا", "القصير", "مرسي علم", "شلاتين", "حلايب",
+    "الجونه", "سهل حشيش", "مكادي", "بورتو السخنه", "محافظه البحر الاحمر",
+)
 
 
-
-def _ai_news_scope_label(governorate) -> str:
-    """خبر محلي لو المحافظة من محافظات مصر — عالمي لأي حاجة تانية أو فاضية."""
+def _ai_news_scope_label(governorate, context="") -> str:
+    """محلي = محافظة مصرية (بتمييز بحر الأحمر المصري بالسياق)؛ غير كده عالمي."""
     g = str(governorate or "").strip()
-    if not g or g == "-" or g == "غير محدد":
+    if not g or _ar_norm(g) in _BLOCKED_NORM:
         return "خبر عالمي"
-    for k in EGYPT_GOV_LABELS:
-        if g == k or k in g or g in k:
+    t = _ar_norm(g)
+    if t == _ar_norm("البحر الأحمر"):
+        ctx = f" {_ar_norm_words(context)} "
+        if any(f" {_ar_norm_words(h)} " in ctx for h in _RED_SEA_EGYPT_HINTS):
             return "خبر محلي"
-    return "خبر عالمي"
+        return "خبر عالمي"
+    return "خبر محلي" if t in _NORM_EGYPT else "خبر عالمي"
 
 
 def _ensure_ai_news_observed_at(cursor):
@@ -7314,10 +7377,10 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
             _ensure_ai_news_observed_at(cursor)
-            # 🎯 قفل النطاق: الموقع يتطابق مع قايمتي مصر/العالم وإلا يُخزّن فاضياً
-            #    (فتصنفه _ai_news_scope_label «خبر عالمي») والأصل يُحفظ للمراجعة.
+            # 🎯 تصنيف الموقع: محافظة مصرية أو دولة من قائمتي أو دولة جديدة
             _raw_loc = str(news.governorate or '').strip()
-            _loc = normalize_ai_location(_raw_loc)
+            _loc = normalize_ai_location(_raw_loc, news.news_publisher)
+            _ctx = " ".join([str(news.incident_description or ""), str(news.area_name or ""), str(news.street_name or "")])
             # 🛡️ Upsert على news_link: إعادة إرسال نفس الرابط ⇒ تحديث بدل خطأ 500
             #    duplicate key — كل خبر يتبعت ويحفظ بلا أي فشل إرسال للأبد.
             #    التحديث فقط لو السجل القديم بلا تحليل حقيقي (فشل التحليل/غير مصنف) —
@@ -7355,7 +7418,7 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                 news.news_type, news.news_publisher, news.street_name, news.area_name, _loc, _raw_loc, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
                 news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''),
-                _ai_news_scope_label(_loc),
+                _ai_news_scope_label(_loc, _ctx),
                 "%فشل التحليل%", ["غير مصنف", "أخرى / غير مصنف"],
             ))
             row = cursor.fetchone()
@@ -7376,7 +7439,7 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                     _desc = " ".join(str(news.incident_description or "").split())
                     if len(_desc) > 140:
                         _desc = _desc[:140].rstrip() + "…"
-                    _scope = _ai_news_scope_label(_loc)
+                    _scope = _ai_news_scope_label(_loc, _ctx)
                     _ai_news_text = (
                         f"{_scope} ({news.news_type or 'غير مصنف'}) في: {_loc or 'خارج مصر'}"
                         + (f" — {_desc}" if _desc else "")
@@ -7422,7 +7485,8 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
             def none_if_empty(val): return val if val != "" else None
             _ensure_ai_news_observed_at(cursor)
             _raw_loc = str(news.governorate or '').strip()
-            _loc = normalize_ai_location(_raw_loc)
+            _loc = normalize_ai_location(_raw_loc, news.news_publisher)
+            _ctx = " ".join([str(news.incident_description or ""), str(news.area_name or ""), str(news.street_name or "")])
             cursor.execute("""
                 UPDATE ai_news SET
                     incident_date=%s, incident_month=%s, incident_description=%s, news_type=%s, news_publisher=%s,
@@ -7436,7 +7500,7 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
                 news.news_type, news.news_publisher, news.street_name, news.area_name, _loc, _raw_loc, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
                 news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''),
-                _ai_news_scope_label(_loc), news_id
+                _ai_news_scope_label(_loc, _ctx), news_id
             ))
 
             connection.commit()
@@ -7534,18 +7598,20 @@ def normalize_legacy_ai_news(credentials: HTTPAuthorizationCredentials = Depends
     try:
         with connection.cursor() as cursor:
             _ensure_ai_news_observed_at(cursor)
-            cursor.execute("SELECT id, governorate, governorate_original FROM ai_news;")
+            cursor.execute("SELECT id, governorate, governorate_original, news_scope, news_publisher, incident_description, area_name, street_name FROM ai_news;")
             rows = cursor.fetchall()
             changed = cleared = 0
-            for _id, _cur, _saved in rows:
+            for _id, _cur, _saved, _scope, _pub, _desc, _area, _street in rows:
                 _cur = str(_cur or '').strip()
                 _orig = _cur or str(_saved or '').strip()
-                _loc = normalize_ai_location(_orig)
-                if _loc != _cur:
+                _ctx = " ".join([str(_desc or ""), str(_area or ""), str(_street or "")])
+                _loc = normalize_ai_location(_orig, _pub)
+                _new_scope = _ai_news_scope_label(_loc, _ctx)
+                if _loc != _cur or _new_scope != str(_scope or ''):
                     cursor.execute(
                         "UPDATE ai_news SET governorate_original = COALESCE(NULLIF(governorate_original,''), NULLIF(%s,'')), "
                         "governorate=%s, news_scope=%s WHERE id=%s;",
-                        (_orig, _loc, _ai_news_scope_label(_loc), _id),
+                        (_orig, _loc, _new_scope, _id),
                     )
                     changed += 1
                     if not _loc: cleared += 1
@@ -10081,13 +10147,14 @@ def export_earthquake_intel_log(
             {"magnitude": magnitude, "distance_km": dist},
             {"hist_max_mag": hist_max, "hist_window_count": hist_count} if hist_max is not None else None,
         )
+        _v = lambda x: None if (x is None or (isinstance(x, str) and x.strip() == "")) else x
         return [
-            date_part, time_part, magnitude, depth_km, place, _eq_country_from_place(place),
-            lat, lon,
+            _v(date_part), _v(time_part), _v(magnitude), _v(depth_km), _v(place), _v(_eq_country_from_place(place)),
+            _v(lat), _v(lon),
             (round(float(dist)) if dist is not None else None),
-            _eq_intel_status_label(magnitude),
-            risk.get("risk_score"), risk.get("risk_level"),
-            hist_max, hist_count, source, detail_url,
+            _v(_eq_intel_status_label(magnitude)),
+            _v(risk.get("risk_score")), _v(risk.get("risk_level")),
+            _v(hist_max), _v(hist_count), _v(source), _v(detail_url),
         ]
 
     connection = get_connection()

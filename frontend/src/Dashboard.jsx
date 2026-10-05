@@ -1461,7 +1461,7 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
     const plain = rows.map((r) => {
       const arr = Array.isArray(r) ? r : (r && Array.isArray(r.cells) ? r.cells : []);
       const rowKind = (!Array.isArray(r) && r && r.kind) ? r.kind : null;
-      return { arr, rowKind, values: arr.map((s) => { const v = cellSpec(s).v; return v === '' ? null : v; }) };
+      return { arr, rowKind, values: arr.map((s) => { const v = cellSpec(s).v; return (v == null || (typeof v === 'string' && v.trim() === '')) ? null : v; }) };
     });
     plain.forEach(({ arr, rowKind, values }) => {
       ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
@@ -1540,7 +1540,7 @@ const buildWorkbookBufferZip = async (sheets) => {
     const plain = rows.map((r) => {
       const arr = Array.isArray(r) ? r : (r && Array.isArray(r.cells) ? r.cells : []);
       const rowKind = (!Array.isArray(r) && r && r.kind) ? r.kind : null;
-      return { arr, rowKind, values: arr.map((s) => { const v = cellSpec(s).v; return v === '' ? null : v; }) };
+      return { arr, rowKind, values: arr.map((s) => { const v = cellSpec(s).v; return (v == null || (typeof v === 'string' && v.trim() === '')) ? null : v; }) };
     });
     plain.forEach(({ arr, rowKind, values }) => {
       ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
@@ -14548,7 +14548,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     "التاريخ": exportDateSafe(n.incident_date),
     "الشهر": n.incident_month || getMonthName(n.incident_date) || '',
     "الخبر": n.incident_description || '',
-    "الدولة": n.governorate || n.country || n.governorate_original || '',
+    "الدولة": n.governorate || n.country || '',
     "نوع الكارثة": n.news_type || '',
     "المناطق المتأثرة من الكارثة": n.area_name || n.affected_areas || '',
     "المناطق المتوقعة الخطر": n.at_risk_areas || '',
