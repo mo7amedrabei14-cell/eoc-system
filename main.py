@@ -12232,7 +12232,9 @@ def force_refresh_system(
                 target_user_id=None,
                 mission_id=None,
                 details={
-                    "action_text": "أصدر المالك أمراً بتحديث النظام لجميع المستخدمين"
+                    "action_text": "أصدر المالك أمراً بتحديث النظام لجميع المستخدمين",
+                    # ⏱️ مدة العدّاد اللي كل الأجهزة تعرضها قبل الريفريش الإجباري
+                    "refresh_in_seconds": 5,
                 }
             )
 

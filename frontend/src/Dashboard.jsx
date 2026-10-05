@@ -1629,6 +1629,10 @@ export default function Dashboard() {
   const [forcedLogout, setForcedLogout] = useState(null);
   const forcedLogoutRef = useRef(false);
 
+  // 🔄 التحديث الإجباري: إشعار + عدّاد تنازلي ثم ريفريش كامل (زي Ctrl+Shift+R)
+  const [forcedRefresh, setForcedRefresh] = useState(null);
+  const forcedRefreshRef = useRef(false);
+
   useEffect(() => {
     if (!customAlert) return undefined;
     const timeout = setTimeout(() => setCustomAlert(null), 7000);
@@ -2001,6 +2005,38 @@ useEffect(() => {
     }, 1000);
   };
 
+  // 🔄 ريفريش إجباري حقيقي: رابط جديد بكاش‑باستر ⇒ آخر HTML + آخر ملفات بناء (زي Ctrl+Shift+R)
+  const hardReloadNow = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('__v', String(Date.now()));
+      window.location.replace(url.toString());
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  // 🔄 تحديث النظام للجميع: شاشة موقوفة + عدّاد 5 ثواني + ريفريش كامل — مرة واحدة فقط
+  const beginForcedReload = (seconds, reason) => {
+    if (forcedRefreshRef.current) return;
+    forcedRefreshRef.current = true;
+    const total = Math.max(1, Number(seconds) || 5);
+    const deadline = Date.now() + total * 1000;   // ⏱️ مهلة بالساعة الحقيقية مش عدّ تنازلي أعمى
+    setForcedRefresh({ seconds: total, reason: reason || 'يتم تجهيز آخر إصدار من النظام' });
+
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      if (left <= 0) { hardReloadNow(); return; }
+      setForcedRefresh(prev => (prev ? { ...prev, seconds: left } : prev));
+    };
+    const timer = setInterval(tick, 500);
+    // 📱 التاب المخفي: لو المؤقت اتبطّأ، أول ما يرجع نتحقق من المهلة فوراً ويرلّود
+    const onActiveAgain = () => { if (!document.hidden) tick(); };
+    document.addEventListener('visibilitychange', onActiveAgain);
+    window.addEventListener('focus', onActiveAgain);
+    window.setTimeout(() => clearInterval(timer), (total + 15) * 1000);
+  };
+
   const pollInFlightRef = useRef(false);      // لا تداخل بين الطلبات
   const pollBackoffRef = useRef(4000);        // backoff لإعادة الاتصال
   const realtimeUnmountedRef = useRef(false);
@@ -2092,8 +2128,13 @@ useEffect(() => {
             return;
           }
 
-          setCustomAlert('سيتم تحديث النظام خلال ثانيتين...');
-          setTimeout(() => window.location.reload(), 1200);
+          // 🔄 تحديث النظام للجميع: شاشة موقوفة + عدّاد + ريفريش إجباري حقيقي
+          beginForcedReload(
+            Number(e.details && e.details.refresh_in_seconds) || 5,
+            'يتم تحديث النظام — سيتم إعادة تحميل الشاشة تلقائياً'
+          );
+          return;
+
         }
         return;
       }
@@ -2592,12 +2633,9 @@ useEffect(() => {
         return;
       }
 
-      setCustomAlert('سيتم تحديث النظام لجميع المستخدمين خلال ثانيتين...');
-
-      // تحديث المالك نفسه أيضاً
-      window.setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      // 🔄 العدّاد يبدأ عندك فوراً (والحدث يبدأه عند كل الأجهزة التانية).
+      //    نفس الدالة محميّة بـ ref فلو الحدث وصل جهازك كمان مش هيتكرر عدّاد تاني.
+      beginForcedReload(5, 'يتم تحديث النظام — سيتم إعادة تحميل الشاشة تلقائياً');
 
     } catch {
       setCustomAlert('تعذر الاتصال بالسيرفر.');
@@ -2776,25 +2814,32 @@ useEffect(() => {
     <div ref={dashboardRootRef} data-theme={theme} className="app-shell min-h-screen bg-[var(--bg)] text-white font-sans selection:bg-[var(--accent)] selection:text-white flex overflow-hidden transition-colors duration-300" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
-      {/* 🚪 خروج إجباري: إشعار + عدّاد تنازلي واضح ثم خروج فعلي */}
-      {forcedLogout && (
+      {/* 🚪🔄 شاشة حاجبة موحّدة: خروج إجباري (خروج جماعي) أو تحديث إجباري (ريفريش كامل) */}
+      {(forcedLogout || forcedRefresh) && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm" dir={language === 'ar' ? 'rtl' : 'ltr'} role="alertdialog" aria-live="assertive">
           <div className="w-[min(92vw,420px)] rounded-3xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-7 text-center shadow-2xl animate-fade-in">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--danger-soft)] text-[var(--accent)]">
-              <LogoutIcon />
+              {forcedLogout ? <LogoutIcon /> : (
+                <svg className="w-6 h-6 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 3v6h-6" /></svg>
+              )}
             </div>
             <h3 className="text-lg font-extrabold text-[var(--ink)]">
-              {language === 'ar' ? 'سيتم تسجيل خروجك الآن' : 'Signing you out'}
+              {forcedLogout
+                ? (language === 'ar' ? 'سيتم تسجيل خروجك الآن' : 'Signing you out')
+                : (language === 'ar' ? 'يتم تحديث النظام' : 'Updating the system')}
             </h3>
-            <p className="mt-2 text-sm font-semibold text-[var(--muted)]">{forcedLogout.reason}</p>
-            <div className="mt-5 text-5xl font-black tabular-nums text-[var(--accent)]">{forcedLogout.seconds}</div>
+            <p className="mt-2 text-sm font-semibold text-[var(--muted)]">
+              {(forcedLogout || forcedRefresh).reason}
+            </p>
+            <div className="mt-5 text-5xl font-black tabular-nums text-[var(--accent)]">
+              {(forcedLogout || forcedRefresh).seconds}
+            </div>
             <p className="mt-1 text-xs font-bold text-[var(--muted-2)]">
               {language === 'ar' ? 'ثانية' : 'seconds'}
             </p>
           </div>
         </div>
       )}
-
       
       {/* ◈ منطقة الوعي — نَوْل الإشارة: الإشارة بتدخل بذرة وبتتنسج للخارج */}
       <div id="sig-top-rail" className="sig-loom">
