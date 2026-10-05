@@ -1407,6 +1407,32 @@ const safeExternalHref = (url) => {
   return /^[a-z][a-z0-9+.\-]*:/i.test(raw) ? '' : raw;
 };
 
+// 📥 التسليم المركزي لكل ملفات النظام: نافذة حفظ حقيقية ⇒ «نجاح» تعني الملف اتكتب فعلاً.
+//    ترجع: 'saved' (متأكد) · 'cancelled' (المستخدم ألغى) · 'started' (نمط احتياطي بلا تأكيد)
+const deliverFile = async (blob, fileName, saveHandle = null) => {
+  console.info('📥 تنزيل:', fileName, `(${(blob.size / 1024).toFixed(1)} KB)`);
+  if (!blob || blob.size === 0) throw new Error('الملف فاضي — فشل توليد البيانات');
+  // 1) نافذة الحفظ اختيارية — متعطلة افتراضياً (تنزيل صامت زي الأول)
+  let handle = saveHandle;
+  if (handle) {
+    const writable = await handle.createWritable();
+    try { await writable.write(blob); await writable.close(); return 'saved'; }
+    catch (e) { try { await writable.abort(); } catch {} throw e; }
+  }
+  // 2) النمط الاحتياطي المحسّن: داخل DOM + revoke بعد دقيقة + تشخيص في الكونسول
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName; a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 60000);
+    console.warn('📥 اتنزل بالنمط الاحتياطي — لو الملف ما ظهرش: راجع إعدادات التنزيلات/الإضافات في المتصفح');
+    return 'started';
+  } catch (e) { console.error('📥 فشل التنزيل:', e); throw e; }
+};
+
 const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: التفاف النص معطل دائماً */) => {
   const ExcelJS = await import('exceljs');
   const wb = new ExcelJS.Workbook();
@@ -1467,14 +1493,11 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  // ⏳ رسالة النجاح لا تظهر إلا بعد أن يلتقط المتصفح الملف فعلاً
-  return new Promise((resolve) => setTimeout(() => { URL.revokeObjectURL(url); a.remove(); resolve(); }, 1200));
+  const out = await deliverFile(blob, fileName);
+  if (out === 'cancelled') throw new Error('CANCELLED_BY_USER');
+  // ⏳ حبة «جاري تجهيز ملف الإكسيل» تفضل ظاهرة طول التقاط المتصفح للملف،
+  //    ورسالة النجاح مش بتظهر إلا بعد اكتمال بدء التنزيل فعلاً.
+  await new Promise((resolve) => setTimeout(resolve, 1200));
 };
 
 // ⏳ مؤشر العمل العام لكل تصديرات الإكسيل في النظام (استثناء: المضغوط له مؤشره الخاص)
@@ -1563,13 +1586,10 @@ const downloadZipFile = async (files, zipName) => {
   });
   // STORE: ملفات xlsx مضغوطة أصلاً ⇒ أسرع وبنفس الحجم تقريباً
   const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = zipName;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+  const out = await deliverFile(blob, zipName);
+  if (out === 'cancelled') throw new Error('CANCELLED_BY_USER');
+  // ⏳ نفس الإكسيل: العلامة تفضل ظاهرة لحد ما المتصفح ياخد الملف
+  await new Promise((resolve) => setTimeout(resolve, 1200));
 };
 
 
@@ -6590,16 +6610,14 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         // 📥 تنزيل نسخة JSON كاملة — الشباب يقدر يسترجع منها أي خانة
                         try {
                           const blob = new Blob([JSON.stringify(item.payload, null, 2)], { type: 'application/json' });
-                          const a = document.createElement('a');
-                          a.href = URL.createObjectURL(blob);
-                          a.download = `استمارة_مرفوضة_${item.payload?.mission_code || item.key.slice(0, 8)}.json`;
-                          a.click();
-                          setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-                        } catch { setCustomAlert('تعذر تنزيل النسخة.'); }
+                          await deliverFile(blob, `استمارة_مرفوضة_${item.payload?.mission_code || item.key.slice(0, 8)}.json`);
+                        } catch {
+                          setCustomAlert('تعذر تنزيل النسخة.');
+                        }
                       }}
                       className="btn-ghost px-3 py-1.5 rounded-xl text-[11px] font-bold"
                     >📥 تنزيل نسخة</button>
@@ -14530,7 +14548,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     "التاريخ": exportDateSafe(n.incident_date),
     "الشهر": n.incident_month || getMonthName(n.incident_date) || '',
     "الخبر": n.incident_description || '',
-    "الدولة": n.governorate || n.country || '',
+    "الدولة": n.governorate || n.country || n.governorate_original || '',
     "نوع الكارثة": n.news_type || '',
     "المناطق المتأثرة من الكارثة": n.area_name || n.affected_areas || '',
     "المناطق المتوقعة الخطر": n.at_risk_areas || '',

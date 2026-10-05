@@ -7094,6 +7094,107 @@ EGYPT_GOV_LABELS = (
     "الاسماعيلية", "السويس", "شمال سيناء", "جنوب سيناء", "مطروح", "الوادي الجديد",
 )
 
+# 🇪🇬 المحافظات الـ27 بالأسماء المعتمدة (+ variants إملائية — التطبيع بيغطي أغلبها)
+EGYPT_GOV_LIST = (
+    "القاهرة", "الجيزة", "القليوبية", "الاسكندرية", "الإسكندرية", "مطروح", "البحيرة",
+    "جنوب سيناء", "شمال سيناء", "السويس", "الشرقية", "الإسماعيلية", "الاسماعيلية",
+    "بور سعيد", "بورسعيد", "المنوفية", "الغربية", "الدقهلية", "كفرالشيخ", "كفر الشيخ",
+    "دمياط", "المنيا", "بني سويف", "الفيوم", "أسيوط", "اسيوط", "الوادي الجديد",
+    "سوهاج", "أسوان", "اسوان", "الاقصر", "الأقصر", "البحر الاحمر", "البحر الأحمر", "قنا",
+)
+
+# 🌍 المواقع العالمية المسموح بها في الرصد الآلي (دول + بحار + محيطات + مناطق)
+GLOBAL_LOCATIONS = (
+    "أروبا", "أفغانستان", "أنغولا", "أنغويلا", "جزر آلاند", "ألبانيا", "أندورا",
+    "الإمارات العربية المتحدة", "الأرجنتين", "أرمينيا", "ساموا الأمريكية", "أنتاركتيكا",
+    "فرنسا", "أنتيغوا وبربودا", "أستراليا", "النمسا", "أذربيجان", "بوروندي", "بلجيكا",
+    "بنين", "هولندا الكاريبية", "بوركينا فاسو", "بنغلاديش", "بلغاريا", "البحرين",
+    "جزر البهاما", "البوسنة والهرسك", "سان بارتليمي", "بيلاروسيا", "بليز", "برمودا",
+    "بوليفيا", "البرازيل", "بربادوس", "بروناي", "بوتان", "جزيرة بوفيه", "بوتسوانا",
+    "جمهورية أفريقيا الوسطى", "كندا", "جزر كوكوس (كيلينغ)", "سويسرا", "تشيلي", "الصين",
+    "ساحل العاج", "الكاميرون", "الكونغو - كينشاسا", "الكونغو - برازافيل", "جزر كوك",
+    "كولومبيا", "جزر القمر", "الرأس الأخضر", "كوستاريكا", "كوبا", "كوراساو",
+    "جزيرة كريسماس", "جزر كايمان", "قبرص", "التشيك", "ألمانيا", "جيبوتي", "دومينيكا",
+    "الدانمرك", "جمهورية الدومينيكان", "الجزائر", "الإكوادور", "مصر", "إريتريا",
+    "الصحراء الغربية", "إسبانيا", "إستونيا", "إثيوبيا", "فنلندا", "فيجي", "جزر فوكلاند",
+    "جزر فارو", "ميكرونيزيا", "الغابون", "المملكة المتحدة", "جورجيا", "غيرنزي", "غانا",
+    "جبل طارق", "غينيا", "غوادلوب", "غامبيا", "غينيا بيساو", "غينيا الاستوائية",
+    "اليونان", "غرينادا", "غرينلاند", "غواتيمالا", "غويانا الفرنسية", "جزيرة جوام",
+    "غيانا", "هونغ كونغ الصينية (منطقة إدارية خاصة)", "جزيرة هيرد وجزر ماكدونالد",
+    "هندوراس", "كرواتيا", "هايتي", "هنغاريا", "إندونيسيا", "جزيرة مان", "الهند",
+    "الإقليم البريطاني في المحيط الهندي", "أيرلندا", "إيران", "العراق", "آيسلندا",
+    "إسرائيل", "إيطاليا", "جامايكا", "جيرسي", "الأردن", "اليابان", "كازاخستان", "كينيا",
+    "قيرغيزستان", "كمبوديا", "كيريباتي", "سانت كيتس ونيفيس", "كوريا الجنوبية", "الكويت",
+    "لاوس", "لبنان", "ليبيريا", "ليبيا", "سانت لوسيا", "ليختنشتاين", "سريلانكا",
+    "ليسوتو", "ليتوانيا", "لوكسمبورغ", "لاتفيا", "منطقة ماكاو الإدارية الخاصة",
+    "سان مارتن", "المغرب", "موناكو", "مولدوفا", "مدغشقر", "جزر المالديف", "المكسيك",
+    "جزر مارشال", "مقدونيا الشمالية", "مالي", "مالطا", "ميانمار", "الجبل الأسود",
+    "منغوليا", "جزر ماريانا الشمالية", "موزمبيق", "موريتانيا", "مونتسرات",
+    "جزر المارتينيك", "موريشيوس", "ملاوي", "ماليزيا", "مايوت", "ناميبيا",
+    "كاليدونيا الجديدة", "النيجر", "جزيرة نورفولك", "نيجيريا", "نيكاراغوا", "نيوي",
+    "هولندا", "النرويج", "نيبال", "ناورو", "نيوزيلندا", "عمان", "باكستان", "بنما",
+    "جزر بيتكيرن", "بيرو", "الفلبين", "بالاو", "بابوا غينيا الجديدة", "بولندا",
+    "بورتوريكو", "كوريا الشمالية", "البرتغال", "باراغواي", "الأراضي الفلسطينية", "قطر",
+    "روينيون", "رومانيا", "روسيا", "رواندا", "السعودية", "السودان", "السنغال",
+    "سنغافورة", "جورجيا الجنوبية وجزر ساندويتش الجنوبية", "سانت هيلينا",
+    "سفالبارد وجان ماين", "جزر سليمان", "سيراليون", "السلفادور", "سان مارينو",
+    "الصومال", "سان بيير ومكويلون", "صربيا", "جنوب السودان", "ساو تومي وبرينسيبي",
+    "سورينام", "سلوفاكيا", "سلوفينيا", "السويد", "إسواتيني", "سانت مارتن", "سيشل",
+    "سوريا", "جزر توركس وكايكوس", "تشاد", "توغو", "تايلاند", "طاجيكستان", "توكيلاو",
+    "تركمانستان", "تيمور - ليشتي", "تونغا", "ترينيداد وتوباغو", "تونس", "تركيا",
+    "توفالو", "تايوان", "تنزانيا", "أوغندا", "أوكرانيا", "جزر الولايات المتحدة النائية",
+    "أورغواي", "الولايات المتحدة الأمريكية", "أوزبكستان", "الفاتيكان",
+    "سانت فنسنت وجزر غرينادين", "فنزويلا", "جزر فيرجن البريطانية",
+    "جزر فيرجن الأمريكية", "فيتنام", "فانواتو", "جزر والس وفوتونا", "ساموا", "اليمن",
+    "جنوب إفريقيا", "زامبيا", "زيمبابوي", "المحيط الاطلسي", "المحيط الهادي",
+    "المحيط الهندي", "تيمور الشرقية", "جبال الهند", "البحر الابيض المتوسط",
+    "شبه جزيرة بوثيا", "البحر الأيوني", "جنوب أفريقيا", "البحر الاحمر", "البحر الميت",
+    "بحر إيجة", "البحر التيراني", "جبال البرانس", "الخليج الفارسي", "البحر الأدرياتيكي",
+    "بحر الشمال", "خليج البنغال", "بحر آرافورا", "بحر قزوين", "بحر سكوشيا",
+    "جزر مارياس", "جبال لومونوسوف", "البحر الأسود", "المحيط المتجمد الشمالي",
+    "بحر سولو", "البحر الكاريبي", "بحر العرب", "بحيرة تنجانيقا", "ولاية وايومنغ",
+    "مضيق هرمز", "بحر لاكاديفي", "جزيرة",
+)
+
+# 🔤 أسماء إنجليزية شائعة جاية من أخبار أجنبية → اسم معتمد عربي
+_LOCATION_ALIASES = {
+    "egypt": "مصر", "cairo": "القاهرة", "giza": "الجيزة", "alexandria": "الاسكندرية",
+    "red sea": "البحر الاحمر", "mediterranean": "البحر الابيض المتوسط",
+    "saudi arabia": "السعودية", "saudi": "السعودية", "uae": "الإمارات العربية المتحدة",
+    "united arab emirates": "الإمارات العربية المتحدة", "usa": "الولايات المتحدة الأمريكية",
+    "united states": "الولايات المتحدة الأمريكية", "uk": "المملكة المتحدة",
+    "united kingdom": "المملكة المتحدة", "palestine": "الأراضي الفلسطينية",
+    "turkey": "تركيا", "persian gulf": "الخليج الفارسي", "arabian sea": "بحر العرب",
+    "arabian gulf": "الخليج الفارسي", "unknown": "", "unspecified": "", "na": "",
+}
+
+def _ar_norm(s):
+    """مفتاح مطابقة: بيشيل التشكيل، يوحّد الهمزات/الياء/التاء المربوطة، ويشيل المسافات والترقيم."""
+    import unicodedata
+    t = unicodedata.normalize("NFKC", str(s or "")).strip().lower()
+    t = re.sub(r"[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED\u0640]", "", t)
+    t = (t.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا").replace("ٱ", "ا")
+          .replace("ى", "ي").replace("ئ", "ي").replace("ؤ", "و").replace("ة", "ه"))
+    return re.sub(r"[^\w\u0600-\u06FF]", "", t, flags=re.UNICODE)
+
+_NORM_EGYPT = {_ar_norm(x): x for x in EGYPT_GOV_LIST}
+_NORM_GLOBAL = {_ar_norm(x): x for x in GLOBAL_LOCATIONS}
+_NORM_ALIASES = {_ar_norm(k): v for k, v in _LOCATION_ALIASES.items()}
+
+def normalize_ai_location(raw):
+    """اسم الموقع المعتمد من القايمتين (مصر الأول) أو '' لو خارج النطاق."""
+    t = _ar_norm(raw)
+    if not t or t in {"-", "غيرمحدد"}:
+        return ""
+    if t in _NORM_EGYPT:
+        return _NORM_EGYPT[t]
+    if t in _NORM_GLOBAL:
+        return _NORM_GLOBAL[t]
+    if t in _NORM_ALIASES:
+        return _NORM_ALIASES[t]
+    return ""
+
+
 
 def _ai_news_scope_label(governorate) -> str:
     """خبر محلي لو المحافظة من محافظات مصر — عالمي لأي حاجة تانية أو فاضية."""
@@ -7111,6 +7212,7 @@ def _ensure_ai_news_observed_at(cursor):
     if not _AI_NEWS_SCHEMA_READY:
         cursor.execute("ALTER TABLE public.ai_news ADD COLUMN IF NOT EXISTS observed_at timestamp without time zone")
         cursor.execute("ALTER TABLE public.ai_news ADD COLUMN IF NOT EXISTS news_scope text")
+        cursor.execute("ALTER TABLE public.ai_news ADD COLUMN IF NOT EXISTS governorate_original text")
         # 🔙 ترقية السجلات القديمة مرة واحدة (بما فيها إصلاح أي صف فاضي)
         cursor.execute("""
             UPDATE ai_news SET news_scope = CASE
@@ -7176,6 +7278,10 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
             _ensure_ai_news_observed_at(cursor)
+            # 🎯 قفل النطاق: الموقع يتطابق مع قايمتي مصر/العالم وإلا يُخزّن فاضياً
+            #    (فتصنفه _ai_news_scope_label «خبر عالمي») والأصل يُحفظ للمراجعة.
+            _raw_loc = str(news.governorate or '').strip()
+            _loc = normalize_ai_location(_raw_loc)
             # 🛡️ Upsert على news_link: إعادة إرسال نفس الرابط ⇒ تحديث بدل خطأ 500
             #    duplicate key — كل خبر يتبعت ويحفظ بلا أي فشل إرسال للأبد.
             #    التحديث فقط لو السجل القديم بلا تحليل حقيقي (فشل التحليل/غير مصنف) —
@@ -7183,9 +7289,9 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
             cursor.execute("""
                 INSERT INTO ai_news (
                     incident_date, incident_month, incident_description, news_type, news_publisher,
-                    street_name, area_name, governorate, hospital_name, injured_count, deaths_count,
+                    street_name, area_name, governorate, governorate_original, hospital_name, injured_count, deaths_count,
                     news_updates, news_link, data_entry_name, observed_at, news_scope
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s::text, '')::timestamp, (now() AT TIME ZONE 'Africa/Cairo')), %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(NULLIF(%s::text, '')::timestamp, (now() AT TIME ZONE 'Africa/Cairo')), %s)
                 ON CONFLICT (news_link) DO UPDATE SET
                     incident_date = EXCLUDED.incident_date,
                     incident_month = EXCLUDED.incident_month,
@@ -7195,6 +7301,7 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                     street_name = EXCLUDED.street_name,
                     area_name = EXCLUDED.area_name,
                     governorate = EXCLUDED.governorate,
+                    governorate_original = COALESCE(NULLIF(ai_news.governorate_original, ''), EXCLUDED.governorate_original),
                     hospital_name = EXCLUDED.hospital_name,
                     injured_count = EXCLUDED.injured_count,
                     deaths_count = EXCLUDED.deaths_count,
@@ -7209,10 +7316,10 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                 RETURNING id, (xmax = 0) AS inserted
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
-                news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
+                news.news_type, news.news_publisher, news.street_name, news.area_name, _loc, _raw_loc, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
                 news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''),
-                _ai_news_scope_label(news.governorate),
+                _ai_news_scope_label(_loc),
                 "%فشل التحليل%", ["غير مصنف", "أخرى / غير مصنف"],
             ))
             row = cursor.fetchone()
@@ -7233,9 +7340,9 @@ def create_ai_news(news: AINewsModel, credentials: HTTPAuthorizationCredentials 
                     _desc = " ".join(str(news.incident_description or "").split())
                     if len(_desc) > 140:
                         _desc = _desc[:140].rstrip() + "…"
-                    _scope = _ai_news_scope_label(news.governorate)
+                    _scope = _ai_news_scope_label(_loc)
                     _ai_news_text = (
-                        f"{_scope} ({news.news_type or 'غير مصنف'}) في: {news.governorate or 'خارج مصر'}"
+                        f"{_scope} ({news.news_type or 'غير مصنف'}) في: {_loc or 'خارج مصر'}"
                         + (f" — {_desc}" if _desc else "")
                     )
                     create_realtime_event(
@@ -7278,18 +7385,22 @@ def update_ai_news(news_id: int, news: AINewsModel, credentials: HTTPAuthorizati
         with connection.cursor() as cursor:
             def none_if_empty(val): return val if val != "" else None
             _ensure_ai_news_observed_at(cursor)
+            _raw_loc = str(news.governorate or '').strip()
+            _loc = normalize_ai_location(_raw_loc)
             cursor.execute("""
                 UPDATE ai_news SET
                     incident_date=%s, incident_month=%s, incident_description=%s, news_type=%s, news_publisher=%s,
-                    street_name=%s, area_name=%s, governorate=%s, hospital_name=%s, injured_count=%s, deaths_count=%s,
+                    street_name=%s, area_name=%s, governorate=%s, governorate_original = COALESCE(NULLIF(governorate_original, ''), NULLIF(%s, '')),
+                    hospital_name=%s, injured_count=%s, deaths_count=%s,
                     news_updates=%s, news_link=%s, data_entry_name=%s, news_scope=%s,
                     observed_at=COALESCE(NULLIF(%s::text, '')::timestamp, observed_at)
                 WHERE id=%s;
             """, (
                 none_if_empty(news.incident_date), none_if_empty(news.incident_month), news.incident_description, 
-                news.news_type, news.news_publisher, news.street_name, news.area_name, news.governorate, 
+                news.news_type, news.news_publisher, news.street_name, news.area_name, _loc, _raw_loc, 
                 news.hospital_name, str(news.injured_count), str(news.deaths_count), news.news_updates, 
-                news.news_link, news.data_entry_name, _ai_news_scope_label(news.governorate), news_id
+                news.news_link, news.data_entry_name, none_if_empty(getattr(news, 'observed_at', None) or ''),
+                _ai_news_scope_label(_loc), news_id
             ))
 
             connection.commit()
@@ -7371,6 +7482,42 @@ def delete_ai_news(news_id: int, credentials: HTTPAuthorizationCredentials = Dep
     except Exception as e:
         connection.rollback()
         raise HTTPException(status_code=500)
+    finally:
+        connection.close()
+
+@app.post("/api/ai-news/normalize-legacy")
+def normalize_legacy_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """🧹 ترحيل واحد للمالك: يحفظ الموقع القديم في governorate_original، يطبّع governorate
+    على قايمتي مصر/العالم، ويعيد حساب news_scope — بدون فقدان أي قيمة أصلية."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id: raise HTTPException(status_code=401, detail="غير مصرح")
+    if not is_owner_role(get_user_role(user_id)):
+        raise HTTPException(status_code=403, detail="الترحيل متاح للمالك فقط.")
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            _ensure_ai_news_observed_at(cursor)
+            cursor.execute("SELECT id, governorate FROM ai_news;")
+            rows = cursor.fetchall()
+            changed = cleared = 0
+            for _id, _raw in rows:
+                _orig = str(_raw or '').strip()
+                _loc = normalize_ai_location(_orig)
+                if _loc != _orig:
+                    cursor.execute(
+                        "UPDATE ai_news SET governorate_original = COALESCE(NULLIF(governorate_original,''), NULLIF(%s,'')), "
+                        "governorate=%s, news_scope=%s WHERE id=%s;",
+                        (_orig, _loc, _ai_news_scope_label(_loc), _id),
+                    )
+                    changed += 1
+                    if not _loc: cleared += 1
+            connection.commit()
+            return {"message": f"تم الترحيل: {changed} سجل اتعدل — منهم {cleared} خالف النطاق واتصنف عالمي (الأصل محفوظ في governorate_original)",
+                    "total": len(rows), "changed": changed, "out_of_scope_cleared": cleared}
+    except Exception as e:
+        connection.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         connection.close()
 
