@@ -1437,6 +1437,37 @@ const deliverFile = async (blob, fileName, saveHandle = null) => {
   } catch (e) { console.error('📥 فشل التنزيل:', e); throw e; }
 };
 
+const _xlsxDateHead = (h) => /تاريخ|date|last update|آخر تحديث/i.test(String(h == null ? '' : h));
+const _xlsxFullDate = (s) => typeof s === 'string' && (
+  /^\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}([T ]\d{1,2}:\d{2}(:\d{2})?)?$/.test(s.trim()) ||
+  /^\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}([T ]\d{1,2}:\d{2}(:\d{2})?)?$/.test(s.trim())
+);
+const _xlsxToDate = (raw) => {
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : { v: raw, hasTime: false };
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  let y, mo, d, rest;
+  if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; rest = s.slice(m[0].length); }
+  else {
+    m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+    if (!m) return null;
+    d = +m[1]; mo = +m[2]; y = +m[3]; rest = s.slice(m[0].length);
+  }
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  let hh = 0, mi = 0, ss = 0, hasTime = false;
+  const tm = rest.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (tm) {
+    hh = +tm[1]; mi = +tm[2]; ss = +(tm[3] || 0); hasTime = true;
+    const ap = (rest.match(/AM|PM|ص|م/i) || [''])[0].toUpperCase();
+    if (ap === 'PM' || ap === 'م') { if (hh < 12) hh += 12; }
+    else if (ap === 'AM' || ap === 'ص') { if (hh === 12) hh = 0; }
+  }
+  const dt = new Date(Date.UTC(y, mo - 1, d, hh, mi, ss));
+  return isNaN(dt.getTime()) ? null : { v: dt, hasTime };
+};
+
+
 const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: التفاف النص معطل دائماً */) => {
   const ExcelJS = await import('exceljs');
   const wb = new ExcelJS.Workbook();
@@ -1460,6 +1491,8 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
     const { name, header = [], rows = [], merges = [], widths = null, showGridLines = true } = sheet;
     const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true, showGridLines: showGridLines !== false }] });
     if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
+    const dateCols = new Set();
+    header.forEach((h, i) => { if (_xlsxDateHead(h)) dateCols.add(i); });
 
     // 🧩 الصف سليم كـ Array (التصديرات القديمة) أو كـ { cells, kind } (الفورم)
     const plain = rows.map((r) => {
@@ -1469,7 +1502,15 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
     });
     plain.forEach(({ arr, rowKind, values }) => {
       ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
-        Object.assign(c, pickStyle(cellSpec(arr[col - 1]).k || rowKind));
+        const spec = cellSpec(arr[col - 1]);
+        const asDate = dateCols.has(col - 1) || (header.length === 0 && _xlsxFullDate(spec.v));
+        if (asDate) {
+          const parsed = _xlsxToDate(spec.v);
+          if (parsed) { c.value = parsed.v; c.numFmt = spec.fmt || (parsed.hasTime ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy'); }
+        } else if (spec.fmt) {
+          c.numFmt = spec.fmt;
+        }
+        Object.assign(c, pickStyle(spec.k || rowKind));
       });
     });
     merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
@@ -4557,8 +4598,8 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       }
       // 🛡️ فشل شبكة/سيرفر (مثل 500 لحظي): إعادة محاولة تلقائية حتى 4 مرات —
       //    لا «لا توجد مهام» 10 ثوانٍ عند فتح الصفحة بسبب خطأ عابر
-      if (!res.ok && _retried < 4) {
-        await new Promise(r => setTimeout(r, 900 * (_retried + 1)));
+      if (!res.ok && _retried < 3) {
+        await new Promise(r => setTimeout(r, 400 * (_retried + 1)));
         if (seq !== missionsFetchSeqRef.current) return; // طلب أحدث حل محلنا
         return fetchMissions(silent, _retried + 1, _heal);
       }
@@ -4576,8 +4617,8 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       }
     } catch {
       // 🛡️ فشل اتصال: نفس سياسة إعادة المحاولة — الصفحة لا تُظهر «لا مهام» بسبب انقطاع عابر
-      if (_retried < 4) {
-        await new Promise(r => setTimeout(r, 900 * (_retried + 1)));
+      if (_retried < 3) {
+        await new Promise(r => setTimeout(r, 400 * (_retried + 1)));
         if (seq !== missionsFetchSeqRef.current) return;
         return fetchMissions(silent, _retried + 1, _heal);
       }
@@ -10034,13 +10075,20 @@ const visibleBranches = (
       };
       const _govDisplay = (name) => WEATHER_GOV_ORDER.find(g => _normGov(g) === _normGov(name)) || name;
       const _dailyOrdered = [...data].sort((a, b) => _govRank(a.branch_name) - _govRank(b.branch_name));
+      // 🔢 النسب تُكتب نسبة مئوية حقيقية (0.95 + تنسيق 0%)
+      const _pct = (v) => {
+        if (v === null || v === undefined || v === '') return '';
+        const n = Number(v);
+        return Number.isFinite(n) ? { v: n / 100, fmt: '0%' } : { v: String(v), fmt: null };
+      };
       const shiftRows = _dailyOrdered.map(r => ({
+        'التاريخ': filterDate,
         'المحافظة': _govDisplay(r.branch_name),
         'حرارة صغرى (°C)': r.temp_min ?? '', 'حرارة عظمى (°C)': r.temp_max ?? '',
         'رياح صغرى (كم/س)': r.wind_min ?? '', 'رياح عظمى (كم/س)': r.wind_max ?? '',
         'أمطار صغرى (مم)': r.rain_min ?? '', 'أمطار عظمى (مم)': r.rain_max ?? '',
-        'رطوبة صغرى (%)': r.humidity_min ?? '', 'رطوبة عظمى (%)': r.humidity_max ?? '',
-        'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
+        'رطوبة صغرى (%)': _pct(r.humidity_min), 'رطوبة عظمى (%)': _pct(r.humidity_max),
+        'غيوم صغرى (%)': _pct(r.clouds_min), 'غيوم عظمى (%)': _pct(r.clouds_max),
         'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
       }));
       await exportWorkbook([{ name: 'الطقس اليومي', ...gridFromRows(shiftRows) }], `الطقس_اليومي_${filterDate}.xlsx`);
@@ -10057,13 +10105,14 @@ const visibleBranches = (
       const data = await res.json();
       if (!data.length) return setCustomAlert(lang === 'ar' ? 'لا توجد توقعات مسجلة في هذا التاريخ.' : 'No forecasts recorded for this date.');
       const shiftAr = WEATHER_SHIFT_CHIPS.reduce((a, s) => { a[s.key] = s.ar; return a; }, {});
+      const _pct = (v) => (v === null || v === undefined || v === '') ? '' : `${v}%`;
       const toLogRow = (r) => ({
         'التاريخ': r.forecast_date, 'الوردية': shiftAr[r.shift] || r.shift, 'المحافظة': r.branch_name,
         'حرارة صغرى (°C)': r.temp_min ?? '', 'حرارة عظمى (°C)': r.temp_max ?? '',
         'رياح صغرى (كم/س)': r.wind_min ?? '', 'رياح عظمى (كم/س)': r.wind_max ?? '',
         'أمطار صغرى (مم)': r.rain_min ?? '', 'أمطار عظمى (مم)': r.rain_max ?? '',
-        'رطوبة صغرى (%)': r.humidity_min ?? '', 'رطوبة عظمى (%)': r.humidity_max ?? '',
-        'غيوم صغرى (%)': r.clouds_min ?? '', 'غيوم عظمى (%)': r.clouds_max ?? '',
+        'رطوبة صغرى (%)': _pct(r.humidity_min), 'رطوبة عظمى (%)': _pct(r.humidity_max),
+        'غيوم صغرى (%)': _pct(r.clouds_min), 'غيوم عظمى (%)': _pct(r.clouds_max),
         'جودة هواء صغرى': r.aqi_min ?? '', 'جودة هواء عظمى': r.aqi_max ?? '',
       });
       // 📑 مصنّف بأوراقٍ منفصلة لكل وردية (صباح/مساء/ليل) — الأوراق الفارغة تُستبعد تلقائياً.

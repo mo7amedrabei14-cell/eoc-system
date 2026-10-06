@@ -2880,6 +2880,15 @@ def get_missions(
     #    فارغ/غير مُرسَل ⇒ لا تأثير إطلاقاً (الاستعلام كما كان تماماً).
     p_search = (participant_name or "").strip()
     p_search_like = f"%{p_search}%" if p_search else None
+
+    # 🧊 كاش قصير مُبطَل بالأحداث (3 ثوانٍ) بمفتاح لكل مستخدم على حدة:
+    #    نطاق المستخدم ثابت ⇒ لا تسريب بين الأدوار أو الفروع،
+    #    ولا نستخدم الكاش إطلاقاً وقت البحث باسم المشارك.
+    _missions_cache_key = f"missions:u{user_id}"
+    if not p_search:
+        _missions_cached = _cache_read(_missions_cache_key)
+        if _missions_cached is not None:
+            return _missions_cached
     try:
         with connection.cursor() as cursor:
             # ⚡ تحسين سرعة: كانت 5 استعلامات فرعية مترابطة (correlated subqueries)
@@ -3001,6 +3010,8 @@ def get_missions(
                     "beneficiaries": beneficiaries_dict.get(m_id, []),
                     "vehicles_info": f"{r[9] or ''} ({r[10] or ''})" if r[9] else "لا توجد سيارات" 
                 })
+            if not p_search:
+                _cache_write(_missions_cache_key, result)
             return result
     except Exception as e:
         print(f"Error fetching missions: {e}")
