@@ -681,6 +681,7 @@ def ensure_gov_contacts_schema():
                         wireless_time  VARCHAR(20),
                         whatsapp_time  VARCHAR(20),
                         reply_time     VARCHAR(20),
+                        tasks_status   VARCHAR(120),
                         notes          VARCHAR(120),
                         entered_by     INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
                         created_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo'),
@@ -696,6 +697,8 @@ def ensure_gov_contacts_schema():
                 CREATE INDEX IF NOT EXISTS idx_gov_contacts_date
                     ON governorate_contacts (contact_date DESC);
             """)
+            # 🧩 «موقف المهام» — تُضاف للجداول القديمة كمان
+            cursor.execute("ALTER TABLE governorate_contacts ADD COLUMN IF NOT EXISTS tasks_status VARCHAR(120);")
             connection.commit()
             print("gov contacts schema: governorate_contacts created")
     except Exception as e:
@@ -8643,7 +8646,7 @@ GOV_CONTACT_NOTE_OPTIONS = (
 GOV_CONTACT_FIELDS = (
     "reason", "contact_count",
     "phone_time", "wireless_time", "whatsapp_time",
-    "reply_time", "notes",
+    "reply_time", "tasks_status", "notes",
 )
 GOV_CONTACT_MAX_LEN = 120
 # تصدير Excel (بفلتر التاريخ) من «الجوكر» فما فوق — لا يُصدّر الأوبريشن (4 حسابات)
@@ -8662,6 +8665,7 @@ class GovContactRowModel(BaseModel):
     wireless_time: Optional[str] = None
     whatsapp_time: Optional[str] = None
     reply_time: Optional[str] = None
+    tasks_status: Optional[str] = None
     notes: Optional[str] = None
 
     def provided_fields(self):
@@ -8762,7 +8766,7 @@ def get_gov_contacts(date: str, credentials: HTTPAuthorizationCredentials = Depe
             sql = """
                 SELECT g.branch_id, g.contact_date, g.reason, g.contact_count,
                        g.phone_time, g.wireless_time, g.whatsapp_time, g.reply_time,
-                       g.notes, g.entered_by, u.full_name, TRIM(b.branch_name),
+                       g.tasks_status, g.notes, g.entered_by, u.full_name, TRIM(b.branch_name),
                        g.updated_at
                 FROM governorate_contacts g
                 LEFT JOIN users u ON u.user_id = g.entered_by
@@ -8786,11 +8790,12 @@ def get_gov_contacts(date: str, credentials: HTTPAuthorizationCredentials = Depe
                     "wireless_time": r[5],
                     "whatsapp_time": r[6],
                     "reply_time": r[7],
-                    "notes": r[8],
-                    "entered_by": r[9],
-                    "entered_by_name": r[10],
-                    "branch_name": r[11],
-                    "updated_at": fmt_dt(r[12]),
+                    "tasks_status": r[8],
+                    "notes": r[9],
+                    "entered_by": r[10],
+                    "entered_by_name": r[11],
+                    "branch_name": r[12],
+                    "updated_at": fmt_dt(r[13]),
                 }
                 for r in rows
             ]
@@ -8830,6 +8835,9 @@ def save_gov_contacts(
             continue
         cols = list(fields)
         values = [_gov_contact_field_value(row, f) for f in fields]
+        # 🧩 «موقف المهام» مايفضلش محفوظ إلا مع «تم الرد…» (نفس قاعدة الواجهة)
+        if "notes" in cols and "tasks_status" in cols and not str(getattr(row, "notes", None) or "").strip().startswith("تم الرد"):
+            values[cols.index("tasks_status")] = None
         # 🏷️ «سبب الاتصال» يُثبَّت في القاعدة كنص حقيقي دايماً (الافتراضي لو مش مرسل) —
         #    لأن التصدير لـ Excel بيقرأ القاعدة: صف من غير سبب = خانة فاضية في الملف.
         #    وعلى التحديث: ما نمسحش سبب مخصص محفوظ من قبل (نحتفظ بالمخزَّن إلا لو مرسل صراحةً).
@@ -8931,7 +8939,7 @@ def get_gov_contacts_log(
                 f"""
                 SELECT g.contact_date, g.branch_id, TRIM(b.branch_name), g.reason,
                        g.contact_count, g.phone_time, g.wireless_time, g.whatsapp_time,
-                       g.reply_time, g.notes, u.full_name, g.updated_at
+                       g.reply_time, g.tasks_status, g.notes, u.full_name, g.updated_at
                 FROM governorate_contacts g
                 LEFT JOIN branches b ON b.branch_id = g.branch_id
                 LEFT JOIN users u ON u.user_id = g.entered_by
@@ -8952,9 +8960,10 @@ def get_gov_contacts_log(
                     "wireless_time": r[6],
                     "whatsapp_time": r[7],
                     "reply_time": r[8],
-                    "notes": r[9],
-                    "entered_by_name": r[10],
-                    "updated_at": fmt_dt(r[11]),
+                    "tasks_status": r[9],
+                    "notes": r[10],
+                    "entered_by_name": r[11],
+                    "updated_at": fmt_dt(r[12]),
                 }
                 for r in rows
             ]
@@ -10208,6 +10217,7 @@ def export_earthquake_intel_log(
     try:
         import io
         from openpyxl import Workbook
+        from openpyxl.cell import WriteOnlyCell
     except ImportError:
         raise HTTPException(status_code=500, detail="مكتبة Excel غير متاحة على السيرفر (openpyxl)")
 
@@ -10237,13 +10247,41 @@ def export_earthquake_intel_log(
             {"hist_max_mag": hist_max, "hist_window_count": hist_count} if hist_max is not None else None,
         )
         _v = lambda x: None if (x is None or (isinstance(x, str) and x.strip() == "")) else x
+
+        # 🔢 أرقام حقيقية في الإكسل: Decimal/نص رقمي ⇒ float، والعدادات ⇒ int، والفراغ يفضل None
+        def _num(x):
+            if x is None or (isinstance(x, str) and x.strip() == ""):
+                return None
+            try:
+                return float(x)
+            except Exception:
+                return None
+
+        def _int(x):
+            n = _num(x)
+            return None if n is None else int(round(n))
+
+        # 🗓️ التاريخ والوقت كنوع حقيقي (تاريخ فعلاً ووقت فعلاً — مش نص)
+        _date_cell = None
+        _time_cell = None
+        if isinstance(occurred_at, datetime):
+            _date_cell = WriteOnlyCell(ws, value=occurred_at.date())
+            _date_cell.number_format = 'dd/mm/yyyy'
+            _time_cell = WriteOnlyCell(ws, value=occurred_at.time())
+            _time_cell.number_format = 'hh:mm'
+        elif occurred_at is not None and hasattr(occurred_at, "year"):
+            _date_cell = WriteOnlyCell(ws, value=occurred_at)
+            _date_cell.number_format = 'dd/mm/yyyy'
+
         return [
-            _v(date_part), _v(time_part), _v(magnitude), _v(depth_km), _v(place), _v(_eq_country_from_place(place)),
-            _v(lat), _v(lon),
+            (_date_cell if _date_cell is not None else _v(date_part)),
+            (_time_cell if _time_cell is not None else _v(time_part)),
+            _num(magnitude), _num(depth_km), _v(place), _v(_eq_country_from_place(place)),
+            _num(lat), _num(lon),
             (round(float(dist)) if dist is not None else None),
             _v(_eq_intel_status_label(magnitude)),
-            _v(risk.get("risk_score")), _v(risk.get("risk_level")),
-            _v(hist_max), _v(hist_count), _v(source), _v(detail_url),
+            _int(risk.get("risk_score")), _v(risk.get("risk_level")),
+            _num(hist_max), _int(hist_count), _v(source), _v(detail_url),
         ]
 
     connection = get_connection()

@@ -1439,8 +1439,8 @@ const deliverFile = async (blob, fileName, saveHandle = null) => {
 
 const _xlsxDateHead = (h) => /تاريخ|date|last update|آخر تحديث/i.test(String(h == null ? '' : h));
 const _xlsxFullDate = (s) => typeof s === 'string' && (
-  /^\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}([T ]\d{1,2}:\d{2}(:\d{2})?)?$/.test(s.trim()) ||
-  /^\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}([T ]\d{1,2}:\d{2}(:\d{2})?)?$/.test(s.trim())
+  /^\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}([T ]\d{1,2}:\d{2}(:\d{2})?(\s*(AM|PM|ص|م))?)?$/i.test(s.trim()) ||
+  /^\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}([T ]\d{1,2}:\d{2}(:\d{2})?(\s*(AM|PM|ص|م))?)?$/i.test(s.trim())
 );
 const _xlsxToDate = (raw) => {
   if (raw instanceof Date) return isNaN(raw.getTime()) ? null : { v: raw, hasTime: false };
@@ -1467,6 +1467,38 @@ const _xlsxToDate = (raw) => {
   return isNaN(dt.getTime()) ? null : { v: dt, hasTime };
 };
 
+const _xlsxColKind = (h) => {
+  const s = String(h == null ? '' : h);
+  if (/تاريخ|date|last update|آخر تحديث/i.test(s)) return 'date';
+  if (/توقيت|وقت|ساعة|\btime\b/i.test(s)) return 'time';
+  if (/%|نسبة|percent/i.test(s)) return 'percent';
+  if (/كود|رقم|معرّف|لوحة|هاتف/i.test(s)) return 'text';
+  if (/عدد|إجمالي|مجموع|نقاط|كمية|قوة|شدة|عمق|مسافة|درجة|خط العرض|خط الطول|count|total|qty|score|magnitude|depth|distance|latitude|longitude|\bid\b/i.test(s)) return 'number';
+  return 'text';
+};
+
+const _xlsxNumber = (v) => {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const s = String(v == null ? '' : v).trim();
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+};
+
+const _xlsxTime = (v) => {
+  if (v instanceof Date) return (v.getUTCHours() * 3600 + v.getUTCMinutes() * 60 + v.getUTCSeconds()) / 86400;
+  const s = String(v == null ? '' : v).trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|ص|م)?$/i);
+  if (!m) return null;
+  let hh = +m[1];
+  const mi = +m[2], ss = +(m[3] || 0);
+  const ap = (m[4] || '').toUpperCase();
+  if ((ap === 'PM' || ap === 'م') && hh < 12) hh += 12;
+  if ((ap === 'AM' || ap === 'ص') && hh === 12) hh = 0;
+  if (hh > 23 || mi > 59 || ss > 59) return null;
+  return (hh * 3600 + mi * 60 + ss) / 86400;
+};
+
 
 const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: التفاف النص معطل دائماً */) => {
   const ExcelJS = await import('exceljs');
@@ -1491,8 +1523,7 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
     const { name, header = [], rows = [], merges = [], widths = null, showGridLines = true } = sheet;
     const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true, showGridLines: showGridLines !== false }] });
     if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
-    const dateCols = new Set();
-    header.forEach((h, i) => { if (_xlsxDateHead(h)) dateCols.add(i); });
+    const kinds = header.map((h) => _xlsxColKind(h));
 
     // 🧩 الصف سليم كـ Array (التصديرات القديمة) أو كـ { cells, kind } (الفورم)
     const plain = rows.map((r) => {
@@ -1503,12 +1534,24 @@ const _exportWorkbookImpl = async (sheets, fileName, _wrapText /* مُهمل: ا
     plain.forEach(({ arr, rowKind, values }) => {
       ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
         const spec = cellSpec(arr[col - 1]);
-        const asDate = dateCols.has(col - 1) || (header.length === 0 && _xlsxFullDate(spec.v));
-        if (asDate) {
-          const parsed = _xlsxToDate(spec.v);
-          if (parsed) { c.value = parsed.v; c.numFmt = spec.fmt || (parsed.hasTime ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy'); }
-        } else if (spec.fmt) {
+        const raw = spec.v;
+        const kind = header.length ? (kinds[col - 1] || 'text') : (_xlsxFullDate(raw) ? 'date' : 'text');
+        if (spec.fmt) {
           c.numFmt = spec.fmt;
+        } else if (raw != null && raw !== '' && !(raw instanceof Date)) {
+          if (kind === 'date') {
+            const d = _xlsxToDate(raw);
+            if (d) { c.value = d.v; c.numFmt = d.hasTime ? 'dd/mm/yyyy hh:mm AM/PM' : 'dd/mm/yyyy'; }
+          } else if (kind === 'time') {
+            const t = _xlsxTime(raw);
+            if (t != null) { c.value = t; c.numFmt = 'hh:mm AM/PM'; }
+          } else if (kind === 'percent') {
+            const n = _xlsxNumber(raw);
+            if (n != null) { c.value = n > 1 ? n / 100 : n; c.numFmt = '0%'; }
+          } else if (kind === 'number') {
+            const n = _xlsxNumber(raw);
+            if (n != null) c.value = n;
+          }
         }
         Object.assign(c, pickStyle(spec.k || rowKind));
       });
@@ -1581,6 +1624,7 @@ const buildWorkbookBufferZip = async (sheets) => {
     const { name, header = [], rows = [], merges = [], widths = null, showGridLines = true } = sheet;
     const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true, showGridLines: showGridLines !== false }] });
     if (header.length) ws.addRow(header).eachCell((c) => Object.assign(c, headerStyle));
+    const kinds = header.map((h) => _xlsxColKind(h));
 
     const plain = rows.map((r) => {
       const arr = Array.isArray(r) ? r : (r && Array.isArray(r.cells) ? r.cells : []);
@@ -1589,7 +1633,27 @@ const buildWorkbookBufferZip = async (sheets) => {
     });
     plain.forEach(({ arr, rowKind, values }) => {
       ws.addRow(values).eachCell({ includeEmpty: true }, (c, col) => {
-        Object.assign(c, pickStyle(cellSpec(arr[col - 1]).k || rowKind));
+        const spec = cellSpec(arr[col - 1]);
+        const raw = spec.v;
+        const kind = header.length ? (kinds[col - 1] || 'text') : (_xlsxFullDate(raw) ? 'date' : 'text');
+        if (spec.fmt) {
+          c.numFmt = spec.fmt;
+        } else if (raw != null && raw !== '' && !(raw instanceof Date)) {
+          if (kind === 'date') {
+            const d = _xlsxToDate(raw);
+            if (d) { c.value = d.v; c.numFmt = d.hasTime ? 'dd/mm/yyyy hh:mm AM/PM' : 'dd/mm/yyyy'; }
+          } else if (kind === 'time') {
+            const t = _xlsxTime(raw);
+            if (t != null) { c.value = t; c.numFmt = 'hh:mm AM/PM'; }
+          } else if (kind === 'percent') {
+            const n = _xlsxNumber(raw);
+            if (n != null) { c.value = n > 1 ? n / 100 : n; c.numFmt = '0%'; }
+          } else if (kind === 'number') {
+            const n = _xlsxNumber(raw);
+            if (n != null) c.value = n;
+          }
+        }
+        Object.assign(c, pickStyle(spec.k || rowKind));
       });
     });
     merges.forEach((m) => ws.mergeCells(m[0], m[1], m[2], m[3]));
@@ -4542,6 +4606,10 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
   participantSearchRef.current = participantSearch;
   // 🛡️ تسلسل الطلبات: آخر طلب فقط يحق له كتابة القائمة — الرد القديم المتأخر يُهمَل.
   const missionsFetchSeqRef = useRef(0);
+  // 🚦 بوابة الطلب الواحد: ممنوع أكتر من طلب مهام واحد في نفس الوقت.
+  //    أي نداء ييجي وفيه طلب شغال ⇒ يتسجّل ويتنفّذ مرة واحدة بس بعده (بأحدث قيمة بحث).
+  const missionsInFlightRef = useRef(false);
+  const missionsQueuedRef = useRef(false);
 
   const [missionsLoaded, setMissionsLoaded] = useState(false); // 🛡️ «لا توجد مهام» لا تُعرض قبل نجاح الجلب فعلاً
   // ⚡ عرض تدريجي: نرسم أول دفعة فقط وزر «عرض المزيد» — أول رسم أسرع بكتير
@@ -4573,7 +4641,23 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
     }, 5000);
   };
 
+  // 🚦 البوابة: كل المنادين (فتح/حدث لحظي/مؤقت/تعافي/بحث) يمرّوا من هنا.
   const fetchMissions = async (silent = false, _retried = 0, _heal = false) => {
+    if (missionsInFlightRef.current) { missionsQueuedRef.current = true; return; }
+    missionsInFlightRef.current = true;
+    try {
+      return await fetchMissionsRun(silent, _retried, _heal);
+    } finally {
+      missionsInFlightRef.current = false;
+      if (missionsQueuedRef.current) {
+        missionsQueuedRef.current = false;
+        // جولة واحدة فقط بأحدث قيمة بحث — لا تكديس
+        setTimeout(() => { fetchMissions(true); }, 150);
+      }
+    }
+  };
+
+  const fetchMissionsRun = async (silent = false, _retried = 0, _heal = false) => {
     const seq = ++missionsFetchSeqRef.current;
     if (missionsHealTimerRef.current) { clearTimeout(missionsHealTimerRef.current); missionsHealTimerRef.current = null; }
     // محاولة جديدة من طرف المستخدم/المؤقت/الحدث ⇒ ميزانية المحاولات تتجدد
@@ -4601,7 +4685,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       if (!res.ok && _retried < 3) {
         await new Promise(r => setTimeout(r, 400 * (_retried + 1)));
         if (seq !== missionsFetchSeqRef.current) return; // طلب أحدث حل محلنا
-        return fetchMissions(silent, _retried + 1, _heal);
+        return fetchMissionsRun(silent, _retried + 1, _heal);
       }
       if (res.ok) {
         const data = await res.json();
@@ -4620,7 +4704,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       if (_retried < 3) {
         await new Promise(r => setTimeout(r, 400 * (_retried + 1)));
         if (seq !== missionsFetchSeqRef.current) return;
-        return fetchMissions(silent, _retried + 1, _heal);
+        return fetchMissionsRun(silent, _retried + 1, _heal);
       }
       scheduleMissionsHeal(seq); // استُنفدت المحاولات دون نجاح ⇒ لا استسلام صامت
     }
@@ -10105,7 +10189,11 @@ const visibleBranches = (
       const data = await res.json();
       if (!data.length) return setCustomAlert(lang === 'ar' ? 'لا توجد توقعات مسجلة في هذا التاريخ.' : 'No forecasts recorded for this date.');
       const shiftAr = WEATHER_SHIFT_CHIPS.reduce((a, s) => { a[s.key] = s.ar; return a; }, {});
-      const _pct = (v) => (v === null || v === undefined || v === '') ? '' : `${v}%`;
+      const _pct = (v) => {
+        if (v === null || v === undefined || v === '') return '';
+        const n = Number(v);
+        return Number.isFinite(n) ? { v: n / 100, fmt: '0%' } : { v: String(v), fmt: null };
+      };
       const toLogRow = (r) => ({
         'التاريخ': r.forecast_date, 'الوردية': shiftAr[r.shift] || r.shift, 'المحافظة': r.branch_name,
         'حرارة صغرى (°C)': r.temp_min ?? '', 'حرارة عظمى (°C)': r.temp_max ?? '',
@@ -10557,7 +10645,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
             reason: r.reason ?? '', contact_count: r.contact_count ?? '',
             phone_time: r.phone_time ?? '', wireless_time: r.wireless_time ?? '',
             whatsapp_time: r.whatsapp_time ?? '', reply_time: r.reply_time ?? '',
-            notes: r.notes ?? '',
+            tasks_status: r.tasks_status ?? '', notes: r.notes ?? '',
           };
         });
         const serverMap = { ...map };
@@ -10713,14 +10801,23 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   };
   const toggleChannel = (bid, field) => setField(bid, field, String(rowOf(bid)[field] || '').trim() ? '' : govTimeLabel());
   // 📝 الملاحظات (داتا فاليد ليست): تُسجَّل كما هي — «وقت الرد» يدوي بالكامل (لا تعبئة ولا تفريغ تلقائي)
+  // ✅ «تم الرد» بأي طريقة (واتساب/هاتفيا/لاسلكيا) ⇒ تفتح خانة «المهام»
+  const isReplied = (row) => String((row || {}).notes || '').trim().startsWith('تم الرد');
   const setNotes = (bid, value) => {
     const before = rowOf(bid);
     const patch = { notes: value };
+    // 🧹 لو الاختيار مش «تم الرد» ⇒ المهام تتصفّر (والخانة مقفولة أصلاً)
+    if (!String(value || '').trim().startsWith('تم الرد')) patch.tasks_status = '';
     if (!String(before.reason || '').trim()) patch.reason = GOV_REASON_DEFAULT;
-    setRows(prev => ({ ...prev, [bid]: { ...before, ...patch, notes: value } }));
+    setRows(prev => ({ ...prev, [bid]: { ...before, ...patch } }));
     putPendingMany(filterDate, bid, patch);
     markDirty(filterDate, bid);
     scheduleSave();
+  };
+  // 🧩 تغيير «موقف المهام» — ممنوع وهو مقفول
+  const setTaskStatus = (bid, value) => {
+    if (!isReplied(rowOf(bid))) return;
+    setField(bid, 'tasks_status', value);
   };
 
   // 🧮 الكروت الأربعة (على المحافظات المرئية فقط = نطاق المستخدم)
@@ -10772,7 +10869,8 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
           'لاسلكي': formatTime12(r.wireless_time),
           'واتساب': formatTime12(r.whatsapp_time),
           'وقت الرد': formatTime12(r.reply_time),
-          'ملاحظات': r.notes || '',
+          'المهام': r.tasks_status || '',
+          'حالة الرد': r.notes || '',
         };
       });
       await exportWorkbook([{ name: `سجل التواصل ${filterDate}`, ...gridFromRows(exportRows) }], `سجل_التواصل_${filterDate}.xlsx`);
@@ -10799,7 +10897,8 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
         'لاسلكي': formatTime12(r.wireless_time),
         'واتساب': formatTime12(r.whatsapp_time),
         'وقت الرد': formatTime12(r.reply_time),
-        'ملاحظات': r.notes || '',
+        'المهام': r.tasks_status || '',
+        'حالة الرد': r.notes || '',
         'سجّله': r.entered_by_name || '',
         'آخر تحديث': r.updated_at || '',
       }));
@@ -10835,15 +10934,21 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   //    فوق = اللي قبله، وشمال/يمين بين الخلايا في خانة عدد المرات.
   //    أي مفتاح عالجه الحقل نفسه (وقت/قائمة) نسيبه للحقل (e.defaultPrevented).
   const focusCell = (row, col) => {
-    if (row < 0 || row >= visibleBranches.length || col < 0 || col >= GOV_GRID_COLS.length) return;
-    const cell = document.getElementById(`gcell_${row}_${col}`);
-    if (!cell) return;
-    const target = cell.matches('input, select')
-      ? cell
-      : cell.querySelector('input[type="text"], input[type="number"], select, input');
-    if (!target) return;
-    target.focus();
-    if (typeof target.select === 'function') { try { target.select(); } catch { /* بعض الحقول بترفض */ } }
+    if (col < 0 || col >= GOV_GRID_COLS.length || !visibleBranches.length) return;
+    const start = Math.min(Math.max(row, 0), visibleBranches.length - 1);
+    // 🔁 نتخطّى الخلايا المقفولة (خانة المهام قبل الرد) بدل ما التنقل يتوقف
+    for (let step = 0; step < visibleBranches.length; step++) {
+      const r = (start + step) % visibleBranches.length;
+      const cell = document.getElementById(`gcell_${r}_${col}`);
+      if (!cell) continue;
+      const target = cell.matches('input, select')
+        ? cell
+        : cell.querySelector('input[type="text"], input[type="number"], select, input');
+      if (!target || target.disabled) continue;
+      target.focus();
+      if (typeof target.select === 'function') { try { target.select(); } catch { /* بعض الحقول بترفض */ } }
+      return;
+    }
   };
   const gridNavKey = (e, row, col) => {
     if (e.defaultPrevented) return;         // الحقل نفسه استهلك المفتاح (أجزاء الوقت/قائمة الاختيار)
@@ -10925,7 +11030,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
           <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
-            <table className="w-full text-right whitespace-nowrap min-w-[1280px] text-sm border-separate" style={{ borderSpacing: 0 }}>
+            <table className="w-full text-right whitespace-nowrap min-w-[1460px] text-sm border-separate" style={{ borderSpacing: 0 }}>
               <thead>
                 <tr>
                   <th className="wx-sticky-corner p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
@@ -10935,7 +11040,8 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
                     <th key={c.key} className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T(c.ar, c.en)}</th>
                   ))}
                   <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('وقت الرد', 'Reply time')}</th>
-                  <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('ملاحظات', 'Notes')}</th>
+                  <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('المهام', 'Tasks')}</th>
+                  <th className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)]">{T('حالة الرد', 'Notes')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -10972,7 +11078,13 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
                         </div>
                       </td>
                       <td className="p-2 min-w-[190px]">
-                        <EocSelect variant="cell" id={`gcell_${rIdx}_6`} value={r.notes || ''} onChange={e => setNotes(b.id, e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 6)}>
+                        <EocSelect variant="cell" id={`gcell_${rIdx}_6`} value={r.tasks_status || ''} disabled={!isReplied(r)} onChange={e => setTaskStatus(b.id, e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 6)} className={`${!isReplied(r) ? 'opacity-40 cursor-not-allowed' : ''} ${GOV_TASKS_TONE[r.tasks_status] || ''}`}>
+                          <option value="">—</option>
+                          {GOV_TASKS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </EocSelect>
+                      </td>
+                      <td className="p-2 min-w-[190px]">
+                        <EocSelect variant="cell" id={`gcell_${rIdx}_7`} value={r.notes || ''} onChange={e => setNotes(b.id, e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 7)}>
                           <option value="">—</option>
                           {GOV_NOTES_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </EocSelect>
@@ -11004,18 +11116,25 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
 
 const MemoGovernorateContactsView = memo(GovernorateContactsView);
 const GOV_NOTES_OPTIONS = ['تم الرد واتساب', 'تم الرد هاتفيا', 'تم الرد لاسلكيا', 'لم يتم الرد', 'مغلق'];
+// 🧩 «موقف المهام» — 3 اختيارات بألوان (أخضر/أحمر/أصفر)، وتُفتح فقط لما يكون الرد «تم الرد…»
+const GOV_TASKS_OPTIONS = ['تم الإبلاغ بالمهام', 'في انتظار بيانات المهام', 'لا يوجد مهام'];
+const GOV_TASKS_TONE = {
+  'تم الإبلاغ بالمهام': 'text-[var(--ok)] border-[var(--ok)] bg-[var(--ok-soft)]',
+  'لا يوجد مهام': 'text-[var(--accent)] border-[var(--accent)] bg-[var(--danger-soft)]',
+  'في انتظار بيانات المهام': 'text-[var(--warn)] border-[var(--warn)] bg-[var(--warn-soft)]',
+};
 const GOV_REASON_DEFAULT = 'معرفة وجود مهمات';
-const GOV_CONTACT_FIELDS = ['reason', 'contact_count', 'phone_time', 'wireless_time', 'whatsapp_time', 'reply_time', 'notes'];
+const GOV_CONTACT_FIELDS = ['reason', 'contact_count', 'phone_time', 'wireless_time', 'whatsapp_time', 'reply_time', 'tasks_status', 'notes'];
 const GOV_CHANNELS = [
   { key: 'phone_time', ar: 'هاتفيا', en: 'Phone' },
   { key: 'wireless_time', ar: 'لاسلكي', en: 'Wireless' },
   { key: 'whatsapp_time', ar: 'واتساب', en: 'WhatsApp' },
 ];
 // أعمدة الشبكة بالترتيب (تُستخدم في التنقّل بالكيبورد): السبب · العدد · القنوات الثلاث · وقت الرد · الملاحظات
-const GOV_GRID_COLS = ['reason', 'count', ...GOV_CHANNELS.map(c => c.key), 'reply_time', 'notes'];
+const GOV_GRID_COLS = ['reason', 'count', ...GOV_CHANNELS.map(c => c.key), 'reply_time', 'tasks', 'notes'];
 const GOV_PENDING_KEY = 'eoc_gov_contacts_pending_v1';
 const GOV_PENDING_SCOPE = 'gov_contacts_log';
-const emptyGovRow = () => ({ reason: '', contact_count: '', phone_time: '', wireless_time: '', whatsapp_time: '', reply_time: '', notes: '' });
+const emptyGovRow = () => ({ reason: '', contact_count: '', phone_time: '', wireless_time: '', whatsapp_time: '', reply_time: '', tasks_status: '', notes: '' });
 // ⏰ وقت مصر الحالي بصيغة الآلة HH:MM (24 ساعة) — نفس ما يخزّنه ويرسله المشروع في كل مكان،
 //    والعرض 12 ساعة يحدث تلقائياً في حقل الوقت المقسّم (SegTimeField) وفي الإكسيل.
 const govTimeLabel = () => {
