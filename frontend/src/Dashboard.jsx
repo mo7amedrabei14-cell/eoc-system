@@ -4503,6 +4503,8 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
   const missionsFetchSeqRef = useRef(0);
 
   const [missionsLoaded, setMissionsLoaded] = useState(false); // 🛡️ «لا توجد مهام» لا تُعرض قبل نجاح الجلب فعلاً
+  // ⚡ عرض تدريجي: نرسم أول دفعة فقط وزر «عرض المزيد» — أول رسم أسرع بكتير
+  const [missionsRenderCap, setMissionsRenderCap] = useState(200);
   // 🩹 علاج «لازم أطلع وأدخل تاني عشان الداتا تحمل»:
   //    كانت 4 محاولات ثم استسلام صامت ⇒ لو فشل الجلب الأول (serverless بارد/503 عابر) بقيت
   //    السكلتونز للأبد حتى يخرج المستخدم ويدخل تاني. دلوقتي بعد استنفاد المحاولات نجدّد الجلب
@@ -5459,6 +5461,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
       if (!hasBeneficiaries) {
         beneficiariesSheet.push({
           "كود المهمة": missionCodeWithDay(m, filterDate),
+          ...(withCategories ? { "ID المهمة": m.mission_id } : {}),
           "تصنيف المستفيدين": "",
           "الرقم (المباشر)": "",
           "عنوان التصنيف": "",
@@ -6641,6 +6644,20 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
     return { filteredMissions, regionStats };
   }, [missionsList, isVolunteer, userRegion, missionViewType, filterDate, statusFilter, activeRegionTab, filterBranch, searchTerm, participantSearch]);
 
+  // ⚡ الصفوف المرسومة فعلاً:
+  //   • أثناء أي بحث (سريع أو باسم المتطوع) → كل النتائج بلا حد (زي الأول بالحرف)
+  //   • في العرض العادي → أول دفعة + زر «عرض المزيد»
+  //   • ونضمن ظهور الصف المُركَّز عليه من البث اللحظي دائماً
+  const visibleMissions = useMemo(() => {
+    const searching = participantSearch.trim() !== '' || searchTerm.trim() !== '';
+    let cap = searching ? filteredMissions.length : missionsRenderCap;
+    if (focusedRowId != null) {
+      const i = filteredMissions.findIndex(x => String(x.mission_id) === String(focusedRowId));
+      if (i >= 0) cap = Math.max(cap, i + 1);
+    }
+    return filteredMissions.slice(0, cap);
+  }, [filteredMissions, missionsRenderCap, focusedRowId, participantSearch, searchTerm]);
+
   const getCreationDate = () => {
     if (currentMissionData && currentMissionData.created_at) { return String(currentMissionData.created_at).split(' ')[0]; }
     return filterDate || getLocalDate();
@@ -6951,7 +6968,9 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
                 </td>
               </tr>
             ) :
-            filteredMissions.length > 0 ? filteredMissions.map(m => (
+            filteredMissions.length > 0 ? (
+            <>
+            {visibleMissions.map(m => (
               <tr key={`mission-${m.mission_id}`} id={`focus-row-${m.mission_id}`} className={`group transition-colors duration-300 ${pulseMissions.some(p => p.id === m.mission_id) ? 'mission-flash-row' : 'hover:bg-[var(--surface-2)]/70'} ${String(focusedRowId) === String(m.mission_id) ? ' focus-row' : ''}`}>
                 <td data-label="تاريخ الإنشاء" className="px-3 md:px-4 py-3 text-[var(--muted)] font-mono text-xs tabular-nums whitespace-nowrap align-middle border-b border-[var(--border)]/60">{formatDateTime(m.creation_datetime || m.created_at)}</td>
                 <td data-label="تاريخ المهمة" className="px-3 md:px-4 py-3 align-middle whitespace-nowrap border-b border-[var(--border)]/60"><span className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--accent-softer)] text-[var(--accent)] font-bold font-mono text-xs tabular-nums">{m.exit_date !== '-' && m.exit_date ? formatDateTime(m.exit_date) : 'غير مسجل'}</span></td>
@@ -6995,7 +7014,22 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
                   </div>
                 </td>
               </tr>
-            )) : (
+            ))}
+            {visibleMissions.length < filteredMissions.length && (
+              <tr>
+                <td colSpan="16" className="p-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setMissionsRenderCap(c => c + 200)}
+                    className="px-4 py-2 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] font-bold text-sm hover:bg-[var(--accent)] hover:text-white transition-colors"
+                  >
+                    عرض المزيد ({filteredMissions.length - visibleMissions.length} مهمة متبقية)
+                  </button>
+                </td>
+              </tr>
+            )}
+            </>
+            ) : (
               <tr><td colSpan="16"><div className="empty-state"><div className="empty-state-icon">📋</div><p className="text-sm font-semibold text-[var(--muted)]">لا توجد مهام مطابقة</p></div></td></tr>
             )}
           </tbody>
@@ -9977,8 +10011,31 @@ const visibleBranches = (
       if (!res.ok) return setCustomAlert('تعذّر جلب الطقس اليومي للتصدير.');
       const data = await res.json();
       if (!data.length) return setCustomAlert(lang === 'ar' ? 'لا توجد بيانات طقس يومي للتصدير في هذا التاريخ.' : 'No daily weather data to export.');
-      const shiftRows = data.map(r => ({
-        'المحافظة': r.branch_name,
+      // 🇪🇬 ترتيب وأسماء المحافظات المعتمدة في تصدير الطقس اليومي (تصدير فقط)
+      const WEATHER_GOV_ORDER = [
+        'القاهرة', 'الجيزة', 'القليوبية', 'الإسكندرية', 'مطروح', 'البحيرة', 'جنوب سيناء',
+        'شمال سيناء', 'السويس', 'الشرقية', 'الإسماعيلية', 'بورسعيد', 'المنوفية', 'الغربية',
+        'الدقهلية', 'كفر الشيخ', 'دمياط', 'المنيا', 'بني سويف', 'الفيوم', 'أسيوط',
+        'الوادي الجديد', 'سوهاج', 'أسوان', 'الأقصر', 'البحر الأحمر', 'قنا',
+      ];
+      const _normGov = (s) => {
+        let x = String(s || '')
+          .replace(/\s+/g, '')
+          .replace(/[أإآ]/g, 'ا')
+          .replace(/ى/g, 'ي')
+          .replace(/ة/g, 'ه');
+        if (x === 'المركزالعام') x = 'القاهره'; // فرع المركز العام = القاهرة (نفس معادلة النظام)
+        return x;
+      };
+      const _govRank = (name) => {
+        const n = _normGov(name);
+        const i = WEATHER_GOV_ORDER.findIndex(g => _normGov(g) === n);
+        return i === -1 ? WEATHER_GOV_ORDER.length : i; // غير المعروف في الآخر
+      };
+      const _govDisplay = (name) => WEATHER_GOV_ORDER.find(g => _normGov(g) === _normGov(name)) || name;
+      const _dailyOrdered = [...data].sort((a, b) => _govRank(a.branch_name) - _govRank(b.branch_name));
+      const shiftRows = _dailyOrdered.map(r => ({
+        'المحافظة': _govDisplay(r.branch_name),
         'حرارة صغرى (°C)': r.temp_min ?? '', 'حرارة عظمى (°C)': r.temp_max ?? '',
         'رياح صغرى (كم/س)': r.wind_min ?? '', 'رياح عظمى (كم/س)': r.wind_max ?? '',
         'أمطار صغرى (مم)': r.rain_min ?? '', 'أمطار عظمى (مم)': r.rain_max ?? '',
@@ -11731,6 +11788,7 @@ const [clearAllCode, setClearAllCode] = useState('');
     if (!gd.incident_date) return setCustomAlert("عفواً، يجب إدخال التاريخ.");
     if (!gd.country) return setCustomAlert("عفواً، يجب تحديد الدولة/المكان.");
     if (!gd.disaster_type) return setCustomAlert("عفواً، يجب تحديد نوع الكارثة.");
+    if (!gd.data_entry_name || String(gd.data_entry_name).trim() === '') return setCustomAlert("عفواً، اسم مدخل الخبر إلزامي — برجاء إدخال الاسم قبل الحفظ.");
 
     const payload = { ...gd, incident_month: getMonthName(gd.incident_date) };
     const token = sessionStorage.getItem('access_token');

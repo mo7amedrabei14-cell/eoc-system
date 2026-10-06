@@ -740,6 +740,25 @@ def ensure_weather_extra_history_schema():
         connection.close()
 
 
+def ensure_missions_perf_indexes():
+    """⚡ فهارس أداء صفحة المهام — خطوة خفيفة منفصلة (لا نرفع SCHEMA_VERSION)."""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_mp_mission_id ON mission_participants (mission_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_mv_mission_id ON mission_vehicles (mission_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_mb_mission_id ON mission_beneficiaries (mission_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_missions_branch_id ON missions (branch_id);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_missions_created_at ON missions (created_at DESC);")
+            connection.commit()
+            print("missions perf indexes: ok")
+    except Exception as e:
+        connection.rollback()
+        print(f"ensure_missions_perf_indexes error (will retry next boot): {e}")
+    finally:
+        connection.close()
+
+
 def ensure_client_errors_schema():
     """🧯 جدول بلاغات أخطاء الواجهة (تشخيص «الشاشة البيضا») — خطوة خفيفة منفصلة.
 
@@ -817,6 +836,7 @@ def _bootstrap_schema_in_background():
         ensure_earthquake_intel_schema()  # 🌍 جدول استخبارات الزلازل (خفيفة منفصلة)
         ensure_earthquake_catalog_schema()  # 📚 كتالوج 30 سنة التاريخي (خفيفة منفصلة)
         ensure_weather_extra_history_schema()  # 🌪️ تاريخ الطبقات الإضافية (خفيفة منفصلة)
+        ensure_missions_perf_indexes()  # ⚡ فهارس تسريع صفحة المهام (خفيفة منفصلة)
         _schema_error["message"] = None
     except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
         _schema_error["message"] = str(e)[:200]
@@ -5987,6 +6007,15 @@ class LocalNewsModel(BaseModel):
     data_entry_name: Optional[str] = None
     notes: Optional[str] = None
 
+    @field_validator("data_entry_name")
+    @classmethod
+    def _require_entry_name(cls, v):
+        # ✍️ اسم مدخل الخبر إلزامي (أخبار محلية + كوارث عالمية)
+        #    نرفض None أو نص فاضي/مسافات فقط — لضمان وصول اسم حقيقي للتسجيل
+        if v is None or not str(v).strip():
+            raise ValueError("اسم مدخل الخبر إلزامي")
+        return v
+
 @app.get("/api/local-news")
 def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
     # 🧊 كاش مُبطَل بالأحداث — نفس النتيجة حرفياً؛ أي خبر جديد (حدث لحظي) يُبطلها فوراً
@@ -6589,6 +6618,15 @@ class GlobalDisasterModel(BaseModel):
     news_updates: Optional[str] = None
     data_entry_name: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("data_entry_name")
+    @classmethod
+    def _require_entry_name(cls, v):
+        # ✍️ اسم مدخل الخبر إلزامي (أخبار محلية + كوارث عالمية)
+        #    نرفض None أو نص فاضي/مسافات فقط — لضمان وصول اسم حقيقي للتسجيل
+        if v is None or not str(v).strip():
+            raise ValueError("اسم مدخل الخبر إلزامي")
+        return v
 
 @app.get("/api/global-disasters")
 def get_global_disasters(credentials: HTTPAuthorizationCredentials = Depends(security)):
