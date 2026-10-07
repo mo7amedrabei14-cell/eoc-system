@@ -6676,10 +6676,10 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
 
       if (filterDate) {
          baseMissions = baseMissions.filter(m => {
-            const createdAt = (m.created_at && m.created_at !== '-')
-  ? String(m.created_at).split(/[ T]/)[0]
-  : ((m.creation_datetime && m.creation_datetime !== '-')
-    ? String(m.creation_datetime).split(/[ T]/)[0]
+            const createdAt = (m.creation_datetime && m.creation_datetime !== '-')
+  ? String(m.creation_datetime).split(/[ T]/)[0]
+  : ((m.created_at && m.created_at !== '-')
+    ? String(m.created_at).split(/[ T]/)[0]
     : '');
 
             const isCompleted = ['Completed', 'Completed (Reviewed by Youth Administration)', 'مكتملة (تمت المراجعة من إدارة الشباب)'].includes(m.status);
