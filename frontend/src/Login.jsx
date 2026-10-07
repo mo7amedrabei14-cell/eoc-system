@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
 import { BASE } from './apiBase';
 // 🩺 حارس السيرفر: لو السيرفر واقع، صفحة الدخول نفسها تقول الحقيقة بدل رسالة
 // "تعذر الاتصال" العامة — والتلميذ يشوف تعليمات الرستر و Ctrl+Shift+R فوراً.
@@ -7,6 +8,10 @@ import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serv
 import { checkServerHealth } from './serverHealthCore';
 // 🔇 شاشة الدخول ليها مؤشرها الخاص (سبينر الزر) — حبة العمل العامة مكتومة هنا تماماً
 import { setWorkingSuppressed } from './workingToast';
+// 🎛️ توكنات الحركة الموحّدة للنظام (نوابض + easing فخم)
+import { SPRING, SPRING_SOFT, EASE_OUT } from './motion/tokens';
+// 🎬 نظام البصريات «الجمرة السينمائية» — ملف منفصل ببادئة lx- حتى لا يمس لوحة التحكم
+import './login/loginScene.css';
 
 
 /* ─────────────────────────────────────────────────────────────
@@ -35,7 +40,7 @@ const EyeOffIcon = () => (
   </svg>
 );
 const AlertIcon = () => (
-  <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
   </svg>
 );
@@ -44,17 +49,19 @@ const ShieldIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
   </svg>
 );
-const SpinnerIcon = () => (
-  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+const CheckIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12.5 9.5 17 19 7" />
   </svg>
 );
 const ChevronsIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M13 6l6 6-6 6M5 6l6 6-6 6" />
   </svg>
 );
+
+/* محيط حلقة تقدّم الهلال (SVG) — r = 46 في نظام إحداثيات 100×100 */
+const HALO_C = 2 * Math.PI * 46;
 
 /* ─────────────────────────────────────────────────────────────
    ساعة تشغيل مباشرة داخل الرباط العلوي (بدون Backend)
@@ -68,6 +75,84 @@ function useOpsClock() {
   return now;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   عدّاد تصاعدي للقياسات — بصري خالص (ease تكعيبي + احترام reduced-motion)
+   ───────────────────────────────────────────────────────────── */
+function useCountUp(target, active, duration = 1400) {
+  const [val, setVal] = useState(0);
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (!active || reduce) return undefined;
+    let raf;
+    const start = performance.now();
+    const step = (now) => {
+      const p = Math.min(1, (now - start) / duration);
+      const e = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(target * e));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [active, target, duration, reduce]);
+  // مع تقليل الحركة: القيمة النهائية تُعرض مباشرة بلا حركة (بلا setState داخل effect)
+  return reduce ? target : val;
+}
+
+/* قياس جاهزية واحد (رقم متصاعد + شريط + ومضة اكتمال) */
+function Gauge({ g, active }) {
+  const v = useCountUp(g.val, active);
+  return (
+    <div className="min-w-0 flex flex-col items-center gap-2.5">
+      <span className="lx-gauge-num" style={{ color: g.color }}>
+        {v}<small>%</small>
+      </span>
+      <div className="lx-gauge-bar w-full">
+        <div
+          className={`lx-gauge-fill ${active ? 'is-full' : ''}`}
+          style={{
+            width: active ? `${g.val}%` : '0%',
+            background: `linear-gradient(90deg, ${g.color}, var(--accent-glow))`,
+            boxShadow: `0 0 12px ${g.color}`,
+          }}
+        />
+      </div>
+      <span className="text-[10px] font-bold text-[var(--muted)] truncate max-w-full">{g.label}</span>
+    </div>
+  );
+}
+
+/* ── توصيفات حركة البوابة وسطح القيادة (variants للتتابع المرحلي) ── */
+const GATE_RISE = {
+  hidden: { opacity: 0, y: 26, filter: 'blur(6px)' },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { ...SPRING_SOFT, staggerChildren: 0.085, delayChildren: 0.18 } },
+};
+const GATE_ITEM = {
+  hidden: { opacity: 0, y: 18, filter: 'blur(4px)' },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING_SOFT },
+};
+const DECK_ENTER = {
+  hidden: { opacity: 0, y: 38, scale: 0.985, filter: 'blur(7px)' },
+  show: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', transition: { ...SPRING_SOFT, delayChildren: 0.14, staggerChildren: 0.09 } },
+};
+const DECK_CHILD = {
+  hidden: { opacity: 0, y: 20, filter: 'blur(4px)' },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING_SOFT },
+};
+const FORM_COL = {
+  hidden: { opacity: 0, y: 20, filter: 'blur(4px)' },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { ...SPRING_SOFT, staggerChildren: 0.06, delayChildren: 0.06 } },
+  exit: { opacity: 0, y: -10, filter: 'blur(4px)', transition: { duration: 0.18, ease: EASE_OUT } },
+};
+const FORM_ITEM = {
+  hidden: { opacity: 0, y: 14, filter: 'blur(3px)' },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING },
+};
+const TAB_PAGE = {
+  initial: { opacity: 0, y: 14, filter: 'blur(5px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING_SOFT },
+  exit: { opacity: 0, y: -10, filter: 'blur(4px)', transition: { duration: 0.18, ease: EASE_OUT } },
+};
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -76,7 +161,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(true);
-    // 🔇 كتم الحبة في شاشة الدخول — مؤشر التحميل هنا هو سبينر زر الدخول نفسه
+  // 🔇 كتم الحبة في شاشة الدخول — مؤشر التحميل هنا هو سبينر زر الدخول نفسه
   useEffect(() => {
     setWorkingSuppressed(true);
     return () => setWorkingSuppressed(false);
@@ -100,12 +185,12 @@ export default function Login() {
 
   useEffect(() => {
     if (!openingCeremony) return undefined;
-    const brand = document.getElementById('opening-crest');
+    const brand = document.getElementById('lx-crest');
     const brandStamp = () => {
       setOpeningCeremony(false);
     };
     // نُطلق «الطابع» بعد انتهاء الضربة الضوئية ثم نُغلق المراسم
-    const t = setTimeout(() => { if (brand) brand.classList.add('opening-stamped'); }, 480);
+    const t = setTimeout(() => { if (brand) brand.classList.add('is-stamped'); }, 480);
     const t2 = setTimeout(brandStamp, 1900);
     return () => { clearTimeout(t); clearTimeout(t2); };
   }, [openingCeremony]);
@@ -144,6 +229,18 @@ export default function Login() {
   // بوابة السحب تبدأ دائمًا من الشمال وتتحرك إلى اليمين، حتى مع اللغة العربية.
   const dirSign = 1;
 
+  // ✨ بارالاكس لطيف لهلال البوابة مع حركة المؤشر (يُلغى تلقائيًا مع reduced-motion)
+  const reduceMotion = useReducedMotion();
+  const parX = useMotionValue(0);
+  const parY = useMotionValue(0);
+  const parSX = useSpring(parX, { stiffness: 55, damping: 17 });
+  const parSY = useSpring(parY, { stiffness: 55, damping: 17 });
+  const handleGatePointerMove = (e) => {
+    if (reduceMotion) return;
+    parX.set((e.clientX / window.innerWidth - 0.5) * 16);
+    parY.set((e.clientY / window.innerHeight - 0.5) * 11);
+  };
+
   // تشغيل القياسات (readiness) بعد دخول الكارت
   useEffect(() => {
     const t = setTimeout(() => setGaugesOn(true), 220);
@@ -164,7 +261,7 @@ export default function Login() {
     setDragX(maxX);
     setDragProgress(1);
     setIsUnlocking(true);
-    if (navigator.vibrate) try { navigator.vibrate([10, 30, 20]); } catch (e) {}
+    if (navigator.vibrate) try { navigator.vibrate([10, 30, 20]); } catch { /* وضع الاهتزاز غير مدعوم */ }
     setTimeout(() => setIsMounted(true), 160);   // كارت الدخول يبدأ بالدخول
     setTimeout(() => setShowGate(false), 860);    // البوابة تُزال من الـ DOM
   };
@@ -287,7 +384,7 @@ export default function Login() {
       } else {
         setErrorMsg(language === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid login credentials');
       }
-    } catch (err) {
+    } catch {
       setErrorMsg(language === 'ar'
         ? 'تعذر الاتصال بالخادم المركزي — تأكد من الشبكة، ولو الشبكة تمام رستر السيرفر واضغط Ctrl+Shift+R.'
         : 'Unable to reach the central server — check your network; if that is fine, restart the server and press Ctrl+Shift+R.');
@@ -363,7 +460,7 @@ export default function Login() {
 
   const handleCaps = (e) => {
     if (e.nativeEvent && e.nativeEvent.getModifierState) {
-      try { setCapsLock(e.nativeEvent.getModifierState('CapsLock')); } catch (err) {}
+      try { setCapsLock(e.nativeEvent.getModifierState('CapsLock')); } catch { /* متصفح لا يدعم getModifierState */ }
     }
   };
 
@@ -372,407 +469,291 @@ export default function Login() {
     ? t('تم — جاري فتح الوصول', 'Done — opening access')
     : dragProgress >= 0.55
       ? t('استمرّر أكثر…', 'Keep sliding…')
-      : dragProgress > 0.12
-        ? t('اسحب لفتح الوصول الآمن', 'Slide to unlock secure access')
-        : t('اسحب لفتح الوصول الآمن', 'Slide to unlock secure access');
+      : t('اسحب لفتح الوصول الآمن', 'Slide to unlock secure access');
 
   return (
     <div
-      className="relative min-h-[100dvh] bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
+      className="lx relative min-h-[100dvh] bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* 🩺 شاشة وقوع السيرفر — تظهر على صفحة الدخول نفسها (أول مكان بيوصل له الشباب) */}
       <ServerDownOverlay health={serverHealth} lang={language} />
       <ServerRecoveryBanner health={serverHealth} lang={language} />
-      {/* 🔐 تجربة OTP: خط طبيعي → مدار تحميل → علامة نجاح، بدون تغيير منطق التحقق. */}
-      <style>{`
-        .otp-orbit-zone.is-checking {
-          min-height: 176px;
-          min-width: 176px;
-        }
-        .otp-orbit-zone.is-checking .otp-orbit-item {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          margin: -24px;
-          width: 48px;
-          height: 48px;
-          animation:
-            otp-form-circle .8s cubic-bezier(.22, .8, .25, 1) forwards,
-            otp-spin-circle 2s linear .8s infinite;
-        }
-        .otp-orbit-zone.is-checking .otp-box {
-          color: transparent !important;
-          caret-color: transparent;
-          -webkit-text-security: none;
-          box-shadow: 0 0 0 1px var(--accent-soft), 0 0 18px var(--accent-glow);
-        }
-        /* كل مربع يبدأ من موضعه في الخط ثم يصل إلى نقطة مستقلة في المدار */
-        @keyframes otp-form-circle {
-          from {
-            transform: translateX(var(--line-x)) scale(.92);
-            opacity: .65;
-          }
-          to {
-            transform: rotate(var(--angle)) translateX(66px) scale(1);
-            opacity: 1;
-          }
-        }
-        /* المدار يدور حول المركز؛ المربعات لا تدور حول محاورها */
-        @keyframes otp-spin-circle {
-          from {
-            transform: rotate(var(--angle)) translateX(66px) scale(1);
-          }
-          to {
-            transform: rotate(calc(var(--angle) + 360deg)) translateX(66px) scale(1);
-          }
-        }
-        .otp-orbit-zone.is-success {
-          min-height: 176px;
-          min-width: 176px;
-        }
-        .otp-orbit-zone.is-success .otp-orbit-item {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          margin: -24px;
-          width: 48px;
-          height: 48px;
-          animation: otp-collapse-success .7s cubic-bezier(.22, .8, .25, 1) forwards;
-        }
-        .otp-orbit-zone.is-success .otp-box {
-          color: transparent !important;
-          caret-color: transparent;
-          -webkit-text-security: none;
-          box-shadow: 0 0 0 1px var(--ok-soft), 0 0 18px var(--ok-soft);
-        }
-        @keyframes otp-collapse-success {
-          from {
-            transform: rotate(var(--angle)) translateX(66px) scale(1);
-            opacity: 1;
-          }
-          to {
-            transform: rotate(var(--angle)) translateX(0) scale(.35);
-            opacity: 0;
-          }
-        }
-        .otp-success-mark {
-          position: absolute;
-          inset: 50% auto auto 50%;
-          width: 64px;
-          height: 64px;
-          transform: translate(-50%, -50%) scale(.55);
-          display: grid;
-          place-items: center;
-          border: 1px solid var(--ok);
-          border-radius: 999px;
-          color: var(--ok);
-          background: var(--ok-soft);
-          box-shadow: 0 0 0 8px var(--ok-soft), 0 0 34px var(--ok-soft);
-          opacity: 0;
-          pointer-events: none;
-        }
-        .otp-orbit-zone.is-success .otp-success-mark {
-          animation: otp-success-pop .55s cubic-bezier(.22, .8, .25, 1) .5s forwards;
-        }
-        .otp-success-mark svg {
-          width: 34px;
-          height: 34px;
-          stroke-dasharray: 40;
-          stroke-dashoffset: 40;
-          animation: otp-success-draw .55s ease-out .75s forwards;
-        }
-        @keyframes otp-success-pop {
-          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        }
-        @keyframes otp-success-draw {
-          to { stroke-dashoffset: 0; }
-        }
 
-        .gate-bloom {
-          position: absolute;
-          border-radius: 999px;
-          background: var(--accent-glow);
-          filter: blur(120px);
-          animation: gate-breathe 9s var(--ease-out) infinite;
-          will-change: transform, opacity;
-        }
-        .gate-bloom--a { top: -22%; inset-inline-start: -12%; width: 46vw; height: 46vw; opacity: .5; }
-        .gate-bloom--b { bottom: -26%; inset-inline-end: -10%; width: 42vw; height: 42vw; opacity: .38; animation-duration: 12s; }
-
-        @keyframes gate-breathe {
-          0%, 100% { opacity: .34; }
-          50%      { opacity: .58; }
-        }
-
-        .gate-vignette {
-          background: radial-gradient(125% 95% at 50% -12%, transparent 42%, color-mix(in srgb, var(--bg) 60%, transparent) 100%);
-        }
-
-        .gate-grain {
-          opacity: .028;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-        }
-
-        .gate-crest {
-          box-shadow:
-            0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
-            0 0 0 12px color-mix(in srgb, var(--accent) 5%, transparent),
-            0 0 0 26px color-mix(in srgb, var(--accent) 3%, transparent),
-            0 26px 64px -26px color-mix(in srgb, var(--accent) 70%, transparent);
-        }
-
-        .gate-track {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 86%, transparent));
-          box-shadow:
-            0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent) inset,
-            0 0 0 1px color-mix(in srgb, var(--border-strong) 55%, transparent) inset,
-            0 22px 54px -30px rgba(0, 0, 0, .55);
-        }
-
-        .gate-in { animation: gate-rise .62s var(--ease-out) both; }
-
-        @keyframes gate-rise {
-          from { opacity: 0; transform: translate3d(0, 14px, 0); }
-          to   { opacity: 1; transform: translate3d(0, 0, 0); }
-        }
-
-        @media (min-width: 1920px) {
-          .gate-bloom { filter: blur(150px); }
-        }
-
-        @media (max-width: 640px) {
-          .gate-grain { display: none; }
-          .gate-bloom { filter: blur(70px); }
-        }
-
-      `}</style>
-
-      {/* ═══════════ الخلفية المحيطة (نفس لغة لوحة التحكم) ═══════════ */}
-      <div className="gate-ambient pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-        <span className="gate-bloom gate-bloom--a" />
-        <span className="gate-bloom gate-bloom--b" />
-        <span className="gate-vignette absolute inset-0" />
-        <span className="gate-grain absolute inset-0" />
+      {/* ═══════════ الخلفية المحيطة — مشهد الجمرة (يبقى خلف سطح القيادة) ═══════════ */}
+      <div className="lx-scene" aria-hidden="true">
+        <div className="lx-aurora" />
+        <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.22})` }}>
+          <span className="lx-glow lx-glow--a" />
+        </div>
+        <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.14})` }}>
+          <span className="lx-glow lx-glow--b" />
+        </div>
+        <span className="lx-glow lx-glow--c" />
+        <span className="lx-beam" />
+        <div className="lx-grid" />
+        <span className="lx-sweep" />
+        <div className="lx-vignette" />
+        <div className="lx-grain" />
       </div>
 
       {/* ═══════════ تحكمات ثابتة: اللغة + الثيم ─────────────── */}
-      <button
+      <motion.button
         type="button"
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...SPRING_SOFT, delay: 0.35 }}
         onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
         title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
         aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
-        className="fixed top-4 start-5 z-[60] h-10 px-4 inline-flex items-center rounded-full border border-[var(--border-strong)]/60 bg-[var(--surface)]/70 backdrop-blur-xl text-[11px] font-extrabold tracking-[0.18em] text-[var(--muted)] shadow-[0_12px_30px_-16px_rgba(0,0,0,0.5)] transition-all duration-300 hover:text-[var(--accent)] hover:border-[var(--accent)]/50 hover:-translate-y-0.5 active:scale-95"
+        className="lx-pill-btn fixed top-4 start-5 z-[9999]"
       >
         {language === 'ar' ? 'EN' : 'AR'}
-      </button>
+      </motion.button>
 
-      <button
+      <motion.button
         type="button"
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...SPRING_SOFT, delay: 0.42 }}
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         aria-label={t('تفعيل الوضع الفاتح', 'Enable light mode')}
-        className="fixed top-4 end-5 z-[60] w-[76px] h-10 rounded-full p-1 bg-[var(--surface)]/70 backdrop-blur-xl border border-[var(--border-strong)]/60 shadow-[0_12px_30px_-16px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-[var(--accent)]/60"
+        className="lx-switch fixed top-4 end-5 z-[9999]"
       >
-        <span className="absolute top-1 start-1 w-4 h-4 text-[var(--faint)] pointer-events-none flex items-center justify-center">
+        <span className="lx-switch-ic lx-switch-ic--s" aria-hidden="true">
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
         </span>
-        <span className="absolute top-1 end-1 w-4 h-4 text-[var(--faint)] pointer-events-none flex items-center justify-center">
+        <span className="lx-switch-ic lx-switch-ic--e" aria-hidden="true">
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
         </span>
-        <span
-          className={`absolute top-1 ${theme === 'dark' ? 'start-1' : 'start-[38px]'} w-8 h-8 rounded-full flex items-center justify-center bg-[var(--accent)] text-white shadow-[var(--shadow-accent)] transition-[inset-inline-start] duration-300 ease-[cubic-bezier(0.34,1.45,0.64,1)]`}
-        >
+        <span className={`lx-switch-knob ${theme === 'dark' ? 'lx-switch-knob--start' : 'lx-switch-knob--end'}`}>
           {theme === 'dark' ? (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
           ) : (
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
           )}
         </span>
-      </button>
+      </motion.button>
 
       {/* ═══════════ بوابة السحب للدخول (Slide to Unlock) ═══════════ */}
-      {showGate && (
-        <div
-          className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--bg)] ${
-            isUnlocking ? 'gate-peel pointer-events-none' : ''
-          }`}
-          dir="ltr"
-        >
-          {/* تألق محيطي — يشتغل مع تقدّم السحب */}
-          <span className="gate-bloom gate-bloom--a" aria-hidden="true" style={{ transform: `scale(${1 + dragProgress * 0.22})` }} />
-          <span className="gate-bloom gate-bloom--b" aria-hidden="true" style={{ transform: `scale(${1 + dragProgress * 0.16})` }} />
-
-          <div className="relative z-10 flex flex-col items-center px-6 py-6 w-full max-w-[min(92vw,520px)]">
-            {/* 🎉 المفاجأة عند الفتح — «مراسم الافتتاح» تعمل مع كل Refresh */}
-            {openingCeremony && (
-              <div aria-hidden="true" className="opening-ceremony pointer-events-none absolute inset-0 z-[70]">
-                <div className="opening-slash" />
-                <span className="opening-spark" style={{ insetInlineStart: '18%', insetBlockStart: '34%', animationDelay: '0.55s' }} />
-                <span className="opening-spark" style={{ insetInlineStart: '72%', insetBlockStart: '28%', animationDelay: '0.7s' }} />
-                <span className="opening-spark" style={{ insetInlineStart: '56%', insetBlockStart: '70%', animationDelay: '0.85s' }} />
-                <span className="opening-spark" style={{ insetInlineStart: '88%', insetBlockStart: '55%', animationDelay: '1s' }} />
+      <AnimatePresence>
+        {showGate && (
+          <motion.div
+            key="lx-gate"
+            className="fixed inset-0 z-50 overflow-hidden"
+            dir="ltr"
+            onPointerMove={handleGatePointerMove}
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.05, filter: 'blur(14px)' }}
+            transition={{ duration: 0.55, ease: EASE_OUT }}
+            style={{ pointerEvents: isUnlocking ? 'none' : 'auto' }}
+          >
+            {/* مشهد البوابة الخاص — طبقة أعمق من خلفية الصفحة */}
+            <div className="lx-scene" aria-hidden="true">
+              <div className="lx-aurora" />
+              <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.22})` }}>
+                <span className="lx-glow lx-glow--a" />
               </div>
-            )}
-            {openingCeremony && <div aria-hidden="true" className="opening-crest-ring" />}
-            {/* حلقة تقدم حول الشعار (conic) — تمتلئ مع السحب */}
-            <div
-              className="relative mb-9"
-              style={{
-                transform: `translate3d(0, ${-dragProgress * 9}px, 0) scale(${1 - dragProgress * 0.03})`,
-                transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.34,1.45,0.64,1)',
-              }}
-            >
-              <div
-                className="absolute -inset-2.5 rounded-full"
-                style={{ background: `conic-gradient(var(--accent) ${dragProgress * 360}deg, var(--surface-3) 0deg)`, opacity: 0.5 + dragProgress * 0.5, transition: dragProgress === 1 ? 'background 0.4s' : 'none' }}
-              />
-              <div className="absolute -inset-2.5 rounded-full bg-[var(--surface-3)]" style={{ transform: `rotate(${dragProgress * 360}deg) scale(${dragProgress})`, opacity: dragProgress }} />
-              <div className="absolute -inset-2.5 rounded-full shadow-[0_0_34px_var(--accent-glow)] blur-xl" style={{ opacity: dragProgress * 0.55 }} />
-              <div className="absolute inset-0 -m-6 rounded-full bg-[var(--accent-glow)] blur-2xl animate-pulse" style={{ animationDuration: '3.5s', opacity: 0.5 + dragProgress * 0.4 }}>
-                {dragProgress >= 0.92 && <span className="ripple-burst absolute inset-0 rounded-full bg-[var(--ok)]" />}
+              <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.14})` }}>
+                <span className="lx-glow lx-glow--b" />
               </div>
-
-              <div id="opening-crest" className={`gate-crest relative w-[clamp(96px,6.2vw,124px)] h-[clamp(96px,6.2vw,124px)] rounded-full bg-[var(--surface)] border border-[var(--border-strong)]/70 flex items-center justify-center p-2 transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
-                <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
-              </div>
+              <span className="lx-glow lx-glow--c" />
+              <span className="lx-beam" />
+              <div className="lx-grid" />
+              <span className="lx-sweep" />
+              <div className="lx-vignette" />
+              <div className="lx-grain" />
             </div>
 
-            <h2
-              className={`gate-in text-[clamp(20px,2.1vw,28px)] font-extrabold text-center text-[var(--ink)] ${language === 'ar' ? '' : 'tracking-[-0.01em]'}`}
-              style={{ animationDelay: '.12s' }}
+            <motion.div
+              variants={GATE_RISE}
+              initial="hidden"
+              animate="show"
+              className="relative z-10 flex h-full flex-col items-center justify-center px-6 w-full max-w-[min(92vw,540px)] mx-auto"
             >
-              {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
-            </h2>
-            <p
-              className={`gate-in text-[clamp(11px,0.85vw,13px)] font-bold text-center text-[var(--muted)] mb-8 ${language === 'ar' ? '' : 'uppercase tracking-[0.22em]'}`}
-              style={{ animationDelay: '.18s' }}
-            >
-              {language === 'ar' ? 'مركز عمليات الطوارئ — EOC' : 'Emergency Operations Center — EOC'}
-            </p>
-
-            {/* قراءة النسبة المئوية */}
-            <div className="h-6 mb-1 flex items-center justify-center">
-              {dragProgress > 0 && dragProgress < 1 && (
-                <span className="font-mono text-xs font-bold text-[var(--accent)] tabular-nums">
-                  {Math.round(dragProgress * 100)}%
-                </span>
+              {/* 🎉 المفاجأة عند الفتح — «مراسم الافتتاح» تعمل مع كل Refresh */}
+              {openingCeremony && (
+                <div className="lx-boot" aria-hidden="true">
+                  <div className="lx-boot-slash" />
+                  <span className="lx-boot-ring" />
+                  <span className="lx-boot-spark" style={{ insetInlineStart: '18%', top: '34%', animationDelay: '0.55s' }} />
+                  <span className="lx-boot-spark" style={{ insetInlineStart: '72%', top: '28%', animationDelay: '0.7s' }} />
+                  <span className="lx-boot-spark" style={{ insetInlineStart: '56%', top: '70%', animationDelay: '0.85s' }} />
+                  <span className="lx-boot-spark" style={{ insetInlineStart: '88%', top: '55%', animationDelay: '1s' }} />
+                </div>
               )}
-              {dragProgress === 1 && (
-                <span className="uppercase tracking-[0.28em] text-[11px] font-bold text-[var(--ok)]">✓ {t('مُفعّل', 'ACTIVATED')}</span>
-              )}
-            </div>
 
-            {/* مسار السحب */}
-            <div
-              ref={trackRef}
-              className="gate-in gate-track relative z-10 w-full self-center h-14 rounded-full backdrop-blur-md overflow-hidden touch-none select-none"
-              style={{ animationDelay: '.24s' }}
-            >
-              {/* خط لمعان داخلي */}
-              <span className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
+              {/* ── هلال البوابة: توهج + أقمار + حلقة تقدم + قرص زجاجي ── */}
+              <motion.div variants={GATE_ITEM} className="relative">
+                <motion.div style={{ x: parSX, y: parSY }} className="lx-crest-stack">
+                  <span className="lx-crest-glow" aria-hidden="true" />
+                  <span className="lx-orbit" aria-hidden="true"><span className="lx-sat lx-sat--a" /></span>
+                  <span className="lx-orbit lx-orbit--inner" aria-hidden="true"><span className="lx-sat lx-sat--b" /></span>
+                  {/* حلقة التقدم — تمتلئ مع السحب */}
+                  <svg className="lx-halo" viewBox="0 0 100 100" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="lxHaloGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="var(--accent-glow)" />
+                        <stop offset="55%" stopColor="var(--lx-accent-hi)" />
+                        <stop offset="100%" stopColor="var(--accent)" />
+                      </linearGradient>
+                    </defs>
+                    <circle className="lx-halo-track" cx="50" cy="50" r="46" />
+                    <circle
+                      className="lx-halo-arc"
+                      cx="50" cy="50" r="46"
+                      strokeDasharray={HALO_C}
+                      strokeDashoffset={HALO_C * (1 - dragProgress)}
+                      style={{ transition: isDragging ? 'none' : 'stroke-dashoffset .45s var(--ease-out)' }}
+                    />
+                  </svg>
+                  <div
+                    id="lx-crest"
+                    className={`lx-crest ${dragProgress >= 0.92 || isUnlocking ? 'is-done' : ''}`}
+                  >
+                    <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" />
+                  </div>
+                </motion.div>
+              </motion.div>
 
-              {/* علامات المراحل (3 نقاط منطقية — تنعكس تلقائيًا في RTL) */}
-              {[0.33, 0.66, 0.92].map((p) => (
-                <span key={p} className="pointer-events-none absolute top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-[var(--border-strong)]/70" style={{ insetInlineStart: `calc(${p * 100}%)`, transform: 'translate(-50%, -50%)', marginInlineStart: p === 0.92 ? '-6px' : '0' }} />
-              ))}
-
-              {/* تعبئة التقدم — تنمو من الشمال إلى اليمين */}
-              <div
-                className="pointer-events-none absolute top-1 bottom-1 rounded-full bg-gradient-to-r from-[var(--accent-softer)] via-[var(--accent)] to-[var(--accent)]"
-                style={{
-                  left: 4,
-                  width: `${dragX}px`,
-                  boxShadow: '0 0 22px var(--accent-glow), inset 0 0 8px rgba(255,255,255,0.08)',
-                  transition: isDragging ? 'none' : 'width 0.5s cubic-bezier(0.34,1.45,0.64,1)',
-                }}
-              />
-
-              {/* ذيل ضوئي خلف المقبض — من الشمال إلى اليمين */}
-              <div
-                className="pointer-events-none absolute top-1/2 z-[5] w-[72px] h-9 rounded-full bg-[var(--accent-glow)] blur-xl"
-                style={{
-                  left: 4,
-                  width: `${dragX}px`,
-                  transform: `translate3d(0, -50%, 0)`,
-                  opacity: dragProgress * 0.5,
-                  transition: isDragging ? 'none' : 'opacity 0.5s cubic-bezier(0.34,1.45,0.64,1)',
-                }}
-              />
-
-              {/* النص التوجيهي المتطور */}
-              <div
-                className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[var(--ink)] text-xs sm:text-sm font-semibold tracking-wide"
-                style={{ opacity: 1 - dragProgress }}
+              <motion.h2
+                variants={GATE_ITEM}
+                className="lx-gate-title mt-9"
+                style={language === 'ar' ? undefined : { letterSpacing: '-0.015em' }}
               >
-                <ShieldIcon />
-                <span className="whitespace-nowrap">{slideLabel}</span>
-                <ChevronsIcon />
-              </div>
-
-              {/* المقبض — يتحرك فيزيائيًا من الشمال إلى اليمين */}
-              <div
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-                onKeyDown={handleKnobKey}
-                role="slider"
-                tabIndex={0}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(dragProgress * 100)}
-                aria-label={language === 'ar' ? 'اسحب لفتح الوصول' : 'Slide to unlock'}
-                style={{
-                  left: 4,
-                  width: HANDLE_SIZE,
-                  height: HANDLE_SIZE,
-                  transform: `translateX(${dirSign * dragX}px)`,
-                  transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.34,1.45,0.64,1)',
-                }}
-                className={`absolute top-1/2 -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-full ${isDragging ? 'scale-110' : ''} ${isUnlocking ? 'pointer-events-none' : ''}`}
+                {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
+              </motion.h2>
+              <motion.p
+                variants={GATE_ITEM}
+                className="lx-gate-sub mt-2.5"
+                style={language === 'ar' ? { letterSpacing: '.12em', textTransform: 'none' } : undefined}
               >
-                {/* هالة متتبعة للمقبض — تنفّس إرشادي عند السكون فقط */}
-                <span className={`absolute -inset-2 rounded-full bg-[var(--accent-glow)] blur-md ${!isDragging && !isUnlocking ? 'handle-breathe' : 'opacity-70'}`} />
-                {isUnlocking && <span className="absolute inset-0 rounded-full bg-[var(--ok)] animate-ping opacity-50" />}
-                {isUnlocking && <span className="ripple-burst absolute inset-6 rounded-full border-2 border-[var(--ok)]" />}
-                {/* قلب المقبض */}
-                <span className={`relative h-full w-full rounded-full flex items-center justify-center shadow-lg transition-colors duration-300 ${isUnlocking ? 'bg-[var(--ok)] text-white' : 'bg-white'}`}>
-                  {isUnlocking ? (
-                    <svg viewBox="0 0 100 100" className="w-6 h-6 drop-shadow animate-scale-pop">
-                      <path d="M 22 55 L 42 75 L 80 32" fill="none" stroke="white" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="w-8 h-8 object-contain object-[39%] drop-shadow-sm pointer-events-none" />
-                  )}
-                </span>
-              </div>
-            </div>
+                {language === 'ar' ? 'مركز عمليات الطوارئ — EOC' : 'Emergency Operations Center — EOC'}
+              </motion.p>
 
-            <p
-              className={`gate-in mt-8 text-[11px] text-[var(--faint)] font-mono ${language === 'ar' ? '' : 'tracking-[0.2em]'}`}
-              style={{ animationDelay: '.3s' }}
-            >
-              {language === 'ar' ? 'بوابة الدخول المشفّرة · EOC SECURE GATE' : 'ENCRYPTED ACCESS GATE · EOC SECURE GATE'}
-            </p>
-          </div>
-        </div>
-      )}
+              {/* قراءة النسبة المئوية / شارة التفعيل */}
+              <motion.div variants={GATE_ITEM} className="lx-readout mt-7">
+                {dragProgress > 0 && dragProgress < 1 && (
+                  <span className="lx-pct">{Math.round(dragProgress * 100)}%</span>
+                )}
+                {dragProgress === 1 && (
+                  <span className="lx-granted lx-morph"><i />{t('مُفعّل', 'ACTIVATED')}</span>
+                )}
+              </motion.div>
+
+              {/* ── مسار السحب ── */}
+              <motion.div variants={GATE_ITEM} className="w-full flex justify-center">
+                <div
+                  ref={trackRef}
+                  className={`lx-track ${isDragging ? 'is-dragging' : ''} ${isUnlocking ? 'is-done' : ''}`}
+                >
+                  <span className="lx-track-shine" aria-hidden="true" />
+
+                  {/* تعبئة الجمرة + توهجها الواسع */}
+                  <span
+                    className="lx-fill"
+                    aria-hidden="true"
+                    style={{
+                      width: `calc(${HANDLE_SIZE / 2}px + ${dragX}px)`,
+                      transition: isDragging ? 'none' : 'width .45s var(--ease-out)',
+                    }}
+                  />
+                  <span
+                    className="lx-fill-glow"
+                    aria-hidden="true"
+                    style={{
+                      width: `calc(${HANDLE_SIZE}px + ${dragX}px)`,
+                      opacity: 0.35 + dragProgress * 0.55,
+                      transition: isDragging ? 'none' : 'width .45s var(--ease-out), opacity .45s var(--ease-out)',
+                    }}
+                  />
+
+                  {/* معينات المراحل — تشتعل تباعًا */}
+                  {[0.33, 0.66, 0.92].map((p) => (
+                    <span
+                      key={p}
+                      className={`lx-tick ${dragProgress >= p ? 'is-lit' : ''}`}
+                      style={{ insetInlineStart: `${p * 100}%` }}
+                      aria-hidden="true"
+                    />
+                  ))}
+
+                  {/* حلقة الهدف النهائي */}
+                  <span className={`lx-goal ${dragProgress >= 0.92 ? 'is-lit' : ''}`} aria-hidden="true">
+                    <CheckIcon />
+                  </span>
+
+                  {/* التسمية المتطورة */}
+                  <span className="lx-track-label" style={{ opacity: Math.max(0, 1 - dragProgress * 1.15) }}>
+                    <span className="lx-shield-ic" aria-hidden="true"><ShieldIcon /></span>
+                    <span key={slideLabel} className="lx-morph whitespace-nowrap">{slideLabel}</span>
+                    <span className="lx-chevs" aria-hidden="true">
+                      <ChevronsIcon /><ChevronsIcon /><ChevronsIcon />
+                    </span>
+                  </span>
+
+                  {/* المقبض — كرة زجاجية بشعار الهلال */}
+                  <div
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    onKeyDown={handleKnobKey}
+                    role="slider"
+                    tabIndex={0}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(dragProgress * 100)}
+                    aria-label={language === 'ar' ? 'اسحب لفتح الوصول' : 'Slide to unlock'}
+                    className={`lx-handle ${isDragging ? 'is-dragging' : 'is-idle'} ${isUnlocking ? 'is-done' : ''}`}
+                    style={{
+                      width: HANDLE_SIZE,
+                      height: HANDLE_SIZE,
+                      transform: `translateY(-50%) translateX(${dirSign * dragX}px)`,
+                      transition: isDragging ? 'none' : 'transform .45s var(--ease-out)',
+                    }}
+                  >
+                    <span className="lx-handle-halo" aria-hidden="true" />
+                    {isUnlocking && <span className="lx-ripple lx-ripple--1" aria-hidden="true" />}
+                    {isUnlocking && <span className="lx-ripple lx-ripple--2" aria-hidden="true" />}
+                    <span className="lx-handle-core">
+                      <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
+                      <span className="lx-handle-check" aria-hidden="true">
+                        <svg viewBox="0 0 100 100"><path d="M 22 55 L 42 75 L 80 32" /></svg>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.p
+                variants={GATE_ITEM}
+                className="lx-gate-foot mt-9"
+                style={language === 'ar' ? { letterSpacing: '.1em' } : undefined}
+              >
+                {language === 'ar' ? 'بوابة الدخول المشفّرة · EOC SECURE GATE' : 'ENCRYPTED ACCESS GATE · EOC SECURE GATE'}
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════ كارت القيادة (Command Deck) ═══════════ */}
       <div className="relative z-10 flex items-center justify-center min-h-[100dvh] p-4 sm:p-8">
-        <div
-          className={`w-full max-w-[860px] 2xl:max-w-[1000px] bg-[var(--surface)]/85 backdrop-blur-2xl rounded-[2rem] border border-[var(--border)] shadow-[var(--shadow-3)] flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-            isMounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-          }`}
+        <motion.div
+          className="lx-deck"
+          variants={DECK_ENTER}
+          initial="hidden"
+          animate={isMounted ? 'show' : 'hidden'}
         >
           {/* ─── الرباط العلوي: هوية القيادة + الحالة الحية ─── */}
-          <div className="relative shrink-0 bg-gradient-to-r from-[#a00606] via-[#c70000] to-[#8d0a0a] text-white px-5 sm:px-8 py-4 overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle,white_1px,transparent_1.5px)] bg-[length:20px_20px]" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/25" />
+          <motion.div variants={DECK_CHILD} className="lx-ribbon relative shrink-0 px-5 sm:px-8 py-4">
+            <span className="lx-ribbon-line" aria-hidden="true" />
+            <span className="lx-ribbon-fade" aria-hidden="true" />
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="w-11 h-11 shrink-0 bg-white rounded-xl flex items-center justify-center p-1 shadow-lg">
-                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
+                <span className="lx-logo-tile shrink-0">
+                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" />
                 </span>
                 <div className="min-w-0">
                   <p className="font-extrabold text-sm sm:text-base leading-tight tracking-tight">
@@ -784,38 +765,52 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 sm:gap-4">
-                <span className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-black/25 backdrop-blur-sm border border-white/15 px-3 py-1.5">
-                  <span className="live-blink w-2 h-2 rounded-full bg-white shadow-[0_0_8px_white]" />
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <span className="lx-chip hidden sm:inline-flex">
+                  <span className="lx-live-dot" aria-hidden="true" />
                   <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em]">LIVE</span>
                 </span>
-                <span className="rounded-lg bg-black/25 backdrop-blur-sm border border-white/15 px-3 py-1.5 font-mono text-[11px] sm:text-xs tabular-nums tracking-widest">
-                  {opsNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                <span className="lx-chip">
+                  <span className="lx-clock">
+                    {opsNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                  </span>
                 </span>
-                <span className="hidden md:inline-flex items-center gap-3 text-white/60 text-[10px] font-mono tracking-widest">
-                  <span>EOC · OPS</span>
-                  <span>v2.0.0</span>
+                <span className="hidden md:inline-flex text-white/60 text-[10px] font-mono tracking-widest">
+                  EOC · OPS · v2.0.0
                 </span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* ─── الجسم: الجاهزية (يمينً/شمالًا) + نموذج الوصول ─── */}
+          {/* ─── الجسم: كونسول الجاهزية + نموذج الوصول ─── */}
           <div className="flex flex-col">
-            {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة (جزء من الكارت الواحد) */}
-            <div className="relative overflow-hidden px-6 sm:px-8 pt-8 pb-6 flex flex-col items-center gap-6 bg-[var(--surface-2)]/45 border-b border-[var(--border)]/70">
-              <div className="pointer-events-none absolute -top-20 start-1/2 -translate-x-1/2 w-80 h-48 rounded-full bg-[var(--accent-glow)] blur-[95px] opacity-35" />
+            {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة */}
+            <motion.div variants={DECK_CHILD} className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
+              {/* الرادار */}
+              <div className="lx-radar shrink-0" aria-hidden="true">
+                <div className="lx-radar-sweep" />
+                <span className="lx-radar-ring lx-radar-ring--1" />
+                <span className="lx-radar-ring lx-radar-ring--2" />
+                <span className="lx-radar-blip" style={{ top: '13%', insetInlineEnd: '26%', width: 7, height: 7, background: 'var(--accent)' }} />
+                <span className="lx-radar-blip" style={{ bottom: '21%', insetInlineStart: '23%', width: 5, height: 5, background: 'var(--ok)', animationDelay: '1.1s' }} />
+                <img
+  src="/Egyptian_Red_Crescent.png"
+  alt="الهلال الأحمر المصري"
+  draggable="false"
+  className="lx-radar-logo"
+  style={{
+    width: '36px',
+    height: '36px',
+    objectFit: 'contain',
+    objectPosition: 'center',
+    display: 'block',
+    opacity: 1,
+    visibility: 'visible',
+    position: 'relative',
+    zIndex: 5,
+  }}
+/>
 
-              {/* الرادار (مصغّر ومركزي) */}
-              <div className="relative shrink-0 w-24 h-24 rounded-full border border-[var(--border-strong)] bg-[var(--surface-2)]/70 overflow-hidden">
-                <div className="radar-sweep absolute inset-0" style={{ background: 'conic-gradient(from 0deg, var(--accent-glow) 0deg, transparent 72deg)' }} />
-                <span className="absolute inset-[18%] rounded-full border border-[var(--border)]" />
-                <span className="absolute inset-[38%] rounded-full border border-[var(--border)]" />
-                <span className="absolute top-[12%] end-[24%] w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse" />
-                <span className="absolute bottom-[20%] start-[22%] w-1.5 h-1.5 rounded-full bg-[var(--ok)] animate-pulse" style={{ animationDelay: '1.2s' }} />
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" className="w-8 h-8 object-contain object-[39%] opacity-90" />
-                </span>
               </div>
 
               {/* القياسات: صف ثلاثي متناظر */}
@@ -825,229 +820,248 @@ export default function Login() {
                   { key: 'field', label: language === 'ar' ? 'الربط الميداني' : 'Field-team link', val: 100, color: 'var(--ok)' },
                   { key: 'secure', label: language === 'ar' ? 'تشفير القناة' : 'Channel encryption', val: 100, color: 'var(--ok)' },
                 ].map((g) => (
-                  <div key={g.key} className="min-w-0 flex flex-col items-center gap-2">
-                    <span className="font-mono text-xl font-bold tabular-nums leading-none" style={{ color: g.color }}>{g.val}<span className="text-[10px] text-[var(--muted)]">%</span></span>
-                    <div className="h-1 w-full rounded-full bg-[var(--surface-3)] overflow-hidden">
-                      <div className="ops-gauge-fill h-full rounded-full" style={{ width: gaugesOn ? `${g.val}%` : '0%', background: `linear-gradient(90deg, ${g.color}, var(--accent-glow))`, boxShadow: `0 0 10px ${g.color}` }} />
-                    </div>
-                    <span className="text-[10px] font-bold text-[var(--muted)] truncate max-w-full">{g.label}</span>
-                  </div>
+                  <Gauge key={g.key} g={g} active={gaugesOn} />
                 ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* نموذج الوصول الموحّد */}
-            <div
-              className="p-7 sm:p-10 lg:p-10"
-            >
+            <motion.div variants={DECK_CHILD} className="p-7 sm:p-10">
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start gap-8 lg:gap-12">
-                {/* عمود المقدمة/الثقة — نفس المحتوى، يُعاد توزيعه ليستخدم عرض الكارت بالكامل */}
+                {/* عمود المقدمة/الثقة */}
                 <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
                   <div>
-                    <span className="eyebrow mb-3">
+                    <span className="lx-eyebrow mb-3">
                       {language === 'ar' ? 'بوابة الدخول' : 'SECURE ACCESS'}
                     </span>
-                    <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight">
+                    <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
                       {language === 'ar' ? 'بوابة الوصول الآمن' : 'Secure Access Portal'}
                     </h3>
-                    <p className="text-[var(--muted)] text-sm mt-1.5 leading-relaxed">
+                    <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
                       {language === 'ar'
                         ? 'أدخل بيانات الاعتماد الموثقة للمتابعة إلى مركز العمليات.'
                         : 'Enter your verified credentials to continue into the operations center.'}
                     </p>
                   </div>
-                  <div className="hidden lg:flex items-center gap-2 text-[var(--faint)] text-xs">
-                    <span className="text-[var(--ok)]"><ShieldIcon /></span>
-                    <span className="font-mono tracking-wide">
-                      {language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}
-                    </span>
+                  <div className="hidden lg:flex lx-trust">
+                    <b aria-hidden="true">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12.5 9.5 17 19 7" />
+                      </svg>
+                    </b>
+                    <span>{language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}</span>
                   </div>
                 </div>
 
-                {/* عمود النموذج */}
-                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 stagger flex flex-col gap-5">
-
-                {loginStage === 'verify' ? (
-                <div className="flex flex-col items-center gap-6 text-center py-2">
-                  <div>
-                    <span className="eyebrow mb-3">
-                      {language === 'ar' ? 'طبقة حماية إضافية' : 'ADDITIONAL SECURITY LAYER'}
-                    </span>
-                    <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight">
-                      {language === 'ar' ? 'رمز التحقق' : 'Verification Code'}
-                    </h3>
-                    <p className="text-[var(--muted)] text-sm mt-1.5 leading-relaxed">
-                      {language === 'ar'
-                        ? 'أدخل رمز التحقق المكوّن من 6 أرقام لإكمال الدخول'
-                        : 'Enter the 6-digit verification code to complete sign-in'}
-                    </p>
-                  </div>
-
-                  {verifyError && (
-                    <div className="error-shake flex items-start gap-3 rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent-softer)] px-4 py-3 text-[var(--ink)] w-full" style={{ animation: 'fade-in 0.35s var(--ease-out)' }}>
-                      <span className="text-[var(--accent)]"><AlertIcon /></span>
-                      <div className="text-sm leading-snug text-start">
-                        <p className="font-bold mb-0.5">{language === 'ar' ? 'رمز غير صحيح' : 'Incorrect code'}</p>
-                        <p className="text-[var(--muted)]">{language === 'ar' ? 'تأكد من الرمز وحاول مرة أخرى' : 'Check the code and try again'}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div
-                    dir="ltr"
-                    className={`otp-orbit-zone relative flex items-center justify-center gap-2.5 ${verifyStage === 'checking' ? 'is-checking' : ''} ${verifyStage === 'success' ? 'is-success' : ''}`}
-                  >
-                    {verifyDigits.map((d, i) => (
-                      <span
-                        key={i}
-                        className="otp-orbit-item inline-flex"
-                        style={{
-                          '--angle': `${i * 60 - 150}deg`,
-                          '--line-x': `${(i - 2.5) * 58}px`
-                        }}
+                {/* عمود النموذج — انتقال سينمائي بين الدخول ورمز التحقق */}
+                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
+                  <AnimatePresence mode="wait" initial={false}>
+                    {loginStage === 'verify' ? (
+                      <motion.div
+                        key="verify"
+                        {...TAB_PAGE}
+                        className="flex flex-col items-center gap-6 text-center py-2"
                       >
-                        <input
-                          ref={(el) => (otpRefs.current[i] = el)}
-                          type="password"
-                          inputMode="numeric"
-                          autoComplete="off"
-                          data-lpignore="true"
-                          data-1p-ignore="true"
-                          maxLength={1}
-                          value={verifyStage === 'checking' || verifyStage === 'success' ? '' : d}
-                          disabled={verifyStage === 'checking'}
-                          onChange={(e) => handleOtpChange(i, e.target.value)}
-                          onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                          onPaste={i === 0 ? handleOtpPaste : undefined}
-                          className="otp-box w-12 h-12 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--ink)] text-center text-xl font-bold font-mono outline-none transition-all duration-300 focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-glow)]"
-                        />
-                      </span>
-                    ))}
-                    {verifyStage === 'success' && (
-                      <span className="otp-success-mark" aria-label={language === 'ar' ? 'تم التحقق بنجاح' : 'Verification successful'}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M5 12.5 9.2 17 19 7" />
-                        </svg>
-                      </span>
-                    )}
-                  </div>
+                        <div>
+                          <span className="lx-eyebrow mb-3">
+                            {language === 'ar' ? 'طبقة حماية إضافية' : 'ADDITIONAL SECURITY LAYER'}
+                          </span>
+                          <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
+                            {language === 'ar' ? 'رمز التحقق' : 'Verification Code'}
+                          </h3>
+                          <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
+                            {language === 'ar'
+                              ? 'أدخل رمز التحقق المكوّن من 6 أرقام لإكمال الدخول'
+                              : 'Enter the 6-digit verification code to complete sign-in'}
+                          </p>
+                        </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginStage('form');
-                      setPendingAuthData(null);
-                      setVerifyDigits(['', '', '', '', '', '']);
-                      setVerifyStage('idle');
-                      setVerifyError(false);
-                    }}
-                    className="text-xs font-semibold text-[var(--faint)] hover:text-[var(--ink)] transition-colors"
-                  >
-                    {language === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to sign in'}
-                  </button>
-                </div>
-                ) : (
-                <>
-                {errorMsg && (
-                  <div className="error-shake flex items-start gap-3 rounded-2xl border border-[var(--accent)]/30 bg-[var(--accent-softer)] px-4 py-3 text-[var(--ink)]" style={{ animation: 'fade-in 0.35s var(--ease-out)' }}>
-                    <span className="text-[var(--accent)]"><AlertIcon /></span>
-                    <div className="text-sm leading-snug">
-                      <p className="font-bold mb-0.5">{language === 'ar' ? 'تعذّر الدخول' : 'Sign-in failed'}</p>
-                      <p className="text-[var(--muted)]">{errorMsg}</p>
-                    </div>
-                  </div>
-                )}
+                        {verifyError && (
+                          <div className="lx-error w-full text-start" role="alert">
+                            <span className="lx-error-ic" aria-hidden="true"><AlertIcon /></span>
+                            <div className="text-sm leading-snug">
+                              <p className="font-bold mb-0.5">{language === 'ar' ? 'رمز غير صحيح' : 'Incorrect code'}</p>
+                              <p className="text-[var(--muted)]">{language === 'ar' ? 'تأكد من الرمز وحاول مرة أخرى' : 'Check the code and try again'}</p>
+                            </div>
+                          </div>
+                        )}
 
-                <form onSubmit={handleLogin} className="group/form flex flex-col gap-5" autoComplete="off">
-                  <div className="group">
-                    <label className="block text-xs font-bold text-[var(--muted)] mb-2 tracking-wide uppercase">
-                      {language === 'ar' ? 'الرقم التعريفي / المستخدم' : 'ID / Username'}
-                    </label>
-                    <div className="relative">
-                      <span className="absolute start-4 top-1/2 -translate-y-1/2 text-[var(--faint)] transition-colors duration-300 group-focus-within:text-[var(--accent)]">
-                        <UserIcon />
-                      </span>
-                      <input
-                        ref={usernameRef}
-                        type="text"
-                        required
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder={language === 'ar' ? 'أدخل رقمك التعريفي' : 'Enter your ID'}
-                        autoComplete="new-password"
-                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] py-4 ps-12 pe-4 text-[var(--ink)] placeholder-[var(--faint)] outline-none transition-all duration-300 focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-glow)]"
-                      />
-                    </div>
-                  </div>
+                        <div
+                          dir="ltr"
+                          className={`otp-orbit-zone ${verifyStage === 'checking' ? 'is-checking' : ''} ${verifyStage === 'success' ? 'is-success' : ''}`}
+                        >
+                          {verifyDigits.map((d, i) => (
+                            <span
+                              key={i}
+                              className="otp-orbit-item inline-flex"
+                              style={{
+                                '--angle': `${i * 60 - 150}deg`,
+                                '--line-x': `${(i - 2.5) * 58}px`
+                              }}
+                            >
+                              <input
+                                ref={(el) => (otpRefs.current[i] = el)}
+                                type="password"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                maxLength={1}
+                                value={verifyStage === 'checking' || verifyStage === 'success' ? '' : d}
+                                disabled={verifyStage === 'checking'}
+                                onChange={(e) => handleOtpChange(i, e.target.value)}
+                                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                onPaste={i === 0 ? handleOtpPaste : undefined}
+                                className="otp-box"
+                              />
+                            </span>
+                          ))}
+                          {verifyStage === 'success' && (
+                            <span className="otp-success-mark" aria-label={language === 'ar' ? 'تم التحقق بنجاح' : 'Verification successful'}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M5 12.5 9.2 17 19 7" />
+                              </svg>
+                            </span>
+                          )}
+                        </div>
 
-                  <div className="group">
-                    <label className="block text-xs font-bold text-[var(--muted)] mb-2 tracking-wide uppercase">
-                      {language === 'ar' ? 'رمز المرور السري' : 'Secret password'}
-                    </label>
-                    <div className="relative">
-                      <span className="absolute start-4 top-1/2 -translate-y-1/2 text-[var(--faint)] transition-colors duration-300 group-focus-within:text-[var(--accent)]">
-                        <LockIcon />
-                      </span>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onKeyUp={handleCaps}
-                        placeholder="••••••••"
-                        autoComplete="new-password"
-                        className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] py-4 ps-12 pe-12 text-[var(--ink)] placeholder-[var(--faint)] outline-none transition-all duration-300 focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent-glow)] tracking-widest font-mono"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? (language === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (language === 'ar' ? 'إظهار كلمة المرور' : 'Show password')}
-                        className="absolute end-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[var(--faint)] hover:text-[var(--ink)] transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLoginStage('form');
+                            setPendingAuthData(null);
+                            setVerifyDigits(['', '', '', '', '', '']);
+                            setVerifyStage('idle');
+                            setVerifyError(false);
+                          }}
+                          className="lx-backlink"
+                        >
+                          {language === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to sign in'}
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="form"
+                        variants={FORM_COL}
+                        initial="hidden"
+                        animate="show"
+                        exit="exit"
+                        className="flex flex-col gap-5"
                       >
-                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                      </button>
-                    </div>
-                    {capsLock && (
-                      <p className="mt-1.5 text-[11px] font-semibold text-[var(--warn)] flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--warn)] animate-pulse" />
-                        {language === 'ar' ? 'مفتاح Caps Lock مفعّل — راجع حالة الأحرف' : 'Caps Lock is on — check letter case'}
-                      </p>
-                    )}
-                  </div>
+                        {errorMsg && (
+                          <motion.div variants={FORM_ITEM} className="lx-error" role="alert">
+                            <span className="lx-error-ic" aria-hidden="true"><AlertIcon /></span>
+                            <div className="text-sm leading-snug">
+                              <p className="font-bold mb-0.5">{language === 'ar' ? 'تعذّر الدخول' : 'Sign-in failed'}</p>
+                              <p className="text-[var(--muted)]">{errorMsg}</p>
+                            </div>
+                          </motion.div>
+                        )}
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="relative mt-2 w-full overflow-hidden rounded-2xl bg-[var(--accent)] text-white font-bold py-4 text-sm flex items-center justify-center gap-2 shadow-[0_10px_30px_-8px_var(--accent-glow)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_44px_-8px_var(--accent-glow)] active:translate-y-0 active:scale-[0.985] disabled:opacity-80 disabled:pointer-events-none"
-                  >
-                    {isLoading && (
-                      <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-                        <span
-                          className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                          style={{ animation: 'slide-sheen 1.1s var(--ease-out) infinite' }}
-                        />
-                      </span>
-                    )}
-                    {isLoading && <SpinnerIcon />}
-                    {isLoading
-                      ? (language === 'ar' ? 'جاري التحقق من الهوية…' : 'Verifying identity…')
-                      : (language === 'ar' ? 'تأكيد الدخول' : 'Sign In')}
-                  </button>
-                </form>
+                        <form onSubmit={handleLogin} className="flex flex-col gap-5" autoComplete="off">
+                          <motion.div variants={FORM_ITEM} className="lx-field">
+                            <span className="lx-field-glow" aria-hidden="true" />
+                            <label className="lx-label">
+                              <span className="lx-label-dot" aria-hidden="true" />
+                              {language === 'ar' ? 'الرقم التعريفي / المستخدم' : 'ID / Username'}
+                            </label>
+                            <div className="lx-input-wrap">
+                              <span className="lx-input-ic" aria-hidden="true"><UserIcon /></span>
+                              <input
+                                ref={usernameRef}
+                                type="text"
+                                required
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder={language === 'ar' ? 'أدخل اسم المستخدم الخاص بك' : 'Enter your Username'}
+                                autoComplete="new-password"
+                                className="lx-input"
+style={{
+  color: 'var(--ink)',
+  backgroundColor: 'var(--surface-3)',
+  borderColor: 'var(--border)',
+  opacity: 1,
+  visibility: 'visible',
+}}
 
-                <div className="flex items-center gap-2 text-[var(--faint)] text-xs lg:hidden">
-                  <span className="text-[var(--ok)]"><ShieldIcon /></span>
-                  <span className="font-mono tracking-wide">
-                    {language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}
-                  </span>
-                </div>
-                </>
-                )}
+                              />
+                            </div>
+                          </motion.div>
+
+                          <motion.div variants={FORM_ITEM} className="lx-field">
+                            <span className="lx-field-glow" aria-hidden="true" />
+                            <label className="lx-label">
+                              <span className="lx-label-dot" aria-hidden="true" />
+                              {language === 'ar' ? 'رمز المرور السري' : 'Secret password'}
+                            </label>
+                            <div className="lx-input-wrap">
+                              <span className="lx-input-ic" aria-hidden="true"><LockIcon /></span>
+                              <input
+                                type={showPassword ? 'text' : 'password'}
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                onKeyUp={handleCaps}
+                                placeholder="********"
+                                autoComplete="new-password"
+                                className="lx-input"
+                                style={{
+                                  color: 'var(--ink)',
+                                  backgroundColor: 'var(--surface-3)',
+                                  borderColor: 'var(--border)',
+                                  opacity: 1,
+                                  visibility: 'visible',
+                                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                                  letterSpacing: '0.12em',
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                aria-label={showPassword ? (language === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (language === 'ar' ? 'إظهار كلمة المرور' : 'Show password')}
+                                className="lx-eye"
+                              >
+                                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                              </button>
+                            </div>
+                            {capsLock && (
+                              <p className="lx-caps">
+                                <i aria-hidden="true" />
+                                {language === 'ar' ? 'مفتاح Caps Lock مفعّل — راجع حالة الأحرف' : 'Caps Lock is on — check letter case'}
+                              </p>
+                            )}
+                          </motion.div>
+
+                          <motion.button
+                            variants={FORM_ITEM}
+                            whileTap={isLoading ? undefined : { scale: 0.982 }}
+                            type="submit"
+                            disabled={isLoading}
+                            className={`lx-submit ${isLoading ? 'is-loading' : ''}`}
+                          >
+                            {isLoading && <span className="lx-spinner" aria-hidden="true" />}
+                            {isLoading
+                              ? (language === 'ar' ? 'جاري التحقق من الهوية…' : 'Verifying identity…')
+                              : (language === 'ar' ? 'تسجيل الدخول' : 'Sign In')}
+                          </motion.button>
+                        </form>
+
+                        <motion.div variants={FORM_ITEM} className="lx-trust lg:hidden justify-center">
+                          <b aria-hidden="true">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12.5 9.5 17 19 7" />
+                            </svg>
+                          </b>
+                          <span>{language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}</span>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
