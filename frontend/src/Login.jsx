@@ -378,7 +378,7 @@ export default function Login() {
 
   return (
     <div
-      className="relative min-h-screen bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
+      className="relative min-h-[100dvh] bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* 🩺 شاشة وقوع السيرفر — تظهر على صفحة الدخول نفسها (أول مكان بيوصل له الشباب) */}
@@ -488,14 +488,75 @@ export default function Login() {
         @keyframes otp-success-draw {
           to { stroke-dashoffset: 0; }
         }
+
+        .gate-bloom {
+          position: absolute;
+          border-radius: 999px;
+          background: var(--accent-glow);
+          filter: blur(120px);
+          animation: gate-breathe 9s var(--ease-out) infinite;
+          will-change: transform, opacity;
+        }
+        .gate-bloom--a { top: -22%; inset-inline-start: -12%; width: 46vw; height: 46vw; opacity: .5; }
+        .gate-bloom--b { bottom: -26%; inset-inline-end: -10%; width: 42vw; height: 42vw; opacity: .38; animation-duration: 12s; }
+
+        @keyframes gate-breathe {
+          0%, 100% { opacity: .34; }
+          50%      { opacity: .58; }
+        }
+
+        .gate-vignette {
+          background: radial-gradient(125% 95% at 50% -12%, transparent 42%, color-mix(in srgb, var(--bg) 60%, transparent) 100%);
+        }
+
+        .gate-grain {
+          opacity: .028;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        .gate-crest {
+          box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
+            0 0 0 12px color-mix(in srgb, var(--accent) 5%, transparent),
+            0 0 0 26px color-mix(in srgb, var(--accent) 3%, transparent),
+            0 26px 64px -26px color-mix(in srgb, var(--accent) 70%, transparent);
+        }
+
+        .gate-track {
+          background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 86%, transparent));
+          box-shadow:
+            0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent) inset,
+            0 0 0 1px color-mix(in srgb, var(--border-strong) 55%, transparent) inset,
+            0 22px 54px -30px rgba(0, 0, 0, .55);
+        }
+
+        .gate-in { animation: gate-rise .62s var(--ease-out) both; }
+
+        @keyframes gate-rise {
+          from { opacity: 0; transform: translate3d(0, 14px, 0); }
+          to   { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+
+        @media (min-width: 1920px) {
+          .gate-bloom { filter: blur(150px); }
+        }
+
+        @media (max-width: 640px) {
+          .gate-grain { display: none; }
+          .gate-bloom { filter: blur(70px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .gate-bloom, .gate-in { animation: none !important; }
+        }
       `}</style>
 
       {/* ═══════════ الخلفية المحيطة (نفس لغة لوحة التحكم) ═══════════ */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-[18%] -end-[8%] w-[55vw] h-[55vw] bg-[var(--accent-glow)] rounded-full blur-[130px] animate-pulse" style={{ animationDuration: '5s' }} />
-        <div className="absolute -bottom-[22%] -start-[10%] w-[48vw] h-[48vw] bg-[var(--accent-glow)] rounded-full blur-[110px] animate-pulse" style={{ animationDuration: '7s' }} />
-        <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(122,132,152,0.16)_1px,transparent_1.4px)] bg-[length:26px_26px] opacity-40" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
+      <div className="gate-ambient pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <span className="gate-bloom gate-bloom--a" />
+        <span className="gate-bloom gate-bloom--b" />
+        <span className="gate-vignette absolute inset-0" />
+        <span className="gate-grain absolute inset-0" />
       </div>
 
       {/* ═══════════ تحكمات ثابتة: اللغة + الثيم ─────────────── */}
@@ -504,7 +565,7 @@ export default function Login() {
         onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
         title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
         aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
-        className="fixed top-4 start-5 z-[60] px-4 py-2 rounded-xl border text-xs font-bold tracking-wider backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-105 hover:border-[var(--accent)] hover:!text-[var(--accent)] border-[var(--border)] bg-[var(--surface)]/70 text-[var(--muted)]"
+        className="fixed top-4 start-5 z-[60] h-10 px-4 inline-flex items-center rounded-full border border-[var(--border-strong)]/60 bg-[var(--surface)]/70 backdrop-blur-xl text-[11px] font-extrabold tracking-[0.18em] text-[var(--muted)] shadow-[0_12px_30px_-16px_rgba(0,0,0,0.5)] transition-all duration-300 hover:text-[var(--accent)] hover:border-[var(--accent)]/50 hover:-translate-y-0.5 active:scale-95"
       >
         {language === 'ar' ? 'EN' : 'AR'}
       </button>
@@ -513,7 +574,7 @@ export default function Login() {
         type="button"
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         aria-label={t('تفعيل الوضع الفاتح', 'Enable light mode')}
-        className="fixed top-4 end-5 z-[60] w-[76px] h-10 rounded-full p-1 bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-1)] transition-all duration-300 hover:scale-105 hover:border-[var(--accent)]/60"
+        className="fixed top-4 end-5 z-[60] w-[76px] h-10 rounded-full p-1 bg-[var(--surface)]/70 backdrop-blur-xl border border-[var(--border-strong)]/60 shadow-[0_12px_30px_-16px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-[var(--accent)]/60"
       >
         <span className="absolute top-1 start-1 w-4 h-4 text-[var(--faint)] pointer-events-none flex items-center justify-center">
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
@@ -541,10 +602,10 @@ export default function Login() {
           dir="ltr"
         >
           {/* تألق محيطي — يشتغل مع تقدّم السحب */}
-          <div className="pointer-events-none absolute -top-[12%] -start-[10%] w-[46vw] h-[46vw] bg-[var(--accent-glow)] rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4.5s', transform: `scale(${1 + dragProgress * 0.28})` }} />
-          <div className="pointer-events-none absolute -bottom-[16%] -end-[8%] w-[42vw] h-[42vw] bg-[var(--accent-glow)] rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6.5s', transform: `scale(${1 + dragProgress * 0.22})` }} />
+          <span className="gate-bloom gate-bloom--a" aria-hidden="true" style={{ transform: `scale(${1 + dragProgress * 0.22})` }} />
+          <span className="gate-bloom gate-bloom--b" aria-hidden="true" style={{ transform: `scale(${1 + dragProgress * 0.16})` }} />
 
-          <div className="relative z-10 flex flex-col items-center px-6 py-6 w-full max-w-[440px]">
+          <div className="relative z-10 flex flex-col items-center px-6 py-6 w-full max-w-[min(92vw,520px)]">
             {/* 🎉 المفاجأة عند الفتح — «مراسم الافتتاح» تعمل مع كل Refresh */}
             {openingCeremony && (
               <div aria-hidden="true" className="opening-ceremony pointer-events-none absolute inset-0 z-[70]">
@@ -574,15 +635,21 @@ export default function Login() {
                 {dragProgress >= 0.92 && <span className="ripple-burst absolute inset-0 rounded-full bg-[var(--ok)]" />}
               </div>
 
-              <div id="opening-crest" className={`relative w-24 h-24 md:w-28 md:h-28 rounded-full bg-[var(--surface-2)] border border-[var(--border)] shadow-[var(--shadow-3)] flex items-center justify-center p-2 transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
+              <div id="opening-crest" className={`gate-crest relative w-[clamp(96px,6.2vw,124px)] h-[clamp(96px,6.2vw,124px)] rounded-full bg-[var(--surface)] border border-[var(--border-strong)]/70 flex items-center justify-center p-2 transition-colors duration-500 ${dragProgress >= 0.92 ? 'border-[var(--ok)]' : ''}`}>
                 <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
               </div>
             </div>
 
-            <h2 className="text-xl md:text-2xl font-extrabold tracking-wide text-center text-[var(--ink)]">
+            <h2
+              className={`gate-in text-[clamp(20px,2.1vw,28px)] font-extrabold text-center text-[var(--ink)] ${language === 'ar' ? '' : 'tracking-[-0.01em]'}`}
+              style={{ animationDelay: '.12s' }}
+            >
               {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
             </h2>
-            <p className="text-sm text-center text-[var(--muted)] mb-7">
+            <p
+              className={`gate-in text-[clamp(11px,0.85vw,13px)] font-bold text-center text-[var(--muted)] mb-8 ${language === 'ar' ? '' : 'uppercase tracking-[0.22em]'}`}
+              style={{ animationDelay: '.18s' }}
+            >
               {language === 'ar' ? 'مركز عمليات الطوارئ — EOC' : 'Emergency Operations Center — EOC'}
             </p>
 
@@ -601,7 +668,8 @@ export default function Login() {
             {/* مسار السحب */}
             <div
               ref={trackRef}
-              className="relative z-10 w-full self-center h-14 rounded-full bg-[var(--surface-2)]/70 border border-[var(--border)] backdrop-blur-md shadow-[var(--shadow-1)] overflow-hidden touch-none select-none"
+              className="gate-in gate-track relative z-10 w-full self-center h-14 rounded-full backdrop-blur-md overflow-hidden touch-none select-none"
+              style={{ animationDelay: '.24s' }}
             >
               {/* خط لمعان داخلي */}
               <span className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
@@ -683,7 +751,10 @@ export default function Login() {
               </div>
             </div>
 
-            <p className="mt-7 text-[11px] text-[var(--faint)] tracking-wide font-mono">
+            <p
+              className={`gate-in mt-8 text-[11px] text-[var(--faint)] font-mono ${language === 'ar' ? '' : 'tracking-[0.2em]'}`}
+              style={{ animationDelay: '.3s' }}
+            >
               {language === 'ar' ? 'بوابة الدخول المشفّرة · EOC SECURE GATE' : 'ENCRYPTED ACCESS GATE · EOC SECURE GATE'}
             </p>
           </div>
@@ -691,9 +762,9 @@ export default function Login() {
       )}
 
       {/* ═══════════ كارت القيادة (Command Deck) ═══════════ */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4 sm:p-8">
+      <div className="relative z-10 flex items-center justify-center min-h-[100dvh] p-4 sm:p-8">
         <div
-          className={`w-full max-w-[860px] bg-[var(--surface)]/85 backdrop-blur-2xl rounded-[2rem] border border-[var(--border)] shadow-[var(--shadow-3)] flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          className={`w-full max-w-[860px] 2xl:max-w-[1000px] bg-[var(--surface)]/85 backdrop-blur-2xl rounded-[2rem] border border-[var(--border)] shadow-[var(--shadow-3)] flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
             isMounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
           }`}
         >

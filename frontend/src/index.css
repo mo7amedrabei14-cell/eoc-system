@@ -3974,3 +3974,258 @@ select.field {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* ═══════════════════════════════════════════════════════
+   EOC GATE — Premium skin (login / secure gate)
+   Pure CSS. No libraries. Uses the project's own tokens.
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --gate-accent-rgb: 199, 0, 0;          /* نفس أحمر الهوية المستخدم في المشروع */
+  --gate-ease: cubic-bezier(.2, .8, .2, 1);
+  --gate-radius: 30px;
+  --gate-shadow:
+    0 1px 0 rgba(255, 255, 255, .55) inset,
+    0 18px 40px -18px rgba(16, 16, 20, .28),
+    0 60px 120px -60px rgba(16, 16, 20, .45);
+}
+
+/* ---------- 1) الخلفية: قاعدة محايدة + هالتين هاديتين + حبيبات ---------- */
+.gate {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(var(--gate-accent-rgb), .07), transparent 60%),
+    var(--bg, #f7f7f9);
+}
+
+.gate::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 34% at 22% 30%, rgba(var(--gate-accent-rgb), .10), transparent 72%),
+    radial-gradient(42% 38% at 80% 72%, rgba(var(--gate-accent-rgb), .08), transparent 74%),
+    radial-gradient(60% 60% at 50% 50%, transparent 55%, rgba(10, 10, 14, .06) 100%);
+  filter: blur(6px);
+  animation: gate-aurora 26s var(--gate-ease) infinite alternate;
+}
+
+.gate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: .035;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes gate-aurora {
+  from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+  to   { transform: translate3d(1.5%, 1.5%, 0) scale(1.06); }
+}
+
+/* ---------- 2) الكارت الزجاجي ---------- */
+.gate-card {
+  position: relative;
+  width: min(92vw, 440px);
+  padding: 44px 36px 34px;
+  border-radius: var(--gate-radius);
+  text-align: center;
+  background: color-mix(in srgb, var(--surface, #ffffff) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-strong, #d8d8dd) 70%, transparent);
+  box-shadow: var(--gate-shadow);
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+}
+
+/* ---------- 3) الشعار: حلقة ضوء واحدة هادية ---------- */
+.gate-logo {
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface, #ffffff);
+  box-shadow:
+    0 0 0 1px rgba(var(--gate-accent-rgb), .10),
+    0 0 0 10px rgba(var(--gate-accent-rgb), .035),
+    0 0 0 22px rgba(var(--gate-accent-rgb), .018),
+    0 18px 44px -18px rgba(var(--gate-accent-rgb), .45);
+}
+
+.gate-logo img {
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* ---------- 4) التسلسل الطباعي ---------- */
+.gate-title {
+  margin: 0;
+  font-size: clamp(24px, 4.4vw, 32px);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.15;
+  color: var(--ink, #111114);
+}
+
+.gate-sub {
+  margin: 8px 0 26px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--muted, #8a8a93);
+}
+
+/* ---------- 5) الزرار الفخم ---------- */
+.gate-cta {
+  position: relative;
+  width: 100%;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--gate-accent-rgb), .28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(180deg, #d80a0a, #b10000);
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .35) inset,
+    0 10px 24px -10px rgba(var(--gate-accent-rgb), .75),
+    0 2px 6px -2px rgba(0, 0, 0, .25);
+  transition: transform .22s var(--gate-ease), box-shadow .22s var(--gate-ease);
+}
+
+.gate-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .38) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform .7s var(--gate-ease);
+}
+
+.gate-cta:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .4) inset,
+    0 16px 34px -12px rgba(var(--gate-accent-rgb), .8),
+    0 2px 8px -2px rgba(0, 0, 0, .3);
+}
+
+.gate-cta:hover::after { transform: translateX(120%); }
+.gate-cta:active { transform: scale(.985); }
+
+.gate-cta:focus-visible {
+  outline: 2px solid rgba(var(--gate-accent-rgb), .55);
+  outline-offset: 3px;
+}
+
+/* ---------- 6) الكنترولات العايمة: شكل واحد موحّد ---------- */
+.gate-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-strong, #d8d8dd) 60%, transparent);
+  background: color-mix(in srgb, var(--surface, #ffffff) 70%, transparent);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  color: var(--ink, #111114);
+  box-shadow: 0 10px 28px -16px rgba(0, 0, 0, .35);
+  transition: transform .2s var(--gate-ease), background .2s var(--gate-ease);
+}
+
+.gate-chip:hover { transform: translateY(-1px); }
+.gate-chip:active { transform: scale(.96); }
+
+/* ---------- 7) الفوتر ---------- */
+.gate-foot {
+  margin: 22px 0 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--faint, #a8a8b0);
+}
+
+/* ---------- 8) الدخول المتدرّج ---------- */
+@keyframes gate-in {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes gate-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+.gate-card { animation: gate-in .62s var(--gate-ease) both; }
+.gate-logo { animation: gate-in .62s var(--gate-ease) both, gate-float 7s ease-in-out 1.2s infinite; }
+
+.gate-stagger > * { animation: gate-in .62s var(--gate-ease) both; }
+.gate-stagger > *:nth-child(1) { animation-delay: .04s; }
+.gate-stagger > *:nth-child(2) { animation-delay: .11s; }
+.gate-stagger > *:nth-child(3) { animation-delay: .18s; }
+.gate-stagger > *:nth-child(4) { animation-delay: .25s; }
+.gate-stagger > *:nth-child(5) { animation-delay: .32s; }
+
+/* ---------- 9) الوضع الداكن (الاسم اتغيّر حسب كلاس الثيم عندك) ---------- */
+.dark .gate {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(var(--gate-accent-rgb), .16), transparent 62%),
+    var(--bg, #0b0b0d);
+}
+
+.dark .gate-card {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .06) inset,
+    0 24px 60px -24px rgba(0, 0, 0, .8);
+}
+
+/* ---------- 10) الإتاحة والأداء ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .gate::before,
+  .gate-card,
+  .gate-logo,
+  .gate-stagger > * {
+    animation: none !important;
+  }
+  .gate-cta,
+  .gate-cta::after,
+  .gate-chip {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .gate-card {
+    padding: 34px 22px 26px;
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  }
+  .gate::after { display: none; }     /* الحبيبات اتشالت على الموبايل */
+  .gate::before { animation: none; }  /* الهالة ثابتة = أسرع */
+}
