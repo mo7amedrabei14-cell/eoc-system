@@ -546,9 +546,6 @@ export default function Login() {
           .gate-bloom { filter: blur(70px); }
         }
 
-        @media (prefers-reduced-motion: reduce) {
-          .gate-bloom, .gate-in { animation: none !important; }
-        }
       `}</style>
 
       {/* ═══════════ الخلفية المحيطة (نفس لغة لوحة التحكم) ═══════════ */}
