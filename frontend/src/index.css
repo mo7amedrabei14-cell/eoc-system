@@ -1956,46 +1956,23 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 0 0 1px var(--border), inset 0 0 0 1px rgba(20,22,34,0.04);
 }
 
-/* ── SHARED ACTIVE INDICATOR (Moving Surface) ─────────────────────────────
-   A single physical surface that travels between nav items.
-   This replaces per-item ::before indicators for true shared-element feel. */
+/* ── المؤشر النشط (السطح المشترك) — تعريفه الوحيد في supercharged.css ──────
+   هنا كان تعريف قديم *مختلف تمامًا* لنفس العنصر الوهمي: شريط رأسي بعرض 3px
+   (`width: 3px; height: 48px`) لا سطح كامل العرض. ولأن إطاري الجديد لا يعلن
+   `width` أصلًا، كان `width: 3px` القديم **يبقى فعّالًا معه** (خاصية غير
+   متنازعة ⇒ لا تُلغى) فيُقصّ السطح الجديد إلى شريحة 3px.
+   كما كانت الصندوقية over-constrained (شمال + يمين + عرض معًا) فيُهمل
+   `inset-inline-end` ويختل الموضع.
+   أُزيل التعريف القديم كليًّا؛ بقي تعريف واحد في supercharged.css. */
 .nav-shell {
   position: relative;
 }
-.nav-shell::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0;
-  top: 0;
-  width: 3px;
-  height: 48px; /* matches nav-item height */
-  border-radius: 999px;
-  background: var(--accent);
-  box-shadow:
-    0 0 12px var(--accent-glow),
-    0 0 24px var(--accent-glow),
-    inset 0 1px 0 rgba(255,255,255,0.3);
-  transform: translateY(var(--nav-indicator-y, 0));
-  transition: transform var(--dur-slow) var(--spring-tight);
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-}
-.nav-shell.has-active::before { opacity: 1; }
 
-/* Per-item active state - now minimal, indicator handled by shared surface */
-.nav-item.is-active {
-  color: var(--ink);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  /* No per-item ::before - shared indicator handles it */
-}
-.nav-item.is-active::before { display: none; /* Phase A: يبقى مُبطَلًا فعليًّا (المؤشر المشترك يتولّى الأمر) */ }
-.nav-item.is-active svg { transform: scale(1.08); filter: drop-shadow(0 0 6px var(--accent-glow)); }
+/* حالة العنصر النشط: الشكل البصري مُعرّف في supercharged.css (وزن، توهّج
+   الأيقونة، صفيحة السطح). هنا فقط قاعدة السلوك التي لا يعرفها غيرها. */
+.nav-item.is-active::before { display: none; }
 
-/* العنصر النشط: تدرّج ناعم + توهج داخلي خفيف + أيقونة منتعشة */
-.nav-item {
-  transition: background-color var(--dur-fast) var(--ease-out-quick), color var(--dur-fast) var(--ease-out-quick), transform var(--dur-fast) var(--ease-out-quick), box-shadow var(--dur-fast) var(--ease-out-quick); }
-.nav-item svg { transition: transform var(--dur-fast) var(--ease-out-quick), filter var(--dur-fast) var(--ease-out-quick), opacity var(--dur-fast) var(--ease-out-quick); }
+.nav-item svg { transition: transform var(--dur-fast) var(--ease-out-quick), opacity var(--dur-fast) var(--ease-out-quick); }
 
 .nav-item.is-active {
   color: var(--ink);
@@ -2034,29 +2011,12 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
    دخول متتابع للعناصر (stagger) عند فتح الشريط + لمعة ذكية عند التمرير
    + توهج نابض للعنصر النشط + كبسولة نبض لشعار الاستضافة. */
 
-/* ترقيم متتابع حسب الترتيب الفعلي في الشريط */
-.nav-shell > button:nth-of-type(1) { --nav-i: 0; }
-.nav-shell > button:nth-of-type(2) { --nav-i: 1; }
-.nav-shell > button:nth-of-type(3) { --nav-i: 2; }
-.nav-shell > button:nth-of-type(4) { --nav-i: 3; }
-.nav-shell > button:nth-of-type(5) { --nav-i: 4; }
-.nav-shell > button:nth-of-type(6) { --nav-i: 5; }
-.nav-shell > button:nth-of-type(7) { --nav-i: 6; }
-.nav-shell > button:nth-of-type(8) { --nav-i: 7; }
-.nav-shell > button:nth-of-type(9) { --nav-i: 8; }
-.nav-shell > button:nth-of-type(10) { --nav-i: 9; }
-
-/* دخول أنيق: انزلاق طفيف + تلاشي، متتابع بفرق 35ms.
-   backwards (وليس both) حتى لا يُجمَّد transform عنصر بعد الانتهاء
-   فيبقى hover translateX / active:scale يعملان بشكل طبيعي. */
-.nav-item {
-  animation: nav-in var(--dur-slow) var(--spring-soft) backwards;
-  animation-delay: calc(var(--nav-i, 0) * 35ms);
-}
-@keyframes nav-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to   { opacity: 1; transform: none; }
-}
+/* دخول عناصر القائمة: لحركة واحدة فقط في النظام كله.
+   كان هنا `nav-in` + تأخير متتابع 35ms لكل عنصر عبر ١٠ متغيّرات `--nav-i`،
+   وهي نفس الحركة التي تُعرّفها supercharged.css باسم `sc-nav-in` بمدّة أقصر
+   وبلا نابض (nav-in كان 340ms بـ `--spring-soft` مع scale ⇒ ثقل بلا فائدة).
+   تعريفان لنفس الحالة = أيّهما يفوز يعتمد على ترتيب الورقة فقط. أُزيل هذا
+   الازدواج (ومعه المتغيّرات الميتة) وبقيت `sc-nav-in`. */
 
 /* لمعة ذكية: خط ضوئي يمسح العنصر عند التمرير (GPU-friendly، transform فقط) */
 .nav-item::after {

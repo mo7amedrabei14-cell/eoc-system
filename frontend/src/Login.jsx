@@ -225,7 +225,10 @@ export default function Login() {
      (≤ ٦ مرات لإيماءة كاملة) ⇒ استجابة 1:1 بلا إعادة بناء. */
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragX, setDragX] = useState(0);
+  /* `dragX` كان حالة React تُقرأ في التصميم القديم (inline translateX على المقبض).
+     بعد نقل كل الحركة إلى متغيّرات CSS، لم يبق أي قارئ له — لكن `setDragX` ظلّ
+     يُستدعى عند كل عتبة ⇒ إعادة رسم بلا مستهلك. أُزيلت الحالة بالكامل.
+     `dragProgress` يبقى: هو ما يُقرأ فعلاً (aria-valuenow + شارة «مُفعّل»). */
   const [dragProgress, setDragProgress] = useState(0);
   // حالة تقريبية (عتبات فقط) للفئات: اشتعال المعيّنات، الهدف، نص المرحلة، إظهار النسبة
   const [dragStage, setDragStage] = useState({ tick: 0, goal: false, label: 0, pct: false });
@@ -290,7 +293,6 @@ export default function Login() {
       stageRef.current = next;
       setDragStage(next);
       // تحديث الوصولية والقراءة المنطقية عند العتبات فقط (بلا ٦٠ تحديثًا/ثانية)
-      setDragX(x);
       setDragProgress(p);
     }
   }, []);
@@ -305,7 +307,6 @@ export default function Login() {
     const maxX = readMax();
     setIsDragging(false);
     setIsUnlocking(true);
-    setDragX(maxX);
     setDragProgress(1);
     paint(maxX, maxX);
     if (navigator.vibrate) try { navigator.vibrate([10, 30, 20]); } catch { /* وضع الاهتزاز غير مدعوم */ }
@@ -382,7 +383,6 @@ export default function Login() {
       if (pos <= 0.5) {
         springRef.current = null;
         paint(0, maxX);
-        setDragX(0);
         setDragProgress(0);
         return;
       }
