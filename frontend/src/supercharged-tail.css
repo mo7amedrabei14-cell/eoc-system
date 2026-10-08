@@ -159,34 +159,14 @@
   -webkit-backdrop-filter: none !important;
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   G) البوابة + الدخول — نفس هوية الشلّ، وبميزانية ضباب واحدة
-   ════════════════════════════════════════════════════════════════════════════ */
-.gate {
-  background-color: var(--sc-bg);
-}
-
-.gate-card {
-  background: var(--sc-glass-1);
-  border: 1px solid var(--sc-hair-strong);
-  backdrop-filter: blur(var(--blur-md)) saturate(1.25);
-  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.25);
-  box-shadow: var(--sc-shadow-3), inset 0 1px 0 var(--sc-light-top);
-  contain: layout paint style;
-}
-
-.gate-chip {
-  backdrop-filter: blur(var(--blur-sm)) saturate(1.15);
-  -webkit-backdrop-filter: blur(var(--blur-sm)) saturate(1.15);
-  border: 1px solid var(--sc-hair-strong);
-  background: var(--sc-glass-2);
-}
-
-/* حين لا يُدعم الضباب: سطوح معتمة نظيفة */
-@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-  .gate-card { background: var(--sc-surface-1); }
-  .gate-chip { background: var(--sc-surface-2); }
-}
+/* ═══════════════════════════════════════════════════════════════════════┐
+   G) البوابة + الدخول — أُزيلت بالكامل
+   ──────────────────────────────────────────────────────────────────────┐
+   ما كان هنا (.gate / .gate-card / .gate-chip + بديل `@supports`)
+   كان يخدّم بوابة الدخول القديمة. البوابة الحقيقية اليوم هي `.lx-gate`
+   (في loginScene.css)، ولا شيء في الكود كله يستخدم `.gate*` هذه بعدها.
+   تُركت هنا كقواعد ميتة تُضبّب ثلاث طبقات لا وجود لها ⇒ أُزيلت.
+   ════════════════════════════════════════════════════════════════════════ */
 
 /* ════════════════════════════════════════════════════════════════════════════
    J) الشبكة الإجمالية — تحقّق أخير من القوانين الحديدية

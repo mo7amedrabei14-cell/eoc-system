@@ -866,12 +866,17 @@
 }
 
 /* طابع الهلال: هبوط بنابض + وميض حلقة */
+/* ✨ «ختم» الهلال عند الظهور — المظهر الأول للمنتج كله.
+   ملاحظة أداء: النسخة السابقة كانت تُحرّك `filter: blur(6px) → 0` على *مركز*
+   المشهد (القرص + ٦ طبقات ظل + الأقمار) مع مفتاح وسيط `scale(1.045)` داخل
+   `--ease-spring` ⇒ بلور على عنصر يتحرك (أغلى حالة في الدليل كله) + ارتداد
+   مزدوج (المفتاح الوسيط + المنحنى النابضي). الآن: إزاحة صغيرة + تلاشي +
+   انضغاط بسيط ينفتح — وصول فوري بلا تجاوز ودون بلور أثناء الحركة. */
 @keyframes lx-stamp {
-  0%   { transform: translateY(-14px) scale(.8);  opacity: 0; filter: blur(6px); }
-  55%  { transform: translateY(2px)  scale(1.045); opacity: 1; filter: blur(0); }
-  100% { transform: translateY(0)    scale(1);     opacity: 1; filter: blur(0); }
+  from { transform: translate3d(0, -12px, 0) scale(0.94); opacity: 0; }
+  to   { transform: none; opacity: 1; }
 }
-#lx-crest.is-stamped { animation: lx-stamp .7s var(--ease-spring) .1s both; }
+#lx-crest.is-stamped { animation: lx-stamp .42s var(--lx-ease-out-quick) .06s both; }
 
 /* تذييل البوابة */
 .lx-gate-foot {
@@ -955,20 +960,45 @@
   background-size: 20px 20px;
   opacity: .10;
 }
+/* لمعة الرباط تسري عبره كل ٧.٥ث.
+   ملاحظة أداء (الأهم في هذا الملف): النسخة السابقة كانت تُحرّك
+   `inset-inline-start` من -18% إلى 108% **إلى ما لا نهاية** — أي حركة على خاصية
+   تخطيط، أبدية. هذا بالضبط ما يمنعه الدليل: "تجنّب: تحريك التخطيط".
+   الآن الحركة `transform: translateX()` + opacity فقط ⇒ إطارات الـ compositor.
+   كيف بقيت المسافة صحيحة دون معرفة عرض الرباط؟ عنصر اللمعة يأخذ `width: 100%`
+   من الرباط، ونسبة `translateX` تُحسب على **عرض العنصر نفسه** ⇒ -100% = عرض
+   الرباط كاملًا تمامًا، نفس مدى الرحلة السابقة بالحرف. واللمعة نفسها صارت
+   نطاقًا داخل التدرّج (مئوية) فلا تحتاج رقم 130px الثابت. */
 .lx-ribbon::after {
   content: "";
   position: absolute;
   top: -60%; bottom: -60%;
-  width: 130px;
-  transform: rotate(18deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .13), transparent);
+  inset-inline-start: 0;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 36%,
+    rgba(255, 255, 255, .14) 50%,
+    transparent 64%
+  );
+  opacity: 0;
+  transform: rotate(18deg) translateX(-100%);
   animation: lx-ribbon-sheen 7.5s var(--ease-out) infinite;
+  pointer-events: none;
 }
 @keyframes lx-ribbon-sheen {
-  0%   { inset-inline-start: -18%; opacity: 0; }
-  12%  { opacity: 1; }
-  42%  { inset-inline-start: 108%; opacity: 1; }
-  50%, 100% { inset-inline-start: 108%; opacity: 0; }
+  0%        { transform: rotate(18deg) translateX(-100%); opacity: 0; }
+  12%       { opacity: 1; }
+  42%       { transform: rotate(18deg) translateX(100%);  opacity: 1; }
+  50%, 100% { transform: rotate(18deg) translateX(100%);  opacity: 0; }
+}
+/* RTL: اللمعة تتبع اتجاه القراءة (يمين ← يسار) — نفس الشكل، إشارة معاكسة */
+[dir="rtl"] .lx-ribbon::after { animation-name: lx-ribbon-sheen-rtl; }
+@keyframes lx-ribbon-sheen-rtl {
+  0%        { transform: rotate(-18deg) translateX(100%); opacity: 0; }
+  12%       { opacity: 1; }
+  42%       { transform: rotate(-18deg) translateX(-100%); opacity: 1; }
+  50%, 100% { transform: rotate(-18deg) translateX(-100%); opacity: 0; }
 }
 .lx-ribbon-line {
   position: absolute;
@@ -1340,15 +1370,25 @@
     filter var(--lx-dur-base) var(--lx-ease-out-quick);
   overflow: hidden;
 }
+/* لمعة زر الإنشاء — كانت تُحرّك `inset-inline-start` (خاصية تخطيط) عبر
+   انتقال عند المرور **وأنيميشن لا نهائي أثناء التحميل** (1.15s × ∞).
+   الآن: عنصر بعرض الزر كاملًا واللمعة نطاق داخل التدرّج ⇒ الإزاحة
+   `translateX(±100%)` تُقابل تمامًا عرض الزر، بلا أي رقم سحري مربوط بالعرض،
+   والحركة على الـ compositor في الحالتين. */
 .lx-submit::before {
   content: "";
   position: absolute;
   top: 0; bottom: 0;
-  width: 46%;
-  inset-inline-start: -60%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .34), transparent);
-  transform: skewX(-14deg);
-  transition: inset-inline-start .7s var(--lx-ease-out-quick);
+  inset-inline-start: 0;
+  width: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 34%,
+    rgba(255, 255, 255, .3) 50%,
+    transparent 66%
+  );
+  transform: skewX(-14deg) translateX(-100%);
+  transition: transform .42s var(--lx-ease-out-quick);
   pointer-events: none;
 }
 .lx-submit:hover:not(:disabled) {
@@ -1360,16 +1400,23 @@
     0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent),
     0 0 24px -4px var(--accent-soft);
 }
-.lx-submit:hover:not(:disabled)::before { inset-inline-start: 118%; }
+/* المرور: اللمعة تعبر الزر مرة واحدة ثم تتوقف خارج حدوده */
+.lx-submit:hover:not(:disabled)::before { transform: skewX(-14deg) translateX(100%); }
 .lx-submit:active:not(:disabled) { transform: translateY(0) scale(.982); }
 .lx-submit:disabled { cursor: default; opacity: 0.6; }
 .lx-submit.is-loading { pointer-events: none; }
 .lx-submit.is-loading::before {
-  inset-inline-start: -60%;
+  transform: skewX(-14deg) translateX(-100%);
   animation: lx-submit-sheen 1.15s var(--lx-ease-out-quick) infinite;
 }
 @keyframes lx-submit-sheen {
-  to { inset-inline-start: 118%; }
+  to { transform: skewX(-14deg) translateX(100%); }
+}
+/* RTL: اللمعة تعبر باتجاه القراءة */
+[dir="rtl"] .lx-submit.is-loading::before { animation-name: lx-submit-sheen-rtl; }
+@keyframes lx-submit-sheen-rtl {
+  from { transform: skewX(14deg) translateX(100%); }
+  to   { transform: skewX(14deg) translateX(-100%); }
 }
 
 .lx-spinner {
@@ -1398,14 +1445,17 @@
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent),
     0 12px 34px -18px var(--accent-glow);
-  animation: lx-error-in .5s var(--ease-out) both;
+  animation: lx-error-in .42s var(--lx-ease-out-quick) both;
 }
+/* دخول رسالة الخطأ: نُبقي «الرجّة» (فهي معلومة — تُشير إلى الرفض) ونُزيل
+   البلور الذي كان يُعاد تصويره في منتصف الحركة، ونُزيل التجاوز الوسيط
+   `scale(1.004)` الذي لا يُرى ويُطيل الرحلة. */
 @keyframes lx-error-in {
-  0%   { opacity: 0; transform: translateY(-8px) scale(.98); filter: blur(4px); }
-  55%  { opacity: 1; transform: translateY(1px) scale(1.004); filter: blur(0); }
-  72%  { transform: translateX(-4px); }
-  84%  { transform: translateX(3px); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0%   { opacity: 0; transform: translate3d(0, -8px, 0) scale(.98); }
+  55%  { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  72%  { transform: translate3d(-4px, 0, 0); }
+  84%  { transform: translate3d(3px, 0, 0); }
+  100% { opacity: 1; transform: none; }
 }
 .lx-error-ic {
   flex-shrink: 0;
