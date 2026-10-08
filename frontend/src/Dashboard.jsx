@@ -9692,7 +9692,7 @@ const visibleBranches = (
             };
             Object.entries(p).forEach(([f, v]) => { m[bid][f] = v; });          // المعلّق أولاً
             if (wasTouched) WEATHER_METRICS.forEach(mt => WEATHER_METRIC_FIELDS(mt).forEach(f => {
-              if (f in prev[bid]) m[bid][f] = prev[bid][f];                    // أو آخر ما كتبه المستخدم
+              if (prev && prev[bid] && f in prev[bid]) m[bid][f] = prev[bid][f];   // أو آخر ما كتبه المستخدم
             }));
           });
           return m;
@@ -9719,17 +9719,23 @@ const visibleBranches = (
   useEffect(() => {
     touchedRef.current = new Set();
     loadGrid(false).then(() => {
-      // 🧷 لو فيه أرقام معلقة لسه ما اتأكدش حفظها لنفس الوردية/التاريخ: نرجّعها
-      //    للمعروض بدل ما تختفي — الشغل يفضل قدام صاحبه لحد ما السيرفر يأكد.
-      const pending = pendingRowsRef.current[`${filterDate}|${shift}`];
-      if (!pending) return;
-      Object.keys(pending).forEach(bid => touchedRef.current.add(Number(bid)));
-      setFormValues(prev => {
-        const merged = { ...prev };
-        Object.entries(pending).forEach(([bid, vals]) => { merged[bid] = { ...(merged[bid] || {}), ...vals }; });
-        return merged;
-      });
-    });
+  // 🧷 لو فيه أرقام معلقة لسه ما اتأكدش حفظها لنفس الوردية/التاريخ: نرجّعها
+  //    للمعروض بدل ما تختفي — الشغل يفضل قدام صاحبه لحد ما السيرفر يأكد.
+  const pendingAll = pendingRowsRef.current[`${filterDate}|${shift}`];
+  if (!pendingAll) return;
+  // 🔒 فروع نطاق المستخدم الحالي فقط — بقايا حساب آخر على نفس المتصفح تتجاهلها الشاشة
+  const allowed = new Set(visibleBranches.map(b => Number(b.id)));
+  const pending = Object.fromEntries(
+    Object.entries(pendingAll).filter(([bid]) => allowed.has(Number(bid)))
+  );
+  if (!Object.keys(pending).length) return;
+  Object.keys(pending).forEach(bid => touchedRef.current.add(Number(bid)));
+  setFormValues(prev => {
+    const merged = { ...prev };
+    Object.entries(pending).forEach(([bid, vals]) => { merged[bid] = { ...(merged[bid] || {}), ...vals }; });
+    return merged;
+  });
+});
     loadDaily(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shift, filterDate]);

@@ -56,8 +56,13 @@
 /* ════════════════════════════════════════════════════════════════════════════
    ١) خلفية البوابة — Ambient Background موحّد مع Dashboard (Phase 3)
    ════════════════════════════════════════════════════════════════════════════
-   مبسط: توهّج brand واحد + شبكة خفيفة جداً — بدون حركة مكلفة، بدون ضوضاء.
-   يعمل في الداكن والفاتح بعلاج متعمد لكل ثيم.
+   المشهد طبقة واحدة تُرسم مرة واحدة، لكنها مركّبة من **أربعة أدوار فضاء**
+   بترتيب مقصود (الأسبق في القائمة يُرسم فوق الأحدث):
+     ① أفق: ضوء هوية دافئ من أعلى اليسار ⇒ مصدر ضوء للمشهد كله
+     ② بؤرة: ضوء مركزي واسع خلف الهلال ⇒ الهلال «مضاء من بيئته» لا ملصق
+     ③ عمق: تعتيم خارجي يُرسم *فوق* النسيج ⇒ المستوى يتوارى عند الأطراف
+     ④ نسيج: شبكة عمليات 64px بحدّ شعري واحد
+   النتيجة: ظهور + عمق، بصفر حركة وبصفر JS.
    ════════════════════════════════════════════════════════════════════════════ */
 .lx-scene {
   position: absolute;
@@ -67,29 +72,60 @@
   pointer-events: none;
 }
 
-/* Dark mode: توهّج brand واحد مركّز + شبكة عمليات رقيقة جداً */
+/* Dark: الوضع الليلي — أفق أحمر خافت + بؤرة بيضاء حمراء خلف الهلال */
 .lx-scene {
   background-color: var(--bg);
   background-image:
-    /* Single brand ambient glow - top-left, larger and softer (matching dashboard) */
-    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 70%),
-    /* Extremely subtle grid for depth - barely visible */
-    linear-gradient(var(--border-hair) 1px, transparent 1px),
+    /* ① أفق */ radial-gradient(1250px 620px at 6% -14%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 66%),
+    /* ② بؤرة */ radial-gradient(760px 520px at 50% 44%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 68%),
+    /* ③ عمق */ radial-gradient(130% 108% at 50% 44%, transparent 34%, rgba(0, 0, 0, 0.55) 100%),
+    /* ④ نسيج */ linear-gradient(var(--border-hair) 1px, transparent 1px),
     linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
-  background-size: auto, 64px 64px, 64px 64px;
+  background-size: auto, auto, auto, 64px 64px, 64px 64px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
 }
 
-/* Light mode: warmer, softer ambient treatment (matching dashboard) */
+/* Light: تركيبة نهارية مختلفة لا تبديل رموز — بؤرة دافئة، وتعتيم أدنى
+   (الضوء لا يُحجب في النهار) بل «غائم» عند الأطراف فقط. */
 :root[data-theme="light"] .lx-scene {
   background-image:
-    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 65%),
+    radial-gradient(1250px 620px at 6% -14%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 62%),
+    radial-gradient(760px 520px at 50% 44%, rgba(255, 255, 255, 0.75), transparent 66%),
+    radial-gradient(130% 108% at 50% 44%, transparent 46%, color-mix(in srgb, #b8b2a9 22%, transparent) 100%),
     linear-gradient(var(--border-hair) 1px, transparent 1px),
     linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
-  background-size: auto, 64px 64px, 64px 64px;
+  background-size: auto, auto, auto, 64px 64px, 64px 64px;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
 }
 
 /* إزالة العناصر الثقيلة: lx-aurora, lx-glow--a/b/c, lx-beam, lx-sweep, lx-vignette, lx-grain
    كلها مستبدلة بالـ background-image أعلاه — أخف وأداء أعلى */
+
+/* لمعة الأرضية: مخروط ضوء باهت ينزل من الأعلى عبر مركز الشاشة ⇒ مستوى
+   مضيء يُثبّت الهلال في فضاء، بدل توهّج عائم على خلفية مسطّحة. */
+.lx-gate::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 74%;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 7%, transparent),
+    transparent 58%
+  );
+  clip-path: polygon(38% 0, 62% 0, 96% 100%, 4% 100%);
+  pointer-events: none;
+  /* فوق `.lx-scene` (الذي يملك خلفية معتمة) وتحت المحتوى (z-10) */
+  z-index: 2;
+}
+:root[data-theme="light"] .lx-gate::before {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 5%, transparent),
+    transparent 56%
+  );
+}
 
 /* ════════════════════════════════════════════════════════════════════════════
    ٢) هلال البوابة (Crest) — قرص زجاجي + هالة SVG + أقمار مدارية
@@ -100,13 +136,46 @@
   height: clamp(108px, 8.2vw, 148px);
 }
 
+/* بركة ضوء أسفل الهلال: قرص بيضوي واسع باهت يثبّت الهلال كجسم يطفو
+   فوق مستوى، لا ملصقًا في الفراغ. ثابت تمامًا (لا حركة، لا فلتر). */
+.lx-crest-stack::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 88%;
+  inset-inline: 6%;
+  height: 34%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 26%, transparent),
+    transparent 78%
+  );
+  transform: translateZ(0);
+  pointer-events: none;
+}
+:root[data-theme="light"] .lx-crest-stack::after {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 15%, transparent),
+    transparent 76%
+  );
+}
+
 .lx-crest-glow {
   position: absolute;
   inset: -34%;
   border-radius: 999px;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 62%);
-  filter: blur(18px);
+  /* 🚫 `filter: blur(18px)` اتشال: تدرّج شعاعي ناعم أصلاً، والفلتر كان يُجبر
+     المتصفح على إعادة تصوير (rasterize) الطبقة في كل إطار من نبضة التنفّس
+     اللانهائية. نفس الشكل — الآن transform/opacity فقط على الـ compositor. */
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 38%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 14%, transparent) 44%,
+    transparent 72%
+  );
   opacity: .8;
+  will-change: transform, opacity;
   animation: lx-crest-breathe 3.8s ease-in-out infinite;
 }
 @keyframes lx-crest-breathe {
@@ -171,7 +240,16 @@
   stroke: url(#lxHaloGrad);
   stroke-width: 3;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 6px var(--accent-glow));
+  /* التقدّم يُشتقّ من `--lx-p` (يكتبه rAF واحد) — بلا انتقال زمني وبلا فلتر.
+     كان `drop-shadow` فلترًا يُعاد حسابه مع تغيّر dashoffset في كل إطار سحب. */
+  stroke-dashoffset: calc(var(--lx-halo-c, 289.0265) * (1 - var(--lx-p, 0)));
+}
+
+/* جذر البوابة: القيم الابتدائية + طول محيط الهالة (2π×46) */
+.lx-gate {
+  --lx-x: 0px;
+  --lx-p: 0;
+  --lx-halo-c: 289.0265;
 }
 
 /* القرص الزجاجي نفسه — Liquid Glass موحّد مع Sidebar/Header (Phase 4+5) */
@@ -188,12 +266,16 @@
   -webkit-backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
           backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
   border: 1px solid var(--border);
-  /* Shadow budget: contact + ambient only, no giant black shadows (Phase 9) */
+  /* إضاءة اتجاهية: مصدر ضوء واحد من فوق، وليس توهّجًا متساويًا في كل
+     الاتجاهات. اللمعة العلوية + الظل السفلي الداخلي هما ما يجعلان القرص
+     يقرأ كجسم زجاجي محدّب لا دائرة مسطّحة ملوّنة. */
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -16px 24px -14px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
     0 0 0 1px var(--border),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
+    0 22px 44px -26px rgba(0, 0, 0, 0.8),
+    0 0 44px -14px color-mix(in srgb, var(--accent) 38%, transparent);
   transition: border-color var(--lx-dur-base) var(--lx-ease-out-quick),
               box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
 }
@@ -207,14 +289,16 @@
     inset 0 0 0 1px rgba(255,255,255,0.02);
 }
 
-/* Light mode glass crest */
+/* Light mode glass crest — نفس الاتجاهية بإضاءة نهارية (تعتيم أنعم بكثير) */
 :root[data-theme="light"] .lx-crest {
   background: var(--lx-glass-heavy-light);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -14px 22px -14px rgba(18, 22, 34, 0.16),
+    inset 0 0 0 1px rgba(20, 22, 34, 0.04),
     0 0 0 1px var(--border),
-    inset 0 0 0 1px rgba(20,22,34,0.04);
+    0 20px 40px -26px rgba(18, 22, 34, 0.28),
+    0 0 40px -14px color-mix(in srgb, var(--accent) 26%, transparent);
 }
 :root[data-theme="light"] .lx-crest.is-done {
   box-shadow:
@@ -259,13 +343,17 @@
 }
 [dir="rtl"] .lx-gate-sub { letter-spacing: .12em; text-transform: none; }
 
-/* ظهور نصي ناعم يُعاد تشغيله عند تغيّر المحتوى (key remount) */
+/* ظهور نصي ناعم يُعاد تشغيله عند تغيّر المحتوى (key remount).
+   ⚡ مُهمّ: هذه الكتلة تُعاد *أثناء السحب* عند كل تغيّر مرحلة لنص التسمية،
+   وكانت تُحرّك `filter: blur(5px) → 0` ⇒ إعادة تصوير النص في منتصف الإيماءة
+   (بالضبط النوع الذي يجب تجنّبه: بلور أثناء الحركة). الآن opacity + إزاحة
+   صغيرة فقط، وأقصر (180ms) ⇒ يُحسّ كتغيير فوري لا كحركة تُشاهد. */
 .lx-morph {
-  animation: lx-morph-in .38s var(--ease-out) both;
+  animation: lx-morph-in 180ms var(--lx-ease-out-quick) both;
 }
 @keyframes lx-morph-in {
-  from { opacity: 0; transform: translateY(6px); filter: blur(5px); }
-  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* شارة النسبة المئوية / التفعيل فوق المسار */
@@ -329,23 +417,35 @@
   -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
           backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
   border: 1px solid var(--border);
-  /* Shadow budget: contact + ambient only, no giant black shadows (Phase 9) */
+  /* مادة اتجاهية: لمعة علوية (الضوء من فوق) + حوض سفلي غائر (حفرة التمرير)
+     + حدّ شعري + تلامس قصير. هذا ما يفرّق «حفرة زجاجية» عن «كبسولة مسطّحة». */
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -20px 30px -22px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
     0 0 0 1px var(--border),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
-  transition: border-color var(--lx-dur-base) var(--lx-ease-out-quick),
-              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
+    0 24px 48px -30px rgba(0, 0, 0, 0.85);
+  /* حفرة التمرير: لون الحدّ فقط (سريع). خلط الظل في الانتقال كان يُجبر
+     إعادة تركيب الـ backdrop المُضبَّب عند كل تبديل حالة. */
+  transition: border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
+              background-color var(--lx-dur-fast) var(--lx-ease-out-quick);
 }
 .lx-track.is-dragging {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  /* 🚀 أثناء الحركة: بلا ضباب خلفي. البلور تحت عناصر تتحرك ⇒ إعادة تركيب
+     الـ backdrop في كل إطار، وهذا أغلى عنصر في الإيماءة كلها.
+     مادة شبه معتمة = نفس الجمال، بلا كلفة إطارات. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: color-mix(in srgb, var(--surface-2) 94%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.06),
     var(--lx-shadow-ambient),
     0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 24px -4px var(--accent-soft),
     inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+:root[data-theme="light"] .lx-track.is-dragging {
+  background: color-mix(in srgb, #ffffff 96%, transparent);
 }
 .lx-track.is-done {
   border-color: color-mix(in srgb, var(--ok) 55%, transparent);
@@ -361,10 +461,11 @@
 :root[data-theme="light"] .lx-track {
   background: var(--lx-glass-medium-light);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -18px 28px -22px rgba(18, 22, 34, 0.22),
+    inset 0 0 0 1px rgba(20, 22, 34, 0.04),
     0 0 0 1px var(--border),
-    inset 0 0 0 1px rgba(20,22,34,0.04);
+    0 22px 44px -30px rgba(18, 22, 34, 0.3);
 }
 :root[data-theme="light"] .lx-track.is-dragging {
   box-shadow:
@@ -388,45 +489,90 @@
   position: absolute;
   inset-inline: 34px;
   top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ink) 30%, transparent), transparent);
+  height: 1.5px;
+  border-radius: 999px;
+  /* لمعة مواصفاتية حقيقية: نقطة قوية في الثلث الأيسر تتلاشى عند الأطراف
+     (مصدر ضوء واحد) بدل خط متدرّج متساوٍ في اتجاه واحد. */
+  background: radial-gradient(
+    60% 100% at 26% 50%,
+    rgba(255, 255, 255, 0.55),
+    color-mix(in srgb, var(--ink) 22%, transparent) 48%,
+    transparent
+  );
   pointer-events: none;
+}
+:root[data-theme="light"] .lx-track-shine {
+  background: radial-gradient(
+    60% 100% at 26% 50%,
+    rgba(255, 255, 255, 0.95),
+    color-mix(in srgb, var(--ink) 12%, transparent) 48%,
+    transparent
+  );
 }
 
 /* تعبئة الجمرة + حافة حارقة + توهج واسع */
-.lx-fill {
+/* ── التعبئة: مقطع كبسولي ثابت + تعبئة تُقاس بـ scaleX ──────────────────
+   قبل: `width` يتحرّك بانتقال ٠.٤٥s (حركة تخطيط) + `filter: blur(16px)` على
+   عنصر يتغيّر عرضه في كل إطار ⇒ إعادة تخطيط + إعادة رسم + إعادة تصوير طوال
+   السحب. الآن: `transform: scaleX()` وحده (compositor). الشكل الكبسولي يضمنه
+   المقطع القاصّ، فلا يحدث أي تشوّه للحواف المستديرة من القياس. */
+.lx-fill-clip {
   position: absolute;
   top: 5px;
   bottom: 5px;
   inset-inline-start: 5px;
+  inset-inline-end: 5px;
   border-radius: 999px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lx-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--lx-p, 0));
   background: linear-gradient(90deg, var(--accent-softer), color-mix(in srgb, var(--accent) 82%, #000 0%) 60%, var(--accent));
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent),
-    inset 0 0 14px color-mix(in srgb, var(--lx-ember-hot) 55%, transparent),
-    0 0 26px var(--accent-glow);
-}
-.lx-fill::after {
-  content: "";
-  position: absolute;
-  inset-inline-end: -2px;
-  top: 12%; bottom: 12%;
-  width: 16px;
-  border-radius: 999px;
-  background: radial-gradient(closest-side, color-mix(in srgb, #fff 85%, var(--lx-ember-hot)) 0%, var(--lx-ember-hot) 45%, transparent 100%);
-  filter: blur(2px);
+    inset 0 0 14px color-mix(in srgb, var(--lx-ember-hot) 55%, transparent);
 }
 .lx-fill-glow {
   position: absolute;
-  top: 50%;
-  inset-inline-start: 5px;
-  height: 46px;
-  border-radius: 999px;
-  transform: translateY(-50%);
-  background: linear-gradient(90deg, transparent, var(--accent-glow) 55%, color-mix(in srgb, var(--lx-ember-hot) 60%, transparent));
-  filter: blur(16px);
-  opacity: .8;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--lx-p, 0));
+  /* تدرّج ناعم بدل `filter: blur(16px)` — نفس الإحساس، بلا فلتر يُعاد حسابه */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 26%, transparent) 62%,
+    color-mix(in srgb, var(--lx-ember-hot) 62%, transparent)
+  );
+  opacity: calc(0.4 + var(--lx-p, 0) * 0.5);
   pointer-events: none;
+}
+
+/* 🪨 الجمرة السافرة: كتلة *ثابتة الحجم* تُنقل بـ translate3d ⇒ لا قياس،
+   لا قصّ، لا رسم. كانت سابقًا `filter: blur(16px)` على عنصر متغيّر العرض. */
+.lx-ember {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 0;
+  width: 76px;
+  height: 76px;
+  margin-top: -38px;
+  margin-inline-start: 12px;
+  border-radius: 999px;
+  transform: translate3d(var(--lx-x, 0px), 0, 0);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--lx-ember-hot) 62%, transparent),
+    color-mix(in srgb, var(--accent) 24%, transparent) 46%,
+    transparent 78%
+  );
+  opacity: calc(0.35 + var(--lx-p, 0) * 0.55);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* علامات المراحل — معينات تشتعل */
@@ -437,7 +583,11 @@
   border-radius: 2px;
   transform: translate(-50%, -50%) rotate(45deg) scale(1);
   background: color-mix(in srgb, var(--ink) 18%, transparent);
-  transition: background .3s var(--ease-out), box-shadow .3s var(--ease-out), transform .45s var(--ease-spring);
+  /* مدد قصيرة + نابض ضيّق: الاشتعال يجب أن يُحسّ فوريًّا لا “يتأرجح”.
+     (كان transform .45s بنابض مرتدّ — إحساس لعِب بطيء.) */
+  transition: background var(--lx-dur-fast) var(--lx-ease-out-quick),
+              box-shadow var(--lx-dur-fast) var(--lx-ease-out-quick),
+              transform 190ms cubic-bezier(0.32, 1, 0.5, 1);
   pointer-events: none;
 }
 .lx-tick.is-lit {
@@ -448,6 +598,7 @@
 .lx-track.is-done .lx-tick.is-lit {
   background: var(--ok);
   box-shadow: 0 0 12px 2px var(--ok-soft);
+  transform: translate(-50%, -50%) rotate(45deg) scale(1.2);
 }
 
 /* هدف النهاية — حلقة تشتعل مع الاقتراب */
@@ -462,7 +613,10 @@
   display: grid;
   place-items: center;
   color: color-mix(in srgb, var(--ink) 40%, transparent);
-  transition: border-color .3s, color .3s, box-shadow .3s;
+  transition: border-color var(--lx-dur-base) var(--lx-ease-out-quick),
+              color var(--lx-dur-base) var(--lx-ease-out-quick),
+              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
+              transform var(--lx-dur-base) cubic-bezier(0.32, 1, 0.5, 1);
   pointer-events: none;
 }
 .lx-goal.is-lit {
@@ -485,7 +639,15 @@
   letter-spacing: .04em;
   color: color-mix(in srgb, var(--ink) 78%, transparent);
   pointer-events: none;
+  /* التلاشي مع السحب من `--lx-p` (كان inline style يُحدَّث في كل إطار عبر React) */
+  opacity: max(0, calc(1 - var(--lx-p, 0) * 1.15));
 }
+
+/* الحشوات اللانهائية على العناصر الصغيرة تُترك لأنها transform/opacity فقط */
+.lx-orbit,
+.lx-orbit--inner,
+.lx-chevs svg,
+.lx-handle.is-idle .lx-handle-halo { will-change: transform, opacity; }
 .lx-track-label .lx-shield-ic {
   color: color-mix(in srgb, var(--accent) 75%, var(--ink));
   display: inline-flex;
@@ -518,6 +680,10 @@
   cursor: grab;
   touch-action: none;
   outline: none;
+  /* الموضع: translate3d من متغيّر يكتبه rAF واحد. لا انتقال زمني ⇒ الإيماءة
+     1:1 مع الإصبع؛ والعودة يحرّكها نابض JS حرج التخميد (بلا انتقال CSS يزاحمها). */
+  transform: translate3d(var(--lx-x, 0px), -50%, 0);
+  will-change: transform;
 }
 .lx-handle.is-dragging { cursor: grabbing; }
 .lx-handle:focus-visible {
@@ -526,13 +692,20 @@
 
 .lx-handle-halo {
   position: absolute;
-  inset: -9px;
+  inset: -12px;
   border-radius: 999px;
-  background: var(--accent-glow);
-  filter: blur(11px);
-  opacity: .65;
-  transition: opacity .3s var(--ease-out);
+  /* تدرّج شعاعي بدل `filter: blur(11px)` — الفلتر كان يُعاد تصويره في كل
+     إطار من نبضة `lx-halo-breathe` اللانهائية *وأثناء السحب كله*. */
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 52%, transparent),
+    color-mix(in srgb, var(--accent) 18%, transparent) 52%,
+    transparent 80%
+  );
+  opacity: .75;
+  transition: opacity var(--lx-dur-fast) var(--lx-ease-out-quick);
   pointer-events: none;
+  will-change: transform, opacity;
 }
 .lx-handle.is-idle .lx-handle-halo { animation: lx-halo-breathe 2.8s ease-in-out infinite; }
 .lx-handle.is-dragging .lx-handle-halo { opacity: 1; }
@@ -558,9 +731,12 @@
     0 10px 26px -8px rgba(0, 0, 0, .65),
     0 0 20px -4px var(--accent-glow);
   overflow: hidden;
-  transition: background .35s var(--ease-out), transform .35s var(--ease-spring);
+  /* كان انتقال .35s مع `--ease-spring`: إحساس ثقيل، وانتقال على `background`
+     (تدرّج) لا يُحرَّك أصلًا ⇒ يُزيل الفحص فقط. الآن تحوّل قصير صريح 170ms
+     بمنحنى يبدأ سريعًا وينتهي بسرعة ⇒ استجابة لمس فورية بلا ارتداد. */
+  transition: transform 170ms var(--lx-ease-out-quick), box-shadow 170ms var(--lx-ease-out-quick);
 }
-.lx-handle.is-dragging .lx-handle-core { transform: scale(1.07); }
+.lx-handle.is-dragging .lx-handle-core { transform: scale(1.05); }
 .lx-handle-core img {
   width: 46%;
   height: 46%;

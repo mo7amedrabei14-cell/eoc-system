@@ -89,12 +89,15 @@
   --ring: 0 0 0 3px rgba(199, 0, 0, 0.28);
   --ring-soft: 0 0 0 3px rgba(199, 0, 0, 0.14);
 
-  /* الحركة: منحنى مائي حقيقي + مدد متدرجة */
+  /* الحركة: منحنى مائي حقيقي + مدد متدرجة
+     ملاحظة تنظيف: `--dur-fast` و `--dur-slow` كانا مُعرّفين هنا *وأيضًا* في
+     كتلة Effect Budget أسفل الملف بنفس الأسماء — والأخيرة تفوز دائمًا، فكانت
+     القيمتان هنا كودًا ميتًا لا يُقرأ. أُزيلتا؛ المعنى الحقيقي هناك.
+     `--ease-spring` كان بنطاق 1.45 (ارتداد ملحوظ) ⇒ هُدّئ إلى 1.18: نفس الإحساس
+     الحيوي بلا «تجاوز» مرئي ولا انتظار لاستقرار الحركة. */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
-  --dur-fast: 150ms;
-  --dur: 260ms;
-  --dur-slow: 480ms;
+  --ease-spring: cubic-bezier(0.34, 1.18, 0.64, 1);
+  --dur: 200ms;
 
   /* تدرّج أفقي للطباعة */
   --text-tight: -0.02em;
@@ -457,24 +460,33 @@ html {
   --glass-medium-light: rgba(250, 250, 252, 0.62);
   --glass-light-light: rgba(250, 250, 252, 0.42);
 
-  /* Motion tokens — unified vocabulary */
-  --spring-tight: cubic-bezier(0.34, 1.2, 0.64, 1);    /* Active indicators, nav rail */
+  /* Motion tokens — unified vocabulary
+     مدد مُعاد ضبطها نحو «استجابة فورية + استقرار سريع»: كل قيمة انخفضت إلى
+     نطاق البرنامج (تفاعلات دقيقة 100–180، عناصر تحكم 120–220، أسطح 220–360،
+     انتقالات كبرى تحت 450). لا قيمة مخمليّة بطيئة في النظام كله. */
+  --spring-tight: cubic-bezier(0.34, 1.12, 0.64, 1);   /* Active indicators, nav rail */
   --spring-soft: cubic-bezier(0.22, 1, 0.36, 1);       /* Panels, drawers, sidebar */
   --ease-out-quick: cubic-bezier(0.16, 1, 0.3, 1);     /* Hover, focus, press */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);       /* Standard transitions */
 
   --dur-instant: 80ms;    /* Press feedback */
   --dur-fast: 150ms;      /* Hover, focus */
-  --dur-base: 260ms;      /* Standard transitions */
-  --dur-slow: 420ms;      /* Panels, modals, sidebar */
-  --dur-slower: 560ms;    /* Page transitions */
+  --dur-base: 200ms;      /* Standard transitions */
+  --dur-slow: 340ms;      /* Panels, modals, sidebar */
+  --dur-slower: 420ms;    /* Page transitions */
 
   /* Shadow budget: contact + ambient only */
   --shadow-contact: 0 1px 2px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
   --shadow-ambient: 0 4px 12px rgba(0,0,0,0.12);
   --shadow-elevated: 0 12px 32px rgba(0,0,0,0.18);
   --shadow-modal: 0 24px 64px rgba(0,0,0,0.25);
+
+  /* اتجاه الإزاحة المنطقية للحركات الجانبية: −x يسارًا في LTR (القيمة
+     الافتراضية) ويُعكس إلى +x في RTL أدناه ⇒ حركة واحدة تعمل في الاتجاهين. */
+  --slide-dir: -1;
 }
+
+html[dir="rtl"] { --slide-dir: 1; }
 
 /* Light mode shadows */
 :root[data-theme="light"] {
@@ -593,29 +605,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
 ::-webkit-scrollbar-corner, .custom-scrollbar::-webkit-scrollbar-corner { background: var(--bg); }
 
 /* ───────────────────── 5) الأسطح والمكوّنات ───────────────────── */
-/* خلفية غرفة العمليات: وهج brand واحد مركّز + شبكة عمليات رقيقة جداً
-   → إحساس Command Center نقي، ثابت (content هو اللي بيتمرر) ومتوافق مع الثيمين
-   Phase 3: simplified to single ambient glow + subtle grid only */
-.surface-view, .app-shell {
-  background-color: var(--bg);
-  background-image:
-    /* Single brand ambient glow - top-left, larger and softer */
-    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 70%),
-    /* Extremely subtle grid for depth - barely visible */
-    linear-gradient(var(--border-hair) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
-  background-size: auto, 64px 64px, 64px 64px;
-}
-
-/* Light mode: warmer, softer ambient treatment */
-:root[data-theme="light"] .surface-view,
-:root[data-theme="light"] .app-shell {
-  background-image:
-    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 65%),
-    linear-gradient(var(--border-hair) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
-  background-size: auto, 64px 64px, 64px 64px;
-}
+/* ملاحظة: خلفية البيئة (.surface-view / .app-shell) تُعرّف الآن في
+   supercharged.css وحده (هوية الفضاء: أفق + توازن + عمق + نسيج).
+   النسخة القديمة كانت تُعاد بنفس القيم من هنا أيضًا ⇒ قاعدتان لنفس
+   السطح في ملفّين. أُزيلت لتُصبح المصدر واحدًا. */
 
 /* بطاقة / لوح — سطح خلفي مرتفع (Phase 9: lighter shadows, cleaner depth) */
 .card-surface {
@@ -1312,9 +1305,14 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 }
 
 /* ───────────────── 11) مودال / شيت ───────────────── */
+/* الحجاب: كتلة لونية معتمة بلا ضباب. الضباب على شاشة كاملة هو أغلى
+   مركّبة ممكنة في التطبيق، والقيمة البصرية منه هنا صفر (لا أحد «يرى»
+   الضباب خلف حجاب ٧٢٪ معتم). المادة التي تستفيد من الضباب هي
+   `.modal-card` نفسها، وهي مُبقاة. */
 .modal-backdrop {
-  background: color-mix(in srgb, var(--bg-deep) 72%, transparent);
-  backdrop-filter: blur(var(--blur-md));
+  background: color-mix(in srgb, var(--bg-deep) 80%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   animation: fade-in var(--dur-fast) var(--ease-out);
 }
 .modal-card {
@@ -1322,13 +1320,24 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-3);
-  animation: modal-in 0.42s var(--ease-spring);
+  animation: modal-in 0.26s var(--ease-out-quick);
   will-change: transform, opacity;
 }
 
 /* ───────────────────── 12) توست / إشعارات ───────────────────── */
-/* 🎬 Premium Motion: يبدأ كدائرة صغيرة ثم تتمدد بنعومة (clip-path circle)
-   — تحويل + شفافية فقط عبر GPU، بدون reflow، مع انكماش سلس عند الإغلاق. */
+/* 🎬 Premium Motion: تنبثق من موضعها إلى موضعها النهائي في ~٢٠٠ms بـ
+   transform + opacity فقط — لا clip-path، لا حلقة كلية، لا ارتداد.
+
+   ملاحظة أداء (سبب إعادة الكتابة): النسخة السابقة كانت تُحرّك
+   `clip-path: circle(0% → 150%)` خلال `--spring-tight` مع مفتاح وسيط
+   `scale(1.02)`. ثلاثة آثار سلبية مقيسة:
+     ١) تحريك clip-path شكل تحت مستوى الـ compositor ⇒ إعادة تصفيف الطبقة
+        في كل إطار من الدخول *والخروج* لكل إشارة — أغلى ممّا يكلف المنظر.
+     ٢) مفتاح 45% بداخلها + منحنى نابضي ⇒ ارتداد مرئي مزدوج (ممنوع: المنتج
+        يجب أن يقرأ محكومًا لا مرحيًا).
+     ٣) `will-change` دائم على كل توست ⇒ طبقة مركّبة محجوزة للأبد، وانتقال
+        ميّت على `filter` (لا يقيمة يتغيّر).
+   الآن: إزاحة −١٢px + قليل من التقليص، تنتهي في موضعها تمامًا وبلا تجاوز. */
 .toast-item {
   background: var(--glass-medium);
   border: 1px solid var(--border-strong);
@@ -1337,10 +1346,10 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   backdrop-filter: blur(var(--blur-sm));
   -webkit-backdrop-filter: blur(var(--blur-sm));
   /* backwards (لا both): بعد انتهاء الدخول تُحرَّر transform حتى يعمل hover-lift / press */
-  animation: toast-in var(--dur-base) var(--spring-tight) backwards;
+  animation: toast-in var(--dur-base) var(--ease-out-quick) backwards;
   transform-origin: center top;
-  will-change: transform, opacity;
-  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), filter var(--dur) var(--ease-out);
+  transition: transform var(--dur-fast) var(--ease-out-quick),
+              box-shadow var(--dur-fast) var(--ease-out-quick);
 }
 /* ── توهّج خلفي نابض يدخل مع التوست (أحمر هوية / بنفسجي AI) + hover يرتفع ويتوهّج ── */
 .toast-item { position: relative; isolation: isolate; }
@@ -1355,9 +1364,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   border-radius: inherit;
   background: radial-gradient(120% 95% at 50% -25%, var(--accent-glow), transparent 58%),
               radial-gradient(80% 70% at 50% 125%, color-mix(in srgb, var(--info) 12%, transparent), transparent 55%);
-  opacity: 0;
-  animation: toast-bloomin 0.9s var(--ease-out) forwards;
-  transition: opacity 0.35s var(--ease-out), filter 0.35s var(--ease-out);
+  opacity: 1;
   pointer-events: none;
 }
 .toast-item-ai::before {
@@ -1367,38 +1374,17 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 .toast-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-3), 0 16px 44px -12px var(--accent-glow); }
 .toast-item-ai:hover { box-shadow: var(--shadow-3), 0 16px 44px -16px rgba(177, 122, 248, 0.5); }
 .toast-item:active { transform: scale(0.99); }
-@keyframes toast-bloomin { from { opacity: 0; } to { opacity: 1; } }
 .toast-item-closing {
-  animation: toast-out 0.34s cubic-bezier(0.55, 0, 0.85, 0.36) both;
+  animation: toast-out var(--dur-base) var(--ease-standard) both;
   pointer-events: none;
 }
 @keyframes toast-in {
-  0% {
-    opacity: 0;
-    clip-path: circle(0% at 50% 50%);
-    transform: translateY(-16px) scale(0.6);
-  }
-  45% {
-    opacity: 1;
-    clip-path: circle(35% at 50% 50%);
-    transform: translateY(0) scale(1.02);
-  }
-  100% {
-    clip-path: circle(150% at 50% 50%);
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translate3d(0, -12px, 0) scale(0.965); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes toast-out {
-  0% {
-    opacity: 1;
-    clip-path: circle(150% at 50% 50%);
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    clip-path: circle(0% at 50% 50%);
-    transform: translateY(-10px) scale(0.6);
-  }
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.97); }
 }
 
 /* ── شريط العدّاد التنازلي للتوست (F8): ينكمش خلال 9 ثوانٍ نحو النهاية المنطقية ──
@@ -1482,21 +1468,26 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* قائمة الإشعارات — مدعومة RTL عبر logical properties */
 /* معتمة بالكامل: --glass كان شبه شفاف + backdrop blur فكان يظهر ما خلفه من المحتوى.
    source of truth: الخلفية المعتمة من الألوان الفعلية للسمة (غامق/فاتح) بدون أي alpha. */
-/* === NOTIF dropdown: a focused glass panel rising on a hinge ===
-   Opens with a clip-path iris bloom + rise; each row is a thin streak whose left
-   edge carries the event tone, so the list reads as a timeline, not a list. */
+/* === قائمة الإشعارات: لوحة زجاجية تنبثق من مرساة الجرس ===
+   ملاحظة أداء: كانت تفتح بـ `notif-drop 0.46s` تُحرّك `clip-path: circle()`
+   (رسم، لا compositor) مع `will-change: clip-path` دائم على اللوحة. القائمة
+   تُفتح/تُغلق كثيرًا وببيانات حقيقية تحتها ⇒ إعادة تصفيف ٠.٤٦ ثانية في كل
+   فتح. الآن انبثاق ٢٢٠ms من `transform-origin: top center` بـ
+   transform+opacity فقط: أسرع، أنعم، وصفر إعادة تصفيف. */
 .notif-dropdown {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 96%, #000), var(--surface));
   border: 1px solid var(--border-strong);
   border-radius: 18px;
   box-shadow: 0 30px 70px -30px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.03) inset;
-  animation: notif-drop 0.46s var(--sp-snap) both;
+  animation: notif-drop var(--dur-base) var(--ease-out-quick) both;
   transform-origin: top center;
-  will-change: transform, opacity, clip-path;
 }
 [dir="rtl"] .notif-dropdown { transform-origin: top center; }
-@keyframes notif-drop { 0% { opacity:0; clip-path: circle(0 at 50% 0); transform: translateY(-14px) scale(.96); } 60% { opacity:1; } 100% { opacity:1; clip-path: circle(130% at 50% 0); transform:none; } }
+@keyframes notif-drop {
+  from { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
 .notif-item {
   position: relative;
   padding: 11px 16px 11px 14px;
@@ -1530,11 +1521,24 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   background: var(--ni-c, var(--accent));
   box-shadow: 0 0 8px var(--ni-c, var(--accent));
 }
-/* smooth exit + staggered entry for items */
-.notif-dropdown-close { animation: notif-drop-out 0.2s var(--sp-drop) forwards; }
-.notif-item-in { animation: notif-row-in 0.4s var(--sp-soft) both; }
-@keyframes notif-drop-out { 0% { opacity:1; clip-path: circle(130% at 50% 0); } 100% { opacity:0; clip-path: circle(0 at 50% 0); transform: translateY(-8px); } }
-@keyframes notif-row-in { 0% { opacity:0; transform: translateX(-8px); } 100% { opacity:1; transform:none; } }
+/* خروج ناعم + دخول متتابع للصفوف */
+.notif-dropdown-close { animation: notif-drop-out var(--dur-fast) var(--ease-standard) forwards; }
+.notif-item-in { animation: notif-row-in 200ms var(--ease-out-quick) both; }
+/* تدرّج متتابع قصير: يقرأ القائمة كقائمة لا ككتلة، بلا انتظار ملحوظ */
+.notif-item-in:nth-child(1) { animation-delay: 0ms; }
+.notif-item-in:nth-child(2) { animation-delay: 22ms; }
+.notif-item-in:nth-child(3) { animation-delay: 44ms; }
+.notif-item-in:nth-child(4) { animation-delay: 66ms; }
+.notif-item-in:nth-child(n + 5) { animation-delay: 88ms; }
+@keyframes notif-drop-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.98); }
+}
+/* الإزاحة منطقية (inline-start) لا فيزيائية — تعمل في RTL و LTR بنفس الترتيب */
+@keyframes notif-row-in {
+  from { opacity: 0; transform: translateX(calc(var(--slide-dir, 1) * 8px)); }
+  to   { opacity: 1; transform: none; }
+}
 
 /* حلقة نارية أنيقة تدور باستمرار حول زر الجرس عند وجود إشعارات غير مقروءة.
    قوس لهبي (أصفر→برتقالي→أحمر) يشبه المذنّب يلفّ حلقة رفيعة بشكل دائري سلس،
@@ -1722,8 +1726,8 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   to   { opacity: 0; }
 }
 @keyframes modal-in {
-  0%   { opacity: 0; transform: translateY(26px) scale(0.97); }
-  100% { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.975); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes dropdown-in {
   from { opacity: 0; transform: translateY(-8px) scale(0.97); }
@@ -1762,15 +1766,18 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   to   { opacity: 1; transform: none; }
 }
 
-.animate-fade-in-up { animation: fade-in-up 0.5s var(--ease-out) backwards; }
-.animate-fade-in { animation: fade-in 0.3s var(--ease-out) both; }
-.animate-modal-in { animation: modal-in 0.42s var(--ease-spring) both; }
-.animate-scale-pop { animation: scale-pop 0.3s var(--ease-spring) both; }
-.animate-dropdown-in { animation: dropdown-in 0.32s var(--ease-spring) both; }
+/* مساعدات الحركة العامة — مُعاد ضبطها على ميزانية البرنامج:
+   مدد أقصر + بلا منحنى نابضي (النابض على عنصر يظهر لأول مرة يعطي ارتدادًا
+   مرئيًا بلا معنى»). 0.5s ⇒ 0.32s للدخول، 0.42s ⇒ 0.26s للمودال. */
+.animate-fade-in-up { animation: fade-in-up 0.32s var(--ease-out) backwards; }
+.animate-fade-in { animation: fade-in 0.22s var(--ease-out) both; }
+.animate-modal-in { animation: modal-in 0.26s var(--ease-out-quick) both; }
+.animate-scale-pop { animation: scale-pop 0.2s var(--ease-out-quick) both; }
+.animate-dropdown-in { animation: dropdown-in 0.18s var(--ease-out-quick) both; }
 .animate-float-slow { animation: float-slow 5s var(--ease-out) infinite; }
 
 /* دخول متتابع (stagger) — مجرد تأخير تصاعدي على العناصر المباشرة */
-.stagger > * { animation: fade-in-up 0.5s var(--ease-out) backwards; }
+.stagger > * { animation: fade-in-up 0.32s var(--ease-out) backwards; }
 .stagger > *:nth-child(1) { animation-delay: 0.03s; }
 .stagger > *:nth-child(2) { animation-delay: 0.08s; }
 .stagger > *:nth-child(3) { animation-delay: 0.13s; }

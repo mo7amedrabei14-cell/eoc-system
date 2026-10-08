@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
 import { BASE } from './apiBase';
@@ -215,19 +215,32 @@ export default function Login() {
   const navigate = useNavigate();
   const opsNow = useOpsClock();
 
-  /* ── بوابة السحب للدخول (Slide to Unlock) — فيزياء نابضية ── */
+  /* ── بوابة السحب للدخول (Slide to Unlock) — محرّك متغيّرات CSS ──
+     ⚡ المسألة كلها كانت في مكان واحد: كل إطار من السحب كان يمرّر setDragX +
+     setDragProgress ⇒ إعادة بناء (reconcile) لكل شجرة صفحة الدخول ٦٠ مرة في
+     الثانية، فتتحوّل الإيماءة إلى «مدخل ← انتظار ← حركة».
+     الآن: الموضع الحقيقي يعيش في ref، والرسم يتم بكتابة متغيّرين (`--lx-x`,
+     `--lx-p`) على جذر البوابة في إطار واحد. CSS يشتقّ منها كل شيء: المقبض،
+     التعبئة، الجمرة، النسبة، وحلقة التقدّم. React يُحدَّث فقط عند *عبور عتبة*
+     (≤ ٦ مرات لإيماءة كاملة) ⇒ استجابة 1:1 بلا إعادة بناء. */
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [dragProgress, setDragProgress] = useState(0);
+  // حالة تقريبية (عتبات فقط) للفئات: اشتعال المعيّنات، الهدف، نص المرحلة، إظهار النسبة
+  const [dragStage, setDragStage] = useState({ tick: 0, goal: false, label: 0, pct: false });
   const [gaugesOn, setGaugesOn] = useState(false);
   const trackRef = useRef(null);
+  const gateRootRef = useRef(null);
   const springRef = useRef(null);
-  const dragPhaseRef = useRef(0); // وضع مغناطيسي مرن أثناء السحب
+  const posRef = useRef(0);   // الموضع الحقيقي (px) — مصدر الحقيقة أثناء الإيماءة
+  const maxRef = useRef(1);   // أقصى إزاحة، مقيسة من عرض المسار
+  const velRef = useRef(0);   // سرعة الإيماءة (px/s) — تُستخدم كـ throw عند الإفلات
+  const lastMoveRef = useRef(0);
+  const pctRef = useRef(null); // نص النسبة — يُكتب مباشرة بلا إعادة بناء
+  const stageRef = useRef({ tick: 0, goal: false, label: 0, pct: false });
   const HANDLE_SIZE = 60;
   const isRTL = language === 'ar';
-  // بوابة السحب تبدأ دائمًا من الشمال وتتحرك إلى اليمين، حتى مع اللغة العربية.
-  const dirSign = 1;
 
   // ✨ بارالاكس لطيف لهلال البوابة مع حركة المؤشر (يُلغى تلقائيًا مع reduced-motion)
   const reduceMotion = useReducedMotion();
@@ -255,58 +268,125 @@ export default function Login() {
     [],
   );
 
-  const completeUnlock = (maxX) => {
-    if (springRef.current) cancelAnimationFrame(springRef.current);
+  // ── الرسم: متغيّرا CSS على جذر البوابة ⇒ كل الحركة على الـ compositor ──
+  // لا يُستدعى setState إلا عند عبور عتبة حقيقية (فئة/اشتعال/نص).
+  const paint = useCallback((x, maxX) => {
+    const root = gateRootRef.current;
+    if (!root) return;
+    const m = maxX || maxRef.current || 1;
+    const p = Math.max(0, Math.min(x / m, 1));
+    posRef.current = x;
+    root.style.setProperty('--lx-x', x.toFixed(2) + 'px');
+    root.style.setProperty('--lx-p', p.toFixed(4));
+    if (pctRef.current) pctRef.current.textContent = Math.round(p * 100) + '%';
+    const next = {
+      tick: p >= 0.92 ? 3 : p >= 0.66 ? 2 : p >= 0.33 ? 1 : 0,
+      goal: p >= 0.92,
+      label: p >= 0.9 ? 2 : p >= 0.55 ? 1 : 0,
+      pct: p > 0.004 && p < 1,
+    };
+    const prev = stageRef.current;
+    if (prev.tick !== next.tick || prev.goal !== next.goal || prev.label !== next.label || prev.pct !== next.pct) {
+      stageRef.current = next;
+      setDragStage(next);
+      // تحديث الوصولية والقراءة المنطقية عند العتبات فقط (بلا ٦٠ تحديثًا/ثانية)
+      setDragX(x);
+      setDragProgress(p);
+    }
+  }, []);
+
+  const readMax = () => {
+    const rect = trackRef.current && trackRef.current.getBoundingClientRect();
+    return rect ? Math.max(1, rect.width - HANDLE_SIZE - 8) : maxRef.current;
+  };
+
+  const completeUnlock = () => {
+    if (springRef.current) { cancelAnimationFrame(springRef.current); springRef.current = null; }
+    const maxX = readMax();
     setIsDragging(false);
+    setIsUnlocking(true);
     setDragX(maxX);
     setDragProgress(1);
-    setIsUnlocking(true);
+    paint(maxX, maxX);
     if (navigator.vibrate) try { navigator.vibrate([10, 30, 20]); } catch { /* وضع الاهتزاز غير مدعوم */ }
     setTimeout(() => setIsMounted(true), 160);   // كارت الدخول يبدأ بالدخول
     setTimeout(() => setShowGate(false), 860);    // البوابة تُزال من الـ DOM
   };
 
+  // انتقال قصير لأي حركة غير السحب (لوحة المفاتيح / الإكمال):
+  // منحنى واحد نظيف = تسارع فوري + هبوط مضبوط بلا ارتداد وبلا ذيل بطيء.
+  const glideTo = (to, maxX) => {
+    if (springRef.current) { cancelAnimationFrame(springRef.current); springRef.current = null; }
+    const from = posRef.current;
+    const dist = Math.abs(to - from);
+    if (dist < 0.5) { paint(to, maxX); return; }
+    const dur = Math.max(110, Math.min(230, 96 + dist * 0.3));
+    const t0 = performance.now();
+    const step = (now) => {
+      const t = Math.min((now - t0) / dur, 1);
+      const e = 1 - (1 - t) * (1 - t) * (1 - t) * (1 - t);   // easeOutQuart
+      paint(from + (to - from) * e, maxX);
+      if (t < 1) springRef.current = requestAnimationFrame(step);
+      else springRef.current = null;
+    };
+    springRef.current = requestAnimationFrame(step);
+  };
+
   const handlePointerDown = (e) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    dragPhaseRef.current = dragX;
     if (springRef.current) { cancelAnimationFrame(springRef.current); springRef.current = null; }
+    velRef.current = 0;
+    lastMoveRef.current = performance.now();
     setIsDragging(true);
   };
 
   const handlePointerMove = (e) => {
     if (!isDragging || !trackRef.current) return;
     const trackRect = trackRef.current.getBoundingClientRect();
-    const maxX = trackRect.width - HANDLE_SIZE - 8;
-    // السحب ثابت من الشمال إلى اليمين في كل اللغات.
+    const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
+    maxRef.current = maxX;
+    // 🎯 تتبّع 1:1 — لا تصفية ولا «مغناطيسية»: ما يلمسه الإصبع هو ما يُرسم في
+    // نفس الإطار. (اللمسة المغناطيسية القديمة كانت تضيف لاجًا محسوسًا).
     const fromStart = e.clientX - trackRect.left;
-    const target = Math.max(0, Math.min(fromStart - HANDLE_SIZE / 2, maxX));
-    // لمسة مغناطيسية: الهدف يُتبع بنسبة متليّنة تجعل المقبض "ينجذب" بدل قفزة جامدة
-    dragPhaseRef.current += (target - dragPhaseRef.current) * 0.5;
-    const newX = Math.max(0, Math.min(dragPhaseRef.current, maxX));
-    setDragX(newX);
-    setDragProgress(maxX > 0 ? newX / maxX : 0);
-    if (maxX > 0 && newX >= maxX * 0.92) completeUnlock(maxX);
+    const x = Math.max(0, Math.min(fromStart - HANDLE_SIZE / 2, maxX));
+    // سرعة الإيماءة (px/s) مع تنعيم بسيط ⇒ تُستخدم كـ «throw» عند الإفلات،
+    // فيكمل المقبض حركته بنفس زخم الإصبع بدل أن يتجاهله.
+    const now = performance.now();
+    const dt = Math.max(now - lastMoveRef.current, 1);
+    const inst = ((x - posRef.current) / dt) * 1000;
+    velRef.current = velRef.current * 0.65 + inst * 0.35;
+    lastMoveRef.current = now;
+    paint(x, maxX);
+    if (x >= maxX * 0.92) completeUnlock();
   };
 
   const handlePointerUp = () => {
     if (!isDragging) return;
     setIsDragging(false);
-    const trackRect = trackRef.current && trackRef.current.getBoundingClientRect();
-    const maxX = trackRect ? trackRect.width - HANDLE_SIZE - 8 : 1;
-    if (dragX >= maxX * 0.92) { /* اكتمل داخل move */ return; }
-    // ⭐ عودة نابضية: من حيث توقف الإصبع إلى الصفر مع ارتداد خفيف (damped spring)
-    const k = 220, c = 15, m = 1;
-    let pos = dragX, vel = 0, last = performance.now();
+    const maxX = readMax();
+    const x = posRef.current;
+    if (x >= maxX * 0.92) { /* اكتمل داخل move */ return; }
+    // ⭐ العودة: *الحل التحليلي الدقيق* لنابض حرج التخميد (ζ = 1).
+    //    x(t) = (x₀ + (v₀ + ω·x₀)·t) · e^(−ω·t)
+    //    لماذا تحليليًّا وليس تكاملًا رقميًّا؟ لأن تكامل أويلر المباشر ينفجر
+    //    عدديًّا حين يكبر الخط الزمني (إطار مسقوط ⇒ dt = 1/30 ⇒ c·dt > 1
+    //    فينقلب اتجاه السرعة). الحدث كان يظهر كـ«قفزة إلى الصفر». الحل التحليلي
+    //    مستقل تمامًا عن معدّل الإطارات ومستقر دائمًا، ويعطي زخم الإفلات طبيعيًّا.
+    const w = 38;                    // ω: استقرار محسوس خلال ~150ms
+    const x0 = Math.max(0, Math.min(x, maxX));
+    const v0 = Math.max(-6000, Math.min(velRef.current, 6000));
+    const t0 = performance.now();
     const step = (now) => {
-      const dt = Math.min((now - last) / 1000, 1 / 30);
-      last = now;
-      const a = (k * (0 - pos) - c * vel) / m;
-      vel += a * dt;
-      pos += vel * dt;
-      const p = Math.max(0, Math.min(pos, maxX));
-      setDragX(p);
-      setDragProgress(maxX > 0 ? p / maxX : 0);
-      if (Math.abs(pos) < 0.4 && Math.abs(vel) < 0.5) { setDragX(0); setDragProgress(0); return; }
+      const t = (now - t0) / 1000;
+      const pos = (x0 + (v0 + w * x0) * t) * Math.exp(-w * t);
+      if (pos <= 0.5) {
+        springRef.current = null;
+        paint(0, maxX);
+        setDragX(0);
+        setDragProgress(0);
+        return;
+      }
+      paint(pos, maxX);
       springRef.current = requestAnimationFrame(step);
     };
     springRef.current = requestAnimationFrame(step);
@@ -329,13 +409,13 @@ export default function Login() {
     // لوحة المفاتيح تتبع نفس الاتجاه: السهم الأيمن للتقدم.
     const isFwd = e.key === 'ArrowRight';
     const isBack = e.key === 'ArrowLeft';
-    if (e.key === 'Enter' && dragProgress >= 0.8) { completeUnlock(maxX); return; }
+    // العتبة تُقرأ من الموضع الحقيقي (posRef) لا من الحالة التقريبية ⇒ نفس سلوك ما قبل التحويل بالحرف
+    if (e.key === 'Enter' && posRef.current / maxX >= 0.8) { completeUnlock(); return; }
     if (!isFwd && !isBack) return;
     e.preventDefault();
-    const newX = Math.max(0, Math.min(dragX + (isFwd ? maxX * 0.12 : -maxX * 0.12), maxX));
-    setDragX(newX);
-    setDragProgress(maxX > 0 ? newX / maxX : 0);
-    if (newX >= maxX * 0.92) completeUnlock(maxX);
+    const newX = Math.max(0, Math.min(posRef.current + (isFwd ? maxX * 0.12 : -maxX * 0.12), maxX));
+    if (newX >= maxX * 0.92) { if (springRef.current) cancelAnimationFrame(springRef.current); completeUnlock(); return; }
+    glideTo(newX, maxX);
   };
 
   const handleLogin = async (e) => {
@@ -465,9 +545,9 @@ export default function Login() {
   };
 
   // تركيبة نصية تتطور مع مراحل السحب
-  const slideLabel = dragProgress >= 0.9
+  const slideLabel = dragStage.label >= 2
     ? t('تم — جاري فتح الوصول', 'Done — opening access')
-    : dragProgress >= 0.55
+    : dragStage.label >= 1
       ? t('استمرّر أكثر…', 'Keep sliding…')
       : t('اسحب لفتح الوصول الآمن', 'Slide to unlock secure access');
 
@@ -480,22 +560,11 @@ export default function Login() {
       <ServerDownOverlay health={serverHealth} lang={language} />
       <ServerRecoveryBanner health={serverHealth} lang={language} />
 
-      {/* ═══════════ الخلفية المحيطة — مشهد الجمرة (يبقى خلف سطح القيادة) ═══════════ */}
-      <div className="lx-scene" aria-hidden="true">
-        <div className="lx-aurora" />
-        <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.22})` }}>
-          <span className="lx-glow lx-glow--a" />
-        </div>
-        <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.14})` }}>
-          <span className="lx-glow lx-glow--b" />
-        </div>
-        <span className="lx-glow lx-glow--c" />
-        <span className="lx-beam" />
-        <div className="lx-grid" />
-        <span className="lx-sweep" />
-        <div className="lx-vignette" />
-        <div className="lx-grain" />
-      </div>
+      {/* ═══════════ الخلفية المحيطة — طبقة واحدة (`.lx-scene`) ═══════════
+          كانت 9 عناصر (aurora / glow×3 / beam / grid / sweep / vignette / grain)
+          بلا أي قاعدة CSS، ومعها inline transform مربوط بـ dragProgress ⇒ تُبنى
+          في كل رسم وتُعيد بناء الشجرة مع كل إطار سحب مقابل صفر أثر بصري. */}
+      <div className="lx-scene" aria-hidden="true" />
 
       {/* ═══════════ تحكمات ثابتة: اللغة + الثيم ─────────────── */}
       <motion.button
@@ -540,30 +609,24 @@ export default function Login() {
         {showGate && (
           <motion.div
             key="lx-gate"
-            className="fixed inset-0 z-50 overflow-hidden"
+            ref={gateRootRef}
+            className="lx-gate fixed inset-0 z-50 overflow-hidden"
             dir="ltr"
             onPointerMove={handleGatePointerMove}
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.05, filter: 'blur(14px)' }}
-            transition={{ duration: 0.55, ease: EASE_OUT }}
+            /* الخروج: opacity + scale فقط. كان `filter: blur(14px)` متحرّكًا
+               ⇒ مسح كامل الشاشة وإعادة رسمها بفلتر طوال مدة الخروج. */
+            exit={{ opacity: 0, scale: 1.04 }}
+            transition={{ duration: 0.34, ease: EASE_OUT }}
             style={{ pointerEvents: isUnlocking ? 'none' : 'auto' }}
           >
-            {/* مشهد البوابة الخاص — طبقة أعمق من خلفية الصفحة */}
-            <div className="lx-scene" aria-hidden="true">
-              <div className="lx-aurora" />
-              <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.22})` }}>
-                <span className="lx-glow lx-glow--a" />
-              </div>
-              <div className="absolute inset-0" style={{ transform: `scale(${1 + dragProgress * 0.14})` }}>
-                <span className="lx-glow lx-glow--b" />
-              </div>
-              <span className="lx-glow lx-glow--c" />
-              <span className="lx-beam" />
-              <div className="lx-grid" />
-              <span className="lx-sweep" />
-              <div className="lx-vignette" />
-              <div className="lx-grain" />
-            </div>
+            {/* 🌫️ مشهد البوابة — طبقة واحدة في CSS (`.lx-scene`).
+                كان هنا 8 عناصر (aurora / glow×3 / beam / grid / sweep /
+                vignette / grain) **بلا أي قاعدة CSS** (مُستبدلة بـ background-image
+                في commit سابق) ⇒ DOM ميت يُبنى في كل رسم، مع inline transform
+                يربط البارالاكس بـ dragProgress فيُجبر إعادة بناء لكل إطار.
+                أُزيل بالكامل — نفس الشكل، صفر عُقد. */}
+            <div className="lx-scene" aria-hidden="true" />
 
             <motion.div
               variants={GATE_RISE}
@@ -603,13 +666,11 @@ export default function Login() {
                       className="lx-halo-arc"
                       cx="50" cy="50" r="46"
                       strokeDasharray={HALO_C}
-                      strokeDashoffset={HALO_C * (1 - dragProgress)}
-                      style={{ transition: isDragging ? 'none' : 'stroke-dashoffset .45s var(--ease-out)' }}
                     />
                   </svg>
                   <div
                     id="lx-crest"
-                    className={`lx-crest ${dragProgress >= 0.92 || isUnlocking ? 'is-done' : ''}`}
+                    className={`lx-crest ${dragStage.goal || isUnlocking ? 'is-done' : ''}`}
                   >
                     <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" />
                   </div>
@@ -633,9 +694,7 @@ export default function Login() {
 
               {/* قراءة النسبة المئوية / شارة التفعيل */}
               <motion.div variants={GATE_ITEM} className="lx-readout mt-7">
-                {dragProgress > 0 && dragProgress < 1 && (
-                  <span className="lx-pct">{Math.round(dragProgress * 100)}%</span>
-                )}
+                {dragStage.pct && <span className="lx-pct" ref={pctRef} />}
                 {dragProgress === 1 && (
                   <span className="lx-granted lx-morph"><i />{t('مُفعّل', 'ACTIVATED')}</span>
                 )}
@@ -649,42 +708,34 @@ export default function Login() {
                 >
                   <span className="lx-track-shine" aria-hidden="true" />
 
-                  {/* تعبئة الجمرة + توهجها الواسع */}
-                  <span
-                    className="lx-fill"
-                    aria-hidden="true"
-                    style={{
-                      width: `calc(${HANDLE_SIZE / 2}px + ${dragX}px)`,
-                      transition: isDragging ? 'none' : 'width .45s var(--ease-out)',
-                    }}
-                  />
-                  <span
-                    className="lx-fill-glow"
-                    aria-hidden="true"
-                    style={{
-                      width: `calc(${HANDLE_SIZE}px + ${dragX}px)`,
-                      opacity: 0.35 + dragProgress * 0.55,
-                      transition: isDragging ? 'none' : 'width .45s var(--ease-out), opacity .45s var(--ease-out)',
-                    }}
-                  />
+                  {/* تعبئة الجمرة: مقطع واحد يقصّ الشكل الكبسولي + تعبئة تُقاس بـ
+                      `scaleX` من `--lx-p`. كان العرض يُحرّك بـ `width` عبر انتقال
+                      ٠.٤٥s ⇒ حركة تخطيط بطيئة. الآن transform فقط: صفر تخطيط،
+                      وصفر رسم بعد الإطار الأول. */}
+                  <span className="lx-fill-clip" aria-hidden="true">
+                    <span className="lx-fill" />
+                    <span className="lx-fill-glow" />
+                  </span>
+                  {/* جمرة سافرة: كتلة ثابتة الحجم تُنقل بـ translate3d (compositor) */}
+                  <span className="lx-ember" aria-hidden="true" />
 
-                  {/* معينات المراحل — تشتعل تباعًا */}
-                  {[0.33, 0.66, 0.92].map((p) => (
+                  {/* معينات المراحل — تشتعل تباعًا (من العتبات فقط، بلا رسم لكل إطار) */}
+                  {[0.33, 0.66, 0.92].map((p, i) => (
                     <span
                       key={p}
-                      className={`lx-tick ${dragProgress >= p ? 'is-lit' : ''}`}
+                      className={`lx-tick ${dragStage.tick > i ? 'is-lit' : ''}`}
                       style={{ insetInlineStart: `${p * 100}%` }}
                       aria-hidden="true"
                     />
                   ))}
 
                   {/* حلقة الهدف النهائي */}
-                  <span className={`lx-goal ${dragProgress >= 0.92 ? 'is-lit' : ''}`} aria-hidden="true">
+                  <span className={`lx-goal ${dragStage.goal ? 'is-lit' : ''}`} aria-hidden="true">
                     <CheckIcon />
                   </span>
 
-                  {/* التسمية المتطورة */}
-                  <span className="lx-track-label" style={{ opacity: Math.max(0, 1 - dragProgress * 1.15) }}>
+                  {/* التسمية المتطورة — تلاشيها من `--lx-p` في CSS */}
+                  <span className="lx-track-label">
                     <span className="lx-shield-ic" aria-hidden="true"><ShieldIcon /></span>
                     <span key={slideLabel} className="lx-morph whitespace-nowrap">{slideLabel}</span>
                     <span className="lx-chevs" aria-hidden="true">
@@ -706,12 +757,9 @@ export default function Login() {
                     aria-valuenow={Math.round(dragProgress * 100)}
                     aria-label={language === 'ar' ? 'اسحب لفتح الوصول' : 'Slide to unlock'}
                     className={`lx-handle ${isDragging ? 'is-dragging' : 'is-idle'} ${isUnlocking ? 'is-done' : ''}`}
-                    style={{
-                      width: HANDLE_SIZE,
-                      height: HANDLE_SIZE,
-                      transform: `translateY(-50%) translateX(${dirSign * dragX}px)`,
-                      transition: isDragging ? 'none' : 'transform .45s var(--ease-out)',
-                    }}
+                    /* الموضع من `--lx-x` (CSS) — لا انتقال زمني أثناء السحب:
+                       الحركة 1:1 مع الإصبع، والعودة يحرّكها النابض في JS. */
+                    style={{ width: HANDLE_SIZE, height: HANDLE_SIZE }}
                   >
                     <span className="lx-handle-halo" aria-hidden="true" />
                     {isUnlocking && <span className="lx-ripple lx-ripple--1" aria-hidden="true" />}
