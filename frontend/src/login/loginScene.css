@@ -1,27 +1,63 @@
 /* ════════════════════════════════════════════════════════════════════════════
-   LX — LOGIN EXPERIENCE ("Cinematic Ember")
+   LX — LOGIN EXPERIENCE ("Cinematic Ember") — Unified with EOC Shell
    ────────────────────────────────────────────────────────────────────────────
    نظام البصريات الكامل لشاشة ما-قبل-الدخول (البوابة) وشاشة الدخول (سطح القيادة).
-   كل الأسماء هنا بادئة `lx-` حتى لا تتداخل مع أي قاعدة في index.css
-   (القواعد القديمة الخاصة بالدخول هناك تصبح غير مستخدمة ولا تُمس).
+   الآن موحّد مع: Liquid Glass materials, motion tokens, ambient background,
+   shadow budget, and performance budgets من index.css.
 
    المبادئ:
      • transform + opacity فقط في الحركات (لا reflow).
      • كل الألوان من توكنات الثيم (--bg/--surface/--accent/...) ⇒ يعمل في الداكن والفاتح.
-     • الحركات الثقيلة (aurora/orbit/sweep) تُطفأ مع prefers-reduced-motion.
+     • لا prefers-reduced-motion — التجربة الكاملة مفعّلة.
+     • Glass وصفات موحّدة: --glass-heavy, --glass-medium, --glass-light
+     • حركة موحّدة: --spring-tight, --spring-soft, --ease-out-quick
+     • ظلال خفيفة: --shadow-contact, --shadow-ambient, --shadow-elevated
    ════════════════════════════════════════════════════════════════════════════ */
 
-/* ── متغيرات محلية للتجربة ─────────────────────────────────────────────────── */
+/* ── متغيرات محلية للتجربة (تستمد من توكنات النظام الموحّدة) ────────────────── */
 .lx {
   --lx-accent-hi: color-mix(in srgb, var(--accent) 62%, #fff);
   --lx-ember-hot: color-mix(in srgb, var(--accent) 78%, #ff7a3d);
   --lx-glass-hi: color-mix(in srgb, var(--ink) 9%, transparent);
   --lx-ring: color-mix(in srgb, var(--accent) 55%, transparent);
   --lx-beam: color-mix(in srgb, var(--accent) 24%, transparent);
+
+  /* Glass recipes — تستمد من النظام الموحّد (Phase 4+5) */
+  --lx-glass-heavy: var(--glass-heavy);
+  --lx-glass-medium: var(--glass-medium);
+  --lx-glass-light: var(--glass-light);
+  --lx-glass-heavy-light: var(--glass-heavy-light);
+  --lx-glass-medium-light: var(--glass-medium-light);
+  --lx-glass-light-light: var(--glass-light-light);
+
+  /* Motion tokens — موحّدة مع النظام (Phase 2) */
+  --lx-spring-tight: var(--spring-tight);
+  --lx-spring-soft: var(--spring-soft);
+  --lx-ease-out-quick: var(--ease-out-quick);
+  --lx-ease-standard: var(--ease-standard);
+  --lx-dur-instant: var(--dur-instant);
+  --lx-dur-fast: var(--dur-fast);
+  --lx-dur-base: var(--dur-base);
+  --lx-dur-slow: var(--dur-slow);
+  --lx-dur-slower: var(--dur-slower);
+
+  /* Shadow budget — موحّدة (Phase 9) */
+  --lx-shadow-contact: var(--shadow-contact);
+  --lx-shadow-ambient: var(--shadow-ambient);
+  --lx-shadow-elevated: var(--shadow-elevated);
+  --lx-shadow-modal: var(--shadow-modal);
+
+  /* Blur budget — موحّد (Phase 2) */
+  --lx-blur-lg: var(--blur-lg);
+  --lx-blur-md: var(--blur-md);
+  --lx-blur-sm: var(--blur-sm);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ١) خلفية البوابة — مشهد الأورورا الطبقي
+   ١) خلفية البوابة — Ambient Background موحّد مع Dashboard (Phase 3)
+   ════════════════════════════════════════════════════════════════════════════
+   مبسط: توهّج brand واحد + شبكة خفيفة جداً — بدون حركة مكلفة، بدون ضوضاء.
+   يعمل في الداكن والفاتح بعلاج متعمد لكل ثيم.
    ════════════════════════════════════════════════════════════════════════════ */
 .lx-scene {
   position: absolute;
@@ -31,124 +67,29 @@
   pointer-events: none;
 }
 
-.lx-aurora {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(90% 62% at 50% 38%, color-mix(in srgb, var(--bg) 0%, transparent) 40%, var(--bg) 100%),
-    var(--bg);
-}
-
-.lx-glow {
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(110px);
-  will-change: transform, opacity;
-}
-.lx-glow--a {
-  top: -24%; inset-inline-start: -14%;
-  width: 52vw; height: 52vw; min-width: 480px; min-height: 480px;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 62%);
-  opacity: .55;
-  animation: lx-drift-a 13s ease-in-out infinite;
-}
-.lx-glow--b {
-  bottom: -30%; inset-inline-end: -12%;
-  width: 46vw; height: 46vw; min-width: 420px; min-height: 420px;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 64%);
-  opacity: .38;
-  animation: lx-drift-b 17s ease-in-out infinite;
-}
-.lx-glow--c {
-  top: 30%; inset-inline-start: 56%;
-  width: 30vw; height: 30vw; min-width: 300px; min-height: 300px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent) 0%, transparent 66%);
-  opacity: .30;
-  animation: lx-drift-a 21s ease-in-out -6s infinite;
-}
-@keyframes lx-drift-a {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50%      { transform: translate3d(4%, -3%, 0) scale(1.07); }
-}
-@keyframes lx-drift-b {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1.04); }
-  50%      { transform: translate3d(-5%, 4%, 0) scale(.96); }
-}
-
-/* خط الأفق المضيء خلف الهلال */
-.lx-beam {
-  position: absolute;
-  top: 41%; inset-inline: 0;
-  height: 220px;
-  transform: translateY(-50%);
-  background: linear-gradient(
-    90deg,
-    transparent 4%,
-    var(--lx-beam) 38%,
-    color-mix(in srgb, var(--lx-accent-hi) 30%, transparent) 50%,
-    var(--lx-beam) 62%,
-    transparent 96%
-  );
-  filter: blur(26px);
-  opacity: .6;
-  animation: lx-beam-breathe 8s ease-in-out infinite;
-}
-@keyframes lx-beam-breathe {
-  0%, 100% { opacity: .42; }
-  50%      { opacity: .72; }
-}
-
-/* شبكة المخطط الشبكي الخافتة */
-.lx-grid {
-  position: absolute;
-  inset: -2px;
+/* Dark mode: توهّج brand واحد مركّز + شبكة عمليات رقيقة جداً */
+.lx-scene {
+  background-color: var(--bg);
   background-image:
-    linear-gradient(color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px);
-  background-size: 54px 54px;
-  -webkit-mask-image: radial-gradient(75% 68% at 50% 44%, transparent 26%, #000 88%);
-          mask-image: radial-gradient(75% 68% at 50% 44%, transparent 26%, #000 88%);
-  opacity: .5;
+    /* Single brand ambient glow - top-left, larger and softer (matching dashboard) */
+    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 70%),
+    /* Extremely subtle grid for depth - barely visible */
+    linear-gradient(var(--border-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
+  background-size: auto, 64px 64px, 64px 64px;
 }
 
-/* ماسح ضوئي عمودي يعبر المشهد ببطء */
-.lx-sweep {
-  position: absolute;
-  top: -10%; bottom: -10%;
-  width: 190px;
-  inset-inline-start: -240px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--lx-accent-hi) 5%, transparent),
-    color-mix(in srgb, #fff 7%, transparent),
-    color-mix(in srgb, var(--lx-accent-hi) 5%, transparent),
-    transparent
-  );
-  transform: skewX(-8deg);
-  animation: lx-sweep-pass 11s linear infinite;
-}
-@keyframes lx-sweep-pass {
-  0%   { inset-inline-start: -22%; opacity: 0; }
-  8%   { opacity: 1; }
-  46%  { inset-inline-start: 112%; opacity: 1; }
-  54%, 100% { inset-inline-start: 112%; opacity: 0; }
+/* Light mode: warmer, softer ambient treatment (matching dashboard) */
+:root[data-theme="light"] .lx-scene {
+  background-image:
+    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 65%),
+    linear-gradient(var(--border-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
+  background-size: auto, 64px 64px, 64px 64px;
 }
 
-.lx-vignette {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(120% 100% at 50% 0%, transparent 55%, color-mix(in srgb, var(--bg) 82%, transparent) 100%),
-    radial-gradient(140% 120% at 50% 50%, transparent 58%, color-mix(in srgb, var(--bg) 88%, transparent) 100%);
-}
-
-.lx-grain {
-  position: absolute;
-  inset: 0;
-  opacity: .032;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+/* إزالة العناصر الثقيلة: lx-aurora, lx-glow--a/b/c, lx-beam, lx-sweep, lx-vignette, lx-grain
+   كلها مستبدلة بالـ background-image أعلاه — أخف وأداء أعلى */
 
 /* ════════════════════════════════════════════════════════════════════════════
    ٢) هلال البوابة (Crest) — قرص زجاجي + هالة SVG + أقمار مدارية
@@ -233,7 +174,7 @@
   filter: drop-shadow(0 0 6px var(--accent-glow));
 }
 
-/* القرص الزجاجي نفسه */
+/* القرص الزجاجي نفسه — Liquid Glass موحّد مع Sidebar/Header (Phase 4+5) */
 .lx-crest {
   position: absolute;
   inset: 0;
@@ -242,28 +183,48 @@
   align-items: center;
   justify-content: center;
   padding: 12%;
-  background:
-    linear-gradient(160deg, var(--lx-glass-hi) 0%, transparent 42%),
-    color-mix(in srgb, var(--surface) 72%, transparent);
-  -webkit-backdrop-filter: blur(14px);
-          backdrop-filter: blur(14px);
-  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  /* Unified glass recipe: --glass-heavy + blur-lg + saturate */
+  background: var(--lx-glass-heavy);
+  -webkit-backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
+          backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
+  border: 1px solid var(--border);
+  /* Shadow budget: contact + ambient only, no giant black shadows (Phase 9) */
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent),
-    inset 0 -18px 30px -22px color-mix(in srgb, var(--bg) 90%, transparent),
-    0 30px 70px -28px rgba(0, 0, 0, .8),
-    0 0 0 10px color-mix(in srgb, var(--accent) 4%, transparent),
-    0 0 0 22px color-mix(in srgb, var(--accent) 2.5%, transparent);
-  transition: border-color .5s var(--ease-out), box-shadow .5s var(--ease-out);
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
+  transition: border-color var(--lx-dur-base) var(--lx-ease-out-quick),
+              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
 }
 .lx-crest.is-done {
   border-color: color-mix(in srgb, var(--ok) 55%, transparent);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent),
-    0 30px 70px -28px rgba(0, 0, 0, .8),
-    0 0 0 10px color-mix(in srgb, var(--ok) 10%, transparent),
-    0 0 44px 2px var(--ok-soft);
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
+    0 0 24px -4px var(--ok-soft),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
 }
+
+/* Light mode glass crest */
+:root[data-theme="light"] .lx-crest {
+  background: var(--lx-glass-heavy-light);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
+}
+:root[data-theme="light"] .lx-crest.is-done {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
+    0 0 24px -4px var(--ok-soft),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
+}
+
 .lx-crest img {
   width: 100%;
   height: 100%;
@@ -271,7 +232,7 @@
   object-position: 39%;
   pointer-events: none;
   user-select: none;
-  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, .45));
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, .25));
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -352,7 +313,7 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ٤) مسار السحب — كبسولة زجاجية بجمرة متوهجة
+   ٤) مسار السحب — كبسولة زجاجية بجمرة متوهجة (موحّدة مع نظام Liquid Glass)
    ════════════════════════════════════════════════════════════════════════════ */
 .lx-track {
   position: relative;
@@ -363,34 +324,63 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  background:
-    linear-gradient(180deg, var(--lx-glass-hi) 0%, transparent 34%),
-    color-mix(in srgb, var(--surface) 66%, transparent);
-  -webkit-backdrop-filter: blur(16px);
-          backdrop-filter: blur(16px);
-  border: 1px solid color-mix(in srgb, var(--ink) 13%, transparent);
+  /* Unified glass recipe: --glass-medium + blur-md + saturate */
+  background: var(--lx-glass-medium);
+  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
+          backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
+  border: 1px solid var(--border);
+  /* Shadow budget: contact + ambient only, no giant black shadows (Phase 9) */
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent),
-    inset 0 -22px 34px -30px rgba(0, 0, 0, .9),
-    0 26px 64px -30px rgba(0, 0, 0, .75);
-  transition: border-color .4s var(--ease-out), box-shadow .4s var(--ease-out);
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
+  transition: border-color var(--lx-dur-base) var(--lx-ease-out-quick),
+              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
 }
 .lx-track.is-dragging {
-  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent),
-    inset 0 -22px 34px -30px rgba(0, 0, 0, .9),
-    0 26px 64px -30px rgba(0, 0, 0, .75),
-    0 0 0 5px color-mix(in srgb, var(--accent) 7%, transparent),
-    0 0 44px -6px var(--accent-glow);
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 24px -4px var(--accent-soft),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
 }
 .lx-track.is-done {
-  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent),
-    0 26px 64px -30px rgba(0, 0, 0, .75),
-    0 0 0 5px color-mix(in srgb, var(--ok) 9%, transparent),
-    0 0 54px -4px var(--ok-soft);
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
+    0 0 24px -4px var(--ok-soft),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+
+/* Light mode glass track */
+:root[data-theme="light"] .lx-track {
+  background: var(--lx-glass-medium-light);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
+}
+:root[data-theme="light"] .lx-track.is-dragging {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 24px -4px var(--accent-soft),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
+}
+:root[data-theme="light"] .lx-track.is-done {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
+    0 0 24px -4px var(--ok-soft),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
 }
 
 /* لمعان علوي داخلي */
@@ -731,7 +721,7 @@
 [dir="rtl"] .lx-gate-foot { letter-spacing: .1em; }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ٧) سطح القيادة (Deck) — لوحة زجاجية بحواف مضيئة
+   ٧) سطح القيادة (Deck) — لوحة زجاجية بحواف مضيئة (موحّدة مع نظام Liquid Glass)
    ════════════════════════════════════════════════════════════════════════════ */
 .lx-deck {
   position: relative;
@@ -739,14 +729,17 @@
   max-width: 900px;
   border-radius: 28px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  -webkit-backdrop-filter: blur(28px) saturate(1.25);
-          backdrop-filter: blur(28px) saturate(1.25);
-  border: 1px solid color-mix(in srgb, var(--ink) 11%, transparent);
+  /* Unified glass recipe: --glass-heavy + blur-lg + saturate */
+  background: var(--lx-glass-heavy);
+  -webkit-backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
+          backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
+  border: 1px solid var(--border);
+  /* Shadow budget: contact + ambient only, no giant black shadows (Phase 9) */
   box-shadow:
-    0 60px 140px -40px rgba(0, 0, 0, .85),
-    0 0 90px -30px var(--accent-glow),
-    inset 0 1px 0 color-mix(in srgb, #fff 9%, transparent);
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
 }
 .lx-deck::before {
   content: "";
@@ -757,6 +750,16 @@
   background: linear-gradient(90deg, transparent, color-mix(in srgb, #fff 34%, transparent), transparent);
   z-index: 5;
   pointer-events: none;
+}
+
+/* Light mode deck */
+:root[data-theme="light"] .lx-deck {
+  background: var(--lx-glass-heavy-light);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
 }
 
 /* ── الرباط الأحمر ── */
@@ -1042,17 +1045,20 @@
 .lx-input {
   width: 100%;
   border-radius: 17px;
-  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border: 1px solid var(--border);
+  /* Unified glass recipe: --glass-light + blur-sm + saturate */
   background:
-    linear-gradient(180deg, var(--lx-glass-hi) 0%, transparent 40%),
+    linear-gradient(180deg, var(--lx-glass-light) 0%, transparent 40%),
     color-mix(in srgb, var(--surface-2) 88%, transparent);
   padding: 16px 52px 16px 52px;
   font-size: 15px;
   font-weight: 600;
   color: var(--ink);
   outline: none;
+  -webkit-backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
+          backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 7%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.05),
     inset 0 -14px 22px -20px rgba(0, 0, 0, .8);
   transition:
     border-color .3s var(--ease-out),
@@ -1061,13 +1067,28 @@
 }
 [dir="ltr"] .lx-input { padding-left: 52px; padding-right: 52px; }
 .lx-input::placeholder {
-  color: var(--faint);
+  color: var(--muted);
   font-weight: 500;
 }
 .lx-input:focus {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 9%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 10px 36px -12px var(--accent-glow);
+}
+/* Light mode input */
+:root[data-theme="light"] .lx-input {
+  background:
+    linear-gradient(180deg, var(--lx-glass-light-light) 0%, transparent 40%),
+    color-mix(in srgb, var(--surface-2) 88%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -14px 22px -20px rgba(0, 0, 0, .06);
+}
+:root[data-theme="light"] .lx-input:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
     0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
     0 10px 36px -12px var(--accent-glow);
 }
@@ -1118,7 +1139,7 @@
   animation: lx-pulse-dot 1.2s ease-in-out infinite;
 }
 
-/* ── زر الدخول ── */
+/* ── زر الدخول — موحّد مع Button System (Phase 9/10) ── */
 .lx-submit {
   position: relative;
   width: 100%;
@@ -1130,19 +1151,17 @@
   letter-spacing: .05em;
   color: #fff;
   cursor: pointer;
-  border: 1px solid color-mix(in srgb, #fff 22%, var(--accent));
-  background:
-    radial-gradient(130% 150% at 18% -10%, color-mix(in srgb, var(--lx-accent-hi) 55%, transparent) 0%, transparent 52%),
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #fff) 0%, var(--accent) 52%, color-mix(in srgb, var(--accent) 78%, #000) 100%);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, #fff);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #fff) 0%, var(--accent) 52%, color-mix(in srgb, var(--accent) 78%, #000) 100%);
+  /* Shadow budget: contact + ambient + glow, no giant black shadows */
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 34%, transparent),
-    inset 0 -10px 18px -12px rgba(0, 0, 0, .7),
-    0 14px 38px -12px var(--accent-glow),
-    0 4px 14px -6px rgba(0, 0, 0, .5);
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
   transition:
-    transform .3s var(--ease-spring),
-    box-shadow .35s var(--ease-out),
-    filter .3s var(--ease-out);
+    transform var(--lx-dur-fast) var(--lx-spring-snap),
+    box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
+    filter var(--lx-dur-base) var(--lx-ease-out-quick);
   overflow: hidden;
 }
 .lx-submit::before {
@@ -1153,25 +1172,25 @@
   inset-inline-start: -60%;
   background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .34), transparent);
   transform: skewX(-14deg);
-  transition: inset-inline-start .7s var(--ease-out);
+  transition: inset-inline-start .7s var(--lx-ease-out-quick);
   pointer-events: none;
 }
 .lx-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  filter: brightness(1.07);
+  filter: brightness(1.05);
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent),
-    inset 0 -10px 18px -12px rgba(0, 0, 0, .7),
-    0 20px 52px -14px var(--accent-glow),
-    0 6px 18px -6px rgba(0, 0, 0, .5);
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 24px -4px var(--accent-soft);
 }
 .lx-submit:hover:not(:disabled)::before { inset-inline-start: 118%; }
 .lx-submit:active:not(:disabled) { transform: translateY(0) scale(.982); }
-.lx-submit:disabled { cursor: default; }
+.lx-submit:disabled { cursor: default; opacity: 0.6; }
 .lx-submit.is-loading { pointer-events: none; }
 .lx-submit.is-loading::before {
   inset-inline-start: -60%;
-  animation: lx-submit-sheen 1.15s var(--ease-out) infinite;
+  animation: lx-submit-sheen 1.15s var(--lx-ease-out-quick) infinite;
 }
 @keyframes lx-submit-sheen {
   to { inset-inline-start: 118%; }
@@ -1237,7 +1256,7 @@
 .lx-trust b { color: var(--ok); font-weight: 400; display: inline-flex; }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ٩) رمز التحقق OTP — صناديق زجاجية + مدار (نفس آلية is-checking/is-success)
+   ٩) رمز التحقق OTP — صناديق زجاجية + مدار (موحّد مع Forms Phase 10)
    ════════════════════════════════════════════════════════════════════════════ */
 .otp-orbit-zone {
   position: relative;
@@ -1249,9 +1268,10 @@
 .otp-box {
   width: 54px; height: 54px;
   border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--ink) 13%, transparent);
+  border: 1px solid var(--border);
+  /* Unified glass recipe: --glass-light + blur-sm + saturate */
   background:
-    linear-gradient(180deg, var(--lx-glass-hi) 0%, transparent 42%),
+    linear-gradient(180deg, var(--lx-glass-light) 0%, transparent 42%),
     color-mix(in srgb, var(--surface-2) 90%, transparent);
   color: var(--ink);
   text-align: center;
@@ -1260,22 +1280,42 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   outline: none;
   caret-color: var(--accent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent), inset 0 -12px 18px -18px rgba(0, 0, 0, .8);
+  -webkit-backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
+          backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -12px 18px -18px rgba(0, 0, 0, .8);
   transition:
-    border-color .3s var(--ease-out),
-    box-shadow .3s var(--ease-out),
-    transform .25s var(--ease-spring),
+    border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
+    box-shadow var(--lx-dur-fast) var(--lx-ease-out-quick),
+    transform var(--lx-dur-instant) var(--lx-spring-snap),
     background-color .3s;
 }
 .otp-box:focus {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
   box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
     0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
-    0 8px 26px -10px var(--accent-glow),
-    inset 0 1px 0 color-mix(in srgb, #fff 9%, transparent);
+    0 8px 26px -10px var(--accent-glow);
   transform: translateY(-2px);
 }
 .otp-box:not([value=""]) { border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
+
+/* Light mode OTP box */
+:root[data-theme="light"] .otp-box {
+  background:
+    linear-gradient(180deg, var(--lx-glass-light-light) 0%, transparent 42%),
+    color-mix(in srgb, var(--surface-2) 90%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    inset 0 -12px 18px -18px rgba(0, 0, 0, .06);
+}
+:root[data-theme="light"] .otp-box:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 8px 26px -10px var(--accent-glow);
+}
 
 /* المدار: الصناديق تتجمع في حلقة دوّارة أثناء الفحص */
 .otp-orbit-zone.is-checking,
@@ -1372,7 +1412,7 @@
 .lx-backlink:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ١٠) مفاتيح اللغة/الثيم العائمة
+   ١٠) مفاتيح اللغة/الثيم العائمة — موحّدة مع Button/Glass System
    ════════════════════════════════════════════════════════════════════════════ */
 .lx-pill-btn {
   display: inline-flex;
@@ -1381,46 +1421,98 @@
   height: 40px;
   padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--ink) 13%, transparent);
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  -webkit-backdrop-filter: blur(16px);
-          backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  /* Unified glass recipe: --glass-medium + blur-md + saturate */
+  background: var(--lx-glass-medium);
+  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
+          backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: .18em;
   color: var(--muted);
-  box-shadow: 0 14px 34px -18px rgba(0, 0, 0, .65);
+  /* Shadow budget: contact + ambient only */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border);
   transition:
-    color .3s var(--ease-out),
-    border-color .3s var(--ease-out),
-    transform .3s var(--ease-spring),
-    box-shadow .3s var(--ease-out);
+    color var(--lx-dur-fast) var(--lx-ease-out-quick),
+    border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
+    transform var(--lx-dur-fast) var(--lx-spring-snap),
+    box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
 }
 .lx-pill-btn:hover {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   transform: translateY(-2px);
-  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .7), 0 0 24px -8px var(--accent-glow);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 24px -4px var(--accent-soft);
 }
 .lx-pill-btn:active { transform: translateY(0) scale(.94); }
+
+/* Light mode pill button */
+:root[data-theme="light"] .lx-pill-btn {
+  background: var(--lx-glass-medium-light);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border);
+}
+:root[data-theme="light"] .lx-pill-btn:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 24px -4px var(--accent-soft);
+}
 
 .lx-switch {
   position: relative;
   width: 74px; height: 40px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--ink) 13%, transparent);
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
-  -webkit-backdrop-filter: blur(16px);
-          backdrop-filter: blur(16px);
-  box-shadow: 0 14px 34px -18px rgba(0, 0, 0, .65);
-  transition: border-color .3s, box-shadow .3s, transform .3s var(--ease-spring);
+  border: 1px solid var(--border);
+  /* Unified glass recipe: --glass-medium + blur-md + saturate */
+  background: var(--lx-glass-medium);
+  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
+          backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
+  /* Shadow budget: contact + ambient only */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border);
+  transition: border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
+              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
+              transform var(--lx-dur-fast) var(--lx-spring-snap);
 }
 .lx-switch:hover {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   transform: translateY(-2px);
-  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, .7), 0 0 24px -8px var(--accent-glow);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 24px -4px var(--accent-soft);
 }
 .lx-switch:active { transform: translateY(0) scale(.96); }
+
+/* Light mode switch */
+:root[data-theme="light"] .lx-switch {
+  background: var(--lx-glass-medium-light);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px var(--border);
+}
+:root[data-theme="light"] .lx-switch:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 24px -4px var(--accent-soft);
+}
 .lx-switch-ic {
   position: absolute;
   top: 50%;
