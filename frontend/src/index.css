@@ -1709,11 +1709,10 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 [dir="ltr"] .rail-item { --tip-dir: 1; }
 [dir="rtl"] .rail-item { --tip-dir: -1; }
 
-/* ───────────────────── 16) الحركات ───────────────────── */
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: none; }
-}
+/* ───────────────────── 16) الحركات ─────────────────────
+   Phase A: `@keyframes fade-in-up` كان معرّفًا مرتين (هنا وفي قسم
+   «PERFORMANCE FOUNDATION» فوق). النسخة المكررة اتشالت — التعريف المتبقي
+   هو الأضيق (8px بدل 12px) فيبدو الدخول أسرع وأكثر «native». */
 @keyframes fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -1911,11 +1910,13 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* ── #2 حركة الشريط الجانبي (Premium Motion) ──────────────────────────────── */
 /* انزلاق مفتوح/مغلق بنابض طري + عمق ناعم */
 .sidebar-shell {
+  /* Phase A/B: `will-change: width` كان يُرقّي الشريط لطبقة دائمة رغم أن
+     العرض لا يتحرك بـ GPU أصلًا — أُزيل. `box-shadow` أُزيل من الانتقال
+     لأنه إعادة رسم كاملة أثناء فتح/طي الشريط (أغلى من قيمة المكسب).
+     الطيّ نفسه يبقى استخداميًّا كما هو (سلوك محفوظ). */
   transition:
-    width var(--dur-slow) var(--spring-soft),
-    right var(--dur-slow) var(--spring-soft),
-    box-shadow var(--dur-slow) var(--ease-out);
-  will-change: width, transform;
+    width var(--dur-base) var(--spring-tight),
+    right var(--dur-slow) var(--spring-soft);
 }
 
 /* ─── LIQUID GLASS SIDEBAR SURFACE (Phase 4+5) ───
@@ -1981,7 +1982,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   /* No per-item ::before - shared indicator handles it */
 }
-.nav-item.is-active::before { display: none; }
+.nav-item.is-active::before { display: none; /* Phase A: يبقى مُبطَلًا فعليًّا (المؤشر المشترك يتولّى الأمر) */ }
 .nav-item.is-active svg { transform: scale(1.08); filter: drop-shadow(0 0 6px var(--accent-glow)); }
 
 /* العنصر النشط: تدرّج ناعم + توهج داخلي خفيف + أيقونة منتعشة */
@@ -2941,6 +2942,14 @@ select.field {
 .seg-ghost:disabled ~ button { opacity: 0.55; cursor: not-allowed; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   SUPERCHARGED EOC — طبقة التحويل البصري + الأداء (المراحل B → I)
+   ───────────────────────────────────────────────────────────────────────────
+   تُستورد *قبل* mobile.css عن قصد: الموبايل يبقى الكلمة الأخيرة على الشاشات
+   الصغيرة، والنسخة المكتبية تحصل على الهوية والمعمار الجديد.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@import "./supercharged.css";
+
+/* ═══════════════════════════════════════════════════════════════════════════
    Mobile Styles Import — MUST BE LAST to override everything above
    ═══════════════════════════════════════════════════════════════════════════ */
 @import "./mobile.css";
@@ -3466,11 +3475,9 @@ select.field {
   opacity:0;
   animation: nt-sheen 880ms cubic-bezier(.3,0,.2,1) 150ms both;
 }
-@keyframes nt-sheen{
-  0%  { opacity:0; transform: translateX(-26%); }
-  24% { opacity:.85; }
-  100%{ opacity:0; transform: translateX(26%); }
-}
+/* Phase A: نسخة `nt-sheen` المكررة اتشالت — كان فيه تعريفين بنفس الاسم
+   (هنا و في قسم اللوح المطوي) والثاني هو الذي يُطبَّق فعليًّا. حذف الأول
+   لا يغيّر شيئًا بصريًّا ويوحّد مصدر الحقيقة للحركة. */
 
 /* المرور: رفعة هادئة وحدّ أوضح */
 .sig-note:hover, .sig-note:focus-visible{
@@ -4204,35 +4211,20 @@ select.field {
   text-underline-offset: 3px;
 }
 .sig-detail-link:hover { filter: brightness(1.2); }
-/* ═══════════ 🧱 ثبات تام: لا رفع عند المرور ولا انزلاق دخول ═══════════ */
-
-/* 1) عند المرور: أي كارت أو زر يفضل ثابت في مكانه */
-[class*="card"]:hover, [class*="btn"]:hover, [class*="chip"]:hover,
-.nav-item:hover, .icon-btn:hover, .action-btn:hover, .toast-item:hover,
-.toast-stack-chip:hover, .seg-pill:hover, .sidebar-brand:hover {
-  transform: none !important;
-}
-
-/* 2) نفس العناصر: ممنوع أي إزاحة حتى من حركات الدخول */
-.card-surface, .card-surface-interactive, .hover-lift, .kpi-card, .spot-card,
-.toast-item, .btn-primary, .btn-accent, .icon-btn, .action-btn, .nav-item,
-.chip, .seg-pill, .modal-card, .sidebar-brand {
-  transform: none !important;
-}
-
-/* 3) الحركات الدخولة (انزلاق من تحت / فتح جوا) — العنصر يظهر فورًا */
-.modal-card, .modal-card > *, .toast-item, .palette-pop,
-[class*="animate-fade"], [class*="animate-slide"] {
-  animation: none !important;
-}
-
-/* ═══════════ 🚫 إلغاء البلور فقط — الألوان والحركات زي ما هي ═══════════ */
-
-/* 1) أي تأثير blur خلفي لأي عنصر */
-*, *::before, *::after {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   🧹 (Phase A) — REMOVED: two blanket "stability" blocks
+   ───────────────────────────────────────────────────────────────────────────
+   ما اتشال هنا كان يلغي *كل* النظام البصري، مش يثبّته:
+     • transform: none !important على كل كارت/زر/عنصر تنقل
+       ⇒ ألغى الرفع عند المرور والضغط (`active:scale`) تمامًا.
+     • animation: none !important على المودالات والتوستات ولوحة الأوامر
+       ⇒ ألغى دخولها الناعم تمامًا (كانت تظهر بلا حركة).
+     • backdrop-filter: none !important على `*`
+       ⇒ ألغى الزجاج السائل من الشلّ الجانبي والهيدر واللوحات.
+   البديل هو طبقة «SUPERCHARGED EOC» (في `supercharged.css`) التي تعيد هذه
+   الطبقات بحدود ميزانية أداء صارمة: transform/opacity فقط، وعدد أسطح
+   ضبابي محدود، و`contain` على المناطق الثقيلة، واحترام تقليل الحركة.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════
    EOC GATE — Premium skin (login / secure gate)
@@ -4488,3 +4480,11 @@ select.field {
   .gate::after { display: none; }     /* الحبيبات اتشالت على الموبايل */
   .gate::before { animation: none; }  /* الهالة ثابتة = أسرع */
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SUPERCHARGED EOC — TAIL (المراحل E → J)
+   يا ختام الـ cascade: يعدّل ما لا يمكن تعديله قبل mobile.css (نظام
+   الإشعارات/الطوارئ/حبّة العمل/البوابة) — كلها قواعد مُعرَّفة لاحقًا في
+   index.css نفسه. يُستورد في آخر الملف ليكون الكلمة الأخيرة عليها.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@import "./supercharged-tail.css";

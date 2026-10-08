@@ -210,6 +210,9 @@
   .nav-shell { padding: 1rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
   .nav-item { border-radius: var(--radius); margin-bottom: 0.25rem; }
   .nav-label { font-size: 1rem; }
+  /* مؤشّر التنقّل السافر: حشوة الـ nav هنا 1rem (مش 0.75rem) ⇒السطح المشترك
+     يتطابق مع عرض العنصر بالحرف على اللمس — لا إزاحة أفقية. */
+  .nav-shell::before { inset-inline: 1rem; }
 
   /* ──────────────────────────────────────────────────────────────────────
      8) TABS — Scrollable, larger targets
@@ -434,4 +437,58 @@
     padding: 16px 12px;
     font-size: 14px;
   }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     SUPERCHARGED EOC — معايرة اللمس والبطارية (المرحلة I)
+     ────────────────────────────────────────────────────────────────────────
+     الموبايل = أقل GPU طبيعيًّا + بطارية. كل ضباب يُطلى على مساحة كبيرة هنا
+     يُستهلك مباشرة من عمر البطارية أثناء التمرير. القاعدة:
+       • الشريط الجانبي (شاشة كاملة) والهيدر اللاصق وشاشة التعتيم ⇒ بلا ضباب.
+       • الشريط الجانبي كان يُنتقل في ظله أيضًا ⇒ أُزيل (إعادة رسم كاملة أثناء
+         الفتح/الطيّ على كل إطار).
+     ════════════════════════════════════════════════════════════════════════ */
+
+  /* الشريط الجانبي: سطح مادي معتم بدل ضباب على ارتفاع الشاشة كاملة */
+  .sidebar-shell {
+    background: var(--sc-surface-1, var(--surface));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition: transform 0.3s var(--spring-soft, var(--ease-spring));
+    box-shadow: var(--sc-shadow-2), inset 0 1px 0 var(--sc-light-top);
+  }
+  .sidebar-shell.is-open {
+    box-shadow: var(--sc-shadow-3), inset 0 1px 0 var(--sc-light-top);
+  }
+
+  /* شاشة التعتيم: كتلة لونية فقط — لا ضباب على مساحة الشاشة كاملة */
+  .sidebar-backdrop {
+    background: color-mix(in srgb, #05050a 52%, transparent);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* الهيدر اللاصق: أهم حالة تمرير في الموبايل ⇒ بلا ضباب أثناء التمرير */
+  .glass-header {
+    background: var(--sc-surface-1, var(--surface));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: inset 0 -1px 0 var(--sc-hair, var(--border));
+  }
+
+  /* شبكة الأدوات: مذنّب التركيز يُبقي حقلًا مركَّزًا واحدًا فقط ⇒ بلا دوران */
+  .eoc-frame::before,
+  .segmented-btn.is-active::before,
+  .segmented-btn.is-active-accent::before,
+  .chip-active::before { animation: none; }
+
+  /* حبّة العمل: مدار مزدوج + نواة نابضة + شريط سافر — كلها transform/opacity
+     فتبقى، لكن بلا نبض ظلٍّ إضافي. */
+  .working-pill { box-shadow: var(--sc-shadow-3), inset 0 1px 0 var(--sc-light-top); }
+
+  /* ميض الصفوف: أقصر على اللمس (لا مؤشر ماوس يتبعه) */
+  .mission-flash-row,
+  .focus-row { animation-duration: 1s; }
+
+  /* شريط التمرير المتراكب لا يشغل مساحة ⇒ لا حاجة للحجز */
+  #main-scroll-container { scrollbar-gutter: auto; }
 }

@@ -1,0 +1,637 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   ██  SUPERCHARGED EOC — Phases B → I  ██
+   ────────────────────────────────────────────────────────────────────────────
+   طبقة التحويل البصري + الأداء. تُستورد *قبل* mobile.css عن قصد، حتى تبقى
+   قواعد الموبايل هي الكلمة الأخيرة على الشاشات الصغيرة.
+
+   القوانين الحديدية المطبَّقة هنا:
+     1. لا حركة إلا على `transform` و `opacity` (خارج الـ compositor = ممنوع).
+     2. لا حركة لا نهائية على `box-shadow` / `background-position` /
+        `border-color` / `width` / `height` / `inset` (كل واحدة إعادة رسم كاملة
+        كل إطار، للأبد).
+     3. ميزانية ضباب صارمة: ٣ أسطح كحد أقصى (شريط جانبي + هيدر + لوحة عائمة)،
+        ونصف قطر ≤ ١٢px على الديسكتوب. الشاشات الكاملة (scrims) بلا ضباب نهائيًّا.
+     4. `contain` على كل منطقة ثقيلة ⇒ تغيير صغير لا يُعيد حساب الصفحة.
+     5. العمق من المادة + التباين + الحدود الشعرية، لا من ظلال ضخمة.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   B) الأساس — توكينات الهوية + الطباعة + الأسطح
+   ════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── سلّم محايدات أعمق (داكن) — درجات متقاربة بدل قفزات حادة ── */
+  --sc-bg: #07070a;
+  --sc-bg-deep: #030305;
+  --sc-surface-1: #0c0c10;
+  --sc-surface-2: #121216;
+  --sc-surface-3: #191920;
+  --sc-surface-4: #22222b;
+
+  /* ── حدود شعرية: الضوء الداخلي هو ما يصنع العمق ── */
+  --sc-hair: rgba(255, 255, 255, 0.055);
+  --sc-hair-strong: rgba(255, 255, 255, 0.11);
+  --sc-light-top: rgba(255, 255, 255, 0.05);   /* حافة ضوء من أعلى السطح */
+  --sc-light-in: rgba(255, 255, 255, 0.022);   /* إضاءة داخلية عامة */
+
+  /* ── المادة الزجاجية الموحّدة (dark) ── */
+  --sc-glass-1: rgba(9, 9, 13, 0.74);
+  --sc-glass-2: rgba(12, 12, 17, 0.62);
+
+  /* ── طبقات السطح الجاهزة (تستهلكها البطاقات/اللوحات) ── */
+  --sc-elev-1: linear-gradient(180deg, var(--sc-light-top), transparent 46%), var(--sc-surface-1);
+  --sc-elev-2: linear-gradient(180deg, var(--sc-light-top), transparent 42%), var(--sc-surface-2);
+  --sc-elev-3: linear-gradient(180deg, var(--sc-light-top), transparent 38%), var(--sc-surface-3);
+
+  /* ── الظلال: تلامسية فقط، قصيرة وهادئة ── */
+  --sc-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.42);
+  --sc-shadow-2: 0 2px 6px rgba(0, 0, 0, 0.4), 0 12px 28px -18px rgba(0, 0, 0, 0.7);
+  --sc-shadow-3: 0 3px 10px rgba(0, 0, 0, 0.42), 0 26px 60px -28px rgba(0, 0, 0, 0.82);
+
+  /* ── حجاب الطبقات العائمة: كتلة لونية شفافة بلا ضباب (GPU-free) ── */
+  --sc-scrim: color-mix(in srgb, #05050a 68%, transparent);
+  --sc-scrim-strong: color-mix(in srgb, #05050a 80%, transparent);
+
+  /* ── الطباعة: عائلة نصية مزدوجة + أرقام ثابتة العرض ── */
+  --sc-font-ui: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui,
+    -apple-system, "Noto Sans Arabic", Tahoma, sans-serif;
+  --sc-font-display: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", system-ui,
+    -apple-system, "Noto Sans Arabic", Tahoma, sans-serif;
+  --sc-font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+
+  /* ── حركة: نابض ضيّق + مدد قصيرة (إحساس native فوري) ── */
+  --sc-spring: cubic-bezier(0.32, 1.24, 0.58, 1);
+  --sc-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --sc-dur-1: 90ms;    /* ضغط */
+  --sc-dur-2: 150ms;   /* مرور / تركيز */
+  --sc-dur-3: 240ms;   /* انتقال معياري */
+  --sc-dur-4: 380ms;   /* لوحات / أدراج */
+}
+
+/* ── الوضع الفاتح: إضاءة محيطة أنعم + أسطح صريحة + حدود واضحة ──
+   (ليس عكس الوضع الداكن — درجات مختلفة تمامًا بغرض القراءة الممتازة) */
+:root[data-theme="light"] {
+  --sc-bg: #f6f6f8;
+  --sc-bg-deep: #ededf1;
+  --sc-surface-1: #ffffff;
+  --sc-surface-2: #fbfbfd;
+  --sc-surface-3: #f2f2f6;
+  --sc-surface-4: #e7e7ee;
+
+  --sc-hair: rgba(18, 22, 34, 0.075);
+  --sc-hair-strong: rgba(18, 22, 34, 0.14);
+  --sc-light-top: rgba(255, 255, 255, 0.72);
+  --sc-light-in: rgba(18, 22, 34, 0.012);
+
+  --sc-glass-1: rgba(252, 252, 254, 0.8);
+  --sc-glass-2: rgba(252, 252, 254, 0.66);
+
+  --sc-shadow-1: 0 1px 2px rgba(20, 25, 45, 0.07);
+  --sc-shadow-2: 0 1px 2px rgba(20, 25, 45, 0.06), 0 10px 26px -18px rgba(20, 25, 45, 0.2);
+  --sc-shadow-3: 0 2px 8px rgba(20, 25, 45, 0.07), 0 24px 56px -28px rgba(20, 25, 45, 0.24);
+
+  --sc-scrim: color-mix(in srgb, #101522 34%, transparent);
+  --sc-scrim-strong: color-mix(in srgb, #101522 48%, transparent);
+}
+
+/* ── الطباعة: عائلات مزدوجة + أرقام ثابتة + تحسين ثلاثي ── */
+body {
+  font-family: var(--sc-font-ui);
+  font-optical-sizing: auto;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+}
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.ops-clock,
+.kpi-value,
+.modal-card h3,
+.glass-header h1 {
+  font-family: var(--sc-font-display);
+}
+
+/* أرقام ثابتة العرض في كل مكان يقرأه المشغّل لحظيًّا (KPIs، عدّادات، جداول، إحداثيات) */
+.kpi-value,
+.ops-clock,
+.tabular-nums,
+table,
+th,
+td,
+time,
+.font-mono,
+kbd,
+.sig-tally-n,
+.sig-note b,
+.stat-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* تتبّع أنظف: العناوين ضيّقة، النص الوظيفي مفتوح قليلًا */
+.app-shell h1 { letter-spacing: -0.028em; }
+.app-shell h2 { letter-spacing: -0.024em; }
+.app-shell h3 { letter-spacing: -0.014em; }
+.eyebrow,
+.section-title { text-wrap: balance; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   B) الخلفية المحيطة — هوية غرفة العمليات (ثابتة، بلا JS ولا جزيئات)
+   ────────────────────────────────────────────────────────────────────────────
+   طبقة واحدة تُرسم مرة واحدة: توهّج دافئ من أعلى اليسار (الهوية الحمراء) +
+   برودة هادئة من أسفل اليمين (توازن لوني) + شبكة عمليات خفيفة جدًّا.
+   `main` هو الذي يمرّر داخليًّا، لذا هذه الطبقة *لا* تُعاد رسمها أثناء التمرير.
+   ════════════════════════════════════════════════════════════════════════════ */
+.surface-view,
+.app-shell {
+  background-color: var(--sc-bg);
+  background-image:
+    radial-gradient(1200px 620px at 10% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 68%),
+    radial-gradient(1000px 700px at 108% 112%, color-mix(in srgb, var(--info) 6%, transparent), transparent 70%),
+    linear-gradient(var(--sc-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--sc-hair) 1px, transparent 1px);
+  background-size: auto, auto, 72px 72px, 72px 72px;
+  background-repeat: no-repeat, no-repeat, repeat, repeat;
+}
+
+:root[data-theme="light"] .surface-view,
+:root[data-theme="light"] .app-shell {
+  background-image:
+    radial-gradient(1200px 620px at 10% -10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 64%),
+    radial-gradient(1000px 700px at 108% 112%, color-mix(in srgb, var(--info) 5%, transparent), transparent 68%),
+    linear-gradient(var(--sc-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--sc-hair) 1px, transparent 1px);
+  background-size: auto, auto, 72px 72px, 72px 72px;
+}
+
+/* ── حاوية التمرير الرئيسية ─────────────────────────────────────────────
+   ⚠️ لماذا لا نضع `contain: paint` هنا؟ لأن العزل يُحوّل العنصر إلى
+   containing block لكل عنصر `position: fixed` بداخله. وهذه الصفحة تحتوي
+   على طبقات `fixed inset-0` *مضمّنة* داخل الواجهات (توسيع الجدول،
+   منتقي الأيام، شاشة الإنهاء…) ⇒ العزل كان سيقصّها ويزيح مركزها بعرض
+   الشريط الجانبي. لذلك: عزل التمرير فقط، وليس عزل الرسم. */
+#main-scroll-container {
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
+/* نفس السبب يمنع العزل على أي حاوية قد تحتضن طبقة مضمّنة:
+   .card-surface (بعض الواجهات جذرها بطاقة وتحوي طبقات Full-screen)،
+   .table-shell، وكل ما يحيط بالاستمارات.
+   العزل مطبَّق فقط حيث أمكن إثبات أنه لا يوجد ابن `fixed` (انظر بالأسفل). */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   B) الأسطح — العمق من المادة والضوء الداخلي
+   ════════════════════════════════════════════════════════════════════════════ */
+/* العمق: مادة متدرّجة + حد شعري + حافة ضوء داخلية. بلا عزل هنا (انظر الشرح
+   أعلاه): البطاقة قد تحتضن طبقة fixed مضمّنة. */
+.card-surface {
+  background: var(--sc-elev-1);
+  border: 1px solid var(--sc-hair);
+  box-shadow: var(--sc-shadow-1), inset 0 1px 0 var(--sc-light-top);
+}
+
+:root[data-theme="light"] .card-surface {
+  box-shadow: var(--sc-shadow-1), inset 0 1px 0 var(--sc-light-top);
+}
+
+/* رفع عند المرور: transform فقط + ترقية الطبقة عند الحاجة فقط */
+@media (hover: hover) and (pointer: fine) {
+  .card-surface-interactive,
+  .hover-lift {
+    transition: transform var(--sc-dur-3) var(--sc-ease),
+                box-shadow var(--sc-dur-3) var(--sc-ease),
+                border-color var(--sc-dur-2) var(--sc-ease);
+  }
+  .card-surface-interactive:hover,
+  .hover-lift:hover {
+    transform: translate3d(0, -3px, 0);
+    border-color: var(--sc-hair-strong);
+    box-shadow: var(--sc-shadow-2), inset 0 1px 0 var(--sc-light-top);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   C) الشلّ — الزجاج بميزانية + الهيدر + لوحة التنقل
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── ١) الشريط الجانبي: سطح مادي واحد ──
+   الضباب مُبقى (هو هوية الشلّ) لكن بنصف قطر ١٢px بدل ١٦px، وبلا انتقال على
+   الظل (كان يُعيد رسم الشريط كاملًا أثناء الفتح/الطي). */
+.sidebar-shell {
+  background: var(--sc-glass-1);
+  backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+  border-inline-end: 1px solid var(--sc-hair);
+  box-shadow: inset 0 1px 0 var(--sc-light-top), inset -1px 0 0 rgba(255, 255, 255, 0.02);
+  /* عزل الشريط: تغيير عرضه لا يُعيد حساب بقية الصفحة */
+  contain: layout paint style;
+}
+
+:root[data-theme="light"] .sidebar-shell {
+  background: var(--sc-glass-1);
+  box-shadow: inset 0 1px 0 var(--sc-light-top), inset -1px 0 0 rgba(18, 22, 34, 0.03);
+}
+
+/* كان ظلًّا بديلًا مربوطًا بوجود <main> بعده — أُزيل لصالح مادة موحّدة */
+.sidebar-shell:has(+ main) {
+  box-shadow: inset 0 1px 0 var(--sc-light-top), inset -1px 0 0 rgba(255, 255, 255, 0.02);
+}
+
+/* ── ٢) الهيدر: كروم واحد مع الشريط ── */
+.glass-header {
+  background: var(--sc-glass-2);
+  backdrop-filter: blur(var(--blur-md)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.2);
+  border-bottom: 1px solid var(--sc-hair);
+  box-shadow: inset 0 1px 0 var(--sc-light-top), 0 1px 2px rgba(0, 0, 0, 0.14);
+  contain: layout paint style;
+}
+
+:root[data-theme="light"] .glass-header {
+  background: var(--sc-glass-2);
+  box-shadow: inset 0 1px 0 var(--sc-light-top), 0 1px 2px rgba(20, 25, 45, 0.05);
+}
+
+/* ── ٣) بديل صريح حين لا يدعم المتصفح الضباب: أسطح معتمة نظيفة (لا شفافية بلا ضباب) ── */
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .sidebar-shell { background: var(--sc-surface-1); }
+  .glass-header { background: var(--sc-surface-2); }
+  :root[data-theme="light"] .sidebar-shell { background: var(--sc-surface-1); }
+  :root[data-theme="light"] .glass-header { background: var(--sc-surface-1); }
+}
+
+/* ── ٤) الأدوات الزجاجية الصغيرة (chips / حاويات عائمة) — رقيقة جدًّا ── */
+.sidebar-brand {
+  background: var(--sc-elev-2);
+  border-color: var(--sc-hair-strong);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   C) لوحة التنقل — مؤشر نشط يسافر بـ transform فقط
+   ────────────────────────────────────────────────────────────────────────────
+   بديل كامل للنسخة القديمة التي كانت:
+     • تُشغّل `nav-active-breathe` (box-shadow لا نهائي ⇒ إعادة رسم كل إطار).
+     • تُشغّل «لمعة» متدرّجة على *كل* عنصر (١٩ طبقة تدرّج دائمة).
+     • ترسم شرطة `::before` لكل عنصر نشط (مربوطة بالعنصر لا مشتركة).
+   الآن: سطح واحد مشترك ينتقل بين العناصر بـ `translate3d` — وهو ما يطلبه
+   البرنامج صراحةً (Hardware-accelerated traveling active indicator).
+   ════════════════════════════════════════════════════════════════════════════ */
+.nav-shell {
+  position: relative;
+  /* العزل يمنع حركة المؤشر من إبطال أي شيء خارج الـ nav */
+  contain: layout paint;
+}
+
+.nav-shell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: 0.75rem;                     /* = حشوة الـ nav (p-3) */
+  height: var(--nav-indicator-h, 48px);
+  border-radius: var(--radius);
+  border-inline-start: 3px solid var(--accent);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      color-mix(in srgb, var(--accent) 7%, transparent) 62%,
+      color-mix(in srgb, var(--accent) 3%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent),
+    0 2px 10px -6px var(--accent-glow);
+  /* السفر: transform فقط — لا عرض، لا إزاحة، لا حدود متحركة */
+  transform: translate3d(0, var(--nav-indicator-y, 0px), 0);
+  transition: transform var(--sc-dur-3) var(--sc-spring);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[dir="rtl"] .nav-shell::before {
+  background:
+    linear-gradient(
+      270deg,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      color-mix(in srgb, var(--accent) 7%, transparent) 62%,
+      color-mix(in srgb, var(--accent) 3%, transparent)
+    );
+}
+
+.nav-shell.has-active::before { opacity: 1; }
+
+/* العنصر النشط: بلا مادة خاصة به — السطح المشترك هو المادة (مصدر حقيقة واحد) */
+.nav-item {
+  z-index: 1;
+  position: relative;
+  border-radius: var(--radius);
+  transition:
+    background-color var(--sc-dur-2) var(--sc-ease),
+    color var(--sc-dur-2) var(--sc-ease);
+  /* أُلغيت «اللمعة» (‎::after بتدرّج على كل عنصر) — ضوضاء بصرية + طبقات زائدة */
+}
+
+.nav-item::after { content: none; }
+
+.nav-item.is-active {
+  color: var(--ink);
+  background: transparent;
+  box-shadow: none;
+  animation: none;                 /* 🛑 إلغاء nav-active-breathe (box-shadow لا نهائي) */
+}
+
+.nav-item.is-active::before { content: none; }
+
+.nav-item.is-active svg {
+  transform: scale(1.06);
+  filter: drop-shadow(0 0 5px var(--accent-glow));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover {
+    color: var(--ink);
+    background: var(--surface-hover);
+    transform: none;
+  }
+  .nav-item:not(.is-active):hover svg { transform: scale(1.04); }
+}
+
+.nav-item:active { transform: scale(0.985); }
+
+/* عناوين الأقسام: علامة عمليات صغيرة بدل نصّ باهت عائم */
+.nav-shell > p {
+  letter-spacing: 0.14em;
+  color: var(--faint);
+  position: relative;
+}
+
+/* دخول العناصر: transform/opacity فقط، وبلا `both` حتى لا تُجمَّد الطبقات */
+.nav-item {
+  animation: sc-nav-in var(--sc-dur-4) var(--sc-spring) backwards;
+  animation-delay: calc(var(--nav-i, 0) * 28ms);
+}
+@keyframes sc-nav-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* الطيّ: النص يتلاشى بـ transform/opacity — لا `max-width` متحرّك (تخطيط) */
+.nav-label {
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity var(--sc-dur-3) var(--sc-ease), transform var(--sc-dur-3) var(--sc-ease);
+}
+.nav-label-on { opacity: 1; max-width: 14rem; transform: translate3d(0, 0, 0); }
+.nav-label-off { opacity: 0; max-width: 0; transform: translate3d(-8px, 0, 0); }
+[dir="ltr"] .nav-label-off { transform: translate3d(8px, 0, 0); }
+
+/* ── ٥) أزرار الشريط السفلي (خروج/تحديث) ── */
+.nav-item-danger:hover,
+.nav-item-danger.is-active {
+  color: #ff6161 !important;
+  background: color-mix(in srgb, #ff4d4d 11%, transparent) !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   E) مؤشرات الحالة — نبض مركّب بدل box-shadow متكرر
+   ────────────────────────────────────────────────────────────────────────────
+   كل مؤشر حيّ في الشلّ كان يحرّك `box-shadow` إلى ما لا نهاية. الآن: نقطة ثابتة
+   + حلقة واحدة تكبر وتتلاشى بـ `transform` + `opacity` → إطارات compositor فقط.
+   ════════════════════════════════════════════════════════════════════════════ */
+/* ملاحظة: `liv-idle-dot` و `wp-dot` و `animate-pulse` تُترك كما هي —
+   فهي تحرّك transform/opacity فقط (آمنة على الـ compositor).
+   ما يُستبدل هو ما يحرّك box-shadow فقط. */
+.status-dot-live,
+.live-dot {
+  position: relative;
+  animation: none;          /* إلغاء dot-pulse / live-dot الأصلية (box-shadow) */
+}
+
+.status-dot-live::after,
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ok);
+  opacity: 0;
+  animation: sc-ping 2.6s var(--sc-ease) infinite;
+  pointer-events: none;
+}
+@keyframes sc-ping {
+  0%   { transform: scale(0.6); opacity: 0.5; }
+  70%  { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* `animate-pulse` (Tailwind) تحرّك opacity فقط ⇒ مركّبة وآمنة — تُترك.
+   أما `glow-accent` فكان يحرّك box-shadow لا نهائيًّا ⇒ يُسكَت. */
+.glow-accent { animation: none; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   F) الطبقات المكانية — مودالات / أدراج / قوائم منسدلة
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* الحجاب: كتلة لونية — بلا ضباب على شاشة كاملة (أغلى رسم ممكن) */
+.palette-scrim,
+.modal-scrim,
+.sidebar-backdrop.is-visible {
+  background: var(--sc-scrim);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* اللوحة العائمة: سطح مادي عالي + ضباب محدود المساحة */
+.palette-pop,
+.eoc-select__menu,
+.modal-card {
+  background: var(--sc-elev-3);
+  border: 1px solid var(--sc-hair-strong);
+  box-shadow: var(--sc-shadow-3), inset 0 1px 0 var(--sc-light-top);
+  contain: layout paint style;
+}
+
+/* استعادة دخول المودال (كان مُلغى بـ animation:none) — transform/opacity فقط */
+.modal-card { animation: sc-modal-in var(--sc-dur-4) var(--sc-spring) both; }
+@keyframes sc-modal-in {
+  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.975); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* لوحة الأوامر: نفس الإحساس المكاني لكن أسرع (إحساس «فوري») */
+.palette-pop { animation: sc-pop-in var(--sc-dur-3) var(--sc-spring) both; }
+@keyframes sc-pop-in {
+  from { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   D) المحتوى — KPIs + الجداول
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── بطاقات المؤشر ── */
+.kpi-card {
+  background: var(--sc-elev-1);
+  border: 1px solid var(--sc-hair);
+  box-shadow: var(--sc-shadow-1), inset 0 1px 0 var(--sc-light-top);
+  contain: layout paint style;      /* عدّاد متغيّر لا يُعيد حساب الشبكة كلها */
+}
+
+/* التوهّج الزخرفي: كان radial-gradient باهتًا في الزاوية يقرأ كلكنة داكنة
+   لا كضوء. الآن مصدر ضوء حقيقي: أصغر، أكثر إشراقًا، بتلاشٍ أنعم. */
+.kpi-card::after {
+  inset-inline-end: -2rem;
+  inset-block-start: -2.5rem;
+  width: 7.5rem;
+  height: 7.5rem;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 30%, transparent),
+    color-mix(in srgb, var(--accent) 9%, transparent) 58%,
+    transparent 78%
+  );
+  opacity: 0.55;
+}
+
+/* على الأسطح الفاتحة نفس التوهّج يقرأ كمسحة وردية ثقيلة ⇒ يُخفَّف ويضيق */
+:root[data-theme="light"] .kpi-card::after {
+  width: 6.5rem;
+  height: 6.5rem;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 16%, transparent),
+    color-mix(in srgb, var(--accent) 5%, transparent) 55%,
+    transparent 76%
+  );
+  opacity: 0.5;
+}
+
+/* تسمية المؤشر: ليست لحظة هوية ⇒ حيادية هادئة، وتترك الأكسنت للرقم نفسه */
+.kpi-card .eyebrow,
+.kpi-card .kpi-sub {
+  color: var(--muted);
+}
+.kpi-card .eyebrow::before { display: none; }
+
+.kpi-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+/* ── الجداول: كثيفة، هادئة، ومحصورة ── */
+.table-shell {
+  background: var(--sc-elev-1);
+  border: 1px solid var(--sc-hair);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--sc-shadow-1), inset 0 1px 0 var(--sc-light-top);
+}
+
+.table-shell thead th {
+  background: var(--sc-surface-3);
+  border-bottom: 1px solid var(--sc-hair-strong);
+  letter-spacing: 0.01em;
+  font-weight: 800;
+}
+
+/* ⚠️ لا نلمس `thead` بـ transform/will-change: جداول الطقس تستعمل
+   `position: sticky` على الخلايا (‎.wx-frozen) لتثبيت الرأس والعمود مثل Excel.
+   أي transform على `thead` يجعله containing block للخلايا اللاصقة فيه ⇒ يكسر
+   التثبيت (تبقى ملتصقة داخل رأس قصير بدل حاوية التمرير). تُركت اليه بلا لمس. */
+
+.table-shell tbody tr {
+  transition: background-color var(--sc-dur-2) linear;
+  /* اللمس فقط: لا حركة صفوف — لا ظلال ولا إزاحات في القوائم الكثيفة */
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .table-shell tbody tr:hover { background: var(--surface-hover); }
+}
+
+/* ✅ بديل التمرير الافتراضي (Virtualization) للجداول الطويلة:
+   `content-visibility: auto` تُعفي المتصفّح من تخطيط/رسم الصفوف خارج الشاشة
+   تمامًا، و`contain-intrinsic-size` مع كلمة `auto` تجعل المتصفّح *يتذكّر*
+   الارتفاع الحقيقي بعد أول رسم ⇒ شريط التمرير يبقى دقيقًا.
+   مطبَّق على الديسكتوب فقط (الموبايل يحوّل الصفوف إلى بطاقات في mobile.css). */
+@media (min-width: 768px) {
+  .table-shell tbody tr {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 3.4rem;
+  }
+}
+
+/* ── العزل المطبَّق فعلًا (حيث ثبت أنه لا يوجد ابن `fixed`) ───────────────
+   `.sidebar-shell` و`.nav-shell` و`.kpi-card` و`.glass-header`: بنية أوراق
+   لا تحتضن أي طبقة مضمّنة (القوائم العائمة داخلها إطلاقًا `absolute` بنسب إلى
+   أب مُموضِع، والقوائم المنسدلة الحقيقية تُرسم بـ portal خارج الشجرة).
+   ⇒ تغيير صف جدول / عدّاد KPI / عرض الشريط الجانبي لا يُبطل رسم الصفحة كاملة. */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   H) نظام الحركة — transform/opacity فقط + احترام تقليل الحركة
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ردّ لمسي فوري لكل الأزرار (< 50ms لإحساس الاستجابة) */
+.btn,
+.icon-btn,
+.action-btn,
+.segmented-btn,
+.chip,
+button.nav-item {
+  transition-duration: var(--sc-dur-2);
+  transition-timing-function: var(--sc-ease);
+}
+
+.btn:active:not(:disabled),
+.icon-btn:active,
+.action-btn:active,
+.segmented-btn:active,
+.chip:active {
+  transform: scale(0.97);
+  transition-duration: var(--sc-dur-1);
+}
+
+/* ── مذنّب EOC (هوية بصرية) — يبقى في لحظات التركيز فقط ──────────────────
+   حقل مركَّز = مذنّب يدور، وهو حدث *وقتي* ومُبادر من المستخدم ⇒ تكلفته مشروعة
+   (ولهذا لا نُلغيه).
+   أما الأزرار/الشرائح *النشطة* فحالتها دائمة: كانت تدور ٢.٤ ثانية لا نهائيًّا
+   ⇒ إعادة رسم conic-gradient مقنّع ٦٠ مرة/ثانية على *كل* زر شريحة محدّد في
+   صفحة الفلترة، للأبد. الآن يُبقى الإطار (نفس الشكل الجميل) بلا دوران. */
+.segmented-btn.is-active-accent::before,
+.segmented-btn.is-active::before,
+.chip-active::before,
+.eoc-frame::before {
+  animation: none;
+}
+
+/* ── الشبكات الكبيرة: لا حركة دخول متتالية على قوائم طويلة ── */
+.stagger-children > *:nth-child(n + 13) { animation: none; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   I) تقليل الحركة — إيقاف كل شيء تزييني (لا نُخفي أي معلومة)
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .nav-shell::before { transition: none; }
+  .status-dot-live::after,
+  .live-dot::after { animation: none; opacity: 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   J) قياس/بروفايل (مفيد للتحقّق اليدوي من الأداء)
+   ────────────────────────────────────────────────────────────────────────────
+   لتشخيص أبطأ المناطق في المتصفح: DevTools → Rendering → Paint flashing،
+   مع تشغيل القسم التالي يدويًّا لرؤية ما يُعاد رسمه. ملاحظة تصميمية فقط ولا
+   تُطبَّق تلقائيًّا (لكي لا تُلوّن الواجهة في الإنتاج). */
+.eoc-paint-debug * {
+  outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}

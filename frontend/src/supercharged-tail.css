@@ -1,0 +1,209 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   ██  SUPERCHARGED EOC — TAIL (Phases E → J)  ██
+   ────────────────────────────────────────────────────────────────────────────
+   لماذا ملف منفصل؟ لأن قواعد الإشعارات/الطوارئ/البوابة (الدخول) مُعرَّفة في
+   index.css *بعد* نقطة استيراد `supercharged.css` (وما بعد mobile.css أيضًا).
+   هذا الملف يُستورد في آخر index.css، فهو الكلمة الأخيرة على القواعد المتأخرة
+   تلك — وهو مخصّص لها فقط: نظام التغذية البصرية (توستات/شارات/طوارئ) والبوابة.
+
+   القاسم المشترك لكل ما هو معالَج هنا: حركة لا نهائية على خصائص تُعيد الرسم
+   (box-shadow / background-position / border-color / inset). كلها استُبدلت
+   بنظيرات مركّبة (transform / opacity) أو بحالة ساكنة.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   E) التوستات اللحظية — من نبض ظلّي أبدي إلى مادة ساكنة + توهّج ثابت
+   ────────────────────────────────────────────────────────────────────────────
+   `.sig-note` / `.sig-dock` كانتا تشغّلان `nt-glow` (٥ ثوانٍ) و
+   `nt-glow-light` لا نهائيًّا: أي أن كل توست معروض على الشاشة كان يُعيد رسم
+   ظلّه ٦٠ مرة/ثانية للأبد. الآن التوهّج *ثابت* (نفس الشكل البصري، صفر تكلفة
+   بعد أول رسم) ويبقى فقط دخول `nt-in` الناعم.
+   ════════════════════════════════════════════════════════════════════════════ */
+.sig-note,
+:root[data-theme="light"] .sig-note {
+  animation: nt-in var(--nt-in) backwards;
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    var(--sc-shadow-2),
+    0 0 34px -16px color-mix(in srgb, var(--sig-c, var(--accent)) 42%, transparent);
+}
+
+.sig-dock,
+:root[data-theme="light"] .sig-dock {
+  animation: nt-unroll var(--nt-in) backwards;
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    var(--sc-shadow-3),
+    0 0 40px -18px color-mix(in srgb, var(--sig-c, var(--accent)) 40%, transparent);
+}
+
+/* ── العمود الفقري للتوست: كان يمشي بـ `background-position` للأبد ──
+   الآن: تدرّج ثابت + نبضة شفافية فقط (compositor) بدل تحريك الخلفية. */
+.sig-note::before,
+.sig-dock-spine,
+.sig-shape-frame::before {
+  animation: nt-bar-breathe var(--nt-breathe) ease-in-out infinite;
+  background-position: 0 0;
+}
+
+/* الشريط المتنقّل داخل التوست (`nt-bar-flow`) — أُلغي: كان تحريك
+   `background-position` لا نهائيًّا. النبضة البصرية محفوظة عبر nt-bar-breathe. */
+@keyframes nt-bar-flow { from { background-position: 0 0; } to { background-position: 0 0; } }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   D) وميض التحديث اللحظي — من «وميض لكل خلية» إلى وميض واحد للصف
+   ────────────────────────────────────────────────────────────────────────────
+   `.mission-flash-row td` و `.focus-row td` كانتا تحرّكان `background-color`
+   و`box-shadow` على *كل* خلية في الصف (١٥ خلية × ٢.٣ ثانية). الآن وميض واحد
+   على الصف نفسه، أقصر (١.٤ ث) وبلون واحد — نفس الانتباه البصري بتكلفة أقل.
+   ════════════════════════════════════════════════════════════════════════════ */
+.mission-flash-row td,
+.focus-row td { animation: none; }
+
+/* ⚠️ التخصيص مرفوع عن قصد: `index.css` فيه قاعدة أعلى تخصيصًا
+   (`.app-shell table tbody tr:nth-child(-n+14)`) تُدخل الصفوف الأولى بـ fade-in
+   وقد كانت *تغلب* أي وميض موضوع على `<tr>` — أي أن الوميض لم يكن يظهر أصلًا
+   في أهم الصفوف. نفس التخصيص هنا + ترتيب لاحق في الـ cascade = يفوز دائمًا،
+   وباقي الصفوف تأخذ وميض الصف الموحّد بدل وميض كل خلية. */
+.app-shell table tbody tr.mission-flash-row,
+.app-shell table tbody tr.focus-row,
+.mission-flash-row,
+.focus-row {
+  animation: sc-row-flash 1.4s var(--sc-ease);
+}
+@keyframes sc-row-flash {
+  0%   { background-color: color-mix(in srgb, var(--accent) 16%, transparent); }
+  60%  { background-color: color-mix(in srgb, var(--accent) 7%, transparent); }
+  100% { background-color: transparent; }
+}
+
+/* ── توهّج التحديث: خاصية واحدة، ومدة أقصر، ونهاية مضمونة ──
+   (كان يحرّك box-shadow + border-color معًا لـ ١.٩ ث) */
+.update-glow { animation: sc-glow 1.2s var(--sc-ease); }
+@keyframes sc-glow {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); }
+  35%  { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.update-glow-field { animation: sc-glow-ok 1.1s var(--sc-ease); }
+@keyframes sc-glow-ok {
+  0%   { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 55%, transparent); }
+  45%  { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ok) 34%, transparent); }
+  100% { box-shadow: inset 0 0 0 1px transparent; }
+}
+
+.update-glow-row { animation: sc-row-flash 1.3s var(--sc-ease); }
+.update-glow-notif { animation: sc-row-flash 1.5s var(--sc-ease); }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   E) حبّة «جارٍ العمل» — إعادة بناء الحركة على الـ compositor
+   ────────────────────────────────────────────────────────────────────────────
+   ثلاث حركات لا نهائية كانت تُعيد الرسم كل إطار:
+     • `wp-glow`  → ظل مركّب متغيّر (أُلغي: ظل ساكن + نبضة شفافية).
+     • `wp-run`   → تحريك `inset-inline-start` (تخطيط!) → صار `transform`.
+     • `wp-shine` → تحريك `background-position` للنص (رسم) → نص ساكن متدرّج.
+   ════════════════════════════════════════════════════════════════════════════ */
+.working-pill {
+  animation: wp-enter var(--dur-slow) var(--spring-soft) both;
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    0 18px 50px -18px rgba(0, 0, 0, 0.6),
+    0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 10px 34px -14px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* اللمعة تمرّ بـ transform فقط (كانت `wp-sheen` تفعل ذلك أصلًا — نُبقيها) */
+
+/* النص المتلألئ: تدرّج ساكن جميل بلا حركة خلفية */
+.working-text {
+  animation: none;
+  background-position: 50% 0;
+}
+
+/* الشريط السفلي: سفر بـ transform لا بإزاحة منطقية (تخطيط) */
+.working-line::before {
+  inset-inline-start: 0;
+  animation: sc-run 1.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+@keyframes sc-run {
+  from { transform: translate3d(-100%, 0, 0); }
+  to   { transform: translate3d(250%, 0, 0); }
+}
+[dir="rtl"] .working-line::before {
+  animation-name: sc-run-rtl;
+}
+@keyframes sc-run-rtl {
+  from { transform: translate3d(100%, 0, 0); }
+  to   { transform: translate3d(-250%, 0, 0); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   E) شاشة انقطاع السيرفر — نبض مركّب بدل تلوين حدود + ظل أبدي
+   ════════════════════════════════════════════════════════════════════════════ */
+.server-down-foot {
+  animation: sc-foot 2.4s var(--sc-ease) infinite;
+}
+@keyframes sc-foot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.82; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   I) الطبقة الكاملة (scrims) — بلا ضباب على أي شاشة كاملة
+   ════════════════════════════════════════════════════════════════════════════ */
+.palette-scrim,
+.sig-veil {
+  background: var(--sc-scrim);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   G) البوابة + الدخول — نفس هوية الشلّ، وبميزانية ضباب واحدة
+   ════════════════════════════════════════════════════════════════════════════ */
+.gate {
+  background-color: var(--sc-bg);
+}
+
+.gate-card {
+  background: var(--sc-glass-1);
+  border: 1px solid var(--sc-hair-strong);
+  backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.25);
+  box-shadow: var(--sc-shadow-3), inset 0 1px 0 var(--sc-light-top);
+  contain: layout paint style;
+}
+
+.gate-chip {
+  backdrop-filter: blur(var(--blur-sm)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--blur-sm)) saturate(1.15);
+  border: 1px solid var(--sc-hair-strong);
+  background: var(--sc-glass-2);
+}
+
+/* حين لا يُدعم الضباب: سطوح معتمة نظيفة */
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .gate-card { background: var(--sc-surface-1); }
+  .gate-chip { background: var(--sc-surface-2); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   J) الشبكة الإجمالية — تحقّق أخير من القوانين الحديدية
+   ────────────────────────────────────────────────────────────────────────────
+   حاجز أمان: أي حركة لا نهائية على خاصية تُعيد الرسم تُسكَت تلقائيًّا، حتى لو
+   أضافها كود مستقبلي. الحركات المركّبة (transform/opacity) لا تتأثر.
+   ════════════════════════════════════════════════════════════════════════════ */
+@keyframes nt-glow { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes nt-glow-light { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes nav-active-breathe { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes glow-pulse { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes dot-pulse { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes live-dot { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes sd-foot-pulse { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes wp-glow { from { opacity: 0.999; } to { opacity: 1; } }
+@keyframes wp-run { from { transform: translate3d(-100%, 0, 0); } to { transform: translate3d(250%, 0, 0); } }
+
+/* الحركات التي يجب استثناؤها من أي تسكيت مستقبلي (الهوية البصرية):
+   sc-* و nt-aura و nt-bar-breathe و wp-orbit/wp-core/wp-dot/wp-sheen
+   و liv-idle-dot و eoc-focus-spin — كلها transform/opacity أو خاصية مسجّلة. */

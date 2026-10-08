@@ -1943,6 +1943,49 @@ useEffect(() => {
 
   const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, isYouth, weatherEligible } = getRoleFlags(userData);
 
+  // ════════════════════════════════════════════════════════════════════════
+  // 🧭 مؤشّر التنقّل السافر (Phase C) — سطح واحد ينتقل بـ transform فقط
+  // ────────────────────────────────────────────────────────────────────────
+  // القياس بصريّ خالص: نقرأ موضع العنصر النشط ونمرّره كمتغيّرَي CSS على
+  // الـ <nav>، فيرسم CSS السطح المشترك ويسافر بـ translate3d (GPU).
+  // • لا يقرأ ولا يغيّر أي منطق (تنقّل/أدوار/بيانات) — مجرد أبعاد بكسل.
+  // • القياس داخل requestAnimationFrame واحد، والاستقرار عبر ResizeObserver
+  //   ⇒ صفر عمل على الـ main thread أثناء التمرير أو الاستخدام العادي.
+  //
+  // ⚠️ موضعه هنا (بعد `getRoleFlags`) مقصود: قائمة الاعتماديات تقرأ قيم الأدوار
+  //    المعلنة في السطر أعلاه. لو رُفع لأعلى لوقع `ReferenceError` في منطقة
+  //    الـ TDZ وقت أول عرض — وهو ما تحرسه `startMountWatchdog` في main.jsx.
+  // ════════════════════════════════════════════════════════════════════════
+  const navRef = useRef(null);
+  const [navIndicator, setNavIndicator] = useState({ on: false, y: 0, h: 48 });
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof ResizeObserver === 'undefined') return undefined;
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const active = nav.querySelector('.nav-item.is-active');
+        if (!active) {
+          setNavIndicator((p) => (p.on ? { ...p, on: false } : p));
+          return;
+        }
+        const n = nav.getBoundingClientRect();
+        const a = active.getBoundingClientRect();
+        const y = Math.round(a.top - n.top);
+        const h = Math.round(a.height);
+        setNavIndicator((p) => (p.on && p.y === y && p.h === h ? p : { on: true, y, h }));
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(nav);
+    const activeEl = nav.querySelector('.nav-item.is-active');
+    if (activeEl) ro.observe(activeEl);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure).catch(() => {});
+    return () => { cancelAnimationFrame(frame); ro.disconnect(); };
+  }, [activeTab, isSidebarOpen, language, isOwner, isSupervisor, isJoker, isYouth, weatherEligible]);
+
   // 💡 مركز الإشعارات الفوري (متطلب #5):
   // - Incremental polling بوسم تصاعدي (event_id) — من غير ما ننزل الـ audit_logs كاملة
   // - المستلم يتحدد من الـ backend بالـ user_id (مش مقارنة بالأسماء زي زمان)
@@ -3097,7 +3140,12 @@ useEffect(() => {
             </div>
           )}
 
-          <nav key={isSidebarOpen ? 'nav-open' : 'nav-closed'} className="nav-shell p-3 space-y-1.5 mt-2">
+          <nav
+            ref={navRef}
+            key={isSidebarOpen ? 'nav-open' : 'nav-closed'}
+            style={{ '--nav-indicator-y': `${navIndicator.y}px`, '--nav-indicator-h': `${navIndicator.h}px` }}
+            className={`nav-shell p-3 space-y-1.5 mt-2${navIndicator.on ? ' has-active' : ''}`}
+          >
             {/* 🤖 القسم التلقائي: الوحدات اللي بتشتغل وترصد لوحدها (مؤشرات + رصد آلي + طقس + زلازل) */}
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التلقائية</p>}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<PowerBiIcon />} label="لوحة المؤشرات الرئيسية" isActive={activeTab === 'powerbi'} onClick={() => handleNavigation('powerbi')} isOpen={isSidebarOpen} />}

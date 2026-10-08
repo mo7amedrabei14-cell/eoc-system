@@ -1,1182 +1,332 @@
-# EOC VISUAL TRANSFORMATION PLAN
+EOC VISUAL TRANSFORMATION PLAN (SUPERCHARGED EDITION)
+Stable EOC → Radical Premium Native-Application Experience
+0. MASTER PRINCIPLE — HYPER-PERFORMANCE FIRST
+This is the single most important rule of the entire project.
 
-## From Stable Web Dashboard → Premium Native-Application Experience
+THE SYSTEM MUST BE:
+AS FAST + AS SMOOTH + AS RESPONSIVE AS PHYSICALLY POSSIBLE
+before anything else.
 
-### PRIMARY GOAL
+The UI must run at a locked 60 FPS (and scale smoothly to 120 FPS on high-refresh-rate displays).
+Visual quality is extremely important, but performance has absolute priority.
 
-Transform the existing EOC frontend into a dramatically:
+The final product must feel:
+instant → responsive → fluid → stable → smooth → weightless
+at every interaction.
 
-**lighter + faster + smoother + cleaner + more premium + more polished**
+The user should never feel:
 
-experience inspired by the best qualities of:
+lag
 
-**Apple + iOS + macOS + visionOS + Google Material 3 + Linear + Raycast**
+input delay (Click-to-action must be < 50ms)
 
-Do NOT copy any of them literally.
+animation hesitation
+
+stutter or frame drops (Jank)
+
+delayed controls
+
+UI freezing (Main-thread blocking)
+
+unnecessary loading or React re-rendering
+
+excessive repainting (Layout Thrashing)
+
+sluggish scrolling
+
+Priority order
+Runtime speed & Main-Thread Freedom (Zero blocking tasks)
+
+Interaction responsiveness (Instant tactile feedback)
+
+Animation smoothness (GPU-accelerated only)
+
+Rendering efficiency (Strict CSS containment)
+
+Visual hierarchy
+
+Materials / graphics
+
+Decorative effects
+
+A visual effect that makes the application slower is a fatal design decision, even if it looks impressive.
+A simpler implementation that feels instantaneous is ALWAYS preferred over a more impressive implementation that adds rendering cost.
+
+1. PRIMARY GOAL
+Transform the existing EOC frontend into a:
+dramatically lighter + faster + smoother + cleaner + more premium + more spatial + more polished
+native-application experience.
+
+The redesign should feel comparable in quality to the strongest principles from:
+Apple + iOS + macOS + visionOS + Google Material 3 + Linear + Raycast + Vercel + Stripe
 
 Extract their strongest principles around:
 
-* material
-* hierarchy
-* spatial depth
-* motion
-* interaction
-* navigation
-* feedback
-* responsiveness
+material & hierarchy
 
-and create an original visual language for the EOC.
+depth & lighting
 
----
+motion & interaction
 
-# 0. STARTING CONDITION — CRITICAL
+Zero-latency interfaces (Linear/Raycast principle)
+and create an original: EOC visual identity.
 
-The current repository is the **stable source of truth**.
+2. RADICAL VISUAL TRANSFORMATION
+This is NOT a small polish pass.
+The difference between old and new should be: immediately obvious side-by-side.
 
-Do NOT assume previous visual experiments are correct.
+The user should feel:
 
-Do NOT blindly reuse previous agents' CSS, components, or animation implementations.
-
-First inspect:
-
-* actual frontend architecture
-* current components
-* current selectors
-* design tokens
-* theme system
-* responsive rules
-* existing motion infrastructure
-* state boundaries
-* forms
-* maps
-* filtering
-* navigation
-* mission flows
-
-The examples in this plan are **design intent only**.
-
-Adapt everything to the actual codebase.
-
-Do NOT copy example snippets literally when they conflict with the repository's architecture.
-
----
-
-# 1. NON-NEGOTIABLE SAFETY RULES
-
-These rules override every visual requirement.
-
-### NEVER change application behavior to create a visual effect.
-
-Do NOT modify:
-
-* business logic
-* state logic
-* filtering logic
-* map behavior
-* form state
-* mission state
-* data flow
-* calculations
-* API behavior
-* authentication
-* RBAC
-* workflows
-* event semantics
-
-### NEVER let animation control application state.
-
-Animations must NOT:
-
-* open/close a component by changing state
-* reset a filter
-* remount a form
-* alter map state
-* alter mission state
-* change navigation state
-* change data
-* trigger business logic
-
-### NEVER introduce remounts just to animate.
-
-Avoid:
-
-* unnecessary `key` changes
-* animation-driven unmount/mount cycles
-* lifecycle changes purely for visual effects
-
-A visual transition must remain presentation-only.
-
-### REUSE existing infrastructure.
-
-Prefer existing:
-
-* components
-* motion primitives
-* design tokens
-* utilities
-* selectors
-
-Do not create new abstractions unless they genuinely simplify the system.
-
-### DO NOT create CSS patch layers.
-
-Avoid:
-
-* append-after-append overrides
-* specificity wars
-* giant emergency CSS files
-* excessive `!important`
-
-Prefer clean, scoped, maintainable styles.
-
-### NO REDUCED-MOTION LAYER
-
-Do NOT add:
-
-* `prefers-reduced-motion`
-* `reducedMotion="user"`
-
-The full intended motion experience should remain enabled.
-
-### NO FAKE PERFORMANCE BUDGETS
-
-Do NOT create CSS variables that pretend to measure blur/CPU/GPU usage.
-
-Performance must be evaluated using real browser behavior and actual rendering/compositing cost.
-
----
-
-# 2. LAYOUT IS FROZEN
-
-The visual design may change substantially.
-
-The structural layout may NOT.
-
-Keep the established locations and information architecture of:
-
-* Sidebar
-* Header
-* major content regions
-* dashboard sections
-* cards
-* forms
-* tables
-* maps
-* filters
-* controls
-
-Do NOT:
-
-* move major components to different regions
-* reorder primary sections
-* change the main grid architecture
-* change the established information hierarchy
-* move the Sidebar to another part of the screen
-* move the Header
-* relocate cards between columns
-* redesign the application as a different layout system
-
-You may dramatically redesign how existing elements **look, feel, illuminate, animate, and respond**.
-
-Think:
-
-**same architecture + radically better visual language**
-
----
-
-# 3. PERFORMANCE IS THE PRIMARY DESIGN CONSTRAINT
-
-The final application must feel **lighter than the stable baseline**.
-
-Do not add visual effects first and optimize later.
-
-Choose the highest visual value for the lowest runtime cost.
-
-## Prefer
-
-* `transform`
-* `opacity`
-* lightweight transitions
-* efficient spring motion
-* static lighting
-* subtle gradients
-* compositor-friendly animation
-* reusable motion primitives
-* restrained blur
-
-## Avoid / Minimize
-
-* many simultaneous `backdrop-filter` surfaces
-* very large blur radii
-* continuously animated blur
-* animated `box-shadow`
-* animated filters
-* expensive `mix-blend-mode`
-* giant gradients layered on many elements
-* unnecessary infinite animations
-* expensive layout animation
-* unnecessary React re-renders
-* JavaScript animation loops
-* animation of width/height/top/left when transform can do the job
-
-The system should feel:
-
-**instant to interact with + smooth while moving**
-
-not:
-
-**beautiful but heavy**
-
----
-
-# 4. PERFORMANCE VALIDATION
-
-Use actual browser tools where available.
-
-Inspect:
-
-* Chrome DevTools Performance
-* Rendering / paint behavior
-* compositing
-* long tasks
-* layout work
-* animation smoothness
-* excessive repainting
-
-Do NOT claim a percentage improvement unless it is actually measured.
-
-Never invent:
-
-"60% CPU reduction"
-
-unless it has been benchmarked.
-
-Use measurable evidence where possible.
-
----
-
-# 5. AMBIENT BACKGROUND — PREMIUM BUT QUIET
-
-Create a refined command-center atmosphere.
-
-The background should add:
-
-* depth
-* identity
-* environmental light
-* premium atmosphere
-
-without distracting from operational content.
-
-A subtle brand-colored ambient glow is desirable.
-
-Use:
-
-* one or two restrained environmental gradients
-* low-opacity lighting
-* theme-aware treatment
-
-Avoid:
-
-* noisy grids everywhere
-* multiple competing glows
-* animated background blobs
-* large moving background effects
-
-## DARK MODE
-
-Dark mode may use a deeper, richer ambient brand atmosphere.
-
-## LIGHT MODE
-
-Light mode needs its own deliberate treatment:
-
-* softer
-* cleaner
-* slightly warmer
-* lower saturation
-* high readability
-
-Do NOT simply invert dark-mode values.
-
-The ambient background should feel intentional in both themes.
-
----
-
-# 6. LIQUID GLASS — SELECTIVE AND HIGH QUALITY
-
-Introduce a sophisticated **Liquid Glass-inspired material language**.
-
-This is NOT generic glassmorphism.
-
-Do NOT use blur everywhere.
-
-## Glass is primarily for the functional/chrome layer:
-
-* Sidebar
-* Header
-* navigation
-* tabs
-* floating controls
-* dialogs
-* drawers
-* notifications
-* contextual controls
-
-## Keep solid/readable surfaces for:
-
-* KPI data
-* dashboards
-* tables
-* forms
-* maps
-* dense operational content
-
-## Liquid Glass characteristics
-
-Use a restrained combination of:
-
-* translucency
-* adaptive tint
-* subtle background interaction
-* specular highlights
-* inner light
-* hairline edges
-* material contrast
-* controlled blur
-* environmental depth
-
-The material should feel:
-
-**alive + refined + spatial**
-
-not:
-
-**blurred + shiny + decorative**
-
-Use lower blur values where possible.
-
-Static lighting is preferred over constantly animated lighting.
-
----
-
-# 7. SIDEBAR TRANSFORMATION
-
-The Sidebar is the most important visual surface.
-
-Keep:
-
-* its location
-* its navigation
-* its functionality
-
-But substantially improve its visual identity.
-
-It may become:
-
-* a refined floating/native-style panel
-* a sophisticated glass surface
-* a stronger spatial object
-* a more elegant navigation environment
-
-You may improve:
-
-* surface
-* radius
-* material
-* hairlines
-* light response
-* icon presentation
-* grouping
-* hover state
-* selected state
-* spacing rhythm
-* collapsed state
-* depth
-* motion
-
-## Active navigation
-
-Use a true shared active indicator where the architecture safely supports it.
-
-The active element should feel like a physical surface traveling between destinations.
-
-Avoid restarting separate animations on each item.
-
-## Sidebar interaction
-
-Improve:
-
-* hover
-* press
-* active
-* focus
-* expand/collapse
-
-Keep interaction immediate.
-
-Do NOT introduce state changes through animation.
-
----
-
-# 8. HEADER + NAVIGATION
-
-Keep the Header and navigation in the same locations.
-
-Make them feel like one coherent premium chrome layer.
-
-Improve:
-
-* material
-* controls
-* active states
-* icon treatment
-* tab selection
-* hover
-* press
-* focus
-* hierarchy
-* transition quality
-
-Active indicators should visibly move between states rather than simply being recreated.
-
----
-
-# 9. MOTION SYSTEM
-
-Motion should become part of the product's identity.
-
-Build a coherent motion language rather than random animations.
-
-Prioritize:
-
-### Directional navigation
-
-When changing between views:
-
-* current content exits in a logical direction
-* incoming content enters from the corresponding direction
-* the transition preserves the feeling of one continuous space
-
-Do NOT use fade-only transitions.
-
-### Shared layout / shared elements
-
-Where appropriate, use:
-
-* `layout`
-* `layoutId`
-* shared view transitions
-* shared element patterns
-
-for things that genuinely continue from one state to another.
-
-Examples:
-
-* active navigation surface
-* tab indicator
-* contextual controls
-* selected states
-* overlay relationships
-
-### Spring interaction
-
-Use fast, controlled springs for:
-
-* active indicators
-* Sidebar
-* drawers
-* panels
-* press feedback
-* selected states
-
-Springs should feel:
-**tight + precise + controlled**
-
-Not:
-**bouncy + playful**
-
----
-
-# 10. HIGH-IMPACT INTERACTIONS
-
-Create a small number of truly memorable interactions.
-
-The goal is not "animation everywhere".
-
-The goal is to have interactions that people notice during a live demonstration.
-
-Prioritize:
-
-1. Sidebar active indicator physically traveling.
-2. Directional tab/page movement.
-3. Coordinated Sidebar/content transition.
-4. Modal emerging naturally from its trigger/context.
-5. Dropdown emerging naturally from its trigger.
-6. Notifications entering and stacking elegantly.
-7. Success feedback with a satisfying completion moment.
-8. Warning/error feedback with controlled visual emphasis.
-9. Expand/collapse transformations.
-10. Tactile button/control interactions.
-
-These should be:
-
-* fast
-* visible
-* elegant
-* interruptible
-
----
-
-# 11. FEEDBACK STATES
-
-Do a dedicated visual pass on:
-
-* success
-* error
-* warning
-* info
-* confirmation
-* toast
-* notification
-* loading
-* empty states
-
-These are high-value moments.
-
-## Success
-
-Use a short completion animation that communicates:
-
-**done**
-
-without becoming celebratory clutter.
-
-## Error
-
-Use a short corrective response:
-
-* controlled shake
-* emphasis
-* focused visual feedback
-
-Do not overdo it.
-
-## Warning
-
-Make it noticeable without being aggressive.
-
-## Notifications
-
-Notifications should:
-
-* enter elegantly
-* stack naturally
-* settle into position
-* exit smoothly
-
-Where technically safe, their visual origin should relate to their trigger.
-
-## Loading
-
-Use lightweight motion.
-
-Avoid multiple infinite decorative effects.
-
----
-
-# 12. CARDS / KPI / PANELS
-
-Keep them in their existing locations.
-
-Make them feel:
-
-* lighter
-* cleaner
-* more dimensional
-* more premium
-
-## Shadows
-
-Shadows must remain restrained.
-
-Prefer:
-
-* contact shadows
-* very soft ambient separation
-* hairlines
-* material contrast
-* inner highlights
-
-Avoid giant black shadows.
-
-Depth should come primarily from:
-
-**material + contrast + light + spacing**
-
-rather than heavy shadow.
-
-## KPI
-
-Operational numbers must be highly readable.
-
-Use:
-
-* strong contrast
-* clear hierarchy
-* tabular numerals where appropriate
-* appropriate font weight
-
-Primary numbers should immediately stand out.
-
-Do NOT sacrifice data readability for aesthetics.
-
----
-
-# 13. TABLES
-
-Tables should feel:
-
-**dense + calm + readable + professional**
-
-Improve:
-
-* surface treatment
-* header hierarchy
-* hairlines
-* row hover
-* selected state
-* action affordances
-
-Do not animate every row.
-
-Do not add unnecessary stagger to large data tables.
-
-Do not compromise scrolling or overflow behavior.
-
----
-
-# 14. FORMS
-
-Forms should feel:
-
-**precise + tactile + calm + trustworthy**
-
-Improve:
-
-* field surfaces
-* focus states
-* validation visuals
-* button feedback
-* spacing refinement without changing structure
-
-IMPORTANT:
-
-Never allow an animation to:
-
-* hide a form
-* remount a form
-* change its state
-* reset its data
-* close it during a press
-* interfere with submit behavior
-
-Form behavior must remain exactly as it was.
-
----
-
-# 15. MAPS
-
-Maps are operational content and must remain functional and readable.
-
-Do NOT:
-
-* add heavy overlays over the map
-* break map controls
-* alter map behavior
-* change map state
-* apply expensive glass effects directly over large map areas
-
-Only refine surrounding presentation and lightweight controls where appropriate.
-
----
-
-# 16. LOGIN + PRE-LOGIN
-
-The Login and Pre-Login experience should feel like the same premium product.
-
-You may substantially improve their:
-
-* material
-* ambient background
-* lighting
-* depth
-* typography treatment
-* controls
-* motion
-* transitions
-* focus states
-* loading
-* feedback
-
-Keep:
-
-* logo
-* authentication flow
-* functionality
-
-Do NOT redesign the logo itself.
-
-The Login and Pre-Login should share the same visual vocabulary as the main EOC shell.
-
----
-
-# 17. DARK + LIGHT MODE
-
-Both themes are first-class.
-
-Do NOT design Dark Mode and then create Light Mode by swapping a few colors.
-
-Deliberately refine:
-
-### Dark Mode
-
-* material
-* ambient light
-* contrast
-* surfaces
-* highlights
-* states
-* numbers
-
-### Light Mode
-
-* material opacity
-* ambient warmth
-* surface separation
-* text contrast
-* numbers
-* borders
-* states
-* buttons
-* notifications
-
-Important operational information must remain equally readable in both themes.
-
----
-
-# 18. MOBILE
-
-Mobile is a first-class experience.
-
-Do NOT treat mobile as "desktop but narrower".
-
-Preserve the existing responsive structure and behavior.
-
-Test at:
-
-* 390px
-* 430px
-* 768px
-
-Verify:
-
-* Sidebar/drawer
-* Header
-* navigation
-* lists
-* accordions
-* forms
-* tables
-* maps
-* dropdowns
-* modals
-* notifications
-* scrolling
-* touch interaction
-* overflow
-* stacking
-
-## DO NOT introduce new gesture-based navigation
-
-Do not add swipe navigation or gesture-driven state changes unless it already exists and is known to be safe.
-
-Touch feedback should remain visual.
-
-No fake haptics.
-
-## Mobile performance
-
-On mobile:
-
-* reduce blur intelligently
-* reduce decorative effects
-* keep important motion
-* keep interaction feedback
-* avoid heavy simultaneous effects
-
-Do NOT automatically remove every animation.
-
-Reduce intelligently rather than disabling blindly.
-
----
-
-# 19. RESPONSIVE DESKTOP
-
-Validate:
-
-* 1920×1080
-* 1600×900
-* 1440×900
-* 1366×768
-
-Use 1920×1080 as the primary desktop reference.
-
-Do NOT create a fixed 1920px canvas.
-
-Do NOT use `transform: scale()` to fake desktop sizing.
-
-The layout should scale naturally and remain usable on smaller screens.
-
----
-
-# 20. MOTION PERFORMANCE RULES
-
-Keep most routine UI transitions approximately in the fast-response range.
-
-Use:
-
-* short timing
-* responsive springs
-* transform
-* opacity
-
-Do not delay user interaction for animation.
-
-Animation should begin immediately.
-
-Prefer:
-
-**instant response → smooth settling**
-
-not:
-
-**click → wait → animation**
-
-Animations must be interruptible.
-
-Rapid interaction should not cause animation buildup or stale transitions.
-
----
-
-# 21. MOTION CONSISTENCY
-
-Create a small reusable motion vocabulary.
-
-Examples:
-
-* PageTransition
-* TabTransition
-* NavigationMotion
-* SharedIndicator
-* ModalMotion
-* DrawerMotion
-* StaggeredEntrance
-* SpringPress
-* ExpandCollapse
-
-Do NOT create hundreds of unrelated animation implementations.
-
-Do NOT duplicate the same animation logic across many screens.
-
-The whole EOC should feel like one product.
-
----
-
-# 22. CSS / ARCHITECTURE QUALITY
-
-Do NOT build a giant last-loaded stylesheet simply to overpower earlier CSS.
-
-Do NOT solve every conflict using `!important`.
-
-Do NOT create layers of competing selectors.
-
-Prefer:
-
-* clear tokens
-* clean scoped selectors
-* existing architecture
-* reusable components
-* minimal specificity
-* understandable theme rules
-
-Before creating a new style, check whether an existing token or component can support it cleanly.
-
----
-
-# 23. REGRESSION PROTECTION
-
-The following are protected behaviors:
-
-* Task Log filtering
-* mission forms
-* map behavior
-* mission state
-* form state
-* responsive state
-* authentication
-* navigation state
-* existing calculations
-* existing workflows
-
-If a visual change causes a regression:
-
-**revert the visual change**
-
-Do NOT patch the application behavior to accommodate the visual change.
-
----
-
-# 24. EXECUTION METHOD
-
-Implement the plan in phases.
-
-After every major phase:
-
-1. Build.
-2. Run tests.
-3. Check for new errors.
-4. Verify the affected UI.
-5. Verify that protected functionality still behaves correctly.
-
-Do NOT stack later phases on top of a broken phase.
-
-If something breaks:
-
-* identify the root cause
-* fix or revert that phase
-* only then continue
-
-Do not wait for user approval between phases.
-
-Continue autonomously once the phase is verified.
-
----
-
-# 25. VALIDATION MATRIX
-
-The final implementation must be tested across:
-
-### Desktop
-
-* 1920×1080
-* 1600×900
-* 1440×900
-* 1366×768
-
-### Mobile
-
-* 390px
-* 430px
-* 768px
-
-### Themes
-
-* Dark
-* Light
-
-### Functional areas
-
-* Login
-* Pre-login
-* Dashboard
-* Navigation
-* Sidebar
-* Mission forms
-* Task Log
-* Maps
-* Filters
-* Notifications
-* Modals
-* Dropdowns
-* Loading
-* Success
-* Error
-* Warning
-
----
-
-# 26. TASK LOG REGRESSION CHECK
-
-This specific behavior must be tested:
-
-**Today / اليوم + Open Missions / المهام المفتوحة**
-
-Selecting "Open Missions" must NOT silently remove or reset the existing Today date filter.
-
-Test multiple filter combinations.
-
-Do not claim filtering is correct without actually reproducing these interactions.
-
----
-
-# 27. PERFORMANCE ACCEPTANCE CRITERIA
-
-Do NOT invent numerical improvements.
-
-Instead verify that:
-
-* navigation remains responsive
-* scrolling remains responsive
-* filtering remains responsive
-* opening forms remains responsive
-* maps remain usable
-* notifications remain responsive
-* motion does not cause visible frame drops
-* expensive effects are limited
-* unnecessary infinite animations are removed
-* layout work is minimized
-
-The final result should feel **lighter than the stable baseline**.
-
----
-
-# 28. FINAL VISUAL QUALITY BAR
-
-This is NOT a generic "make it prettier" task.
-
-The final result should feel like:
-
-**a premium native application for a professional emergency operations environment.**
-
-Use:
-
-**Apple-level restraint**
-+
-**visionOS spatial depth**
-+
-**Google-level interaction clarity**
-+
-**Linear-level product polish**
-+
-**Raycast-level native-app feel**
-
-while creating an original EOC identity.
-
-The visual transformation should be immediately noticeable.
-
-But do NOT confuse:
-
-**more effects**
-
-with:
-
-**better design**
-
-The target is:
-
-**less visual noise + stronger hierarchy + better materials + stronger interaction + faster motion + cleaner depth**
-
----
-
-# 29. FINAL SUCCESS CRITERIA
-
-Success means ALL of the following are true:
-
-✅ System feels noticeably lighter and faster.
-
-✅ Navigation feels fluid and spatial.
-
-✅ Sidebar feels substantially more premium.
-
-✅ Active navigation physically moves between destinations.
-
-✅ Motion is visible and satisfying without being slow.
-
-✅ Liquid Glass is selective and purposeful.
-
-✅ Ambient background adds depth without noise.
-
-✅ Shadows are significantly lighter and cleaner.
-
-✅ Numbers and operational data are highly readable.
-
-✅ Dark Mode looks intentional and premium.
-
-✅ Light Mode looks intentional and premium.
-
-✅ Login and Pre-Login belong to the same visual system.
-
-✅ Mobile is stable, responsive, and usable.
-
-✅ Maps remain functional.
-
-✅ Forms remain stable.
-
-✅ Task Log filtering behavior remains correct.
-
-✅ No business logic has changed.
-
-✅ No application behavior has changed.
-
-✅ No animation controls application state.
-
-✅ Performance is better than the baseline.
-
----
-
-# 30. FINAL RULE
+"This is the same EOC system, but it looks like a completely different, incredibly fast premium product."
 
 Be:
-
-**ambitious with visual design**
-
+extremely conservative with system behavior
 and
+extremely ambitious with visual design and performance.
 
-**extremely conservative with system behavior.**
+3. DESIGN & PERFORMANCE REFERENCE SOURCES
+Use these as visual, interaction, and performance references:
 
-You have maximum creative freedom over:
+Apple HIG (Materials, Motion, Spatial Layout)
 
-* appearance
-* materials
-* visual hierarchy
-* surfaces
-* Sidebar styling
-* Header styling
-* navigation styling
-* typography treatment
-* lighting
-* Liquid Glass
-* motion
-* interactions
-* feedback states
+Google Material 3
 
-You have ZERO freedom over:
+Vercel Geist & Radix Colors
 
-* business logic
-* data behavior
-* filtering
-* forms
-* maps
-* authentication
-* RBAC
-* workflows
-* application state semantics
+Chrome DevTools Performance: (Rendering, paint, compositing, layout, long tasks, animation cost).
 
-The desired result is:
+React Profiler: (Identify and destroy unnecessary renders).
 
-**THE SAME EOC**
+4. GIT / GITHUB OWNERSHIP
+Git and GitHub are NOT part of this agent's responsibility.
+Work: LOCAL ONLY.
+Use only: local project files, local dev server, local browser.
 
-with
+5. CURRENT SCOPE — VISUAL / MOTION / GRAPHICS
+The application logic is settled. This task is:
+VISUAL + MOTION + GRAPHICS + INTERACTION POLISH
 
-**A DRAMATICALLY BETTER VISUAL EXPERIENCE**
+Strictly Protected:
 
-while being:
+Business logic, RBAC, Auth
 
-**LIGHTER + FASTER + SMOOTHER + MORE PREMIUM**
+API behavior & calculations
 
-Do not play it safe visually.
+Form/Map/Filtering/Task Log state and data flow.
 
-Do not experiment with the system's behavior.
+6. PHASE 0 — FULL FRONTEND INSPECTION + PERFORMANCE CLEANUP
+Before redesigning anything, clean the old visual debris and performance bottlenecks.
 
-Build the strongest frontend experience possible within these boundaries.
+Search for visual blockers:
+duplicate CSS, duplicate keyframes, unused classes/assets.
+
+stale experimental styles, inline styles, !important.
+
+animation: none, transition: none.
+
+Search for Performance Killers (CRITICAL):
+Unnecessary React rerenders: (Components rendering when their props haven't changed).
+
+Expensive animation loops: (Animating width, height, margin, padding, top/left).
+
+Excessive DOM complexity: (Deeply nested divs for simple visuals).
+
+Giant SVGs inline: (Convert to sprite sheets or lightweight icons).
+
+Heavy Blur: (Excessive backdrop-filter: blur covering massive screen areas).
+
+7. PERFORMANCE BASELINE
+Before major visual work, measure the current application.
+Record:
+
+Production build size (JS/CSS chunks).
+
+Long tasks (Tasks > 50ms blocking the main thread).
+
+FPS drops during map panning or table scrolling.
+
+8. PERFORMANCE RULES (THE IRON LAWS)
+ONLY Animate Compositor Properties (GPU Accelerated)
+transform: translate3d(x,y,z) or transform: translateX/Y
+
+opacity
+
+scale
+(Animating anything else triggers Layout/Paint and causes stutter).
+
+Implement CSS Containment
+Use contain: paint or contain: strict on heavy components (Sidebar, Map container, Tables) to prevent the browser from recalculating the whole page when one small thing changes.
+Use content-visibility: auto for off-screen heavy lists.
+
+Minimize
+Giant backdrop-filter / large blur areas
+
+Animated blur, animated box-shadow, animated filters
+
+Layout animation (Width/Height)
+
+Unnecessary React component remounts.
+
+Absolute rule:
+If a visual effect causes a frame drop: kill it or simplify it.
+
+9. VISUAL REFERENCE SCALE — 3840×2160
+Use 3840×2160 as the primary visual/art-direction reference (2× the previous 1920×1080).
+This is a design reference, NOT a fixed application canvas. The application must remain fluid and responsive.
+
+10. LAYOUT IS FROZEN
+Keep the established structural layout (Sidebar, Header, Maps, Forms, Data Tables).
+Think: same structure + radically better visual language.
+
+11. NEW EOC VISUAL IDENTITY
+Target qualities:
+
+Apple: Restraint, precision, material hierarchy.
+
+visionOS: Spatial depth, separation.
+
+Linear / Raycast: Dense, hyper-fast, native-app feeling, instant response.
+
+Vercel / Geist: Typography, spacing discipline, minimalism.
+
+Do NOT make it visually noisy, neon-heavy, or use generic glassmorphism.
+
+12. AMBIENT BACKGROUND
+Create a recognizable environmental layer using static lighting or restrained gradients.
+Performance check: Backgrounds must be cheap to render. No JS particles.
+
+13 & 14. DARK MODE & LIGHT MODE
+Dark Mode: Rich deep neutrals, elevated tonal surfaces, subtle EOC red atmospheric influence, controlled borders.
+
+Light Mode: Softer ambient light, crisp borders, readable typography, refined brand accents. (Do NOT just invert dark mode).
+
+15. LIQUID GLASS
+Use selectively on: Sidebar, Header, Floating controls, Dialogs.
+Performance check: Limit the blur radius and the pixel area covered by backdrop-filter. Use fallback solid colors with opacity for heavy rendering moments.
+
+16. SIDEBAR — HERO TRANSFORMATION
+Transform the visual identity (silhouette, material, typography, hover states, active states).
+
+Active indicator (Hardware Accelerated)
+Use a shared active surface that travels.
+It must be animated using ONLY transform (Framer Motion layoutId or CSS FLIP technique).
+Motion must be immediate, tight, smooth, interruptible.
+
+17. HEADER + NAVIGATION
+Feel like one coherent native chrome system. Improve hierarchy, icons, depth, and active states.
+
+18. TYPOGRAPHY
+Improve hierarchy (display, body, utility, numeric, Arabic).
+Use tabular numerals (font-variant-numeric: tabular-nums;) for dashboards, KPIs, and coordinates so numbers don't shift horizontally during live updates.
+
+19. COLOR SYSTEM
+Create a coherent tonal system (EOC red, deep neutrals, semantic green/amber/red).
+
+20. CARDS / KPI / PANELS
+Depth should primarily come from: material + contrast + spacing + light (subtle inner borders), rather than huge, performance-killing box-shadows.
+
+21. TABLES (HIGH PERFORMANCE DATA)
+Tables must feel: dense + calm + readable + premium.
+
+Virtualization: If tables or Task Logs hold hundreds of rows, they MUST use Virtual Scrolling (e.g., react-window or similar concept) to keep the DOM node count extremely low.
+
+Do NOT animate large datasets. Hover states should use fast CSS only.
+
+22. FORMS & 23. FEEDBACK SYSTEM
+Precise, tactile, trustworthy.
+Feedback (Success, Error, Toast) must enter naturally, stack cleanly, and exit smoothly using transform and opacity.
+
+24. MODALS / DRAWERS / DROPDOWNS
+Treat as spatial layers. Establish visual relationships. Ensure mounting/unmounting these does not freeze the main thread.
+
+25. MAPS & 26. LOGIN
+Maps: Remain operational. Do not add heavy overlays or CSS filters over the canvas/WebGL context.
+
+Login: Same typography, material, and ambient lighting as the main EOC app.
+
+27. MOTION SYSTEM (ZERO-LATENCY TARGET)
+Motion is important, but performance comes first.
+Target: instant response → smooth settling (not: click → wait → animation).
+
+Use tight controlled springs.
+
+Pre-calculate layouts.
+
+Feedback for clicks must happen in < 50ms.
+
+28. HIGH-IMPACT MOTION
+Prioritize:
+
+Sidebar active indicator traveling
+
+Contextual modal/dropdown emergence
+
+Button tactile response (Scale down 0.98 on press)
+
+Notification stacking
+
+29 - 33. RESPONSIVE, MOBILE & CSS ARCHITECTURE
+Mobile is first-class. Intelligently reduce blur and complex shadows on mobile to save battery and GPU.
+
+Clean source styles. Do NOT use !important as a general solution.
+
+Remove all dead CSS and unused visual systems.
+
+34 & 35. PERFORMANCE VALIDATION (CONTINUOUS) & DECISION RULE
+Validation happens throughout the implementation.
+For every new visual effect ask:
+
+Does it materially improve the experience?
+
+Can it use cheaper rendering primitives?
+
+Does it drop frames?
+If a cheaper solution gives 95% of the visual quality but 200% of the performance: USE THE CHEAPER SOLUTION.
+
+36. EXECUTION ORDER
+Phase A: Inspect, Clean, Measure Baseline.
+
+Phase B: Performance-safe Visual Foundation (Tokens, typography, basic surfaces).
+
+Phase C: Shell Transformation (Sidebar, Header, Navigation).
+
+Phase D: Major Content (Cards, KPIs, Virtualized Tables).
+
+Phase E: Feedback (Toasts, Loading).
+
+Phase F: Spatial Layers (Modals, Drawers).
+
+Phase G: Login & Pre-Login.
+
+Phase H: Motion (Hardware accelerated only).
+
+Phase I: Responsive calibration.
+
+Phase J: Final Optimization & Profiling (Destroying unnecessary renders).
+
+37 - 40. BROWSER IS SOURCE OF TRUTH & PROTECTED LOGIC
+Validate continuously in the browser. No functional regressions. No business logic touched.
+
+41. FINAL SUCCESS CRITERIA
+✅ The application runs at peak FPS with zero layout thrashing.
+✅ Click-to-response latency is imperceptible.
+✅ Visual difference is dramatic and feels native.
+✅ Ambient lighting creates a distinct EOC atmosphere.
+✅ Heavy data tables and task logs do not slow down the UI.
+✅ No business logic or Git operations were modified/performed by the agent.
+✅ 1920×1080 @ 100% feels correctly scaled, and 3840×2160 acts as a perfect reference.
+✅ No major performance regression was introduced; instead, performance was heavily optimized.
+
+42. FINAL DESIGN PHILOSOPHY
+Apple restraint * visionOS depth * Linear polish & speed * Vercel typography * EOC authority
+
+HYPER-PERFORMANCE FIRST.
+The product must never become beautiful but slow.
+The ideal result is: INSTANT + FLUID + SPATIAL + PREMIUM at the exact same time.
+
+43. FINAL COMMAND
+Work LOCAL ONLY. Do NOT touch GitHub.
+Inspect the actual frontend first. Clean visual blockers.
+Execute the transformation autonomously.
+MAKE THE EOC SYSTEM AS FAST, RESPONSIVE, AND SMOOTH AS A 120-FPS NATIVE ENGINE.
+Every visual decision MUST pass the performance test.
