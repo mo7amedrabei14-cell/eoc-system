@@ -5079,14 +5079,10 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
   //    الخط الجديد. دلوقتي: اسم واحد من الحالة، ولا قراءة من الشاشة، ولا رقم ترتيب داخل الاسم.
   const customItineraryTitle = (ci) => String((ci && ci.title) || '').trim() || 'خط سير مخصص';
   // ✍️ خط سير جديد ياخد اسماً فعلياً من أول لحظة (كان title: '' ⇒ اسم مؤقت/مبهم)
-  const addCustomItinerary = () => setCustomItineraries(prev => {
-    const used = new Set((prev || []).map(c => String((c && c.title) || '').trim()).filter(Boolean));
-    let n = (prev || []).length + 1;
-    let title = `خط سير مخصص ${n}`;
-    while (used.has(title)) { n += 1; title = `خط سير مخصص ${n}`; }
-    return [...(prev || []), { id: Date.now(), title, routes: [{ id: Date.now() }] }];
-  });
-  const removeCustomItinerary = (id) => setCustomItineraries(customItineraries.filter(c => c.id !== id));
+// العنوان يبدأ فاضي عمداً: المستخدم لازم يكتبه (الحفظ والإضافة بيتمنعوا لحد ما يتكتب)
+const addCustomItinerary = () => setCustomItineraries(prev => (
+  [...(prev || []), { id: Date.now(), title: '', routes: [{ id: Date.now() }] }]
+));  const removeCustomItinerary = (id) => setCustomItineraries(customItineraries.filter(c => c.id !== id));
   const addRouteToCustom = (customId) => setCustomItineraries(customItineraries.map(c => c.id === customId ? { ...c, routes: [...c.routes, { id: Date.now() }] } : c));
   const removeRouteFromCustom = (customId, routeId) => {
     const row = (customItineraries.find(c => c.id === customId)?.routes || []).find(r => r.id === routeId);
@@ -6818,7 +6814,7 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
             <div className="segmented">
               <button onClick={() => setMissionViewType('all_types')} className={`segmented-btn ${missionViewType === 'all_types' ? 'is-active' : ''}`}>كل المهام</button>
               <button onClick={() => setMissionViewType('daily')} className={`segmented-btn ${missionViewType === 'daily' ? 'is-active-accent' : ''}`}>المهام العادية</button>
-              <button onClick={() => { setMissionViewType('open'); setFilterDate(''); }} className={`segmented-btn ${missionViewType === 'open' ? 'is-active-accent' : ''}`}>المهام المفتوحة</button>
+              <button onClick={() => setMissionViewType('open')} className={`segmented-btn ${missionViewType === 'open' ? 'is-active-accent' : ''}`}>المهام المفتوحة</button>
             </div>
 
             <div className="hidden md:block w-px h-6 bg-[var(--border)]"></div>
@@ -7678,7 +7674,9 @@ function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, i
                 const basicRouteOption = routes.length > 0 ? 'خط السير الأساسي' : null;
                 // 🆔 نفس دالة الاسم المستخدمة في الحفظ بالحرف — مافيش قراءة من الشاشة
                 //    ومافيش احتياطي برقم الترتيب (كان سبب انتقال الإسناد لخط تاني).
-                const customOptions = customItineraries.map((ci) => customItineraryTitle(ci));
+                const customOptions = customItineraries
+  .filter((ci) => String((ci && ci.title) || '').trim() !== '')
+  .map((ci) => customItineraryTitle(ci));
                 const allOptions = [basicRouteOption, ...customOptions].filter(Boolean);
 
                 return (
