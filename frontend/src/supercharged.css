@@ -399,10 +399,14 @@ kbd,
 /* ① الجسم المادي */
 .nav-shell::before {
   border-inline-start: 3px solid var(--accent);
+  /* ⚠️ `linear-gradient(to inline-end, …)` ليس صالحًا — كلمات الاتجاه المنطقية
+     (inline-start/end/block-start/end) غير مدعومة في دوال التدرّج أصلًا،
+     فال declaring كان يُسقَط بالكامل بهدوء (background-image: none).
+     الحل: اتجاه فيزيائي + قاعدة RTL واحدة تعكسه — نفس الأثر بالحرف. */
   background-image:
     /* لمعة أفقية على طول السطح */ linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%),
     /* صبغة الهوية من الحافة المنطقية */ linear-gradient(
-      to inline-end,
+      to right,
       color-mix(in srgb, var(--accent) 17%, transparent),
       color-mix(in srgb, var(--accent) 6%, transparent) 58%,
       color-mix(in srgb, var(--accent) 2%, transparent)
@@ -418,7 +422,17 @@ kbd,
 .nav-shell.has-active::before { opacity: 1; }
 .nav-shell.has-active::after { opacity: 0.55; }
 
-/* الأثر يخرج من الحافة المنطقية (يمين في RTL) لا من الحافة الفيزيائية */
+/* الانعكاس المنطقي: في RTL تخرج صبغة السطح وأثرُه من الحافة اليمنى */
+[dir="rtl"] .nav-shell::before {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(
+      to left,
+      color-mix(in srgb, var(--accent) 17%, transparent),
+      color-mix(in srgb, var(--accent) 6%, transparent) 58%,
+      color-mix(in srgb, var(--accent) 2%, transparent)
+    );
+}
 [dir="rtl"] .nav-shell::after {
   background: radial-gradient(80% 120% at 78% 50%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%);
 }
@@ -538,11 +552,15 @@ kbd,
   color: color-mix(in srgb, var(--faint) 88%, var(--ink));
   position: relative;
 }
+/* خط الفصل: فيزيائي + انعكاس RTL (نفس سبب السطح النشط أعلاه) */
 .nav-shell > p::after {
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(to inline-end, var(--sc-hair), transparent);
+  background: linear-gradient(to right, var(--sc-hair), transparent);
+}
+[dir="rtl"] .nav-shell > p::after {
+  background: linear-gradient(to left, var(--sc-hair), transparent);
 }
 
 /* دخول العناصر: transform/opacity فقط، وبلا `both` حتى لا تُجمَّد الطبقات */
