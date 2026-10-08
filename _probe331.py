@@ -7,7 +7,7 @@ from db import get_connection
 
 token = create_access_token(1)  # OWNER mrabea.x
 
-url = "https://eoc-system-qaol.vercel.app/api/missions/331?client_now=2026-09-13T10%3A00"
+url = "https://eoc-backend-neon.vercel.app/api/missions/331?client_now=2026-09-13T10%3A00"
 req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
 try:
     with urllib.request.urlopen(req, timeout=30) as resp:

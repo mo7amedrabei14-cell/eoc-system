@@ -4,7 +4,7 @@ load_dotenv()
 from auth import create_access_token
 
 token = create_access_token(1)
-url = "https://eoc-system-qaol.vercel.app/api/missions/331?client_now=2026-09-13T10%3A00"
+url = "https://eoc-backend-neon.vercel.app/api/missions/331?client_now=2026-09-13T10%3A00"
 req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
 with urllib.request.urlopen(req, timeout=30) as resp:
     data = json.loads(resp.read().decode("utf-8"))

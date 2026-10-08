@@ -420,18 +420,152 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ─────────────────────────── 3) قاعدة الشاشة ─────────────────────────── */
-html, body, #root { height: 100%; }
+/* ─────────────────────────── 3) قاعدة الشاشة — 1920×1080 reference ───────────────────────────
+   Fluid typography root: 1rem = 16px at 1920px viewport width, scales proportionally.
+   This ensures UI scales naturally on 125%/150% scaling without transform hacks.
+   Mobile (<768px) overrides in mobile.css take precedence. */
+html {
+  height: 100%;
+  /* 1920px = reference width where 1rem = 16px.
+     Scales: 1366px → ~14.3px, 1440px → ~15px, 1536px (125%) → ~16px, 1600px → ~16.7px, 1920px → 16px */
+  font-size: clamp(14px, 0.833vw, 16px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PERFORMANCE FOUNDATION — Effect Budget & Compositor-First Motion
+   ═══════════════════════════════════════════════════════════════════════════════
+   Budget: max 3 simultaneous backdrop-filter surfaces, max blur 16px (8px mobile).
+   All motion: transform + opacity only. No layout/animate width/height/top/left.
+   Reusable motion primitives replace one-off animations. */
+
+/* ── Effect Budget Tokens ── */
+:root {
+  /* Blur budget: desktop max 16px, mobile max 8px */
+  --blur-xs: 4px;
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 16px;
+  --blur-xl: 20px;
+
+  /* Glass recipes: selective, purposeful */
+  --glass-heavy: rgba(10, 10, 12, 0.72);      /* Sidebar, Header, Modals */
+  --glass-medium: rgba(10, 10, 12, 0.55);     /* Dropdowns, Toasts */
+  --glass-light: rgba(10, 10, 12, 0.35);      /* Hover overlays only */
+
+  /* Light mode glass */
+  --glass-heavy-light: rgba(250, 250, 252, 0.78);
+  --glass-medium-light: rgba(250, 250, 252, 0.62);
+  --glass-light-light: rgba(250, 250, 252, 0.42);
+
+  /* Motion tokens — unified vocabulary */
+  --spring-tight: cubic-bezier(0.34, 1.2, 0.64, 1);    /* Active indicators, nav rail */
+  --spring-soft: cubic-bezier(0.22, 1, 0.36, 1);       /* Panels, drawers, sidebar */
+  --ease-out-quick: cubic-bezier(0.16, 1, 0.3, 1);     /* Hover, focus, press */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);       /* Standard transitions */
+
+  --dur-instant: 80ms;    /* Press feedback */
+  --dur-fast: 150ms;      /* Hover, focus */
+  --dur-base: 260ms;      /* Standard transitions */
+  --dur-slow: 420ms;      /* Panels, modals, sidebar */
+  --dur-slower: 560ms;    /* Page transitions */
+
+  /* Shadow budget: contact + ambient only */
+  --shadow-contact: 0 1px 2px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-ambient: 0 4px 12px rgba(0,0,0,0.12);
+  --shadow-elevated: 0 12px 32px rgba(0,0,0,0.18);
+  --shadow-modal: 0 24px 64px rgba(0,0,0,0.25);
+}
+
+/* Light mode shadows */
+:root[data-theme="light"] {
+  --shadow-contact: 0 1px 2px rgba(20,25,45,0.06), 0 1px 3px rgba(20,25,45,0.04);
+  --shadow-ambient: 0 4px 12px rgba(20,25,45,0.06);
+  --shadow-elevated: 0 12px 32px rgba(20,25,45,0.1);
+  --shadow-modal: 0 24px 64px rgba(20,25,45,0.16);
+}
+
+/* ── Compositor-friendly animation helpers ── */
+/* Use these classes instead of one-off keyframes */
+.animate-in { animation: fade-in-up var(--dur-base) var(--ease-out-quick) both; }
+.animate-out { animation: fade-out-down var(--dur-fast) var(--ease-standard) both; }
+.animate-scale-in { animation: scale-in var(--dur-fast) var(--spring-tight) both; }
+.animate-scale-out { animation: scale-out var(--dur-instant) var(--ease-standard) both; }
+.animate-slide-in-right { animation: slide-in-right var(--dur-base) var(--spring-soft) both; }
+.animate-slide-out-right { animation: slide-out-right var(--dur-fast) var(--ease-standard) both; }
+.animate-slide-in-left { animation: slide-in-left var(--dur-base) var(--spring-soft) both; }
+.animate-slide-out-left { animation: slide-out-left var(--dur-fast) var(--ease-standard) both; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-out-down {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(8px); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes scale-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: scale(0.96); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-out-right {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(16px); }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-out-left {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(-16px); }
+}
+
+/* Stagger helper for lists */
+.stagger-children > * { animation: fade-in-up var(--dur-base) var(--ease-out-quick) both; }
+.stagger-children > *:nth-child(1)  { animation-delay: calc(var(--stagger-delay, 40ms) * 0); }
+.stagger-children > *:nth-child(2)  { animation-delay: calc(var(--stagger-delay, 40ms) * 1); }
+.stagger-children > *:nth-child(3)  { animation-delay: calc(var(--stagger-delay, 40ms) * 2); }
+.stagger-children > *:nth-child(4)  { animation-delay: calc(var(--stagger-delay, 40ms) * 3); }
+.stagger-children > *:nth-child(5)  { animation-delay: calc(var(--stagger-delay, 40ms) * 4); }
+.stagger-children > *:nth-child(6)  { animation-delay: calc(var(--stagger-delay, 40ms) * 5); }
+.stagger-children > *:nth-child(7)  { animation-delay: calc(var(--stagger-delay, 40ms) * 6); }
+.stagger-children > *:nth-child(8)  { animation-delay: calc(var(--stagger-delay, 40ms) * 7); }
+.stagger-children > *:nth-child(9)  { animation-delay: calc(var(--stagger-delay, 40ms) * 8); }
+.stagger-children > *:nth-child(10) { animation-delay: calc(var(--stagger-delay, 40ms) * 9); }
+.stagger-children > *:nth-child(11) { animation-delay: calc(var(--stagger-delay, 40ms) * 10); }
+.stagger-children > *:nth-child(12) { animation-delay: calc(var(--stagger-delay, 40ms) * 11); }
 
 body {
+  height: 100%;
+  margin: 0;
   background-color: var(--bg);
   color: var(--ink);
   font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
   font-feature-settings: "cv02", "cv03", "tnum" 0;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   transition: background-color 0.35s var(--ease-out), color 0.35s var(--ease-out);
 }
+
+#root {
+  height: 100%;
+  /* Ensure #root fills viewport without forcing fixed dimensions */
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Prevent horizontal overflow at viewport level */
+html, body { overflow-x: hidden; }
 
 /* تدرّج حركة الثيم بين الفاتح والداكن */
 :root, #root, .app-shell, .surface-view, .card-surface {
@@ -459,28 +593,54 @@ a, button { -webkit-tap-highlight-color: transparent; }
 ::-webkit-scrollbar-corner, .custom-scrollbar::-webkit-scrollbar-corner { background: var(--bg); }
 
 /* ───────────────────── 5) الأسطح والمكوّنات ───────────────────── */
-/* خلفية غرفة العمليات: وهج brand أعلى اليسار + توهّج معلوماتي خافت يمين + شبكة عمليات رقيقة
-   → إحساس Command Center في كل شاشة، ثابت (content هو اللي بيتمرر) ومتوافق مع الثيمين */
+/* خلفية غرفة العمليات: وهج brand واحد مركّز + شبكة عمليات رقيقة جداً
+   → إحساس Command Center نقي، ثابت (content هو اللي بيتمرر) ومتوافق مع الثيمين
+   Phase 3: simplified to single ambient glow + subtle grid only */
 .surface-view, .app-shell {
   background-color: var(--bg);
   background-image:
-    radial-gradient(1100px 520px at 12% -10%, var(--accent-softer), transparent 62%),
-    radial-gradient(880px 480px at 104% -14%, color-mix(in srgb, var(--info) 6%, transparent), transparent 58%),
+    /* Single brand ambient glow - top-left, larger and softer */
+    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 70%),
+    /* Extremely subtle grid for depth - barely visible */
     linear-gradient(var(--border-hair) 1px, transparent 1px),
     linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
-  background-size: auto, auto, 54px 54px, 54px 54px;
+  background-size: auto, 64px 64px, 64px 64px;
 }
 
-/* بطاقة / لوح — سطح خلفي مرتفع */
+/* Light mode: warmer, softer ambient treatment */
+:root[data-theme="light"] .surface-view,
+:root[data-theme="light"] .app-shell {
+  background-image:
+    radial-gradient(1400px 700px at 8% -8%, var(--accent-softer), transparent 65%),
+    linear-gradient(var(--border-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
+  background-size: auto, 64px 64px, 64px 64px;
+}
+
+/* بطاقة / لوح — سطح خلفي مرتفع (Phase 9: lighter shadows, cleaner depth) */
 .card-surface {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  /* edge-light علوي: شعرة ضوئية ترفع السطح في الداكن / غير مرئية تقريبًا في الفاتح */
-  box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  /* Lighter, cleaner shadows - contact + ambient only, no giant black shadows */
+  box-shadow: var(--shadow-contact), inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
-.card-surface-interactive { transition: transform var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-out), border-color var(--dur) var(--ease-out); }
-.card-surface-interactive:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); border-color: var(--border-strong); }
+.card-surface-interactive {
+  transition: transform var(--dur-slow) var(--spring-soft), box-shadow var(--dur-slow) var(--spring-soft), border-color var(--dur-base) var(--ease-out-quick);
+}
+.card-surface-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-ambient), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-color: var(--border-strong);
+}
+
+/* Light mode card shadows - even lighter */
+:root[data-theme="light"] .card-surface {
+  box-shadow: var(--shadow-contact), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+:root[data-theme="light"] .card-surface-interactive:hover {
+  box-shadow: var(--shadow-ambient), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
 
 .section-title { color: var(--ink); font-weight: 800; letter-spacing: var(--text-tight); }
 
@@ -502,12 +662,46 @@ a, button { -webkit-tap-highlight-color: transparent; }
   background: linear-gradient(90deg, var(--accent), transparent);
 }
 
-/* رأس زجاجي (Glass Header) */
+/* رأس زجاجي (Glass Header) — unified Liquid Glass recipe */
 .glass-header {
-  background: var(--glass);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: var(--glass-heavy);
+  backdrop-filter: blur(var(--blur-lg)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(140%);
   border-bottom: 1px solid var(--border);
+  /* Premium header treatment - subtle inner light + material depth */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 1px 3px rgba(0,0,0,0.12),
+    0 4px 16px -4px rgba(0,0,0,0.08);
+}
+
+/* Light mode glass header */
+:root[data-theme="light"] .glass-header {
+  background: var(--glass-heavy-light);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.5),
+    0 1px 3px rgba(20,25,45,0.04),
+    0 4px 16px -4px rgba(20,25,45,0.03);
+}
+
+/* Header elements premium feel */
+.glass-header .icon-btn,
+.glass-header button[aria-label*="بحث"],
+.glass-header .btn-ghost,
+.glass-header .theme-toggle {
+  transition: transform var(--dur-fast) var(--ease-out-quick), background-color var(--dur-fast) var(--ease-out-quick), box-shadow var(--dur-fast) var(--ease-out-quick);
+}
+.glass-header .icon-btn:hover,
+.glass-header button[aria-label*="بحث"]:hover,
+.glass-header .btn-ghost:hover,
+.glass-header .theme-toggle:hover {
+  transform: translateY(-1px);
+}
+.glass-header .icon-btn:active,
+.glass-header button[aria-label*="بحث"]:active,
+.glass-header .btn-ghost:active,
+.glass-header .theme-toggle:active {
+  transform: scale(0.97);
 }
 
 /* إدخال كمية توضيحية: ترنزيل البطاقات */
@@ -1120,8 +1314,8 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* ───────────────── 11) مودال / شيت ───────────────── */
 .modal-backdrop {
   background: color-mix(in srgb, var(--bg-deep) 72%, transparent);
-  backdrop-filter: blur(12px);
-  animation: fade-in 0.24s var(--ease-out);
+  backdrop-filter: blur(var(--blur-md));
+  animation: fade-in var(--dur-fast) var(--ease-out);
 }
 .modal-card {
   background: var(--surface);
@@ -1136,14 +1330,14 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* 🎬 Premium Motion: يبدأ كدائرة صغيرة ثم تتمدد بنعومة (clip-path circle)
    — تحويل + شفافية فقط عبر GPU، بدون reflow، مع انكماش سلس عند الإغلاق. */
 .toast-item {
-  background: var(--glass);
+  background: var(--glass-medium);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-3);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-elevated);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
   /* backwards (لا both): بعد انتهاء الدخول تُحرَّر transform حتى يعمل hover-lift / press */
-  animation: toast-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: toast-in var(--dur-base) var(--spring-tight) backwards;
   transform-origin: center top;
   will-change: transform, opacity;
   transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), filter var(--dur) var(--ease-out);
@@ -1718,18 +1912,83 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* انزلاق مفتوح/مغلق بنابض طري + عمق ناعم */
 .sidebar-shell {
   transition:
-    width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    right 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.42s var(--ease-out);
+    width var(--dur-slow) var(--spring-soft),
+    right var(--dur-slow) var(--spring-soft),
+    box-shadow var(--dur-slow) var(--ease-out);
   will-change: width, transform;
 }
-.sidebar-shell:has(+ main) { box-shadow: 0 0 0 1px var(--border); }
 
-.nav-item { transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
-.nav-item svg { transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out); }
-.nav-item:hover svg { transform: scale(1.12); filter: drop-shadow(0 0 5px var(--accent-glow)); }
+/* ─── LIQUID GLASS SIDEBAR SURFACE (Phase 4+5) ───
+   Refined native-app panel with Liquid Glass material.
+   Keeps existing structure; only upgrades surface, depth, light response. */
+.sidebar-shell {
+  background: var(--glass-heavy);
+  backdrop-filter: blur(var(--blur-lg)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(140%);
+  border-inline-end: 1px solid var(--border);
+  /* Subtle inner highlight for material depth */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    12px 0 40px -18px rgba(0,0,0,0.35),
+    inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+.sidebar-shell:has(+ main) { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 0 0 1px var(--border), inset 0 0 0 1px rgba(255,255,255,0.02); }
+
+/* Light mode sidebar glass */
+:root[data-theme="light"] .sidebar-shell {
+  background: var(--glass-heavy-light);
+  backdrop-filter: blur(var(--blur-lg)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    12px 0 40px -18px rgba(20,25,45,0.12),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
+}
+:root[data-theme="light"] .sidebar-shell:has(+ main) {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 0 0 1px var(--border), inset 0 0 0 1px rgba(20,22,34,0.04);
+}
+
+/* ── SHARED ACTIVE INDICATOR (Moving Surface) ─────────────────────────────
+   A single physical surface that travels between nav items.
+   This replaces per-item ::before indicators for true shared-element feel. */
+.nav-shell {
+  position: relative;
+}
+.nav-shell::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  width: 3px;
+  height: 48px; /* matches nav-item height */
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow:
+    0 0 12px var(--accent-glow),
+    0 0 24px var(--accent-glow),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+  transform: translateY(var(--nav-indicator-y, 0));
+  transition: transform var(--dur-slow) var(--spring-tight);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+}
+.nav-shell.has-active::before { opacity: 1; }
+
+/* Per-item active state - now minimal, indicator handled by shared surface */
+.nav-item.is-active {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  /* No per-item ::before - shared indicator handles it */
+}
+.nav-item.is-active::before { display: none; }
+.nav-item.is-active svg { transform: scale(1.08); filter: drop-shadow(0 0 6px var(--accent-glow)); }
 
 /* العنصر النشط: تدرّج ناعم + توهج داخلي خفيف + أيقونة منتعشة */
+.nav-item {
+  transition: background-color var(--dur-fast) var(--ease-out-quick), color var(--dur-fast) var(--ease-out-quick), transform var(--dur-fast) var(--ease-out-quick), box-shadow var(--dur-fast) var(--ease-out-quick); }
+.nav-item svg { transition: transform var(--dur-fast) var(--ease-out-quick), filter var(--dur-fast) var(--ease-out-quick), opacity var(--dur-fast) var(--ease-out-quick); }
+
 .nav-item.is-active {
   color: var(--ink);
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 15%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
@@ -1747,7 +2006,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   border-radius: 999px;
   background: var(--accent);
   box-shadow: 0 0 10px var(--accent-glow), 0 0 22px var(--accent-glow);
-  animation: nav-rail-in 0.5s var(--ease-out) both;
+  animation: nav-rail-in var(--dur-slow) var(--ease-out) both;
 }
 @keyframes nav-rail-in {
   from { transform: scaleY(0.25) translateX(4px); opacity: 0; }
@@ -1757,7 +2016,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 .nav-label {
   overflow: hidden;
   white-space: nowrap;
-  transition: opacity 0.28s var(--ease-out), max-width 0.3s var(--ease-out), transform 0.28s var(--ease-out);
+  transition: opacity var(--dur-slow) var(--ease-out-quick), max-width 0.3s var(--ease-out-quick), transform var(--dur-slow) var(--ease-out-quick);
 }
 .nav-label-on { opacity: 1; max-width: 12rem; transform: translateX(0); }
 .nav-label-off { opacity: 0; max-width: 0; transform: translateX(-6px); }
@@ -1783,7 +2042,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
    backwards (وليس both) حتى لا يُجمَّد transform عنصر بعد الانتهاء
    فيبقى hover translateX / active:scale يعملان بشكل طبيعي. */
 .nav-item {
-  animation: nav-in var(--dur-slow) var(--ease-spring) backwards;
+  animation: nav-in var(--dur-slow) var(--spring-soft) backwards;
   animation-delay: calc(var(--nav-i, 0) * 35ms);
 }
 @keyframes nav-in {
@@ -1823,7 +2082,7 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 
 /* كبسولة نبض حول شعار الاستضافة (الدرع) عند التمرير */
 .sidebar-brand {
-  transition: transform var(--dur-slow) var(--ease-spring), box-shadow var(--dur-slow) var(--ease-spring), border-color var(--dur-slow) var(--ease-out);
+  transition: transform var(--dur-slow) var(--spring-soft), box-shadow var(--dur-slow) var(--spring-soft), border-color var(--dur-slow) var(--ease-out-quick);
 }
 .sidebar-brand:hover {
   transform: translateY(-1.5px) scale(1.05);
@@ -1833,10 +2092,10 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 
 /* ─────────────── 18c) Connectivity Banner ─────────────── */
 .conn-banner-offline {
-  animation: conn-slide-in 0.4s var(--ease-spring) forwards, conn-pulse-bg 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite 0.4s;
+  animation: conn-slide-in var(--dur-slow) var(--spring-soft) forwards, conn-pulse-bg 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite 0.4s;
 }
 .conn-banner-back {
-  animation: conn-slide-in 0.35s var(--ease-spring) forwards, conn-fade-out 0.6s 2.6s var(--ease-out) forwards;
+  animation: conn-slide-in 0.35s var(--spring-soft) forwards, conn-fade-out 0.6s 2.6s var(--ease-out) forwards;
 }
 @keyframes conn-slide-in {
   from { opacity: 0; transform: translateY(-100%); }
@@ -1852,10 +2111,10 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 
 /* ─────────────── 18d) Command Palette (⌘K) ─────────────── */
 .palette-pop {
-  animation: palette-in 0.26s var(--ease-spring);
+  animation: palette-in var(--dur-base) var(--spring-soft);
   transform-origin: 50% -5%;
 }
-.palette-scrim { animation: palette-scrim-in 0.2s var(--ease-out); }
+.palette-scrim { animation: palette-scrim-in var(--dur-fast) var(--ease-out); }
 @keyframes palette-in {
   from { opacity: 0; transform: translateY(-14px) scale(0.97); }
   to   { opacity: 1; transform: none; }
@@ -2811,7 +3070,7 @@ select.field {
   background:
     radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--accent) 32%, transparent), transparent 70%),
     color-mix(in srgb, #000 78%, transparent);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(var(--blur-xs));
 }
 
 .server-down-card {
@@ -4042,8 +4301,8 @@ select.field {
   background: color-mix(in srgb, var(--surface, #ffffff) 72%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-strong, #d8d8dd) 70%, transparent);
   box-shadow: var(--gate-shadow);
-  backdrop-filter: blur(28px) saturate(1.35);
-  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  backdrop-filter: blur(var(--blur-xl)) saturate(1.35);
+  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(1.35);
 }
 
 /* ---------- 3) الشعار: حلقة ضوء واحدة هادية ---------- */
@@ -4151,8 +4410,8 @@ select.field {
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border-strong, #d8d8dd) 60%, transparent);
   background: color-mix(in srgb, var(--surface, #ffffff) 70%, transparent);
-  backdrop-filter: blur(18px) saturate(1.3);
-  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(var(--blur-lg)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(1.3);
   color: var(--ink, #111114);
   box-shadow: 0 10px 28px -16px rgba(0, 0, 0, .35);
   transition: transform .2s var(--gate-ease), background .2s var(--gate-ease);
@@ -4223,8 +4482,8 @@ select.field {
 @media (max-width: 640px) {
   .gate-card {
     padding: 34px 22px 26px;
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(var(--blur-md)) saturate(1.2);
+    -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.2);
   }
   .gate::after { display: none; }     /* الحبيبات اتشالت على الموبايل */
   .gate::before { animation: none; }  /* الهالة ثابتة = أسرع */

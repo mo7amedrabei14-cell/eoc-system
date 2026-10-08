@@ -27,7 +27,7 @@ except ImportError:
 import requests
 
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN", "").strip()
-SYSTEM_API_URL = (os.environ.get("SYSTEM_API_URL") or "https://eoc-system-qaol.vercel.app/").rstrip("/")
+SYSTEM_API_URL = (os.environ.get("SYSTEM_API_URL") or "https://eoc-backend-neon.vercel.app/").rstrip("/")
 TICK_URL = SYSTEM_API_URL + "/api/earthquake-intel/engine/tick"
 
 
