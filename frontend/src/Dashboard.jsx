@@ -3150,7 +3150,7 @@ useEffect(() => {
         <div className="sidebar-panel">
         <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className={`sidebar-heading relative ${isSidebarOpen ? 'is-expanded' : 'is-collapsed'}`}>
-            <div className="absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
+            <div className="sidebar-heading-glow absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
             <div className="sidebar-heading-row relative z-10 flex items-center gap-3">
               <div
                 className="sidebar-brand w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center p-2 shrink-0"
