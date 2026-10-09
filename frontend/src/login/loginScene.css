@@ -120,11 +120,11 @@
   z-index: 2;
 }
 :root[data-theme="light"] .lx-gate::before {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--accent) 5%, transparent),
-    transparent 56%
-  );
+  /* الإسفين المخروطي (`clip-path` بحواف مستقيمة) كان يُقرأ كشريطين مائلين
+     على الخلفية الفاتحة ⇒ يُلغى تمامًا، ويُستبدل بماسة ضوء ناعمة بلا حواف. */
+  background: radial-gradient(64% 58% at 50% 0%, rgba(255, 255, 255, 0.85), transparent 70%);
+  clip-path: none;
+  height: 60%;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -331,7 +331,7 @@
   color: var(--ink);
   text-shadow: 0 2px 30px color-mix(in srgb, var(--bg) 80%, transparent);
 }
-.lx-gate-title [dir="ltr"] & { letter-spacing: -0.015em; }
+[dir="ltr"] .lx-gate-title { letter-spacing: -0.015em; }
 
 .lx-gate-sub {
   font-size: clamp(0.6875rem, .9vw, 0.8438rem);
@@ -959,9 +959,13 @@
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(120% 170% at 88% -30%, rgba(255, 255, 255, .22) 0%, transparent 46%),
-    linear-gradient(112deg, #7d0505 0%, #a00606 30%, #c70000 58%, #930808 100%);
+    radial-gradient(120% 170% at 88% -30%, rgba(255, 255, 255, 0.14) 0%, transparent 46%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 46%),
+    linear-gradient(112deg, #3d0507 0%, #6b090e 40%, #9c1116 70%, #4a0608 100%);
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 .lx-ribbon::before {
   content: "";
@@ -1246,9 +1250,17 @@
 
 .lx-input-wrap {
   position: relative;
+  /* ⚠️ جذر المشكلة الحقيقية في الأيقونات الباهتة (ثلاث محاولات لون فشلت):
+     `.lx-input` يحمل `backdrop-filter` + خلفية بشفافية 0.74 ⇒ يُنشئ stacking
+     context ويُرسم فوق أي شقيق بلا `z-index`. وبما أن `<span class="lx-input-ic">`
+     يسبق `<input>` في ترتيب الـ DOM، كانت الأيقونة مدفونة تحت سطح الحقل
+     فتظهر كشبح داكن مهما تغيّر لونها (تُثبت ذلك `elementFromPoint` ⇒ INPUT).
+     الحل: طبقة صريحة للأيقونة فوق سطح الحقل — أي لون يُطبَّق الآن يظهر كما هو. */
+  isolation: isolate;
 }
 .lx-input-ic {
   position: absolute;
+  z-index: 3;
   top: 50%;
   transform: translateY(-50%);
   inset-inline-start: 1.0625rem;
@@ -1258,8 +1270,9 @@
   pointer-events: none;
 }
 .lx-field:focus-within .lx-input-ic {
-  color: var(--accent);
-  transform: translateY(-50%) scale(1.1);
+  /* إبراز أحمر فاتح: `var(--accent)` الغامق كان يختفي على الخلفية الداكنة */
+  color: var(--lx-ic-focus);
+  transform: translateY(-50%) scale(1.08);
 }
 /* ── الحقول — وحدات rem لتنمو مع مقياس الجذر ─────────────────────────
    كانت المقاسات بالبكسل (`font-size: 15px`، `padding: 16px`)، فحقل الدخول
@@ -1331,6 +1344,7 @@
 
 .lx-eye {
   position: absolute;
+  z-index: 3;
   top: 50%;
   transform: translateY(-50%);
   inset-inline-end: 0.5625rem;
@@ -1384,7 +1398,7 @@
     var(--lx-shadow-ambient),
     0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
   transition:
-    transform var(--lx-dur-fast) var(--lx-spring-snap),
+    transform var(--lx-dur-fast) var(--lx-ease-snap),
     box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
     filter var(--lx-dur-base) var(--lx-ease-out-quick);
   overflow: hidden;
@@ -1537,7 +1551,7 @@
   transition:
     border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
     box-shadow var(--lx-dur-fast) var(--lx-ease-out-quick),
-    transform var(--lx-dur-instant) var(--lx-spring-snap),
+    transform var(--lx-dur-instant) var(--lx-ease-snap),
     background-color .3s;
 }
 .otp-box:focus {
@@ -1687,7 +1701,7 @@
   transition:
     color var(--lx-dur-fast) var(--lx-ease-out-quick),
     border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
-    transform var(--lx-dur-fast) var(--lx-spring-snap),
+    transform var(--lx-dur-fast) var(--lx-ease-snap),
     box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
 }
 .lx-pill-btn:hover {
@@ -1734,7 +1748,7 @@
     0 0 0 1px var(--border);
   transition: border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
               box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
-              transform var(--lx-dur-fast) var(--lx-spring-snap);
+              transform var(--lx-dur-fast) var(--lx-ease-snap);
 }
 .lx-switch:hover {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
@@ -1834,175 +1848,583 @@
   .lx-glow { filter: blur(150px); }
 }
 
-/* ═══════════════════════════════════════════════════════
-   إصلاح ظهور شاشة تسجيل الدخول
-   ═══════════════════════════════════════════════════════ */
 
-/* زر اللغة وزر الوضع الليلي/الفاتح */
-.lx-pill-btn,
-.lx-switch {
-  position: fixed !important;
-  top: 1rem !important;
-  z-index: 9999 !important;
-  display: inline-flex !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
+/* ════════════════════════════════════════════════════════════════════════════
+   ★ CINEMATIC EMBER — طبقة الصقل النهائية (تُضاف بعد كل ما سبق ⇒ آخر كلمة)
+   ────────────────────────────────────────────────────────────────────────────
+   لماذا قسم إضافي بدل تعديل كل قاعدة؟ لأن الملف يُحمَّل بعد index.css ⇒ هذه
+   القواعد تسود على القواعد المكافئة في التخطيط بلا أي `!important` وبلا لمس
+   أي شاشة أخرى. كل ما هنا مقيّد بـ `lx-` (شاشة الدخول وحدها).
+
+   ① توكنات الهوية والمواد والأشكال (Musical-Ember Design Tokens)
+   ② المشهد المحيط: أرضية عميقة + أورورا + نسيج + ضوء مؤشّر
+   ③ البوابة: هيكل مركزي + لوح زجاجي + ختم بهالة ومدارات
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── ① التوكنات ─────────────────────────────────────────────────────────── */
+.lx {
+  /* الهوية */
+  --lx-red: #c70000;
+  --lx-red-hi: #ff3b30;
+  --lx-amber: #ff9f0a;
+  --lx-emerald: #30d158;
+  --lx-amber-soft: color-mix(in srgb, var(--lx-amber) 15%, transparent);
+  --lx-hair: color-mix(in srgb, var(--ink) 14%, transparent);
+
+  /* المواد */
+  --lx-glass-edge: color-mix(in srgb, var(--ink) 16%, transparent);
+  --lx-glass-top: rgba(255, 255, 255, 0.09);
+  --lx-glass-top-strong: rgba(255, 255, 255, 0.16);
+
+  /* الأشكال والمقاسات */
+  --lx-r-sm: 0.9375rem;
+  --lx-r-md: 1.25rem;
+  --lx-r-lg: 1.75rem;
+  --lx-r-xl: 2.4rem;
+  --lx-r-pill: 999px;
+  --lx-field-h: 3.375rem;
+  --lx-control: 2.5rem;
+  --lx-track-h: 4.25rem;
+  --lx-crest: clamp(6.75rem, 8.2vw, 9.25rem);
+
+  /* الحركة */
+  --lx-ease-quick: cubic-bezier(0.16, 1, 0.3, 1);
+  --lx-ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --lx-ease-snap: cubic-bezier(0.32, 1.35, 0.5, 1);
+
+  /* ميزانية الظل */
+  --lx-sh-contact: 0 1px 2px rgba(0, 0, 0, 0.42);
+  --lx-sh-ambient: 0 18px 44px -26px rgba(0, 0, 0, 0.85);
+  --lx-sh-depth: 0 34px 78px -46px rgba(0, 0, 0, 0.95);
+
+  /* ضوء المؤشّر (يكتبه rAF واحد في JS — لا حالة React) */
+  --lx-px: 50%;
+  --lx-py: 42%;
+  --lx-pl: 0;
 }
 
-.lx-pill-btn {
-  inset-inline-start: 1.25rem !important;
-  color: var(--ink) !important;
-  background: var(--surface-3) !important;
-  border-color: var(--border) !important;
+:root[data-theme='light'] .lx {
+  /* تحييد الألوان الدافئة (كانت بنّية #4b4038) ⇒ الرمادي البارد هو ما يجعل
+     الفاتح يقرأ «نظيفًا» بلغة Apple/Google بدل الإحساس الطيَني. */
+  --lx-glass-edge: color-mix(in srgb, #2b3446 14%, transparent);
+  --lx-glass-top: rgba(255, 255, 255, 0.92);
+  --lx-glass-top-strong: rgba(255, 255, 255, 0.99);
+  --lx-hair: color-mix(in srgb, #2b3446 14%, transparent);
+  --lx-sh-contact: 0 1px 2px rgba(19, 26, 38, 0.08);
+  --lx-sh-ambient: 0 18px 44px -26px rgba(19, 26, 38, 0.30);
+  --lx-sh-depth: 0 34px 78px -46px rgba(19, 26, 38, 0.34);
 }
 
-.lx-switch {
-  inset-inline-end: 1.25rem !important;
-  color: var(--ink) !important;
-  background: var(--surface-3) !important;
-  border-color: var(--border) !important;
+.lx { background-color: var(--bg); -webkit-tap-highlight-color: transparent; }
+
+/* ── ② المشهد: أرضية + أورورا + نسيج + ضوء مؤشّر ────────────────────────── */
+.lx-scene {
+  background-color: #07090d;
+  background-image:
+    radial-gradient(120% 78% at 50% -18%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
+    radial-gradient(58% 44% at 8% 104%, var(--lx-amber-soft), transparent 62%),
+    radial-gradient(58% 48% at 96% 8%, rgba(96, 132, 152, 0.14), transparent 70%),
+    linear-gradient(168deg, #101319 0%, #0a0d12 46%, #070a0e 100%);
+  background-size: auto;
+  background-repeat: no-repeat;
+}
+/* الثيم الفاتح: إعادة تصميم كاملة للأرضية.
+   المشكلة السابقة: ثلاثة تدرّجات حمراء/كهرمانية فوق بعضها فوق قاعدة دافئة
+   ⇒ غسل وردي طيني + بقع غير متجانسة. الآن: قاعدة عاجية باردة، ماسة حمراء
+   واحدة ضيقة أعلى الشاشة (أثر هوية لا غسل)، بركة دافئة وحيدة أسفل اليسار،
+   وضوء بارد هادئ أعلى اليمين ⇒ عمق مقروء بلا تلطيخ. */
+:root[data-theme='light'] .lx-scene {
+  /* نفس تركيب الداكن (ماسة حمراء + وهج دافئ + ضوء بارد + نسيج) لكن على
+     مسند حيادي بارد مثل Apple (#fbfbfd) — لا عاجي/بيج، ولا غسل وردي. */
+  background-color: #f7f7fa;
+  background-image:
+    /* ماسة العلامة أعلى المركز — الأثر الرمزي نفسه (أهدأ من الداكن) */
+    radial-gradient(86% 48% at 50% -20%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
+    /* وهج كهرماني وحيد أسفل اليسار */
+    radial-gradient(48% 36% at 0% 106%, color-mix(in srgb, var(--lx-amber) 11%, transparent), transparent 66%),
+    /* ضوء بارد أعلى اليمين (لغة Google المادية) */
+    radial-gradient(60% 46% at 102% -6%, rgba(108, 142, 178, 0.14), transparent 72%),
+    /* ضوء أبيض علوي: إحساس السطح المصقول في صفحات Apple */
+    radial-gradient(130% 56% at 50% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
+    /* مسند بارد متدرّج بدل القاعدة الدافئة السابقة */
+    linear-gradient(172deg, #fdfdfe 0%, #f6f7fa 48%, #eef0f4 100%);
+  /* ⚠️ كان سبب "الأشرطة العريضة" في الفاتح: قاعدة أقدم في هذا الملف
+     (`:root[data-theme="light"] .lx-scene` بالسطور ~~٩٠) تحمل ٥ قيم لـ
+     `background-size`/`repeat` ومنها `64px 64px` + `repeat`، وأخصّصيتها
+     (0,2,0) أعلى من `.lx-scene` العامّ ⇒ كانت تغلب لأجل المتغيّرات الطويلة،
+     فيُرسم المسند المتدرّج نفسه على مقاس 64px مكرّرًا ⇒ أشرطة أفقية.
+     الآن تُثبَّت قيم الحجم/التكرار صريحًا لكل الطبقات أدناه. */
+  background-size: auto, auto, auto, auto, auto;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
 
-/* الرادار — توسيط الهلال داخل الدائرة */
-.lx-radar {
-  position: relative !important;
-  display: block !important;
-  overflow: hidden !important;
-  isolation: isolate !important;
+/* حقل أورورا: ينزلق ببطء شديد (transform فقط، 52s) */
+.lx-aurora {
+  position: absolute;
+  inset: -14%;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 30% at 26% 30%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 68%),
+    radial-gradient(30% 26% at 76% 24%, rgba(108, 146, 168, 0.13), transparent 70%),
+    radial-gradient(32% 28% at 62% 78%, var(--lx-amber-soft), transparent 70%);
+  transform: translate3d(0, 0, 0) scale(1.02);
+  will-change: transform;
+  animation: lx-aurora-drift 52s ease-in-out infinite alternate;
+}
+:root[data-theme='light'] .lx-aurora {
+  /* كانت 11/18/15% ⇒ بقع رطبة مرئية. الآن تنفّس لوني خفيف بارد فقط. */
+  background:
+    radial-gradient(30% 26% at 24% 28%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%),
+    radial-gradient(28% 24% at 78% 22%, rgba(122, 156, 196, 0.12), transparent 72%),
+    radial-gradient(30% 26% at 62% 80%, color-mix(in srgb, var(--lx-amber) 8%, transparent), transparent 72%);
+  opacity: 0.9;
+}
+@keyframes lx-aurora-drift {
+  from { transform: translate3d(-1.4%, -1%, 0) scale(1.02); }
+  to   { transform: translate3d(1.6%, 1.2%, 0) scale(1.06); }
 }
 
-.lx-radar > img,
-.lx-radar .lx-radar-logo {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  right: auto !important;
-  bottom: auto !important;
-  width: 2.25rem !important;
-  height: 2.25rem !important;
-  margin: 0 !important;
-  display: block !important;
-  z-index: 20 !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  object-fit: contain !important;
-  object-position: center !important;
-  transform: translate(-50%, -50%) !important;
+/* النسيج: شبكة عمليات مخفّفة عند الأطراف + خريطة الأطلس بشفافية منخفضة */
+.lx-scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--lx-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lx-hair) 1px, transparent 1px);
+  background-size: 64px 64px, 64px 64px;
+  opacity: 0.3;
+  -webkit-mask-image: radial-gradient(120% 100% at 50% 42%, #000 32%, transparent 82%);
+          mask-image: radial-gradient(120% 100% at 50% 42%, #000 32%, transparent 82%);
+}
+:root[data-theme='light'] .lx-scene::before {
+  /* طلب المستخدم الصريح: «شبكة زي الدارك أفضل من السادة خالص».
+     ⇒ نفس مقاس شبكة الداكن (64px) بنفس الحضور، لكن بخطّ حيادي بارد
+     (لا البنّي الذي كان يقرأ كبلاط)، وتلاشٍ ناعم عند الأطراف. */
+  --lx-hair: color-mix(in srgb, #2b3446 30%, transparent);
+  background-size: 64px 64px, 64px 64px;
+  opacity: 0.34;
+  -webkit-mask-image: radial-gradient(104% 86% at 50% 44%, #000 26%, transparent 84%);
+          mask-image: radial-gradient(104% 86% at 50% 44%, #000 26%, transparent 84%);
+}
+.lx-scene::after {
+  content: '';
+  position: absolute;
+  inset: -3%;
+  pointer-events: none;
+  background: url('/response-atlas.svg') center / cover no-repeat;
+  opacity: 0.09;
+  mix-blend-mode: screen;
+  transform: scale(1.03);
+  animation: lx-atlas-float 34s ease-in-out infinite alternate;
+}
+:root[data-theme='light'] .lx-scene::after {
+  /* كان `multiply` @0.11 باسم الأطلس ⇒ أشرطة رمادية عريضة تُفسد الفاتح.
+     الآن تُعاد وظيفتها إلى «إطار عمق» (vignette) بارد يعطي نفس الإحساس
+     السينمائي الموجود في الداكن، بلا حداية ولا أشرطة. */
+  display: block;
+  inset: -2%;
+  background: radial-gradient(128% 104% at 50% 40%, transparent 54%, rgba(23, 31, 44, 0.10) 100%);
+  background-size: auto;
+  background-repeat: no-repeat;
+  opacity: 1;
+  mix-blend-mode: normal;
+  transform: none;
+  animation: none;
+  -webkit-mask-image: none;
+          mask-image: none;
+}
+@keyframes lx-atlas-float {
+  from { transform: translate3d(-0.5%, -0.3%, 0) scale(1.03); }
+  to   { transform: translate3d(0.5%, 0.3%, 0) scale(1.05); }
 }
 
-/* إظهار الحقول بالكامل */
-.lx-field,
-.lx-label,
-.lx-input-wrap,
+/* ضوء المؤشّر: بقعة ضوء ناعمة تتبع المؤشّر (rAF واحد، بلا إعادة رسم) */
+.lx-light {
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  background:
+    radial-gradient(32rem 32rem at var(--lx-px) var(--lx-py), color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%),
+    radial-gradient(22rem 22rem at calc(var(--lx-px) + 6%) calc(var(--lx-py) - 5%), var(--lx-amber-soft), transparent 66%);
+  opacity: var(--lx-pl);
+  transition: opacity 420ms var(--lx-ease-soft);
+  will-change: opacity;
+}
+:root[data-theme='light'] .lx-light {
+  background:
+    radial-gradient(32rem 32rem at var(--lx-px) var(--lx-py), color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
+    radial-gradient(22rem 22rem at calc(var(--lx-px) + 6%) calc(var(--lx-py) - 5%), color-mix(in srgb, var(--lx-amber) 12%, transparent), transparent 66%);
+}
+
+/* تدهور رشيق بلا backdrop-filter: المواد تبقى صالحة */
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .lx-deck, .lx-track, .lx-input, .lx-crest, .lx-pill-btn, .lx-switch, .otp-box, .lx-gate-board {
+    -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+  }
+  .lx-deck { background-color: color-mix(in srgb, var(--surface-2) 97%, transparent); }
+  :root[data-theme='light'] .lx-deck { background-color: rgba(252, 251, 248, 0.97); }
+  .lx-input, .otp-box { background: color-mix(in srgb, var(--surface-3) 96%, transparent); }
+  .lx-track { background: color-mix(in srgb, var(--surface-2) 94%, transparent); }
+}
+
+/* ── ③ البوابة: هيكل مركزي + لوح زجاجي + ختم بهالة ومدارات ──────────────── */
+.lx-gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(1.25rem + env(safe-area-inset-top)) 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+.lx-gate::before { height: 78%; opacity: calc(0.65 + var(--lx-p, 0) * 0.35); }
+.lx-gate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(128% 104% at 50% 46%, transparent 34%, rgba(3, 5, 8, 0.6) 100%);
+}
+:root[data-theme='light'] .lx-gate::after {
+  background: radial-gradient(128% 104% at 50% 46%, transparent 42%, rgba(120, 108, 94, 0.16) 100%);
+}
+.lx-gate-board {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(94vw, 40rem);
+  max-width: 40rem;
+  /* h-full من أدوات التخطيط كان يجعل اللوح بطول الشاشة ⇒ فراغ ميت أعلى/أسفل */
+  height: auto;
+  min-height: 0;
+  margin: auto;
+  padding: clamp(1.75rem, 3.4vw, 2.6rem) clamp(1.25rem, 3.2vw, 2.4rem) clamp(1.6rem, 3vw, 2.2rem);
+  border-radius: var(--lx-r-xl);
+  background:
+    radial-gradient(120% 90% at 50% -30%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--lx-glass-top), transparent 34%),
+    color-mix(in srgb, var(--surface-2) 48%, transparent);
+  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(1.25);
+          backdrop-filter: blur(var(--lx-blur-md)) saturate(1.25);
+  border: 1px solid var(--lx-glass-edge);
+  box-shadow:
+    inset 0 1px 0 var(--lx-glass-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--ink) 3%, transparent),
+    var(--lx-sh-depth);
+  animation: lx-board-in 700ms var(--lx-ease-soft) both;
+}
+:root[data-theme='light'] .lx-gate-board {
+  background:
+    radial-gradient(120% 90% at 50% -30%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), transparent 36%),
+    color-mix(in srgb, #ffffff 68%, transparent);
+  border-color: color-mix(in srgb, #4b4038 14%, transparent);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    var(--lx-sh-depth);
+}
+@keyframes lx-board-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+.lx-gate-board::before {
+  content: '';
+  position: absolute;
+  inset-inline: 14%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lx-glass-top-strong), transparent);
+  pointer-events: none;
+}
+.lx-gate-board::after {
+  content: 'ERC / FIELD ATLAS';
+  position: absolute;
+  inset-block-start: 1rem;
+  inset-inline-end: 1.25rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--lx-glass-edge);
+  border-radius: var(--lx-r-pill);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  color: var(--faint);
+  font: 700 0.55rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.16em;
+  pointer-events: none;
+}
+.lx-gate-emblem { position: relative; }
+.lx-crest-stack { width: var(--lx-crest); height: var(--lx-crest); }
+.lx-halo, .lx-orbit, .lx-orbit--inner, .lx-crest-glow { display: block; }
+.lx-crest-glow {
+  opacity: calc(0.4 + var(--lx-p, 0) * 0.5);
+  animation: lx-crest-breathe 4.4s ease-in-out infinite;
+}
+@keyframes lx-crest-breathe {
+  0%, 100% { transform: scale(0.97); }
+  50%      { transform: scale(1.05); }
+}
+.lx-orbit {
+  animation: lx-spin 30s linear infinite;
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.lx-orbit--inner {
+  animation: lx-spin-r 44s linear infinite;
+  border-color: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+@keyframes lx-spin-r { to { transform: rotate(-360deg); } }
+.lx-halo-arc { opacity: calc(0.5 + var(--lx-p, 0) * 0.5); }
+.lx-gate-title { margin-top: 1.6rem; }
+.lx-gate-sub { margin-top: 0.6rem; }
+.lx-readout { margin-top: 1.1rem; }
+.lx-gate-slider { width: 100%; display: flex; justify-content: center; margin-top: 0.9rem; }
+.lx-gate-foot { margin-top: 1.9rem; }
+
+/* ── ④ سطح القيادة: زجاج سائل + حافة مضيئة عند التركيز ─────────────────── */
+.lx-deck {
+  margin: auto;
+  border-radius: var(--lx-r-xl);
+  background-color: color-mix(in srgb, var(--surface-2) 84%, transparent);
+  background-image:
+    radial-gradient(90% 60% at 12% -6%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    radial-gradient(70% 50% at 96% 104%, rgba(96, 132, 152, 0.1), transparent 62%),
+    linear-gradient(180deg, var(--lx-glass-top), transparent 30%);
+  -webkit-backdrop-filter: blur(var(--lx-blur-lg)) saturate(1.3);
+          backdrop-filter: blur(var(--lx-blur-lg)) saturate(1.3);
+  border-color: var(--lx-glass-edge);
+  box-shadow:
+    inset 0 1px 0 var(--lx-glass-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--ink) 3%, transparent),
+    var(--lx-sh-contact),
+    var(--lx-sh-depth);
+  transition:
+    border-color 420ms var(--lx-ease-soft),
+    box-shadow 420ms var(--lx-ease-soft);
+}
+:root[data-theme='light'] .lx-deck {
+  background-color: color-mix(in srgb, #ffffff 90%, transparent);
+  background-image:
+    radial-gradient(90% 60% at 12% -6%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
+    radial-gradient(70% 50% at 96% 104%, rgba(122, 150, 168, 0.12), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), transparent 30%);
+  border-color: color-mix(in srgb, #4b4038 14%, transparent);
+}
+.lx-deck:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--lx-glass-edge));
+  box-shadow:
+    inset 0 1px 0 var(--lx-glass-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 6%, transparent),
+    0 0 50px -22px color-mix(in srgb, var(--accent) 38%, transparent),
+    var(--lx-sh-depth);
+}
+
+/* ── ⑤ الحقول: hover / focus / filled / invalid / disabled ─────────────── */
 .lx-input {
-  opacity: 1 !important;
-  visibility: visible !important;
-  filter: none !important;
+  min-height: var(--lx-field-h);
+  border-radius: var(--lx-r-pill);
+  border-color: var(--lx-glass-edge);
+  padding-inline: 3.25rem;
+  background:
+    linear-gradient(180deg, var(--lx-glass-top), transparent 46%),
+    color-mix(in srgb, var(--surface-2) 74%, transparent);
 }
-
-.lx-field {
-  position: relative !important;
-  z-index: 5 !important;
+:root[data-theme='light'] .lx-input {
+  background:
+    linear-gradient(180deg, #ffffff, transparent 46%),
+    color-mix(in srgb, #ffffff 80%, transparent);
 }
-
-.lx-input-wrap {
-  position: relative !important;
-  display: block !important;
-  width: 100% !important;
-  min-height: 3.25rem !important;
-  overflow: visible !important;
+.lx-input:hover:not(:disabled) { border-color: color-mix(in srgb, var(--accent) 32%, var(--lx-glass-edge)); }
+.lx-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--lx-glass-edge));
+  box-shadow:
+    inset 0 1px 0 var(--lx-glass-top),
+    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 12px 34px -16px color-mix(in srgb, var(--accent) 48%, transparent);
 }
-
-.lx-input {
-  position: relative !important;
-  z-index: 2 !important;
-  display: block !important;
-  width: 100% !important;
-  min-height: 3.25rem !important;
-  color: var(--ink) !important;
-  -webkit-text-fill-color: var(--ink) !important;
-  background: var(--surface-3) !important;
-  border: 1px solid var(--border) !important;
-  caret-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--border) !important;
+.lx-input:not(:placeholder-shown) { border-color: color-mix(in srgb, var(--accent) 34%, var(--lx-glass-edge)); }
+.lx-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: color-mix(in srgb, var(--surface-3) 60%, transparent);
 }
-
-.lx-input::placeholder {
-  color: var(--muted) !important;
-  opacity: 1 !important;
+.lx-input:user-invalid {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
 }
+.lx-eye:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 75%, transparent); outline-offset: 2px; }
 
-/* زر تسجيل الدخول */
+/* زر الدخول: أبعاد ثابتة مهما تغيّر المحتوى (سبينر ↔ نص) */
 .lx-submit {
-  position: relative !important;
-  z-index: 5 !important;
-  display: flex !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
+  min-height: 3.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  border-radius: var(--lx-r-pill);
+  background:
+    radial-gradient(120% 160% at 22% -30%, color-mix(in srgb, #fff 26%, transparent), transparent 58%),
+    linear-gradient(180deg, var(--lx-red-hi) 0%, var(--lx-red) 58%, color-mix(in srgb, var(--lx-red) 72%, #000) 100%);
+  border-color: color-mix(in srgb, var(--lx-amber) 34%, var(--accent));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 16px 34px -20px rgba(150, 20, 18, 0.95),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
 }
-/* إصلاح ظهور نموذج تسجيل الدخول */
-.lx-deck form,
-.lx-deck form .lx-field,
-.lx-deck form .lx-label,
-.lx-deck form .lx-input-wrap,
-.lx-deck form .lx-input,
-.lx-deck form .lx-submit {
-  opacity: 1 !important;
-  visibility: visible !important;
-  filter: none !important;
+.lx-submit:active:not(:disabled) { transform: translateY(0) scale(0.982); }
+/* ── ⑥ رمز التحقق: ارتفاع محجوز ⇒ لا قفز في اللوح عند الفحص ───────────── */
+.otp-orbit-zone { min-height: 11.375rem; min-width: 11.375rem; }
+.otp-box { border-radius: var(--lx-r-sm); }
+
+/* ── ⑦ التجاوب والشاشات القصيرة والحافة الآمنة ─────────────────────────── */
+@media (min-width: 1536px) {
+  .lx-deck { max-width: 60rem; }
+  .lx-gate-board { max-width: 42rem; }
+}
+@media (max-width: 640px) {
+  .lx { --lx-track-h: 3.875rem; --lx-crest: 6.5rem; --lx-field-h: 3.25rem; }
+  .lx-gate { padding-inline: 1rem; }
+  .lx-gate-board {
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--lx-r-lg);
+    padding: 2.25rem 1.1rem 1.5rem;
+  }
+  .lx-gate-board::after {
+    inset-block-start: 0.75rem;
+    inset-inline-start: 0.85rem;
+    inset-inline-end: auto;
+    font-size: 0.5rem;
+  }
+  .lx-track { max-width: 100%; }
+  .lx-goal { inset-inline-end: 0.75rem; }
+  .lx-deck { border-radius: var(--lx-r-lg); }
+  .lx-input { padding-inline: 2.9rem; }
+  .otp-orbit-zone { min-height: 9.75rem; min-width: 9.75rem; }
+}
+@media (max-width: 400px) {
+  .lx-gate-title { font-size: 1.4rem; }
+  .lx-track-label { font-size: 0.72rem; }
+  .otp-orbit-zone { min-height: 9rem; min-width: 9rem; }
+}
+/* شاشات قصيرة (لوحات أفقية / كيبورد مفتوح): تمرير سليم وأزرار ظاهرة */
+@media (max-height: 720px) {
+  .lx-gate { padding-block: 0.75rem; }
+  .lx-gate-board { padding-block: 1.35rem 1.1rem; }
+  .lx-gate-title { margin-top: 1.1rem; }
+  .lx-gate-foot { margin-top: 1.2rem; }
+  .lx-console { padding-top: 1.5rem; padding-bottom: 1.25rem; }
+}
+@media (max-height: 620px) {
+  .lx { --lx-track-h: 3.5rem; }
+  .lx-crest-stack { width: 5.5rem; height: 5.5rem; }
+  .lx-gate-board { padding-block: 1.1rem 0.9rem; }
+  .lx-gate-title { margin-top: 0.8rem; }
 }
 
-.lx-deck form {
-  position: relative !important;
-  z-index: 20 !important;
+/* ── ⑧ تقليل الحركة: صفر حركة دائمة مع إبقاء المعنى ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .lx-aurora,
+  .lx-scene::after,
+  .lx-crest-glow,
+  .lx-orbit,
+  .lx-orbit--inner,
+  .lx-handle.is-idle .lx-handle-halo,
+  .lx-chevs svg,
+  .lx-ribbon::after,
+  .lx-radar-sweep,
+  .lx-radar-blip,
+  .lx-live-dot,
+  .lx-radar-logo,
+  .lx-boot,
+  .lx-boot-slash,
+  .lx-spinner {
+    animation: none !important;
+  }
+  .lx-aurora { transform: none; }
+  .lx-scene::after { transform: scale(1.03); opacity: 0.15; }
+  .lx-crest-glow { opacity: 0.45; }
+  .lx-radar-blip { opacity: 0.8; }
 }
 
-.lx-deck form .lx-field {
-  display: block !important;
-  position: relative !important;
-  z-index: 21 !important;
+/* ── ⑨ إصلاحات مباشرة من المراجعة الحقيقية ─────────────────────────────── */
+
+/* شعار الرادار: كان بلا قاعدة بعد نقل قواعد التخطيط ⇒ كان يظهر بحجمه الأصلي
+   العملاق ويقفز خارج الدائرة. الآن: موضعه وحجمه وطبقته معرّفة هنا بالكامل. */
+.lx-radar-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  object-fit: contain;
+  object-position: 39%;
+  z-index: 3;
+  opacity: 1;
+  visibility: visible;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.42));
+  animation: lx-crest-float 5.4s var(--lx-ease-soft) infinite;
+}
+@keyframes lx-crest-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-2deg); }
+  50%      { transform: translate(-50%, calc(-50% - 3px)) rotate(2deg); }
+}
+.lx-radar img { position: absolute; }
+
+/* ── أيقونات الحقول — «أفتح ما يمكن» مع بقاء الوضوح في الثيمين ───────────
+   المشكلة كانت في حالتين لا في الراكدة فقط:
+     • الراكدة: `--ink` تطابق النص لكنها تبدو أثقل من اللازم داخل الحقل الزجاجي.
+     • التركيز/الخطأ: `--lx-accent-hi` = color-mix(accent 62%, #fff) ⇒ في الثيم
+       الفاتح تُقاس فعليًا rgb(205, 97, 97) على حقل أبيض ⇒ أيقونة باهتة تختفي.
+   الحل: توكنان مخصّصان للأيقونة (`--lx-ic` راكد، `--lx-ic-focus` عند التركيز)
+   بقيم مصمَّمة لكل ثيم — لا اشتقاق آلي واحد للثيمين. */
+.lx {
+  --lx-ic:       color-mix(in srgb, #ffffff 94%, var(--accent) 6%);
+  --lx-ic-focus: color-mix(in srgb, var(--lx-accent-hi) 55%, #ffffff 45%);
+}
+:root[data-theme="light"] .lx {
+  --lx-ic:       color-mix(in srgb, var(--ink) 55%, #8b9bb4 45%);
+  --lx-ic-focus: color-mix(in srgb, var(--accent) 70%, #ffffff 30%);
+}
+.lx-input-ic { color: var(--lx-ic); }
+.lx-eye { color: var(--lx-ic); }
+.lx-eye:hover { color: var(--lx-ic-focus); }
+.lx-field.has-error .lx-input-ic { color: var(--lx-ic-focus); }
+
+/* مفاتيح اللغة/الثيم: موضع ثابت مضمون على الطرفين (لا تراكب مع أي طبقة) */
+.lx-pill-btn {
+  position: fixed;
+  top: 1rem;
+  inset-inline-start: 1.25rem;
+  z-index: 9999;
+}
+.lx-switch {
+  position: fixed;
+  top: 1rem;
+  inset-inline-end: 1.25rem;
+  z-index: 9999;
+}
+@media (max-width: 640px) {
+  .lx-pill-btn { inset-inline-start: 0.75rem; }
+  .lx-switch { inset-inline-end: 0.75rem; }
 }
 
-.lx-deck form .lx-input-wrap {
-  display: block !important;
-  position: relative !important;
-  width: 100% !important;
-  min-height: 3.375rem !important;
-  overflow: visible !important;
+/* إحساس أسرع وأنعم: كل انتقالات التفاعل تُختصر (لا شيء يزيد عن ٢٤٠ms) */
+.lx {
+  --lx-dur-instant: 90ms;
+  --lx-dur-fast: 130ms;
+  --lx-dur-base: 180ms;
+  --lx-dur-slow: 260ms;
 }
-
-.lx-deck form .lx-submit {
-  display: flex !important;
-  position: relative !important;
-  z-index: 25 !important;
-  min-height: 3rem !important;
-  color: #ffffff !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-/* Field icons + placeholder */
-.lx-input-wrap { position: relative; }
-
-.lx-input-ic,
-.lx-eye {
-  z-index: 5 !important;          /* فوق الخانة */
-  opacity: 1 !important;
-  color: var(--ink) !important;   /* أبيض في الدارك / غامق في اللايت */
-}
-.lx-input-ic svg,
-.lx-eye svg { stroke: currentColor; }
-
-.lx-field:focus-within .lx-input-ic { color: var(--accent) !important; }
-
-.lx-input::placeholder,
-.lx-deck form .lx-input::placeholder {
-  color: color-mix(in srgb, var(--ink) 55%, transparent) !important;
-  -webkit-text-fill-color: color-mix(in srgb, var(--ink) 55%, transparent) !important;
-  opacity: 1 !important;
-  font-weight: 500 !important;
-}
-.lx-input[type="password"]::placeholder { letter-spacing: .12em; }
+.lx-gate-board { animation-duration: 440ms; }
+.lx-deck { transition-duration: 240ms; }
+.lx-gate::before { transition: opacity 220ms var(--lx-ease-soft); }
+.lx-scene::after { animation-duration: 44s; }
+.lx-ribbon::after { animation-duration: 7.5s; }
+.lx-handle-core { transition-duration: var(--lx-dur-fast); }
+.lx-submit { transition-duration: var(--lx-dur-instant), var(--lx-dur-fast), var(--lx-dur-fast); }

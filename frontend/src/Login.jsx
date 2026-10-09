@@ -268,10 +268,32 @@ export default function Login() {
   const parY = useMotionValue(0);
   const parSX = useSpring(parX, { stiffness: 55, damping: 17 });
   const parSY = useSpring(parY, { stiffness: 55, damping: 17 });
+  const lxRootRef = useRef(null);
+  const lightFrameRef = useRef(0);
+  /* 🕯️ ضوء المؤشّر: بقعة ضوء ناعمة تتبع المؤشر على المشهد كله (البوابة والسطح).
+     - إطار واحد لكل مجموعة حركات (rAF) ⇒ صفر إعادة رسم React.
+     - اللمس ومع reduced-motion: لا تتبّع مستمر (بديل ثابت).
+     - الإزاحة مقيّدة (≤ 12px) على الختم وحده ⇒ لا يتحرك التخطيط. */
   const handleGatePointerMove = (e) => {
-    if (reduceMotion) return;
-    parX.set((e.clientX / window.innerWidth - 0.5) * 16);
-    parY.set((e.clientY / window.innerHeight - 0.5) * 11);
+    if (reduceMotion || e.pointerType === 'touch') return;
+    const { clientX, clientY } = e;
+    if (lightFrameRef.current) return;
+    lightFrameRef.current = requestAnimationFrame(() => {
+      lightFrameRef.current = 0;
+      const root = lxRootRef.current;
+      if (root) {
+        root.style.setProperty('--lx-px', ((clientX / window.innerWidth) * 100).toFixed(2) + '%');
+        root.style.setProperty('--lx-py', ((clientY / window.innerHeight) * 100).toFixed(2) + '%');
+        root.style.setProperty('--lx-pl', '1');
+      }
+      parX.set((clientX / window.innerWidth - 0.5) * 12);
+      parY.set((clientY / window.innerHeight - 0.5) * 8);
+    });
+  };
+  /* على الأجهزة اللمسية: ضوء ثابت في المنتصف بدل تتبّع مستمر */
+  const handleScenePointerLeave = () => {
+    const root = lxRootRef.current;
+    if (root) root.style.setProperty('--lx-pl', '0');
   };
 
   // تشغيل القياسات (readiness) بعد دخول الكارت
@@ -284,6 +306,7 @@ export default function Login() {
   useEffect(
     () => () => {
       if (springRef.current) cancelAnimationFrame(springRef.current);
+      if (lightFrameRef.current) cancelAnimationFrame(lightFrameRef.current);
     },
     [],
   );
@@ -433,7 +456,12 @@ export default function Login() {
 
   // إتاحة كاملة للوحة المفاتيح (تقدم/تراجع حسب الاتجاه + Enter عند الاقتراب من النهاية)
   const handleKnobKey = (e) => {
-    if (!trackRef.current || isDragging || isUnlocking) return;
+    if (!trackRef.current || isUnlocking) return;
+    /* 🛡️ لو انقطع pointerup (نقرة سريعة يسبق فيها pointerup معالج pointerdown،
+       لمس متعدد، أو تبديل نافذة) تبقى البوابة «عالقة في السحب» فيُعطَّل مفتاح
+       لوحة المفاتيح بالكامل. مفتاح من لوحة المفاتيح يعني أن الإصبع رُفع ⇒
+       نُنهي أي سحب قديم ثم نكمل بنفس المنطق تمامًا (لا تغيير في الدلالات). */
+    if (isDragging) setIsDragging(false);
     measureHandle();
     const trackRect = trackRef.current.getBoundingClientRect();
     const maxX = Math.max(1, trackRect.width - handleSizeRef.current - 8);
@@ -584,8 +612,11 @@ export default function Login() {
 
   return (
     <div
+      ref={lxRootRef}
       className="lx relative min-h-[100dvh] bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
       dir={isRTL ? 'rtl' : 'ltr'}
+      onPointerMove={handleGatePointerMove}
+      onPointerLeave={handleScenePointerLeave}
     >
       {/* 🩺 شاشة وقوع السيرفر — تظهر على صفحة الدخول نفسها (أول مكان بيوصل له الشباب) */}
       <ServerDownOverlay health={serverHealth} lang={language} />
@@ -595,7 +626,10 @@ export default function Login() {
           كانت 9 عناصر (aurora / glow×3 / beam / grid / sweep / vignette / grain)
           بلا أي قاعدة CSS، ومعها inline transform مربوط بـ dragProgress ⇒ تُبنى
           في كل رسم وتُعيد بناء الشجرة مع كل إطار سحب مقابل صفر أثر بصري. */}
-      <div className="lx-scene" aria-hidden="true" />
+      <div className="lx-scene" aria-hidden="true">
+        <span className="lx-aurora" aria-hidden="true" />
+        <span className="lx-light" aria-hidden="true" />
+      </div>
 
       {/* ═══════════ تحكمات ثابتة: اللغة + الثيم ─────────────── */}
       <motion.button
@@ -637,7 +671,6 @@ export default function Login() {
             ref={gateRootRef}
             className="lx-gate fixed inset-0 z-50 overflow-hidden"
             dir="ltr"
-            onPointerMove={handleGatePointerMove}
             initial={{ opacity: 1 }}
             /* الخروج: opacity + scale فقط. كان `filter: blur(14px)` متحرّكًا
                ⇒ مسح كامل الشاشة وإعادة رسمها بفلتر طوال مدة الخروج. */
@@ -651,7 +684,10 @@ export default function Login() {
                 في commit سابق) ⇒ DOM ميت يُبنى في كل رسم، مع inline transform
                 يربط البارالاكس بـ dragProgress فيُجبر إعادة بناء لكل إطار.
                 أُزيل بالكامل — نفس الشكل، صفر عُقد. */}
-            <div className="lx-scene" aria-hidden="true" />
+            <div className="lx-scene" aria-hidden="true">
+        <span className="lx-aurora" aria-hidden="true" />
+        <span className="lx-light" aria-hidden="true" />
+      </div>
 
             <motion.div
               variants={GATE_RISE}
@@ -870,18 +906,7 @@ export default function Login() {
   alt="الهلال الأحمر المصري"
   draggable="false"
   className="lx-radar-logo"
-  style={{
-    width: '2.25rem',
-    height: '2.25rem',
-    objectFit: 'contain',
-    objectPosition: 'center',
-    display: 'block',
-    opacity: 1,
-    visibility: 'visible',
-    position: 'relative',
-    zIndex: 5,
-  }}
-/>
+  />
 
               </div>
 
@@ -907,11 +932,11 @@ export default function Login() {
                       {language === 'ar' ? 'مركز تنسيق الاستجابة' : 'RESPONSE COORDINATION'}
                     </span>
                     <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
-                      {language === 'ar' ? 'مكتب تنسيق الاستجابة' : 'Response Coordination Desk'}
+                      {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Response Coordination Desk'}
                     </h3>
                     <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
                       {language === 'ar'
-                        ? 'تحقق من بيانات اعتمادك للدخول إلى مركز تنسيق الاستجابة.'
+                        ? 'تحقق من بيانات اعتمادك للدخول إلى مركز عمليات الطوارئ.'
                         : 'Verify your credentials to enter the response coordination desk.'}
                     </p>
                   </div>
@@ -1030,7 +1055,7 @@ export default function Login() {
                         )}
 
                         <form onSubmit={handleLogin} className="flex flex-col gap-5" autoComplete="off">
-                          <motion.div variants={FORM_ITEM} className="lx-field">
+                          <motion.div variants={FORM_ITEM} className={`lx-field ${username ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
                             <label className="lx-label">
                               <span className="lx-label-dot" aria-hidden="true" />
@@ -1047,19 +1072,11 @@ export default function Login() {
                                 placeholder={language === 'ar' ? 'أدخل اسم المستخدم الخاص بك' : 'Enter your Username'}
                                 autoComplete="new-password"
                                 className="lx-input"
-style={{
-  color: 'var(--ink)',
-  backgroundColor: 'var(--surface-3)',
-  borderColor: 'var(--border)',
-  opacity: 1,
-  visibility: 'visible',
-}}
-
-                              />
+/>
                             </div>
                           </motion.div>
 
-                          <motion.div variants={FORM_ITEM} className="lx-field">
+                          <motion.div variants={FORM_ITEM} className={`lx-field ${password ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
                             <label className="lx-label">
                               <span className="lx-label-dot" aria-hidden="true" />
@@ -1076,16 +1093,7 @@ style={{
                                 placeholder="********"
                                 autoComplete="new-password"
                                 className="lx-input"
-                                style={{
-                                  color: 'var(--ink)',
-                                  backgroundColor: 'var(--surface-3)',
-                                  borderColor: 'var(--border)',
-                                  opacity: 1,
-                                  visibility: 'visible',
-                                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                                  letterSpacing: '0.12em',
-                                }}
-                              />
+/>
                               <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
