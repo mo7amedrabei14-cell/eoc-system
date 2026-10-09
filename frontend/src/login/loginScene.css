@@ -132,8 +132,8 @@
    ════════════════════════════════════════════════════════════════════════════ */
 .lx-crest-stack {
   position: relative;
-  width: clamp(108px, 8.2vw, 148px);
-  height: clamp(108px, 8.2vw, 148px);
+  width: clamp(6.75rem, 8.2vw, 9.25rem);
+  height: clamp(6.75rem, 8.2vw, 9.25rem);
 }
 
 /* بركة ضوء أسفل الهلال: قرص بيضوي واسع باهت يثبّت الهلال كجسم يطفو
@@ -164,7 +164,7 @@
 .lx-crest-glow {
   position: absolute;
   inset: -34%;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   /* 🚫 `filter: blur(18px)` اتشال: تدرّج شعاعي ناعم أصلاً، والفلتر كان يُجبر
      المتصفح على إعادة تصوير (rasterize) الطبقة في كل إطار من نبضة التنفّس
      اللانهائية. نفس الشكل — الآن transform/opacity فقط على الـ compositor. */
@@ -186,13 +186,13 @@
 /* مدار الأقمار (يتباطأ ويتسارع مع السحب عبر style) */
 .lx-orbit {
   position: absolute;
-  inset: -22px;
-  border-radius: 999px;
+  inset: -1.375rem;
+  border-radius: 62.4375rem;
   border: 1px dashed color-mix(in srgb, var(--ink) 16%, transparent);
   animation: lx-spin 26s linear infinite;
 }
 .lx-orbit--inner {
-  inset: -11px;
+  inset: -0.6875rem;
   border-style: solid;
   border-color: color-mix(in srgb, var(--ink) 7%, transparent);
   animation: lx-spin-r 34s linear infinite;
@@ -203,18 +203,18 @@
 /* أقمار تدور على حافّة الحلقات — تركب دوران الحلقة نفسها (متجاوبة، بلا أرقام ثابتة) */
 .lx-sat {
   position: absolute;
-  top: -4px;
+  top: -0.25rem;
   inset-inline-start: 50%;
-  margin-inline-start: -3.5px;
-  width: 7px; height: 7px;
-  border-radius: 999px;
+  margin-inline-start: -0.2188rem;
+  width: 0.4375rem; height: 0.4375rem;
+  border-radius: 62.4375rem;
   background: var(--lx-accent-hi);
   box-shadow: 0 0 10px 2px var(--accent-glow);
 }
 .lx-sat--b {
   top: auto;
   bottom: -2.5px;
-  width: 4px; height: 4px;
+  width: 0.25rem; height: 0.25rem;
   margin-inline-start: -2px;
   background: color-mix(in srgb, var(--ink) 55%, transparent);
   box-shadow: none;
@@ -224,9 +224,9 @@
 /* حلقة التقدم المرئية (SVG) — تمتلئ مع السحب */
 .lx-halo {
   position: absolute;
-  inset: -13px;
-  width: calc(100% + 26px);
-  height: calc(100% + 26px);
+  inset: -0.8125rem;
+  width: calc(100% + 1.625rem);
+  height: calc(100% + 1.625rem);
   transform: rotate(-90deg);
   overflow: visible;
 }
@@ -256,7 +256,7 @@
 .lx-crest {
   position: absolute;
   inset: 0;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -323,7 +323,7 @@
    ٣) نصوص البوابة
    ════════════════════════════════════════════════════════════════════════════ */
 .lx-gate-title {
-  font-size: clamp(24px, 2.6vw, 36px);
+  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -0.01em;
   line-height: 1.18;
@@ -334,7 +334,7 @@
 .lx-gate-title [dir="ltr"] & { letter-spacing: -0.015em; }
 
 .lx-gate-sub {
-  font-size: clamp(11px, .9vw, 13.5px);
+  font-size: clamp(0.6875rem, .9vw, 0.8438rem);
   font-weight: 700;
   text-align: center;
   color: var(--muted);
@@ -358,14 +358,14 @@
 
 /* شارة النسبة المئوية / التفعيل فوق المسار */
 .lx-readout {
-  height: 30px;
+  height: 1.875rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .lx-pct {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--lx-accent-hi);
   letter-spacing: .12em;
@@ -375,10 +375,10 @@
 .lx-granted {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
-  border-radius: 999px;
-  font-size: 10.5px;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.875rem;
+  border-radius: 62.4375rem;
+  font-size: 0.6562rem;
   font-weight: 800;
   letter-spacing: .3em;
   text-transform: uppercase;
@@ -388,8 +388,8 @@
   box-shadow: 0 0 24px -4px var(--ok-soft), inset 0 0 12px var(--ok-soft);
 }
 .lx-granted i {
-  width: 6px; height: 6px;
-  border-radius: 999px;
+  width: 0.375rem; height: 0.375rem;
+  border-radius: 62.4375rem;
   background: var(--ok);
   box-shadow: 0 0 10px var(--ok);
   animation: lx-pulse-dot 1s ease-in-out infinite;
@@ -406,9 +406,9 @@
 .lx-track {
   position: relative;
   width: 100%;
-  max-width: 480px;
-  height: 68px;
-  border-radius: 999px;
+  max-width: 30rem;
+  height: 4.25rem;
+  border-radius: 62.4375rem;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -485,10 +485,10 @@
 /* لمعان علوي داخلي */
 .lx-track-shine {
   position: absolute;
-  inset-inline: 34px;
+  inset-inline: 2.125rem;
   top: 0;
   height: 1.5px;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   /* لمعة مواصفاتية حقيقية: نقطة قوية في الثلث الأيسر تتلاشى عند الأطراف
      (مصدر ضوء واحد) بدل خط متدرّج متساوٍ في اتجاه واحد. */
   background: radial-gradient(
@@ -516,11 +516,11 @@
    المقطع القاصّ، فلا يحدث أي تشوّه للحواف المستديرة من القياس. */
 .lx-fill-clip {
   position: absolute;
-  top: 5px;
-  bottom: 5px;
-  inset-inline-start: 5px;
-  inset-inline-end: 5px;
-  border-radius: 999px;
+  top: 0.3125rem;
+  bottom: 0.3125rem;
+  inset-inline-start: 0.3125rem;
+  inset-inline-end: 0.3125rem;
+  border-radius: 62.4375rem;
   overflow: hidden;
   pointer-events: none;
 }
@@ -556,11 +556,11 @@
   position: absolute;
   top: 50%;
   inset-inline-start: 0;
-  width: 76px;
-  height: 76px;
-  margin-top: -38px;
-  margin-inline-start: 12px;
-  border-radius: 999px;
+  width: 4.75rem;
+  height: 4.75rem;
+  margin-top: -2.375rem;
+  margin-inline-start: 0.75rem;
+  border-radius: 62.4375rem;
   transform: translate3d(var(--lx-x, 0px), 0, 0);
   background: radial-gradient(
     closest-side,
@@ -577,7 +577,7 @@
 .lx-tick {
   position: absolute;
   top: 50%;
-  width: 7px; height: 7px;
+  width: 0.4375rem; height: 0.4375rem;
   border-radius: 2px;
   transform: translate(-50%, -50%) rotate(45deg) scale(1);
   background: color-mix(in srgb, var(--ink) 18%, transparent);
@@ -603,10 +603,10 @@
 .lx-goal {
   position: absolute;
   top: 50%;
-  inset-inline-end: 16px;
-  width: 30px; height: 30px;
+  inset-inline-end: 1rem;
+  width: 1.875rem; height: 1.875rem;
   transform: translateY(-50%);
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   border: 1.5px dashed color-mix(in srgb, var(--ink) 24%, transparent);
   display: grid;
   place-items: center;
@@ -631,8 +631,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  font-size: 13px;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: .04em;
   color: color-mix(in srgb, var(--ink) 78%, transparent);
@@ -672,9 +672,9 @@
 .lx-handle {
   position: absolute;
   top: 50%;
-  inset-inline-start: 5px;
+  inset-inline-start: 0.3125rem;
   z-index: 10;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   cursor: grab;
   touch-action: none;
   outline: none;
@@ -690,8 +690,8 @@
 
 .lx-handle-halo {
   position: absolute;
-  inset: -12px;
-  border-radius: 999px;
+  inset: -0.75rem;
+  border-radius: 62.4375rem;
   /* تدرّج شعاعي بدل `filter: blur(11px)` — الفلتر كان يُعاد تصويره في كل
      إطار من نبضة `lx-halo-breathe` اللانهائية *وأثناء السحب كله*. */
   background: radial-gradient(
@@ -716,7 +716,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -783,7 +783,7 @@
 .lx-ripple {
   position: absolute;
   inset: 0;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   border: 2px solid var(--ok);
   opacity: 0;
   pointer-events: none;
@@ -815,7 +815,7 @@
   position: absolute;
   top: -22%; bottom: -22%;
   inset-inline-start: 50%;
-  width: min(40vw, 380px);
+  width: min(40vw, 23.75rem);
   transform: translateX(-50%) rotate(-12deg);
   background: linear-gradient(
     100deg,
@@ -836,8 +836,8 @@
 }
 .lx-boot-spark {
   position: absolute;
-  width: 5px; height: 5px;
-  border-radius: 999px;
+  width: 0.3125rem; height: 0.3125rem;
+  border-radius: 62.4375rem;
   background: color-mix(in srgb, var(--lx-accent-hi) 90%, #fff);
   box-shadow: 0 0 14px 3px var(--accent-glow);
   animation: lx-boot-spark .95s var(--ease-out) both;
@@ -850,9 +850,9 @@
 .lx-boot-ring {
   position: absolute;
   top: 50%; inset-inline-start: 50%;
-  width: 170px; height: 170px;
-  margin: -85px;
-  border-radius: 999px;
+  width: 10.625rem; height: 10.625rem;
+  margin: -5.3125rem;
+  border-radius: 62.4375rem;
   border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
   animation: lx-boot-ring 1s var(--ease-out) .42s both;
   pointer-events: none;
@@ -879,18 +879,18 @@
 /* تذييل البوابة */
 .lx-gate-foot {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10.5px;
+  font-size: 0.6562rem;
   letter-spacing: .24em;
   color: var(--faint);
   text-transform: uppercase;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
 }
 .lx-gate-foot::before,
 .lx-gate-foot::after {
   content: "";
-  width: 34px;
+  width: 2.125rem;
   height: 1px;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ink) 26%, transparent));
 }
@@ -1022,20 +1022,20 @@
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  height: 22px;
+  height: 1.375rem;
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .28));
   pointer-events: none;
 }
 
 .lx-logo-tile {
   position: relative;
-  width: 46px; height: 46px;
-  border-radius: 14px;
+  width: 2.875rem; height: 2.875rem;
+  border-radius: 0.875rem;
   background: linear-gradient(160deg, #ffffff 0%, #ececef 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 5px;
+  padding: 0.3125rem;
   box-shadow:
     0 10px 24px -8px rgba(0, 0, 0, .55),
     inset 0 1px 0 #fff,
@@ -1050,18 +1050,18 @@
 .lx-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  border-radius: 11px;
+  gap: 0.5rem;
+  border-radius: 0.6875rem;
   background: rgba(0, 0, 0, .3);
   border: 1px solid rgba(255, 255, 255, .16);
   -webkit-backdrop-filter: blur(6px);
           backdrop-filter: blur(6px);
-  padding: 7px 12px;
+  padding: 0.4375rem 0.75rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
 }
 .lx-live-dot {
-  width: 8px; height: 8px;
-  border-radius: 999px;
+  width: 0.5rem; height: 0.5rem;
+  border-radius: 62.4375rem;
   background: #fff;
   box-shadow: 0 0 10px 1px rgba(255, 255, 255, .9);
   animation: lx-pulse-dot 1.5s ease-in-out infinite;
@@ -1070,7 +1070,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: .14em;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -1086,26 +1086,26 @@
 .lx-console::after {
   content: "";
   position: absolute;
-  width: 15px; height: 15px;
+  width: 0.9375rem; height: 0.9375rem;
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   border-style: solid;
   pointer-events: none;
 }
 .lx-console::before {
-  top: 12px; inset-inline-start: 12px;
+  top: 0.75rem; inset-inline-start: 0.75rem;
   border-width: 1.5px 0 0 1.5px;
   border-start-start-radius: 6px;
 }
 .lx-console::after {
-  top: 12px; inset-inline-end: 12px;
+  top: 0.75rem; inset-inline-end: 0.75rem;
   border-width: 1.5px 1.5px 0 0;
   border-start-end-radius: 6px;
 }
 
 .lx-radar {
   position: relative;
-  width: 118px; height: 118px;
-  border-radius: 999px;
+  width: 7.375rem; height: 7.375rem;
+  border-radius: 62.4375rem;
   border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
   background:
     radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--surface-3) 80%, transparent) 0%, var(--surface-2) 78%);
@@ -1118,20 +1118,20 @@
 .lx-radar-sweep {
   position: absolute;
   inset: 0;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   background: conic-gradient(from 0deg, var(--accent-glow) 0deg, transparent 76deg);
   animation: lx-spin 4.2s linear infinite;
 }
 .lx-radar-ring {
   position: absolute;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
 }
 .lx-radar-ring--1 { inset: 17%; }
 .lx-radar-ring--2 { inset: 34%; }
 .lx-radar-blip {
   position: absolute;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   animation: lx-pulse-dot 2s ease-in-out infinite;
 }
 .lx-radar img {
@@ -1144,19 +1144,19 @@
 .lx-gauge-num {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 800;
   line-height: 1;
 }
 .lx-gauge-num small {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--muted);
   margin-inline-start: 2px;
 }
 .lx-gauge-bar {
-  height: 5px;
-  border-radius: 999px;
+  height: 0.3125rem;
+  border-radius: 62.4375rem;
   background: color-mix(in srgb, var(--ink) 8%, transparent);
   overflow: hidden;
   position: relative;
@@ -1164,7 +1164,7 @@
 }
 .lx-gauge-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   transition: width 1.3s var(--ease-out);
   position: relative;
 }
@@ -1197,7 +1197,7 @@
 }
 .lx-eyebrow::before {
   content: "";
-  width: 26px; height: 2px;
+  width: 1.625rem; height: 2px;
   border-radius: 2px;
   background: linear-gradient(90deg, var(--accent), var(--accent-glow));
   box-shadow: 0 0 8px var(--accent-glow);
@@ -1209,8 +1209,8 @@
 }
 .lx-field-glow {
   position: absolute;
-  inset: -6px -8px;
-  border-radius: 22px;
+  inset: -0.375rem -0.5rem;
+  border-radius: 1.375rem;
   background: radial-gradient(60% 130% at 50% 120%, var(--accent-glow) 0%, transparent 70%);
   filter: blur(14px);
   opacity: 0;
@@ -1222,20 +1222,20 @@
 .lx-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
   font-weight: 800;
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 9px;
+  margin-bottom: 0.5625rem;
   transition: color .3s var(--ease-out);
 }
 [dir="rtl"] .lx-label { letter-spacing: .03em; }
 .lx-field:focus-within .lx-label { color: color-mix(in srgb, var(--accent) 80%, var(--muted)); }
 .lx-label-dot {
-  width: 5px; height: 5px;
-  border-radius: 999px;
+  width: 0.3125rem; height: 0.3125rem;
+  border-radius: 62.4375rem;
   background: color-mix(in srgb, var(--ink) 24%, transparent);
   transition: background .3s, box-shadow .3s;
 }
@@ -1251,7 +1251,7 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  inset-inline-start: 17px;
+  inset-inline-start: 1.0625rem;
   display: inline-flex;
   color: var(--faint);
   transition: color .3s var(--ease-out), transform .3s var(--ease-spring);
@@ -1290,7 +1290,7 @@
     box-shadow 180ms var(--lx-ease-out-quick),
     background-color 160ms var(--lx-ease-out-quick);
 }
-[dir="ltr"] .lx-input { padding-left: 52px; padding-right: 52px; }
+[dir="ltr"] .lx-input { padding-left: 3.25rem; padding-right: 3.25rem; }
 .lx-input::placeholder {
   color: var(--muted);
   font-weight: 500;
@@ -1333,9 +1333,9 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  inset-inline-end: 9px;
-  padding: 8px;
-  border-radius: 11px;
+  inset-inline-end: 0.5625rem;
+  padding: 0.5rem;
+  border-radius: 0.6875rem;
   color: var(--faint);
   transition: color .25s, background-color .25s, transform .2s var(--ease-spring);
 }
@@ -1349,16 +1349,16 @@
 .lx-caps {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 9px;
-  font-size: 11.5px;
+  gap: 0.5rem;
+  margin-top: 0.5625rem;
+  font-size: 0.7188rem;
   font-weight: 700;
   color: var(--warn);
   animation: lx-morph-in .35s var(--ease-out) both;
 }
 .lx-caps i {
-  width: 7px; height: 7px;
-  border-radius: 999px;
+  width: 0.4375rem; height: 0.4375rem;
+  border-radius: 62.4375rem;
   background: var(--warn);
   box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 70%, transparent);
   animation: lx-pulse-dot 1.2s ease-in-out infinite;
@@ -1368,10 +1368,10 @@
 .lx-submit {
   position: relative;
   width: 100%;
-  margin-top: 6px;
-  border-radius: 17px;
-  padding: 17px 20px;
-  font-size: 14.5px;
+  margin-top: 0.375rem;
+  border-radius: 1.0625rem;
+  padding: 1.0625rem 1.25rem;
+  font-size: 0.9062rem;
   font-weight: 800;
   letter-spacing: .05em;
   color: #fff;
@@ -1439,8 +1439,8 @@
 }
 
 .lx-spinner {
-  width: 19px; height: 19px;
-  border-radius: 999px;
+  width: 1.1875rem; height: 1.1875rem;
+  border-radius: 62.4375rem;
   border: 2.5px solid rgba(255, 255, 255, .28);
   border-top-color: #fff;
   animation: lx-spin .7s linear infinite;
@@ -1451,15 +1451,15 @@
 .lx-error {
   display: flex;
   align-items: flex-start;
-  gap: 13px;
-  border-radius: 17px;
+  gap: 0.8125rem;
+  border-radius: 1.0625rem;
   border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
     color-mix(in srgb, var(--accent-softer) 65%, transparent);
   -webkit-backdrop-filter: blur(8px);
           backdrop-filter: blur(8px);
-  padding: 14px 16px;
+  padding: 0.875rem 1rem;
   color: var(--ink);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent),
@@ -1478,8 +1478,8 @@
 }
 .lx-error-ic {
   flex-shrink: 0;
-  width: 32px; height: 32px;
-  border-radius: 999px;
+  width: 2rem; height: 2rem;
+  border-radius: 62.4375rem;
   display: grid;
   place-items: center;
   color: var(--accent);
@@ -1492,9 +1492,9 @@
 .lx-trust {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 0.5625rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10.5px;
+  font-size: 0.6562rem;
   letter-spacing: .16em;
   color: var(--faint);
 }
@@ -1508,11 +1508,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
+  gap: 0.6875rem;
 }
 .otp-box {
-  width: 54px; height: 54px;
-  border-radius: 16px;
+  width: 3.375rem; height: 3.375rem;
+  border-radius: 1rem;
   border: 1px solid var(--border);
   /* Unified glass recipe: --glass-light + blur-sm + saturate */
   background:
@@ -1520,7 +1520,7 @@
     color-mix(in srgb, var(--surface-2) 90%, transparent);
   color: var(--ink);
   text-align: center;
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 800;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   outline: none;
@@ -1565,15 +1565,15 @@
 /* المدار: الصناديق تتجمع في حلقة دوّارة أثناء الفحص */
 .otp-orbit-zone.is-checking,
 .otp-orbit-zone.is-success {
-  min-height: 182px;
-  min-width: 182px;
+  min-height: 11.375rem;
+  min-width: 11.375rem;
 }
 .otp-orbit-zone.is-checking .otp-orbit-item,
 .otp-orbit-zone.is-success .otp-orbit-item {
   position: absolute;
   top: 50%; inset-inline-start: 50%;
-  margin: -27px;
-  width: 54px; height: 54px;
+  margin: -1.6875rem;
+  width: 3.375rem; height: 3.375rem;
 }
 .otp-orbit-zone.is-checking .otp-orbit-item {
   animation:
@@ -1613,11 +1613,11 @@
 .otp-success-mark {
   position: absolute;
   top: 50%; inset-inline-start: 50%;
-  width: 68px; height: 68px;
+  width: 4.25rem; height: 4.25rem;
   transform: translate(-50%, -50%) scale(.5);
   display: grid;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   border: 1px solid var(--ok);
   color: var(--ok);
   background: var(--ok-soft);
@@ -1631,7 +1631,7 @@
   animation: otp-success-pop .55s cubic-bezier(.22, .8, .25, 1) .45s forwards;
 }
 .otp-success-mark svg {
-  width: 36px; height: 36px;
+  width: 2.25rem; height: 2.25rem;
   stroke-dasharray: 40;
   stroke-dashoffset: 40;
 }
@@ -1647,12 +1647,12 @@
 
 /* رابط العودة */
 .lx-backlink {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--faint);
   transition: color .25s;
-  padding: 6px 10px;
-  border-radius: 9px;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.5625rem;
 }
 .lx-backlink:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
 
@@ -1663,15 +1663,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 999px;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 62.4375rem;
   border: 1px solid var(--border);
   /* Unified glass recipe: --glass-medium + blur-md + saturate */
   background: var(--lx-glass-medium);
   -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
           backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 800;
   letter-spacing: .18em;
   color: var(--muted);
@@ -1716,8 +1716,8 @@
 
 .lx-switch {
   position: relative;
-  width: 74px; height: 40px;
-  border-radius: 999px;
+  width: 4.625rem; height: 2.5rem;
+  border-radius: 62.4375rem;
   border: 1px solid var(--border);
   /* Unified glass recipe: --glass-medium + blur-md + saturate */
   background: var(--lx-glass-medium);
@@ -1762,30 +1762,42 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px; height: 16px;
+  width: 1rem; height: 1rem;
   color: var(--faint);
   pointer-events: none;
+  /* فوق الإبهام: الإبهام صار توهّجًا محايدًا بلا أيقونة داخلية */
+  z-index: 1;
+  transition: color var(--lx-dur-fast) var(--lx-ease-out-quick);
 }
-.lx-switch-ic--s { inset-inline-start: 13px; }
-.lx-switch-ic--e { inset-inline-end: 13px; }
+/* الأيقونتان ثابتتان الهوية (قمر = داكن، شمس = فاتح) في كلتا الحالتين؛
+   والون الأبيض للأيقونة التي يغطيها الإبهام بالضبط. */
+:root[data-theme="dark"] .lx-switch-ic--s,
+:root[data-theme="light"] .lx-switch-ic--e { color: #fff; }
+/* المركز مضبوط بمعادلة واحدة: مركزي الأيقونة والإبهام متطابقان تمامًا */
+.lx-switch-ic--s { inset-inline-start: 0.71875rem; }
+.lx-switch-ic--e { inset-inline-end: 0.71875rem; }
 .lx-switch-knob {
   position: absolute;
-  top: 4px;
-  width: 31px; height: 31px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  color: #fff;
+  top: 0.25rem;
+  width: 1.9375rem; height: 1.9375rem;
+  border-radius: 62.4375rem;
+  z-index: 0;
   background:
     radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--lx-accent-hi) 70%, transparent) 0%, transparent 55%),
     var(--accent);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent),
     0 6px 16px -4px var(--accent-glow);
-  transition: inset-inline-start .38s var(--ease-spring);
+  /* السفر بـ transform (compositor) — كان `inset-inline-start` متحركًا ⇒ حركة تخطيط */
+  transform: translate3d(0, 0, 0);
+  transition: transform .38s var(--ease-spring);
 }
-.lx-switch-knob--start { inset-inline-start: 4px; }
-.lx-switch-knob--end   { inset-inline-start: 37px; }
+.lx-switch-knob--start { inset-inline-start: 0.25rem; }
+/* `- 2px`: الإزاحات تُقاس من صندوق الحشوة (بعد حدّ 1px) بينما `width: 4.625rem`
+   تشمل الحدّ (border-box) ⇒ الحدّ يكسر التناظر ويزيح مركز الشمس بمقداره.
+   الطرد: منتصف الشمس = (4.625 - 2px - 1.125rem) من يسار الحشوة. */
+.lx-switch-knob--end   { inset-inline-start: 0.25rem; transform: translate3d(calc(2.1875rem - 2px), 0, 0); }
+[dir="rtl"] .lx-switch-knob--end { transform: translate3d(calc(-2.1875rem + 2px), 0, 0); }
 
 /* ════════════════════════════════════════════════════════════════════════════
    ١١) استجابة وتقليل الحركة
@@ -1794,12 +1806,12 @@
   .lx-grid, .lx-grain { display: none; }
   .lx-glow { filter: blur(70px); }
   .lx-beam { opacity: .5; }
-  .lx-track { height: 62px; }
-  .lx-crest-stack { width: 100px; height: 100px; }
-  .lx-deck { border-radius: 22px; }
-  .otp-box { width: 46px; height: 46px; border-radius: 14px; font-size: 18px; }
+  .lx-track { height: 3.875rem; }
+  .lx-crest-stack { width: 6.25rem; height: 6.25rem; }
+  .lx-deck { border-radius: 1.375rem; }
+  .otp-box { width: 2.875rem; height: 2.875rem; border-radius: 0.875rem; font-size: 1.125rem; }
   .otp-orbit-zone.is-checking .otp-orbit-item,
-  .otp-orbit-zone.is-success  .otp-orbit-item { margin: -23px; width: 46px; height: 46px; }
+  .otp-orbit-zone.is-success  .otp-orbit-item { margin: -1.4375rem; width: 2.875rem; height: 2.875rem; }
   @keyframes otp-form-circle {
     from { transform: translateX(var(--line-x)) scale(.9); opacity: .6; }
     to   { transform: rotate(var(--angle)) translateX(58px) scale(1); opacity: 1; }
@@ -1826,7 +1838,7 @@
 .lx-pill-btn,
 .lx-switch {
   position: fixed !important;
-  top: 16px !important;
+  top: 1rem !important;
   z-index: 9999 !important;
   display: inline-flex !important;
   opacity: 1 !important;
@@ -1835,14 +1847,14 @@
 }
 
 .lx-pill-btn {
-  inset-inline-start: 20px !important;
+  inset-inline-start: 1.25rem !important;
   color: var(--ink) !important;
   background: var(--surface-3) !important;
   border-color: var(--border) !important;
 }
 
 .lx-switch {
-  inset-inline-end: 20px !important;
+  inset-inline-end: 1.25rem !important;
   color: var(--ink) !important;
   background: var(--surface-3) !important;
   border-color: var(--border) !important;
@@ -1863,8 +1875,8 @@
   left: 50% !important;
   right: auto !important;
   bottom: auto !important;
-  width: 36px !important;
-  height: 36px !important;
+  width: 2.25rem !important;
+  height: 2.25rem !important;
   margin: 0 !important;
   display: block !important;
   z-index: 20 !important;
@@ -1894,7 +1906,7 @@
   position: relative !important;
   display: block !important;
   width: 100% !important;
-  min-height: 52px !important;
+  min-height: 3.25rem !important;
   overflow: visible !important;
 }
 
@@ -1903,7 +1915,7 @@
   z-index: 2 !important;
   display: block !important;
   width: 100% !important;
-  min-height: 52px !important;
+  min-height: 3.25rem !important;
   color: var(--ink) !important;
   -webkit-text-fill-color: var(--ink) !important;
   background: var(--surface-3) !important;
@@ -1953,7 +1965,7 @@
   display: block !important;
   position: relative !important;
   width: 100% !important;
-  min-height: 54px !important;
+  min-height: 3.375rem !important;
   overflow: visible !important;
 }
 
@@ -1961,7 +1973,7 @@
   display: flex !important;
   position: relative !important;
   z-index: 25 !important;
-  min-height: 48px !important;
+  min-height: 3rem !important;
   color: #ffffff !important;
   opacity: 1 !important;
   visibility: visible !important;

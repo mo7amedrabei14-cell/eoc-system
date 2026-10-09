@@ -3064,7 +3064,7 @@ useEffect(() => {
                 aria-label={language === 'en' ? 'Search' : 'بحث'}
                 className="w-full py-3.5 bg-transparent text-[var(--ink)] text-sm font-semibold outline-none placeholder:text-[var(--faint)]"
               />
-              <kbd className="px-1.5 py-0.5 rounded-md bg-[var(--surface-3)] border border-[var(--border)] text-[10px] font-bold text-[var(--faint)] shrink-0">ESC</kbd>
+              <kbd className="px-1.5 py-0.5 rounded-md bg-[var(--surface-3)] border border-[var(--border)] text-[max(0.625rem,9px)] font-bold text-[var(--faint)] shrink-0">ESC</kbd>
             </div>
 
             <div className="max-h-[46vh] overflow-y-auto custom-scrollbar p-2">
@@ -3075,7 +3075,7 @@ useEffect(() => {
               )}
               {palResults.map((group) => (
                 <div key={group.titleAr}>
-                  <p className="px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">{language === 'en' ? group.titleEn : group.titleAr}</p>
+                  <p className="px-3 pt-2 pb-1 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">{language === 'en' ? group.titleEn : group.titleAr}</p>
                   {group.items.map((it) => {
                     const isSel = palFlat[palIdx] === it;
                     return (
@@ -3089,7 +3089,7 @@ useEffect(() => {
                         <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${isSel ? 'bg-white/15 border-white/25' : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'}`}>{it.icon}</span>
                         <span className="flex-1 min-w-0">
                           <span className={`block text-sm font-bold truncate ${isSel ? 'text-white' : it.danger ? 'text-[var(--accent)]' : 'text-[var(--ink)]'}`}>{language === 'en' ? it.en : it.ar}</span>
-                          <span className={`block text-[11px] truncate ${isSel ? 'text-white/80' : 'text-[var(--muted)]'}`}>{it.id.startsWith('__') ? (language === 'en' ? 'Action' : 'إجراء') : (language === 'en' ? 'Open unit' : 'فتح الوحدة')}</span>
+                          <span className={`block text-[max(0.6875rem,9.5px)] truncate ${isSel ? 'text-white/80' : 'text-[var(--muted)]'}`}>{it.id.startsWith('__') ? (language === 'en' ? 'Action' : 'إجراء') : (language === 'en' ? 'Open unit' : 'فتح الوحدة')}</span>
                         </span>
                         {it.update && (
                           <span className={`w-2 h-2 rounded-full shrink-0 ${isSel ? 'bg-white' : 'bg-[var(--accent)]'} animate-pulse`}></span>
@@ -3102,7 +3102,7 @@ useEffect(() => {
               ))}
             </div>
 
-            <div className="flex items-center gap-4 px-4 py-2.5 border-t border-[var(--border)] text-[10px] font-bold text-[var(--faint)] bg-[var(--surface-2)]/50">
+            <div className="flex items-center gap-4 px-4 py-2.5 border-t border-[var(--border)] text-[max(0.625rem,9px)] font-bold text-[var(--faint)] bg-[var(--surface-2)]/50">
               <span className="inline-flex items-center gap-1"><kbd className="px-1 rounded bg-[var(--surface-3)] border border-[var(--border)]">↑</kbd><kbd className="px-1 rounded bg-[var(--surface-3)] border border-[var(--border)]">↓</kbd> {language === 'en' ? 'Navigate' : 'تنقل'}</span>
               <span className="inline-flex items-center gap-1"><kbd className="px-1 rounded bg-[var(--surface-3)] border border-[var(--border)]">↵</kbd> {language === 'en' ? 'Open' : 'فتح'}</span>
               <span className="ms-auto inline-flex items-center gap-1"><kbd className="px-1 rounded bg-[var(--surface-3)] border border-[var(--border)]">ESC</kbd> {language === 'en' ? 'Close' : 'إغلاق'}</span>
@@ -3124,10 +3124,10 @@ useEffect(() => {
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || translate('المالك', language)}</h2>
-                  <p className="text-[11px] text-[var(--muted)] truncate">مركز عمليات الطوارئ</p>
+                  <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] truncate">مركز عمليات الطوارئ</p>
                 </div>
               </div>
-              <p className="relative z-10 mt-4 inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] px-3 py-1 rounded-full">
+              <p className="relative z-10 mt-4 inline-flex items-center gap-1.5 text-[max(0.6875rem,9.5px)] font-bold text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] px-3 py-1 rounded-full">
                 <span className="status-dot status-dot-live"></span>
                 {(userData?.role || 'OWNER')}
               </p>
@@ -3140,21 +3140,25 @@ useEffect(() => {
             </div>
           )}
 
+          {/* أُزيل `key={isSidebarOpen ? 'nav-open' : 'nav-closed'}`: كان يفرض
+              **remount كاملًا** للشجرة عند كل طيّ/فتح ⇒ إعادة تشغيل `sc-nav-in`
+              على كل عنصر (تراكم حركي عند التكرار السريع) + تصفير قياس المؤشر
+              المشترك ⇒ قفزة ووميض. القياس يعتمد أصلًا على `isSidebarOpen` في
+              deps + ResizeObserver ⇒ الـ key كان مكررًا ومضرًّا فقط. */}
           <nav
             ref={navRef}
-            key={isSidebarOpen ? 'nav-open' : 'nav-closed'}
             style={{ '--nav-indicator-y': `${navIndicator.y}px`, '--nav-indicator-h': `${navIndicator.h}px` }}
             className={`nav-shell p-3 space-y-1.5 mt-2${navIndicator.on ? ' has-active' : ''}`}
           >
             {/* 🤖 القسم التلقائي: الوحدات اللي بتشتغل وترصد لوحدها (مؤشرات + رصد آلي + طقس + زلازل) */}
-            {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التلقائية</p>}
+            {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التلقائية</p>}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<PowerBiIcon />} label="لوحة المؤشرات الرئيسية" isActive={activeTab === 'powerbi'} onClick={() => handleNavigation('powerbi')} isOpen={isSidebarOpen} />}
             {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
             {!isYouth && weatherEligible && <NavItem icon={<EarthquakeIcon />} label={language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence'} isActive={activeTab === 'eq_intel'} onClick={() => handleNavigation('eq_intel')} isOpen={isSidebarOpen} hasUpdate={newUpdates.eq_intel} />}
 
             {/* 🛠️ القسم التشغيلي: كل الباقي بنفس ترتيبها — إدخال يدوي ومتابعة تشغيلية */}
-            {isSidebarOpen && <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
+            {isSidebarOpen && <p className="px-3 pt-3 pb-1.5 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
             {/* 🔒 حساب إدارة الشباب (yveoc): 3 صفحات فقط — مؤشرات المركز اليومية، المهام، القوة البشرية */}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<HomeIcon />} label="مؤشرات المركز اليومية" isActive={activeTab === 'home'} onClick={() => handleNavigation('home')} isOpen={isSidebarOpen} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIcon />} label="توقعات الطقس" isActive={activeTab === 'weather'} onClick={() => handleNavigation('weather')} isOpen={isSidebarOpen} hasUpdate={newUpdates.weather} />}
@@ -3250,7 +3254,7 @@ useEffect(() => {
                   {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
                   {activeTab === 'powerbi' && 'لوحة المؤشرات الرئيسية'}
                 </h1>
-                <span className={`hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${realtimeConnected ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--warn-soft)] text-[var(--warn)]'}`}>
+                <span className={`hidden sm:inline-flex items-center gap-1.5 text-[max(0.6875rem,9.5px)] font-bold px-2.5 py-1 rounded-full shrink-0 ${realtimeConnected ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--warn-soft)] text-[var(--warn)]'}`}>
                   <span className={`status-dot ${realtimeConnected ? 'status-dot-live' : 'animate-pulse'}`}></span>
                   {realtimeConnected ? 'متصل لحظياً' : 'جارٍ الاتصال…'}
                 </span>
@@ -3269,7 +3273,7 @@ useEffect(() => {
   >
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
     <span className="tracking-wide">{language === 'en' ? 'Search' : 'بحث'}</span>
-    <kbd className="px-1.5 py-0.5 rounded-md bg-[var(--surface-3)] border border-[var(--border)] text-[10px] font-bold text-[var(--faint)]">⌘K</kbd>
+    <kbd className="px-1.5 py-0.5 rounded-md bg-[var(--surface-3)] border border-[var(--border)] text-[max(0.625rem,9px)] font-bold text-[var(--faint)]">⌘K</kbd>
   </button>
 
   <button
@@ -3286,19 +3290,16 @@ useEffect(() => {
     type="button"
     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     title={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
-    aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
-    className="relative w-[74px] h-10 rounded-full p-1 bg-[var(--surface-3)] border border-[var(--border-strong)] transition-all duration-300 hover:border-[var(--accent-soft)] active:scale-[0.97] shrink-0">
-    <svg className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--faint)] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-    <svg className="absolute end-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--faint)] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-    <span
-      className={`absolute top-1 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--accent)] text-white shadow-[var(--shadow-accent)] transition-all duration-500 ${theme === 'dark' ? 'start-1' : 'start-[34px]'}`}
-    >
-      {theme === 'dark' ? (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
-      ) : (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
-      )}
-    </span>
+    aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}    className="relative w-[4.625rem] h-10 rounded-full p-1 bg-[var(--surface-3)] border border-[var(--border-strong)] transition-colors duration-300 hover:border-[var(--accent-soft)] active:scale-[0.97] shrink-0"
+    data-state={theme}>
+    {/* الإبهام: توهّج محايد فقط — **بلا أيقونة داخلية**. كان يحمل أيقونة مطابقة
+        للثيم فوق الأيقونة الثابتة ⇒ شمسان في الوضع الفاتح وقمران في الداكن،
+        ومنزاحان عن موضعيهما. السفر بـ transform (compositor) لا inset متحرك. */}
+    <span aria-hidden="true" className="eoc-switch-thumb absolute start-1 w-7 h-7 rounded-full bg-[var(--accent)] shadow-[var(--shadow-accent)]" />
+    {/* القمر يمثّل الوضع الداكن دائمًا */}
+    <svg data-on={theme === 'dark'} className="eoc-switch-ic absolute start-[0.6875rem] top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    {/* الشمس تمثّل الوضع الفاتح دائمًا */}
+    <svg data-on={theme === 'light'} className="eoc-switch-ic absolute end-[0.6875rem] top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
   </button>
 
   {/* 💡 جرس الإشعارات + مؤشر الاتصال + القائمة (RTL-aware، إغلاق بالضغط خارجها أو Esc) */}
@@ -3323,7 +3324,7 @@ useEffect(() => {
       </svg>
       {unreadCount > 0 && <span className="bell-ring" />}
       {unreadCount > 0 && (
-        <span key={unreadCount} className="absolute -top-1.5 -start-1.5 z-10 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-scale-pop">
+        <span key={unreadCount} className="absolute -top-1.5 -start-1.5 z-10 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[max(0.6875rem,9.5px)] font-bold flex items-center justify-center shadow-[0_0_12px_rgba(199,0,0,0.6)] animate-scale-pop">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
@@ -3339,13 +3340,13 @@ useEffect(() => {
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-soft)]">
           <h3 className="text-sm font-bold">الإشعارات اللحظية</h3>
           <div className="flex items-center gap-2.5">
-            <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${realtimeConnected ? 'text-[var(--ok)]' : 'text-[var(--warn)]'}`}>
+            <span className={`flex items-center gap-1.5 text-[max(0.6875rem,9.5px)] font-semibold ${realtimeConnected ? 'text-[var(--ok)]' : 'text-[var(--warn)]'}`}>
               <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-[var(--ok)]' : 'bg-[var(--warn)] animate-pulse'}`}></span>
               {realtimeConnected ? 'متصل' : 'جاري الاتصال'}
             </span>
             {unreadCount > 0 && (
               <button type="button" onClick={() => { setNotifications(prev => prev.map(n => ({ ...n, read: true }))); setUnreadCount(0); }}
-                className="text-[11px] text-[var(--accent)] hover:text-[var(--ink)] font-bold transition-colors">
+                className="text-[max(0.6875rem,9.5px)] text-[var(--accent)] hover:text-[var(--ink)] font-bold transition-colors">
                 تحديد الكل كمقروء
               </button>
             )}
@@ -3357,7 +3358,7 @@ useEffect(() => {
               <div className="empty-state-icon animate-float-slow">🔔</div>
               <p className="text-sm font-semibold text-[var(--muted)]">لا توجد إشعارات بعد</p>
               <p className="text-xs text-[var(--faint)]">ستظهر هنا كل التحديثات اللحظية فور حدوثها</p>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[var(--muted-2)] mt-1">
+              <span className="inline-flex items-center gap-1.5 text-[max(0.6875rem,9.5px)] font-bold text-[var(--muted-2)] mt-1">
                 <span className={`w-2 h-2 rounded-full ${realtimeConnected ? 'bg-[var(--ok)]' : 'bg-[var(--warn)] animate-pulse'}`}></span>
                 {realtimeConnected ? 'متصل — بانتظار الأحداث' : 'جارٍ الاتصال…'}
               </span>
@@ -3379,7 +3380,7 @@ useEffect(() => {
                   {!n.read && <span className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0"></span>}
                 </span>
                 <span className="block text-xs text-[var(--muted-2)] mt-0.5 truncate">{n.action}</span>
-                <span className="block text-[11px] text-[var(--faint)] mt-0.5 truncate">{formatDateTime(n.created_at)}</span>
+                <span className="block text-[max(0.6875rem,9.5px)] text-[var(--faint)] mt-0.5 truncate">{formatDateTime(n.created_at)}</span>
               </span>
             </button>
           ))}
@@ -3996,10 +3997,10 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {weatherHighlights.map((m, i) => (
-              <div key={m.key} className="kpi-card card-surface p-4 md:p-6 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[200px] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
+              <div key={m.key} className="kpi-card card-surface p-4 md:p-6 rounded-2xl border border-[var(--border)] spot-card animate-fade-in-up min-h-[12.5rem] flex flex-col justify-start" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-[var(--muted)] font-bold text-lg md:text-xl">{lang === 'ar' ? m.ar : m.en}</h4>
-                  <span className="text-[var(--faint)] font-bold text-[15px]">{m.unit}</span>
+                  <span className="text-[var(--faint)] font-bold text-[0.9375rem]">{m.unit}</span>
                 </div>
                 <div className="text-lg md:text-xl font-bold leading-relaxed">
                   <p className="text-[var(--ink)] break-words">{lang === 'ar' ? 'العظمى' : 'Max'}: {m.maxRow ? `${m.maxRow.branch_name} (${m.maxRow[`${m.key}_max`]}${m.unit})` : <span className="text-[var(--faint)]">—</span>}</p>
@@ -4018,7 +4019,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
           <span className="text-[var(--accent)]"><MapIcon /></span> خريطة الانتشار التفاعلية الفروع (انقر للفلترة أو إلغاء التحديد)
         </h3>
         {/* 💡 الارتفاع بقى 300 في الموبايل و 450 في الديسكتوب */}
-        <div className="h-[300px] md:h-[450px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative z-0">
+        <div className="h-[18.75rem] md:h-[28.125rem] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative z-0">
           <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <ThemedTileLayer />
             {/* 💡 الخريطة الرئيسية للفروع فقط */}
@@ -4026,7 +4027,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
                 <Marker keyboard={false} key={`dash-marker-${branch.id}`} position={[branch.lat, branch.lng]} icon={branchIcon} eventHandlers={{ click: () => { setSelectedBranchName(prev => prev === branch.name ? null : branch.name); document.getElementById('main-scroll-container')?.scrollTo({ top: 0, behavior: 'smooth' }); } }}>
                   <Tooltip direction="top">
                     <strong className="text-[var(--ink-2)] font-bold text-sm text-center block mb-1">{branch.name === 'القاهرة' ? 'المركز العام (القاهرة)' : branch.name}</strong>
-                    <span className="text-[10px] text-blue-600 block text-center font-bold">{selectedBranchName === branch.name ? 'مفعل (انقر للإلغاء)' : 'انقر للفلترة'}</span>
+                    <span className="text-[max(0.625rem,9px)] text-blue-600 block text-center font-bold">{selectedBranchName === branch.name ? 'مفعل (انقر للإلغاء)' : 'انقر للفلترة'}</span>
                   </Tooltip>
                 </Marker>
               ) : null
@@ -4092,10 +4093,10 @@ function BranchesAndInventoryView({ branches }) {
       </div>
 
       {/* 💡 التعديل هنا: الارتفاع هيبقى تلقائي (auto) في الموبايل عشان الخريطة واللستة ياخدوا راحتهم، و 400 في الديسكتوب */}
-      <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[400px]">
+      <div className="flex flex-col lg:flex-row gap-6 h-auto lg:h-[25rem]">
         
         {/* 💡 اللستة هتاخد 250 بيكسل في الموبايل وتقدر تعملها سكرول */}
-        <div className="w-full lg:w-1/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg h-[250px] lg:h-auto">
+        <div className="w-full lg:w-1/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg h-[15.625rem] lg:h-auto">
           <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-4)]"><h3 className="text-md font-bold text-center">قائمة التمركزات</h3></div>
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <table className="w-full text-right text-sm">
@@ -4111,7 +4112,7 @@ function BranchesAndInventoryView({ branches }) {
         </div>
         
         {/* 💡 الخريطة هتاخد 350 بيكسل في الموبايل */}
-        <div className="w-full lg:w-3/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl relative overflow-hidden shadow-lg z-0 h-[350px] lg:h-auto">
+        <div className="w-full lg:w-3/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl relative overflow-hidden shadow-lg z-0 h-[21.875rem] lg:h-auto">
            <MapContainer center={[26.8206, 30.8025]} zoom={5} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
               <ThemedTileLayer />
               {branches.map(branch => branch.lat && branch.lng ? (
@@ -4134,9 +4135,9 @@ function BranchesAndInventoryView({ branches }) {
           <InventoryCard title="مخزون الإيواء" value={totalTentsBlankets.toLocaleString()} unit="خيمة وبطانية" color="text-[var(--data)]" />
           <InventoryCard title="أسطول السيارات (شامل الإسعاف)" value={totalCars.toLocaleString()} unit="سيارة جاهزة" color="text-green-500" />
         </div>
-        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg max-h-[600px] mt-4">
+        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg max-h-[37.5rem] mt-4">
           <div className="flex-1 overflow-auto custom-scrollbar">
-            <table className="w-full min-w-[2200px] text-center text-xs whitespace-nowrap">
+            <table className="w-full min-w-[137.5rem] text-center text-xs whitespace-nowrap">
               <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
                 <tr>
                   <th className="p-4 font-semibold border-l border-[var(--border)] sticky right-0 bg-[var(--surface-3)] z-20">الفرع / التمركز</th>
@@ -6832,7 +6833,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
   };
 
   return (
-    <div className="card-surface overflow-hidden flex flex-col min-h-[700px] flex-1">
+    <div className="card-surface overflow-hidden flex flex-col min-h-[43.75rem] flex-1">
       {/* 🗑️ تأكيد حذف مهمة فردية — التصميم الموحّد (كبسولة علوية عائمة) */}
       <DangerConfirmModal
         show={missionToDelete !== null}
@@ -7005,7 +7006,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
             <div className="mt-3 space-y-2">
               {rejectedList.map(item => (
                 <div key={item.key} className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 flex items-center justify-between gap-3 flex-wrap">
-                  <div className="min-w-0 text-[11px] leading-relaxed text-[var(--muted)]">
+                  <div className="min-w-0 text-[max(0.6875rem,9.5px)] leading-relaxed text-[var(--muted)]">
                     <div className="font-bold text-[var(--ink)] text-xs truncate">
                       {item.payload?.mission_name || 'مهمة بدون اسم'}
                       {item.payload?.mission_code ? ` — ${item.payload.mission_code}` : ''}
@@ -7025,17 +7026,17 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                           setCustomAlert('تعذر تنزيل النسخة.');
                         }
                       }}
-                      className="btn-ghost px-3 py-1.5 rounded-xl text-[11px] font-bold"
+                      className="btn-ghost px-3 py-1.5 rounded-xl text-[max(0.6875rem,9.5px)] font-bold"
                     >📥 تنزيل نسخة</button>
                     <button
                       type="button"
                       onClick={() => { restoreRejectedToOutbox(item.key); setRejectedList(readRejected()); refreshPending(); setCustomAlert('تم إرجاع الاستمارة للطابور — هتتبعت تلقائياً.'); }}
-                      className="btn-warn px-3 py-1.5 rounded-xl text-[11px] font-bold"
+                      className="btn-warn px-3 py-1.5 rounded-xl text-[max(0.6875rem,9.5px)] font-bold"
                     >↩️ إرجاع للطابور</button>
                     <button
                       type="button"
                       onClick={() => { dropRejected(item.key); setRejectedList(readRejected()); }}
-                      className="btn-ghost px-3 py-1.5 rounded-xl text-[11px] font-bold text-[var(--accent)]"
+                      className="btn-ghost px-3 py-1.5 rounded-xl text-[max(0.6875rem,9.5px)] font-bold text-[var(--accent)]"
                     >🗑️ حذف من الأرشيف</button>
                   </div>
                 </div>
@@ -7081,16 +7082,16 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
         )}
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full min-w-[1100px] text-start border-separate border-spacing-0">
+          <table className="w-full min-w-[68.75rem] text-start border-separate border-spacing-0">
           <thead className="sticky top-0 z-20">
-            <tr className="text-[var(--muted-2)] text-[11px] md:text-xs">
+            <tr className="text-[var(--muted-2)] text-[max(0.6875rem,9.5px)] md:text-xs">
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ الإنشاء</th>
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--accent)]">تاريخ المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--info)]">تصنيف المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 text-[var(--ok)]">فترة المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">كود المهمة / ID</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">التمركز (الفرع)</th>
-              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 min-w-[550px]">اسم المهمة</th>
+              <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50 min-w-[34.375rem]">اسم المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">السيارات والسائقين</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">نوع المهمة</th>
               <th className="px-3 md:px-4 py-3 font-bold whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">مكان المهمة</th>
@@ -7155,7 +7156,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                   <div className="text-xs font-bold text-[var(--muted)]">ID: {m.mission_id}</div>
                 </td>
                 <td data-label="التمركز (الفرع)" className="px-3 md:px-4 py-3 font-semibold text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.branch}</td>
-                <td data-label="اسم المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60 min-w-[180px] max-w-[280px]">
+                <td data-label="اسم المهمة" className="px-3 md:px-4 py-3 align-middle border-b border-[var(--border)]/60 min-w-[11.25rem] max-w-[17.5rem]">
                   <button
                     type="button"
                     onClick={() => handleViewMission(m.mission_id)}
@@ -7166,9 +7167,9 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                     {m.mission_name}
                   </button>
                 </td>
-                <td data-label="السيارات والسائقين" className="px-3 md:px-4 py-3 text-[var(--ok)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[140px] max-w-[220px]"><span className="block truncate" title={m.vehicles_info}>{m.vehicles_info}</span></td>
+                <td data-label="السيارات والسائقين" className="px-3 md:px-4 py-3 text-[var(--ok)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[8.75rem] max-w-[13.75rem]"><span className="block truncate" title={m.vehicles_info}>{m.vehicles_info}</span></td>
                 <td data-label="نوع المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.mission_type}</td>
-                <td data-label="مكان المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[160px] max-w-[240px]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
+                <td data-label="مكان المهمة" className="px-3 md:px-4 py-3 text-[var(--ink-2)] text-sm align-middle border-b border-[var(--border)]/60 min-w-[10rem] max-w-[15rem]"><span className="block truncate" title={m.mission_location}>{m.mission_location}</span></td>
                 <td data-label="مسؤول المهمة" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.responsible_person}</td>
                 <td data-label="عدد المشاركين" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.total_participants || 0}</td>
                 <td data-label="مصدر البلاغ" className="px-3 md:px-4 py-3 text-[var(--muted)] text-sm whitespace-nowrap align-middle border-b border-[var(--border)]/60">{m.data_source}</td>
@@ -7452,7 +7453,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
               <SectionCard title={<span>القوة البشرية والمشاركين <span className="text-[var(--accent)]">*</span></span>} icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
                 {requiredTouched && missingFields.includes('field_participants') && <p className="text-[var(--accent)] text-xs font-bold mb-2 flex items-center gap-1.5 px-1">⚠ يجب إضافة مشارك واحد على الأقل بالاسم لإتمام أي عملية على المهمة.</p>}
                 <div className={`overflow-x-auto bg-[var(--surface-4)] rounded-xl border ${requiredTouched && missingFields.includes('field_participants') ? 'border-[var(--accent)]/60' : 'border-[var(--border)]'}`}>
-                  <table className="w-full text-right text-sm min-w-[1120px]">
+                  <table className="w-full text-right text-sm min-w-[70rem]">
                     <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]">
                       <tr>
                         <th className="p-3">م</th>
@@ -7497,7 +7498,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
 
                           {/* 🕒 الساعات — تُحسب من القطاعات (segments) أو الافتراضي من خطة السير */}
                           <td data-label="الساعات" className="p-2 text-center space-y-1">
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-[var(--info-soft)] text-[var(--info)]' : 'text-[var(--faint)]'}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[max(0.6875rem,9.5px)] font-bold whitespace-nowrap ${p.working_hours != null ? 'bg-[var(--info-soft)] text-[var(--info)]' : 'text-[var(--faint)]'}`}>
                               {p.working_hours != null ? fmtHours(p.working_hours, lang) : '—'}
                             </span>
                             {/* 🆕 «يُحسب من بداية المهمة» — قاعدة إلزامية: أول ما يتسند انضمام (JL:J)
@@ -7509,7 +7510,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                               const forcedChecked = isJlLocked ? true : (p.start_from_mission !== false);
                               return (
                                 <label
-                                  className={`flex items-center justify-center gap-1.5 text-[10px] font-bold whitespace-nowrap ${isJlLocked ? 'text-[var(--info)] cursor-not-allowed' : `cursor-pointer select-none ${forcedChecked ? 'text-[var(--info)]' : 'text-[var(--muted-2)]'}`}`}
+                                  className={`flex items-center justify-center gap-1.5 text-[max(0.625rem,9px)] font-bold whitespace-nowrap ${isJlLocked ? 'text-[var(--info)] cursor-not-allowed' : `cursor-pointer select-none ${forcedChecked ? 'text-[var(--info)]' : 'text-[var(--muted-2)]'}`}`}
                                   title={isJlLocked ? 'مُقفل تلقائياً: المشارك عليه انضمام أو انفصال ⇒ يُحسب من بداية المهمة دائماً' : 'يُحسب من بداية المهمة (بدل بداية مساره المحدد) — للمالك/المشرف'}
                                 >
                                   <input
@@ -7540,12 +7541,12 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                                   <span className="inline-flex flex-wrap items-center gap-1">
                                     {routeDays.length > 0 && <span className="text-purple-400">📍</span>}
                                     {routeDays.map(day => (
-                                      <span key={'r:'+day} className="inline-block bg-[var(--ai-soft)] text-[var(--ai)] px-1.5 py-0.5 rounded text-[10px]">{day}</span>
+                                      <span key={'r:'+day} className="inline-block bg-[var(--ai-soft)] text-[var(--ai)] px-1.5 py-0.5 rounded text-[max(0.625rem,9px)]">{day}</span>
                                     ))}
                                     {jlDays.map(day => {
                                       const isJoin = day.startsWith('JL:J:');
                                       return (
-                                        <span key={day} className={`inline-block px-1.5 py-0.5 rounded text-[10px] ${isJoin ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--accent-softer)] text-[var(--accent)]'}`}>
+                                        <span key={day} className={`inline-block px-1.5 py-0.5 rounded text-[max(0.625rem,9px)] ${isJoin ? 'bg-[var(--ok-soft)] text-[var(--ok)]' : 'bg-[var(--accent-softer)] text-[var(--accent)]'}`}>
                                           {isJoin ? '📥' : '📤'} {day.slice(5)}
                                         </span>
                                       );
@@ -7582,11 +7583,11 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                 actionBtn={
                   <div className="flex gap-2">
                     <button type="button" onClick={() => openEntryDialog('join')}
-                      className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors">
+                      className="text-[max(0.625rem,9px)] font-bold px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors">
                       + إضافة انضمام
                     </button>
                     <button type="button" onClick={() => openEntryDialog('leave')}
-                      className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30 transition-colors">
+                      className="text-[max(0.625rem,9px)] font-bold px-3 py-1.5 rounded-lg bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30 transition-colors">
                       + إضافة انفصال
                     </button>
                   </div>
@@ -7614,7 +7615,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                             className="font-bold text-sm bg-transparent outline-none text-white border-b border-transparent hover:border-[var(--border)] focus:border-[var(--accent)] transition-colors w-full"
                             title="أعد تسمية السجل — يُحدَّث مفتاح الإسناد فوراً"
                           />
-                          <div className="text-[11px] text-[var(--muted-2)] mt-0.5">
+                          <div className="text-[max(0.6875rem,9.5px)] text-[var(--muted-2)] mt-0.5">
                             {(() => {
                               try { return formatDateTime12(e.dt); } catch { return e.dt; }
                             })()}
@@ -7622,19 +7623,19 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                           {assignedTo.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {assignedTo.map(name => (
-                                <span key={name} className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-[var(--ai-soft)] text-[var(--ai)]">{name}</span>
+                                <span key={name} className="inline-block text-[max(0.5625rem,8.5px)] px-1.5 py-0.5 rounded bg-[var(--ai-soft)] text-[var(--ai)]">{name}</span>
                               ))}
                             </div>
                           )}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <button type="button" onClick={() => openEntryDialog(e.kind, e)}
-                            className="text-[10px] font-bold px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--muted-2)] hover:text-white hover:border-[var(--accent)] transition-colors"
+                            className="text-[max(0.625rem,9px)] font-bold px-2 py-1 rounded-lg border border-[var(--border)] text-[var(--muted-2)] hover:text-white hover:border-[var(--accent)] transition-colors"
                             title="تعديل">
                             تعديل
                           </button>
                           <button type="button" onClick={() => deleteEntry(e.id)}
-                            className="text-[10px] font-bold px-2 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                            className="text-[max(0.625rem,9px)] font-bold px-2 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
                             title="حذف">
                             حذف
                           </button>
@@ -7665,7 +7666,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                       </div>
                       <div className="p-5 space-y-4">
                         <div>
-                          <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">العنوان</label>
+                          <label className="text-[max(0.625rem,9px)] text-[var(--muted)] font-bold mb-1 block">العنوان</label>
                           <input
                             id="jl_entry_title"
                             type="text"
@@ -7678,7 +7679,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
+                            <label className="text-[max(0.625rem,9px)] text-[var(--muted)] font-bold mb-1 block">التاريخ</label>
                             <SegDateField
                               id={dateId}
                               defaultValue={entryDialog.dt ? String(entryDialog.dt).slice(0, 10) : ''}
@@ -7687,7 +7688,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
+                            <label className="text-[max(0.625rem,9px)] text-[var(--muted)] font-bold mb-1 block">الوقت</label>
                             <SegTimeField
                               id={timeId}
                               defaultValue={entryDialog.dt ? String(entryDialog.dt).slice(11, 16) : ''}
@@ -7738,7 +7739,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                       </div>
                       <div className="p-5 max-h-[55vh] overflow-y-auto">
                         {/* ١) خطوط السير (روتين) — خروج بدون أي JL:* */}
-                        <p className="text-[10px] text-purple-400 font-bold mb-1.5 flex items-center gap-1">🛣️ خطوط السير</p>
+                        <p className="text-[max(0.625rem,9px)] text-purple-400 font-bold mb-1.5 flex items-center gap-1">🛣️ خطوط السير</p>
                         {allOptions.length === 0 && <p className="text-center text-[var(--muted-2)] text-xs py-2 mb-2">لا توجد خطوط سير متاحة. أضفها من قسم خطوط السير.</p>}
                         {allOptions.map((opt) => {
                           const checked = (dp.assigned_days || []).includes(opt);
@@ -7751,7 +7752,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                           );
                         })}
                         {/* ٢) انضمام — JL:J:<title> */}
-                        <p className="text-[10px] text-green-400 font-bold mb-1.5 mt-4 flex items-center gap-1">📥 انضمام</p>
+                        <p className="text-[max(0.625rem,9px)] text-green-400 font-bold mb-1.5 mt-4 flex items-center gap-1">📥 انضمام</p>
                         {joinLeaveEntries.filter(e => e.kind === 'join').length === 0 && (
                           <p className="text-center text-[var(--muted-2)] text-xs py-2 mb-2">لا توجد سجلات انضمام بعد — أضفها من قسم «انضمام / انفصال».</p>
                         )}
@@ -7762,12 +7763,12 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                             <label key={key} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-green-400/10 border border-green-400/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
                               <input type="checkbox" checked={checked} onChange={() => toggleJLAssignment(daysPicker, e)} className="accent-green-400 w-4 h-4" />
                               <span className={`text-sm font-bold ${checked ? 'text-green-400' : 'text-[var(--muted-2)]'}`}>📥 {e.title}</span>
-                              <span className="text-[10px] text-[var(--faint)] mr-auto">{(() => { try { return formatDateTime12(e.dt); } catch { return e.dt; } })()}</span>
+                              <span className="text-[max(0.625rem,9px)] text-[var(--faint)] mr-auto">{(() => { try { return formatDateTime12(e.dt); } catch { return e.dt; } })()}</span>
                             </label>
                           );
                         })}
                         {/* ٣) انفصال — JL:L:<title> */}
-                        <p className="text-[10px] text-[var(--accent)] font-bold mb-1.5 mt-4 flex items-center gap-1">📤 انفصال</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--accent)] font-bold mb-1.5 mt-4 flex items-center gap-1">📤 انفصال</p>
                         {joinLeaveEntries.filter(e => e.kind === 'leave').length === 0 && (
                           <p className="text-center text-[var(--muted-2)] text-xs py-2 mb-2">لا توجد سجلات انفصال بعد — أضفها من قسم «انضمام / انفصال».</p>
                         )}
@@ -7778,7 +7779,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                             <label key={key} className={`flex items-center gap-3 p-2.5 rounded-lg mb-1.5 cursor-pointer transition-colors ${checked ? 'bg-[var(--accent)]/10 border border-[var(--accent)]/30' : 'hover:bg-[var(--surface-hover)] border border-transparent'}`}>
                               <input type="checkbox" checked={checked} onChange={() => toggleJLAssignment(daysPicker, e)} className="accent-[var(--accent)] w-4 h-4" />
                               <span className={`text-sm font-bold ${checked ? 'text-[var(--accent)]' : 'text-[var(--muted-2)]'}`}>📤 {e.title}</span>
-                              <span className="text-[10px] text-[var(--faint)] mr-auto">{(() => { try { return formatDateTime12(e.dt); } catch { return e.dt; } })()}</span>
+                              <span className="text-[max(0.625rem,9px)] text-[var(--faint)] mr-auto">{(() => { try { return formatDateTime12(e.dt); } catch { return e.dt; } })()}</span>
                             </label>
                           );
                         })}
@@ -7797,7 +7798,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                   <div className="w-full md:max-w-sm">
                     <label className="flex items-center gap-2 text-[var(--muted)] text-xs font-bold mb-1.5 px-1">
                       كود الفريق/الإدارة
-                      <button type="button" title="يُحفظ مع بيانات المهمة ويظهر فوراً عند فتحها" className="inline-flex w-4 h-4 rounded-full bg-[var(--surface-3)] text-[var(--faint)] text-[10px] items-center justify-center border border-[var(--border)]">?</button>
+                      <button type="button" title="يُحفظ مع بيانات المهمة ويظهر فوراً عند فتحها" className="inline-flex w-4 h-4 rounded-full bg-[var(--surface-3)] text-[var(--faint)] text-[max(0.625rem,9px)] items-center justify-center border border-[var(--border)]">?</button>
                     </label>
                     <StyledInput id="f_team_code" name="f_team_code" defaultValue={currentMissionData?.team_code || ''} placeholder="مثال: B-12" maxLength={100} />
                   </div>
@@ -7836,7 +7837,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                     <div key={blk.id} className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 md:p-4">
                       <div className="flex flex-col md:flex-row md:items-end gap-2">
                         <div className="flex-1">
-                          <label className="block text-[11px] font-bold text-[var(--muted)] mb-1 px-1">عنوان السجل الإداري — اكتب اسم اليوم أو الفترة (اليوم الأول / اليوم الثاني) في المهام المفتوحة فقط</label>
+                          <label className="block text-[max(0.6875rem,9.5px)] font-bold text-[var(--muted)] mb-1 px-1">عنوان السجل الإداري — اكتب اسم اليوم أو الفترة (اليوم الأول / اليوم الثاني) في المهام المفتوحة فقط</label>
                           <StyledInput value={blk.title} onChange={(e) => setBlockTitle(setAdminBlocks)(blk.id, e.target.value)} placeholder="مثال: اليوم الأول (بالمهام المفتوحة فقط)" className="bg-[var(--surface-3)] font-bold" disabled={isYouthFormLocked} />
                         </div>
                         {bi > 0 && !isYouthFormLocked && (
@@ -7870,7 +7871,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                       <div key={blk.id} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3 md:p-4 space-y-3">
                         <div className="flex flex-col md:flex-row md:items-end gap-2">
                           <div className="flex-1">
-                            <label className="block text-[11px] font-bold text-[var(--muted)] mb-1 px-1">عنوان سجل الملاحظات — اكتب اسم اليوم أو الفترة (اليوم الأول / اليوم الثاني) في المهام المفتوحة فقط</label>
+                            <label className="block text-[max(0.6875rem,9.5px)] font-bold text-[var(--muted)] mb-1 px-1">عنوان سجل الملاحظات — اكتب اسم اليوم أو الفترة (اليوم الأول / اليوم الثاني) في المهام المفتوحة فقط</label>
                             <StyledInput value={blk.title} onChange={(e) => { markVolunteerRoomDirty(); setBlockTitle(setVolunteerBlocks)(blk.id, e.target.value); }} placeholder="مثال: اليوم الأول (بالمهام المفتوحة فقط)" className="bg-[var(--surface-3)] font-bold" disabled={!canEditVolunteerRoom} />
                           </div>
                           {canEditVolunteerRoom && volunteerBlocks.length > 1 && (
@@ -7878,13 +7879,13 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                           )}
                         </div>
 
-                        <div className="hidden md:grid grid-cols-[24px_1fr_1fr_1fr_1.5fr_32px] gap-3 px-1 text-[10px] text-[var(--muted)] font-bold">
+                        <div className="hidden md:grid grid-cols-[24px_1fr_1fr_1fr_1.5fr_32px] gap-3 px-1 text-[max(0.625rem,9px)] text-[var(--muted)] font-bold">
                           <span>#</span><span>التاريخ</span><span>رقم العضوية</span><span>اسم العضو</span><span>الملاحظة</span><span></span>
                         </div>
                         {rows.length === 0 && <p className="text-center text-[var(--muted-2)] text-xs py-2">لا توجد صفوف في سجل الملاحظات بعد.</p>}
                         {rows.map((row, index) => (
                           <div key={row.id} className="grid grid-cols-2 md:grid-cols-[24px_1fr_1fr_1fr_1.5fr_32px] gap-3 items-center bg-[var(--surface-4)] p-3 rounded-xl border border-[var(--border)]">
-                            <span className="w-6 h-6 rounded-full bg-[var(--surface-3)] border border-[var(--border)] text-[10px] font-bold text-[var(--muted)] flex items-center justify-center">{index + 1}</span>
+                            <span className="w-6 h-6 rounded-full bg-[var(--surface-3)] border border-[var(--border)] text-[max(0.625rem,9px)] font-bold text-[var(--muted)] flex items-center justify-center">{index + 1}</span>
                             <SegDateField value={row.note_date} onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.map(r => r.id === row.id ? { ...r, note_date: e.target.value } : r)); }} className="bg-[var(--surface-3)]" disabled={!canEditVolunteerRoom} />
                             <StyledInput value={row.membership_number} onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.map(r => r.id === row.id ? { ...r, membership_number: e.target.value } : r)); }} placeholder="رقم العضوية" className="bg-[var(--surface-3)]" disabled={!canEditVolunteerRoom} />
                             <StyledInput value={row.member_name} onChange={(e) => { markVolunteerRoomDirty(); setVolunteerRoomRows(prev => prev.map(r => r.id === row.id ? { ...r, member_name: e.target.value } : r)); }} placeholder="اسم العضو" className="bg-[var(--surface-3)]" disabled={!canEditVolunteerRoom} />
@@ -8113,8 +8114,8 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
           <div className="h-1.5 rounded-full bg-[var(--surface-4)] overflow-hidden">
             <div className="h-full bg-[var(--accent)] transition-all duration-300" style={{ width: `${zipJob.total ? Math.round((zipJob.done / zipJob.total) * 100) : 0}%` }} />
           </div>
-          <p className="mt-2 text-[11px] text-[var(--muted)] truncate">{zipJob.name}</p>
-          <button type="button" onClick={() => { zipCancelRef.current = true; }} className="mt-3 w-full text-[11px] font-bold text-[var(--muted-2)] hover:text-[var(--accent)]">إلغاء</button>
+          <p className="mt-2 text-[max(0.6875rem,9.5px)] text-[var(--muted)] truncate">{zipJob.name}</p>
+          <button type="button" onClick={() => { zipCancelRef.current = true; }} className="mt-3 w-full text-[max(0.6875rem,9.5px)] font-bold text-[var(--muted-2)] hover:text-[var(--accent)]">إلغاء</button>
         </div>
       )}
 
@@ -8399,7 +8400,7 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
         {isDate && <button type="button" onClick={openCalendar} disabled={disabled} className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>}
       </div>
       {open && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[17.5rem]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <button type="button" onClick={() => changeMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
@@ -8407,7 +8408,7 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
             <button type="button" onClick={() => changeMonth(1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">›</button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
-            {WEEK.map((w, i) => <div key={i} className="h-6 text-[10px] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
+            {WEEK.map((w, i) => <div key={i} className="h-6 text-[max(0.625rem,9px)] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">{cells}</div>
           {type === 'datetime-local' && (
@@ -8532,7 +8533,7 @@ const RouteCard = ({
       </div>
       {/* الصف الثاني: التحرك + الوصول (datetime-local مدمج) */}
       <div className="w-full md:w-auto flex flex-wrap border-l border-[var(--border)] bg-[var(--surface-4)] p-2.5 gap-2 md:gap-4">
-        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+        <div className="flex items-center gap-2 flex-1 min-w-[16.25rem]">
           <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🚀 التحرك:</span>
           <SegDateTimeField
             id={`r_dep_${prefix}_${index}`}
@@ -8540,10 +8541,10 @@ const RouteCard = ({
             onChange={handleDepChange}
             twoIcons
             disabled={disabled}
-            className="field text-center w-full md:w-[330px]"
+            className="field text-center w-full md:w-[20.625rem]"
           />
         </div>
-        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+        <div className="flex items-center gap-2 flex-1 min-w-[16.25rem]">
           <span className="text-[var(--muted-2)] text-xs whitespace-nowrap shrink-0">🏁 الوصول:</span>
           <SegDateTimeField
             id={`r_arr_${prefix}_${index}`}
@@ -8551,7 +8552,7 @@ const RouteCard = ({
             onChange={handleArrChange}
             twoIcons
             disabled={disabled}
-            className="field text-center w-full md:w-[330px]"
+            className="field text-center w-full md:w-[20.625rem]"
           />
         </div>
         {showRemove && (
@@ -8596,7 +8597,7 @@ function InventoryCard({ title, value, unit, color }) {
     <div className="kpi-card card-surface p-5 rounded-2xl">
       <p className="text-[var(--muted)] text-xs font-bold mb-1">{title}</p>
       <p className={`kpi-value text-3xl ${color}`}>{value}</p>
-      <p className="text-[10px] text-[var(--faint)] mt-1">{unit}</p>
+      <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{unit}</p>
     </div>
   );
 }
@@ -8747,7 +8748,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
           <div className="w-10 h-10 shrink-0 bg-[var(--accent-soft)] rounded-xl flex items-center justify-center border border-[var(--accent)]/20 text-[var(--accent)]"><ShieldIcon /></div>
           <div className="flex flex-col items-start">
             <h3 className="text-xl font-bold text-white tracking-wide whitespace-nowrap">سجل الإجراءات الرقابية</h3>
-            <span className="text-[10px] font-bold text-[var(--accent)] bg-[var(--accent-soft)] border border-[var(--accent)]/30 px-2 py-0.5 rounded mt-1">سري للغاية</span>
+            <span className="text-[max(0.625rem,9px)] font-bold text-[var(--accent)] bg-[var(--accent-soft)] border border-[var(--accent)]/30 px-2 py-0.5 rounded mt-1">سري للغاية</span>
           </div>
         </div>
         
@@ -8784,7 +8785,7 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
       </div>
 
       <div className="flex-1 overflow-auto custom-scrollbar relative">
-        <table className="w-full min-w-[700px] text-right text-sm whitespace-nowrap">
+        <table className="w-full min-w-[43.75rem] text-right text-sm whitespace-nowrap">
           <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
             <tr>
               <th className="p-4 font-semibold border-l border-[var(--border)] w-48">التاريخ والوقت</th>
@@ -9135,7 +9136,7 @@ const [nd, setNd] = useState({
         <StatCard title="متوسط نقاط الاستجابة" value={(() => { const withResp = filteredNews.filter(n => n.is_field_response && Number(n.field_response_points) > 0); return withResp.length ? Math.round(withResp.reduce((a,b)=>a+(Number(b.field_response_points)||0),0)/withResp.length) : 0; })()} color="text-[var(--data)]" />
       </div>
 
-      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[40.625rem]">
         <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           <div className="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
             <h3 className="text-xl font-bold text-white whitespace-nowrap">الأخبار المحلية</h3>
@@ -9145,7 +9146,7 @@ const [nd, setNd] = useState({
                 <option value="all">كل المحافظات</option>
                 {governorates.map(g => <option key={g} value={g}>{g}</option>)}
               </EocSelect>
-              <EocSelect variant="toolbar" className="max-w-[200px]" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+              <EocSelect variant="toolbar" className="max-w-[12.5rem]" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
                 <option value="all">كل الحوادث</option>
                 {newsTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </EocSelect>
@@ -9193,12 +9194,12 @@ const [nd, setNd] = useState({
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap min-w-[720px] text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[45rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المحافظة</th>
-                <th className="p-4 font-semibold border-l border-[var(--border)] text-blue-400 max-w-[200px]">وصف الحادث</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] text-blue-400 max-w-[12.5rem]">وصف الحادث</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--data)]">نقاط (رد/تحرك/وصول)</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المتطوعين</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">مدخل الخبر</th>
@@ -9211,7 +9212,7 @@ const [nd, setNd] = useState({
                 <tr key={n.news_id} id={`focus-row-${n.news_id}`} className={`group hover:bg-[var(--surface-hover)]${String(focusedRowId) === String(n.news_id) ? ' focus-row' : ''}`}>
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(n.incident_date)}</td>
                   <td data-label="المحافظة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-bold">{n.governorate}</td>
-                  <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{n.incident_description}</td>
+                  <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[15.625rem]">{n.incident_description}</td>
                   <td data-label="نقاط (رد/تحرك/وصول)" className="p-4 border-l border-[var(--border)]">
                     <div className="flex gap-1">
                       <span className="bg-[var(--data-soft)] text-[var(--data)] px-2 py-0.5 rounded text-xs border border-[var(--data)]/30" title="نقاط الرد">{n.response_time_points}</span>
@@ -9505,7 +9506,7 @@ function WeatherShiftWarning({ shift, onFix, lang = 'ar' }) {
       </div>
 
       <button type="button" onClick={onFix} className="wsw-cta">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.6h12l-2.6-2.6M20 15.4H8l2.6 2.6" /></svg>
+        <svg width="0.875rem" height="0.875rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.6h12l-2.6-2.6M20 15.4H8l2.6 2.6" /></svg>
         {L('بدّل للوردية الصح', 'Switch to correct shift')}
       </button>
     </div>
@@ -10304,7 +10305,7 @@ const visibleBranches = (
                 key={s.key}
                 type="button"
                 onClick={() => setShift(s.key)}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all ${shift === s.key ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
+                className={`px-2.5 py-1 rounded-xl text-[max(0.6875rem,9.5px)] font-bold whitespace-nowrap transition-all ${shift === s.key ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
               >
                 {T(s.ar, s.en)}
               </button>
@@ -10318,7 +10319,7 @@ const visibleBranches = (
               className="ops-chip ops-chip-warn shrink-0 text-[var(--warn)] border-[var(--warn-soft)] bg-[var(--warn-soft)] hover:brightness-110"
               title={T('اضغط للتحويل لوردية الوقت الحالي', 'Click to switch to the current shift')}
             >
-              <svg className="ops-chip-warn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.4l9.2 16H2.8z" /><path d="M12 9.6v4.2" /><circle cx="12" cy="16.9" r="1.05" fill="currentColor" stroke="none" /></svg>
+              <svg className="ops-chip-warn-icon" width="0.8125rem" height="0.8125rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.4l9.2 16H2.8z" /><path d="M12 9.6v4.2" /><circle cx="12" cy="16.9" r="1.05" fill="currentColor" stroke="none" /></svg>
               {T('فاتح وردية غلط — الوقت الحالي:', 'Wrong shift — current:')}{' '}
               {T(
                 timeShift === 'morning' ? 'صباح' : timeShift === 'evening' ? 'مساء' : 'ليل',
@@ -10349,7 +10350,7 @@ const visibleBranches = (
                       <button key={r.region} type="button" onClick={() => handleFinish('region', r.region)}
                         className="w-full text-right px-4 py-3 text-sm font-bold text-[var(--ink)] hover:bg-[var(--surface-hover)] border-b border-[var(--border)] flex items-center gap-2">
                         <WeatherIcon className="w-4 h-4 text-[var(--muted)]" /> {r.label}
-                        <span className="text-[10px] text-[var(--faint)] font-normal">{W_REGION_LABELS[r.region]}</span>
+                        <span className="text-[max(0.625rem,9px)] text-[var(--faint)] font-normal">{W_REGION_LABELS[r.region]}</span>
                       </button>
                     ))}
                     <button type="button" onClick={() => handleFinish('all', null)}
@@ -10430,13 +10431,13 @@ const visibleBranches = (
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
           <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
-            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm border-separate" style={{ borderSpacing: 0 }}>
+            <table className="w-full text-right whitespace-nowrap min-w-[68.75rem] text-sm border-separate" style={{ borderSpacing: 0 }}>
               <thead>
                 <tr>
                   <th rowSpan="2" className="wx-sticky-corner p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
                   {WEATHER_METRICS.map(m => (
                     <th key={m.key} colSpan="2" className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)] text-center">
-                      {T(m.ar, m.en)}{m.unit ? <span className="text-[10px] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
+                      {T(m.ar, m.en)}{m.unit ? <span className="text-[max(0.625rem,9px)] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
                     </th>
                   ))}
                 </tr>
@@ -10504,13 +10505,13 @@ const visibleBranches = (
           <p className="text-[var(--muted)] text-sm py-6 text-center">{T('لا توجد بيانات مجمّعة لهذا اليوم بعد — أدخل توقعات الورديات أولاً.', 'No aggregated data yet — enter shift forecasts first.')}</p>
         ) : (
           <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
-            <table className="w-full text-right whitespace-nowrap min-w-[1100px] text-sm border-separate" style={{ borderSpacing: 0 }}>
+            <table className="w-full text-right whitespace-nowrap min-w-[68.75rem] text-sm border-separate" style={{ borderSpacing: 0 }}>
               <thead>
                 <tr>
                   <th rowSpan="2" className="wx-sticky-corner p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
                   {WEATHER_METRICS.map(m => (
                     <th key={m.key} colSpan="2" className="wx-sticky-head p-3 font-semibold border-l border-[var(--border)] text-center">
-                      {T(m.ar, m.en)}{m.unit ? <span className="text-[10px] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
+                      {T(m.ar, m.en)}{m.unit ? <span className="text-[max(0.625rem,9px)] font-normal text-[var(--faint)]"> ({m.unit})</span> : null}
                     </th>
                   ))}
                 </tr>
@@ -10979,7 +10980,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   };
 
   const cellCls = 'w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-2 py-1.5 text-center text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 transition-colors';
-  const timeCls = 'w-[118px] bg-[var(--surface-3)] border border-[var(--border)] rounded-lg py-1.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 transition-colors';
+  const timeCls = 'w-[7.375rem] bg-[var(--surface-3)] border border-[var(--border)] rounded-lg py-1.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--accent)]/50 transition-colors';
 
   // ⌨️ تنقّل بالكيبورد زي شبكة صفحة الطقس: تحت/Enter = الصف اللي بعده (نفس العمود)،
   //    فوق = اللي قبله، وشمال/يمين بين الخلايا في خانة عدد المرات.
@@ -11081,7 +11082,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
           <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
-            <table className="w-full text-right whitespace-nowrap min-w-[1460px] text-sm border-separate" style={{ borderSpacing: 0 }}>
+            <table className="w-full text-right whitespace-nowrap min-w-[91.25rem] text-sm border-separate" style={{ borderSpacing: 0 }}>
               <thead>
                 <tr>
                   <th className="wx-sticky-corner p-3 font-semibold border-l border-[var(--border)]">{T('المحافظة', 'Governorate')}</th>
@@ -11128,13 +11129,13 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
                           <SegTimeField value={r.reply_time || ''} onChange={e => setField(b.id, 'reply_time', e.target.value)} className={timeCls} />
                         </div>
                       </td>
-                      <td className="p-2 min-w-[190px]">
+                      <td className="p-2 min-w-[11.875rem]">
                         <EocSelect variant="cell" id={`gcell_${rIdx}_6`} value={r.tasks_status || ''} disabled={!isReplied(r)} onChange={e => setTaskStatus(b.id, e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 6)} className={`${!isReplied(r) ? 'opacity-40 cursor-not-allowed' : ''} ${GOV_TASKS_TONE[r.tasks_status] || ''}`}>
                           <option value="">—</option>
                           {GOV_TASKS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </EocSelect>
                       </td>
-                      <td className="p-2 min-w-[190px]">
+                      <td className="p-2 min-w-[11.875rem]">
                         <EocSelect variant="cell" id={`gcell_${rIdx}_7`} value={r.notes || ''} onChange={e => setNotes(b.id, e.target.value)} onKeyDown={e => gridNavKey(e, rIdx, 7)}>
                           <option value="">—</option>
                           {GOV_NOTES_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -11660,7 +11661,7 @@ const onMatrixChange = (s, d, val) => {
         </div>
 
         <div className="table-shell overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+          <table className="w-full min-w-[45rem]">
             <thead>
               <tr>
                 <th>{T('التاريخ', 'Date')}</th>
@@ -11790,7 +11791,7 @@ const onMatrixChange = (s, d, val) => {
                 icon={<UsersIcon />}
                 actionBtn={<button onClick={resetMatrix} className="action-btn action-btn--danger">{T('تصفير الكل', 'Reset All')}</button>}>
                 <div className="table-shell overflow-x-auto">
-                  <table className="w-full min-w-[560px]">
+                  <table className="w-full min-w-[35rem]">
                     <thead>
                       <tr>
                         <th className="p-3 text-start">{T('الوردية', 'Shift')}</th>
@@ -12133,7 +12134,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         <StatCard title="إجمالي المصابين" value={totalInjuries.toLocaleString()} color="text-[var(--data)]" />
       </div>
 
-      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[650px]">
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[40.625rem]">
         <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           
           <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
@@ -12183,13 +12184,13 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap min-w-[720px] text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[45rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-orange-400">الدولة / المكان</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">نوع الكارثة</th>
-                <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">الخبر</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[12.5rem]">الخبر</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الوفيات</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">المصابين</th>
                 <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
@@ -12202,7 +12203,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                   <td data-label="التاريخ" className="p-4 text-white border-l border-[var(--border)]">{formatDateTime(d.incident_date)}</td>
                   <td data-label="الدولة / المكان" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{d.country}</td>
                   <td data-label="نوع الكارثة" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold bg-[var(--accent-softer)]">{d.disaster_type}</td>
-                  <td data-label="الخبر" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[250px]">{d.news_title}</td>
+                  <td data-label="الخبر" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] truncate max-w-[15.625rem]">{d.news_title}</td>
                   <td data-label="الوفيات" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.deaths_count}</td>
                   <td data-label="المصابين" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] text-center">{d.injured_count}</td>
                   <td data-label="إجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
@@ -12773,9 +12774,9 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               🌍 {T('العالم كله — 30 سنة من النشاط الزلزالي', 'Worldwide — 30 years of seismic activity')}
-              <span className="text-[11px] font-bold text-[var(--muted)]">({T('كتالوج USGS المحلي — M≥4', 'Local USGS catalog — M≥4')})</span>
+              <span className="text-[max(0.6875rem,9.5px)] font-bold text-[var(--muted)]">({T('كتالوج USGS المحلي — M≥4', 'Local USGS catalog — M≥4')})</span>
             </h3>
-            {forecast?.generated_at && <span className="text-[11px] text-[var(--muted)]">🕐 {fmtTime12(forecast.generated_at)}</span>}
+            {forecast?.generated_at && <span className="text-[max(0.6875rem,9.5px)] text-[var(--muted)]">🕐 {fmtTime12(forecast.generated_at)}</span>}
           </div>
           {worldZone.model_ok === false ? (
             <p className="text-sm text-[var(--muted)] py-4 text-center">⏳ {T('الكتالوج المحلي لم يُعبَّأ بعد — شغّل باك فيل الكتالوج أو انتظر التحديث.', 'Local catalog not filled yet — run the backfill script or wait for refresh.')}</p>
@@ -12783,35 +12784,35 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
-                  <p className="text-[10px] text-[var(--muted)]">{T('إجمالي الزلازل (30 سنة)', 'Total quakes (30y)')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('إجمالي الزلازل (30 سنة)', 'Total quakes (30y)')}</p>
                   <p className="text-2xl font-extrabold text-orange-400">{catalogTotal.toLocaleString('en')}</p>
-                  <p className="text-[10px] text-[var(--muted)]">≈ {worldZone.daily_avg ?? '—'} {T('زلزال/يوم', 'per day')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">≈ {worldZone.daily_avg ?? '—'} {T('زلزال/يوم', 'per day')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
-                  <p className="text-[10px] text-[var(--muted)]">{T('أقوى زلزال مسجل', 'Strongest recorded')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('أقوى زلزال مسجل', 'Strongest recorded')}</p>
                   <p className="text-2xl font-extrabold text-red-400">{worldZone.strongest_mag ?? '—'}</p>
-                  <p className="text-[10px] text-[var(--muted)] truncate" title={worldZone.strongest_place || ''}>{worldZone.strongest_place || '—'}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)] truncate" title={worldZone.strongest_place || ''}>{worldZone.strongest_place || '—'}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
-                  <p className="text-[10px] text-[var(--muted)]">{T('متوسط أقوى زلزال سنوياً', 'Avg yearly max')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('متوسط أقوى زلزال سنوياً', 'Avg yearly max')}</p>
                   <p className="text-2xl font-extrabold text-yellow-400">{worldZone.yearly_max_avg ?? '—'}</p>
-                  <p className="text-[10px] text-[var(--muted)]">{T('ريختر — المرجع السنوي المتوقع', 'Richter — expected annual benchmark')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('ريختر — المرجع السنوي المتوقع', 'Richter — expected annual benchmark')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
-                  <p className="text-[10px] text-[var(--muted)]">{T('زلزالات M≥5 / M≥6 / M≥7', 'M≥5 / M≥6 / M≥7 quakes')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('زلزالات M≥5 / M≥6 / M≥7', 'M≥5 / M≥6 / M≥7 quakes')}</p>
                   <p dir="ltr" className="text-lg font-extrabold text-[var(--ink)]">{Number(worldZone.m5 || 0).toLocaleString('en')} / {Number(worldZone.m6 || 0).toLocaleString('en')} / {Number(worldZone.m7 || 0).toLocaleString('en')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
-                  <p className="text-[10px] text-[var(--muted)]">{T('النشاط الحالي (28 يوم)', 'Current activity (28d)')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('النشاط الحالي (28 يوم)', 'Current activity (28d)')}</p>
                   <p className={`text-2xl font-extrabold ${(worldZone.activity_ratio || 1) > 1.5 ? 'text-red-400' : (worldZone.activity_ratio || 1) < 0.7 ? 'text-emerald-400' : 'text-orange-400'}`}>{worldZone.activity_ratio != null ? `×${worldZone.activity_ratio}` : '—'}</p>
-                  <p className="text-[10px] text-[var(--muted)]">{T('مقارنة بالمعدل التاريخي (×1 = طبيعي)', 'vs historical rate (×1 = normal)')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('مقارنة بالمعدل التاريخي (×1 = طبيعي)', 'vs historical rate (×1 = normal)')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/[0.04] border border-white/5 p-3 text-center">
-                  <p className="text-[10px] text-[var(--muted)]">{T('متوقع باقي الشهر (M≥4)', 'Expected rest of month (M≥4)')}</p>
+                  <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('متوقع باقي الشهر (M≥4)', 'Expected rest of month (M≥4)')}</p>
                   <p className="text-2xl font-extrabold text-[var(--ink)]">{worldZone.expected28 ?? '—'}</p>
                 </div>
               </div>
-              <p className="text-[11px] text-[var(--muted)] mt-3">
+              <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] mt-3">
                 📊 {T('أرقام حقيقية من كتالوج 30 سنة المعبَّأ محلياً — تُستخدم كمرجع مقارنة لكل الزلازل الجديدة.', 'Real figures from the filled 30-year local catalog — used as the benchmark for every new detection.')}
               </p>
             </>
@@ -12825,14 +12826,14 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             🔮 {T('توقعات الأسبوع القادم لكل منطقة', 'Next-week forecast per zone')}
           </h3>
-          {forecast?.generated_at && <span className="text-[11px] text-[var(--muted)]">🕐 {fmtTime12(forecast.generated_at)}</span>}
+          {forecast?.generated_at && <span className="text-[max(0.6875rem,9.5px)] text-[var(--muted)]">🕐 {fmtTime12(forecast.generated_at)}</span>}
         </div>
-        <p className="text-[11px] text-[var(--muted)] mb-4">
+        <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] mb-4">
           {T('ماذا يعني هذا الكارت؟ نحسب لكل منطقة معدلها التاريخي (آخر 10 سنوات) ومعدلها الحديث (آخر 28 يوماً)، ثم ندمجهما (45% تاريخي + 55% حديث) في توزيع بواسون يعطي العدد المتوقع وفرص حدوث زلزال خلال الأسبوع القادم. «اتجاه النشاط» يوضح هل المنطقة أهدأ أو أنشط من معدلها التاريخي — وهو سؤال مختلف تماماً عن «خطورة الأسبوع» التي تعتمد على فرص الأسبوع القادم.',
             'What does this card mean? For each zone we blend its 10-year historical rate with the last 28 days (45% / 55%) into a Poisson model giving expected counts and chances for the coming week. "Activity trend" shows whether the zone is quieter or busier than its own historical rate — a different question from "week risk", which is about chances for the coming week.',
           )}
         </p>
-        <p className="text-[11px] font-bold text-orange-300 mb-3 inline-flex items-center gap-1.5">
+        <p className="text-[max(0.6875rem,9.5px)] font-bold text-orange-300 mb-3 inline-flex items-center gap-1.5">
           🗓️ {T('أسبوع التوقعات:', 'Forecast week:')}
           <b className="text-[var(--ink)]">{weekDays[0]?.day} {weekDays[0]?.short}</b>
           <span>←</span>
@@ -12852,7 +12853,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
               <div key={z.id} className="p-4 rounded-2xl bg-[var(--surface-2)] border border-white/5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-sm text-white">{isAr ? z.ar : z.en}</span>
-                  <span className={`text-[11px] px-2 py-0.5 rounded border font-bold ${riskBg(z.week_risk)}`}>{z.week_risk}</span>
+                  <span className={`text-[max(0.6875rem,9.5px)] px-2 py-0.5 rounded border font-bold ${riskBg(z.week_risk)}`}>{z.week_risk}</span>
                 </div>
                 {z.model_ok === false ? (
                   <p className="text-xs text-[var(--muted)] py-3 text-center">{T('تعذر جلب إحصاءات المنطقة', 'Zone stats unavailable')}</p>
@@ -12860,15 +12861,15 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                   <>
                     <div className="grid grid-cols-3 gap-2 text-center mb-2">
                       <div className="rounded-xl bg-white/[0.04] py-2">
-                        <p className="text-[10px] text-[var(--muted)]">{T('متوقع M≥4', 'Exp M≥4')}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('متوقع M≥4', 'Exp M≥4')}</p>
                         <p className={`text-lg font-extrabold ${magColor(z.expected_week_m4)}`}>{z.expected_week_m4}</p>
                       </div>
                       <div className="rounded-xl bg-white/[0.04] py-2">
-                        <p className="text-[10px] text-[var(--muted)]">{T('احتمال M≥4.5', 'P M≥4.5')}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('احتمال M≥4.5', 'P M≥4.5')}</p>
                         <p className="text-lg font-extrabold text-orange-400">{z.prob_m45_pct}%</p>
                       </div>
                       <div className="rounded-xl bg-white/[0.04] py-2">
-                        <p className="text-[10px] text-[var(--muted)]">{T('احتمال M≥5', 'P M≥5')}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--muted)]">{T('احتمال M≥5', 'P M≥5')}</p>
                         <p className="text-lg font-extrabold text-red-400">{z.prob_m5_pct}%</p>
                       </div>
                     </div>
@@ -12881,12 +12882,12 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                     <div className="flex gap-1 mb-2">
                       {weekDays.map((d, i) => (
                         <div key={i} className="flex-1 text-center leading-tight">
-                          <p className="text-[9px] text-[var(--muted)] truncate">{d.day}</p>
-                          <p className="text-[9px] font-bold text-[var(--ink)]">{d.short}</p>
+                          <p className="text-[max(0.5625rem,8.5px)] text-[var(--muted)] truncate">{d.day}</p>
+                          <p className="text-[max(0.5625rem,8.5px)] font-bold text-[var(--ink)]">{d.short}</p>
                         </div>
                       ))}
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
+                    <div className="flex items-center justify-between text-[max(0.6875rem,9.5px)] text-[var(--muted)]">
                       <span title={T('اتجاه النشاط = هل المنطقة الآن أنشط أو أهدأ من معدلها التاريخي (10 سنوات)؟ سؤال مختلف عن خطورة الأسبوع.', 'Activity trend = is the zone busier or quieter than its own 10-year rate? A different question from week risk.')}
                         className="inline-flex items-center gap-1 cursor-help">
                         {T('اتجاه النشاط (مقارنة بالتاريخ):', 'Activity trend (vs history):')}
@@ -12914,12 +12915,12 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
             <button onClick={() => setRiskView('table')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${riskView === 'table' ? 'bg-red-600 text-white' : 'text-[var(--muted)]'}`}>{T('جدول', 'Table')}</button>
           </div>
         </div>
-        <p className="text-[11px] text-[var(--muted)] mb-1">
+        <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] mb-1">
           {T('ما هو «أعلى خطورة»؟ درجة من 0 إلى 100 تُحسب لكل زلزال مرصود في آخر 7 أيام من ثلاثة عناصر: 38% شدة الزلزال نفسه (القوة) + 30% قربه من وسط القارة (كلما اقترب زاد تأثيره المحتمل على مصر) + 32% «المفارقة التاريخية»: كم كان أقوى زلزال في نفس الموقع ونفس الفترة من السنة (±15 يوماً) خلال آخر 30 سنة داخل 500 كم؟ زلزال 5.5 في منطقة عادةً ما يتجاوز 3 يُعدّ شاذاً وترتفع درجته، والزلزال نفسه في منطقة شهدت 7.5 يُعدّ عادياً وتنخفض درجته.',
             'What is "highest risk"? A 0-100 score per quake in the last 7 days: 38% magnitude + 30% proximity to Egypt\'s continental center (closer = higher potential impact) + 32% historical anomaly: how strong was the strongest same-season (±15 days) quake within 500 km in 30 years? A 5.5 where 3 is usual scores high; the same quake where 7.5 happened scores low.',
           )}
         </p>
-        <p className="text-[11px] mb-3 text-[var(--muted)]">
+        <p className="text-[max(0.6875rem,9.5px)] mb-3 text-[var(--muted)]">
           {T('على الخريطة: الدوائر = الزلازل المرصودة (حجمها ولونها = درجة الخطورة)، والحلقات الرمادية المنقطة = الحد التاريخي لكل موقع (أقوى حدث في 30 سنة لنفس الفترة) لتقيس الفرق بعينك.',
             'On the map: circles = detected quakes (size & color = risk score), dashed grey rings = the historical benchmark per location (30-year same-season max) so you can see the gap.',
           )}
@@ -12939,7 +12940,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
               <span className="text-[var(--muted)] ms-auto">🕒 {T('يُحدَّث تلقائياً كل 5 دقائق', 'Auto-refreshes every 5 min')}{analysis?.generated_at ? ` · ${T('آخر تحديث', 'Updated')} ${fmtTime12(analysis.generated_at)}` : ''}</span>
             </div>
             {riskView === 'map' ? (
-              <div className="h-[420px] rounded-2xl overflow-hidden border border-white/5 relative">
+              <div className="h-[26.25rem] rounded-2xl overflow-hidden border border-white/5 relative">
                 <MapContainer center={[22, 30]} zoom={2} minZoom={2} worldCopyJump scrollWheelZoom style={{ height: '100%', width: '100%' }}>
                   <ThemedTileLayer />
                   {/* 🌋 أحزمة النشاط الزلزالي العالمي — حدود الصفائح التكتونية */}
@@ -12994,7 +12995,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                   })}
                 </MapContainer>
                 {/* 🔖 مفتاح الخريطة */}
-                <div className="absolute top-2 end-2 z-[600] bg-black/75 rounded-xl px-3 py-2 text-[10px] leading-relaxed pointer-events-none border border-white/10">
+                <div className="absolute top-2 end-2 z-[600] bg-black/75 rounded-xl px-3 py-2 text-[max(0.625rem,9px)] leading-relaxed pointer-events-none border border-white/10">
                   <div className="font-bold mb-1 text-white">{T('مفتاح الخريطة', 'Map legend')}</div>
                   <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#ef4444' }} />{T('خطورة حرجة (75+)', 'Critical (75+)')}</div>
                   <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: '#f97316' }} />{T('عالية (50+)', 'High (50+)')}</div>
@@ -13007,8 +13008,8 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
               </div>
             ) : (
           <div className="overflow-x-auto rounded-2xl border border-white/5">
-            <table className="w-full min-w-[880px] text-sm">
-              <thead className="bg-[var(--surface-2)] text-[11px] uppercase text-[var(--muted)]">
+            <table className="w-full min-w-[55rem] text-sm">
+              <thead className="bg-[var(--surface-2)] text-[max(0.6875rem,9.5px)] uppercase text-[var(--muted)]">
                 <tr>
                   <th className="p-3 text-right">التاريخ والوقت</th>
                   <th className="p-3 text-right">القوة</th>
@@ -13029,7 +13030,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${riskBg(ev.risk_level)}`}>{ev.risk_score}/100 — {ev.risk_level}</span>
                       {(Number(ev.risk_score) || 0) >= 50 && (
-                        <p className="text-[11px] font-bold text-red-400 mt-1">👀 {T('يستحق المراقبة الآن — تابع التحديثات', 'Worth watching now — follow updates')}</p>
+                        <p className="text-[max(0.6875rem,9.5px)] font-bold text-red-400 mt-1">👀 {T('يستحق المراقبة الآن — تابع التحديثات', 'Worth watching now — follow updates')}</p>
                       )}
                       {ev.detail_url && (
                         <a href={ev.detail_url} target="_blank" rel="noreferrer" className="ms-2 text-xs font-bold text-red-400 hover:text-red-300 underline underline-offset-2">
@@ -13441,7 +13442,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
 )}
 
-      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl p-4 md:p-6 shadow-lg relative z-0 h-auto md:h-[500px]">
+      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl p-4 md:p-6 shadow-lg relative z-0 h-auto md:h-[31.25rem]">
         {/* 💡 الفلاتر فوق الخريطة */}
         <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4">
           <div className="flex items-center gap-3">
@@ -13467,7 +13468,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
 
         {/* 💡 زوم أوت للخريطة */}
-        <div className="h-[300px] md:h-[380px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative mt-4 md:mt-0">
+        <div className="h-[18.75rem] md:h-[23.75rem] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative mt-4 md:mt-0">
           <MapContainer center={[20.0, 10.0]} zoom={2} scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <ThemedTileLayer />
             
@@ -13476,7 +13477,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`g-${eq.eq_id}`} position={[lat, lng]} icon={globalEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {formatTime12(eq.time)}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-red-600 block text-center mb-1">{eq.magnitude} ريختر ({eq.status})</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[max(0.625rem,9px)] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {formatTime12(eq.time)}</span><span className="text-[max(0.625rem,9px)] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -13486,7 +13487,7 @@ const [clearAllCode, setClearAllCode] = useState('');
               if (isNaN(lat) || isNaN(lng)) return null;
               return (
                 <Marker keyboard={false} key={`e-${eq.eq_id}`} position={[lat, lng]} icon={egyptEqIcon} eventHandlers={{ click: () => { setSelectedEqId(prev => prev === eq.eq_id ? null : eq.eq_id); const container = document.getElementById('main-scroll-container'); const target = document.getElementById('earthquakes-table-section'); if (container && target) container.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' }); } }}>
-                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[10px] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {formatTime12(eq.time)}</span><span className="text-[10px] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
+                  <Tooltip direction="top"><strong className="text-green-600 block text-center mb-1">{eq.magnitude} ريختر (مصر)</strong><span className="text-xs text-[var(--ink-2)] text-center block font-bold">{eq.region}</span><span className="text-[max(0.625rem,9px)] text-[var(--faint)] text-center block mt-1">{formatDateTime(eq.date)} | {formatTime12(eq.time)}</span><span className="text-[max(0.625rem,9px)] text-blue-500 text-center block mt-1 font-bold">انقر لفلترة السجل</span></Tooltip>
                 </Marker>
               );
             })}
@@ -13494,7 +13495,7 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
       </div>
 
-      <div id="earthquakes-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
+      <div id="earthquakes-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[37.5rem] scroll-mt-6">
         <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
           <h3 className="text-xl font-bold text-white hidden md:block">سجل بيانات الزلازل</h3>
           
@@ -13524,14 +13525,14 @@ const [clearAllCode, setClearAllCode] = useState('');
           {(activeEqTab === 'global' || activeEqTab === 'all') ? (
             <div className="mb-8">
               {activeEqTab === 'all' && <h4 className="p-4 text-[var(--accent)] font-bold bg-[var(--surface-4)]">الزلازل العالمية</h4>}
-              <table className="w-full text-right whitespace-nowrap min-w-[800px] text-sm">
+              <table className="w-full text-right whitespace-nowrap min-w-[50rem] text-sm">
                 <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">الدولة</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)] text-[var(--accent)]">القوة (ريختر)</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">العمق</th>
-                    <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">المنطقة</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[12.5rem]">المنطقة</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">الإحداثيات</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)] text-center">الحالة</th>
                     <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
@@ -13545,7 +13546,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                       <td data-label="الدولة" className="p-4 text-orange-400 border-l border-[var(--border)] font-bold">{eq.country}</td>
                       <td data-label="القوة (ريختر)" className="p-4 text-[var(--accent)] border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td data-label="العمق" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
-                      <td data-label="المنطقة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
+                      <td data-label="المنطقة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[12.5rem]">{eq.region}</td>
                       <td data-label="الإحداثيات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
                       <td data-label="الحالة" className="p-4 border-l border-[var(--border)] text-center"><span className={`px-2 py-1 rounded text-xs font-bold ${eq.status === 'زلزال' ? 'bg-[var(--danger-soft)] text-[var(--accent)] border border-[var(--accent)]/30' : 'bg-[var(--surface-hover)] text-[var(--muted-2)] border border-[var(--border)]'}`}>{eq.status}</span></td>
                       <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
@@ -13564,13 +13565,13 @@ const [clearAllCode, setClearAllCode] = useState('');
           {(activeEqTab === 'egypt' || activeEqTab === 'all') ? (
             <div>
               {activeEqTab === 'all' && <h4 className="p-4 text-green-500 font-bold bg-[var(--surface-4)]">زلازل مصر</h4>}
-              <table className="w-full text-right whitespace-nowrap min-w-[600px] text-sm">
+              <table className="w-full text-right whitespace-nowrap min-w-[37.5rem] text-sm">
                 <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)] text-green-500">القوة (ريختر)</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">العمق</th>
-                    <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[200px]">المنطقة (مصر)</th>
+                    <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[12.5rem]">المنطقة (مصر)</th>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">الإحداثيات</th>
                     <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
                   </tr>
@@ -13582,7 +13583,7 @@ const [clearAllCode, setClearAllCode] = useState('');
                       <td data-label="التاريخ / الوقت" className="p-4 text-white border-l border-[var(--border)] font-mono">{formatDateTime(eq.date)} <span className="text-[var(--faint)]">{formatTime12(eq.time)}</span></td>
                       <td data-label="القوة (ريختر)" className="p-4 text-green-500 border-l border-[var(--border)] font-bold">{eq.magnitude}</td>
                       <td data-label="العمق" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono">{eq.depth_km}</td>
-                      <td data-label="المنطقة (مصر)" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[200px]">{eq.region}</td>
+                      <td data-label="المنطقة (مصر)" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] truncate max-w-[12.5rem]">{eq.region}</td>
                       <td data-label="الإحداثيات" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] font-mono text-xs" dir="ltr">{eq.latitude ? `${eq.latitude}, ${eq.longitude}` : '-'}</td>
                       <td data-label="الإجراءات" className="px-2 py-3 sticky end-0 z-10 sticky-end-col align-middle border-b border-[var(--border)]/60 bg-[var(--surface)] group-hover:bg-[var(--surface-2)]">
                         <div className="flex justify-center gap-1.5">
@@ -14488,7 +14489,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <span className="text-base">ℹ️</span>
             <span className="font-bold text-white">{T('المصادر والمنهجية المعتمدة:', 'Sources & Methodology:')}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[max(0.6875rem,9.5px)]">
             <span className="inline-flex items-center gap-1.5 bg-blue-900/40 px-2.5 py-1 rounded-lg border border-blue-700/50">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
               {T('التوقعات: Open-Meteo Forecast (ECMWF IFS 0.25°)', 'Forecast: Open-Meteo Forecast (ECMWF IFS 0.25°)')}
@@ -14568,10 +14569,10 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
               <span className="kpi-sub kpi-sub-lg">{kpiHazardLocations.length === 0 ? T('لا توجد إشارات مخاطر مرصودة', 'No hazard alerts detected') : `${T('إجمالي الإشارات:', 'Total signals:')} ${kpiHazardsCount}`}</span>
             </div>
             {kpiHazardLocations.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1 max-h-[68px] overflow-y-auto custom-scrollbar pe-1">
+              <div className="mt-2 flex flex-wrap gap-1 max-h-[4.25rem] overflow-y-auto custom-scrollbar pe-1">
                 {kpiHazardLocations.map((h, i) => (
                   <span key={`${h.name}-${i}`} title={h.name}
-                    className="inline-flex items-center gap-1 max-w-[9.5rem] px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-950/50 text-red-300 border border-red-800/50">
+                    className="inline-flex items-center gap-1 max-w-[9.5rem] px-2 py-0.5 rounded-lg text-[max(0.625rem,9px)] font-bold bg-red-950/50 text-red-300 border border-red-800/50">
                     <span className="truncate">{h.name}</span>
                     <span className="shrink-0 font-mono opacity-80">{h.count}</span>
                   </span>
@@ -14595,7 +14596,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                 </h3>
                 <p className="text-xs text-red-200/90 mt-1 break-words" dir={isAr ? 'rtl' : 'ltr'}>{apiError}</p>
                 {apiPartial && (
-                  <p className="text-[11px] text-[var(--muted)] mt-1.5">
+                  <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] mt-1.5">
                     {T('تظل البطاقات والبيانات التي تم جلبها بنجاح ظاهرة أدناه.', 'Data loaded from successful endpoints remains visible below.')}
                   </p>
                 )}
@@ -14657,13 +14658,13 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-xl font-extrabold text-[var(--ink)]">{isAr ? item.location_name_ar : (item.location_name_en || item.location_name_ar)}</h3>
-                        {item.region && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)]">{item.region}</span>}
-                        <span className="text-[11px] font-mono text-[var(--faint)]" dir="ltr">[{formatCoordinate(item.latitude)}°, {formatCoordinate(item.longitude)}°]</span>
+                        {item.region && <span className="text-[max(0.6875rem,9.5px)] font-bold px-2 py-0.5 rounded-full bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)]">{item.region}</span>}
+                        <span className="text-[max(0.6875rem,9.5px)] font-mono text-[var(--faint)]" dir="ltr">[{formatCoordinate(item.latitude)}°, {formatCoordinate(item.longitude)}°]</span>
                       </div>
                       <p className="text-xs text-[var(--muted)] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <span>{T('التاريخ المستهدف:', 'Target Date:')} <strong className="text-[var(--ink)]">{item.target_date}</strong></span>
                         <span>{T('تاريخ التنبؤ:', 'Forecast Date:')} <strong className="text-[var(--ink)]">{fc.forecast_date || '—'}</strong></span>
-                        {fc.fetched_at && <span className="text-[11px] text-[var(--faint)]">({T('تم الجلب:', 'Fetched:')} {new Date(fc.fetched_at).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })})</span>}
+                        {fc.fetched_at && <span className="text-[max(0.6875rem,9.5px)] text-[var(--faint)]">({T('تم الجلب:', 'Fetched:')} {new Date(fc.fetched_at).toLocaleTimeString(isAr ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })})</span>}
                       </p>
                     </div>
                   </div>
@@ -14689,7 +14690,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                             ? 'bg-amber-950/50 text-amber-300 border-amber-700/50'
                             : 'bg-cyan-950/50 text-cyan-300 border-cyan-700/50';
                         return (
-                          <span key={`${hazardCode || 'hazard'}-${hzIndex}`} className={`inline-flex max-w-xs flex-col items-start gap-0.5 px-3 py-1.5 rounded-xl text-[10px] font-bold border shadow-sm ${hzInfo?.color || levelClass}`} title={hazardDetail || undefined}>
+                          <span key={`${hazardCode || 'hazard'}-${hzIndex}`} className={`inline-flex max-w-xs flex-col items-start gap-0.5 px-3 py-1.5 rounded-xl text-[max(0.625rem,9px)] font-bold border shadow-sm ${hzInfo?.color || levelClass}`} title={hazardDetail || undefined}>
                             <span className="flex items-center gap-1.5">
                               <span className="truncate">{hazardTitle}</span>
                               {(hazardLevel || hazardUnit) && (
@@ -14712,42 +14713,42 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('درجة الحرارة', 'Temperature')}</span><span>🌡️</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-red-400">{fc.tmax ?? '—'}°</span><span className="text-xs font-bold text-blue-400">/ {fc.tmin ?? '—'}°C</span></div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('عظمى / صغرى', 'Max / Min')}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{T('عظمى / صغرى', 'Max / Min')}</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('الهطول المطري', 'Precipitation')}</span><span>🌧️</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-cyan-400">{fc.precip_mm ?? 0}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'مم' : 'mm'}</span></div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('الاحتمالية:', 'Probability:')} {fc.precip_prob_pct ?? 0}%</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{T('الاحتمالية:', 'Probability:')} {fc.precip_prob_pct ?? 0}%</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('سرعة الرياح', 'Wind Speed')}</span><span>💨</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-amber-400">{fc.wind_max_kph ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'كم/س' : 'km/h'}</span></div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('الهبات:', 'Gusts:')} {fc.wind_gusts_kph ?? '—'} {isAr ? 'كم/س' : 'km/h'}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{T('الهبات:', 'Gusts:')} {fc.wind_gusts_kph ?? '—'} {isAr ? 'كم/س' : 'km/h'}</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('الغبار و PM2.5', 'Dust & PM2.5')}</span><span>🌪️</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-orange-400">{fc.raw_json?.extra?.air?.dust_max ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">µg/m³</span></div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">PM2.5: {fc.raw_json?.extra?.air?.pm25_max ?? '—'} µg/m³</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">PM2.5: {fc.raw_json?.extra?.air?.pm25_max ?? '—'} µg/m³</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('ارتفاع الموج', 'Wave Height')}</span><span>🌊</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-sky-400">{fc.raw_json?.extra?.marine?.wave_height_max ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'م' : 'm'}</span></div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('للمحافظات الساحلية فقط', 'Coastal only')}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{T('للمحافظات الساحلية فقط', 'Coastal only')}</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('خطر السيول', 'Flood Risk')}</span><span>💧</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-teal-400">{fc.raw_json?.extra?.flood?.river_discharge_max ?? '—'}</span><span className="text-xs font-bold text-[var(--muted)]">{isAr ? 'م³/ث' : 'm³/s'}</span></div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('التصريف النهري المتوقع', 'Expected river discharge')}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{T('التصريف النهري المتوقع', 'Expected river discharge')}</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('الرطوبة النسبية', 'Humidity')}</span><span>💧</span></div>
                         <div className="flex items-baseline gap-1.5"><span className="text-lg font-black text-indigo-400">{fc.humidity_mean_pct ?? '—'}%</span></div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">{fc.humidity_mean_pct >= 75 ? <span className="text-amber-400 font-bold">{T('رطوبة جوية مرتفعة', 'High Humidity')}</span> : T('متوسط اليوم', 'Daily mean')}</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{fc.humidity_mean_pct >= 75 ? <span className="text-amber-400 font-bold">{T('رطوبة جوية مرتفعة', 'High Humidity')}</span> : T('متوسط اليوم', 'Daily mean')}</p>
                       </div>
                       <div className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)]">
                         <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1"><span>{T('حالة السماء', 'Sky Condition')}</span><span>☁️</span></div>
                         <div className="text-sm font-black text-[var(--ink)] truncate">{getWmoDescription(fc.weather_code)}</div>
-                        <p className="text-[10px] text-[var(--faint)] mt-1">{T('الغيوم:', 'Clouds:')} {fc.cloud_cover_mean_pct ?? 0}%</p>
+                        <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{T('الغيوم:', 'Clouds:')} {fc.cloud_cover_mean_pct ?? 0}%</p>
                       </div>
                     </div>
                   </div>
@@ -14756,7 +14757,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                   <div>
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                       <h4 className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider flex items-center gap-1.5">📊 {T('الخط المرجعي التاريخي لـ 30 عاماً وشذوذ التوقعات (ERA5 Reanalysis)', '30-Year Historical Baseline & Anomalies (ERA5)')}</h4>
-                      <span className="text-[11px] text-[var(--faint)] bg-[var(--surface-2)] px-2.5 py-0.5 rounded-full border border-[var(--border)]">{T('نافذة ±3 أيام حول التاريخ عبر 1996–2026', '±3-day window across 1996–2026')}</span>
+                      <span className="text-[max(0.6875rem,9.5px)] text-[var(--faint)] bg-[var(--surface-2)] px-2.5 py-0.5 rounded-full border border-[var(--border)]">{T('نافذة ±3 أيام حول التاريخ عبر 1996–2026', '±3-day window across 1996–2026')}</span>
                     </div>
 
                     <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
@@ -14798,8 +14799,8 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                                   <td className="p-3 text-center font-mono text-[var(--muted)]">{s.sample_count < 20 ? <span className="text-red-400 font-bold">{s.sample_count} ⚠️</span> : <span className="text-zinc-400">{s.sample_count}</span>}</td>
                                   <td className="p-3 text-center">
                                     <div className="flex items-center justify-center gap-1 flex-wrap">
-                                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${anomBadge.style}`}>{isAr ? anomBadge.ar : anomBadge.en}</span>
-                                      {isRecordBreak && <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">{T('رقم قياسي!', 'Record!')}</span>}
+                                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[max(0.6875rem,9.5px)] font-bold border ${anomBadge.style}`}>{isAr ? anomBadge.ar : anomBadge.en}</span>
+                                      {isRecordBreak && <span className="px-2 py-0.5 rounded-full text-[max(0.625rem,9px)] font-black bg-red-600 text-white animate-pulse">{T('رقم قياسي!', 'Record!')}</span>}
                                     </div>
                                   </td>
                                 </tr>
@@ -14820,11 +14821,11 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                           <div key={fIdx} className="bg-[var(--surface-2)] p-3 rounded-2xl border border-[var(--border)] flex flex-col justify-between">
                             <div className="flex items-center justify-between text-xs text-[var(--muted)] mb-1">
                               <span className="font-bold text-[var(--ink)]">{f.threshold_desc_ar}</span>
-                              <span className="font-mono text-[11px] bg-[var(--surface-3)] px-1.5 py-0.5 rounded text-[var(--faint)]">{f.threshold_value} {f.threshold_unit}</span>
+                              <span className="font-mono text-[max(0.6875rem,9.5px)] bg-[var(--surface-3)] px-1.5 py-0.5 rounded text-[var(--faint)]">{f.threshold_value} {f.threshold_unit}</span>
                             </div>
                             <div className="mt-2 flex items-baseline justify-between">
                               <span className="text-base font-black text-[var(--accent)] font-mono">{f.frequency_pct}%</span>
-                              <span className="text-[11px] text-[var(--muted)] font-mono" dir="ltr">({f.qualifying_count} / {f.total_count})</span>
+                              <span className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] font-mono" dir="ltr">({f.qualifying_count} / {f.total_count})</span>
                             </div>
                             <div className="w-full bg-[var(--surface-3)] h-1.5 rounded-full mt-2 overflow-hidden">
                               <div className="bg-[var(--accent)] h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(f.frequency_pct, 100)}%` }} />
@@ -14857,11 +14858,11 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                   <div>
                     <div className="flex items-center gap-2">
                       <strong className="text-[var(--ink)]">{T('التاريخ المستهدف:', 'Target:')} {r.target_date}</strong>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'success' ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-700/60' : r.status === 'partial' ? 'bg-amber-950/60 text-amber-300 border border-amber-700/60' : 'bg-red-950/60 text-red-300 border border-red-700/60'}`}>{r.status}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[max(0.625rem,9px)] font-bold ${r.status === 'success' ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-700/60' : r.status === 'partial' ? 'bg-amber-950/60 text-amber-300 border border-amber-700/60' : 'bg-red-950/60 text-red-300 border border-red-700/60'}`}>{r.status}</span>
                     </div>
-                    <p className="text-[11px] text-[var(--muted)] mt-1">{T('تاريخ التشغيل:', 'Run at:')} {r.run_date}</p>
-                    <p className="text-[11px] text-[var(--muted)]">{T('تاريخ التنبؤ:', 'Forecast Date:')} {r.forecast_date || '—'} | {T('آخر تاريخ مرصود:', 'Latest Observed Date:')} {r.latest_observed_date || '—'}</p>
-                    <p className="text-[11px] text-[var(--muted)]">{T('الناجحة:', 'OK:')} {r.successful_locations}/{r.total_locations}</p>
+                    <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] mt-1">{T('تاريخ التشغيل:', 'Run at:')} {r.run_date}</p>
+                    <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)]">{T('تاريخ التنبؤ:', 'Forecast Date:')} {r.forecast_date || '—'} | {T('آخر تاريخ مرصود:', 'Latest Observed Date:')} {r.latest_observed_date || '—'}</p>
+                    <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)]">{T('الناجحة:', 'OK:')} {r.successful_locations}/{r.total_locations}</p>
                   </div>
                   <button type="button" onClick={() => { setTargetDate(r.target_date); setShowRunsModal(false); }} className="ops-btn bg-[var(--accent)] text-white px-3 py-1.5 rounded-xl font-bold text-xs">{T('عرض التقرير', 'View Report')}</button>
                 </div>
@@ -14894,7 +14895,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                     <div key={key} className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-between gap-3 text-xs">
                       <div>
                         <div className="font-mono text-purple-300 font-bold">{key}</div>
-                        <div className="text-[11px] text-[var(--muted)] mt-0.5">{item.description_ar}</div>
+                        <div className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] mt-0.5">{item.description_ar}</div>
                       </div>
                       <span className="font-mono text-base font-black text-amber-400 bg-[var(--surface-3)] px-2.5 py-1 rounded-lg border border-[var(--border)]">{item.value} {item.unit || ''}</span>
                     </div>
@@ -15254,7 +15255,7 @@ const totalAiCountries = new Set(
             </div>
             <div className="flex items-center gap-1.5 mt-1 border-t border-[var(--border)] pt-1">
               <svg className="w-3 h-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span className="text-[10px] text-[var(--muted-2)] font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
+              <span className="text-[max(0.625rem,9px)] text-[var(--muted-2)] font-mono font-bold tracking-wider">آخر فحص: {lastRunTime}</span>
             </div>
           </div>
           {/* 👇 الخط اللي بيفصل والبادج بتاع جيت هاب رجعوا هنا 👇 */}
@@ -15329,7 +15330,7 @@ const totalAiCountries = new Set(
 
       {/* 💡 خريطة الرصد التكتيكية للذكاء الاصطناعي */}
 
-      <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-4 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-0 h-auto md:h-[450px] animate-fade-in-up">
+      <div className="bg-[var(--surface-2)] border border-purple-500/30 rounded-3xl p-4 md:p-6 shadow-[0_0_20px_rgba(168,85,247,0.1)] relative z-0 h-auto md:h-[28.125rem] animate-fade-in-up">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد اللحظي للذكاء الاصطناعي</h3>
           {selectedAiNewsId && (
@@ -15338,7 +15339,7 @@ const totalAiCountries = new Set(
             </button>
           )}
         </div>
-        <div className="h-[300px] md:h-[350px] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative">
+        <div className="h-[18.75rem] md:h-[21.875rem] w-full rounded-2xl overflow-hidden border border-[var(--border)] relative">
           <MapContainer center={[22, 30]} zoom={2} minZoom={2} worldCopyJump scrollWheelZoom={true} keyboard={false} style={{ height: '100%', width: '100%' }}>
             <ThemedTileLayer />
             
@@ -15354,7 +15355,7 @@ const totalAiCountries = new Set(
                       <strong className="text-purple-700 block mb-1">{news.news_type}</strong>
                       <span className="text-xs text-[var(--ink-2)] font-bold line-clamp-2">{news.incident_description}</span>
                       {aiData.img && aiData.img !== 'لا توجد صورة' && <img src={aiData.img} alt="حادث" className="w-full h-20 object-cover mt-2 rounded border border-[var(--border)]" />}
-                      <span className="text-[10px] text-blue-600 block mt-2 font-bold">انقر لفلترة الجدول</span>
+                      <span className="text-[max(0.625rem,9px)] text-blue-600 block mt-2 font-bold">انقر لفلترة الجدول</span>
                     </div>
                   </Tooltip>
                 </Marker>
@@ -15364,7 +15365,7 @@ const totalAiCountries = new Set(
         </div>
       </div>
 
-      <div id="ai-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[600px] scroll-mt-6">
+      <div id="ai-table-section" className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden shadow-lg flex flex-col h-[37.5rem] scroll-mt-6">
         <div className="p-6 border-b border-[var(--border)] bg-[var(--surface-4)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10">
           <div className="flex items-center gap-2">
             <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-[var(--surface-3)] border border-purple-500/30 rounded-xl px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
@@ -15405,7 +15406,7 @@ const totalAiCountries = new Set(
         )}
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap min-w-[760px] text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[47.5rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-purple-500/30">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
@@ -15413,7 +15414,7 @@ const totalAiCountries = new Set(
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-purple-400">نوع الخبر</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)] text-center">النطاق</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">المحافظة</th>
-                <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[250px]">وصف الحادث</th>
+                <th className="p-4 font-semibold border-l border-[var(--border)] max-w-[15.625rem]">وصف الحادث</th>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">الناشر</th>
                 <th className="px-2 py-3 font-bold whitespace-nowrap sticky-end-col z-30 text-center bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">إجراءات</th>
               </tr>
@@ -15427,13 +15428,13 @@ const totalAiCountries = new Set(
                   <td data-label="وقت الرصد" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)] font-mono text-xs">{n.observed_at ? formatDateTime(n.observed_at) : '—'}</td>
                   <td data-label="نوع الخبر" className="p-4 text-purple-400 border-l border-[var(--border)] font-bold">
                   <td data-label="النطاق" className="p-4 border-l border-[var(--border)] text-center">
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${(n.news_scope || 'خبر عالمي') === 'خبر محلي' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-orange-500/15 text-orange-400 border-orange-500/30'}`}>{n.news_scope || 'خبر عالمي'}</span>
+                    <span className={`px-2 py-0.5 rounded text-[max(0.6875rem,9.5px)] font-bold border ${(n.news_scope || 'خبر عالمي') === 'خبر محلي' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-orange-500/15 text-orange-400 border-orange-500/30'}`}>{n.news_scope || 'خبر عالمي'}</span>
                   </td>
                     {n.news_type}
-                    {aiData && aiData.severity && <span className="block mt-1 bg-[var(--danger-soft)] text-[var(--accent)] px-2 py-0.5 rounded text-[10px] w-max">خطورة: {aiData.severity}/10</span>}
+                    {aiData && aiData.severity && <span className="block mt-1 bg-[var(--danger-soft)] text-[var(--accent)] px-2 py-0.5 rounded text-[max(0.625rem,9px)] w-max">خطورة: {aiData.severity}/10</span>}
                   </td>
                   <td data-label="المحافظة" className="p-4 text-[var(--ink-2)] border-l border-[var(--border)]">{n.governorate}</td>
-                  <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] min-w-[200px] max-w-[400px] whitespace-normal leading-7">
+                  <td data-label="وصف الحادث" className="p-4 text-[var(--muted-2)] border-l border-[var(--border)] min-w-[12.5rem] max-w-[25rem] whitespace-normal leading-7">
                       {n.incident_description || 'لا يوجد وصف'}
                   </td>
                   <td data-label="الناشر" className="p-4 text-[var(--faint)] border-l border-[var(--border)] text-xs">{n.news_publisher}</td>
@@ -15658,7 +15659,7 @@ function ExportChoiceModal({ show, title = 'تصدير السجل الشامل �
       <div className="sig-choice-grid">
         <button type="button" className="sig-choice-card" onClick={onWithCategories}>
           <div className="sig-choice-icon">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="1.3125rem" height="1.3125rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />
             </svg>
           </div>
@@ -15671,7 +15672,7 @@ function ExportChoiceModal({ show, title = 'تصدير السجل الشامل �
 
         <button type="button" className="sig-choice-card" onClick={onWithoutCategories}>
           <div className="sig-choice-icon">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="1.3125rem" height="1.3125rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
               <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
@@ -15702,7 +15703,7 @@ function DownloadConfirmModal({ show, title = 'تنزيل السجل الفرد�
           <button type="button" className="sig-btn sig-btn-ghost" onClick={onCancel}>{cancelLabel}</button>
           <button type="button" className="sig-btn sig-btn-main" onClick={onConfirm}>
             <span className="flex items-center justify-center gap-2">
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="1rem" height="1rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
               </svg>
               {confirmLabel}
@@ -16026,7 +16027,7 @@ function ActionToast({ message, onClose }) {
 
         <span className="sig-force" aria-hidden="true"><i /><i /><i /></span>
         <button type="button" className="sig-x" onClick={close} aria-label="إغلاق">
-          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
+          <svg width="0.9375rem" height="0.9375rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
     </div>,
@@ -16175,7 +16176,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
         <StatCard title="إجمالي المتطوعين" value={hrList.filter(p => p.participant_type === 'volunteer').length} color="text-blue-400" />
       </div>
 
-      <div className="card-surface overflow-hidden flex flex-col h-[660px]">
+      <div className="card-surface overflow-hidden flex flex-col h-[41.25rem]">
         <div className="p-6 border-b border-[var(--border)] flex flex-col lg:flex-row justify-between items-center gap-4 z-10 bg-[var(--surface-2)]">
 
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -16231,7 +16232,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
         </div>
 
         <div className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full text-right whitespace-nowrap min-w-[1000px] text-sm">
+          <table className="w-full text-right whitespace-nowrap min-w-[62.5rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-2)] text-[var(--muted)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)] w-16 text-center">م</th>

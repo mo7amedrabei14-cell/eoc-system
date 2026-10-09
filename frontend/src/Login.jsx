@@ -50,12 +50,12 @@ const ShieldIcon = () => (
   </svg>
 );
 const CheckIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="0.8125rem" height="0.8125rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 12.5 9.5 17 19 7" />
   </svg>
 );
 const ChevronsIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+  <svg width="0.8125rem" height="0.8125rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M13 6l6 6-6 6M5 6l6 6-6 6" />
   </svg>
 );
@@ -116,7 +116,7 @@ function Gauge({ g, active }) {
           }}
         />
       </div>
-      <span className="text-[10px] font-bold text-[var(--muted)] truncate max-w-full">{g.label}</span>
+      <span className="text-[max(0.625rem,9px)] font-bold text-[var(--muted)] truncate max-w-full">{g.label}</span>
     </div>
   );
 }
@@ -244,7 +244,18 @@ export default function Login() {
   const lastMoveRef = useRef(0);
   const pctRef = useRef(null); // نص النسبة — يُكتب مباشرة بلا إعادة بناء
   const stageRef = useRef({ tick: 0, goal: false, label: 0, pct: false });
-  const HANDLE_SIZE = 60;
+  const HANDLE_SIZE = 60;        // قيمة ارتداد px — تُحلَّ بحجم المقبض المرسوم فعليًا
+  /* المقبض أصبح 3.75rem فيتتبّع مقياس الجذر، لكن رياضة السحب تعمل بالـpx
+     (trackRect.width). نقيسه **مرة واحدة عند بداية الإيماءة** ونخزّنه في ref،
+     فلا تُجرى قراءة style لكل إطار أثناء السحب (ممنوع في §1). */
+  const handleSizeRef = useRef(HANDLE_SIZE);
+  const handleRef = useRef(null);
+  const measureHandle = () => {
+    const el = handleRef.current;
+    if (!el) return;
+    const w = parseFloat(getComputedStyle(el).width);
+    if (w > 0) handleSizeRef.current = w;
+  };
   const isRTL = language === 'ar';
 
   // ✨ بارالاكس لطيف لهلال البوابة مع حركة المؤشر (يُلغى تلقائيًا مع reduced-motion)
@@ -300,8 +311,9 @@ export default function Login() {
   }, []);
 
   const readMax = () => {
+    measureHandle();
     const rect = trackRef.current && trackRef.current.getBoundingClientRect();
-    return rect ? Math.max(1, rect.width - HANDLE_SIZE - 8) : maxRef.current;
+    return rect ? Math.max(1, rect.width - handleSizeRef.current - 8) : maxRef.current;
   };
 
   const completeUnlock = () => {
@@ -349,6 +361,7 @@ export default function Login() {
       /* لا التقاط — الالتقاط ليس شرطًا لبدء السحب */
     }
     if (springRef.current) { cancelAnimationFrame(springRef.current); springRef.current = null; }
+    measureHandle();          // قياس واحد يسبق السحب — لا قراءة style داخل الحركة
     velRef.current = 0;
     lastMoveRef.current = performance.now();
     setIsDragging(true);
@@ -357,12 +370,12 @@ export default function Login() {
   const handlePointerMove = (e) => {
     if (!isDragging || !trackRef.current) return;
     const trackRect = trackRef.current.getBoundingClientRect();
-    const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
+    const maxX = Math.max(1, trackRect.width - handleSizeRef.current - 8);
     maxRef.current = maxX;
     // 🎯 تتبّع 1:1 — لا تصفية ولا «مغناطيسية»: ما يلمسه الإصبع هو ما يُرسم في
     // نفس الإطار. (اللمسة المغناطيسية القديمة كانت تضيف لاجًا محسوسًا).
     const fromStart = e.clientX - trackRect.left;
-    const x = Math.max(0, Math.min(fromStart - HANDLE_SIZE / 2, maxX));
+    const x = Math.max(0, Math.min(fromStart - handleSizeRef.current / 2, maxX));
     // سرعة الإيماءة (px/s) مع تنعيم بسيط ⇒ تُستخدم كـ «throw» عند الإفلات،
     // فيكمل المقبض حركته بنفس زخم الإصبع بدل أن يتجاهله.
     const now = performance.now();
@@ -417,8 +430,9 @@ export default function Login() {
   // إتاحة كاملة للوحة المفاتيح (تقدم/تراجع حسب الاتجاه + Enter عند الاقتراب من النهاية)
   const handleKnobKey = (e) => {
     if (!trackRef.current || isDragging || isUnlocking) return;
+    measureHandle();
     const trackRect = trackRef.current.getBoundingClientRect();
-    const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
+    const maxX = Math.max(1, trackRect.width - handleSizeRef.current - 8);
     // لوحة المفاتيح تتبع نفس الاتجاه: السهم الأيمن للتقدم.
     const isFwd = e.key === 'ArrowRight';
     const isBack = e.key === 'ArrowLeft';
@@ -608,13 +622,7 @@ export default function Login() {
         <span className="lx-switch-ic lx-switch-ic--e" aria-hidden="true">
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
         </span>
-        <span className={`lx-switch-knob ${theme === 'dark' ? 'lx-switch-knob--start' : 'lx-switch-knob--end'}`}>
-          {theme === 'dark' ? (
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
-          ) : (
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
-          )}
-        </span>
+        <span aria-hidden="true" className={`lx-switch-knob ${theme === 'dark' ? 'lx-switch-knob--start' : 'lx-switch-knob--end'}`} />
       </motion.button>
 
       {/* ═══════════ بوابة السحب للدخول (Slide to Unlock) ═══════════ */}
@@ -758,6 +766,7 @@ export default function Login() {
 
                   {/* المقبض — كرة زجاجية بشعار الهلال */}
                   <div
+                    ref={handleRef}
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
@@ -772,7 +781,7 @@ export default function Login() {
                     className={`lx-handle ${isDragging ? 'is-dragging' : 'is-idle'} ${isUnlocking ? 'is-done' : ''}`}
                     /* الموضع من `--lx-x` (CSS) — لا انتقال زمني أثناء السحب:
                        الحركة 1:1 مع الإصبع، والعودة يحرّكها النابض في JS. */
-                    style={{ width: HANDLE_SIZE, height: HANDLE_SIZE }}
+                    style={{ width: '3.75rem', height: '3.75rem' }}
                   >
                     <span className="lx-handle-halo" aria-hidden="true" />
                     {isUnlocking && <span className="lx-ripple lx-ripple--1" aria-hidden="true" />}
@@ -820,7 +829,7 @@ export default function Login() {
                   <p className="font-extrabold text-sm sm:text-base leading-tight tracking-tight">
                     {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
                   </p>
-                  <p className="text-white/75 text-[11px] sm:text-xs font-medium">
+                  <p className="text-white/75 text-[max(0.6875rem,9.5px)] sm:text-xs font-medium">
                     {language === 'ar' ? 'مركز عمليات الطوارئ · نظام الإدارة' : 'Emergency Operations Center · Command System'}
                   </p>
                 </div>
@@ -829,14 +838,14 @@ export default function Login() {
               <div className="flex items-center gap-2.5 sm:gap-3">
                 <span className="lx-chip hidden sm:inline-flex">
                   <span className="lx-live-dot" aria-hidden="true" />
-                  <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em]">LIVE</span>
+                  <span className="text-[max(0.625rem,9px)] sm:text-[max(0.6875rem,9.5px)] font-bold tracking-[0.2em]">LIVE</span>
                 </span>
                 <span className="lx-chip">
                   <span className="lx-clock">
                     {opsNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                   </span>
                 </span>
-                <span className="hidden md:inline-flex text-white/60 text-[10px] font-mono tracking-widest">
+                <span className="hidden md:inline-flex text-white/60 text-[max(0.625rem,9px)] font-mono tracking-widest">
                   EOC · OPS · v2.0.0
                 </span>
               </div>
@@ -852,16 +861,16 @@ export default function Login() {
                 <div className="lx-radar-sweep" />
                 <span className="lx-radar-ring lx-radar-ring--1" />
                 <span className="lx-radar-ring lx-radar-ring--2" />
-                <span className="lx-radar-blip" style={{ top: '13%', insetInlineEnd: '26%', width: 7, height: 7, background: 'var(--accent)' }} />
-                <span className="lx-radar-blip" style={{ bottom: '21%', insetInlineStart: '23%', width: 5, height: 5, background: 'var(--ok)', animationDelay: '1.1s' }} />
+                <span className="lx-radar-blip" style={{ top: '13%', insetInlineEnd: '26%', width: '0.4375rem', height: '0.4375rem', background: 'var(--accent)' }} />
+                <span className="lx-radar-blip" style={{ bottom: '21%', insetInlineStart: '23%', width: '0.3125rem', height: '0.3125rem', background: 'var(--ok)', animationDelay: '1.1s' }} />
                 <img
   src="/Egyptian_Red_Crescent.png"
   alt="الهلال الأحمر المصري"
   draggable="false"
   className="lx-radar-logo"
   style={{
-    width: '36px',
-    height: '36px',
+    width: '2.25rem',
+    height: '2.25rem',
     objectFit: 'contain',
     objectPosition: 'center',
     display: 'block',
@@ -956,8 +965,7 @@ export default function Login() {
                               key={i}
                               className="otp-orbit-item inline-flex"
                               style={{
-                                '--angle': `${i * 60 - 150}deg`,
-                                '--line-x': `${(i - 2.5) * 58}px`
+                                '--angle': `${i * 60 - 150}deg`,                                  '--line-x': `${(i - 2.5) * 3.625}rem`
                               }}
                             >
                               <input

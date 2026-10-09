@@ -416,7 +416,7 @@ kbd,
   position: absolute;
   top: 0;
   inset-inline: 0.75rem;                     /* = حشوة الـ nav (p-3) */
-  height: var(--nav-indicator-h, 48px);
+  height: var(--nav-indicator-h, 3rem);
   border-radius: var(--radius);
   opacity: 0;
   pointer-events: none;
@@ -501,7 +501,7 @@ kbd,
   width: 2px;
   height: 1.15rem;
   margin-top: -0.575rem;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   background: color-mix(in srgb, var(--accent) 55%, transparent);
   transform: scaleY(0);
   transform-origin: center;
@@ -540,7 +540,7 @@ kbd,
   content: "";
   position: absolute;
   inset: -0.45rem;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
   background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 26%, transparent), transparent 74%);
   pointer-events: none;
 }
@@ -653,8 +653,8 @@ kbd,
 .live-dot::after {
   content: "";
   position: absolute;
-  inset: -3px;
-  border-radius: 999px;
+  inset: -0.1875rem;
+  border-radius: 62.4375rem;
   border: 1.5px solid var(--ok);
   opacity: 0;
   animation: sc-ping 2.6s var(--sc-ease) infinite;

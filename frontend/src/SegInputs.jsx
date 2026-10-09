@@ -448,7 +448,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
           className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>
       </div>
       {open && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[17.5rem]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <button type="button" onClick={() => changeMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
@@ -456,7 +456,7 @@ export const SegDateField = ({ value, onChange, defaultValue, id, className = ''
             <button type="button" onClick={() => changeMonth(1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">›</button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
-            {WEEK.map((w, i) => <div key={i} className="h-6 text-[10px] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
+            {WEEK.map((w, i) => <div key={i} className="h-6 text-[max(0.625rem,9px)] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">{cells}</div>
         </div>,
@@ -717,7 +717,7 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
           className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح منتقي الوقت">🕐</button>
       </div>
       {open && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[17.5rem]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
@@ -725,23 +725,23 @@ export const SegTimeField = ({ value, onChange, defaultValue, id, className = ''
           </div>
           <div className="flex items-start justify-center gap-2" dir="ltr">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
+              <span className="text-[max(0.625rem,9px)] text-[var(--muted-2)] font-bold">ساعات</span>
               <TimeWheel items={HOURS} value={hh12}
                 onChange={(h) => setClock(prev => `${from12Wheel(h, ampm)}:${(prev.split(':')[1] || '00')}`)} />
             </div>
             <span className="text-2xl font-bold text-[var(--accent)] mt-10 select-none">:</span>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">دقائق</span>
+              <span className="text-[max(0.625rem,9px)] text-[var(--muted-2)] font-bold">دقائق</span>
               <TimeWheel items={MINUTES} value={mmWheel}
                 onChange={(m) => setClock(prev => `${(prev.split(':')[0] || '00')}:${m}`)} />
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">الفترة</span>
+              <span className="text-[max(0.625rem,9px)] text-[var(--muted-2)] font-bold">الفترة</span>
               <div className="flex flex-col gap-1 mt-2">
                 <button type="button" onClick={() => { setAmpm('AM'); setClock(flipMeridian(clock, 'AM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
+                  className={`px-2.5 py-1.5 text-[max(0.6875rem,9.5px)] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
                 <button type="button" onClick={() => { setAmpm('PM'); setClock(flipMeridian(clock, 'PM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
+                  className={`px-2.5 py-1.5 text-[max(0.6875rem,9.5px)] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
               </div>
             </div>
           </div>
@@ -1122,7 +1122,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
         )}
       </div>
       {picker === 'time' && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[17.5rem]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-[var(--muted-2)] font-bold">الوقت</span>
@@ -1130,23 +1130,23 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
           </div>
           <div className="flex items-start justify-center gap-2" dir="ltr">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">ساعات</span>
+              <span className="text-[max(0.625rem,9px)] text-[var(--muted-2)] font-bold">ساعات</span>
               <TimeWheel items={HOURS} value={hh12}
                 onChange={(h) => setClock(prev => `${from12Wheel(h, ampm)}:${(prev.split(':')[1] || '00')}`)} />
             </div>
             <span className="text-2xl font-bold text-[var(--accent)] mt-10 select-none">:</span>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">دقائق</span>
+              <span className="text-[max(0.625rem,9px)] text-[var(--muted-2)] font-bold">دقائق</span>
               <TimeWheel items={MINUTES} value={mmWheel}
                 onChange={(m) => setClock(prev => `${(prev.split(':')[0] || '00')}:${m}`)} />
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-[var(--muted-2)] font-bold">الفترة</span>
+              <span className="text-[max(0.625rem,9px)] text-[var(--muted-2)] font-bold">الفترة</span>
               <div className="flex flex-col gap-1 mt-2">
                 <button type="button" onClick={() => { setAmpm('AM'); setClock(flipMeridian(clock, 'AM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
+                  className={`px-2.5 py-1.5 text-[max(0.6875rem,9.5px)] rounded-md font-bold ${ampm === 'AM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>AM</button>
                 <button type="button" onClick={() => { setAmpm('PM'); setClock(flipMeridian(clock, 'PM')); }}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
+                  className={`px-2.5 py-1.5 text-[max(0.6875rem,9.5px)] rounded-md font-bold ${ampm === 'PM' ? 'bg-[var(--accent)] text-white' : 'text-[var(--ink-2)] hover:bg-[var(--surface-hover)]'}`}>PM</button>
               </div>
             </div>
           </div>
@@ -1158,7 +1158,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
         document.body
       )}
       {picker === 'date' && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[280px]"
+        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[17.5rem]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <button type="button" onClick={() => changeCalMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
@@ -1166,7 +1166,7 @@ export const SegDateTimeField = ({ value, onChange, defaultValue, id, className 
             <button type="button" onClick={() => changeCalMonth(1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">›</button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
-            {calWEEK.map((w, i) => <div key={i} className="h-6 text-[10px] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
+            {calWEEK.map((w, i) => <div key={i} className="h-6 text-[max(0.625rem,9px)] text-[var(--muted-2)] flex items-center justify-center">{w}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">{calCells}</div>
         </div>,
