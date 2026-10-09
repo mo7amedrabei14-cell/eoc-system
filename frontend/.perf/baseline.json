@@ -1,0 +1,16 @@
+{
+  "dist": {
+    "css_bytes": 324403,
+    "js_bytes": 3112960,
+    "css_files": 3,
+    "js_files": 9
+  },
+  "css_meta": {
+    "rules": 3667,
+    "important": 274,
+    "backdrop_filter_decls": 15,
+    "keyframes": 145,
+    "infinite_animations": 75,
+    "blur_decls": 37
+  }
+}

@@ -446,6 +446,12 @@
 }
 :root[data-theme="light"] .lx-track.is-dragging {
   background: color-mix(in srgb, #ffffff 96%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.6),
+    var(--lx-shadow-ambient),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 24px -4px var(--accent-soft),
+    inset 0 0 0 1px rgba(20,22,34,0.04);
 }
 .lx-track.is-done {
   border-color: color-mix(in srgb, var(--ok) 55%, transparent);
@@ -467,15 +473,7 @@
     0 0 0 1px var(--border),
     0 22px 44px -30px rgba(18, 22, 34, 0.3);
 }
-:root[data-theme="light"] .lx-track.is-dragging {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 24px -4px var(--accent-soft),
-    inset 0 0 0 1px rgba(20,22,34,0.04);
-}
-:root[data-theme="light"] .lx-track.is-done {
+/* (أُدمجت قاعدة `.lx-track.is-dragging` الخاصة بالوضع الفاتح في الكتلة أعلاه) */:root[data-theme="light"] .lx-track.is-done {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.6),
     var(--lx-shadow-ambient),
@@ -904,23 +902,43 @@
 /* ════════════════════════════════════════════════════════════════════════════
    ٧) سطح القيادة (Deck) — لوحة زجاجية بحواف مضيئة (موحّدة مع نظام Liquid Glass)
    ════════════════════════════════════════════════════════════════════════════ */
+/* ── سطح القيادة (بطاقة الدخول) — نفس لغة الشريط الطائر ──────────────────
+   ثلاث تدخّلات مقصودة في هذه الجولة:
+     ① `max-width` تحوّل من 900px ثابت إلى 56rem ⇒ البطاقة تتناسب مع مقياس
+        الجذر الجديد (≈975px عند 1920) بدل أن تبدو ضامرة بجانب واجهة كبرت.
+     ② الضباب نزل من `--lx-blur-lg` (16px) إلى `--lx-blur-md` (12px). هذه
+        أكبر مساحة مضبّبة في شاشة الدخول كلها، والفرق البصري بين 12 و16
+        غير مرئي على بطاقة عريضة بينما الفرق في الكلفة حقيقي.
+     ③ الظل صار سلمًا حقيقيًّا: تلامس ١px + حدّ ضوء داخلي + فصل بيئي عميق
+        واحد — بدل `--lx-shadow-ambient` العام المضاعف مع `0 0 0 1px` في
+        آن واحد (كان يقرأ كحافة سميكة لا كظل). */
 .lx-deck {
   position: relative;
   width: 100%;
-  max-width: 900px;
-  border-radius: 28px;
+  max-width: 56rem;
+  border-radius: 1.75rem;
   overflow: hidden;
-  /* Unified glass recipe: --glass-heavy + blur-lg + saturate */
-  background: var(--lx-glass-heavy);
-  -webkit-backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
-          backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
+  background-color: var(--lx-glass-heavy);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 26%);
+  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(1.3);
+          backdrop-filter: blur(var(--lx-blur-md)) saturate(1.3);
   border: 1px solid var(--border);
-  /* Shadow budget: contact + ambient only, no giant black shadows (Phase 9) */
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
-    0 0 0 1px var(--border),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 32px 72px -40px rgba(0, 0, 0, 0.95);
+}
+
+/* الوضع الفاتح: مادة نهارية قائمة بذاتها (لا مجرد عكس للداكن) */
+:root[data-theme="light"] .lx-deck {
+  background-color: var(--lx-glass-heavy-light);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 28%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 1px 2px rgba(18, 22, 34, 0.06),
+    0 30px 66px -40px rgba(18, 22, 34, 0.32);
 }
 .lx-deck::before {
   content: "";
@@ -933,15 +951,8 @@
   pointer-events: none;
 }
 
-/* Light mode deck */
-:root[data-theme="light"] .lx-deck {
-  background: var(--lx-glass-heavy-light);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px var(--border),
-    inset 0 0 0 1px rgba(20,22,34,0.04);
-}
+/* (أُدمجت هنا قاعدة الوضع الفاتح المكرّرة: كانت هناك نسخة لاحقة في الملف
+   تغلب على المادة النهارية الجديدة فتُلغيها — قاعدة ثيم واحدة لكل سطح.) */
 
 /* ── الرباط الأحمر ── */
 .lx-ribbon {
@@ -1175,8 +1186,10 @@
 .lx-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 11px;
+  gap: 0.6rem;
+  /* rem لا px: الوسم الصغير يجب أن ينمو بنفس نسبة الواجهة حوله وإلا انكسر
+     التسلسل البصري (عنوان 1.7rem يقف فوق وسم متجمّد من 11px). */
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: .26em;
   text-transform: uppercase;
@@ -1248,16 +1261,22 @@
   color: var(--accent);
   transform: translateY(-50%) scale(1.1);
 }
+/* ── الحقول — وحدات rem لتنمو مع مقياس الجذر ─────────────────────────
+   كانت المقاسات بالبكسل (`font-size: 15px`، `padding: 16px`)، فحقل الدخول
+   يبقى ثابتًا بينما تكبر الواجهة حواليها ⇒ يبدو أصغر وأضعف. الآن
+   بالـ rem: 0.94rem ≈ 16.4px عند 1920 (كان 15px ثابتًا)، والحشوة تنمو معه.
+   والمدة انخفضت من ٣٠٠–٣٥٠ms إلى 160–180ms (نطاق عناصر التحكم في البرنامج)
+   مع منحنى `--lx-ease-out-quick` الذي يبدأ سريعًا ثم يستقر. */
 .lx-input {
   width: 100%;
-  border-radius: 17px;
+  border-radius: 1.05rem;
   border: 1px solid var(--border);
   /* Unified glass recipe: --glass-light + blur-sm + saturate */
   background:
     linear-gradient(180deg, var(--lx-glass-light) 0%, transparent 40%),
     color-mix(in srgb, var(--surface-2) 88%, transparent);
-  padding: 16px 52px 16px 52px;
-  font-size: 15px;
+  padding: 0.95rem 3.1rem;
+  font-size: 0.94rem;
   font-weight: 600;
   color: var(--ink);
   outline: none;
@@ -1267,9 +1286,9 @@
     inset 0 1px 0 rgba(255,255,255,0.05),
     inset 0 -14px 22px -20px rgba(0, 0, 0, .8);
   transition:
-    border-color .3s var(--ease-out),
-    box-shadow .35s var(--ease-out),
-    background-color .3s var(--ease-out);
+    border-color 160ms var(--lx-ease-out-quick),
+    box-shadow 180ms var(--lx-ease-out-quick),
+    background-color 160ms var(--lx-ease-out-quick);
 }
 [dir="ltr"] .lx-input { padding-left: 52px; padding-right: 52px; }
 .lx-input::placeholder {

@@ -236,46 +236,73 @@ kbd,
      ④ حدّ شعري في الجهة الداخلية + حدّ ضوء داخلي بجانبه ⇒ «الحافة تلتقط الضوء»
      ⑤ لمعة مواصفاتية: خط ١px فاتح أسفل الحافة العلوية مباشرة
    وبلاهذه الطبقات يصبح الشريط مادةً داخل بيئة التطبيق, لا لوحًا زجاجيًا. */
+/* ── الشريط الطائر: سطح مادي مُنفصل مكانه داخل الصندوق ─────────────────
+   المطلوب: أن يقرأ كجسم تنقّل مُعلّق داخل بيئة التطبيق، لا كعمود كامل
+   الارتفاع ملتصق بحافتي الشاشة.
+
+   ⚠️ كيف فعلناها دون أي تغيير هيكلي:
+     • `<aside>` **لم تُلمس**: نفس الموضع، نفس أصناف العرض (`w-64/w-72/w-20`)،
+       نفس `fixed md:sticky`، نفس سلوك flex — فلا انزياح في التخطيط ولا
+       أي أثر على المعلومات أو التنقل أو عرض `<main>`.
+     • مادة السطح انتقلت إلى `.sidebar-shell::before` بـ `inset: 0.5rem`
+       و`z-index: -1` ⇒ السطح يتراجع للخلف ويبقى المحتوى أمامه في مكانه حرفيًا.
+     • `padding: 0.5rem` على الشريط يحجز الفراغ نفسه حول المحتوى، فيصبح
+       السطح محيطًا بصندوق المحتوى بدقة — لا محتوى يخرج عن حافة السطح ولا
+       شرائط تمرير تتسرّب إلى الفراغ.
+
+   لماذا `z-index: -1` وليس 0 أو 1؟ لأن ترتيب الرسم داخل سياق التراص يضع
+   العناصر الموضّعة ذات z-index≤0 **أسفل** الأبناء غير الموضّعين. الشريط
+   له z-index خاص (أصناف z-[70]) فهو سياق تراص مغلق، فلا يخرج السطح خلف
+   الصفحة. هذا يحقّق الترتيب الصحيح بلا `position` إضافي على أي ابن وبلا
+   تغيير في DOM. */
 .sidebar-shell {
-  background-color: var(--sc-glass-1);
-  background-image:
-    /* ③ صبغة بيئية */ radial-gradient(120% 34% at 78% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 72%),
-    /* ② إضاءة رأسية */ linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 34%, rgba(0, 0, 0, 0.16));
-  background-repeat: no-repeat;
-  backdrop-filter: blur(var(--blur-md)) saturate(1.3);
-  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.3);
-  border-inline-end: 1px solid var(--sc-hair);
-  box-shadow:
-    /* ④ حدّ ضوء داخلي في الجهة الداخلية */ inset -1px 0 0 rgba(255, 255, 255, 0.035),
-    /* ⑤ لمعة مواصفاتية أسفل الحافة العلوية */ inset 0 1px 0 var(--sc-light-top),
-    /* عمق منفصل: الشريط يجب أن يقرأ كطبقة مختلفة عن محتواه */ 1px 0 0 rgba(0, 0, 0, 0.28);
+  background: none;
+  border-inline-end: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 0.5rem;
   /* عزل الشريط: تغيير عرضه لا يُعيد حساب بقية الصفحة */
   contain: layout paint style;
 }
 
-:root[data-theme="light"] .sidebar-shell {
+.sidebar-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0.5rem;
+  z-index: -1;
+  border-radius: 1.15rem;
+  pointer-events: none;
+  /* ① القاعدة الزجاجية */
   background-color: var(--sc-glass-1);
+  /* ② صبغة بيئية من أعلى + ③ إضاءة رأسية (مضاء من فوق) */
   background-image:
-    radial-gradient(120% 34% at 78% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 38%, rgba(18, 22, 34, 0.035));
+    radial-gradient(120% 34% at 78% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 30%, rgba(0, 0, 0, 0.2));
+  background-repeat: no-repeat;
+  backdrop-filter: blur(var(--blur-md)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(1.3);
+  /* ④ حدّ شعري حقيقي يحيط السطح من كل جهة (كان حدًّا واحدًا في الداخل) */
+  border: 1px solid var(--sc-hair);
+  /* ⑤ لمعة مواصفاتية + حدّ ضوء داخلي + تلامس ثم فصل بيئي */
   box-shadow:
-    inset -1px 0 0 rgba(18, 22, 34, 0.045),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    1px 0 0 rgba(18, 22, 34, 0.05);
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 16px 40px -26px rgba(0, 0, 0, 0.85);
 }
 
-/* كان ظلًّا بديلًا مربوطًا بوجود <main> بعده — أُزيل لصالح مادة موحّدة */
-.sidebar-shell:has(+ main) {
+/* الوضع الفاتح: تركيبة مادة قائمة بذاتها لا انعكاس للداكن */
+:root[data-theme="light"] .sidebar-shell::before {
+  background-color: var(--sc-glass-1);
+  background-image:
+    radial-gradient(120% 34% at 78% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 34%, rgba(18, 22, 34, 0.04));
   box-shadow:
-    inset -1px 0 0 rgba(255, 255, 255, 0.035),
-    inset 0 1px 0 var(--sc-light-top),
-    1px 0 0 rgba(0, 0, 0, 0.28);
-}
-:root[data-theme="light"] .sidebar-shell:has(+ main) {
-  box-shadow:
-    inset -1px 0 0 rgba(18, 22, 34, 0.045),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    1px 0 0 rgba(18, 22, 34, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 1px 2px rgba(18, 22, 34, 0.06),
+    0 16px 34px -26px rgba(18, 22, 34, 0.28);
 }
 
 /* ── ٢) الهيدر — «سطح الأوامر» لا رأس موقع ─────────────────────────────
@@ -350,9 +377,9 @@ kbd,
 
 /* ── ٣) بديل صريح حين لا يدعم المتصفح الضباب: أسطح معتمة نظيفة (لا شفافية بلا ضباب) ── */
 @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-  .sidebar-shell { background: var(--sc-surface-1); }
+  .sidebar-shell::before { background-color: var(--sc-surface-1); background-image: none; }
   .glass-header { background: var(--sc-surface-2); }
-  :root[data-theme="light"] .sidebar-shell { background: var(--sc-surface-1); }
+  :root[data-theme="light"] .sidebar-shell::before { background-color: var(--sc-surface-1); background-image: none; }
   :root[data-theme="light"] .glass-header { background: var(--sc-surface-1); }
 }
 
@@ -838,21 +865,18 @@ button.nav-item {
 .stagger-children > *:nth-child(n + 13) { animation: none; }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   I) تقليل الحركة — إيقاف كل شيء تزييني (لا نُخفي أي معلومة)
+   I) تقليل الحركة — أُزيلت الطبقة العامة
+   ────────────────────────────────────────────────────────────────────────────
+   كان هنا تجاوز عام `*, *::before, *::after { animation/transition-duration:
+   0.001ms !important }` — وهو بالضبط «الطبقة العامة لتقليل الحركة» التي
+   يستثنيها خطة المشروع المتّفق عليها. أُزيلت كاملة.
+   السبب الهندسي وراء استبعادها: تجاوز عام يقتل *كل* حركة بما فيها الحركات
+   التي تحمل معلومة (سفر مؤشر التنقل يخبرك أين أنت، دخول المودال يخبرك أن
+   شيئًا حدث). واستبدالها بقواعد موجّهة لكل حالة يجعل النظام قابلًا
+   للتفسير بدل أن يُسكِت نفسه كله.
+   لا تُعاد هذه الطبقة. القواعد الموجّهة لـ prefers-reduced-motion في
+   index.css و mobile.css تبقى كما هي (كود المشروع الأصلي، مقيّد لا عام).
    ════════════════════════════════════════════════════════════════════════════ */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-  .nav-shell::before { transition: none; }
-  .status-dot-live::after,
-  .live-dot::after { animation: none; opacity: 0; }
-}
 
 /* ════════════════════════════════════════════════════════════════════════════
    J) قياس/بروفايل (مفيد للتحقّق اليدوي من الأداء)

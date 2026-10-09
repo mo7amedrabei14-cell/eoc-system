@@ -123,34 +123,36 @@ function Gauge({ g, active }) {
 
 /* ── توصيفات حركة البوابة وسطح القيادة (variants للتتابع المرحلي) ── */
 const GATE_RISE = {
-  hidden: { opacity: 0, y: 26, filter: 'blur(6px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { ...SPRING_SOFT, staggerChildren: 0.085, delayChildren: 0.18 } },
+  /* كانت `filter: blur()` جزءًا من الدخول ⇒ مسح وإعادة رسم سطح شبه كامل الشاشة
+     كل إطار. الآن opacity + transform فقط — نفس قاعدة مخارج البوابة أدناه. */
+  hidden: { opacity: 0, y: 26 },
+  show: { opacity: 1, y: 0, transition: { ...SPRING_SOFT, staggerChildren: 0.06, delayChildren: 0.10 } },
 };
 const GATE_ITEM = {
-  hidden: { opacity: 0, y: 18, filter: 'blur(4px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING_SOFT },
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: SPRING_SOFT },
 };
 const DECK_ENTER = {
-  hidden: { opacity: 0, y: 38, scale: 0.985, filter: 'blur(7px)' },
-  show: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', transition: { ...SPRING_SOFT, delayChildren: 0.14, staggerChildren: 0.09 } },
+  hidden: { opacity: 0, y: 38, scale: 0.985 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { ...SPRING_SOFT, delayChildren: 0.08, staggerChildren: 0.06 } },
 };
 const DECK_CHILD = {
-  hidden: { opacity: 0, y: 20, filter: 'blur(4px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING_SOFT },
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: SPRING_SOFT },
 };
 const FORM_COL = {
-  hidden: { opacity: 0, y: 20, filter: 'blur(4px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { ...SPRING_SOFT, staggerChildren: 0.06, delayChildren: 0.06 } },
-  exit: { opacity: 0, y: -10, filter: 'blur(4px)', transition: { duration: 0.18, ease: EASE_OUT } },
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { ...SPRING_SOFT, staggerChildren: 0.05, delayChildren: 0.05 } },
+  exit: { opacity: 0, y: -10, transition: { duration: 0.18, ease: EASE_OUT } },
 };
 const FORM_ITEM = {
-  hidden: { opacity: 0, y: 14, filter: 'blur(3px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING },
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: SPRING },
 };
 const TAB_PAGE = {
-  initial: { opacity: 0, y: 14, filter: 'blur(5px)' },
-  animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: SPRING_SOFT },
-  exit: { opacity: 0, y: -10, filter: 'blur(4px)', transition: { duration: 0.18, ease: EASE_OUT } },
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0, transition: SPRING_SOFT },
+  exit: { opacity: 0, y: -10, transition: { duration: 0.18, ease: EASE_OUT } },
 };
 
 export default function Login() {
@@ -297,9 +299,16 @@ export default function Login() {
     }
   }, []);
 
+  // معامل الـ zoom الفعلي (1 لو مفيش zoom): القياس البصري ÷ قياس الـ layout.
+  // ضروري لأن شاشة الدخول بتتصغّر بـ CSS zoom، وgetBoundingClientRect بيرجّع قيم بصرية.
+  const uiScale = () => {
+    const el = trackRef.current;
+    return el && el.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1;
+  };
+
   const readMax = () => {
     const rect = trackRef.current && trackRef.current.getBoundingClientRect();
-    return rect ? Math.max(1, rect.width - HANDLE_SIZE - 8) : maxRef.current;
+    return rect ? Math.max(1, rect.width / uiScale() - HANDLE_SIZE - 8) : maxRef.current;
   };
 
   const completeUnlock = () => {
@@ -334,7 +343,18 @@ export default function Login() {
   };
 
   const handlePointerDown = (e) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
+    /* 🛡️ التحصين: `setPointerCapture` يرمي `NotFoundError` إذا لم يعد للمؤشر
+       id فعّال (نقرة سريعة يسبق فيها pointerup معالج pointerdown، أو قلم/لمس
+       متعدّد، أو Safari على iOS). ولأنه كان **أول سطر** في هذا المعالج، فإن
+       رميه كان يُجهض باقي الدالة ⇒ `setIsDragging(true)` لا يُنفّذ أبدًا ⇒
+       البوابة تصير ميتة ولا يمكن الدخول إطلاقًا.
+       الأثر: عند النجاح لا يتغير أي سلوك؛ وعند الفشل تبقى الإيماءة تعمل عبر
+       `onPointerMove` الموجود أصلًا — تدهور لطيف بدل بوابة معطّلة. */
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* لا التقاط — الالتقاط ليس شرطًا لبدء السحب */
+    }
     if (springRef.current) { cancelAnimationFrame(springRef.current); springRef.current = null; }
     velRef.current = 0;
     lastMoveRef.current = performance.now();
@@ -344,11 +364,12 @@ export default function Login() {
   const handlePointerMove = (e) => {
     if (!isDragging || !trackRef.current) return;
     const trackRect = trackRef.current.getBoundingClientRect();
-    const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
+    const s = uiScale();
+    const maxX = Math.max(1, trackRect.width / s - HANDLE_SIZE - 8);
     maxRef.current = maxX;
     // 🎯 تتبّع 1:1 — لا تصفية ولا «مغناطيسية»: ما يلمسه الإصبع هو ما يُرسم في
     // نفس الإطار. (اللمسة المغناطيسية القديمة كانت تضيف لاجًا محسوسًا).
-    const fromStart = e.clientX - trackRect.left;
+    const fromStart = (e.clientX - trackRect.left) / s;
     const x = Math.max(0, Math.min(fromStart - HANDLE_SIZE / 2, maxX));
     // سرعة الإيماءة (px/s) مع تنعيم بسيط ⇒ تُستخدم كـ «throw» عند الإفلات،
     // فيكمل المقبض حركته بنفس زخم الإصبع بدل أن يتجاهله.
@@ -405,7 +426,7 @@ export default function Login() {
   const handleKnobKey = (e) => {
     if (!trackRef.current || isDragging || isUnlocking) return;
     const trackRect = trackRef.current.getBoundingClientRect();
-    const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
+    const maxX = Math.max(1, trackRect.width / uiScale() - HANDLE_SIZE - 8);
     // لوحة المفاتيح تتبع نفس الاتجاه: السهم الأيمن للتقدم.
     const isFwd = e.key === 'ArrowRight';
     const isBack = e.key === 'ArrowLeft';
@@ -571,7 +592,7 @@ export default function Login() {
         type="button"
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING_SOFT, delay: 0.35 }}
+        transition={{ ...SPRING_SOFT, delay: 0.26 }}
         onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
         title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
         aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
@@ -584,7 +605,7 @@ export default function Login() {
         type="button"
         initial={{ opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING_SOFT, delay: 0.42 }}
+        transition={{ ...SPRING_SOFT, delay: 0.32 }}
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         aria-label={t('تفعيل الوضع الفاتح', 'Enable light mode')}
         className="lx-switch fixed top-4 end-5 z-[9999]"
