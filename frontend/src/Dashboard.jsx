@@ -1753,7 +1753,6 @@ export default function Dashboard() {
   const initialRoleFlags = getRoleFlags(initialAuthRef.current?.user);
   const [activeTab, setActiveTab] = useState(() => getDefaultTab(initialAuthRef.current?.user));
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [customAlert, setCustomAlert] = useState(null);
 
   // 🚪 الخروج الإجباري: إشعار + عدّاد تنازلي ثم خروج فعلي (بلا ريفريش)
@@ -2010,7 +2009,7 @@ useEffect(() => {
     if (activeEl) ro.observe(activeEl);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure).catch(() => {});
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
-  }, [activeTab, isSidebarOpen, language, isOwner, isSupervisor, isJoker, isYouth, weatherEligible]);
+  }, [activeTab, language, isOwner, isSupervisor, isJoker, isYouth, weatherEligible]);
 
   // 💡 مركز الإشعارات الفوري (متطلب #5):
   // - Incremental polling بوسم تصاعدي (event_id) — من غير ما ننزل الـ audit_logs كاملة
@@ -2759,7 +2758,7 @@ useEffect(() => {
   setActiveTab(tabName);
     setNewUpdates(prev => ({ ...prev, [tabName]: false })); // إخفاء النقطة الحمراء بعد قراءة التحديث
     if (window.innerWidth < 768) {
-      setIsSidebarOpen(false);
+    window.dispatchEvent(new Event(SIDEBAR_CLOSE_EVENT));
     }
   };
 
@@ -2877,7 +2876,7 @@ useEffect(() => {
       case 'gov_contacts': return (!isYouth && weatherEligible)
         ? <MemoGovernorateContactsView branches={branchesList} isOwner={isOwner} isJoker={isJoker} isSupervisor={isSupervisor} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.gov_contacts} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
-      case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isYouth={isYouth} isSidebarOpen={isSidebarOpen} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
+      case 'missions': return <MemoMissionsView branches={branchesList} isVolunteer={isVolunteer} isJoker={isJoker} isSupervisor={isSupervisor} isOwner={isOwner} isYouth={isYouth} liveUpdateVersion={liveUpdateVersion.missions} pulseMissions={pulseMissions} liveMissionEvents={liveMissionEvents} lang={language} focusTarget={focusTarget} />;
       case 'local_news': return <MemoLocalNewsView branches={branchesList} isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.local_news} />;
       case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.global_disasters} />;
       case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} lang={language} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.earthquakes} />;
@@ -2985,6 +2984,7 @@ useEffect(() => {
   };
 
   return (
+    <SidebarStateProvider>
     <div ref={dashboardRootRef} data-theme={theme} className="app-shell min-h-screen bg-[var(--bg)] text-white font-sans selection:bg-[var(--accent)] selection:text-white flex overflow-hidden transition-colors duration-300" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
@@ -3137,6 +3137,8 @@ useEffect(() => {
         </div>
       )}
 
+      <SidebarStateSlot>
+        {({ isSidebarOpen, setIsSidebarOpen }) => <>
       <div className={`sidebar-backdrop ${isSidebarOpen ? 'is-visible' : ''} block md:hidden`} onClick={() => setIsSidebarOpen(false)} />
 
         <aside className={`sidebar-shell flex flex-col justify-between fixed md:sticky top-0 h-screen z-[70] ${isSidebarOpen ? 'is-open right-0 w-64 md:w-72' : 'is-collapsed -right-80 md:right-0 w-64 md:w-20'}`}>
@@ -3256,12 +3258,18 @@ useEffect(() => {
           </button>
         </div>
         </aside>
+        </>}
+      </SidebarStateSlot>
 
       <main id="main-scroll-container" className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative">
         <header className="glass-header px-4 md:px-8 py-3.5 md:py-4 flex items-center gap-3 md:gap-4 sticky top-0 z-40">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label="قائمة التنقل" className="icon-btn !w-11 !h-11 shrink-0">
+          <SidebarStateSlot>
+            {({ isSidebarOpen, setIsSidebarOpen }) => (
+          <button onClick={() => setIsSidebarOpen((open) => !open)} aria-label="قائمة التنقل" aria-expanded={isSidebarOpen} className="icon-btn !w-11 !h-11 shrink-0">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
           </button>
+            )}
+          </SidebarStateSlot>
 
           <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -3491,6 +3499,7 @@ useEffect(() => {
       </main>
       
     </div>
+    </SidebarStateProvider>
   );
 }
 
@@ -4383,7 +4392,8 @@ const MemoPowerBiView = memo(PowerBiView);
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
-function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isYouth = false, isSidebarOpen, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
+function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isYouth = false, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
+  const { isSidebarOpen } = useSidebarState();
   const [customAlert, setCustomAlert] = useState(null);
   // 🍡 إخفاء تلقائي لتنبيه الإجراءات بعد 4 ثوانٍ
   useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
