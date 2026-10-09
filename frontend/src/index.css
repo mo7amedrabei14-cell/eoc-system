@@ -12,12 +12,12 @@
 /* ─────────────────────────── 1) التوكينات ─────────────────────────── */
 :root {
   /* أسطح طبقية (الداكن) */
-  --bg: #050505;
-  --bg-deep: #020202;
-  --surface: #0b0b0c;
-  --surface-2: #101012;
-  --surface-3: #16171a;
-  --surface-4: #202126;
+  --bg: #07090d;
+  --bg-deep: #030407;
+  --surface: #0b0e13;
+  --surface-2: #11161e;
+  --surface-3: #171e28;
+  --surface-4: #202a37;
   --surface-hover: rgba(255, 255, 255, 0.045);
   --surface-soft: rgba(255, 255, 255, 0.025);
   --surface-week: rgba(255, 255, 255, 0.03);
@@ -32,8 +32,8 @@
   --ink: #f6f6f7;
   --ink-2: #d7d9de;
   --muted: #a2a6b0;
-  --muted-2: #82868f;
-  --faint: #62666e;
+  --muted-2: #969ca6;
+  --faint: #8d939d;
 
   /* اللون الأساسي + ظلاله */
   --accent: #c70000;
@@ -82,9 +82,9 @@
   --radius-xl: 28px;
 
   /* ظلال تدرّجية عميقة */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.32);
-  --shadow-2: 0 10px 40px rgba(0, 0, 0, 0.5);
-  --shadow-3: 0 24px 80px rgba(0, 0, 0, 0.62);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.38), 0 6px 20px rgba(0, 0, 0, 0.24);
+  --shadow-2: 0 10px 40px rgba(0, 0, 0, 0.38);
+  --shadow-3: 0 24px 80px rgba(0, 0, 0, 0.52);
   --shadow-accent: 0 8px 28px -6px rgba(199, 0, 0, 0.5);
   --ring: 0 0 0 3px rgba(199, 0, 0, 0.28);
   --ring-soft: 0 0 0 3px rgba(199, 0, 0, 0.14);
@@ -107,12 +107,12 @@
 
 /* ───────────────── 2) الثيم الفاتح (نفس الرموز، درجات خفيفة) ───────────────── */
 :root[data-theme="light"] {
-  --bg: #f5f5f7;
-  --bg-deep: #eeeef1;
+  --bg: #f3f5f8;
+  --bg-deep: #e9edf2;
   --surface: #ffffff;
-  --surface-2: #fafafb;
-  --surface-3: #f1f1f4;
-  --surface-4: #e5e5ea;
+  --surface-2: #f8fafc;
+  --surface-3: #eff2f6;
+  --surface-4: #e3e8ef;
   --surface-hover: rgba(20, 25, 40, 0.05);
   --surface-soft: rgba(20, 25, 40, 0.025);
   --surface-week: rgba(20, 25, 40, 0.035);
@@ -124,9 +124,9 @@
 
   --ink: #10151f;
   --ink-2: #2a3447;
-  --muted: #4d5666;
-  --muted-2: #6a7284;
-  --faint: #8b92a2;
+  --muted: #455064;
+  --muted-2: #4b566b;
+  --faint: #59657a;
 
   --accent: #ae0000;
   --accent-hover: #cf0000;

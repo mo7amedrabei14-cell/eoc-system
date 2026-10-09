@@ -1,0 +1,43 @@
+$eoc-colors-dark: (
+  background: #07090d,
+  background-deep: #030407,
+  surface: #0b0e13,
+  surface-raised: #11161e,
+  surface-elevated: #171e28,
+  surface-highest: #202a37,
+  text: #f6f6f7,
+  text-secondary: #d7d9de,
+  text-muted: #a2a6b0,
+  text-muted-2: #969ca6,
+  text-subtle: #8d939d,
+  accent: #c70000
+);
+
+$eoc-colors-light: (
+  background: #f3f5f8,
+  background-deep: #e9edf2,
+  surface: #ffffff,
+  surface-raised: #f8fafc,
+  surface-elevated: #eff2f6,
+  surface-highest: #e3e8ef,
+  text: #10151f,
+  text-secondary: #2a3447,
+  text-muted: #455064,
+  text-muted-2: #4b566b,
+  text-subtle: #59657a,
+  accent: #ae0000
+);
+
+$eoc-radius: (
+  small: 8px,
+  control: 14px,
+  card: 20px,
+  floating: 28px
+);
+
+$eoc-motion: (
+  fast: 90ms,
+  standard: 150ms,
+  panel: 240ms,
+  easing: cubic-bezier(0.16, 1, 0.3, 1)
+);

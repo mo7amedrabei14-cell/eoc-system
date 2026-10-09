@@ -1,0 +1,56 @@
+{
+  "name": "EOC Red Crescent Command",
+  "version": 1,
+  "color": {
+    "brand": {
+      "accent": "#c70000",
+      "accentLight": "#ae0000"
+    },
+    "dark": {
+      "background": "#07090d",
+      "backgroundDeep": "#030407",
+      "surface": "#0b0e13",
+      "surfaceRaised": "#11161e",
+      "surfaceElevated": "#171e28",
+      "surfaceHighest": "#202a37",
+      "text": "#f6f6f7",
+      "textSecondary": "#d7d9de",
+      "textMuted": "#a2a6b0",
+      "textMuted2": "#969ca6",
+      "textSubtle": "#8d939d",
+      "border": "rgba(226, 233, 244, 0.065)"
+    },
+    "light": {
+      "background": "#f3f5f8",
+      "backgroundDeep": "#e9edf2",
+      "surface": "#ffffff",
+      "surfaceRaised": "#f8fafc",
+      "surfaceElevated": "#eff2f6",
+      "surfaceHighest": "#e3e8ef",
+      "text": "#10151f",
+      "textSecondary": "#2a3447",
+      "textMuted": "#455064",
+      "textMuted2": "#4b566b",
+      "textSubtle": "#59657a",
+      "border": "rgba(28, 39, 56, 0.09)"
+    }
+  },
+  "radius": {
+    "small": "8px",
+    "control": "14px",
+    "card": "20px",
+    "floating": "28px"
+  },
+  "motion": {
+    "fast": "90ms",
+    "standard": "150ms",
+    "panel": "240ms",
+    "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "animatedProperties": ["transform", "opacity"]
+  },
+  "accessibility": {
+    "minimumTextContrast": "4.5:1",
+    "keyboardFocus": "visible outline with offset",
+    "reducedMotion": "respect prefers-reduced-motion"
+  }
+}

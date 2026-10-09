@@ -21,22 +21,22 @@
 
 :root {
   /* ── سلّم محايدات أعمق (داكن) — درجات متقاربة بدل قفزات حادة ── */
-  --sc-bg: #07070a;
-  --sc-bg-deep: #030305;
-  --sc-surface-1: #0c0c10;
-  --sc-surface-2: #121216;
-  --sc-surface-3: #191920;
-  --sc-surface-4: #22222b;
+  --sc-bg: #07090d;
+  --sc-bg-deep: #030407;
+  --sc-surface-1: #0b0e13;
+  --sc-surface-2: #11161e;
+  --sc-surface-3: #171e28;
+  --sc-surface-4: #202a37;
 
   /* ── حدود شعرية: الضوء الداخلي هو ما يصنع العمق ── */
-  --sc-hair: rgba(255, 255, 255, 0.055);
-  --sc-hair-strong: rgba(255, 255, 255, 0.11);
+  --sc-hair: rgba(226, 233, 244, 0.065);
+  --sc-hair-strong: rgba(226, 233, 244, 0.13);
   --sc-light-top: rgba(255, 255, 255, 0.05);   /* حافة ضوء من أعلى السطح */
   --sc-light-in: rgba(255, 255, 255, 0.022);   /* إضاءة داخلية عامة */
 
   /* ── المادة الزجاجية الموحّدة (dark) ── */
-  --sc-glass-1: rgba(9, 9, 13, 0.74);
-  --sc-glass-2: rgba(12, 12, 17, 0.62);
+  --sc-glass-1: rgba(9, 12, 18, 0.78);
+  --sc-glass-2: rgba(11, 15, 22, 0.68);
 
   /* ── طبقات السطح الجاهزة (تستهلكها البطاقات/اللوحات) ── */
   --sc-elev-1:
@@ -53,9 +53,9 @@
     var(--sc-surface-3);
 
   /* ── الظلال: تلامسية فقط، قصيرة وهادئة ── */
-  --sc-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.42);
-  --sc-shadow-2: 0 2px 6px rgba(0, 0, 0, 0.4), 0 12px 28px -18px rgba(0, 0, 0, 0.7);
-  --sc-shadow-3: 0 3px 10px rgba(0, 0, 0, 0.42), 0 26px 60px -28px rgba(0, 0, 0, 0.82);
+  --sc-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.34);
+  --sc-shadow-2: 0 2px 6px rgba(0, 0, 0, 0.34), 0 12px 28px -18px rgba(0, 0, 0, 0.62);
+  --sc-shadow-3: 0 3px 10px rgba(0, 0, 0, 0.36), 0 26px 60px -28px rgba(0, 0, 0, 0.74);
 
   /* ── حجاب الطبقات العائمة: كتلة لونية شفافة بلا ضباب (GPU-free) ── */
   --sc-scrim: color-mix(in srgb, #05050a 68%, transparent);
@@ -80,20 +80,20 @@
 /* ── الوضع الفاتح: إضاءة محيطة أنعم + أسطح صريحة + حدود واضحة ──
    (ليس عكس الوضع الداكن — درجات مختلفة تمامًا بغرض القراءة الممتازة) */
 :root[data-theme="light"] {
-  --sc-bg: #f6f6f8;
-  --sc-bg-deep: #ededf1;
+  --sc-bg: #f3f5f8;
+  --sc-bg-deep: #e9edf2;
   --sc-surface-1: #ffffff;
-  --sc-surface-2: #fbfbfd;
-  --sc-surface-3: #f2f2f6;
-  --sc-surface-4: #e7e7ee;
+  --sc-surface-2: #f8fafc;
+  --sc-surface-3: #eff2f6;
+  --sc-surface-4: #e3e8ef;
 
-  --sc-hair: rgba(18, 22, 34, 0.075);
-  --sc-hair-strong: rgba(18, 22, 34, 0.14);
+  --sc-hair: rgba(28, 39, 56, 0.09);
+  --sc-hair-strong: rgba(28, 39, 56, 0.16);
   --sc-light-top: rgba(255, 255, 255, 0.72);
   --sc-light-in: rgba(18, 22, 34, 0.012);
 
-  --sc-glass-1: rgba(252, 252, 254, 0.8);
-  --sc-glass-2: rgba(252, 252, 254, 0.66);
+  --sc-glass-1: rgba(255, 255, 255, 0.84);
+  --sc-glass-2: rgba(248, 250, 252, 0.78);
 
   --sc-shadow-1: 0 1px 2px rgba(20, 25, 45, 0.07);
   --sc-shadow-2: 0 1px 2px rgba(20, 25, 45, 0.06), 0 10px 26px -18px rgba(20, 25, 45, 0.2);
@@ -626,7 +626,7 @@ kbd,
   transition:
     background-color var(--sc-dur-2) var(--sc-ease),
     color var(--sc-dur-2) var(--sc-ease),
-    box-shadow var(--sc-dur-2) var(--sc-ease);
+    transform var(--sc-dur-2) var(--sc-ease);
   /* أُلغيت «اللمعة» (‎::after بتدرّج على كل عنصر) — ضوضاء بصرية + طبقات زائدة */
 }
 
@@ -783,8 +783,8 @@ kbd,
 .sidebar-brand {
   box-shadow:
     inset 0 1px 0 var(--sc-light-top),
-    0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
-    0 0 24px -4px color-mix(in srgb, var(--accent) 34%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 8px 22px -12px color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════

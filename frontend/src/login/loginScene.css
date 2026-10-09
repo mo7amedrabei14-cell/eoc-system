@@ -1419,6 +1419,10 @@
     0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent),
     0 0 24px -4px var(--accent-soft);
 }
+.lx-submit:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 3px;
+}
 /* المرور: اللمعة تعبر الزر مرة واحدة ثم تتوقف خارج حدوده */
 .lx-submit:hover:not(:disabled)::before { transform: skewX(-14deg) translateX(100%); }
 .lx-submit:active:not(:disabled) { transform: translateY(0) scale(.982); }
