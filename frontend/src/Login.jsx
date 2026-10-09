@@ -66,13 +66,18 @@ const HALO_C = 2 * Math.PI * 46;
 /* ─────────────────────────────────────────────────────────────
    ساعة تشغيل مباشرة داخل الرباط العلوي (بدون Backend)
    ───────────────────────────────────────────────────────────── */
-function useOpsClock() {
+function OpsClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  return now;
+  /* ⚡ P0: كانت الساعة دالة `useOpsClock()` تُستدعى داخل **Login نفسه** ⇒ تحديث
+     كل ثانية يُعيد بناء شجرة كاملة (~1100 سطر JSX) ⇒ مهمة رئيسية طويلة
+     50–65ms كل ثانية حتى وهو ساكن (مُقاس: مهمة 50ms واحدة في 1.5 ثانية سكون،
+     ومهمة 62–81ms لكل تغيّر حالة). الآن الحالة محلّ هذا المكوّن الصغير وحده ⇒
+     إعادة البناء محصورة فيه. نفس النص ونفس التوقيت ونفس السلوك الظاهري. */
+  return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -215,7 +220,6 @@ export default function Login() {
   }, [theme]);
 
   const navigate = useNavigate();
-  const opsNow = useOpsClock();
 
   /* ── بوابة السحب للدخول (Slide to Unlock) — محرّك متغيّرات CSS ──
      ⚡ المسألة كلها كانت في مكان واحد: كل إطار من السحب كان يمرّر setDragX +
@@ -841,9 +845,7 @@ export default function Login() {
                   <span className="text-[max(0.625rem,9px)] sm:text-[max(0.6875rem,9.5px)] font-bold tracking-[0.2em]">LIVE</span>
                 </span>
                 <span className="lx-chip">
-                  <span className="lx-clock">
-                    {opsNow.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                  </span>
+                  <span className="lx-clock"><OpsClock /></span>
                 </span>
                 <span className="hidden md:inline-flex text-white/60 text-[max(0.625rem,9px)] font-mono tracking-widest">
                   EOC · OPS · v2.0.0
