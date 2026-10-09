@@ -183,7 +183,7 @@ export default function Login() {
   const [verifyError, setVerifyError] = useState(false);
   const otpRefs = useRef([]);
   const OWNER_VERIFICATION_CODE = '301014';
-  // 🎉 مراسم الافتتاح — تظهر مع كل Refresh / تحميل جديد خارج الجلسة
+  // إشارة فتح الأطلس تظهر مرة واحدة عند تحميل الشاشة
   // الافتتاحية تعمل دائمًا عند كل Refresh بدون أي استثناء.
   const [openingCeremony, setOpeningCeremony] = useState(true);
   const usernameRef = useRef(null);
@@ -221,7 +221,7 @@ export default function Login() {
 
   const navigate = useNavigate();
 
-  /* ── بوابة السحب للدخول (Slide to Unlock) — محرّك متغيّرات CSS ──
+  /* ── بوابة استكشاف الأطلس — محرّك متغيّرات CSS ──
      ⚡ المسألة كلها كانت في مكان واحد: كل إطار من السحب كان يمرّر setDragX +
      setDragProgress ⇒ إعادة بناء (reconcile) لكل شجرة صفحة الدخول ٦٠ مرة في
      الثانية، فتتحوّل الإيماءة إلى «مدخل ← انتظار ← حركة».
@@ -262,7 +262,7 @@ export default function Login() {
   };
   const isRTL = language === 'ar';
 
-  // ✨ بارالاكس لطيف لهلال البوابة مع حركة المؤشر (يُلغى تلقائيًا مع reduced-motion)
+  // بارالاكس لطيف لختم الأطلس مع حركة المؤشر (يُلغى تلقائيًا مع reduced-motion)
   const reduceMotion = useReducedMotion();
   const parX = useMotionValue(0);
   const parY = useMotionValue(0);
@@ -577,10 +577,10 @@ export default function Login() {
 
   // تركيبة نصية تتطور مع مراحل السحب
   const slideLabel = dragStage.label >= 2
-    ? t('تم — جاري فتح الوصول', 'Done — opening access')
+    ? t('تم — جاري فتح مركز الاستجابة', 'Done — opening the response desk')
     : dragStage.label >= 1
-      ? t('استمرّر أكثر…', 'Keep sliding…')
-      : t('اسحب لفتح الوصول الآمن', 'Slide to unlock secure access');
+      ? t('واصل السحب لفتح الأطلس…', 'Keep sliding to unfold the atlas…')
+      : t('اسحب لاستكشاف أطلس الاستجابة', 'Slide to explore the response atlas');
 
   return (
     <div
@@ -629,7 +629,7 @@ export default function Login() {
         <span aria-hidden="true" className={`lx-switch-knob ${theme === 'dark' ? 'lx-switch-knob--start' : 'lx-switch-knob--end'}`} />
       </motion.button>
 
-      {/* ═══════════ بوابة السحب للدخول (Slide to Unlock) ═══════════ */}
+      {/* ═══════════ بوابة استكشاف أطلس الاستجابة ═══════════ */}
       <AnimatePresence>
         {showGate && (
           <motion.div
@@ -657,9 +657,9 @@ export default function Login() {
               variants={GATE_RISE}
               initial="hidden"
               animate="show"
-              className="relative z-10 flex h-full flex-col items-center justify-center px-6 w-full max-w-[min(92vw,540px)] mx-auto"
+              className="lx-gate-board relative z-10 flex h-full flex-col items-center justify-center px-6 w-full max-w-[min(92vw,540px)] mx-auto"
             >
-              {/* 🎉 المفاجأة عند الفتح — «مراسم الافتتاح» تعمل مع كل Refresh */}
+              {/* تظهر إشارة المسار مرة واحدة مع فتح الأطلس */}
               {openingCeremony && (
                 <div className="lx-boot" aria-hidden="true">
                   <div className="lx-boot-slash" />
@@ -671,13 +671,13 @@ export default function Login() {
                 </div>
               )}
 
-              {/* ── هلال البوابة: توهج + أقمار + حلقة تقدم + قرص زجاجي ── */}
-              <motion.div variants={GATE_ITEM} className="relative">
+              {/* ── ختم الهوية: الهلال هو علامة موجز الاستجابة ── */}
+              <motion.div variants={GATE_ITEM} className="lx-gate-emblem relative">
                 <motion.div style={{ x: parSX, y: parSY }} className="lx-crest-stack">
                   <span className="lx-crest-glow" aria-hidden="true" />
                   <span className="lx-orbit" aria-hidden="true"><span className="lx-sat lx-sat--a" /></span>
                   <span className="lx-orbit lx-orbit--inner" aria-hidden="true"><span className="lx-sat lx-sat--b" /></span>
-                  {/* حلقة التقدم — تمتلئ مع السحب */}
+                  {/* تُحتفظ بعناصر الحلقة للتوافق؛ عرض التقدم الأساسي على مسار السحب */}
                   <svg className="lx-halo" viewBox="0 0 100 100" aria-hidden="true">
                     <defs>
                       <linearGradient id="lxHaloGrad" x1="0" y1="0" x2="1" y2="1">
@@ -714,7 +714,7 @@ export default function Login() {
                 className="lx-gate-sub mt-2.5"
                 style={language === 'ar' ? { letterSpacing: '.12em', textTransform: 'none' } : undefined}
               >
-                {language === 'ar' ? 'مركز عمليات الطوارئ — EOC' : 'Emergency Operations Center — EOC'}
+                {language === 'ar' ? 'أطلس الاستجابة الإنسانية · EOC' : 'HUMANITARIAN RESPONSE ATLAS · EOC'}
               </motion.p>
 
               {/* قراءة النسبة المئوية / شارة التفعيل */}
@@ -726,7 +726,7 @@ export default function Login() {
               </motion.div>
 
               {/* ── مسار السحب ── */}
-              <motion.div variants={GATE_ITEM} className="w-full flex justify-center">
+              <motion.div variants={GATE_ITEM} className="lx-gate-slider w-full flex justify-center">
                 <div
                   ref={trackRef}
                   className={`lx-track ${isDragging ? 'is-dragging' : ''} ${isUnlocking ? 'is-done' : ''}`}
@@ -768,7 +768,7 @@ export default function Login() {
                     </span>
                   </span>
 
-                  {/* المقبض — كرة زجاجية بشعار الهلال */}
+                  {/* مقبض السحب يحمل ختم الهوية */}
                   <div
                     ref={handleRef}
                     onPointerDown={handlePointerDown}
@@ -781,7 +781,7 @@ export default function Login() {
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.round(dragProgress * 100)}
-                    aria-label={language === 'ar' ? 'اسحب لفتح الوصول' : 'Slide to unlock'}
+                    aria-label={language === 'ar' ? 'اسحب لاستكشاف أطلس الاستجابة' : 'Slide to explore the response atlas'}
                     className={`lx-handle ${isDragging ? 'is-dragging' : 'is-idle'} ${isUnlocking ? 'is-done' : ''}`}
                     /* الموضع من `--lx-x` (CSS) — لا انتقال زمني أثناء السحب:
                        الحركة 1:1 مع الإصبع، والعودة يحرّكها النابض في JS. */
@@ -805,7 +805,7 @@ export default function Login() {
                 className="lx-gate-foot mt-9"
                 style={language === 'ar' ? { letterSpacing: '.1em' } : undefined}
               >
-                {language === 'ar' ? 'بوابة الدخول المشفّرة · EOC SECURE GATE' : 'ENCRYPTED ACCESS GATE · EOC SECURE GATE'}
+                {language === 'ar' ? 'مركز تنسيق الاستجابة · الهلال الأحمر المصري' : 'RESPONSE COORDINATION · EGYPTIAN RED CRESCENT'}
               </motion.p>
             </motion.div>
           </motion.div>
@@ -834,7 +834,7 @@ export default function Login() {
                     {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
                   </p>
                   <p className="text-white/75 text-[max(0.6875rem,9.5px)] sm:text-xs font-medium">
-                    {language === 'ar' ? 'مركز عمليات الطوارئ · نظام الإدارة' : 'Emergency Operations Center · Command System'}
+                    {language === 'ar' ? 'أطلس الاستجابة · مركز عمليات الطوارئ' : 'Response Atlas · Emergency Operations Center'}
                   </p>
                 </div>
               </div>
@@ -904,15 +904,15 @@ export default function Login() {
                 <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
                   <div>
                     <span className="lx-eyebrow mb-3">
-                      {language === 'ar' ? 'بوابة الدخول' : 'SECURE ACCESS'}
+                      {language === 'ar' ? 'مركز تنسيق الاستجابة' : 'RESPONSE COORDINATION'}
                     </span>
                     <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
-                      {language === 'ar' ? 'بوابة الوصول الآمن' : 'Secure Access Portal'}
+                      {language === 'ar' ? 'مكتب تنسيق الاستجابة' : 'Response Coordination Desk'}
                     </h3>
                     <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
                       {language === 'ar'
-                        ? 'أدخل بيانات الاعتماد الموثقة للمتابعة إلى مركز العمليات.'
-                        : 'Enter your verified credentials to continue into the operations center.'}
+                        ? 'تحقق من بيانات اعتمادك للدخول إلى مركز تنسيق الاستجابة.'
+                        : 'Verify your credentials to enter the response coordination desk.'}
                     </p>
                   </div>
                   <div className="hidden lg:flex lx-trust">

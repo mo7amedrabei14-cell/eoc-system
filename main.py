@@ -823,6 +823,35 @@ _schema_ready = threading.Event()
 _schema_error: Dict[str, Optional[str]] = {"message": None}
 
 
+def ensure_participant_branch_schema():
+    """اجعل فرع غير المتطوع اختيارياً ونظّف القيم التاريخية مرة واحدة."""
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT value FROM schema_meta WHERE key = 'participant_branch_schema';")
+            row = cursor.fetchone()
+            if row and row[0] == "2026-09-28.1":
+                return
+
+            cursor.execute("ALTER TABLE mission_participants ALTER COLUMN branch_id DROP NOT NULL;")
+            cursor.execute("""
+                UPDATE mission_participants
+                SET branch_id = NULL, participation_role = '', membership_number = ''
+                WHERE participant_type = 'non_volunteer'
+                  AND (branch_id IS NOT NULL OR COALESCE(participation_role, '') <> ''
+                       OR COALESCE(membership_number, '') <> '');
+            """)
+            cursor.execute("""
+                INSERT INTO schema_meta (key, value, updated_at)
+                VALUES ('participant_branch_schema', '2026-09-28.1', now())
+                ON CONFLICT (key) DO UPDATE
+                SET value = EXCLUDED.value, updated_at = now();
+            """)
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def _bootstrap_schema_in_background():
     """يفحص/يجهّز بنية القاعدة في الخلفية بدل الإقلاع الحاجب.
 
@@ -833,6 +862,7 @@ def _bootstrap_schema_in_background():
     """
     try:
         ensure_schema()
+        ensure_participant_branch_schema()
         ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
         ensure_client_errors_schema()  # 🧯 جدول بلاغات أخطاء الواجهة (خفيفة منفصلة)
         ensure_gov_contacts_schema()   # 📞 جدول سجل التواصل مع المحافظات (خفيفة منفصلة)
@@ -970,7 +1000,6 @@ async def idempotency_middleware(request: Request, call_next):
                 print(f"Idempotency pre-check error (continuing without cache): {e}")
             finally:
                 connection.close()
-
     # If we didn't return a cached response, proceed to the endpoint
     response = await call_next(request)
 
@@ -1569,7 +1598,7 @@ class ParticipantModel(BaseModel):
     participation_role: str
     # 🆕 صفة المشارك (لغير المتطوعين) — حقل مخصص منفصل عن رقم العضوية الخاص بالمتطوعين
     participant_position: Optional[str] = None
-    branch_id: int
+    branch_id: Optional[int] = None
     assigned_itinerary: str
     return_status: str = "مازال بالمهمة"
     phase_name: str = "اليوم الأول"
@@ -1763,6 +1792,11 @@ def validate_mission_required_fields(mission):
             if p.participant_type == "non_volunteer" and \
                     not val(getattr(p, "participant_position", None)):
                 missing.append(f"صفة المشارك (غير المتطوع: {p.full_name or ('مشارك ' + str(i + 1))})")
+            elif p.participant_type == "volunteer" and val(p.full_name):
+                if not val(getattr(p, "participation_role", None)):
+                    missing.append(f"رقم العضوية (المتطوع: {p.full_name})")
+                if not val(getattr(p, "branch_id", None)):
+                    missing.append(f"الفرع (المتطوع: {p.full_name})")
 
     if mission.eoc_staff is not None:
         staff_map = {s.role_name: s.staff_name for s in mission.eoc_staff}
@@ -3163,6 +3197,12 @@ def create_mission(
             participant_user_ids = []
             inserted_participants = []  # (participant_id, participant_model) for session linking
             for part in dedupe_participants(mission.participants):
+                if part.participant_type == "non_volunteer":
+                    part.branch_id = None
+                    part.participation_role = ""
+                elif part.participant_type == "volunteer":
+                    part.participant_position = None
+
                 # 1. أوتوميشن الإغلاق
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
@@ -3752,6 +3792,12 @@ def update_mission(
             pending_open = set()  # idents أُدرج لها صف فترة مفتوحة (JOIN بلا LEAVE) في هذه الحفظة
             new_participants = []  # (participant_id, part) for day linking
             for part in (dedupe_participants(mission.participants) if mission.participants is not None else []):
+                if part.participant_type == "non_volunteer":
+                    part.branch_id = None
+                    part.participation_role = ""
+                elif part.participant_type == "volunteer":
+                    part.participant_position = None
+
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
 
@@ -5133,8 +5179,11 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
                 )
                 mission_data["participants"].append({
                     "participant_id": pid, "participant_type": r[1], "full_name": r[2], "team_name": r[3], "team_code": r[4],
-                    "participation_role": r[5], "participant_position": r[6], "volunteer_id": r[7], "user_id": r[8],
-                    "membership_number": r[9], "branch_id": r[10], "assigned_itinerary": r[11], "return_status": r[12],
+                    "participation_role": r[5] if r[1] == "volunteer" else "",
+                    "participant_position": r[6], "volunteer_id": r[7], "user_id": r[8],
+                    "membership_number": r[9] if r[1] == "volunteer" else "",
+                    "branch_id": r[10] if r[1] == "volunteer" else None,
+                    "assigned_itinerary": r[11], "return_status": r[12],
                     "phase_name": r[13], "stay_type": r[14], "participation_periods": segments,
                     "assigned_days": assigned_days,
                     "start_from_mission": start_from_mission,
@@ -7933,7 +7982,8 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                 # مفتاح الهوية: volunteer_id يجمع الصفوف حتى لو انجراف رقم العضوية؛
                 # وإلا رقم العضوية+الفرع، وإلا الاسم+الفرع (غير المتطوع).
                 mem = str(p.get('membership_number') or '').strip()
-                br = p.get('branch_id') or 0
+                is_non_volunteer = p.get('participant_type') == 'non_volunteer'
+                br = None if is_non_volunteer else (p.get('branch_id') or 0)
                 vid = p.get('volunteer_id')
                 k = (f"vid:{vid}" if vid
                      else (f"rid:{br}:{mem}" if mem else f"nm:{br}:{p.get('full_name', '')}"))
@@ -8007,7 +8057,8 @@ def get_human_resources(client_now: Optional[str] = None, credentials: HTTPAutho
                     "membership_number": info['membership_number'],
                     "participant_type": info['participant_type'],
                     "participant_position": info['participant_position'],
-                    "branch_name": branches.get(info['branch_id'], 'غير محدد'),
+                    "branch_name": '—' if info['participant_type'] == 'non_volunteer'
+                                   else branches.get(info['branch_id'], 'غير محدد'),
                     "branch_id": info['branch_id'],
                     "volunteer_id": info['volunteer_id'],
                     "missions_count": missions_count,

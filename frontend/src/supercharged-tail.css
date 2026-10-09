@@ -187,3 +187,1731 @@
 /* الحركات المركّبة التي لا تحتاج تسكيتًا افتراضيًا:
    sc-* و nt-aura و nt-bar-breathe و wp-orbit/wp-core/wp-dot/wp-sheen
    و liv-idle-dot تستخدم transform/opacity أو خاصية مسجّلة. */
+
+/* ════════════════════════════════════════════════════════════════════════════
+   K) طبقة القيادة — إعادة صياغة بصرية فوق البنية الحالية
+   لا تغيّر هذه الطبقة ترتيب العناصر أو أحجامها أو مواضعها؛ كل الحركة محصورة
+   في opacity/transform وكل الأسطح تتبع رموز الثيمين الموجودة.
+   ════════════════════════════════════════════════════════════════════════════ */
+.app-shell {
+  --sc-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.app-shell .glass-header {
+  background-image:
+    linear-gradient(105deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--sc-light-top) 70%, transparent), transparent 78%);
+  border-color: color-mix(in srgb, var(--accent) 14%, var(--sc-hair-strong));
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 -1px 0 color-mix(in srgb, var(--accent) 8%, transparent),
+    0 14px 38px -28px color-mix(in srgb, var(--accent) 38%, #000);
+}
+
+.app-shell .sidebar-panel::before {
+  background-image:
+    radial-gradient(90% 28% at 50% 0%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 100%),
+    linear-gradient(180deg, color-mix(in srgb, var(--sc-light-top) 55%, transparent), transparent 34%, color-mix(in srgb, var(--sc-bg-deep) 30%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 13%, var(--sc-hair-strong));
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--sc-hair-strong) 42%, transparent),
+    0 20px 48px -30px color-mix(in srgb, var(--accent) 30%, #000);
+}
+
+.app-shell .sidebar-shell,
+.app-shell .sidebar-panel {
+  transition-timing-function: cubic-bezier(0.2, 0.75, 0.25, 1);
+  transition-duration: 300ms;
+}
+
+.app-shell .nav-shell::before {
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, white 10%, transparent), transparent 55%),
+    linear-gradient(to right, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent) 7%, transparent) 72%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 8px 22px -14px var(--accent-glow);
+  transition-duration: 280ms;
+}
+[dir="rtl"] .app-shell .nav-shell::before {
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, white 10%, transparent), transparent 55%),
+    linear-gradient(to left, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent) 7%, transparent) 72%, transparent);
+}
+
+.app-shell .nav-item {
+  transition-duration: 210ms;
+}
+.app-shell .nav-item.is-active {
+  color: color-mix(in srgb, var(--ink) 94%, var(--accent));
+}
+@media (hover: hover) and (pointer: fine) {
+  .app-shell .nav-item:not(.is-active):hover {
+    background-color: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+}
+
+.app-shell #home-view-top {
+  --dashboard-card-top: color-mix(in srgb, var(--sc-light-top) 54%, transparent);
+}
+.app-shell #home-view-top > .ops-band {
+  background:
+    radial-gradient(ellipse at 8% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 48%),
+    radial-gradient(ellipse at 94% 100%, color-mix(in srgb, var(--info) 13%, transparent), transparent 43%),
+    linear-gradient(112deg, var(--sc-surface-1), var(--sc-surface-2) 52%, var(--sc-surface-1));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--sc-hair-strong));
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--sc-hair) 40%, transparent),
+    0 18px 46px -34px color-mix(in srgb, var(--accent) 62%, #000);
+}
+.app-shell #home-view-top .ops-chip {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sc-light-top) 60%, transparent);
+  transition: background-color 180ms var(--sc-ease), border-color 180ms var(--sc-ease), color 180ms var(--sc-ease);
+}
+
+.app-shell #main-scroll-container > div .kpi-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 46%),
+    linear-gradient(180deg, var(--dashboard-card-top), transparent 48%),
+    linear-gradient(145deg, var(--sc-surface-3), var(--sc-surface-1) 78%);
+  border-color: color-mix(in srgb, var(--sc-hair-strong) 82%, var(--accent));
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--sc-hair) 44%, transparent),
+    inset 3px 0 0 color-mix(in srgb, var(--accent) 58%, transparent),
+    0 12px 30px -23px rgba(0, 0, 0, 0.8);
+  transition:
+    transform 240ms var(--sc-ease),
+    border-color 240ms var(--sc-ease),
+    box-shadow 240ms var(--sc-ease),
+    background-color 240ms var(--sc-ease);
+}
+[dir="rtl"] .app-shell #main-scroll-container > div .kpi-card {
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--sc-hair) 44%, transparent),
+    inset -3px 0 0 color-mix(in srgb, var(--accent) 58%, transparent),
+    0 12px 30px -23px rgba(0, 0, 0, 0.8);
+}
+.app-shell #main-scroll-container > div .kpi-card::after {
+  opacity: 0.72;
+  transition: opacity 240ms var(--sc-ease);
+}
+.app-shell #main-scroll-container > div .kpi-card > div:first-child > div {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 13%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, currentColor 15%, transparent),
+    0 8px 20px -14px currentColor;
+}
+.app-shell #main-scroll-container > div .kpi-value {
+  color: var(--ink);
+  text-shadow: 0 8px 26px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .app-shell #main-scroll-container > div .kpi-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--sc-hair-strong));
+    box-shadow:
+      inset 0 1px 0 var(--sc-light-top),
+      inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
+      inset 3px 0 0 color-mix(in srgb, var(--accent) 78%, transparent),
+      0 18px 34px -22px color-mix(in srgb, var(--accent) 34%, #000);
+  }
+  [dir="rtl"] .app-shell #main-scroll-container > div .kpi-card:hover {
+    box-shadow:
+      inset 0 1px 0 var(--sc-light-top),
+      inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
+      inset -3px 0 0 color-mix(in srgb, var(--accent) 78%, transparent),
+      0 18px 34px -22px color-mix(in srgb, var(--accent) 34%, #000);
+  }
+}
+
+.app-shell #home-view-top .card-surface,
+.app-shell #home-view-top .table-shell {
+  background-image:
+    linear-gradient(145deg, color-mix(in srgb, var(--sc-light-top) 36%, transparent), transparent 42%),
+    linear-gradient(155deg, color-mix(in srgb, var(--accent) 3%, transparent), transparent 58%);
+  border-color: var(--sc-hair-strong);
+}
+.app-shell #home-view-top > div:nth-of-type(6) > div:first-child h3,
+.app-shell #home-view-top > div:nth-of-type(7) h3,
+.app-shell #home-view-top > div:nth-of-type(8) h3,
+.app-shell #home-view-top > div:nth-of-type(9) h3 {
+  text-shadow: 0 4px 18px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.app-shell #home-view-top > div:nth-of-type(4) {
+  background:
+    radial-gradient(ellipse at 8% 0%, color-mix(in srgb, var(--ai) 18%, transparent), transparent 54%),
+    linear-gradient(135deg, var(--sc-surface-2), var(--sc-surface-1) 74%);
+  border-color: color-mix(in srgb, var(--ai) 32%, var(--sc-hair-strong));
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--ai) 8%, transparent),
+    0 18px 40px -32px color-mix(in srgb, var(--ai) 60%, #000);
+}
+
+.app-shell .table-shell thead th {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sc-light-top) 70%, transparent), transparent),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 68%),
+    var(--sc-surface-3);
+}
+.app-shell .table-shell tbody tr {
+  transition: background-color 180ms var(--sc-ease), color 180ms var(--sc-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .app-shell .table-shell tbody tr:hover {
+    background-color: color-mix(in srgb, var(--accent) 8%, var(--surface-hover));
+  }
+}
+
+.app-shell .field,
+.app-shell .eoc-select__value {
+  transition:
+    border-color 180ms var(--sc-ease),
+    background-color 180ms var(--sc-ease),
+    box-shadow 180ms var(--sc-ease),
+    color 180ms var(--sc-ease);
+}
+.app-shell .field:focus,
+.app-shell .eoc-select.is-open .eoc-select__value {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 0 0 4px var(--accent-softer),
+    0 10px 26px -18px var(--accent-glow);
+}
+.app-shell .btn-primary,
+.app-shell .btn-accent,
+.app-shell .action-btn {
+  transition:
+    transform 150ms var(--sc-spring),
+    box-shadow 180ms var(--sc-ease),
+    background-color 180ms var(--sc-ease),
+    border-color 180ms var(--sc-ease);
+}
+
+.app-shell .modal-card {
+  animation-duration: 300ms;
+  animation-timing-function: var(--sc-spring);
+}
+.app-shell .modal-backdrop {
+  animation-duration: 200ms;
+}
+.app-shell .eoc-select__menu {
+  animation: eoc-select-arrive 190ms var(--sc-spring) both;
+}
+@keyframes eoc-select-arrive {
+  from { opacity: 0; transform: translateY(-7px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.app-shell .notif-dropdown {
+  animation-duration: 210ms;
+  animation-timing-function: var(--sc-spring);
+}
+.app-shell .notif-item-in {
+  animation-duration: 240ms;
+  animation-timing-function: var(--sc-ease);
+}
+.app-shell .toast-item {
+  animation-duration: 250ms;
+  animation-timing-function: var(--sc-spring);
+}
+
+.app-shell #main-scroll-container > div {
+  animation: eoc-stage-arrive 220ms var(--sc-ease) both;
+}
+@keyframes eoc-stage-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.app-shell #home-view-top > * {
+  animation: eoc-section-arrive 380ms var(--sc-ease) both;
+}
+.app-shell #home-view-top > :nth-child(1) { animation-delay: 20ms; }
+.app-shell #home-view-top > :nth-child(2) { animation-delay: 45ms; }
+.app-shell #home-view-top > :nth-child(3) { animation-delay: 70ms; }
+.app-shell #home-view-top > :nth-child(4) { animation-delay: 95ms; }
+.app-shell #home-view-top > :nth-child(5) { animation-delay: 120ms; }
+.app-shell #home-view-top > :nth-child(6) { animation-delay: 145ms; }
+.app-shell #home-view-top > :nth-child(7) { animation-delay: 170ms; }
+.app-shell #home-view-top > :nth-child(8) { animation-delay: 195ms; }
+.app-shell #home-view-top > :nth-child(9) { animation-delay: 220ms; }
+@keyframes eoc-section-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+:root[data-theme="light"] .app-shell #main-scroll-container > div .kpi-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px color-mix(in srgb, var(--sc-hair-strong) 36%, transparent),
+    inset 3px 0 0 color-mix(in srgb, var(--accent) 54%, transparent),
+    0 12px 30px -23px rgba(25, 35, 55, 0.34);
+}
+:root[data-theme="light"] [dir="rtl"] .app-shell #main-scroll-container > div .kpi-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px color-mix(in srgb, var(--sc-hair-strong) 36%, transparent),
+    inset -3px 0 0 color-mix(in srgb, var(--accent) 54%, transparent),
+    0 12px 30px -23px rgba(25, 35, 55, 0.34);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell #main-scroll-container > div,
+  .app-shell #home-view-top > *,
+  .app-shell .eoc-select__menu {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   L) بوابة الدخول والإشارات — لمسات هادئة بنفس خامة مركز العمليات
+   ════════════════════════════════════════════════════════════════════════════ */
+.lx-deck.lx-deck {
+  border-color: color-mix(in srgb, var(--accent) 17%, var(--border-strong));
+  background-image:
+    linear-gradient(132deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 26%);
+}
+:root[data-theme="light"] .lx-deck.lx-deck {
+  border-color: color-mix(in srgb, var(--accent) 15%, var(--border-strong));
+  background-image:
+    linear-gradient(132deg, color-mix(in srgb, var(--accent) 4%, transparent), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 28%);
+}
+.lx-deck .lx-input {
+  transition-duration: 180ms, 180ms, 180ms;
+  transition-timing-function: var(--sc-ease);
+}
+.lx-deck .lx-submit {
+  transition-timing-function: var(--sc-ease);
+}
+.lx-deck .lx-error {
+  animation-duration: 280ms;
+  animation-timing-function: var(--sc-ease);
+}
+
+.app-shell .toast-item::after {
+  animation: none;
+  filter: none;
+  opacity: 0.72;
+}
+.app-shell .bell-ring {
+  animation: none;
+  filter: none;
+}
+.sig-note {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--sc-light-top) 72%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--sig-c, var(--accent)) 8%, transparent),
+    var(--sc-shadow-2);
+  transition-timing-function: var(--sc-ease);
+}
+.sig-dock {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--sig-c, var(--accent)) 9%, transparent), transparent 58%),
+    var(--sc-elev-3);
+  border-color: color-mix(in srgb, var(--sig-c, var(--accent)) 24%, var(--sc-hair-strong));
+  box-shadow:
+    inset 0 1px 0 var(--sc-light-top),
+    inset 0 0 0 1px color-mix(in srgb, var(--sc-hair) 40%, transparent),
+    var(--sc-shadow-3);
+}
+.working-pill {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 52%),
+    linear-gradient(160deg, var(--sc-surface-3), var(--sc-surface-1) 78%);
+  border-color: color-mix(in srgb, var(--accent) 21%, var(--sc-hair-strong));
+}
+.working-pill::after {
+  opacity: 0.55;
+}
+.working-text {
+  background-image: none;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-error,
+  .working-pill,
+  .working-pill::after,
+  .working-text,
+  .working-dots i,
+  .working-orbit > i,
+  .working-orbit::after,
+  .working-line::before,
+  .sig-note,
+  .sig-dock {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   M) بوابة الوصول — هوية بصرية جديدة: ختم ميداني فوق سطح لؤلؤي/ليلي
+   ════════════════════════════════════════════════════════════════════════════ */
+.lx > .lx-scene {
+  background-color: #0b1016;
+  background-image:
+    radial-gradient(38rem 30rem at 50% 40%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 72%),
+    radial-gradient(34rem 28rem at 8% 4%, rgba(193, 95, 67, 0.1), transparent 72%),
+    radial-gradient(30rem 24rem at 94% 92%, rgba(71, 102, 117, 0.11), transparent 72%),
+    repeating-radial-gradient(circle at 50% 44%, transparent 0 7.8rem, rgba(255, 255, 255, 0.025) 7.86rem 7.92rem, transparent 8rem 15rem),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, 6rem 6rem, 6rem 6rem;
+}
+
+:root[data-theme="light"] .lx > .lx-scene {
+  background-color: #f2f0eb;
+  background-image:
+    radial-gradient(40rem 32rem at 50% 39%, rgba(255, 255, 255, 0.94), transparent 74%),
+    radial-gradient(38rem 28rem at 4% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 72%),
+    radial-gradient(34rem 28rem at 96% 100%, rgba(121, 143, 145, 0.1), transparent 72%),
+    repeating-radial-gradient(circle at 50% 44%, transparent 0 7.8rem, rgba(40, 47, 54, 0.035) 7.86rem 7.92rem, transparent 8rem 15rem),
+    linear-gradient(rgba(40, 47, 54, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40, 47, 54, 0.035) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, 6rem 6rem, 6rem 6rem;
+}
+
+.lx-gate .lx-scene {
+  background-image:
+    radial-gradient(35rem 30rem at 50% 33%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 72%),
+    radial-gradient(46rem 28rem at 50% 0%, rgba(190, 79, 65, 0.12), transparent 75%),
+    radial-gradient(34rem 30rem at 12% 88%, rgba(46, 94, 105, 0.1), transparent 72%),
+    repeating-radial-gradient(circle at 50% 33%, transparent 0 5.9rem, rgba(255, 255, 255, 0.027) 5.96rem 6.02rem, transparent 6.1rem 11.8rem),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, 6rem 6rem, 6rem 6rem;
+}
+
+:root[data-theme="light"] .lx-gate .lx-scene {
+  background-image:
+    radial-gradient(37rem 32rem at 50% 33%, rgba(255, 255, 255, 0.96), transparent 72%),
+    radial-gradient(45rem 30rem at 50% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 75%),
+    radial-gradient(34rem 30rem at 10% 90%, rgba(74, 119, 124, 0.09), transparent 72%),
+    repeating-radial-gradient(circle at 50% 33%, transparent 0 5.9rem, rgba(40, 47, 54, 0.04) 5.96rem 6.02rem, transparent 6.1rem 11.8rem),
+    linear-gradient(rgba(40, 47, 54, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40, 47, 54, 0.028) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, 6rem 6rem, 6rem 6rem;
+}
+
+.lx-gate::before {
+  height: 82%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 66%);
+}
+
+.lx-gate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 36%, transparent 0 18rem, color-mix(in srgb, var(--bg) 12%, transparent) 38rem, transparent 60rem),
+    linear-gradient(115deg, transparent 0 49.94%, color-mix(in srgb, var(--ink) 5%, transparent) 50%, transparent 50.06%);
+}
+
+:root[data-theme="light"] .lx-gate::after {
+  background:
+    radial-gradient(ellipse at 50% 36%, transparent 0 18rem, rgba(91, 81, 69, 0.055) 38rem, transparent 60rem),
+    linear-gradient(115deg, transparent 0 49.94%, rgba(63, 72, 81, 0.045) 50%, transparent 50.06%);
+}
+
+.lx-gate .lx-crest {
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 0.2), transparent 48%),
+    linear-gradient(145deg, rgba(30, 38, 46, 0.94), rgba(10, 14, 20, 0.96));
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -18px 28px -18px rgba(0, 0, 0, 0.85),
+    0 0 0 0.45rem rgba(255, 255, 255, 0.025),
+    0 1.25rem 3rem -1.4rem rgba(0, 0, 0, 0.8),
+    0 0 3.5rem -1.5rem var(--accent-glow);
+}
+
+:root[data-theme="light"] .lx-gate .lx-crest {
+  background:
+    radial-gradient(circle at 32% 22%, #fff, transparent 54%),
+    linear-gradient(145deg, #fffdfa, #e8e4dc);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -16px 26px -18px rgba(63, 49, 39, 0.2),
+    0 0 0 0.45rem rgba(255, 255, 255, 0.56),
+    0 1.25rem 3rem -1.4rem rgba(59, 51, 42, 0.3),
+    0 0 3.5rem -1.5rem color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.lx-gate .lx-orbit {
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.lx-gate .lx-orbit--inner {
+  border-color: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.lx-gate .lx-track {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 55%),
+    rgba(12, 17, 23, 0.72);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1.2rem 2rem -1.5rem rgba(0, 0, 0, 0.78),
+    0 1.25rem 2.75rem -2rem rgba(0, 0, 0, 0.78);
+  transition:
+    border-color 220ms var(--sc-ease),
+    background-color 220ms var(--sc-ease),
+    box-shadow 220ms var(--sc-ease);
+}
+
+:root[data-theme="light"] .lx-gate .lx-track {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 239, 232, 0.88));
+  border-color: rgba(101, 92, 80, 0.2);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1rem 1.5rem -1.3rem rgba(87, 76, 62, 0.18),
+    0 1.25rem 2.75rem -2rem rgba(65, 56, 45, 0.34);
+}
+
+.lx-gate .lx-track-label {
+  color: color-mix(in srgb, var(--ink) 86%, transparent);
+}
+
+.lx-gate .lx-handle-core {
+  background:
+    radial-gradient(115% 115% at 30% 18%, #fff 0%, #f7f3ec 53%, #ddd6ca 100%);
+  border-color: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -0.45rem 0.75rem -0.5rem rgba(48, 39, 29, 0.42),
+    0 0.5rem 1.3rem -0.35rem rgba(0, 0, 0, 0.66),
+    0 0 1.25rem -0.45rem var(--accent-glow);
+}
+
+.lx .lx-deck {
+  background-color: rgba(13, 18, 24, 0.91);
+  background-image:
+    radial-gradient(70% 55% at 50% 0%, rgba(255, 255, 255, 0.055), transparent 82%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 32%);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 2rem 5rem -2.8rem rgba(0, 0, 0, 0.92),
+    0 0 0 1px rgba(7, 11, 16, 0.28);
+}
+
+:root[data-theme="light"] .lx .lx-deck {
+  background-color: rgba(250, 249, 246, 0.96);
+  background-image:
+    radial-gradient(75% 58% at 50% 0%, rgba(255, 255, 255, 0.98), transparent 84%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), transparent 34%);
+  border-color: rgba(91, 80, 67, 0.17);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 2rem 5rem -2.8rem rgba(55, 48, 39, 0.42),
+    0 0 0 1px rgba(106, 92, 75, 0.04);
+}
+
+.lx .lx-ribbon {
+  background:
+    radial-gradient(90% 160% at 82% -60%, rgba(255, 235, 220, 0.28), transparent 62%),
+    linear-gradient(112deg, #51141b 0%, #791b24 43%, #9c2930 70%, #67151e 100%);
+}
+
+.lx .lx-ribbon::before {
+  background-image:
+    linear-gradient(132deg, transparent 0 38%, rgba(255, 255, 255, 0.14) 38.1% 38.25%, transparent 38.35% 100%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.26) 0.7px, transparent 1px);
+  background-size: auto, 1rem 1rem;
+  opacity: 0.16;
+}
+
+.lx .lx-logo-tile {
+  background: linear-gradient(145deg, #fffefa, #e9e5dd);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0.6rem 1.4rem -0.7rem rgba(0, 0, 0, 0.65),
+    0 0 0 0.2rem rgba(255, 255, 255, 0.08);
+}
+
+.lx .lx-chip {
+  background: rgba(22, 13, 17, 0.36);
+  border-color: rgba(255, 244, 235, 0.23);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0.4rem 1rem -0.7rem rgba(0, 0, 0, 0.7);
+}
+
+.lx .lx-console {
+  background:
+    radial-gradient(42% 78% at 50% 23%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 100%),
+    linear-gradient(90deg, transparent 0 15%, rgba(255, 255, 255, 0.025) 50%, transparent 85%),
+    color-mix(in srgb, var(--surface-2) 78%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+:root[data-theme="light"] .lx .lx-console {
+  background:
+    radial-gradient(42% 78% at 50% 23%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 100%),
+    linear-gradient(90deg, transparent 0 15%, rgba(255, 255, 255, 0.78) 50%, transparent 85%),
+    rgba(235, 232, 225, 0.64);
+  border-bottom-color: rgba(82, 74, 63, 0.1);
+}
+
+.lx .lx-radar {
+  background:
+    radial-gradient(circle at 34% 25%, rgba(255, 255, 255, 0.14), transparent 42%),
+    radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--accent) 18%, var(--surface-2)), var(--surface-2) 76%);
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border-strong));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1rem 1.5rem -1.1rem rgba(0, 0, 0, 0.72),
+    0 0 0 0.45rem color-mix(in srgb, var(--ink) 3%, transparent),
+    0 0 2.5rem -1rem var(--accent-glow);
+}
+
+:root[data-theme="light"] .lx .lx-radar {
+  background:
+    radial-gradient(circle at 34% 25%, #fff, transparent 45%),
+    radial-gradient(circle at 50% 46%, #fff, #e8e4dc 78%);
+  border-color: rgba(108, 91, 74, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1rem 1.5rem -1.1rem rgba(72, 60, 46, 0.16),
+    0 0 0 0.45rem rgba(99, 80, 59, 0.04),
+    0 0 2.5rem -1rem color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.lx .lx-gauge-bar {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.lx .lx-eyebrow {
+  color: color-mix(in srgb, var(--accent) 88%, #e7a28d);
+}
+
+:root[data-theme="light"] .lx .lx-eyebrow {
+  color: color-mix(in srgb, var(--accent) 88%, #742e2b);
+}
+
+.lx .lx-input {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), transparent 52%),
+    rgba(17, 24, 32, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -0.75rem 1rem -1rem rgba(0, 0, 0, 0.72) !important;
+  transition:
+    border-color 200ms var(--sc-ease),
+    box-shadow 220ms var(--sc-ease),
+    background-color 200ms var(--sc-ease) !important;
+}
+
+:root[data-theme="light"] .lx .lx-input {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 245, 240, 0.92)) !important;
+  border-color: rgba(93, 82, 68, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -0.75rem 1rem -1rem rgba(76, 63, 47, 0.16) !important;
+}
+
+.lx .lx-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 0 0 3px color-mix(in srgb, var(--accent) 11%, transparent),
+    0 0.75rem 2rem -1.2rem var(--accent-glow) !important;
+}
+
+:root[data-theme="light"] .lx .lx-input:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 0.75rem 2rem -1.2rem var(--accent-glow) !important;
+}
+
+.lx .lx-submit {
+  background: linear-gradient(180deg, #a33338 0%, #872129 58%, #681720 100%);
+  border-color: rgba(255, 218, 204, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0.65rem 1.35rem -0.9rem rgba(137, 31, 39, 0.92),
+    0 0 0 1px rgba(105, 20, 28, 0.32);
+  transition:
+    transform 180ms var(--sc-ease),
+    box-shadow 220ms var(--sc-ease),
+    filter 220ms var(--sc-ease);
+}
+
+.lx .lx-submit:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 0.8rem 1.7rem -1rem rgba(137, 31, 39, 0.9),
+    0 0 0 1px rgba(148, 45, 49, 0.48);
+}
+
+.lx .lx-pill-btn,
+.lx .lx-switch {
+  border-color: color-mix(in srgb, var(--ink) 12%, transparent) !important;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent),
+    0 0.5rem 1.3rem -0.8rem rgba(0, 0, 0, 0.58) !important;
+}
+
+:root[data-theme="light"] .lx .lx-pill-btn,
+:root[data-theme="light"] .lx .lx-switch {
+  border-color: rgba(83, 73, 61, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 0.5rem 1.3rem -0.8rem rgba(73, 61, 47, 0.24) !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   N) إعادة تخيّل الدخول — بوابة الختم ومحطة القيادة
+   ════════════════════════════════════════════════════════════════════════════ */
+.lx-gate > .relative.z-10 {
+  isolation: isolate;
+}
+
+.lx-gate > .relative.z-10::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  width: min(42rem, calc(100vw - 2rem));
+  height: min(36rem, calc(100dvh - 2rem));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 2.25rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 32%),
+    radial-gradient(90% 60% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 80%),
+    rgba(9, 14, 20, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 0.45rem rgba(255, 255, 255, 0.012),
+    0 2rem 5rem -3rem rgba(0, 0, 0, 0.58);
+  pointer-events: none;
+}
+
+.lx-gate > .relative.z-10::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: calc(50% - min(18rem, 50dvh - 1rem));
+  left: 50%;
+  width: min(42rem, calc(100vw - 2rem));
+  height: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent 8%, color-mix(in srgb, var(--accent) 64%, transparent) 50%, transparent 92%);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+:root[data-theme="light"] .lx-gate > .relative.z-10::before {
+  border-color: rgba(91, 80, 67, 0.14);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), transparent 36%),
+    radial-gradient(90% 60% at 50% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 80%),
+    rgba(255, 253, 249, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 0 0 0.45rem rgba(255, 255, 255, 0.16),
+    0 2rem 5rem -3rem rgba(73, 61, 47, 0.32);
+}
+
+.lx-gate .lx-gate-title {
+  text-shadow: 0 0.4rem 2rem color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+.lx-gate .lx-gate-sub {
+  color: color-mix(in srgb, var(--muted) 82%, var(--ink));
+}
+
+.lx-gate .lx-gate-foot {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+
+.lx-gate .lx-crest-stack::after {
+  inset-block-start: 92%;
+  height: 24%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 34%, transparent), transparent 82%);
+}
+
+:root[data-theme="light"] .lx-gate .lx-crest-stack::after {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 19%, transparent), transparent 82%);
+}
+
+.lx-gate .lx-crest-glow {
+  animation: none;
+  opacity: 0.72;
+}
+
+.lx-gate .lx-orbit,
+.lx-gate .lx-orbit--inner {
+  animation-play-state: paused;
+}
+
+.lx .lx-deck {
+  background-image:
+    radial-gradient(ellipse at 17% 33%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 43%),
+    radial-gradient(ellipse at 84% 94%, rgba(76, 113, 124, 0.075), transparent 39%),
+    repeating-radial-gradient(circle at 18% 27%, transparent 0 4.4rem, rgba(255, 255, 255, 0.018) 4.46rem 4.5rem, transparent 4.56rem 8.9rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 32%);
+}
+
+:root[data-theme="light"] .lx .lx-deck {
+  background-image:
+    radial-gradient(ellipse at 17% 33%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 43%),
+    radial-gradient(ellipse at 84% 94%, rgba(82, 126, 132, 0.07), transparent 39%),
+    repeating-radial-gradient(circle at 18% 27%, transparent 0 4.4rem, rgba(73, 63, 50, 0.025) 4.46rem 4.5rem, transparent 4.56rem 8.9rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.7), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), transparent 32%);
+}
+
+.lx .lx-deck::before {
+  inset-inline: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 5%, color-mix(in srgb, var(--accent) 75%, #e4a08c) 50%, transparent 95%);
+  opacity: 0.76;
+}
+
+.lx .lx-ribbon {
+  background:
+    radial-gradient(90% 150% at 78% -65%, rgba(255, 255, 255, 0.08), transparent 62%),
+    linear-gradient(110deg, #141c25 0%, #1c252f 56%, #20262c 100%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.lx .lx-ribbon::before {
+  background-image:
+    linear-gradient(132deg, transparent 0 38%, rgba(255, 255, 255, 0.12) 38.1% 38.25%, transparent 38.35% 100%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.22) 0.7px, transparent 1px);
+  opacity: 0.12;
+}
+
+.lx .lx-ribbon-fade {
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.14));
+}
+
+.lx .lx-chip {
+  background: rgba(8, 13, 18, 0.4);
+  border-color: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.lx .lx-ribbon p,
+.lx .lx-ribbon .text-white\/75,
+.lx .lx-ribbon .text-white\/60 {
+  color: rgba(255, 250, 246, 0.9) !important;
+}
+
+.lx .lx-console {
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 68%),
+    linear-gradient(90deg, transparent 0 12%, rgba(255, 255, 255, 0.026) 50%, transparent 88%),
+    rgba(12, 18, 25, 0.64);
+}
+
+:root[data-theme="light"] .lx .lx-console {
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 68%),
+    linear-gradient(90deg, transparent 0 12%, rgba(255, 255, 255, 0.74) 50%, transparent 88%),
+    rgba(233, 230, 223, 0.62);
+}
+
+.lx .lx-radar-sweep {
+  opacity: 0.42;
+}
+
+.lx .lx-gauge-num {
+  text-shadow: 0 0.4rem 1.4rem color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.lx .lx-field:focus-within .lx-field-glow {
+  opacity: 0.34;
+}
+
+.lx .lx-label {
+  transition:
+    color 180ms var(--sc-ease),
+    transform 180ms var(--sc-ease);
+}
+
+.lx .lx-field:focus-within .lx-label {
+  transform: translateY(-1px);
+}
+
+.lx .lx-input-ic,
+.lx .lx-eye {
+  transition:
+    color 180ms var(--sc-ease),
+    transform 180ms var(--sc-ease),
+    background-color 180ms var(--sc-ease);
+}
+
+.lx .lx-eye:hover {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.lx .lx-submit::before {
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.2) 50%, transparent 65%);
+}
+
+.lx .lx-submit.is-loading::before {
+  animation-duration: 1.5s;
+}
+
+.lx .lx-error {
+  border-radius: 0.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-gate > .relative.z-10::before,
+  .lx-gate > .relative.z-10::after,
+  .lx-gate .lx-crest-glow,
+  .lx-gate .lx-orbit,
+  .lx-gate .lx-orbit--inner {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   O) أطلس الاستجابة — مسارات تضاريسية وهوية زجاجية هادئة
+   ════════════════════════════════════════════════════════════════════════════ */
+.lx > .lx-scene {
+  background-color: #0c1418;
+  background-image:
+    radial-gradient(ellipse at 12% 78%, rgba(163, 62, 51, 0.17), transparent 36%),
+    radial-gradient(ellipse at 88% 12%, rgba(131, 151, 143, 0.13), transparent 37%),
+    linear-gradient(145deg, #111c20 0%, #0b1317 54%, #11191c 100%);
+}
+
+:root[data-theme="light"] .lx > .lx-scene {
+  background-color: #e9e7e1;
+  background-image:
+    radial-gradient(ellipse at 12% 78%, rgba(157, 52, 42, 0.11), transparent 36%),
+    radial-gradient(ellipse at 88% 12%, rgba(103, 129, 124, 0.12), transparent 37%),
+    linear-gradient(145deg, #f5f3ed 0%, #e8e6df 54%, #efede7 100%);
+}
+
+.lx-gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.lx-gate .lx-scene {
+  background-color: #0b1418;
+  background-image:
+    radial-gradient(ellipse at 50% 50%, rgba(169, 67, 54, 0.18), transparent 38%),
+    radial-gradient(ellipse at 8% 92%, rgba(91, 127, 118, 0.14), transparent 40%),
+    linear-gradient(145deg, #111d21 0%, #0a1216 60%, #11191c 100%);
+}
+
+:root[data-theme="light"] .lx-gate .lx-scene {
+  background-color: #e9e7e1;
+  background-image:
+    radial-gradient(ellipse at 50% 50%, rgba(168, 55, 44, 0.12), transparent 38%),
+    radial-gradient(ellipse at 8% 92%, rgba(97, 133, 122, 0.12), transparent 40%),
+    linear-gradient(145deg, #f6f4ef 0%, #e9e7e1 60%, #eeece6 100%);
+}
+
+.lx-scene::before,
+.lx-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lx-scene::before {
+  inset: -2%;
+  z-index: 0;
+  background: url("/response-atlas.svg") center / cover no-repeat;
+  opacity: 0.7;
+  mix-blend-mode: screen;
+  transform: scale(1.02);
+  animation:
+    atlas-map-arrive 1.25s cubic-bezier(.2, .72, .2, 1) both,
+    atlas-map-float 24s ease-in-out 1.25s infinite alternate;
+}
+
+:root[data-theme="light"] .lx-scene::before {
+  opacity: 0.74;
+  mix-blend-mode: multiply;
+}
+
+.lx-gate .lx-scene::before {
+  opacity: 0.78;
+  background-position: 50% 50%;
+}
+
+:root[data-theme="light"] .lx-gate .lx-scene::before {
+  opacity: 0.76;
+}
+
+.lx-scene::after {
+  z-index: 1;
+  background:
+    radial-gradient(ellipse at 24% 28%, rgba(235, 159, 151, 0.08), transparent 32%),
+    radial-gradient(ellipse at 76% 68%, rgba(153, 177, 210, 0.08), transparent 34%),
+    radial-gradient(ellipse at 50% 50%, transparent 44%, rgba(6, 12, 15, 0.2) 100%);
+  opacity: 0;
+  animation:
+    atlas-coordinates-in 900ms cubic-bezier(.2, .72, .2, 1) 180ms both,
+    atlas-ambient-breathe 18s ease-in-out 1s infinite alternate;
+}
+
+:root[data-theme="light"] .lx-scene::after {
+  background:
+    radial-gradient(ellipse at 24% 28%, rgba(223, 143, 142, 0.14), transparent 32%),
+    radial-gradient(ellipse at 76% 68%, rgba(150, 166, 202, 0.13), transparent 34%),
+    radial-gradient(ellipse at 50% 50%, transparent 48%, rgba(70, 69, 60, 0.1) 100%);
+}
+
+@keyframes atlas-map-arrive {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(1.035); }
+  to { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes atlas-map-float {
+  from { transform: translate3d(-0.4%, -0.25%, 0) scale(1.02); }
+  to { transform: translate3d(0.4%, 0.25%, 0) scale(1.04); }
+}
+
+@keyframes atlas-coordinates-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes atlas-ambient-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.025); }
+}
+
+.lx-gate::before,
+.lx-gate::after {
+  content: none;
+}
+
+.lx-gate-board {
+  display: grid !important;
+  width: min(92vw, 840px) !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0;
+  grid-template-columns: minmax(8rem, 0.78fr) minmax(0, 1.22fr);
+  grid-template-areas:
+    "emblem title"
+    "emblem subtitle"
+    "emblem readout"
+    "slider slider"
+    "foot foot";
+  align-content: center;
+  align-items: center;
+  column-gap: clamp(1.5rem, 4vw, 3.5rem);
+  row-gap: 0.15rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  isolation: isolate;
+}
+
+.lx-gate > .lx-gate-board.relative.z-10::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  width: auto;
+  height: auto;
+  transform: none;
+  border: 1px solid rgba(224, 230, 221, 0.22);
+  border-radius: 1.2rem;
+  background:
+    radial-gradient(ellipse at 14% 4%, rgba(255, 255, 255, 0.11), transparent 55%),
+    linear-gradient(145deg, rgba(29, 43, 46, 0.93), rgba(15, 25, 29, 0.9));
+  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  backdrop-filter: blur(22px) saturate(1.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 2.5rem 6rem -3rem rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  animation: atlas-board-surface-in 900ms cubic-bezier(.2, .72, .2, 1) both;
+}
+
+@keyframes atlas-board-surface-in {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.lx-gate > .lx-gate-board.relative.z-10::after {
+  content: "ERC   /   FIELD ATLAS";
+  position: absolute;
+  z-index: 1;
+  top: 0.8rem;
+  inset-inline-end: 1.25rem;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  height: auto;
+  transform: none;
+  color: rgba(235, 224, 203, 0.68);
+  font: 700 0.56rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.18em;
+  pointer-events: none;
+}
+
+:root[data-theme="light"] .lx-gate > .lx-gate-board.relative.z-10::before {
+  border-color: rgba(95, 99, 88, 0.2);
+  background:
+    radial-gradient(ellipse at 14% 4%, rgba(255, 255, 255, 0.96), transparent 55%),
+    linear-gradient(145deg, rgba(250, 249, 245, 0.92), rgba(236, 235, 228, 0.9));
+  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  backdrop-filter: blur(22px) saturate(1.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.52),
+    0 2.5rem 6rem -3rem rgba(57, 48, 35, 0.42);
+}
+
+:root[data-theme="light"] .lx-gate > .lx-gate-board.relative.z-10::after {
+  color: rgba(68, 76, 69, 0.62);
+}
+
+.lx-gate-emblem {
+  grid-area: emblem;
+  justify-self: center;
+  align-self: center;
+}
+
+.lx-gate-title {
+  grid-area: title;
+  justify-self: start;
+  width: 100%;
+  margin: 0 !important;
+  text-align: start;
+}
+
+.lx-gate-sub {
+  grid-area: subtitle;
+  justify-self: start;
+  width: 100%;
+  margin: 0.25rem 0 0 !important;
+  text-align: start;
+  letter-spacing: 0.08em !important;
+}
+
+.lx-gate .lx-readout {
+  grid-area: readout;
+  justify-self: start;
+  height: 2rem;
+  margin: 0.45rem 0 0 !important;
+}
+
+.lx-gate-slider {
+  grid-area: slider;
+  margin-top: 1.35rem;
+}
+
+.lx-gate-foot {
+  grid-area: foot;
+  justify-self: center;
+  margin: 1rem 0 0 !important;
+}
+
+.lx-gate .lx-crest-stack {
+  width: clamp(7rem, 10vw, 9rem);
+  height: clamp(7rem, 10vw, 9rem);
+}
+
+.lx-gate .lx-crest {
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 50%),
+    linear-gradient(155deg, #293738, #131c1f);
+  border-color: rgba(225, 215, 190, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1.1rem 1.5rem -1.2rem rgba(0, 0, 0, 0.8),
+    0 0 0 0.38rem rgba(225, 215, 190, 0.055),
+    0 1rem 2.5rem -1.4rem rgba(0, 0, 0, 0.84);
+}
+
+.lx-gate .lx-track {
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(194, 75, 59, 0.14), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 55%),
+    rgba(16, 27, 30, 0.86);
+  border-color: rgba(224, 228, 215, 0.23);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -0.75rem 1rem -1rem rgba(0, 0, 0, 0.82),
+    0 1rem 2.2rem -1.55rem rgba(0, 0, 0, 0.8);
+}
+
+:root[data-theme="light"] .lx-gate .lx-track {
+  background:
+    linear-gradient(90deg, rgba(174, 56, 46, 0.1), transparent 48%),
+    linear-gradient(180deg, #fff, rgba(244, 243, 237, 0.92));
+  border-color: rgba(83, 88, 77, 0.22);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -0.75rem 1rem -1rem rgba(74, 70, 57, 0.24),
+    0 1rem 2.2rem -1.55rem rgba(54, 52, 43, 0.35);
+}
+
+.lx-gate .lx-handle-core {
+  border-radius: 38%;
+  background:
+    radial-gradient(circle at 32% 24%, #fff 0%, #f1eee6 57%, #d9d5c9 100%);
+  border-color: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -0.4rem 0.8rem -0.45rem rgba(48, 39, 29, 0.35),
+    0 0.55rem 1.5rem -0.35rem rgba(0, 0, 0, 0.58),
+    0 0 0 0.24rem rgba(194, 75, 59, 0.12);
+}
+
+:root[data-theme="light"] .lx-gate .lx-crest {
+  background:
+    linear-gradient(145deg, #fff, transparent 52%),
+    linear-gradient(155deg, #f5f1e7, #ddd6c8);
+  border-color: rgba(105, 87, 62, 0.26);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1rem 1.4rem -1.2rem rgba(74, 60, 40, 0.2),
+    0 0 0 0.38rem rgba(104, 85, 58, 0.08),
+    0 1rem 2.5rem -1.4rem rgba(57, 48, 35, 0.32);
+}
+
+.lx-gate .lx-halo,
+.lx-gate .lx-orbit,
+.lx-gate .lx-orbit--inner,
+.lx-gate .lx-crest-glow {
+  display: none;
+  animation: none;
+}
+
+.lx-gate .lx-track {
+  height: 3.9rem;
+  border-radius: 0.7rem;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 0.65rem, rgba(218, 207, 180, 0.035) 0.68rem 0.7rem),
+    #202c2e;
+  border-color: rgba(225, 215, 190, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -0.6rem 1rem -0.85rem rgba(0, 0, 0, 0.78),
+    0 0.8rem 1.8rem -1.35rem rgba(0, 0, 0, 0.78);
+}
+
+:root[data-theme="light"] .lx-gate .lx-track {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 0.65rem, rgba(101, 85, 61, 0.055) 0.68rem 0.7rem),
+    #e6e0d3;
+  border-color: rgba(101, 85, 61, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -0.6rem 1rem -0.85rem rgba(78, 64, 43, 0.16),
+    0 0.8rem 1.8rem -1.35rem rgba(57, 48, 35, 0.3);
+}
+
+.lx-gate .lx-handle-core {
+  border-radius: 0.65rem;
+  background: linear-gradient(145deg, #fffdf7, #d9d0bd);
+  border-color: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -0.4rem 0.65rem -0.45rem rgba(55, 45, 31, 0.36),
+    0 0.45rem 1rem -0.3rem rgba(0, 0, 0, 0.58);
+}
+
+.lx-gate .lx-track-label {
+  font-family: inherit;
+  letter-spacing: 0;
+  color: color-mix(in srgb, var(--ink) 82%, transparent);
+}
+
+.lx-gate .lx-track-shine,
+.lx-gate .lx-ember,
+.lx-gate .lx-fill-glow {
+  opacity: 0.2;
+}
+
+.lx-gate .lx-chevs svg {
+  animation: none;
+}
+
+.lx-gate .lx-tick {
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(0) scale(1);
+}
+
+.lx-gate .lx-tick.is-lit {
+  transform: translate(-50%, -50%) rotate(0) scale(1.2);
+}
+
+.lx-gate .lx-gate-foot {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+}
+
+/* The existing readiness figures are presented as a printed field checklist. */
+.lx .lx-deck {
+  border-radius: 0.8rem;
+  background-color: rgba(18, 28, 31, 0.91);
+  background-image:
+    radial-gradient(ellipse at 10% 0%, rgba(200, 84, 68, 0.11), transparent 48%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.065), transparent 50%);
+  -webkit-backdrop-filter: blur(24px) saturate(1.15);
+  backdrop-filter: blur(24px) saturate(1.15);
+  border-color: rgba(231, 230, 216, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.19),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 2rem 5rem -2.5rem rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(5, 12, 14, 0.24);
+}
+
+:root[data-theme="light"] .lx .lx-deck {
+  border-radius: 0.8rem;
+  background-color: rgba(250, 249, 246, 0.9);
+  background-image:
+    radial-gradient(ellipse at 10% 0%, rgba(174, 56, 46, 0.055), transparent 48%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(245, 244, 239, 0.86));
+  -webkit-backdrop-filter: blur(24px) saturate(1.08);
+  backdrop-filter: blur(24px) saturate(1.08);
+  border-color: rgba(82, 86, 76, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.56),
+    0 2rem 5rem -2.5rem rgba(54, 51, 42, 0.42),
+    0 0 0 1px rgba(64, 66, 57, 0.05);
+}
+
+.lx .lx-ribbon {
+  background:
+    linear-gradient(90deg, transparent 0 1.35rem, rgba(198, 77, 62, 0.82) 1.35rem 1.42rem, transparent 1.42rem),
+    radial-gradient(ellipse at 82% -70%, rgba(236, 224, 205, 0.1), transparent 58%),
+    linear-gradient(110deg, #172327 0%, #202e31 66%, #293638 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(220, 214, 198, 0.14);
+}
+
+:root[data-theme="light"] .lx .lx-ribbon {
+  background:
+    linear-gradient(90deg, transparent 0 1.35rem, rgba(174, 56, 46, 0.8) 1.35rem 1.42rem, transparent 1.42rem),
+    radial-gradient(ellipse at 82% -70%, rgba(255, 255, 255, 0.97), transparent 58%),
+    linear-gradient(110deg, #f6f4ed 0%, #ecebe4 66%, #e5e6df 100%);
+  color: #242b29;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1px 0 rgba(77, 81, 71, 0.12);
+}
+
+:root[data-theme="light"] .lx .lx-ribbon p,
+:root[data-theme="light"] .lx .lx-ribbon .text-white\/75,
+:root[data-theme="light"] .lx .lx-ribbon .text-white\/60 {
+  color: #303431 !important;
+}
+
+.lx .lx-ribbon::before {
+  background-image:
+    radial-gradient(circle, rgba(231, 218, 191, 0.22) 0.7px, transparent 1px);
+  background-size: 0.9rem 0.9rem;
+  opacity: 0.12;
+}
+
+:root[data-theme="light"] .lx .lx-ribbon::before {
+  background-image:
+    radial-gradient(circle, rgba(85, 69, 45, 0.18) 0.7px, transparent 1px);
+}
+
+.lx .lx-deck::before {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 4%, rgba(214, 184, 132, 0.56) 50%, transparent 96%);
+}
+
+.lx .lx-logo-tile {
+  border-radius: 0.55rem;
+}
+
+.lx .lx-console {
+  background:
+    linear-gradient(90deg, transparent 0 1.15rem, rgba(198, 77, 62, 0.52) 1.15rem 1.2rem, transparent 1.2rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 55%),
+    rgba(26, 39, 41, 0.72);
+  border-color: rgba(226, 224, 207, 0.16);
+}
+
+:root[data-theme="light"] .lx .lx-console {
+  background:
+    linear-gradient(90deg, transparent 0 1.15rem, rgba(174, 56, 46, 0.48) 1.15rem 1.2rem, transparent 1.2rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), transparent 55%),
+    rgba(240, 239, 232, 0.88);
+  border-color: rgba(83, 86, 76, 0.16);
+}
+
+.lx .lx-radar {
+  border-radius: 1rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.13), transparent 55%),
+    #293638;
+  border-color: rgba(220, 210, 187, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.17),
+    inset 0 -0.8rem 1.2rem -1rem rgba(0, 0, 0, 0.72),
+    0 0 0 0.35rem rgba(213, 201, 170, 0.035),
+    0 0.75rem 1.7rem -1.25rem rgba(0, 0, 0, 0.75);
+}
+
+:root[data-theme="light"] .lx .lx-radar {
+  background:
+    linear-gradient(145deg, #fff, transparent 55%),
+    #e0d8c9;
+  border-color: rgba(102, 84, 56, 0.23);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -0.8rem 1.2rem -1rem rgba(72, 59, 39, 0.18),
+    0 0 0 0.35rem rgba(112, 91, 57, 0.045),
+    0 0.75rem 1.7rem -1.25rem rgba(75, 60, 39, 0.3);
+}
+
+.lx .lx-radar-sweep,
+.lx .lx-radar-ring,
+.lx .lx-radar-blip {
+  display: none;
+  animation: none;
+}
+
+.lx .lx-gauge-bar {
+  height: 0.24rem;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--ink) 13%, transparent);
+  box-shadow: none;
+}
+
+.lx .lx-input {
+  border-radius: 0.62rem;
+  background: rgba(12, 20, 23, 0.62) !important;
+  border-color: rgba(220, 224, 212, 0.2) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="light"] .lx .lx-input {
+  background: rgba(255, 255, 255, 0.76) !important;
+  border-color: rgba(79, 84, 76, 0.2) !important;
+  box-shadow: inset 0 1px 2px rgba(52, 54, 46, 0.055);
+}
+
+.lx .lx-submit {
+  border-radius: 0.62rem;
+  background: linear-gradient(112deg, #9f3b32 0%, #b64a3b 48%, #96352d 100%);
+  border-color: rgba(235, 186, 162, 0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(72, 13, 14, 0.18),
+    0 0.7rem 1.4rem -0.9rem rgba(125, 44, 32, 0.82);
+}
+
+.lx .lx-eyebrow {
+  letter-spacing: 0.12em;
+}
+
+.lx .lx-label {
+  letter-spacing: 0.07em;
+}
+
+.lx .lx-trust {
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 640px) {
+  .lx-gate {
+    padding: 1rem;
+  }
+
+  .lx-gate-board {
+    grid-template-columns: minmax(5.75rem, 0.55fr) minmax(0, 1.45fr);
+    column-gap: 1rem;
+    padding: 1.5rem 1.1rem;
+  }
+
+  .lx-gate .lx-crest-stack {
+    width: 6.75rem;
+    height: 6.75rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .lx-gate-board {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "emblem"
+      "title"
+      "subtitle"
+      "readout"
+      "slider"
+      "foot";
+    row-gap: 0.25rem;
+    padding: 2.5rem 1rem 1.5rem;
+  }
+
+  .lx-gate-title,
+  .lx-gate-sub,
+  .lx-gate .lx-readout {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .lx-gate-emblem {
+    margin-bottom: 0.8rem;
+  }
+
+  .lx-gate-slider {
+    margin-top: 0.85rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-gate .lx-crest-glow,
+  .lx .lx-radar-sweep,
+  .lx .lx-radar-blip,
+  .lx .lx-radar-ring {
+    animation: none !important;
+  }
+}
+
+.lx .lx-boot-slash,
+.lx .lx-boot-spark {
+  display: none;
+}
+
+.lx .lx-boot-ring {
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  animation-duration: 1.1s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-scene::before,
+  .lx-scene::after,
+  .lx-gate-board::before {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .lx .lx-boot {
+    display: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   P) انسيابية شبابية — طبقات لينة، أطراف دائرية، وحركة نابضية هادئة
+   ════════════════════════════════════════════════════════════════════════════ */
+.lx > .lx-scene {
+  background-image:
+    radial-gradient(ellipse at 13% 14%, rgba(211, 128, 137, 0.16), transparent 31%),
+    radial-gradient(ellipse at 87% 22%, rgba(133, 157, 185, 0.16), transparent 34%),
+    radial-gradient(ellipse at 77% 87%, rgba(112, 161, 147, 0.13), transparent 35%),
+    linear-gradient(145deg, #11191d 0%, #0c1418 54%, #15191f 100%);
+}
+
+:root[data-theme="light"] .lx > .lx-scene {
+  background-image:
+    radial-gradient(ellipse at 13% 14%, rgba(231, 169, 169, 0.38), transparent 31%),
+    radial-gradient(ellipse at 87% 22%, rgba(174, 187, 221, 0.42), transparent 34%),
+    radial-gradient(ellipse at 77% 87%, rgba(157, 196, 183, 0.32), transparent 35%),
+    linear-gradient(145deg, #f8f5f1 0%, #efefeb 54%, #f5f0ec 100%);
+}
+
+.lx-gate .lx-scene {
+  background-image:
+    radial-gradient(ellipse at 50% 42%, rgba(200, 107, 110, 0.2), transparent 31%),
+    radial-gradient(ellipse at 18% 80%, rgba(109, 157, 147, 0.18), transparent 37%),
+    radial-gradient(ellipse at 88% 18%, rgba(111, 136, 176, 0.2), transparent 35%),
+    linear-gradient(145deg, #111a1e 0%, #0b1317 57%, #17191f 100%);
+}
+
+:root[data-theme="light"] .lx-gate .lx-scene {
+  background-image:
+    radial-gradient(ellipse at 50% 42%, rgba(225, 157, 158, 0.42), transparent 31%),
+    radial-gradient(ellipse at 18% 80%, rgba(133, 181, 167, 0.34), transparent 37%),
+    radial-gradient(ellipse at 88% 18%, rgba(148, 163, 202, 0.4), transparent 35%),
+    linear-gradient(145deg, #f8f5f1 0%, #eeefed 57%, #f4eeec 100%);
+}
+
+.lx .lx-deck {
+  overflow: hidden;
+  transition:
+    border-color 420ms cubic-bezier(.2, .8, .2, 1),
+    box-shadow 420ms cubic-bezier(.2, .8, .2, 1);
+}
+
+:root .lx .lx-deck,
+:root[data-theme="dark"] .lx .lx-deck,
+:root[data-theme="light"] .lx .lx-deck {
+  border-radius: 3.2rem 3.2rem 3.2rem 2.4rem / 3rem 3rem 3rem 2.2rem;
+}
+
+.lx .lx-ribbon {
+  border-radius: 999px;
+  transition: background-color 420ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.lx .lx-console {
+  border-radius: 2.4rem 2.8rem 2.6rem 2.1rem;
+  transition:
+    background-color 420ms cubic-bezier(.2, .8, .2, 1),
+    border-color 420ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.lx .lx-logo-tile,
+.lx .lx-radar {
+  border-radius: 50%;
+}
+
+.lx .lx-chip {
+  border-radius: 999px;
+}
+
+.lx-gate > .lx-gate-board.relative.z-10::before {
+  border-radius: 4rem 4.2rem 4rem 3.2rem / 3.5rem 3.5rem 3.4rem 2.8rem;
+  background:
+    radial-gradient(ellipse at 8% 8%, rgba(239, 169, 162, 0.13), transparent 43%),
+    radial-gradient(ellipse at 95% 92%, rgba(139, 175, 166, 0.12), transparent 44%),
+    linear-gradient(145deg, rgba(30, 42, 47, 0.91), rgba(17, 26, 31, 0.88));
+  animation-duration: 760ms;
+  animation-timing-function: cubic-bezier(.2, .8, .2, 1);
+}
+
+:root[data-theme="light"] .lx-gate > .lx-gate-board.relative.z-10::before {
+  background:
+    radial-gradient(ellipse at 8% 8%, rgba(242, 187, 180, 0.4), transparent 43%),
+    radial-gradient(ellipse at 95% 92%, rgba(177, 208, 194, 0.34), transparent 44%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.91), rgba(246, 245, 241, 0.9));
+}
+
+.lx-gate > .lx-gate-board.relative.z-10::after {
+  top: 1.1rem;
+  inset-inline-end: 1.25rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(225, 231, 220, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  letter-spacing: 0.13em;
+}
+
+:root[data-theme="light"] .lx-gate > .lx-gate-board.relative.z-10::after {
+  border-color: rgba(91, 99, 88, 0.12);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.lx-gate .lx-crest {
+  border-radius: 50%;
+}
+
+.lx-gate .lx-handle-core {
+  border-radius: 50%;
+  transition:
+    transform 360ms cubic-bezier(.2, .8, .2, 1),
+    box-shadow 360ms cubic-bezier(.2, .8, .2, 1),
+    border-radius 360ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.lx-gate .lx-handle.is-dragging .lx-handle-core {
+  transform: scale(1.06);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 0.35rem rgba(196, 76, 61, 0.16),
+    0 0.65rem 1.5rem -0.35rem rgba(0, 0, 0, 0.5);
+}
+
+.lx-gate .lx-track {
+  border-radius: 999px;
+}
+
+.lx .lx-radar-logo {
+  transform-origin: center;
+  animation: atlas-crest-float 5.2s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+
+@keyframes atlas-crest-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-2deg); }
+  50% { transform: translate3d(0, -3px, 0) rotate(2deg); }
+}
+
+.lx .lx-input,
+.lx .lx-submit {
+  border-radius: 999px;
+  transition:
+    border-color 240ms cubic-bezier(.2, .8, .2, 1),
+    box-shadow 240ms cubic-bezier(.2, .8, .2, 1),
+    background-color 240ms cubic-bezier(.2, .8, .2, 1),
+    transform 240ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.lx .lx-input:focus {
+  box-shadow:
+    0 0 0 0.22rem color-mix(in srgb, var(--accent) 15%, transparent),
+    inset 0 1px 2px rgba(52, 54, 46, 0.055);
+}
+
+.lx .lx-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 0.85rem 1.5rem -0.85rem rgba(125, 44, 32, 0.72);
+}
+
+.lx .lx-submit:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+@keyframes atlas-board-surface-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.965); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-scene::before,
+  .lx-scene::after,
+  .lx .lx-radar-logo {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .lx .lx-deck,
+  .lx .lx-ribbon,
+  .lx .lx-console,
+  .lx .lx-handle-core,
+  .lx .lx-input,
+  .lx .lx-submit {
+    transition-duration: 1ms !important;
+  }
+}

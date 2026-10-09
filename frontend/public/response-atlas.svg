@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="coral" x1="96" y1="845" x2="1500" y2="124" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D89A91" stop-opacity=".1"/>
+      <stop offset=".48" stop-color="#C34B43" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#D9919A" stop-opacity=".22"/>
+    </linearGradient>
+    <linearGradient id="lilac" x1="119" y1="88" x2="1394" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A9A8D8" stop-opacity=".08"/>
+      <stop offset=".52" stop-color="#B8A7D6" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#92BEB2" stop-opacity=".08"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="1440" y1="58" x2="308" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A2C6B5" stop-opacity=".08"/>
+      <stop offset=".52" stop-color="#82B5A6" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#D5A09B" stop-opacity=".08"/>
+    </linearGradient>
+    <radialGradient id="soft-coral" cx="0" cy="0" r="1" gradientTransform="matrix(0 310 -470 0 365 286)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D8827B" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#D8827B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="soft-lilac" cx="0" cy="0" r="1" gradientTransform="matrix(0 360 -530 0 1255 696)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A9A8D8" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#A9A8D8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="365" cy="286" rx="470" ry="310" fill="url(#soft-coral)"/>
+  <ellipse cx="1255" cy="696" rx="530" ry="360" fill="url(#soft-lilac)"/>
+  <path d="M-160 240C-64 84 88 53 218 126c110 62 98 164 218 181 100 15 164-69 257-31 96 39 117 153 46 226-70 73-166 48-248 101-105 68-106 205-231 244C125 888 8 794-42 691c-61-126-196-306-118-451Z" fill="url(#coral)" opacity=".24"/>
+  <path d="M1106-111c123-58 283-8 340 110 50 103 2 179 57 248 54 68 146 53 185 132 42 85-11 181-103 202-91 22-151-46-240-27-112 24-157 146-271 139-116-7-192-126-157-239 35-112 169-127 174-229 4-81-103-128-88-225 8-53 51-91 103-111Z" fill="url(#lilac)" opacity=".3"/>
+  <path d="M378 833c75-80 178-67 235-2 47 54 41 126 105 147 63 21 113-31 174-4 67 30 87 115 42 173-46 58-126 45-190 76-89 42-102 133-203 153-102 20-204-40-225-143-21-102 75-169 54-251-14-58-66-91-57-149 4-1 20-1 65 0Z" fill="url(#mint)" opacity=".24"/>
+  <path d="M-95 192c164-98 272-81 388-24 107 53 171 67 274 13 105-55 145-139 268-143 125-4 207 91 329 74 120-16 204-113 356-115" stroke="url(#lilac)" stroke-width="38" stroke-linecap="round" opacity=".17"/>
+  <path d="M-125 684c180-114 267-119 410-39 116 65 195 118 326 53 104-52 157-174 308-173 140 1 218 125 352 83 120-37 169-150 294-205" stroke="url(#coral)" stroke-width="44" stroke-linecap="round" opacity=".17"/>
+  <circle cx="345" cy="313" r="8" fill="#C34B43" fill-opacity=".24"/>
+  <circle cx="1305" cy="674" r="11" fill="#92BEB2" fill-opacity=".3"/>
+  <circle cx="1166" cy="238" r="6" fill="#B8A7D6" fill-opacity=".4"/>
+</svg>

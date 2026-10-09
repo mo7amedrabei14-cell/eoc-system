@@ -10,6 +10,7 @@ import { normTime, formatTime12, formatDateTime12 } from './timeutils';
 import { SegDateField, SegTimeField, SegDateTimeField } from './SegInputs';
 import { translate } from './i18n.js';
 import { classifyActivity } from './activityMap';
+import { parseParticipantRows, PARTICIPANT_IMPORT_HEADERS } from './participantImport';
 // 🩺 حارس السيرفر: نبضة حقيقية على /api/health + شاشة الوقوع الحاجبة
 import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serverHealth';
 // 💾 المسودات المحلية: أي استمارة مفتوحة بتتسجّل على جهاز المستخدم قبل الإرسال
@@ -4410,6 +4411,70 @@ const MemoPowerBiView = memo(PowerBiView);
 // ==========================================
 // 3. شاشة سجل المهام واستمارة التسجيل
 // ==========================================
+// 🧹 تنظيف استيراد المشاركين من Excel — بنفس منطق تغيير «نوع المشارك» يدوياً في الجدول:
+//    • متطوع      ⇒ «صفة المشارك» تتفرّغ
+//    • غير متطوع  ⇒ «رقم العضوية» و«الفرع» يتفرّغوا
+//    التنظيف بيتم قبل ما الصفوف توصل للمُحلِّل (عشان ما يرفضش الصف)، وبعد ما تخرج منه (طبقة تانية).
+const _importCellText = (v) => {
+  if (v == null) return '';
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'object') {
+    if (Array.isArray(v.richText)) return v.richText.map(t => t.text).join('').trim();
+    if (v.text != null) return String(v.text).trim();
+    if (v.result != null) return String(v.result).trim();
+    return '';
+  }
+  return String(v).trim();
+};
+const _importParticipantType = (v) => {
+  const t = _importCellText(v).replace(/[\u064B-\u0652\u0640]/g, '').replace(/\s+/g, ' ').toLowerCase();
+  if (!t) return null;
+  if (/^غير ?متطوع/.test(t) || t === 'non_volunteer' || t === 'non-volunteer' || t === 'non volunteer') return 'non_volunteer';
+  if (t === 'متطوع' || t === 'volunteer') return 'volunteer';
+  return null;
+};
+function sanitizeParticipantImportRows(rows, headers) {
+  const find = (re) => (headers || []).findIndex(h => re.test(String(h || '')));
+  const typeCol = 0;                                   // العمود A في القالب (قائمة متطوع / غير متطوع)
+  const memCol = (() => { const k = find(/العضوية/); return k >= 0 ? k : 2; })();   // العمود C (نص) في القالب
+  const branchCol = find(/الفرع/);                     // لو العنوان مش متعرّف ⇒ نتجاوز القاعدة ولا نخمّن
+  const posCol = find(/صفة/);
+  let cleared = 0;
+  const out = (rows || []).map((row) => {
+    if (!Array.isArray(row)) return row;
+    const type = _importParticipantType(row[typeCol]);
+    if (!type) return row;                             // صف العناوين أو نوع غير معروف: بدون لمس
+    const next = row.slice();
+    const wipe = (col) => {
+      if (col >= 0 && _importCellText(next[col]) !== '') { next[col] = null; cleared += 1; }
+    };
+    if (type === 'volunteer') wipe(posCol);
+    else { wipe(memCol); wipe(branchCol); }
+    return next;
+  });
+  return { rows: out, cleared };
+}
+function sanitizeImportedParticipants(list) {
+  let cleared = 0;
+  const out = (list || []).map((p) => {
+    if (!p) return p;
+    const type = p.participant_type || 'volunteer';
+    if (type === 'volunteer') {
+      if (String(p.participant_position || '').trim()) { cleared += 1; return { ...p, participant_position: '' }; }
+      return p;
+    }
+    const hasRole = !!(String(p.participation_role || '').trim() || String(p.membership_number || '').trim());
+    const hasBranch = p.branch_id != null && p.branch_id !== '';
+    if (!hasRole && !hasBranch) return p;
+    cleared += (hasRole ? 1 : 0) + (hasBranch ? 1 : 0);
+    const next = { ...p, participation_role: '', branch_id: null };
+    if ('membership_number' in p) next.membership_number = '';
+    if ('branch_name' in p) next.branch_name = '';
+    return next;
+  });
+  return { list: out, cleared };
+}
+
 function MissionsView({ branches, isVolunteer, isJoker, isSupervisor, isOwner, isYouth = false, liveUpdateVersion, pulseMissions = [], liveMissionEvents = [], lang = 'ar', focusTarget = null }) {
   const { isSidebarOpen } = useSidebarState();
   const [customAlert, setCustomAlert] = useState(null);
@@ -5218,6 +5283,82 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
     setParticipants(prev => prev.length >= MAX_MISSION_PARTICIPANTS
       ? prev
       : [...prev, { id: `${Date.now()}-${Math.random()}` }]);
+  };
+  const handleParticipantExcelImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(await file.arrayBuffer());
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) throw new Error('الملف لا يحتوي على ورقة بيانات.');
+
+      const rows = worksheet.getSheetValues().slice(1).map(row => Array.isArray(row) ? row.slice(1) : []);
+      const prepared = sanitizeParticipantImportRows(rows, PARTICIPANT_IMPORT_HEADERS);
+      const result = parseParticipantRows(prepared.rows, branches);
+      if (result.errors.length) {
+        const visibleErrors = result.errors.slice(0, 12).join('\n');
+        const remainingErrors = result.errors.length > 12 ? `\n... ويوجد ${result.errors.length - 12} خطأ آخر.` : '';
+        setCustomAlert(`لم يتم استيراد أي صف. راجع البيانات التالية ثم أعد اختيار الملف:\n${visibleErrors}${remainingErrors}`);
+        return;
+      }
+      if (!result.participants.length) {
+        setCustomAlert('لا توجد صفوف مشاركين صالحة للاستيراد في الملف.');
+        return;
+      }
+
+      const existingParticipants = participants.filter((_, index) =>
+        String(document.getElementById(`p_name_${index}`)?.value || '').trim());
+      if (existingParticipants.length + result.participants.length > MAX_MISSION_PARTICIPANTS) {
+        setCustomAlert(`تعذر الاستيراد: الحد الأقصى ${MAX_MISSION_PARTICIPANTS} مشاركاً، والمتبقي ${MAX_MISSION_PARTICIPANTS - existingParticipants.length}.`);
+        return;
+      }
+
+      const cleaned = sanitizeImportedParticipants(result.participants);
+      const clearedTotal = prepared.cleared + cleaned.cleared;
+      setParticipants([...existingParticipants, ...cleaned.list]);
+      setCustomAlert(`تم استيراد ${result.participants.length} مشاركاً إلى الجدول.`
+        + (clearedTotal ? ` وتم تفريغ ${clearedTotal} خانة لا تخص نوع المشارك (صفة المشارك للمتطوع، رقم العضوية/الفرع لغير المتطوع).` : '')
+        + ' راجع البيانات ثم احفظ الاستمارة.');
+    } catch (error) {
+      setCustomAlert(`تعذر قراءة ملف Excel: ${error.message || 'الملف غير صالح.'}`);
+    } finally {
+      event.target.value = '';
+    }
+  };
+  const downloadParticipantTemplate = async () => {
+    try {
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('المشاركون', { views: [{ rightToLeft: true, state: 'frozen', ySplit: 1 }] });
+      worksheet.addRow(PARTICIPANT_IMPORT_HEADERS);
+      worksheet.columns = [
+        { width: 16.11 }, { width: 29.11 }, { width: 29.11 }, { width: 29.11 }, { width: 29.11 },
+      ];
+      worksheet.getColumn(3).numFmt = '@';
+      for (let row = 2; row <= MAX_MISSION_PARTICIPANTS + 1; row += 1) {
+        worksheet.getCell(`A${row}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: ['"متطوع,غير متطوع"'],
+        };
+      }
+
+      const validationWorksheet = workbook.addWorksheet('DV');
+      validationWorksheet.getCell('A1').value = 'متطوع';
+      validationWorksheet.getCell('A2').value = 'غير متطوع';
+      branches.forEach((branch, index) => {
+        validationWorksheet.getCell(index + 1, 2).value = branch.name;
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const result = await deliverFile(blob, 'قالب_المشاركين.xlsx');
+      if (result !== 'cancelled') setCustomAlert('تم تجهيز قالب المشاركين. املأ الأعمدة بالترتيب ثم استورده.');
+    } catch (error) {
+      setCustomAlert(`تعذر تجهيز قالب Excel: ${error.message || 'حدث خطأ غير متوقع.'}`);
+    }
   };
   const addBeneficiary = () => { setNoBenFlag(false); setBeneficiaries([...beneficiaries, { id: Date.now() }]); };
   const removeVehicle = (id) => setVehicles(vehicles.filter(v => v.id !== id));
@@ -6278,6 +6419,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
     field_completion_date: 'تاريخ الانتهاء (لإنهاء المهمة)',
     field_completion_time: 'ساعة الانتهاء (لإنهاء المهمة)',
     field_participant_position: 'صفة المشارك (لغير المتطوعين)',
+    field_participant_requirements: 'رقم العضوية والفرع للمتطوع، والصفة لغير المتطوع',
   };
 
   // 🔎 قراءة الحقول الإلزامية الناقصة من الـ DOM (المصدر الحقيقي للبيانات)
@@ -6286,12 +6428,14 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
     const missing = [];
     if (!v('f_exit_date')) missing.push('field_exit_date');
     if (!v('f_departure_time')) missing.push('field_departure_time');
-    if (!(participants || []).some(p => String(p.full_name || '').trim() !== '')) missing.push('field_participants');
-    // 🆕 صفة المشارك إلزامية لكل مشارك غير متطوع (المتطوع يُعرف برقم العضوية فقط)
+    if (!(participants || []).some((_, i) => v(`p_name_${i}`))) missing.push('field_participants');
     const positionMissing = participants.some((p, i) =>
-      (p.participant_type || 'volunteer') === 'non_volunteer' &&
-      !String(document.getElementById(`p_position_${i}`)?.value || '').trim());
+      (p.participant_type || 'volunteer') === 'non_volunteer' && !v(`p_position_${i}`));
     if (positionMissing) missing.push('field_participant_position');
+    const volunteerRequirementsMissing = participants.some((_, i) =>
+      v(`p_name_${i}`) && (v(`p_type_${i}`) || 'volunteer') === 'volunteer' &&
+      (!v(`p_role_${i}`) || !v(`p_branch_${i}`)));
+    if (volunteerRequirementsMissing) missing.push('field_participant_requirements');
     // 🆕 الإلزام على **كل** بلوكات الهيكل الإداري: الأول من الـ DOM، والإضافية من حالة React
     const REQUIRED_ADMIN = [
       ['مسؤول المتابعة', 'eoc_leader', 'field_leader'],
@@ -6592,7 +6736,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
            team_name: document.getElementById(`p_team_${i}`)?.value || '',
            participation_role: document.getElementById(`p_role_${i}`)?.value || '',
            participant_position: document.getElementById(`p_position_${i}`)?.value || '',
-           branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || 19),
+           branch_id: parseInt(document.getElementById(`p_branch_${i}`)?.value || '', 10) || null,
            assigned_itinerary: hasDayGroups ? '' : (getSelectedOptionSourceText(document.getElementById(`p_itin_${i}`)) || 'خط السير الأساسي'),
            return_status: submitStatus === 'Completed' ? 'تم انتهاء مهمتة' : 'مازال بالمهمة',
            phase_name: document.getElementById(`p_phase_${i}`)?.value || 'اليوم الأول',
@@ -7262,8 +7406,8 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
         </div>
       </div>
 
-      {isModalOpen && (
-        <div key={currentMissionData ? `edit-${currentMissionData.mission_id}` : 'new'} className="modal-backdrop fixed inset-0 flex items-center justify-center z-[200] p-4">
+      {isModalOpen && createPortal(
+        <div key={currentMissionData ? `edit-${currentMissionData.mission_id}` : 'new'} className="modal-backdrop fixed inset-0 flex items-center justify-center z-[1000] p-4">
           <div className={`modal-card w-full max-w-6xl h-full max-h-[95vh] flex flex-col overflow-hidden ${formGlowOn ? 'update-glow' : ''}`}>
 
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
@@ -7506,8 +7650,18 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                 </div>
               </SectionCard>
 
-              <SectionCard title={<span>القوة البشرية والمشاركين <span className="text-[var(--accent)]">*</span></span>} icon={<UsersIcon />} actionBtn={<button onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>}>
+              <SectionCard title={<span>القوة البشرية والمشاركين <span className="text-[var(--accent)]">*</span></span>} icon={<UsersIcon />} actionBtn={
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={addParticipant} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">+ إضافة مشارك</button>
+                  <label className="text-xs text-[var(--info)] hover:text-white font-bold bg-[var(--info-soft)] px-3 py-1.5 rounded-lg cursor-pointer">
+                    استيراد Excel
+                    <input type="file" accept=".xlsx" className="hidden" onChange={handleParticipantExcelImport} />
+                  </label>
+                  <button type="button" onClick={downloadParticipantTemplate} className="text-xs text-[var(--muted-2)] hover:text-white font-bold bg-[var(--surface-3)] px-3 py-1.5 rounded-lg">تنزيل القالب</button>
+                </div>
+              }>
                 {requiredTouched && missingFields.includes('field_participants') && <p className="text-[var(--accent)] text-xs font-bold mb-2 flex items-center gap-1.5 px-1">⚠ يجب إضافة مشارك واحد على الأقل بالاسم لإتمام أي عملية على المهمة.</p>}
+                {requiredTouched && missingFields.includes('field_participant_requirements') && <p className="text-[var(--accent)] text-xs font-bold mb-2 px-1">⚠ رقم العضوية والفرع إلزاميان للمتطوع، وصفة المشارك إلزامية لغير المتطوع.</p>}
                 <div className={`overflow-x-auto bg-[var(--surface-4)] rounded-xl border ${requiredTouched && missingFields.includes('field_participants') ? 'border-[var(--accent)]/60' : 'border-[var(--border)]'}`}>
                   <table className="w-full text-right text-sm min-w-[70rem]">
                     <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-[var(--border)]">
@@ -7529,7 +7683,13 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                         <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
                           <td data-label="م" className="p-2 text-center text-[var(--muted-2)] font-bold">{index + 1}</td>
                           <td data-label="النوع" className="p-2">
-                            <EocSelect variant="cell" id={`p_type_${index}`} value={p.participant_type || 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_type = e.target.value; setParticipants(newP); }}>
+                            <EocSelect variant="cell" id={`p_type_${index}`} value={p.participant_type || 'volunteer'} onChange={(e) => {
+                              const participantType = e.target.value;
+                              setParticipants(previous => previous.map((participant, participantIndex) => participantIndex === index
+                                ? { ...participant, participant_type: participantType, participation_role: '', participant_position: '', branch_id: null }
+                                : participant));
+                              bumpValidation();
+                            }}>
                               <option value="volunteer" className="bg-[var(--surface-4)]">متطوع</option>
                               <option value="non_volunteer" className="bg-[var(--surface-4)]">غير متطوع</option>
                             </EocSelect>
@@ -7541,10 +7701,10 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                             </datalist>
                           </td>
                           <td data-label="رقم العضوية" className="p-2">
-                            <input id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : '—'} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : 'text-white'}`} />
+                            <input key={`p-role-${p.id}-${p.participant_type || 'volunteer'}`} id={`p_role_${index}`} type="text" defaultValue={p.participation_role || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? 'رقم العضوية...' : '—'} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'} onChange={bumpValidation} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'non_volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : 'text-white'}`} />
                           </td>
                           <td data-label="صفة المشارك" className="p-2">
-                            <input id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
+                            <input key={`p-position-${p.id}-${p.participant_type || 'volunteer'}`} id={`p_position_${index}`} type="text" defaultValue={p.participant_position || ''} placeholder={(p.participant_type || 'volunteer') === 'volunteer' ? '—' : 'اكتب صفة المشارك...'} disabled={(p.participant_type || 'volunteer') === 'volunteer'} onChange={(e) => { const newP = [...participants]; newP[index].participant_position = e.target.value; setParticipants(newP); bumpValidation(); }} className={`eoc-manual-field bg-transparent outline-none w-full ${(p.participant_type || 'volunteer') === 'volunteer' ? 'text-[var(--muted-2)] cursor-not-allowed' : (requiredTouched && !String(p.participant_position || '').trim() ? 'text-[var(--accent)]' : 'text-white')}`} />
                           </td>
 
                           {/* الفريق — حقل يدوي فارغ by default، يُستخدم لتسمية الفرق الداخلي */}
@@ -7617,7 +7777,8 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
 
                           {/* الفرع — كل الفروع بدون فلترة (داخل جدول المشاركين فقط) */}
                           <td data-label="الفرع" className="p-2">
-                            <EocSelect variant="cell" id={`p_branch_${index}`} defaultValue={p.branch_id || userBranchId} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'}>
+                            <EocSelect key={`p-branch-${p.id}-${p.participant_type || 'volunteer'}`} variant="cell" id={`p_branch_${index}`} defaultValue={p.branch_id || ''} disabled={(p.participant_type || 'volunteer') === 'non_volunteer'} onChange={bumpValidation}>
+                              <option value="" className="bg-[var(--surface-4)]">—</option>
                               {branches.map(b => (
                                 <option key={b.id} value={b.id} className="bg-[var(--surface-4)]">{b.name}</option>
                               ))}
@@ -8133,7 +8294,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
             )}
             </div>
         </div>
-      )}
+      , document.body)}
       <DangerConfirmModal
   show={showClearAllConfirm}
   title="تأكيد الحذف"
@@ -16318,7 +16479,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
                   <td data-label="الاسم" className="p-4 font-semibold">{person.full_name}</td>
                   <td data-label="رقم العضوية / الصفة" className="p-4">{person.membership_number}</td>
                   <td data-label="صفة المشارك" className="p-4">{person.participant_position || '—'}</td>
-                  <td data-label="الفرع التابع له" className="p-4">{person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
+                  <td data-label="الفرع التابع له" className="p-4">{person.participant_type === 'non_volunteer' ? '—' : person.branch_name === 'القاهرة' ? 'المركز العام' : person.branch_name}</td>
                   <td data-label="النوع" className="p-4 text-center">{person.participant_type === 'volunteer' ? 'متطوع' : 'غير متطوع'}</td>
                   <td data-label="الحالة الآن" className="p-4 text-center">{person.active_mission ? 'في مهمة حاليًا' : 'ليس في مهمة حاليًا'}</td>
                   <td data-label="عدد المهام" className="p-4 text-center">{person.missions_count}</td>
