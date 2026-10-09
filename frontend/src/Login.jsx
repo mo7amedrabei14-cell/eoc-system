@@ -299,16 +299,9 @@ export default function Login() {
     }
   }, []);
 
-  // معامل الـ zoom الفعلي (1 لو مفيش zoom): القياس البصري ÷ قياس الـ layout.
-  // ضروري لأن شاشة الدخول بتتصغّر بـ CSS zoom، وgetBoundingClientRect بيرجّع قيم بصرية.
-  const uiScale = () => {
-    const el = trackRef.current;
-    return el && el.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1;
-  };
-
   const readMax = () => {
     const rect = trackRef.current && trackRef.current.getBoundingClientRect();
-    return rect ? Math.max(1, rect.width / uiScale() - HANDLE_SIZE - 8) : maxRef.current;
+    return rect ? Math.max(1, rect.width - HANDLE_SIZE - 8) : maxRef.current;
   };
 
   const completeUnlock = () => {
@@ -364,12 +357,11 @@ export default function Login() {
   const handlePointerMove = (e) => {
     if (!isDragging || !trackRef.current) return;
     const trackRect = trackRef.current.getBoundingClientRect();
-    const s = uiScale();
-    const maxX = Math.max(1, trackRect.width / s - HANDLE_SIZE - 8);
+    const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
     maxRef.current = maxX;
     // 🎯 تتبّع 1:1 — لا تصفية ولا «مغناطيسية»: ما يلمسه الإصبع هو ما يُرسم في
     // نفس الإطار. (اللمسة المغناطيسية القديمة كانت تضيف لاجًا محسوسًا).
-    const fromStart = (e.clientX - trackRect.left) / s;
+    const fromStart = e.clientX - trackRect.left;
     const x = Math.max(0, Math.min(fromStart - HANDLE_SIZE / 2, maxX));
     // سرعة الإيماءة (px/s) مع تنعيم بسيط ⇒ تُستخدم كـ «throw» عند الإفلات،
     // فيكمل المقبض حركته بنفس زخم الإصبع بدل أن يتجاهله.
@@ -426,7 +418,7 @@ export default function Login() {
   const handleKnobKey = (e) => {
     if (!trackRef.current || isDragging || isUnlocking) return;
     const trackRect = trackRef.current.getBoundingClientRect();
-    const maxX = Math.max(1, trackRect.width / uiScale() - HANDLE_SIZE - 8);
+    const maxX = Math.max(1, trackRect.width - HANDLE_SIZE - 8);
     // لوحة المفاتيح تتبع نفس الاتجاه: السهم الأيمن للتقدم.
     const isFwd = e.key === 'ArrowRight';
     const isBack = e.key === 'ArrowLeft';
