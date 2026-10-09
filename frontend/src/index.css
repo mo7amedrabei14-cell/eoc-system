@@ -452,8 +452,8 @@
    كان الـ root = 17.42px على 1920 (أكبر من الطبيعي بـ 9%) وده سبب إحساس «الزووم».
    دلوقتي: root = 16px × --ui-zoom. أصغر رقم مريح للقراءة تقريباً .62 */
 :root { --ui-zoom: 1; }
-@media (min-width: 1024px) { :root { --ui-zoom: .66; } }  /* لابتوب 1024–1599 */
-@media (min-width: 1600px) { :root { --ui-zoom: .70; } }  /* 1600 / 1920 */
+@media (min-width: 1024px) { :root { --ui-zoom: .70; } }  /* لابتوب 1024–1599 */
+@media (min-width: 1600px) { :root { --ui-zoom: .74; } }  /* 1600 / 1920 */
 @media (min-width: 2560px) { :root { --ui-zoom: .90; } }  /* شاشات كبيرة جداً */
 
 html {

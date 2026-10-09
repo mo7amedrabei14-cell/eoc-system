@@ -3287,12 +3287,12 @@ useEffect(() => {
     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     title={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
     aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
-    className="relative w-[74px] h-10 rounded-full p-1 bg-[var(--surface-3)] border border-[var(--border-strong)] transition-all duration-300 hover:border-[var(--accent-soft)] active:scale-[0.97] shrink-0"
+    className="relative w-[58px] h-9 rounded-full p-1 bg-[var(--surface-3)] border border-[var(--border-strong)] transition-all duration-300 hover:border-[var(--accent-soft)] active:scale-[0.97] shrink-0"
   >
     <svg className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--faint)] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg className="absolute end-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--faint)] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
     <span
-      className={`absolute top-1 w-8 h-8 rounded-full flex items-center justify-center bg-[var(--accent)] text-white shadow-[var(--shadow-accent)] transition-all duration-500 ${theme === 'dark' ? 'start-1' : 'start-[34px]'}`}
+      className={`absolute top-1 w-7 h-7 rounded-full flex items-center justify-center bg-[var(--accent)] text-white shadow-[var(--shadow-accent)] transition-all duration-500 ${theme === 'dark' ? 'start-1' : 'start-[34px]'}`}
     >
       {theme === 'dark' ? (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
