@@ -560,6 +560,19 @@ html[dir="rtl"] { --slide-dir: 1; }
   to { opacity: 0; transform: translateX(-16px); }
 }
 
+/* One system-wide escape hatch: all routes honor the user's motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Stagger helper for lists */
 .stagger-children > * { animation: fade-in-up var(--dur-base) var(--ease-out-quick) both; }
 .stagger-children > *:nth-child(1)  { animation-delay: calc(var(--stagger-delay, 40ms) * 0); }
@@ -1600,9 +1613,9 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 /* unread count makes the corona inhale: the bell fills with each new signal */
 .bell-wrap.is-glowing .bell-ring { animation: bell-inhale 2.4s ease-in-out infinite, bell-ring-spin 2.2s linear infinite; }
 .icon-btn:has(.bell-ring) { overflow: visible !important; }
-@media (prefers-reduced-motion: reduce) { .bell-ring, .bell-ring::after { animation-duration: 4.5s; } }
+@media (prefers-reduced-motion: reduce) { .bell-ring, .bell-ring::after { animation: none; } }
 .bell-wrap.is-glowing .bell-ring::after { animation-duration: 1.5s; }
-@keyframes bell-inhale { 0%,100% { filter: drop-shadow(0 0 5px rgba(255, 122, 40, 0.6)); } 50% { filter: drop-shadow(0 0 15px rgba(255, 90, 30, 0.95)) drop-shadow(0 0 26px rgba(255, 60, 20, 0.5)); } }
+@keyframes bell-inhale { 0%,100% { opacity: 0.78; } 50% { opacity: 1; } }
 @keyframes dropdown-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to   { opacity: 0; transform: translateY(-6px) scale(0.98); }
@@ -1851,7 +1864,9 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   background: var(--surface-2);
   color: var(--muted);
   border: 1px solid var(--border);
-  transition: all var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
   cursor: pointer;
 }
 .chip:hover { color: var(--ink); border-color: var(--border-strong); }
@@ -2891,7 +2906,7 @@ select.field {
   background: var(--surface-3);
   color: var(--muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
   white-space: nowrap;
 }
 .gov-channel-chip:hover { color: var(--ink); border-color: var(--accent); }

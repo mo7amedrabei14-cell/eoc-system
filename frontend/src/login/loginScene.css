@@ -8,7 +8,7 @@
    المبادئ:
      • transform + opacity فقط في الحركات (لا reflow).
      • كل الألوان من توكنات الثيم (--bg/--surface/--accent/...) ⇒ يعمل في الداكن والفاتح.
-     • لا prefers-reduced-motion — التجربة الكاملة مفعّلة.
+     • احترام prefers-reduced-motion مع الإبقاء على الحركة المركّبة للأجهزة الأخرى.
      • Glass وصفات موحّدة: --glass-heavy, --glass-medium, --glass-light
      • حركة موحّدة: --spring-tight, --spring-soft, --ease-out-quick
      • ظلال خفيفة: --shadow-contact, --shadow-ambient, --shadow-elevated

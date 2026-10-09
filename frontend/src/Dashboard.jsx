@@ -1,4 +1,4 @@
-import { cloneElement, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
@@ -24,6 +24,32 @@ import { BASE } from './apiBase';
 // ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
 //    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
 import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
+
+const SidebarStateContext = createContext(null);
+const SIDEBAR_CLOSE_EVENT = 'eoc:sidebar-close';
+
+function SidebarStateProvider({ children }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const value = useMemo(() => ({ isSidebarOpen, setIsSidebarOpen }), [isSidebarOpen]);
+
+  useEffect(() => {
+    const closeSidebar = () => setIsSidebarOpen(false);
+    window.addEventListener(SIDEBAR_CLOSE_EVENT, closeSidebar);
+    return () => window.removeEventListener(SIDEBAR_CLOSE_EVENT, closeSidebar);
+  }, []);
+
+  return <SidebarStateContext.Provider value={value}>{children}</SidebarStateContext.Provider>;
+}
+
+function useSidebarState() {
+  const state = useContext(SidebarStateContext);
+  if (!state) throw new Error('Sidebar state must be used within SidebarStateProvider');
+  return state;
+}
+
+function SidebarStateSlot({ children }) {
+  return children(useSidebarState());
+}
 
 // 📤 الطابور المحلي + أرشيف المرفوضات + مخزن الطقس المعلّق:
 //    المنطق ده كله مطلوع لملف نقي قابل للاختبار — frontend/src/outbox.js
@@ -1716,67 +1742,6 @@ function fmtHours(hours, lang = 'ar') {
   return ar ? `${h}س ${mm}د` : `${h}h ${mm}m`;
 }
 
-function SidebarTooltipLayer({ children, enabled, direction }) {
-  const [tooltip, setTooltip] = useState(null);
-
-  const showTooltip = useCallback((event) => {
-    if (!enabled || window.innerWidth < 768 || !(event.target instanceof Element)) return;
-    if (event.type === 'focus' && !event.target.matches(':focus-visible')) return;
-
-    const trigger = event.target.closest('[data-sidebar-tooltip]');
-    if (!trigger || (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget))) return;
-
-    const label = trigger.getAttribute('data-sidebar-tooltip');
-    if (!label) return;
-
-    const rect = trigger.getBoundingClientRect();
-    const side = direction === 'rtl' ? 'left' : 'right';
-    const top = Math.max(24, Math.min(rect.top + rect.height / 2, window.innerHeight - 24));
-    const left = side === 'left' ? rect.left - 10 : rect.right + 10;
-    setTooltip({ label, left, top, side, direction, trigger });
-  }, [direction, enabled]);
-
-  const hideTooltip = useCallback((event) => {
-    if (!(event.target instanceof Element)) return;
-    const trigger = event.target.closest('[data-sidebar-tooltip]');
-    if (!trigger || (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget))) return;
-    if (event.type === 'pointerout' && trigger.contains(document.activeElement)
-      && document.activeElement.matches(':focus-visible')) return;
-    if (event.type === 'blur' && trigger.matches(':hover')) return;
-    setTooltip(null);
-  }, []);
-
-  const clearTooltip = useCallback(() => setTooltip(null), []);
-
-  return (
-    <Fragment>
-      {cloneElement(children, {
-        onPointerOver: showTooltip,
-        onPointerOut: hideTooltip,
-        onFocusCapture: showTooltip,
-        onBlurCapture: hideTooltip,
-        onScrollCapture: clearTooltip,
-      })}
-      {tooltip && enabled && tooltip.direction === direction && tooltip.trigger.isConnected
-        && (tooltip.trigger.matches(':hover')
-          || (document.activeElement === tooltip.trigger && tooltip.trigger.matches(':focus-visible')))
-        && createPortal(
-          <div
-            className="sidebar-tooltip"
-            data-side={tooltip.side}
-            dir={direction}
-            role="tooltip"
-            aria-hidden="true"
-            style={{ left: `${tooltip.left}px`, top: `${tooltip.top}px` }}
-          >
-            {tooltip.label}
-          </div>,
-          document.body,
-        )}
-    </Fragment>
-  );
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const initialAuthRef = useRef(getStoredAuth());
@@ -3145,7 +3110,7 @@ useEffect(() => {
                         type="button"
                         onMouseEnter={() => setPaletteIndex(palFlat.indexOf(it))}
                         onClick={() => runPalette(it)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-start transition-all duration-150 ${isSel ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-accent)] scale-[1.01]' : 'text-[var(--ink)] hover:bg-[var(--surface-2)]'} ${it.danger ? 'text-[var(--accent)]' : ''}`}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-start transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-150 ${isSel ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-accent)] scale-[1.01]' : 'text-[var(--ink)] hover:bg-[var(--surface-2)]'} ${it.danger ? 'text-[var(--accent)]' : ''}`}
                       >
                         <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${isSel ? 'bg-white/15 border-white/25' : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'}`}>{it.icon}</span>
                         <span className="flex-1 min-w-0">
@@ -3174,7 +3139,6 @@ useEffect(() => {
 
       <div className={`sidebar-backdrop ${isSidebarOpen ? 'is-visible' : ''} block md:hidden`} onClick={() => setIsSidebarOpen(false)} />
 
-      <SidebarTooltipLayer enabled={!isSidebarOpen} direction={language === 'en' ? 'ltr' : 'rtl'}>
         <aside className={`sidebar-shell flex flex-col justify-between fixed md:sticky top-0 h-screen z-[70] ${isSidebarOpen ? 'is-open right-0 w-64 md:w-72' : 'is-collapsed -right-80 md:right-0 w-64 md:w-20'}`}>
         <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className={`sidebar-heading relative ${isSidebarOpen ? 'is-expanded' : 'is-collapsed'}`}>
@@ -3292,7 +3256,6 @@ useEffect(() => {
           </button>
         </div>
         </aside>
-      </SidebarTooltipLayer>
 
       <main id="main-scroll-container" className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative">
         <header className="glass-header px-4 md:px-8 py-3.5 md:py-4 flex items-center gap-3 md:gap-4 sticky top-0 z-40">
@@ -3334,7 +3297,7 @@ useEffect(() => {
     onClick={() => setPaletteOpen(true)}
     title={language === 'ar' ? 'بحث سريع (Ctrl+K)' : 'Quick search (Ctrl+K)'}
     aria-label={language === 'ar' ? 'بحث سريع' : 'Quick search'}
-    className="hidden md:flex items-center gap-2 h-10 px-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-strong)] text-[var(--muted)] text-sm font-semibold hover:border-[var(--accent-soft)] hover:text-[var(--ink)] transition-all duration-200 active:scale-[0.97] shrink-0"
+    className="hidden md:flex items-center gap-2 h-10 px-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-strong)] text-[var(--muted)] text-sm font-semibold hover:border-[var(--accent-soft)] hover:text-[var(--ink)] transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 active:scale-[0.97] shrink-0"
   >
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
     <span className="tracking-wide">{language === 'en' ? 'Search' : 'بحث'}</span>
@@ -4395,7 +4358,7 @@ function PowerBiView({ lang = 'ar' }) {
           className="group absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
                      text-[var(--ink)] bg-[var(--surface-2)]/85 backdrop-blur-md
                      border border-[var(--border-strong)] shadow-[var(--shadow-1)]
-                     transition-all duration-200 ease-[var(--ease-out)]
+                     transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 ease-[var(--ease-out)]
                      hover:bg-[var(--accent)] hover:text-white hover:border-[var(--accent)] hover:shadow-[var(--shadow-accent)]
                      active:scale-95"
         >
@@ -7112,14 +7075,14 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
       )}
 
 
-      <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
+      <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، ID، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {searchTerm && <button onClick={() => setSearchTerm('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
 
       {/* 🔎 بحث باسم المشارك/المتطوع — نفس الستايل والسلوك، RTL كامل، لا يغيّر أي فلتر موجود */}
-      <div className="mt-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-all">
+      <div className="mt-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
         <input type="text" placeholder="بحث باسم المشارك أو المتطوع أو رقم العضوية..." value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {participantSearch && <button onClick={() => setParticipantSearch('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
@@ -8135,7 +8098,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
                       } else {
                         setReturnError('برجاء كتابة سبب الإرجاع بوضوح لتوجيه المتطوع!');
                       }
-                    }} disabled={isSubmitting} className="btn-warn flex-1 px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_18px_var(--warn-soft)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">تأكيد الإرجاع</button>
+                    }} disabled={isSubmitting} className="btn-warn flex-1 px-4 py-3 rounded-xl text-sm font-bold shadow-[0_0_18px_var(--warn-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform] disabled:opacity-40 disabled:cursor-not-allowed">تأكيد الإرجاع</button>
                   </div>
                 </div>
               </div>
@@ -8177,7 +8140,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
             <span className="text-xs font-bold text-[var(--accent)]">{zipJob.done}/{zipJob.total}</span>
           </div>
           <div className="h-1.5 rounded-full bg-[var(--surface-4)] overflow-hidden">
-            <div className="h-full bg-[var(--accent)] transition-all duration-300" style={{ width: `${zipJob.total ? Math.round((zipJob.done / zipJob.total) * 100) : 0}%` }} />
+            <div className="h-full bg-[var(--accent)] transition-[width] duration-300" style={{ width: `${zipJob.total ? Math.round((zipJob.done / zipJob.total) * 100) : 0}%` }} />
           </div>
           <p className="mt-2 text-[max(0.6875rem,9.5px)] text-[var(--muted)] truncate">{zipJob.name}</p>
           <button type="button" onClick={() => { zipCancelRef.current = true; }} className="mt-3 w-full text-[max(0.6875rem,9.5px)] font-bold text-[var(--muted-2)] hover:text-[var(--accent)]">إلغاء</button>
@@ -8825,14 +8788,14 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
           
           {/* فلتر القطاع (مهام / أخبار) */}
           <div className="flex flex-wrap items-center gap-1 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
-            <button onClick={() => setEntityFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'all' ? 'bg-[var(--surface-3)] text-[var(--ink)]' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
-            <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>المهام</button>
-            <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'local_news' ? 'bg-[var(--accent)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الأخبار المحلية</button>
-            <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكوارث العالمية</button>
-            <button onClick={() => setEntityFilter('earthquake')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'earthquake' ? 'bg-purple-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الزلازل</button>
-            <button onClick={() => setEntityFilter('handover')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'handover' ? 'bg-teal-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>تسليم وتسلم مشرفين</button>
+            <button onClick={() => setEntityFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${entityFilter === 'all' ? 'bg-[var(--surface-3)] text-[var(--ink)]' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
+            <button onClick={() => setEntityFilter('mission')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${entityFilter === 'mission' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>المهام</button>
+            <button onClick={() => setEntityFilter('local_news')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${entityFilter === 'local_news' ? 'bg-[var(--accent)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الأخبار المحلية</button>
+            <button onClick={() => setEntityFilter('global_disaster')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${entityFilter === 'global_disaster' ? 'bg-orange-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكوارث العالمية</button>
+            <button onClick={() => setEntityFilter('earthquake')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${entityFilter === 'earthquake' ? 'bg-purple-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الزلازل</button>
+            <button onClick={() => setEntityFilter('handover')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${entityFilter === 'handover' ? 'bg-teal-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>تسليم وتسلم مشرفين</button>
             {/* 💡 الزرار الجديد لفلترة النظام */}
-            <button onClick={() => setEntityFilter('system')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${entityFilter === 'system' ? 'bg-[var(--surface-4)] text-[var(--ink)]' : 'text-[var(--muted-2)] hover:text-white'}`}>النظام</button>
+            <button onClick={() => setEntityFilter('system')} className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${entityFilter === 'system' ? 'bg-[var(--surface-4)] text-[var(--ink)]' : 'text-[var(--muted-2)] hover:text-white'}`}>النظام</button>
           </div>
 
           <input type="text" placeholder="بحث باسم المستخدم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-[var(--surface-3)] border border-[var(--border)] focus:border-[var(--accent)]/50 text-white rounded-xl px-4 py-2 text-sm outline-none w-48 shrink-0" />
@@ -10374,7 +10337,7 @@ const visibleBranches = (
                 key={s.key}
                 type="button"
                 onClick={() => setShift(s.key)}
-                className={`px-2.5 py-1 rounded-xl text-[max(0.6875rem,9.5px)] font-bold whitespace-nowrap transition-all ${shift === s.key ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
+                className={`px-2.5 py-1 rounded-xl text-[max(0.6875rem,9.5px)] font-bold whitespace-nowrap transition-[color,background-color,border-color,opacity,box-shadow,transform] ${shift === s.key ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
               >
                 {T(s.ar, s.en)}
               </button>
@@ -13132,7 +13095,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
           <div className="space-y-2">
             {quakes.map((q) => (
               <div key={q.eq_intel_id} id={`focus-row-${q.eq_intel_id}`}
-                className={`flex flex-wrap items-center gap-x-4 gap-y-1 p-3 rounded-2xl border transition-all ${focusedRowId === q.eq_intel_id ? 'border-[var(--accent)] bg-[var(--accent-softer)] ring-2 ring-[var(--accent)] animate-pulse' : 'bg-[var(--surface-2)] border-white/5'}`}>
+                className={`flex flex-wrap items-center gap-x-4 gap-y-1 p-3 rounded-2xl border transition-[color,background-color,border-color,opacity,box-shadow,transform] ${focusedRowId === q.eq_intel_id ? 'border-[var(--accent)] bg-[var(--accent-softer)] ring-2 ring-[var(--accent)] animate-pulse' : 'bg-[var(--surface-2)] border-white/5'}`}>
                 <span className={`text-lg font-extrabold w-14 ${magColor(q.magnitude)}`}>{q.magnitude != null ? fmtMag(q.magnitude) : '؟'}</span>
                 <span className="text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--muted)]">{q.status || ''}</span>
                 <span dir="ltr" className="text-sm text-[var(--ink)] flex-1 min-w-40 text-right">{q.place || T('غير محدد', 'Unknown')}</span>
@@ -13517,7 +13480,7 @@ const [clearAllCode, setClearAllCode] = useState('');
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد (<span className="text-[var(--accent)]">عالمي 🔴</span> / <span className="text-[var(--ok)]">مصر 🟢</span>)</h3>
             {selectedEqId && (
-              <button onClick={() => setSelectedEqId(null)} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white border border-[var(--border)] px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-[0_0_10px_rgba(199,0,0,0.3)]">
+              <button onClick={() => setSelectedEqId(null)} className="bg-[var(--surface-4)] hover:bg-[var(--accent)] text-[var(--muted-2)] hover:text-white border border-[var(--border)] px-3 py-1 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] shadow-[0_0_10px_rgba(199,0,0,0.3)]">
                 إلغاء الفلترة
               </button>
             )}
@@ -13525,9 +13488,9 @@ const [clearAllCode, setClearAllCode] = useState('');
           
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex gap-2 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
-              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'global' ? 'bg-[var(--accent)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>عالمي</button>
-              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'egypt' ? 'bg-[var(--ok)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>مصر</button>
-              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
+              <button onClick={() => setActiveEqTab('global')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${activeEqTab === 'global' ? 'bg-[var(--accent)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>عالمي</button>
+              <button onClick={() => setActiveEqTab('egypt')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${activeEqTab === 'egypt' ? 'bg-[var(--ok)] text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>مصر</button>
+              <button onClick={() => setActiveEqTab('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${activeEqTab === 'all' ? 'bg-blue-600 text-white' : 'text-[var(--muted-2)] hover:text-white'}`}>الكل</button>
             </div>
             <div className="flex items-center gap-2 bg-[var(--surface-3)] p-1 rounded-xl border border-[var(--border)] shadow-inner">
               <SegDateField value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent px-3 py-1.5 text-sm text-white outline-none cursor-pointer" />
@@ -14455,7 +14418,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                 type="button"
                 onClick={handleTriggerRun}
                 disabled={isTriggering}
-                className="ops-btn bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+                className="ops-btn bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 px-4 py-2.5 rounded-xl font-bold text-sm shadow-md transition-[color,background-color,border-color,opacity,box-shadow,transform] flex items-center gap-2 disabled:opacity-50"
               >
                 <span className={isTriggering ? "animate-spin" : ""}>⚡</span>
                 {isTriggering ? T('جارٍ إطلاق التحليل...', 'Triggering...') : T('تشغيل التحليل الآن', 'Run Analysis Now')}
@@ -14466,7 +14429,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
               <button
                 type="button"
                 onClick={handleExportExcel}
-                className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+                className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-4 py-2.5 rounded-xl font-bold text-sm transition-[color,background-color,border-color,opacity,box-shadow,transform] flex items-center gap-2"
               >
                 <span>📊</span>
                 {T('تصدير التقرير (Excel)', 'Export Excel')}
@@ -14476,7 +14439,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <button
               type="button"
               onClick={() => setShowRunsModal(true)}
-              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-3.5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-3.5 py-2.5 rounded-xl font-bold text-sm transition-[color,background-color,border-color,opacity,box-shadow,transform] flex items-center gap-2"
               title={T('سجل التشغيلات', 'Runs History')}
             >
               <span>📜</span>
@@ -14486,7 +14449,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <button
               type="button"
               onClick={() => setShowConfigModal(true)}
-              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-all"
+              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-[color,background-color,border-color,opacity,box-shadow,transform]"
               title={T('العتبات والإعدادات الفنية', 'Technical Config')}
             >
               <span>⚙️</span>
@@ -14495,7 +14458,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <button
               type="button"
               onClick={fetchWeatherIntelData}
-              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-all"
+              className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-[color,background-color,border-color,opacity,box-shadow,transform]"
               title={T('تحديث البيانات', 'Refresh')}
             >
               <span>🔄</span>
@@ -14538,13 +14501,13 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
           {/* تبويبات الفلترة السريعة */}
           <div className="flex items-center gap-1.5 bg-[var(--surface-2)] p-1 rounded-2xl border border-[var(--border)] self-start md:self-auto overflow-x-auto max-w-full">
-            <button type="button" onClick={() => setActiveFilterTab('all')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeFilterTab === 'all' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+            <button type="button" onClick={() => setActiveFilterTab('all')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${activeFilterTab === 'all' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
               {T('الكل', 'All')} ({assessmentsData.length})
             </button>
-            <button type="button" onClick={() => setActiveFilterTab('hazards')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeFilterTab === 'hazards' ? 'bg-red-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+            <button type="button" onClick={() => setActiveFilterTab('hazards')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] flex items-center gap-1 ${activeFilterTab === 'hazards' ? 'bg-red-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
               ⚠️ {T('المخاطر المرصودة', 'Hazards')} ({kpiHazardsCount})
             </button>
-            <button type="button" onClick={() => setActiveFilterTab('anomalies')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${activeFilterTab === 'anomalies' ? 'bg-amber-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
+            <button type="button" onClick={() => setActiveFilterTab('anomalies')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] flex items-center gap-1 ${activeFilterTab === 'anomalies' ? 'bg-amber-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
               📈 {T('الشذوذ الإحصائي', 'Anomalies')} ({kpiAnomaliesCount})
             </button>
           </div>
@@ -14675,7 +14638,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
               type="button"
               onClick={fetchWeatherIntelData}
               disabled={isLoading}
-              className="ops-btn shrink-0 bg-red-600 text-white hover:bg-red-500 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+              className="ops-btn shrink-0 bg-red-600 text-white hover:bg-red-500 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-[color,background-color,border-color,opacity,box-shadow,transform] disabled:opacity-50"
             >
               {T('إعادة المحاولة', 'Retry')}
             </button>
@@ -14719,7 +14682,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             const aiJson = item.ai_assessment_json;
 
             return (
-              <div key={item.id || locId} className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden shadow-sm transition-all hover:shadow-md">
+              <div key={item.id || locId} className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden shadow-sm transition-[color,background-color,border-color,opacity,box-shadow,transform] hover:shadow-md">
                 {/* رأس كارت الموقع */}
                 <div className="bg-gradient-to-r from-[var(--surface-2)] via-[var(--surface-3)] to-[var(--surface-2)] p-4 md:p-6 border-b border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
@@ -14897,7 +14860,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                               <span className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] font-mono" dir="ltr">({f.qualifying_count} / {f.total_count})</span>
                             </div>
                             <div className="w-full bg-[var(--surface-3)] h-1.5 rounded-full mt-2 overflow-hidden">
-                              <div className="bg-[var(--accent)] h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(f.frequency_pct, 100)}%` }} />
+                              <div className="bg-[var(--accent)] h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(f.frequency_pct, 100)}%` }} />
                             </div>
                           </div>
                         ))}
@@ -15403,7 +15366,7 @@ const totalAiCountries = new Set(
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2"><MapIcon/> خريطة الرصد اللحظي للذكاء الاصطناعي</h3>
           {selectedAiNewsId && (
-            <button onClick={() => setSelectedAiNewsId(null)} className="bg-[var(--surface-4)] hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-all">
+            <button onClick={() => setSelectedAiNewsId(null)} className="bg-[var(--surface-4)] hover:bg-purple-600 text-purple-400 hover:text-white border border-purple-500/30 px-3 py-1 rounded-lg text-xs font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform]">
               إلغاء الفلترة (عرض كل الأخبار)
             </button>
           )}
@@ -15454,7 +15417,7 @@ const totalAiCountries = new Set(
                 <button onClick={handleExportAllExcel} className="bg-[var(--surface-3)] text-purple-400 border border-purple-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[var(--surface-4)] shrink-0 justify-center"><ExcelIcon /> تصدير السجل</button>
                 <button onClick={handleExportLocalExcel} data-tip="تصدير الأخبار المحلية فقط — بنفس أعمدة سجل الأخبار المحلية" className="bg-[var(--surface-3)] text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[var(--surface-4)] shrink-0 justify-center"><ExcelIcon /> تصدير محلي</button>
                 <button onClick={handleExportGlobalExcel} data-tip="تصدير الأخبار العالمية فقط — بنفس أعمدة سجل الكوارث العالمية" className="bg-[var(--surface-3)] text-cyan-400 border border-cyan-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[var(--surface-4)] shrink-0 justify-center"><ExcelIcon /> تصدير عالمي</button>
-                <button onClick={handleManualScanTrigger} disabled={isScanning} className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 justify-center transition-all ${isScanning ? 'bg-purple-600/50 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'}`}>
+                <button onClick={handleManualScanTrigger} disabled={isScanning} className={`px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shrink-0 justify-center transition-[color,background-color,border-color,opacity,box-shadow,transform] ${isScanning ? 'bg-purple-600/50 text-white cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'}`}>
                   {isScanning ? <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري المسح...</> : <><AIIcon className="w-4 h-4"/> إطلاق الرادار</>}
                 </button>
               </>
@@ -16284,7 +16247,7 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
               <button
                 key={opt.key}
                 onClick={() => setFilterActive(opt.key)}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.97] ${
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 active:scale-[0.97] ${
                   filterActive === opt.key
                     ? 'bg-[var(--accent)] text-white shadow-[0_4px_16px_rgba(199,0,0,0.35)] eoc-frame'
                     : 'text-[var(--muted)] hover:text-[var(--ink)]'
