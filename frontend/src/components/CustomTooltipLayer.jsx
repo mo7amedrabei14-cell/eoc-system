@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 const TOOLTIP_ID = 'eoc-custom-tooltip';
-const MAX_TOOLTIP_WIDTH = 272;
 const EDGE_GAP = 12;
 
 function findTrigger(target) {
@@ -31,14 +30,12 @@ function getPlacement(trigger, direction) {
     };
   }
 
-  const width = Math.min(MAX_TOOLTIP_WIDTH, window.innerWidth - EDGE_GAP * 2);
   const centerX = rect.left + rect.width / 2;
-  const left = Math.max(EDGE_GAP + width / 2, Math.min(centerX, window.innerWidth - EDGE_GAP - width / 2));
   const placement = rect.bottom + 56 <= window.innerHeight ? 'below' : 'above';
 
   return {
     placement,
-    left,
+    left: centerX,
     top: placement === 'below' ? rect.bottom + 8 : rect.top - 8,
     direction,
   };
@@ -47,6 +44,21 @@ function getPlacement(trigger, direction) {
 export default function CustomTooltipLayer() {
   const [tooltip, setTooltip] = useState(null);
   const activeRef = useRef(null);
+  const tooltipRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!tooltip) return;
+    const element = tooltipRef.current;
+    if (!element) return;
+
+    const width = element.getBoundingClientRect().width;
+    const minCenter = EDGE_GAP + width / 2;
+    const maxCenter = window.innerWidth - EDGE_GAP - width / 2;
+    const left = Math.max(minCenter, Math.min(tooltip.left, maxCenter));
+    if (left !== tooltip.left) {
+      setTooltip((current) => current?.trigger === tooltip.trigger ? { ...current, left } : current);
+    }
+  }, [tooltip]);
 
   useEffect(() => {
     const clearActive = () => {
@@ -141,6 +153,7 @@ export default function CustomTooltipLayer() {
   return createPortal(
     <div
       id={TOOLTIP_ID}
+      ref={tooltipRef}
       className="app-tooltip"
       data-placement={tooltip.placement}
       dir={tooltip.direction}
