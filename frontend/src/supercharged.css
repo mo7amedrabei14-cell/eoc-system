@@ -240,38 +240,36 @@ kbd,
    المطلوب: أن يقرأ كجسم تنقّل مُعلّق داخل بيئة التطبيق، لا كعمود كامل
    الارتفاع ملتصق بحافتي الشاشة.
 
-   ⚠️ كيف فعلناها دون أي تغيير هيكلي:
-     • `<aside>` **لم تُلمس**: نفس الموضع، نفس أصناف العرض (`w-64/w-72/w-20`)،
-       نفس `fixed md:sticky`، نفس سلوك flex — فلا انزياح في التخطيط ولا
-       أي أثر على المعلومات أو التنقل أو عرض `<main>`.
-     • مادة السطح انتقلت إلى `.sidebar-shell::before` بـ `inset: 0.5rem`
-       و`z-index: -1` ⇒ السطح يتراجع للخلف ويبقى المحتوى أمامه في مكانه حرفيًا.
-     • `padding: 0.5rem` على الشريط يحجز الفراغ نفسه حول المحتوى، فيصبح
-       السطح محيطًا بصندوق المحتوى بدقة — لا محتوى يخرج عن حافة السطح ولا
-       شرائط تمرير تتسرّب إلى الفراغ.
+   ⚠️ كيف فعلناها دون تغيير بنية التنقل:
+     • `<aside>` يحتفظ بنفس الموضع وأصناف العرض (`w-64/w-72/w-20`)،
+       ونفس `fixed md:sticky` وسلوك flex.
+     • مادة السطح في `.sidebar-shell::before` لها 12px أعلى/أسفل و8px جانبيًا،
+       لتكوين فراغ متساوٍ رأسيًا ومحاذاة المحتوى مع حدود الجسم.
+     • الـ padding الجانبي 8px يترك عرضًا فعليًا كافيًا لأيقونات وضع الطي،
+       بينما السطح الزجاجي يظل منفصلًا عن حواف الشاشة.
 
    لماذا `z-index: -1` وليس 0 أو 1؟ لأن ترتيب الرسم داخل سياق التراص يضع
    العناصر الموضّعة ذات z-index≤0 **أسفل** الأبناء غير الموضّعين. الشريط
    له z-index خاص (أصناف z-[70]) فهو سياق تراص مغلق، فلا يخرج السطح خلف
-   الصفحة. هذا يحقّق الترتيب الصحيح بلا `position` إضافي على أي ابن وبلا
-   تغيير في DOM. */
+   الصفحة. هذا يحقّق الترتيب الصحيح بلا تغيير في DOM. */
 .sidebar-shell {
   background: none;
   border-inline-end: 0;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  padding: 0.5rem;
-  /* عزل الشريط: تغيير عرضه لا يُعيد حساب بقية الصفحة */
-  contain: layout paint style;
+  padding: 0.75rem 0.5rem;
+  transition: width 180ms cubic-bezier(0.22, 0.8, 0.24, 1);
+  /* عزل المحتوى الداخلي مع إبقاء السايدبار مشاركًا في قياس flex الطبيعي. */
+  contain: layout style;
 }
 
 .sidebar-shell::before {
   content: "";
   position: absolute;
-  inset: 0.5rem;
+  inset: 0.75rem 0.5rem;
   z-index: -1;
-  border-radius: 1.15rem;
+  border-radius: 1.375rem;
   pointer-events: none;
   /* ① القاعدة الزجاجية */
   background-color: var(--sc-glass-1);
@@ -389,6 +387,98 @@ kbd,
   border-color: var(--sc-hair-strong);
 }
 
+.sidebar-heading {
+  flex: none;
+  padding: 1.75rem 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  transition: padding 180ms var(--sc-ease);
+}
+.sidebar-heading-row { min-height: 3rem; }
+.sidebar-copy {
+  transition: opacity var(--sc-dur-2) var(--sc-ease), transform var(--sc-dur-2) var(--sc-ease);
+}
+.sidebar-role {
+  transition: opacity var(--sc-dur-2) var(--sc-ease), transform var(--sc-dur-2) var(--sc-ease);
+}
+.sidebar-shell.is-collapsed .sidebar-heading {
+  padding: 1rem 0.25rem 0.75rem;
+}
+.sidebar-shell.is-collapsed .sidebar-heading-row { justify-content: center; }
+.sidebar-shell.is-collapsed .sidebar-copy {
+  position: absolute;
+  inset-inline: 3.75rem 0;
+  opacity: 0;
+  transform: translate3d(8px, 0, 0);
+  pointer-events: none;
+}
+[dir="rtl"] .sidebar-shell.is-collapsed .sidebar-copy { transform: translate3d(-8px, 0, 0); }
+.sidebar-shell.is-collapsed .sidebar-role {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(-4px);
+  visibility: hidden;
+  pointer-events: none;
+}
+.sidebar-actions {
+  flex: none;
+  padding: 0.75rem;
+}
+.sidebar-shell.is-collapsed .sidebar-actions {
+  padding: 0.5rem 0.25rem;
+}
+.sidebar-shell [data-sidebar-tooltip] { position: relative; }
+.sidebar-brand {
+  position: relative;
+  transition: transform var(--sc-dur-2) var(--sc-ease);
+}
+.sidebar-brand:hover { transform: translateY(-1px) scale(1.03); }
+
+.sidebar-tooltip {
+  position: fixed;
+  z-index: 10000;
+  max-width: min(17rem, calc(100vw - 1.5rem));
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--sc-hair-strong);
+  border-radius: 0.75rem;
+  background: var(--sc-surface-2);
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 var(--sc-light-top);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: start;
+  white-space: normal;
+  pointer-events: none;
+  animation: sidebar-tooltip-in 100ms var(--sc-ease) both;
+}
+.sidebar-tooltip[data-side="right"] { transform: translateY(-50%); }
+.sidebar-tooltip[data-side="left"] { transform: translate(-100%, -50%); }
+.sidebar-tooltip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transform: translateY(-50%);
+}
+.sidebar-tooltip[data-side="right"]::before {
+  left: -4px;
+  border-right: 4px solid var(--sc-surface-2);
+}
+.sidebar-tooltip[data-side="left"]::before {
+  right: -4px;
+  border-left: 4px solid var(--sc-surface-2);
+}
+@keyframes sidebar-tooltip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-tooltip { animation: none; }
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    C) لوحة التنقل — سطح نشط واحد يسافر بـ transform فقط، وأثر يتخلّف عنه
    ────────────────────────────────────────────────────────────────────────────
@@ -401,8 +491,6 @@ kbd,
    ════════════════════════════════════════════════════════════════════════════ */
 .nav-shell {
   position: relative;
-  /* العزل يمنع حركة المؤشر من إبطال أي شيء خارج الـ nav */
-  contain: layout paint;
 }
 
 /* ── السطح المشترك النشط ─────────────────────────────────────────────
@@ -415,7 +503,7 @@ kbd,
   content: "";
   position: absolute;
   top: 0;
-  inset-inline: 0.75rem;                     /* = حشوة الـ nav (p-3) */
+  inset-inline: 0.25rem;                     /* = الحشوة الأفقية للـ nav */
   height: var(--nav-indicator-h, 3rem);
   border-radius: var(--radius);
   opacity: 0;
@@ -530,6 +618,7 @@ kbd,
   height: 1.2rem;
   stroke-width: 1.75;
   opacity: 0.8;
+  transition: transform var(--sc-dur-2) var(--sc-ease), opacity var(--sc-dur-2) var(--sc-ease);
 }
 .nav-item.is-active svg {
   opacity: 1;
@@ -610,13 +699,23 @@ kbd,
 
 /* الطيّ: النص يتلاشى بـ transform/opacity — لا `max-width` متحرّك (تخطيط) */
 .nav-label {
+  position: relative;
   overflow: hidden;
   white-space: nowrap;
-  transition: opacity var(--sc-dur-3) var(--sc-ease), transform var(--sc-dur-3) var(--sc-ease);
+  transition: opacity var(--sc-dur-2) var(--sc-ease), transform var(--sc-dur-2) var(--sc-ease);
 }
-.nav-label-on { opacity: 1; max-width: 14rem; transform: translate3d(0, 0, 0); }
-.nav-label-off { opacity: 0; max-width: 0; transform: translate3d(-8px, 0, 0); }
+.nav-label-on { opacity: 1; transform: translate3d(0, 0, 0); }
+.nav-label-off {
+  position: absolute;
+  inset-inline-start: 100%;
+  opacity: 0;
+  transform: translate3d(-8px, 0, 0);
+}
 [dir="ltr"] .nav-label-off { transform: translate3d(8px, 0, 0); }
+.nav-item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 75%, white);
+  outline-offset: 2px;
+}
 
 /* ── أزرار الشريط السفلي (خروج/تحديث) ── */
 .nav-item-danger:hover,
@@ -819,9 +918,11 @@ kbd,
 }
 
 /* ── العزل المطبَّق فعلًا (حيث ثبت أنه لا يوجد ابن `fixed`) ───────────────
-   `.sidebar-shell` و`.nav-shell` و`.kpi-card` و`.glass-header`: بنية أوراق
+   `.sidebar-shell` و`.kpi-card` و`.glass-header`: بنية أوراق
    لا تحتضن أي طبقة مضمّنة (القوائم العائمة داخلها إطلاقًا `absolute` بنسب إلى
    أب مُموضِع، والقوائم المنسدلة الحقيقية تُرسم بـ portal خارج الشجرة).
+   مؤشر التنقل داخل `.nav-shell`، أما Tooltips السايدبار فتُرسم عبر portal
+   حتى لا تُقصّها منطقة التمرير.
    ⇒ تغيير صف جدول / عدّاد KPI / عرض الشريط الجانبي لا يُبطل رسم الصفحة كاملة. */
 
 /* ════════════════════════════════════════════════════════════════════════════

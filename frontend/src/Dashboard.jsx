@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
+import { cloneElement, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
@@ -1716,6 +1716,67 @@ function fmtHours(hours, lang = 'ar') {
   return ar ? `${h}س ${mm}د` : `${h}h ${mm}m`;
 }
 
+function SidebarTooltipLayer({ children, enabled, direction }) {
+  const [tooltip, setTooltip] = useState(null);
+
+  const showTooltip = useCallback((event) => {
+    if (!enabled || window.innerWidth < 768 || !(event.target instanceof Element)) return;
+    if (event.type === 'focus' && !event.target.matches(':focus-visible')) return;
+
+    const trigger = event.target.closest('[data-sidebar-tooltip]');
+    if (!trigger || (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget))) return;
+
+    const label = trigger.getAttribute('data-sidebar-tooltip');
+    if (!label) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const side = direction === 'rtl' ? 'left' : 'right';
+    const top = Math.max(24, Math.min(rect.top + rect.height / 2, window.innerHeight - 24));
+    const left = side === 'left' ? rect.left - 10 : rect.right + 10;
+    setTooltip({ label, left, top, side, direction, trigger });
+  }, [direction, enabled]);
+
+  const hideTooltip = useCallback((event) => {
+    if (!(event.target instanceof Element)) return;
+    const trigger = event.target.closest('[data-sidebar-tooltip]');
+    if (!trigger || (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget))) return;
+    if (event.type === 'pointerout' && trigger.contains(document.activeElement)
+      && document.activeElement.matches(':focus-visible')) return;
+    if (event.type === 'blur' && trigger.matches(':hover')) return;
+    setTooltip(null);
+  }, []);
+
+  const clearTooltip = useCallback(() => setTooltip(null), []);
+
+  return (
+    <Fragment>
+      {cloneElement(children, {
+        onPointerOver: showTooltip,
+        onPointerOut: hideTooltip,
+        onFocusCapture: showTooltip,
+        onBlurCapture: hideTooltip,
+        onScrollCapture: clearTooltip,
+      })}
+      {tooltip && enabled && tooltip.direction === direction && tooltip.trigger.isConnected
+        && (tooltip.trigger.matches(':hover')
+          || (document.activeElement === tooltip.trigger && tooltip.trigger.matches(':focus-visible')))
+        && createPortal(
+          <div
+            className="sidebar-tooltip"
+            data-side={tooltip.side}
+            dir={direction}
+            role="tooltip"
+            aria-hidden="true"
+            style={{ left: `${tooltip.left}px`, top: `${tooltip.top}px` }}
+          >
+            {tooltip.label}
+          </div>,
+          document.body,
+        )}
+    </Fragment>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const initialAuthRef = useRef(getStoredAuth());
@@ -3113,32 +3174,28 @@ useEffect(() => {
 
       <div className={`sidebar-backdrop ${isSidebarOpen ? 'is-visible' : ''} block md:hidden`} onClick={() => setIsSidebarOpen(false)} />
 
-      <aside className={`sidebar-shell bg-[var(--surface)] border-l border-[var(--border)] flex flex-col justify-between fixed md:sticky top-0 h-screen overflow-hidden z-[70] ${isSidebarOpen ? 'is-open right-0 w-64 md:w-72 shadow-[12px_0_40px_-18px_rgba(0,0,0,0.55)]' : '-right-80 md:right-0 w-64 md:w-20'}`}>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {isSidebarOpen ? (
-            <div className="px-6 pt-7 pb-5 border-b border-[var(--border)] relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="sidebar-brand w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center p-2 shadow-[0_0_26px_rgba(199,0,0,0.22)] shrink-0">
-                  <img src="/Egyptian_Red_Crescent.png" alt="Egyptian Red Crescent" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || translate('المالك', language)}</h2>
-                  <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] truncate">مركز عمليات الطوارئ</p>
-                </div>
-              </div>
-              <p className="relative z-10 mt-4 inline-flex items-center gap-1.5 text-[max(0.6875rem,9.5px)] font-bold text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] px-3 py-1 rounded-full">
-                <span className="status-dot status-dot-live"></span>
-                {(userData?.role || 'OWNER')}
-              </p>
-            </div>
-          ) : (
-            <div className="p-4 border-b border-[var(--border)] flex justify-center">
-              <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center p-1 shadow-[0_0_18px_rgba(199,0,0,0.22)]" title={userData?.full_name}>
+      <SidebarTooltipLayer enabled={!isSidebarOpen} direction={language === 'en' ? 'ltr' : 'rtl'}>
+        <aside className={`sidebar-shell flex flex-col justify-between fixed md:sticky top-0 h-screen z-[70] ${isSidebarOpen ? 'is-open right-0 w-64 md:w-72' : 'is-collapsed -right-80 md:right-0 w-64 md:w-20'}`}>
+        <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className={`sidebar-heading relative ${isSidebarOpen ? 'is-expanded' : 'is-collapsed'}`}>
+            <div className="absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
+            <div className="sidebar-heading-row relative z-10 flex items-center gap-3">
+              <div
+                className="sidebar-brand w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center p-2 shrink-0"
+                data-sidebar-tooltip={!isSidebarOpen ? (userData?.full_name || translate('المالك', language)) : undefined}
+              >
                 <img src="/Egyptian_Red_Crescent.png" alt="Egyptian Red Crescent" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
               </div>
+              <div className="sidebar-copy min-w-0">
+                <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || translate('المالك', language)}</h2>
+                <p className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] truncate">مركز عمليات الطوارئ</p>
+              </div>
             </div>
-          )}
+            <p className="sidebar-role relative z-10 mt-4 inline-flex items-center gap-1.5 text-[max(0.6875rem,9.5px)] font-bold text-[var(--accent)] bg-[var(--accent-softer)] border border-[var(--accent-soft)] px-3 py-1 rounded-full" aria-hidden={!isSidebarOpen}>
+              <span className="status-dot status-dot-live"></span>
+              {(userData?.role || 'OWNER')}
+            </p>
+          </div>
 
           {/* أُزيل `key={isSidebarOpen ? 'nav-open' : 'nav-closed'}`: كان يفرض
               **remount كاملًا** للشجرة عند كل طيّ/فتح ⇒ إعادة تشغيل `sc-nav-in`
@@ -3148,7 +3205,7 @@ useEffect(() => {
           <nav
             ref={navRef}
             style={{ '--nav-indicator-y': `${navIndicator.y}px`, '--nav-indicator-h': `${navIndicator.h}px` }}
-            className={`nav-shell p-3 space-y-1.5 mt-2${navIndicator.on ? ' has-active' : ''}`}
+            className={`nav-shell px-1 py-3 space-y-1.5 mt-2${navIndicator.on ? ' has-active' : ''}`}
           >
             {/* 🤖 القسم التلقائي: الوحدات اللي بتشتغل وترصد لوحدها (مؤشرات + رصد آلي + طقس + زلازل) */}
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التلقائية</p>}
@@ -3177,11 +3234,12 @@ useEffect(() => {
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
-        <div className="p-3 border-t border-[var(--border)]">
+        <div className={`sidebar-actions border-t border-[var(--border)] ${isSidebarOpen ? '' : 'is-collapsed'}`}>
           {isOwner && (
   <button
     onClick={handleForceRefresh}
-    title={!isSidebarOpen ? "تحديث النظام للجميع" : ""}
+    aria-label="تحديث النظام للجميع"
+    data-sidebar-tooltip={!isSidebarOpen ? 'تحديث النظام للجميع' : undefined}
     className={`nav-item ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}
   >
     <svg
@@ -3208,7 +3266,8 @@ useEffect(() => {
           {isOwner && (
             <button
               onClick={handleLogoutAll}
-              title={!isSidebarOpen ? "تسجيل خروج الجميع" : ""}
+              aria-label="تسجيل خروج الجميع"
+              data-sidebar-tooltip={!isSidebarOpen ? 'تسجيل خروج الجميع' : undefined}
               className={`nav-item nav-item-danger ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3222,12 +3281,18 @@ useEffect(() => {
             </button>
           )}
 
-          <button onClick={handleLogout} title={!isSidebarOpen ? "خروج" : ""} className={`nav-item nav-item-danger ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}>
+          <button
+            onClick={handleLogout}
+            aria-label="إنهاء الجلسة الآمنة"
+            data-sidebar-tooltip={!isSidebarOpen ? 'إنهاء الجلسة الآمنة' : undefined}
+            className={`nav-item nav-item-danger ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}
+          >
             <LogoutIcon />
             {isSidebarOpen && <span className="font-semibold tracking-wide truncate">إنهاء الجلسة الآمنة</span>}
           </button>
         </div>
-      </aside>
+        </aside>
+      </SidebarTooltipLayer>
 
       <main id="main-scroll-container" className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative">
         <header className="glass-header px-4 md:px-8 py-3.5 md:py-4 flex items-center gap-3 md:gap-4 sticky top-0 z-40">
@@ -8565,10 +8630,14 @@ const RouteCard = ({
   );
 };
 
-// 💡 دالة زراير القائمة (مزودة بدعم النقطة الحمراء للإشعارات)
 function NavItem({ icon, label, isActive, onClick, isOpen = true, hasUpdate = false }) {
   return (
-    <button onClick={onClick} title={!isOpen ? label : ''} className={`nav-item active:scale-[0.98] ${isActive ? 'is-active' : ''} ${isOpen ? '' : 'w-14 justify-center mx-auto'}`}>
+    <button
+      onClick={onClick}
+      aria-label={label}
+      data-sidebar-tooltip={!isOpen ? label : undefined}
+      className={`nav-item active:scale-[0.98] ${isActive ? 'is-active' : ''} ${isOpen ? '' : 'w-14 justify-center mx-auto'}`}
+    >
       <div className="shrink-0 relative">
         {icon}
       </div>

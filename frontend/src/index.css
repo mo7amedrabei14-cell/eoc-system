@@ -1915,147 +1915,11 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
   overflow: hidden;
 }
 .nav-item:hover { color: var(--ink); background: var(--surface-hover); transform: translateX(var(--nav-shift, 0)); }
-.nav-item.is-active { color: var(--ink); background: var(--accent-soft); }
-.nav-item.is-active::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0;
-  top: 20%; bottom: 20%;
-  width: 0.1875rem;
-  border-radius: 0.1875rem;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow);
-}
-
 .nav-item-danger { color: var(--muted); }
 .nav-item-danger:hover,
 .nav-item-danger.is-active {
   color: #ff5c5c !important;
   background: color-mix(in srgb, #ff4d4d 12%, transparent) !important;
-}
-
-/* ── #2 حركة الشريط الجانبي (Premium Motion) ──────────────────────────────── */
-/* انزلاق مفتوح/مغلق بنابض طري + عمق ناعم */
-.sidebar-shell {
-  /* Phase A/B: `will-change: width` كان يُرقّي الشريط لطبقة دائمة رغم أن
-     العرض لا يتحرك بـ GPU أصلًا — أُزيل. `box-shadow` أُزيل من الانتقال
-     لأنه إعادة رسم كاملة أثناء فتح/طي الشريط (أغلى من قيمة المكسب).
-     الطيّ نفسه يبقى استخداميًّا كما هو (سلوك محفوظ). */
-  transition:
-    width var(--dur-base) var(--spring-tight),
-    right var(--dur-slow) var(--spring-soft);
-}
-
-/* ─── مادة الشريط: مُنقلة بالكامل إلى `.sidebar-shell::before` (supercharged.css)
-   ─── أُزيلت هنا كتلة "LIQUID GLASS SIDEBAR SURFACE (Phase 4+5)" القديمة
-   (background/backdrop-filter/border/box-shadow) لأن supercharged.css —
-   المُستورد لاحقًا في سطر 2935 — يصفّرها صراحةً لصالح السطح الطائر.
-
-   الأهم: كانت `.sidebar-shell:has(+ main)` تضيف `box-shadow: 0 0 0 1px` —
-   وله أعلى أولوية (0,2,1) من `box-shadow: none` البسيط، فيبقى فعّالًا ⇒
-   إطار مستطيل كامل يحيط الشريط ويُلغي تمامًا صفة «الجسم المُعلّق».
-   الحدّ الشعري صار ملك السطح الطائر وحده (بـ `border: 1px`). */
-
-/* ── المؤشر النشط (السطح المشترك) — تعريفه الوحيد في supercharged.css ──────
-   هنا كان تعريف قديم *مختلف تمامًا* لنفس العنصر الوهمي: شريط رأسي بعرض 3px
-   (`width: 3px; height: 48px`) لا سطح كامل العرض. ولأن إطاري الجديد لا يعلن
-   `width` أصلًا، كان `width: 3px` القديم **يبقى فعّالًا معه** (خاصية غير
-   متنازعة ⇒ لا تُلغى) فيُقصّ السطح الجديد إلى شريحة 3px.
-   كما كانت الصندوقية over-constrained (شمال + يمين + عرض معًا) فيُهمل
-   `inset-inline-end` ويختل الموضع.
-   أُزيل التعريف القديم كليًّا؛ بقي تعريف واحد في supercharged.css. */
-.nav-shell {
-  position: relative;
-}
-
-/* حالة العنصر النشط: الشكل البصري مُعرّف في supercharged.css (وزن، توهّج
-   الأيقونة، صفيحة السطح). هنا فقط قاعدة السلوك التي لا يعرفها غيرها. */
-.nav-item.is-active::before { display: none; }
-
-.nav-item svg { transition: transform var(--dur-fast) var(--ease-out-quick), opacity var(--dur-fast) var(--ease-out-quick); }
-
-.nav-item.is-active {
-  color: var(--ink);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 15%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent), 0 3px 14px -6px var(--accent-glow);
-}
-.nav-item.is-active svg { transform: scale(1.08); filter: drop-shadow(0 0 6px var(--accent-glow)); }
-
-/* الشريط الجانبي النشط: ينزلق بدلالة الحافة المنطقية (RTL/LTR) */
-.nav-item.is-active::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0;
-  top: 24%; bottom: 24%;
-  width: 0.1875rem;
-  border-radius: 62.4375rem;
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow), 0 0 22px var(--accent-glow);
-  animation: nav-rail-in var(--dur-slow) var(--ease-out) both;
-}
-@keyframes nav-rail-in {
-  from { transform: scaleY(0.25) translateX(4px); opacity: 0; }
-  to   { transform: scaleY(1) translateX(0); opacity: 1; }
-}
-/* انحسار ناعم لعنوان العنصر عند الطي (يظل مركباً ويتقلّص بدل القفز) */
-.nav-label {
-  overflow: hidden;
-  white-space: nowrap;
-  transition: opacity var(--dur-slow) var(--ease-out-quick), max-width 0.3s var(--ease-out-quick), transform var(--dur-slow) var(--ease-out-quick);
-}
-.nav-label-on { opacity: 1; max-width: 12rem; transform: translateX(0); }
-.nav-label-off { opacity: 0; max-width: 0; transform: translateX(-6px); }
-[dir="ltr"] .nav-label-off { transform: translateX(6px); }
-
-/* ───────────────── 18b) Sidebar Premium Motion ─────────────────
-   دخول متتابع للعناصر (stagger) عند فتح الشريط + لمعة ذكية عند التمرير
-   + توهج نابض للعنصر النشط + كبسولة نبض لشعار الاستضافة. */
-
-/* دخول عناصر القائمة: لحركة واحدة فقط في النظام كله.
-   كان هنا `nav-in` + تأخير متتابع 35ms لكل عنصر عبر ١٠ متغيّرات `--nav-i`،
-   وهي نفس الحركة التي تُعرّفها supercharged.css باسم `sc-nav-in` بمدّة أقصر
-   وبلا نابض (nav-in كان 340ms بـ `--spring-soft` مع scale ⇒ ثقل بلا فائدة).
-   تعريفان لنفس الحالة = أيّهما يفوز يعتمد على ترتيب الورقة فقط. أُزيل هذا
-   الازدواج (ومعه المتغيّرات الميتة) وبقيت `sc-nav-in`. */
-
-/* لمعة ذكية: خط ضوئي يمسح العنصر عند التمرير (GPU-friendly، transform فقط) */
-.nav-item::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(115deg, transparent 35%, color-mix(in srgb, var(--accent) 16%, transparent) 50%, transparent 65%);
-  transform: translateX(calc(var(--tip-dir, 1) * 110%));
-  opacity: 0;
-  pointer-events: none;
-}
-[dir="ltr"] .nav-item::after { --tip-dir: 1; }
-[dir="rtl"] .nav-item::after { --tip-dir: -1; }
-.nav-item:hover::after {
-  animation: nav-shine 0.8s var(--ease-out);
-}
-@keyframes nav-shine {
-  0%   { transform: translateX(calc(var(--tip-dir, 1) * -110%)); opacity: 1; }
-  100% { transform: translateX(calc(var(--tip-dir, 1) * 110%)); opacity: 1; }
-}
-
-/* العنصر النشط: توهج نابض هادئ يضيف إحساس "حي" بدون إزعاج */
-.nav-item.is-active {
-  animation: nav-active-breathe 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-@keyframes nav-active-breathe {
-  0%, 100% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent), 0 3px 14px -6px var(--accent-glow); }
-  50%      { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), 0 4px 20px -4px var(--accent-glow); }
-}
-
-/* كبسولة نبض حول شعار الاستضافة (الدرع) عند التمرير */
-.sidebar-brand {
-  transition: transform var(--dur-slow) var(--spring-soft), box-shadow var(--dur-slow) var(--spring-soft), border-color var(--dur-slow) var(--ease-out-quick);
-}
-.sidebar-brand:hover {
-  transform: translateY(-1.5px) scale(1.05);
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  box-shadow: 0 0 30px -4px var(--accent-glow);
 }
 
 /* ──────────────── 18c) مبدّل الوضع الفاتح/الداكن — تحكّم شريطي أصلي ────────────────
@@ -2196,28 +2060,10 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
 
 /* حسب رغبة المستخدم: الحركات الحية تعمل دائماً (بدون كبح تقليل الحركة). */
 
-/* ───────────────── 19) عداد الاختيار / الفلاتر الإضافية ───────────────── */
-.tooltip-trigger { position: relative; }
-.tooltip-tip {
-  position: absolute;
-  inset-block-end: calc(100% + 0.5rem);
-  inset-inline-start: 50%;
-  transform: translateX(50%) translateY(-4px);
-  padding: 0.4rem 0.7rem;
-  border-radius: 0.6rem;
-  background: var(--ink);
-  color: var(--bg-deep);
-  font-size: 0.72rem;
-  font-weight: 700;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
-  z-index: 90;
-}
-[dir="rtl"] .tooltip-tip { transform: translateX(-50%) translateY(-4px); }
-.tooltip-trigger:hover .tooltip-tip { opacity: 1; transform: translateX(50%) translateY(0); }
-[dir="rtl"] .tooltip-trigger:hover .tooltip-tip { transform: translateX(-50%) translateY(0); }
+/* ───────────────── 19) توحيد Tooltips السايدبار ────────────────────────
+   أُزيلت قواعد `.tooltip-tip` القديمة: كانت غير مستخدمة ومبنية على عنصر مطلق
+   يُقصّ داخل حاوية تمرير السايدبار. النظام الجديد يرسم تلميحًا واحدًا عبر
+   portal خارج منطقة التمرير، ويملكه supercharged.css. */
 
 /* ──────────────── 20) معالجة الثيم الفاتح للكلاسات القديمة ────────────────
    نضمن أن أي صبغة داكنة مكتوبة حرفياً في الواجهة تنعكس على درجات الثيم الفاتح

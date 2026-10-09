@@ -191,10 +191,15 @@
     width: 100%;
     max-width: 20rem;
     transform: translateX(100%);
-    transition: transform 0.35s var(--ease-spring), box-shadow 0.35s var(--ease-out);
-    box-shadow: var(--shadow-3);
+    transition: transform 180ms var(--sc-ease, var(--ease-spring));
   }
-  .sidebar-shell.is-open { transform: translateX(0); box-shadow: var(--shadow-3), -8px 0 32px rgba(0,0,0,0.3); }
+  .sidebar-shell::before {
+    background-color: var(--sc-surface-1, var(--surface));
+    background-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .sidebar-shell.is-open { transform: translateX(0); }
   .sidebar-shell:not(.is-open) { pointer-events: none; }
 
   /* Overlay backdrop */
@@ -452,16 +457,13 @@
          الفتح/الطيّ على كل إطار).
      ════════════════════════════════════════════════════════════════════════ */
 
-  /* الشريط الجانبي: سطح مادي معتم بدل ضباب على ارتفاع الشاشة كاملة */
+  /* الشريط الجانبي: السطح الداخلي معتم بدل ضباب على ارتفاع الشاشة كاملة */
   .sidebar-shell {
-    background: var(--sc-surface-1, var(--surface));
+    background: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    transition: transform 0.3s var(--spring-soft, var(--ease-spring));
-    box-shadow: var(--sc-shadow-2), inset 0 1px 0 var(--sc-light-top);
-  }
-  .sidebar-shell.is-open {
-    box-shadow: var(--sc-shadow-3), inset 0 1px 0 var(--sc-light-top);
+    transition: transform 180ms var(--sc-ease, var(--ease-spring));
+    box-shadow: none;
   }
 
   /* شاشة التعتيم: كتلة لونية فقط — لا ضباب على مساحة الشاشة كاملة */
