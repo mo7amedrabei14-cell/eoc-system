@@ -25,6 +25,7 @@ from main import (
     compute_working_hours,
     JL_PREFIX_JOIN,
     JL_PREFIX_LEAVE,
+    should_block_active_participant,
 )
 
 J = JL_PREFIX_JOIN
@@ -57,6 +58,13 @@ def _hh(dtobj):
 
 def part_a():
     print("=== A) pure derivation (derive_jl_segments) ===")
+    check("A0 open session blocks a new participant",
+          should_block_active_participant("مهمة أخرى", True, "نشطة"), True, exact=True)
+    check("A0b open session allows updating an existing participant",
+          should_block_active_participant("مهمة أخرى", False, "نشطة"), False, exact=True)
+    check("A0c completed mission is allowed to close sessions",
+          should_block_active_participant("مهمة أخرى", True, "مكتملة"), False, exact=True)
+
     mission_row = {"mission_name": "م", "departure_date": "2026-08-20", "departure_time": "08:00"}
 
     # (1) two cycles JOIN10/LEAVE14 + JOIN17/LEAVE20 → [10-14],[17-20], 7.0h

@@ -2090,6 +2090,15 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
     return volunteer_id, user_id, membership, owner_mission_id, owner_mission_branch
 
 
+def should_block_active_participant(active_in_other, is_new_participant, mission_status):
+    """حاجز الجلسة المفتوحة يمنع الإضافة فقط، لا تحديث مشارك قائم أو إنهاء مهمة."""
+    return (
+        active_in_other is not None
+        and is_new_participant
+        and mission_status not in ('Completed', 'مكتملة')
+    )
+
+
 def dedupe_participants(participants):
     """يمنع التكرار الحرفي فقط داخل نفس الاستمارة (قبل الإدخال) — يحتفظ بآخر إدخال.
     🔑 القاعدة الأساسية (JOIN/LEAVE فقط): بعد تسجيل LEAVE يصبح المتطوع متاحاً من
@@ -3164,7 +3173,7 @@ def create_mission(
                     participant_user_ids.append(participant_user_id)
 
                 # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية المركّبة لا بالنصوص)
-                if active_in_other is not None:
+                if should_block_active_participant(active_in_other, True, mission.status):
                     raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) أو لا يزال مُدرجاً في مهمة أخرى بلا تسجيل انفصال ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
 
                 cursor.execute("""
@@ -3759,11 +3768,6 @@ def update_mission(
                 if ident:
                     reinserted_idents.add(ident)
 
-                # رادار التوافر: جلسة مفتوحة (انضمام بلا انفصال) لنفس الهوية في مهمة
-                # أخرى ⇒ غير متاح — أيًّا كانت حالة تلك المهمة (لا return_status ولا اكتمال)
-                if active_in_other is not None:
-                    raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة أو التحديث: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) أو لا يزال مُدرجاً في مهمة أخرى بلا تسجيل انفصال ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
-
                 # ── مطابقة بالصف (هوية + فترة الإسناد):
                 #    • صف JL: نفس مجموعة JOIN ← نفس الفترة ⇒ تحديث في مكانه (يُحافَظ
                 #      على participant_id وsegments؛ يغطي إغلاق فترة مفتوحة بإضافة LEAVE).
@@ -3780,6 +3784,11 @@ def update_mission(
                 if prev:
                     prev["claimed"] = True
                 else:
+                    # الجلسة المفتوحة تمنع إضافة فترة جديدة، لا حفظ/إنهاء مشارك موجود
+                    # في المهمة الحالية. كما لا تُحجب مهمة مكتملة، إذ تُغلق جلساتها آلياً.
+                    if should_block_active_participant(active_in_other, True, mission.status):
+                        raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) أو لا يزال مُدرجاً في مهمة أخرى بلا تسجيل انفصال ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
+
                     # بوابة التوافر للفترة الجديدة: تُنفَّذ ضد *حالة الجلسة الفعلية* —
                     # لا جلسة مفتوحة لنفس الهوية في هذه المهمة (المهمة الحالية مستثناة
                     # من رادار "أخرى" أعلاه) ولا فترة مفتوحة أُدرجت للتو في هذه الحفظة
