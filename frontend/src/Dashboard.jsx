@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
+import { useSyncExternalStore, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import EocSelect from './components/EocSelect';
@@ -25,26 +25,28 @@ import { BASE } from './apiBase';
 //    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
 import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
 
-const SidebarStateContext = createContext(null);
-const SIDEBAR_CLOSE_EVENT = 'eoc:sidebar-close';
+let sidebarOpenSnapshot = true;
+const sidebarStateListeners = new Set();
 
-function SidebarStateProvider({ children }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const value = useMemo(() => ({ isSidebarOpen, setIsSidebarOpen }), [isSidebarOpen]);
+function subscribeToSidebarState(listener) {
+  sidebarStateListeners.add(listener);
+  return () => sidebarStateListeners.delete(listener);
+}
 
-  useEffect(() => {
-    const closeSidebar = () => setIsSidebarOpen(false);
-    window.addEventListener(SIDEBAR_CLOSE_EVENT, closeSidebar);
-    return () => window.removeEventListener(SIDEBAR_CLOSE_EVENT, closeSidebar);
-  }, []);
-
-  return <SidebarStateContext.Provider value={value}>{children}</SidebarStateContext.Provider>;
+function setSidebarOpen(next) {
+  const nextValue = typeof next === 'function' ? next(sidebarOpenSnapshot) : next;
+  if (nextValue === sidebarOpenSnapshot) return;
+  sidebarOpenSnapshot = nextValue;
+  sidebarStateListeners.forEach((listener) => listener());
 }
 
 function useSidebarState() {
-  const state = useContext(SidebarStateContext);
-  if (!state) throw new Error('Sidebar state must be used within SidebarStateProvider');
-  return state;
+  const isSidebarOpen = useSyncExternalStore(
+    subscribeToSidebarState,
+    () => sidebarOpenSnapshot,
+    () => sidebarOpenSnapshot,
+  );
+  return { isSidebarOpen, setIsSidebarOpen: setSidebarOpen };
 }
 
 function SidebarStateSlot({ children }) {
@@ -1752,6 +1754,7 @@ export default function Dashboard() {
   // 💡 2. نحدد الشاشة الافتراضية بناءً على الرتبة فوراً بثبات
   const initialRoleFlags = getRoleFlags(initialAuthRef.current?.user);
   const [activeTab, setActiveTab] = useState(() => getDefaultTab(initialAuthRef.current?.user));
+  useLayoutEffect(() => setSidebarOpen(true), []);
 
   const [customAlert, setCustomAlert] = useState(null);
 
@@ -1971,18 +1974,17 @@ useEffect(() => {
   // ════════════════════════════════════════════════════════════════════════
   // 🧭 مؤشّر التنقّل السافر (Phase C) — سطح واحد ينتقل بـ transform فقط
   // ────────────────────────────────────────────────────────────────────────
-  // القياس بصريّ خالص: نقرأ موضع العنصر النشط ونمرّره كمتغيّرَي CSS على
-  // الـ <nav>، فيرسم CSS السطح المشترك ويسافر بـ translate3d (GPU).
+  // القياس بصريّ خالص: نكتب موضع العنصر النشط كمتغيّرَي CSS على الـ <nav>
+  // مباشرةً، فيرسم CSS السطح المشترك ويسافر بـ translate3d (GPU).
   // • لا يقرأ ولا يغيّر أي منطق (تنقّل/أدوار/بيانات) — مجرد أبعاد بكسل.
-  // • القياس داخل requestAnimationFrame واحد، والاستقرار عبر ResizeObserver
-  //   ⇒ صفر عمل على الـ main thread أثناء التمرير أو الاستخدام العادي.
+  // • القياس داخل requestAnimationFrame واحد، من دون تحديث حالة Dashboard أو
+  //   إعادة رسم محتوى العمليات عند تغيّر أبعاد السايدبار.
   //
   // ⚠️ موضعه هنا (بعد `getRoleFlags`) مقصود: قائمة الاعتماديات تقرأ قيم الأدوار
   //    المعلنة في السطر أعلاه. لو رُفع لأعلى لوقع `ReferenceError` في منطقة
   //    الـ TDZ وقت أول عرض — وهو ما تحرسه `startMountWatchdog` في main.jsx.
   // ════════════════════════════════════════════════════════════════════════
   const navRef = useRef(null);
-  const [navIndicator, setNavIndicator] = useState({ on: false, y: 0, h: 48 });
   useLayoutEffect(() => {
     const nav = navRef.current;
     if (!nav || typeof ResizeObserver === 'undefined') return undefined;
@@ -1992,14 +1994,18 @@ useEffect(() => {
       frame = requestAnimationFrame(() => {
         const active = nav.querySelector('.nav-item.is-active');
         if (!active) {
-          setNavIndicator((p) => (p.on ? { ...p, on: false } : p));
+          nav.classList.remove('has-active');
+          nav.style.removeProperty('--nav-indicator-y');
+          nav.style.removeProperty('--nav-indicator-h');
           return;
         }
         const n = nav.getBoundingClientRect();
         const a = active.getBoundingClientRect();
         const y = Math.round(a.top - n.top);
         const h = Math.round(a.height);
-        setNavIndicator((p) => (p.on && p.y === y && p.h === h ? p : { on: true, y, h }));
+        nav.style.setProperty('--nav-indicator-y', `${y}px`);
+        nav.style.setProperty('--nav-indicator-h', `${h}px`);
+        nav.classList.add('has-active');
       });
     };
     measure();
@@ -2758,7 +2764,7 @@ useEffect(() => {
   setActiveTab(tabName);
     setNewUpdates(prev => ({ ...prev, [tabName]: false })); // إخفاء النقطة الحمراء بعد قراءة التحديث
     if (window.innerWidth < 768) {
-    window.dispatchEvent(new Event(SIDEBAR_CLOSE_EVENT));
+    setSidebarOpen(false);
     }
   };
 
@@ -2984,7 +2990,6 @@ useEffect(() => {
   };
 
   return (
-    <SidebarStateProvider>
     <div ref={dashboardRootRef} data-theme={theme} className="app-shell min-h-screen bg-[var(--bg)] text-white font-sans selection:bg-[var(--accent)] selection:text-white flex overflow-hidden transition-colors duration-300" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
 
@@ -3142,6 +3147,7 @@ useEffect(() => {
       <div className={`sidebar-backdrop ${isSidebarOpen ? 'is-visible' : ''} block md:hidden`} onClick={() => setIsSidebarOpen(false)} />
 
         <aside className={`sidebar-shell flex flex-col justify-between fixed md:sticky top-0 h-screen z-[70] ${isSidebarOpen ? 'is-open right-0 w-64 md:w-72' : 'is-collapsed -right-80 md:right-0 w-64 md:w-20'}`}>
+        <div className="sidebar-panel">
         <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className={`sidebar-heading relative ${isSidebarOpen ? 'is-expanded' : 'is-collapsed'}`}>
             <div className="absolute top-0 inset-x-0 h-24 bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.13),transparent_70%)] pointer-events-none"></div>
@@ -3170,8 +3176,7 @@ useEffect(() => {
               deps + ResizeObserver ⇒ الـ key كان مكررًا ومضرًّا فقط. */}
           <nav
             ref={navRef}
-            style={{ '--nav-indicator-y': `${navIndicator.y}px`, '--nav-indicator-h': `${navIndicator.h}px` }}
-            className={`nav-shell px-1 py-3 space-y-1.5 mt-2${navIndicator.on ? ' has-active' : ''}`}
+            className="nav-shell px-1 py-3 space-y-1.5 mt-2"
           >
             {/* 🤖 القسم التلقائي: الوحدات اللي بتشتغل وترصد لوحدها (مؤشرات + رصد آلي + طقس + زلازل) */}
             {isSidebarOpen && <p className="px-3 pt-1 pb-1.5 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التلقائية</p>}
@@ -3256,6 +3261,7 @@ useEffect(() => {
             <LogoutIcon />
             {isSidebarOpen && <span className="font-semibold tracking-wide truncate">إنهاء الجلسة الآمنة</span>}
           </button>
+        </div>
         </div>
         </aside>
         </>}
@@ -3499,7 +3505,6 @@ useEffect(() => {
       </main>
       
     </div>
-    </SidebarStateProvider>
   );
 }
 
@@ -3562,6 +3567,31 @@ function TiltCard({ children, className = '', max = 9 }) {
     </div>
   );
 }
+
+const OperationsClock = memo(function OperationsClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const clock = now.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
+  const date = `${now.toLocaleDateString('ar-EG', { weekday: 'long' })}، ${formatDateTime(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+  )}`;
+
+  return (
+    <div className="hidden sm:flex flex-col">
+      <span className="ops-clock text-2xl md:text-3xl font-black text-[var(--ink)]" dir="ltr">{clock}</span>
+      <span className="text-xs font-bold text-[var(--muted)] mt-1">{date}</span>
+    </div>
+  );
+});
 
 function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherEligible = true }) {
   const [missions, setMissions] = useState([]);
@@ -3790,20 +3820,11 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
   const aiTotalCountries = new Set(dailyAiNews.map(n => n.governorate).filter(Boolean)).size;
 
 
-  // 🕐 ساعة العمليات الحية + حالة تشغيلية مشتقة من البيانات الراسخة (لا منطق جديد)
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
   const liveActive = missions.filter(m => !isFinishedStatus(m.status)).length;
   const liveOpen = missions.filter(m => m.mission_classification === 'مفتوحة' && !isFinishedStatus(m.status)).length;
   const latestMissions = [...missions]
     .sort((a, b) => String(b.creation_datetime || b.created_at || '').localeCompare(String(a.creation_datetime || a.created_at || '')))
     .slice(0, 5);
-  const liveClock = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-  const liveDate = `${now.toLocaleDateString('ar-EG', { weekday: 'long' })}، ${formatDateTime(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`)}`;
   const statusTone = m => {
     if (m.status === 'Cancelled') return 'bg-[var(--warn)]';
     if (m.status === 'Completed' || m.status === 'Completed (Reviewed by Youth Administration)' || m.status === 'مكتملة (تمت المراجعة من إدارة الشباب)') return 'bg-[var(--ok)]';
@@ -3836,10 +3857,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         <div className="flex flex-wrap items-center justify-between gap-5 relative z-10">
           <div className="flex items-center gap-4">
             <span className="ops-chip text-[var(--ok)] border-[var(--ok-soft)] bg-[var(--ok-soft)]"><span className="live-dot" /> LIVE</span>
-            <div className="hidden sm:flex flex-col">
-              <span className="ops-clock text-2xl md:text-3xl font-black text-[var(--ink)]" dir="ltr">{liveClock}</span>
-              <span className="text-xs font-bold text-[var(--muted)] mt-1">{liveDate}</span>
-            </div>
+            <OperationsClock />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="ops-chip"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" /> مهام جارية الآن: <b className="text-[var(--ink)] tabular-nums">{liveActive}</b></span>

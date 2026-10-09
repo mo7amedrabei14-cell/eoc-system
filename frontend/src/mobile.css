@@ -193,7 +193,19 @@
     transform: translateX(100%);
     transition: transform 180ms var(--sc-ease, var(--ease-spring));
   }
-  .sidebar-shell::before {
+  .sidebar-panel {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    flex: 1;
+    clip-path: none;
+    transition: none;
+  }
+  .sidebar-shell.is-collapsed .sidebar-panel { clip-path: none; }
+  .sidebar-shell.is-collapsed .sidebar-scroll,
+  .sidebar-shell.is-collapsed .sidebar-actions { width: 100%; }
+  .sidebar-panel::before {
+    inset: 0;
     background-color: var(--sc-surface-1, var(--surface));
     background-image: none;
     backdrop-filter: none;
@@ -405,6 +417,16 @@
     .table-shell td::before { display: none; }
     .modal-card { max-width: none !important; max-height: none !important; border-radius: var(--radius-xl) !important; }
     .sidebar-shell { position: static; transform: none; width: 16rem; max-width: none; box-shadow: none; }
+    .sidebar-panel {
+      position: relative;
+      inset: auto;
+      width: 100%;
+      flex: 1;
+      clip-path: none;
+      transition: none;
+    }
+    .sidebar-shell.is-collapsed .sidebar-scroll,
+    .sidebar-shell.is-collapsed .sidebar-actions { width: 100%; }
   }
 }
 

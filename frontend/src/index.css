@@ -164,14 +164,12 @@
   color-scheme: light;
 }
 
-/* ── تفاعل التركيز المميّز — مذنّب الإطار الضوئي (EOC Focus Comet) ──
-   زاوية تُدار برمجيًّا (registered custom property) لتدوير ضوء يسافر
-   حول حدود الحقل/التحكم النشط. الحركة دائرية بلا اتجاه → تعمل تلقائيًّا
-   في RTL و LTR، والرموز (accent/surface) تجعلها تعمل في الوضعَين. */
+/* ── إطار تركيز EOC ──
+   لمعة ثابتة واضحة في RTL وLTR، بلا حركة تستهلك الرسم أثناء الكتابة. */
 :root {
   /* الحشوة الداخلية: تطابق خلفية `.field` تمامًا حتى لا تتغيّر مساحة الحقل */
   --eoc-frame-fill: linear-gradient(var(--surface-2), var(--surface-2));
-  /* مذنّب حالات التركيز العادي: هالة خفيفة مستمرة + رأس ضوئي ساطع متحرك */
+  /* إطار تركيز محايد مع لمعة ثابتة */
   --eoc-frame-comet: conic-gradient(
       from var(--eoc-focus-angle) at 50% 50%,
       color-mix(in srgb, var(--accent) 6%, transparent) 0deg,
@@ -182,7 +180,7 @@
       transparent 230deg,
       color-mix(in srgb, var(--accent) 14%, transparent) 300deg,
       color-mix(in srgb, var(--accent) 6%, transparent) 340deg);
-  /* مذنّب الحقول الإلزامية الناقصة: إطار أحمر واضح دائم + رأس متحرك */
+  /* إطار أحمر ثابت للحقول الإلزامية الناقصة */
   --eoc-frame-comet-invalid: conic-gradient(
       from var(--eoc-focus-angle) at 50% 50%,
       color-mix(in srgb, var(--accent) 38%, transparent) 0deg,
@@ -190,7 +188,7 @@
       color-mix(in srgb, var(--accent) 42%, transparent) 88deg,
       color-mix(in srgb, var(--accent) 26%, transparent) 125deg,
       color-mix(in srgb, var(--accent) 26%, transparent) 360deg);
-  /* مذنّب العناصر فوق خلفية أكسنت صريحة (أزرار/رقائق نشطة): ضوء فاتح */
+  /* لمعة فاتحة ثابتة فوق خلفية الأكسنت */
   --eoc-frame-comet-on-accent: conic-gradient(
       from var(--eoc-focus-angle) at 50% 50%,
       rgba(255, 255, 255, 0.05) 0deg,
@@ -201,16 +199,6 @@
       transparent 230deg,
       rgba(255, 255, 255, 0.12) 300deg,
       rgba(255, 255, 255, 0.05) 340deg);
-}
-
-@property --eoc-focus-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
-@keyframes eoc-focus-spin {
-  to { --eoc-focus-angle: 360deg; }
 }
 
 /* ════════════ الاختيارات المخصّصة (EocSelect) — بديل فاخر لـ <select> ════════════
@@ -339,7 +327,7 @@
       0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent),
       0 0 0 4px var(--accent-softer),
       0 16px 34px -16px var(--accent-glow) !important;
-    animation: eoc-focus-spin 2.2s linear infinite;
+    animation: none;
   }
 
   /* ── القائمة المنبثقة (منقولة إلى body عبر portal) ──
@@ -807,12 +795,9 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
 }
 
 
-/* ════════ تفاعل التركيز المميّز — مذنّب يتحرك حول الحقل النشط ════════
-   - الحقل القياسي `.field` عند التركيز: إطار ضوئي يسافر حول الحدود + توهج
-     أحمر طبقي (لا يتغيّر حجم/حشوة الحقل؛ الحدود تصبح شفافة والمذنّب يرسم اللون).
-   - الحقل الإلزامي الناقص `.field-invalid`: إطار أحمر دائم واضح + رأس متحرك.
-   - على فقدان التركيز: الحدود والتوهج يختفيان بسلاسة عبر الـ transition
-     الحالي لـ `.field` (border-color / box-shadow).                        ─── */
+/* ════════ إطار التركيز وحالة التحقق ════════
+   إطار ثابت عالي الوضوح؛ يتغير اللون والوهج عبر انتقالات الحقل القائمة
+   من دون حركة متواصلة أثناء الكتابة.                                     ─── */
 
 input.field:focus,
 select.field:focus,
@@ -827,13 +812,10 @@ textarea.field:focus {
     0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent),
     0 0 0 4px var(--accent-softer),
     0 16px 34px -16px var(--accent-glow) !important;
-  animation: eoc-focus-spin 2.2s linear infinite;
+  animation: none;
 }
 
-/* ✦ «إبرة الانتباه» بدل الدوران الأبدي:
-   قبل كده كان كل حقل ناقص حواليه إطار أحمر بيلف للأبد — ٥ حقول = ٥ إطارات بتلف =
-   ضجيج بصري بلا توجيه. دلوقتي: خط 2px ثابت على حافة البداية + إطار نبرة خفيف +
-   مرور ضوء واحد عند الظهور ثم سكون تام. */
+/* الحقل الإلزامي الناقص: علامة حمراء ثابتة على حافة البداية. */
 .field-invalid {
   --eoc-focus-angle: 0deg;
   border-color: transparent !important;
@@ -846,7 +828,7 @@ textarea.field:focus {
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent),
     0 10px 26px -20px var(--accent-glow) !important;
-  animation: eoc-focus-spin .95s linear 1;
+  animation: none;
 }
 [dir="ltr"] .field-invalid { background-position: 0 0, left center, 0 0; }
 
@@ -938,7 +920,7 @@ textarea:not(.field):focus {
     color-mix(in srgb, var(--surface-3) 60%, transparent),
     color-mix(in srgb, var(--surface-3) 60%, transparent)
   );
-  border: 1px solid transparent; /* حامل المذنّب — لا يغيّر الأبعاد (box-sizing: border-box) */
+  border: 1px solid transparent; /* حامل الإطار — لا يغيّر الأبعاد (box-sizing: border-box) */
   border-radius: calc(var(--radius) - 0.25rem);
   background-color: color-mix(in srgb, var(--surface-3) 30%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 45%, transparent);
@@ -962,12 +944,11 @@ textarea:not(.field):focus {
     0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent),
     0 0 0 4px var(--accent-softer),
     0 16px 34px -16px var(--accent-glow) !important;
-  animation: eoc-focus-spin 2.2s linear infinite;
+  animation: none;
 }
 
-/* ─── تحكمات الاختيار/الفلترة: إطار المذنّب على العنصر النشط/المحدّد ───
-   إطار 1.5px يُرسم فوق حافة العنصر عبر mask (لا يغيّر الأبعاد أو الـ layout)
-   ومذنّب يعبر به — أبيض فوق خلفية الأكسنت، وأحمر فوق الخلفيات الحيادية. */
+/* ─── تحكمات الاختيار/الفلترة: انعكاس ثابت على العنصر النشط ───
+   الإطار يُرسم فوق حافة العنصر عبر mask ولا يغيّر الأبعاد أو التخطيط. */
 .segmented-btn.is-active-accent,
 .segmented-btn.is-active,
 .chip-active,
@@ -984,7 +965,7 @@ textarea:not(.field):focus {
   padding: 1.5px;
   pointer-events: none;
   --eoc-focus-angle: 0deg;
-  animation: eoc-focus-spin 2.4s linear infinite;
+  animation: none;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
@@ -1010,7 +991,6 @@ textarea:not(.field):focus {
   transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
               border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
               box-shadow var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out);
-  will-change: transform;
   user-select: none;
 }
 .btn:active { transform: scale(0.97); }
@@ -1059,7 +1039,6 @@ textarea:not(.field):focus {
   color: var(--muted);
   border: 1px solid var(--border);
   transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast), background-color var(--dur-fast), border-color var(--dur-fast);
-  will-change: transform;
 }
 .icon-btn:hover { color: var(--ink); border-color: var(--border-strong); transform: translateY(-1px); }
 .icon-btn:active { transform: scale(0.94); }
@@ -1104,7 +1083,6 @@ textarea:not(.field):focus {
   transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out),
               border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out),
               box-shadow var(--dur-fast) var(--ease-out);
-  will-change: transform;
 }
 .action-btn svg { width: 1.05rem; height: 1.05rem; flex-shrink: 0; }
 .action-btn:hover { color: var(--ink); background: var(--surface-3); }
@@ -1171,7 +1149,6 @@ textarea:not(.field):focus {
   box-shadow: 0 10px 28px -12px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out);
-  will-change: transform;
 }
 .btn-primary::before {
   content: "";
@@ -1508,11 +1485,10 @@ button, .field, input, select, textarea { -webkit-font-smoothing: antialiased; }
    فتح. الآن انبثاق ٢٢٠ms من `transform-origin: top center` بـ
    transform+opacity فقط: أسرع، أنعم، وصفر إعادة تصفيف. */
 .notif-dropdown {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 96%, #000), var(--surface));
-  border: 1px solid var(--border-strong);
+  background: var(--sc-elev-3);
+  border: 1px solid var(--sc-hair-strong);
   border-radius: 1.125rem;
-  box-shadow: 0 30px 70px -30px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.03) inset;
+  box-shadow: var(--sc-shadow-3), inset 0 1px 0 var(--sc-light-top);
   animation: notif-drop var(--dur-base) var(--ease-out-quick) both;
   transform-origin: top center;
 }
