@@ -2332,7 +2332,7 @@
 :root[data-theme="light"] .lx-gate-foot::after { opacity: .56; }
 
 /* Wide gate: crest on the left, action rail on the right. */
-@media (min-width: 900px) and (min-height: 680px) {
+@media (min-width: 900px) and (min-height: 721px) {
   .lx-gate-board {
     width: min(88vw, 75rem);
     max-width: 75rem;
@@ -2351,8 +2351,10 @@
   .lx-gate-slider { justify-self: stretch; }
   .lx-track { width: 100%; }
   .lx-gate-foot { margin-top: 1.55rem !important; }
-  :root[dir="rtl"] .lx-gate-title,
-  :root[dir="rtl"] .lx-gate-sub { text-align: right; }
+  .lx[dir="rtl"] .lx-gate-title,
+  .lx[dir="rtl"] .lx-gate-sub { text-align: right; direction: rtl; }
+  .lx[dir="ltr"] .lx-gate-title,
+  .lx[dir="ltr"] .lx-gate-sub { text-align: left; direction: ltr; }
 }
 
 /* ── Access deck: new split command layout ──────────────────────────────── */
@@ -2797,8 +2799,22 @@
   .lx > .relative.z-10.flex.items-center.justify-center { padding-block: .75rem; }
   .lx-console { padding-block: 1.6rem; }
 }
-@media (min-width: 900px) and (max-height: 679px) {
-  .lx-gate-board { width: min(90vw, 47rem); }
+@media (min-width: 900px) and (max-height: 720px) {
+  .lx-gate-board {
+    width: min(90vw, 52rem);
+    max-width: 52rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "emblem" "title" "sub" "readout" "slider" "foot";
+    column-gap: 0;
+    row-gap: .38rem;
+    padding-block: 1.05rem;
+  }
+  .lx-gate-emblem { margin: .1rem 0 .45rem; }
+  .lx-gate-title, .lx-gate-sub { text-align: center; }
+  .lx[dir="rtl"] .lx-gate-title,
+  .lx[dir="rtl"] .lx-gate-sub { text-align: center; }
+  .lx-crest-stack { width: 5.7rem; height: 5.7rem; }
+  .lx-gate-foot { margin-top: .55rem !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .lx *, .lx *::before, .lx *::after {
