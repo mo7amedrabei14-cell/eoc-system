@@ -1055,14 +1055,19 @@ button.nav-item {
 }
 
 /* ==========================================================
-   1. الكروت الشفافة بالكامل مع الحفاظ على الألوان والإطارات والتوهج
+   1. شفافية كروت المؤشرات فقط — لا نفرض شفافية الخلفية على كل الحاويات
    ========================================================== */
-.kpi-card, 
-.stat-card, 
-.glass-panel, 
-.card, 
+.kpi-card,
+.stat-card {
+  background: transparent !important;
+}
+
+/* الإبقاء على مؤثرات الطبقة الموجودة دون فرض خلفية شفافة على الكروت العامة */
+.kpi-card,
+.stat-card,
+.glass-panel,
+.card,
 .dashboard-card {
-  background: transparent !important; /* شفافية كاملة لرؤية الخلفية تماماً */
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   position: relative !important;
