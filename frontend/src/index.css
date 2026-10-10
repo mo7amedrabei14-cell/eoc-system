@@ -4065,3 +4065,49 @@ select.field {
    index.css نفسه. يُستورد في آخر الملف ليكون الكلمة الأخيرة عليها.
    ═══════════════════════════════════════════════════════════════════════════ */
 @import "./supercharged-tail.css";
+
+/* ==========================================
+   تنسيقات توحيد الجداول والكروت
+   ========================================== */
+
+/* 1. توحيد ألوان الجداول والخلفيات */
+table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  background-color: var(--surface-2) !important;
+  border-radius: var(--radius) !important;
+  overflow: hidden;
+}
+
+/* توحيد رأس الجدول (العناوين) */
+th {
+  background-color: var(--surface-3) !important;
+  color: var(--ink-2) !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid var(--border-strong) !important;
+  padding: 12px 16px !important;
+}
+
+/* توحيد خلايا الجدول */
+td {
+  border-bottom: 1px solid var(--border-hair) !important;
+  color: var(--ink) !important;
+  background-color: transparent !important;
+  padding: 12px 16px !important;
+}
+
+/* خلفية الصف عند التأشير عليه */
+tr:hover td {
+  background-color: var(--surface-hover) !important;
+}
+
+/* 2. توحيد شفافية الكروت والفرعيات داخل جدول المهام */
+.mission-card-inner,
+.table-inner-card,
+tr.expanded-row td {
+  background-color: var(--surface-2) !important;
+  backdrop-filter: blur(var(--blur-sm)) !important;
+  -webkit-backdrop-filter: blur(var(--blur-sm)) !important;
+  border: 1px solid var(--border) !important;
+}
