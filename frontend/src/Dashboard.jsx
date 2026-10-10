@@ -9500,9 +9500,11 @@ const [nd, setNd] = useState({
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
+{isModalOpen && createPortal(
+  <div
+    dir={document.querySelector('.app-shell')?.getAttribute('dir') || 'rtl'}
+    className="eoc-modal-layer modal-backdrop fixed inset-0 flex items-center justify-center p-4"
+  >          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-2xl animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><NewsIcon /> {nd.news_id ? 'تعديل الخبر والمؤشرات' : 'إضافة خبر جديد'}</h2>
               <button onClick={() => setIsModalOpen(false)} disabled={savingNews} className="touch-close bg-[var(--surface-4)] text-[var(--muted-2)] hover:bg-[var(--accent)] hover:text-white p-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><TrashIcon /></button>
@@ -9612,7 +9614,9 @@ const [nd, setNd] = useState({
             </div>
           </div>
         </div>
-      )}
+        ,
+  document.body
+)}
 
       {/* 🗑️ تأكيد حذف خبر فردي — التصميم الموحّد (كبسولة علوية عائمة) */}
       <DangerConfirmModal
@@ -12496,8 +12500,11 @@ const [clearAllCode, setClearAllCode] = useState('');
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
+      {isModalOpen && createPortal(
+  <div
+    dir={document.querySelector('.app-shell')?.getAttribute('dir') || 'rtl'}
+    className="eoc-modal-layer modal-backdrop fixed inset-0 flex items-center justify-center p-4"
+  >
           <div className="bg-[var(--surface)] border border-[var(--accent)]/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(199,0,0,0.1)] animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-white flex items-center gap-2"><GlobalWorldIcon /> {gd.disaster_id ? 'تعديل رصد الكارثة' : 'رصد كارثة عالمية جديدة'}</h2>
@@ -12557,7 +12564,9 @@ const [clearAllCode, setClearAllCode] = useState('');
             </div>
           </div>
         </div>
-      )}
+        ,
+  document.body
+)}
 
       {/* 🗑️ تأكيد حذف رصد فردي — التصميم الموحّد (كبسولة علوية عائمة) */}
       <DangerConfirmModal
@@ -15727,9 +15736,11 @@ const totalAiCountries = new Set(
       </div>
 
       {/* مودال قراءة التقرير والتعديل */}
-      {isModalOpen && (
-        <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
-          <div className="bg-[var(--surface)] border border-purple-500/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-fade-in-up">
+{isModalOpen && createPortal(
+  <div
+    dir={document.querySelector('.app-shell')?.getAttribute('dir') || 'rtl'}
+    className="eoc-modal-layer modal-backdrop fixed inset-0 flex items-center justify-center p-4"
+  >          <div className="bg-[var(--surface)] border border-purple-500/30 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(168,85,247,0.15)] animate-fade-in-up">
             <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-lg font-bold text-[var(--ink)] flex items-center gap-2"><AIIcon className="text-purple-500"/> التقرير الاستخباراتي (OSINT)</h2>
               <button
@@ -15790,7 +15801,9 @@ const totalAiCountries = new Set(
             </div>
           </div>
         </div>
-      )}
+        ,
+  document.body
+)}
 
       <DangerConfirmModal
         show={aiNewsToDelete !== null}
