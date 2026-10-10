@@ -274,14 +274,14 @@
 
 .app-shell #main-scroll-container > div .kpi-card {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 46%),
+    linear-gradient(135deg, color-mix(in srgb, var(--kpi-tone, var(--accent)) 7%, transparent), transparent 46%),
     linear-gradient(180deg, var(--dashboard-card-top), transparent 48%),
     linear-gradient(145deg, var(--sc-surface-3), var(--sc-surface-1) 78%);
-  border-color: color-mix(in srgb, var(--sc-hair-strong) 82%, var(--accent));
+  border-color: color-mix(in srgb, var(--sc-hair-strong) 82%, var(--kpi-tone, var(--accent)));
   box-shadow:
     inset 0 1px 0 var(--sc-light-top),
     inset 0 0 0 1px color-mix(in srgb, var(--sc-hair) 44%, transparent),
-    inset 3px 0 0 color-mix(in srgb, var(--accent) 58%, transparent),
+    inset 3px 0 0 color-mix(in srgb, var(--kpi-tone, var(--accent)) 58%, transparent),
     0 12px 30px -23px rgba(0, 0, 0, 0.8);
   transition:
     transform 240ms var(--sc-ease),
@@ -293,7 +293,7 @@
   box-shadow:
     inset 0 1px 0 var(--sc-light-top),
     inset 0 0 0 1px color-mix(in srgb, var(--sc-hair) 44%, transparent),
-    inset -3px 0 0 color-mix(in srgb, var(--accent) 58%, transparent),
+    inset -3px 0 0 color-mix(in srgb, var(--kpi-tone, var(--accent)) 58%, transparent),
     0 12px 30px -23px rgba(0, 0, 0, 0.8);
 }
 .app-shell #main-scroll-container > div .kpi-card::after {
@@ -308,24 +308,24 @@
 }
 .app-shell #main-scroll-container > div .kpi-value {
   color: var(--ink);
-  text-shadow: 0 8px 26px color-mix(in srgb, var(--accent) 22%, transparent);
+  text-shadow: 0 8px 26px color-mix(in srgb, var(--kpi-tone, var(--accent)) 22%, transparent);
 }
 @media (hover: hover) and (pointer: fine) {
   .app-shell #main-scroll-container > div .kpi-card:hover {
     transform: translateY(-3px);
-    border-color: color-mix(in srgb, var(--accent) 42%, var(--sc-hair-strong));
+    border-color: color-mix(in srgb, var(--kpi-tone, var(--accent)) 42%, var(--sc-hair-strong));
     box-shadow:
       inset 0 1px 0 var(--sc-light-top),
-      inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
-      inset 3px 0 0 color-mix(in srgb, var(--accent) 78%, transparent),
-      0 18px 34px -22px color-mix(in srgb, var(--accent) 34%, #000);
+      inset 0 0 0 1px color-mix(in srgb, var(--kpi-tone, var(--accent)) 12%, transparent),
+      inset 3px 0 0 color-mix(in srgb, var(--kpi-tone, var(--accent)) 78%, transparent),
+      0 18px 34px -22px color-mix(in srgb, var(--kpi-tone, var(--accent)) 34%, #000);
   }
   [dir="rtl"] .app-shell #main-scroll-container > div .kpi-card:hover {
     box-shadow:
       inset 0 1px 0 var(--sc-light-top),
-      inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent),
-      inset -3px 0 0 color-mix(in srgb, var(--accent) 78%, transparent),
-      0 18px 34px -22px color-mix(in srgb, var(--accent) 34%, #000);
+      inset 0 0 0 1px color-mix(in srgb, var(--kpi-tone, var(--accent)) 12%, transparent),
+      inset -3px 0 0 color-mix(in srgb, var(--kpi-tone, var(--accent)) 78%, transparent),
+      0 18px 34px -22px color-mix(in srgb, var(--kpi-tone, var(--accent)) 34%, #000);
   }
 }
 
@@ -448,14 +448,14 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     inset 0 0 0 1px color-mix(in srgb, var(--sc-hair-strong) 36%, transparent),
-    inset 3px 0 0 color-mix(in srgb, var(--accent) 54%, transparent),
+    inset 3px 0 0 color-mix(in srgb, var(--kpi-tone, var(--accent)) 54%, transparent),
     0 12px 30px -23px rgba(25, 35, 55, 0.34);
 }
 :root[data-theme="light"] [dir="rtl"] .app-shell #main-scroll-container > div .kpi-card {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     inset 0 0 0 1px color-mix(in srgb, var(--sc-hair-strong) 36%, transparent),
-    inset -3px 0 0 color-mix(in srgb, var(--accent) 54%, transparent),
+    inset -3px 0 0 color-mix(in srgb, var(--kpi-tone, var(--accent)) 54%, transparent),
     0 12px 30px -23px rgba(25, 35, 55, 0.34);
 }
 

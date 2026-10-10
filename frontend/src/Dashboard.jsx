@@ -3899,14 +3899,14 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
             <span className="kpi-sub kpi-sub-lg"><span className="live-dot" /> نشطة الآن</span>
           </div>
         </TiltCard>
-                <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+                <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:var(--ok)]">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">المهام المكتملة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><CheckIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={completedMissions} /></p>
             <span className="kpi-sub kpi-sub-lg">تم الانتهاء</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:var(--ai)]">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">الأخبار المحلية المرصودة</h3><div className="p-2 rounded-xl text-[var(--ai)] bg-[var(--ai-soft)] border border-[var(--ai)]/20 shrink-0"><NewsIcon/></div></div>
           <div className="flex items-end gap-2 relative z-10"><p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalNews} /></p><span className="text-base font-bold text-[var(--ai)] mb-1.5">(<CountUp value={activeNews} className="!text-base !text-[var(--ai)] font-bold" /> استجابة)</span></div>
         </TiltCard>
@@ -3924,7 +3924,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
             <span className="kpi-sub kpi-sub-lg">خلال 24 ساعة</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:var(--ok)]">
           <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">زلازل مصر المرصودة</h3><div className="p-2 rounded-xl text-[var(--ok)] bg-[var(--ok-soft)] border border-[var(--ok)]/20 shrink-0"><EarthquakeIcon/></div></div>
           <div className="flex flex-wrap items-center gap-2 relative z-10">
             <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={totalEgyptEqs} /></p>
@@ -3959,7 +3959,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger">
 
         {/* إجمالي الأخبار المرصودة */}
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#c084fc]">
           <div className="flex items-center justify-between mb-3 relative z-10">
             <h3 className="text-[var(--muted)] font-bold text-xl truncate">إجمالي الأخبار المرصودة</h3>
             <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
@@ -3975,7 +3975,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
         </TiltCard>
 
         {/* الدول / المحافظات المرصودة */}
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#c084fc]">
           <div className="flex items-center justify-between mb-3 relative z-10">
             <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول / المحافظات المرصودة</h3>
             <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
@@ -4015,21 +4015,21 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
               <span className="kpi-sub kpi-sub-lg">{filterDate ? 'حسب الفلتر' : 'كل العالم (حتى الآن)'}</span>
             </div>
           </TiltCard>
-          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#fb923c]">
             <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">أعلى درجة خطورة</h3><div className="p-2 rounded-xl text-orange-400 bg-orange-400/10 border border-orange-400/20 shrink-0"><AlertIcon/></div></div>
             <div className="flex flex-wrap items-center gap-2 relative z-10">
               <p className="kpi-value text-5xl text-[var(--ink)]"><CountUp value={eqIntelMaxRisk} /></p>
               <span className="kpi-sub kpi-sub-lg">من 100 (38% شدة · 30% قرب · 32% تاريخ)</span>
             </div>
           </TiltCard>
-          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#facc15]">
             <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">أقوى حدث اليوم</h3><div className="p-2 rounded-xl text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 shrink-0"><GlobalWorldIcon/></div></div>
             <div className="flex flex-wrap items-center gap-2 relative z-10">
               <p className="kpi-value text-5xl text-[var(--ink)]">{eqIntelStrongest?.magnitude != null ? fmtMag(eqIntelStrongest.magnitude) : '—'}</p>
               <span className="kpi-sub kpi-sub-lg truncate max-w-full" title={eqIntelStrongest?.place || ''}>{eqIntelStrongest?.place || 'لا رصود بعد'}</span>
             </div>
           </TiltCard>
-          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+          <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#22d3ee]">
             <div className="flex items-center justify-between mb-3 relative z-10"><h3 className="text-[var(--muted)] font-bold text-xl">آخر زلزال مرصود</h3><div className="p-2 rounded-xl shrink-0 text-cyan-400 bg-cyan-400/10 border border-cyan-400/20"><EarthquakeIcon/></div></div>
             <div className="flex flex-wrap items-center gap-2 relative z-10">
               <p className="kpi-value text-5xl text-[var(--ink)]">{eqIntelLatest?.magnitude != null ? fmtMag(eqIntelLatest.magnitude) : '—'}</p>
@@ -8814,16 +8814,57 @@ const TableLoadingRow = ({ colSpan = 7, label = null }) => (
   </tr>
 );
 
+// 🎨 لون الكارت (--kpi-tone): بيتحدّد من لون القيمة ويتبعه لون الحافة والتوهّج والأيقونة — الافتراضي الأكسنت
+const KPI_TW_TONES = { blue: '#60a5fa', green: '#4ade80', purple: '#c084fc', orange: '#fb923c', yellow: '#facc15', cyan: '#22d3ee', red: '#f87171', emerald: '#34d399', amber: '#fbbf24', pink: '#f472b6', teal: '#2dd4bf', sky: '#38bdf8', indigo: '#818cf8', violet: '#a78bfa', rose: '#fb7185' };
+const kpiToneOf = (color, forceAccent = false) => {
+  if (forceAccent) return 'var(--accent)';
+  const c = String(color || '');
+  const v = c.match(/text-\[var\((--[\w-]+)\)\]/);
+  if (v) return ['--ink', '--muted', '--muted-2', '--faint'].includes(v[1]) ? 'var(--accent)' : `var(${v[1]})`;
+  const t = c.match(/text-([a-z]+)-\d{3}/);
+  return (t && KPI_TW_TONES[t[1]]) || 'var(--accent)';
+};
+const KpiGlobeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.2 2.5 3.4 5.5 3.4 9s-1.2 6.5-3.4 9c-2.2-2.5-3.4-5.5-3.4-9S9.8 5.5 12 3z" /></svg>;
+const KpiPulseIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21" /></svg>;
+const KpiClipboardIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4.5" width="12" height="16.5" rx="2.5" /><path d="M9 4.5h6V7H9zM9.5 12h5M9.5 15.5h5" /></svg>;
+const KpiLayersIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z" /><path d="m3 13 9 5 9-5" /></svg>;
+// أيقونة افتراضية حسب عنوان الكارت (لو ما اتبعتش icon صريح)
+const kpiGlyphFor = (title) => {
+  const t = String(title || '');
+  if (/إقليم|المركز العام|Region/i.test(t)) return <MapIcon />;
+  if (/متطوع|القوة|أفراد|Volunteer|Personnel|Force/i.test(t)) return <UsersIcon />;
+  if (/زلزال|زلازل|هزة|Quake|Earthquake/i.test(t)) return <EarthquakeIcon />;
+  if (/وفيات|مصاب|حوادث|كوارث|مخاطر|Death|Injur|Incident|Disaster|Hazard/i.test(t)) return <AlertIcon />;
+  if (/دول|مناطق|محافظات|Countr|Governorate/i.test(t)) return <KpiGlobeIcon />;
+  if (/الرد|تواصل|اتصال|Repl|Contact|Call/i.test(t)) return <PhoneIcon />;
+  if (/تسليم|ورديات|أجهزة|Handover|Shift|Device/i.test(t)) return <KpiClipboardIcon />;
+  if (/استجابة|تحرك|نقاط|Response|Points/i.test(t)) return <KpiPulseIcon />;
+  if (/أخبار|بلاغ|News|Report/i.test(t)) return <NewsIcon />;
+  return <KpiLayersIcon />;
+};
 function InventoryCard({ title, value, unit, color }) {
   return (
-    <div className="kpi-card card-surface p-5 rounded-2xl">
-      <p className="text-[var(--muted)] text-xs font-bold mb-1">{title}</p>
-      <p className={`kpi-value text-3xl ${color}`}>{value}</p>
-      <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1">{unit}</p>
+    <div className="kpi-card card-surface p-5 rounded-2xl" style={{ '--kpi-tone': kpiToneOf(color) }}>
+      <div className="flex items-center justify-between mb-1 relative z-10">
+        <p className="text-[var(--muted)] text-xs font-bold">{title}</p>
+        <div className="kpi-badge shrink-0"><InventoryIcon /></div>
+      </div>
+      <p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p>
+      <p className="text-[max(0.625rem,9px)] text-[var(--faint)] mt-1 relative z-10">{unit}</p>
     </div>
   );
 }
-function StatCard({ title, value, color, icon, borderHighlight }) { return ( <div className={`kpi-card card-surface p-5 rounded-3xl h-32 hover-lift spot-card ${borderHighlight ? 'border-l-4 border-l-[var(--accent)]' : ''}`}>{icon && <div className="relative z-10 mb-1">{icon}</div>}<p className="text-[var(--muted)] text-xs font-semibold mb-1 relative z-10">{title}</p><p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p></div> ); }
+function StatCard({ title, value, color, icon, borderHighlight }) {
+  return (
+    <div className="kpi-card card-surface p-5 rounded-3xl h-32 hover-lift spot-card" style={{ '--kpi-tone': kpiToneOf(color, borderHighlight) }}>
+      <div className="flex items-center justify-between mb-2 relative z-10">
+        <p className="text-[var(--muted)] text-xs font-semibold">{title}</p>
+        <div className="kpi-badge shrink-0">{icon || kpiGlyphFor(title)}</div>
+      </div>
+      <p className={`kpi-value text-3xl ${color} relative z-10`}>{value}</p>
+    </div>
+  );
+}
 
 const EyeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.8 12S6.1 6 12 6s9.2 6 9.2 6-3.3 6-9.2 6S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="3"/><path d="M12 9.6a2.4 2.4 0 1 0 2.4 2.4"/></svg>;
 const TrashIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16"/><path d="M9.5 7V4.4h5V7"/><path d="M6.5 7l.8 12.5a2 2 0 0 0 2 1.5h5.4a2 2 0 0 0 2-1.5L17.5 7"/><path d="M10 11v5.4M14 11v5.4"/></svg>;
@@ -12931,7 +12972,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
             <span className="kpi-sub">{filterFrom || filterTo ? T('حسب الفلتر', 'Filtered') : T('عرض الكل', 'Showing all')}</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card [--kpi-tone:#fb923c]">
           <div className="flex items-center justify-between mb-2 relative z-10">
             <h3 className="text-[var(--muted)] text-xs font-semibold">{T('أعلى خطورة (0-100)', 'Max risk')}</h3>
             <div className="p-1.5 rounded-xl text-orange-400 bg-orange-400/10 border border-orange-400/20 shrink-0"><AlertIcon /></div>
@@ -12941,7 +12982,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
             <span className="kpi-sub">38% شدة · 30% قرب · 32% تاريخ</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card [--kpi-tone:#facc15]">
           <div className="flex items-center justify-between mb-2 relative z-10">
             <h3 className="text-[var(--muted)] text-xs font-semibold">{T('أقوى حدث اليوم', 'Strongest today')}</h3>
             <div className="p-1.5 rounded-xl text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 shrink-0"><GlobalWorldIcon /></div>
@@ -12951,7 +12992,7 @@ function EqIntelView({ lang = 'ar', liveUpdateVersion = 0, isOwner = false, focu
             <span className="kpi-sub truncate max-w-full" title={eqStrongest?.place || ''}>{eqStrongest?.place || T('لا رصود بعد', 'None yet')}</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-32 spot-card [--kpi-tone:#22d3ee]">
           <div className="flex items-center justify-between mb-2 relative z-10">
             <h3 className="text-[var(--muted)] text-xs font-semibold">{T('آخر زلزال مرصود', 'Latest detected quake')}</h3>
             <div className="p-1.5 rounded-xl text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 shrink-0"><EarthquakeIcon /></div>
@@ -14730,7 +14771,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
       {/* 3. كروت الإحصاءات السريعة (KPIs) — نفس ستايل كروت الزلازل/المؤشرات اليومية حرفياً (TiltCard + توهج يتبع الماوس) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#60a5fa]">
           <div className="flex items-center justify-between mb-3 relative z-10">
             <h3 className="text-[var(--muted)] font-bold text-xl truncate">{T('المواقع المغطاة', 'Monitored Locations')}</h3>
             <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-300 border-2 border-blue-400/60 shadow-[0_0_18px_rgba(59,130,246,0.45),0_0_5px_rgba(59,130,246,0.55),inset_0_0_9px_rgba(59,130,246,0.18)] [text-shadow:0_0_10px_currentColor] flex items-center justify-center text-xl font-black shrink-0">📍</div>
@@ -14750,7 +14791,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <span className="kpi-sub kpi-sub-lg">{kpiHazardsCount > 0 ? T('تتطلب متابعة تشغيلية', 'Requires monitoring') : T('لا توجد مخاطر استثنائية', 'No extreme hazards')}</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#fbbf24]">
           <div className="flex items-center justify-between mb-3 relative z-10">
             <h3 className="text-[var(--muted)] font-bold text-xl truncate">{T('حالات الشذوذ الإحصائي', 'Statistical Anomalies')}</h3>
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-300 border-2 border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.45),0_0_5px_rgba(251,191,36,0.55),inset_0_0_9px_rgba(251,191,36,0.18)] [text-shadow:0_0_10px_currentColor] flex items-center justify-center text-xl font-black shrink-0">📈</div>
@@ -14760,7 +14801,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             <span className="kpi-sub kpi-sub-lg">{T('انحراف عن النطاق المعتاد (P25-P75)', 'Deviation from P25-P75')}</span>
           </div>
         </TiltCard>
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#f87171]">
           <div className="flex items-center justify-between mb-3 relative z-10">
             <h3 className="text-[var(--muted)] font-bold text-xl truncate" title={kpiPeak?.label || ''}>
               {kpiPeak ? kpiPeak.label : (kpiIsHotSeason ? T('أعلى حرارة متوقعة', 'Highest Expected Temp') : T('أعلى نسبة أمطار متوقعة', 'Highest Rain Probability'))}
@@ -15490,7 +15531,7 @@ const totalAiCountries = new Set(
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger">
 
         {/* عدد الأخبار */}
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#c084fc]">
           <div className="flex items-center justify-between mb-3 relative z-10">
             <h3 className="text-[var(--muted)] font-bold text-xl truncate">إجمالي الأخبار المرصودة</h3>
             <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
@@ -15517,7 +15558,7 @@ const totalAiCountries = new Set(
 
 
         {/* عدد الدول */}
-        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card">
+        <TiltCard className="kpi-card card-surface p-5 rounded-3xl relative overflow-hidden h-36 spot-card [--kpi-tone:#c084fc]">
           <div className="flex items-center justify-between mb-3 relative z-10">
             <h3 className="text-[var(--muted)] font-bold text-xl truncate">الدول / المحافظات المرصودة</h3>
             <div className="bg-purple-500/15 text-purple-300 border-2 border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.45),0_0_5px_rgba(168,85,247,0.55),inset_0_0_9px_rgba(168,85,247,0.18)] [text-shadow:0_0_10px_currentColor] w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
