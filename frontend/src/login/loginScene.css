@@ -2229,6 +2229,11 @@
   animation: field-watermark 18s ease-in-out infinite alternate;
 }
 :root[data-theme="light"] .lx-gate::before { opacity: .045; }
+:root[data-theme="light"] .lx-gate::before {
+  background: none;
+  clip-path: none;
+  height: 100%;
+}
 @keyframes field-watermark {
   from { transform: translate3d(-1.5%, 0, 0) scale(1); }
   to { transform: translate3d(1.5%, -.6%, 0) scale(1.025); }
@@ -2487,6 +2492,8 @@
   align-items: center;
   min-height: 5.25rem;
   padding: .9rem clamp(1.1rem, 4vw, 4rem);
+  padding-inline-start: max(3.5rem, clamp(1.1rem, 4vw, 4rem));
+  padding-inline-end: max(3.5rem, clamp(1.1rem, 4vw, 4rem));
   overflow: hidden;
   color: #f7f9fc;
   background: #0b111a;
@@ -2970,7 +2977,12 @@
 @media (max-width: 640px) {
   .lx > .relative.z-10.flex.items-center.justify-center { padding: 0; }
   .lx-deck { min-height: 100dvh; }
-  .lx-ribbon { min-height: 4.65rem; padding: .75rem .85rem; }
+  .lx-ribbon {
+    min-height: 4.65rem;
+    padding: .75rem .85rem;
+    padding-inline-start: 3.5rem;
+    padding-inline-end: 3.5rem;
+  }
   .lx-logo-tile { width: 2.55rem; height: 2.55rem; border-radius: .55rem; }
   .lx-ribbon .text-sm, .lx-ribbon .sm\:text-base { font-size: .78rem; }
   .lx-ribbon .text-white\/75 { font-size: .61rem; }
