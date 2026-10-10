@@ -11927,7 +11927,7 @@ const onMatrixChange = (s, d, val) => {
           </div>
         </div>
 
-        <div className="table-shell overflow-x-auto eoc-reference-table-wrap">
+        <div className="table-shell overflow-x-auto">
           <table className="w-full min-w-[45rem] eoc-reference-table">
             <thead>
               <tr>
@@ -12057,7 +12057,7 @@ const onMatrixChange = (s, d, val) => {
               <SectionCard title={T('مصفوفة الورديات', 'Shift Personnel Matrix')}
                 icon={<UsersIcon />}
                 actionBtn={<button onClick={resetMatrix} className="action-btn action-btn--danger">{T('تصفير الكل', 'Reset All')}</button>}>
-                <div className="table-shell overflow-x-auto eoc-reference-table-wrap">
+                <div className="table-shell overflow-x-auto">
                   <table className="w-full min-w-[35rem] eoc-reference-table">
                     <thead>
                       <tr>
