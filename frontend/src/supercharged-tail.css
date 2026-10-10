@@ -623,8 +623,8 @@
   border-top-color: var(--sc-hair) !important;
 }
 .app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]),
-.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > td:not([class*="sticky"]),
-.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > th:not([class*="sticky"]) {
+.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > td:not([class*="sticky"]):not([class*="accent-soft"]),
+.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > th:not([class*="sticky"]):not([class*="accent-soft"]) {
   background: var(--surface-hover) !important;
 }
 
