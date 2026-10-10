@@ -7034,7 +7034,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
   };
 
   return (
-    <div className="card-surface bg-transparent overflow-hidden flex flex-col min-h-[43.75rem] flex-1">
+    <div className="flex flex-col gap-4 min-w-0 min-h-[43.75rem] flex-1">
       {/* 🗑️ تأكيد حذف مهمة فردية — التصميم الموحّد (كبسولة علوية عائمة) */}
       <DangerConfirmModal
         show={missionToDelete !== null}
@@ -7045,6 +7045,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
         onConfirm={confirmDeleteMission}
       />
 
+      <div className="card-surface overflow-hidden rounded-3xl eoc-missions-controls">
       <div className="p-5 md:p-6 border-b border-[var(--border)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex flex-col gap-3 w-full">
 
@@ -7177,24 +7178,24 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
             )}
           </Magnetic>
         </div>
-      </div>
+        <div className="p-4 md:p-5 space-y-3">
 
         {pendingSends > 0 && (
-        <button onClick={retryOutbox} disabled={outboxRetrying} className="mt-4 w-full btn-warn px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.97] disabled:opacity-60">
+        <button onClick={retryOutbox} disabled={outboxRetrying} className="w-full btn-warn px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.97] disabled:opacity-60">
           {outboxRetrying ? '⏳ جاري إعادة المحاولة الآن...' : `⏳ عندك ${pendingSends} استمارة لسه مبعتتش — اضغط هنا لإعادة المحاولة الآن`}
         </button>
       )}
 
       {/* 🔐 استمارات معلقة بسببsession منتهية: الطابور سليم، بس محتاج دخول من جديد */}
       {authBlockedCount > 0 && (
-        <div className="mt-3 rounded-2xl border border-[var(--accent)]/40 bg-[var(--danger-soft)] px-4 py-3 text-xs font-bold text-[var(--ink-2)] leading-relaxed">
+        <div className="rounded-2xl border border-[var(--accent)]/40 bg-[var(--danger-soft)] px-4 py-3 text-xs font-bold text-[var(--ink-2)] leading-relaxed">
           🔐 عندك {authBlockedCount} استمارة محفوظة عندك ومستنية انتهاء الجلسة — سجّل الخروج والدخول من جديد، وهتتبعت لوحدها فوراً. البيانات محفوظة مش ناقصة حاجة.
         </div>
       )}
 
       {/* 🗄️ المرفوضات: كانت *تُمسح* زمان — دلوقتي بتظهر هنا ببياناتها كاملة */}
       {rejectedList.length > 0 && (
-        <div className="mt-3 rounded-2xl border border-[var(--warn)]/45 bg-[var(--warn-soft)] px-4 py-3">
+        <div className="rounded-2xl border border-[var(--warn)]/45 bg-[var(--warn-soft)] px-4 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <span className="text-xs font-bold text-[var(--ink-2)] leading-relaxed">
               🗄️ فيه {rejectedList.length} استمارة السيرفر رفضها — <b>بياناتها محفوظة عندك</b> وما اتمسحتش. راجعها ونزّلها أو رجّعها للطابور.
@@ -7248,21 +7249,23 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
       )}
 
 
-      <div className="mt-4 border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
+      <div className="border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، ID، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {searchTerm && <button onClick={() => setSearchTerm('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
 
       {/* 🔎 بحث باسم المشارك/المتطوع — نفس الستايل والسلوك، RTL كامل، لا يغيّر أي فلتر موجود */}
-      <div className="mt-3 border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
+      <div className="border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
         <input type="text" placeholder="بحث باسم المشارك أو المتطوع أو رقم العضوية..." value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {participantSearch && <button onClick={() => setParticipantSearch('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
+        </div>
+      </div>
 
       {!isVolunteer && (
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 border-b border-[var(--border)] shrink-0">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 shrink-0 eoc-missions-stats">
         <StatCard title="إجمالي المهام" value={regionStats.total} color="text-[var(--ink)]" borderHighlight />
         <StatCard title="المركز العام" value={regionStats.hq} color="text-[var(--accent)]" />
         <StatCard title="إقليم القنال" value={regionStats.canal} color="text-[var(--info)]" />
@@ -7273,7 +7276,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
 
       {isTableExpanded && <div className="fixed inset-0 bg-[var(--bg-deep)]/85 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
 
-      <div className={isTableExpanded ? `fixed inset-4 z-[150] card-surface rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-10 md:left-10' : 'md:right-20 md:left-10'}` : "flex-1 flex flex-col overflow-hidden relative"}>
+      <div className={isTableExpanded ? `fixed inset-4 z-[150] card-surface rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-10 md:left-10' : 'md:right-20 md:left-10'}` : "table-shell flex-1 flex flex-col overflow-hidden relative"}>
 
         {isTableExpanded && (
           <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
@@ -7282,7 +7285,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
           </div>
         )}
 
-        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
+        <div className={`flex-1 overflow-auto custom-scrollbar relative ${isTableExpanded ? 'eoc-table-shell' : ''}`}>
           <table className="w-full min-w-[68.75rem] text-start border-separate border-spacing-0">
           <thead className="sticky top-0 z-20">
             <tr className="text-[var(--muted-2)] text-[max(0.6875rem,9.5px)] md:text-xs">
@@ -11348,7 +11351,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
         ) : visibleBranches.length === 0 ? (
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
-          <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto">
+          <div className="overflow-x-auto custom-scrollbar wx-frozen max-h-[62vh] overflow-y-auto eoc-handover-table-surface">
             <table className="w-full text-right whitespace-nowrap min-w-[91.25rem] text-sm border-separate" style={{ borderSpacing: 0 }}>
               <thead>
                 <tr>
