@@ -2087,6 +2087,7 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
                                   WHERE s.participant_id = p.participant_id AND s.end_dt IS NOT NULL
                               )
                               AND m.status NOT IN ('Completed', 'مكتملة')
+                              AND COALESCE(p.return_status, '') <> 'تم انتهاء مهمتة'
                           )
                       )
                 """ + excl_sql + """
@@ -2574,9 +2575,16 @@ def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_
             "SELECT status FROM missions WHERE mission_id = %s", (mission_id,)
         )
         m_status = cursor.fetchone()[0]
-        new_status = ('مازال بالمهمة'
-                      if any(pd['end'] is None for pd in periods)
-                      else ('تم انتهاء مهمتة' if periods else None))
+        if any(pd['end'] is None for pd in periods):
+            new_status = 'مازال بالمهمة'
+        elif periods:
+            new_status = 'تم انتهاء مهمتة'
+        elif tagged_rows:
+            # كانت له شرائح مشتقة من الكتالوج وأُزيلت كلها (أُلغي إسناد الانضمام/الانفصال عنه)
+            # ⇒ لم يعد منضماً: كانت الحالة القديمة تبقى «مازال بالمهمة» فيظل محجوزاً.
+            new_status = 'تم انتهاء مهمتة'
+        else:
+            new_status = None
         if new_status and m_status not in ('Completed', 'مكتملة'):
             cursor.execute(
                 "UPDATE mission_participants SET return_status = %s WHERE participant_id = %s",
