@@ -587,3 +587,49 @@
 .app-shell .table-shell tbody td[data-label="Date"] {
   text-align: right !important;
 }
+
+
+/* Governorate Contacts: reproduce the Handover table surface without overriding
+   the wx-frozen scroll container's overflow or sticky-cell positioning. */
+.app-shell .eoc-handover-table-surface {
+  background: var(--sc-elev-1) !important;
+  border: 1px solid var(--sc-hair) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--sc-shadow-1), inset 0 1px 0 var(--sc-light-top) !important;
+  background-clip: padding-box;
+}
+
+.app-shell .eoc-handover-table-surface.wx-frozen thead th {
+  text-align: right !important;
+  padding: 0.95rem 1rem !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--muted) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sc-light-top) 28%, transparent), transparent 75%),
+    var(--sc-surface-3) !important;
+  border-bottom: 1px solid var(--sc-hair-strong) !important;
+  background-clip: padding-box;
+}
+
+.app-shell .eoc-handover-table-surface.wx-frozen tbody td {
+  padding: 0.85rem 1rem !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.app-shell .eoc-handover-table-surface.wx-frozen tbody tr {
+  transition: background-color var(--sc-dur-2) linear;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .app-shell .eoc-handover-table-surface.wx-frozen tbody tr:hover {
+    background-color: var(--surface-hover) !important;
+  }
+}
+
+.app-shell .eoc-handover-table-surface.wx-frozen tr:hover .wx-sticky-col,
+.app-shell .eoc-handover-table-surface.wx-frozen tr:hover .wx-sticky-corner {
+  background-color: var(--sc-surface-2) !important;
+}
