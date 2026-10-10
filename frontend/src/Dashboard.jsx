@@ -7263,6 +7263,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
       </div>
         </div>
       </div>
+      </div>
 
       {!isVolunteer && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 shrink-0 eoc-missions-stats">
