@@ -600,11 +600,23 @@
 }
 
 .app-shell .eoc-handover-table-surface.wx-frozen thead th {
+  text-align: right !important;
+  padding: 0.95rem 1rem !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  color: var(--muted) !important;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--sc-light-top) 28%, transparent), transparent 75%),
     var(--sc-surface-3) !important;
   border-bottom: 1px solid var(--sc-hair-strong) !important;
   background-clip: padding-box;
+}
+
+.app-shell .eoc-handover-table-surface.wx-frozen tbody td {
+  padding: 0.85rem 1rem !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 .app-shell .eoc-handover-table-surface.wx-frozen tbody tr {
