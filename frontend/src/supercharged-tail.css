@@ -573,13 +573,13 @@
   background-color: var(--surface) !important;
 }
 
-.app-shell table.eoc-reference-table tbody tr:hover,
-.app-shell table.eoc-reference-table tbody tr:hover > td:not([class*="sticky"]),
-.app-shell table.eoc-reference-table tbody tr:hover > th:not([class*="sticky"]) {
+.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]),
+.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > td:not([class*="sticky"]),
+.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > th:not([class*="sticky"]) {
   background-color: var(--surface-hover) !important;
 }
 
-.app-shell table.eoc-reference-table tbody tr:hover > td[class*="sticky"],
-.app-shell table.eoc-reference-table tbody tr:hover > th[class*="sticky"] {
+.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > td[class*="sticky"],
+.app-shell table.eoc-reference-table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > th[class*="sticky"] {
   background-color: var(--surface-2) !important;
 }
