@@ -7034,7 +7034,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
   };
 
   return (
-    <div className="card-surface overflow-hidden flex flex-col min-h-[43.75rem] flex-1">
+    <div className="card-surface bg-transparent overflow-hidden flex flex-col min-h-[43.75rem] flex-1">
       {/* 🗑️ تأكيد حذف مهمة فردية — التصميم الموحّد (كبسولة علوية عائمة) */}
       <DangerConfirmModal
         show={missionToDelete !== null}
@@ -7045,7 +7045,7 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
         onConfirm={confirmDeleteMission}
       />
 
-      <div className="p-5 md:p-6 border-b border-[var(--border)] bg-[var(--surface-2)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
+      <div className="p-5 md:p-6 border-b border-[var(--border)] flex flex-col md:flex-row justify-between items-center gap-4 z-10">
         <div className="flex flex-col gap-3 w-full">
 
           <div className="flex items-center gap-3">
@@ -7248,21 +7248,21 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
       )}
 
 
-      <div className="mt-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
+      <div className="mt-4 border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، ID، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {searchTerm && <button onClick={() => setSearchTerm('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
 
       {/* 🔎 بحث باسم المشارك/المتطوع — نفس الستايل والسلوك، RTL كامل، لا يغيّر أي فلتر موجود */}
-      <div className="mt-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
+      <div className="mt-3 border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
         <input type="text" placeholder="بحث باسم المشارك أو المتطوع أو رقم العضوية..." value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {participantSearch && <button onClick={() => setParticipantSearch('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
 
       {!isVolunteer && (
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-[var(--surface-week)] border-b border-[var(--border)] shrink-0">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 border-b border-[var(--border)] shrink-0">
         <StatCard title="إجمالي المهام" value={regionStats.total} color="text-[var(--ink)]" borderHighlight />
         <StatCard title="المركز العام" value={regionStats.hq} color="text-[var(--accent)]" />
         <StatCard title="إقليم القنال" value={regionStats.canal} color="text-[var(--info)]" />

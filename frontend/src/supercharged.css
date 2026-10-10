@@ -1097,50 +1097,6 @@ button.nav-item {
 }
 .kpi-card.danger::before, .stat-card.danger::before { background-color: rgba(239, 68, 68, 0.5) !important; }
 
-
-/* ==========================================================
-   2. توحيد ألوان الجداول نهائياً (إلغاء الكحلي وفرض لون سجل التواصل)
-   ========================================================== */
-
-table, 
-.table-container, 
-.data-table, 
-.table-responsive,
-div[class*="table"],
-section[class*="table"],
-tr, td, th {
-  background-color: #0b0d13 !important; /* لون جدول سجل التواصل المعتمد */
-}
-
-/* رأس الجدول */
-table thead th, 
-.table-container thead th,
-.data-table th {
-  background-color: #10131c !important;
-  color: #94a3b8 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-/* صفوف الجدول العادية وعند التمرير */
-table tbody tr, 
-.table-container tbody tr,
-.data-table tr {
-  background-color: #0d1017 !important;
-}
-
-table tbody tr:hover, 
-.table-container tbody tr:hover,
-.data-table tr:hover {
-  background-color: #161b26 !important;
-}
-
-/* الفواصل والحدود داخل الجدول */
-table td, table th,
-.data-table td, .data-table th {
-  border-color: rgba(255, 255, 255, 0.04) !important;
-}
-
-
 /* ==========================================================
    3. ترتيب الطبقات (z-index)
    ========================================================== */
