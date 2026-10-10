@@ -4155,8 +4155,8 @@ function BranchesAndInventoryView({ branches }) {
         {/* 💡 اللستة هتاخد 250 بيكسل في الموبايل وتقدر تعملها سكرول */}
         <div className="w-full lg:w-1/4 bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg h-[15.625rem] lg:h-auto">
           <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-4)]"><h3 className="text-md font-bold text-center">قائمة التمركزات</h3></div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar eoc-reference-table-wrap">
-            <table className="w-full text-right text-sm eoc-reference-table">
+          <div className="flex-1 overflow-y-auto custom-scrollbar eoc-table-shell">
+            <table className="w-full text-right text-sm">
               <tbody className="divide-y divide-[var(--border)]">
                 {branches.map(branch => (
                   <tr key={`list-${branch.id}`} onClick={() => handleSelectBranch(branch.id)} className={`transition-colors cursor-pointer ${selectedBranchId === branch.id ? 'bg-[var(--accent-soft)] border-r-4 border-[var(--accent)]' : 'hover:bg-[var(--surface-hover)] border-r-4 border-transparent'}`}>
@@ -4185,7 +4185,7 @@ function BranchesAndInventoryView({ branches }) {
       </div>
 
       <div id="inventory-table-section" className="space-y-4 mt-4 scroll-mt-6">
-        <h3 className="text-lg font-bold text-white border-b border-[var(--border)] pb-2 eoc-opaque-header">الأرصدة اللوجستية والفنية</h3>
+        <div className="card-surface p-5 md:p-6"><h3 className="text-xl font-bold flex items-center gap-2"><MapIcon className="text-[var(--accent)]" /> الأرصدة اللوجستية والفنية</h3></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InventoryCard title="إجمالي شنط الإسعاف" value={totalFirstAid.toLocaleString()} unit="شنطة مجهزة" color="text-[var(--accent)]" />
           <InventoryCard title="أجهزة اتصال لاسلكي" value={totalRadios.toLocaleString()} unit="جهاز نشط" color="text-blue-500" />
@@ -4193,8 +4193,8 @@ function BranchesAndInventoryView({ branches }) {
           <InventoryCard title="أسطول السيارات (شامل الإسعاف)" value={totalCars.toLocaleString()} unit="سيارة جاهزة" color="text-green-500" />
         </div>
         <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-3xl overflow-hidden flex flex-col shadow-lg max-h-[37.5rem] mt-4">
-          <div className="flex-1 overflow-auto custom-scrollbar eoc-reference-table-wrap">
-            <table className="w-full min-w-[137.5rem] text-center text-xs whitespace-nowrap eoc-reference-table">
+          <div className="flex-1 overflow-auto custom-scrollbar eoc-table-shell">
+            <table className="w-full min-w-[137.5rem] text-center text-xs whitespace-nowrap">
               <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
                 <tr>
                   <th className="p-4 font-semibold border-l border-[var(--border)] sticky right-0 bg-[var(--surface-3)] z-20">الفرع / التمركز</th>
@@ -7282,8 +7282,8 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
           </div>
         )}
 
-        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-reference-table-wrap">
-          <table className="w-full min-w-[68.75rem] text-start border-separate border-spacing-0 eoc-reference-table">
+        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
+          <table className="w-full min-w-[68.75rem] text-start border-separate border-spacing-0">
           <thead className="sticky top-0 z-20">
             <tr className="text-[var(--muted-2)] text-[max(0.6875rem,9.5px)] md:text-xs">
               <th className="px-3 md:px-4 py-3 font-bold font-mono whitespace-nowrap text-start bg-[var(--surface-3)] border-b-2 border-b-[var(--accent)]/50">تاريخ الإنشاء</th>
@@ -9047,8 +9047,8 @@ function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto custom-scrollbar relative eoc-reference-table-wrap">
-        <table className="w-full min-w-[43.75rem] text-right text-sm whitespace-nowrap eoc-reference-table">
+      <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
+        <table className="w-full min-w-[43.75rem] text-right text-sm whitespace-nowrap">
           <thead className="bg-[var(--surface-3)] text-[var(--muted-2)] sticky top-0 z-10 shadow-md">
             <tr>
               <th className="p-4 font-semibold border-l border-[var(--border)] w-48">التاريخ والوقت</th>
@@ -9456,8 +9456,8 @@ const [nd, setNd] = useState({
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-reference-table-wrap">
-          <table className="w-full text-right whitespace-nowrap min-w-[45rem] text-sm eoc-reference-table">
+        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
+          <table className="w-full text-right whitespace-nowrap min-w-[45rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
@@ -11285,9 +11285,9 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   // ── JSX ──
   return (
     <div className="space-y-6 pb-10 animate-fade-in-up">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 eoc-contacts-page-heading">
+      <div className="card-surface p-5 md:p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-[var(--ink)] flex items-center gap-2">
+          <h2 className="text-xl font-bold flex items-center gap-2">
             <span className="text-[var(--accent)]"><PhoneIcon /></span>
             {T('سجل التواصل مع الفروع', 'Governorate Contacts Log')}
           </h2>
@@ -11925,7 +11925,7 @@ const onMatrixChange = (s, d, val) => {
         </div>
 
         <div className="table-shell overflow-x-auto">
-          <table className="w-full min-w-[45rem] eoc-reference-table">
+          <table className="w-full min-w-[45rem]">
             <thead>
               <tr>
                 <th>{T('التاريخ', 'Date')}</th>
@@ -12055,7 +12055,7 @@ const onMatrixChange = (s, d, val) => {
                 icon={<UsersIcon />}
                 actionBtn={<button onClick={resetMatrix} className="action-btn action-btn--danger">{T('تصفير الكل', 'Reset All')}</button>}>
                 <div className="table-shell overflow-x-auto">
-                  <table className="w-full min-w-[35rem] eoc-reference-table">
+                  <table className="w-full min-w-[35rem]">
                     <thead>
                       <tr>
                         <th className="p-3 text-start">{T('الوردية', 'Shift')}</th>
@@ -12447,8 +12447,8 @@ const [clearAllCode, setClearAllCode] = useState('');
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-reference-table-wrap">
-          <table className="w-full text-right whitespace-nowrap min-w-[45rem] text-sm eoc-reference-table">
+        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
+          <table className="w-full text-right whitespace-nowrap min-w-[45rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
@@ -13790,11 +13790,11 @@ const [clearAllCode, setClearAllCode] = useState('');
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-reference-table-wrap">
+        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
           {(activeEqTab === 'global' || activeEqTab === 'all') ? (
             <div className="mb-8">
               {activeEqTab === 'all' && <h4 className="p-4 text-[var(--accent)] font-bold bg-[var(--surface-4)]">الزلازل العالمية</h4>}
-              <table className="w-full text-right whitespace-nowrap min-w-[50rem] text-sm eoc-reference-table">
+              <table className="w-full text-right whitespace-nowrap min-w-[50rem] text-sm">
                 <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
@@ -13834,7 +13834,7 @@ const [clearAllCode, setClearAllCode] = useState('');
           {(activeEqTab === 'egypt' || activeEqTab === 'all') ? (
             <div>
               {activeEqTab === 'all' && <h4 className="p-4 text-green-500 font-bold bg-[var(--surface-4)]">زلازل مصر</h4>}
-              <table className="w-full text-right whitespace-nowrap min-w-[37.5rem] text-sm eoc-reference-table">
+              <table className="w-full text-right whitespace-nowrap min-w-[37.5rem] text-sm">
                 <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)]">
                   <tr>
                     <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ / الوقت</th>
@@ -15674,8 +15674,8 @@ const totalAiCountries = new Set(
           </button>
         )}
 
-        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-reference-table-wrap">
-          <table className="w-full text-right whitespace-nowrap min-w-[47.5rem] text-sm eoc-reference-table">
+        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
+          <table className="w-full text-right whitespace-nowrap min-w-[47.5rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-3)] text-[var(--muted-2)] border-b border-purple-500/30">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)]">التاريخ</th>
@@ -16504,8 +16504,8 @@ function HumanResourcesView({ branches, isOwner, liveUpdateVersion = 0, lang = '
           </span>
         </div>
 
-        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-reference-table-wrap">
-          <table className="w-full text-right whitespace-nowrap min-w-[62.5rem] text-sm eoc-reference-table">
+        <div className="flex-1 overflow-auto custom-scrollbar relative eoc-table-shell">
+          <table className="w-full text-right whitespace-nowrap min-w-[62.5rem] text-sm">
             <thead className="sticky top-0 z-20 bg-[var(--surface-2)] text-[var(--muted)]">
               <tr>
                 <th className="p-4 font-semibold border-l border-[var(--border)] w-16 text-center">م</th>
