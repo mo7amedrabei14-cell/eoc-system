@@ -516,3 +516,70 @@
   inset: 0 !important;
   z-index: 10000 !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   EOC — Reference table palette + restore opaque page surfaces
+   Uses the colors of the Governorate Contacts table only.
+   No typography, padding, widths, heights, sticky behavior, or data logic.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Keep these page surfaces opaque even if an older local reference class remains. */
+.app-shell .eoc-opaque-header,
+.app-shell .eoc-opaque-header.eoc-reference-surface {
+  background-color: var(--surface-4) !important;
+  background-image: none !important;
+  border-color: var(--border) !important;
+}
+
+.app-shell .eoc-opaque-map-panel,
+.app-shell .eoc-opaque-map-panel.eoc-reference-surface {
+  background-color: var(--surface-2) !important;
+  background-image: none !important;
+  border-color: var(--border) !important;
+}
+
+/* Apply the table surface to the scroll container only, never to its page/card heading. */
+.app-shell .eoc-reference-table-wrap {
+  background-color: var(--surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: none !important;
+}
+
+/* Match Governorate Contacts: surface-3 header, theme borders, surface hover,
+   and opaque sticky/action cells. Keep all existing text colors and geometry. */
+.app-shell table.eoc-reference-table,
+.app-shell table.eoc-reference-table tbody {
+  background-color: transparent !important;
+}
+
+.app-shell table.eoc-reference-table thead,
+.app-shell table.eoc-reference-table thead tr,
+.app-shell table.eoc-reference-table thead th {
+  background: var(--surface-3) !important;
+  background-image: none !important;
+  border-color: var(--border) !important;
+}
+
+.app-shell table.eoc-reference-table tbody td,
+.app-shell table.eoc-reference-table tbody th {
+  border-color: var(--border) !important;
+  border-top-color: var(--border) !important;
+}
+
+.app-shell table.eoc-reference-table tbody td[class*="sticky"],
+.app-shell table.eoc-reference-table tbody th[class*="sticky"] {
+  background-color: var(--surface) !important;
+}
+
+.app-shell table.eoc-reference-table tbody tr:hover,
+.app-shell table.eoc-reference-table tbody tr:hover > td:not([class*="sticky"]),
+.app-shell table.eoc-reference-table tbody tr:hover > th:not([class*="sticky"]) {
+  background-color: var(--surface-hover) !important;
+}
+
+.app-shell table.eoc-reference-table tbody tr:hover > td[class*="sticky"],
+.app-shell table.eoc-reference-table tbody tr:hover > th[class*="sticky"] {
+  background-color: var(--surface-2) !important;
+}
