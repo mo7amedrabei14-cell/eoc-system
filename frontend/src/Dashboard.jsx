@@ -7178,7 +7178,8 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
             )}
           </Magnetic>
         </div>
-        <div className="p-4 md:p-5 space-y-3">
+      </div>
+      <div className="p-4 md:p-5 space-y-3">
 
         {pendingSends > 0 && (
         <button onClick={retryOutbox} disabled={outboxRetrying} className="w-full btn-warn px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.97] disabled:opacity-60">
@@ -7249,19 +7250,19 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
       )}
 
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-w-0 w-full eoc-mission-search-row">
       <div className="border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input type="text" placeholder="بحث سريع باسم المهمة، المكان، الكود، ID، أو نوع المهمة..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {searchTerm && <button onClick={() => setSearchTerm('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
-
       {/* 🔎 بحث باسم المشارك/المتطوع — نفس الستايل والسلوك، RTL كامل، لا يغيّر أي فلتر موجود */}
       <div className="border border-[var(--border)] rounded-2xl px-4 py-2 flex items-center gap-3 w-full focus-within:border-[var(--accent-soft)] focus-within:shadow-[var(--ring-soft)] transition-[color,background-color,border-color,opacity,box-shadow,transform]">
         <svg className="w-5 h-5 text-[var(--faint)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
         <input type="text" placeholder="بحث باسم المشارك أو المتطوع أو رقم العضوية..." value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)} className="bg-transparent text-sm w-full outline-none font-bold" />
         {participantSearch && <button onClick={() => setParticipantSearch('')} className="chip chip-active !py-0.5 shrink-0">مسح</button>}
       </div>
-        </div>
+      </div>
       </div>
       </div>
 
