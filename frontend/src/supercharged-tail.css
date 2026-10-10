@@ -524,15 +524,13 @@
    ════════════════════════════════════════════════════════════════════════════ */
 
 /* Keep these page surfaces opaque even if an older local reference class remains. */
-.app-shell .eoc-opaque-header,
-.app-shell .eoc-opaque-header.eoc-reference-surface {
+.app-shell .eoc-opaque-header {
   background-color: var(--surface-4) !important;
   background-image: none !important;
   border-color: var(--border) !important;
 }
 
-.app-shell .eoc-opaque-map-panel,
-.app-shell .eoc-opaque-map-panel.eoc-reference-surface {
+.app-shell .eoc-opaque-map-panel {
   background-color: var(--surface-2) !important;
   background-image: none !important;
   border-color: var(--border) !important;
@@ -562,14 +560,16 @@
 
 .app-shell .eoc-table-shell table tbody td,
 .app-shell .eoc-table-shell table tbody th {
-  border-color: var(--sc-hair) !important;
-  border-top-color: var(--sc-hair) !important;
+  border-color: var(--border) !important;
+  border-top-color: var(--border) !important;
 }
 
-.app-shell .eoc-table-shell table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]),
-.app-shell .eoc-table-shell table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > td:not([class*="sticky"]):not([class*="accent-soft"]),
-.app-shell .eoc-table-shell table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > th:not([class*="sticky"]):not([class*="accent-soft"]) {
-  background-color: var(--surface-hover) !important;
+@media (hover: hover) and (pointer: fine) {
+  .app-shell .eoc-table-shell table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]),
+  .app-shell .eoc-table-shell table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > td:not([class*="sticky"]):not([class*="accent-soft"]),
+  .app-shell .eoc-table-shell table tbody tr:hover:not(.focus-row):not([class*="accent-soft"]) > th:not([class*="sticky"]):not([class*="accent-soft"]) {
+    background-color: color-mix(in srgb, var(--accent) 8%, var(--surface-hover)) !important;
+  }
 }
 
 .app-shell .eoc-table-shell table tbody td[class*="sticky"],
