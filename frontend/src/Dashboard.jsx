@@ -2889,7 +2889,7 @@ useEffect(() => {
       case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} lang={language} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.earthquakes} />;
       case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} />;
       case 'handover': return (isOwner || isSupervisor)
-        ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} liveUpdateVersion={liveUpdateVersion.handover} focusTarget={focusTarget} />
+        ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} focusTarget={focusTarget} />
         : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
       case 'audit': return <MemoAuditLogsView isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.audit} />;
       case 'human_resources': return <MemoHumanResourcesView branches={branchesList} isOwner={isOwner} liveUpdateVersion={liveUpdateVersion.missions} lang={language} />;
@@ -11285,7 +11285,7 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   // ── JSX ──
   return (
     <div className="space-y-6 pb-10 animate-fade-in-up">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 eoc-contacts-page-heading">
         <div>
           <h2 className="text-2xl font-bold text-[var(--ink)] flex items-center gap-2">
             <span className="text-[var(--accent)]"><PhoneIcon /></span>
@@ -11515,7 +11515,7 @@ const HANDOVER_DEPT_AR = { relief: 'الإغاثة', youth: 'الشباب وال
 const splitIssuesText = (text) => { const arr = String(text || '').split('\n').map(s => s.trim()).filter(Boolean); return arr.length ? arr : ['']; };
 const joinIssuesList = (list) => (list || []).map(s => (s || '').trim()).filter(Boolean).join('\n');
 
-function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 0, focusTarget = null }) {
+function HandoverView({ isOwner, isSupervisor, lang = 'ar', focusTarget = null }) {
   const T = (ar, en) => (lang === 'ar' ? ar : en);
   const canAccess = isOwner || isSupervisor;
 
@@ -11606,11 +11606,8 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', liveUpdateVersion = 
   }, []);
 
   useEffect(() => { if (canAccess) fetchHandovers(); }, [canAccess, fetchHandovers]);
-  useEffect(() => { if (canAccess && liveUpdateVersion > 0) fetchHandovers(); }, [liveUpdateVersion, canAccess, fetchHandovers]);
-
-    // 🛡️ شبكة أمان: تحديث صامت دوري
-  // 🛡️ شبكة أمان: تحديث صامت دوري (ظاهر = 60s كما هو · مخفي = تخطى + فوري عند العودة)
-  useSmartPoll(() => { if (canAccess) fetchHandovers(); }, 60000);
+  // Reload on entry and after explicit create/edit/delete actions only.
+  // Avoid repeated polling/realtime-triggered reloads that make this view flicker.
 
 
   const [focusedRowId, setFocusedRowId] = useState(null);
