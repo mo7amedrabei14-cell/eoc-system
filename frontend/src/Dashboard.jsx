@@ -3023,11 +3023,12 @@ useEffect(() => {
       
       {/* ◈ منطقة الوعي — نَوْل الإشارة: الإشارة بتدخل بذرة وبتتنسج للخارج */}
       <div id="sig-top-rail" className="sig-loom">
-        {visibleLiveCount >= 2 && (
+        {/* أكثر من إشعارين حيّين (الظاهر + اللي في الطابور) — الشرط القديم كان بيعدّ الظاهر بس (دايماً 1) فالزر ما كانش بيبان */}
+        {liveToasts.length > 2 && (
           <button type="button" onClick={closeAllToasts} className="sig-dismiss-all pointer-events-auto"
-            title={language === 'en' ? 'Dismiss all visible notifications' : 'إغلاق كل الإشعارات الظاهرة'}>
+            title={language === 'en' ? 'Dismiss all notifications (including queued)' : 'إغلاق كل الإشعارات (بما فيها المنتظرة)'}>
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" /></svg>
-            {language === 'en' ? 'Close all' : 'إغلاق الكل'}
+            {language === 'en' ? 'Close all' : 'إغلاق الكل'} ({liveToasts.length})
           </button>
         )}
 
@@ -16519,4 +16520,3 @@ export class AppErrorBoundary extends Component {
     }
     return this.props.children;
   }
-}
