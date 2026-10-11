@@ -207,11 +207,8 @@ kbd,
    ════════════════════════════════════════════════════════════════════════════ */
 /* العمق: مادة متدرّجة + حد شعري + حافة ضوء داخلية. بلا عزل هنا (انظر الشرح
    أعلاه): البطاقة قد تحتضن طبقة fixed مضمّنة. */
-.card-surface:not(.kpi-card) {
-  background: var(--sc-elev-1);
-}
-
 .card-surface {
+  background: transparent;
   border: 1px solid var(--sc-hair);
   box-shadow:
     var(--sc-shadow-1),
