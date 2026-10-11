@@ -334,7 +334,8 @@
      z-index أعلى من كل المودالات (z-[200] وما فوق) لئلا تُحجب القائمة. */
   .eoc-select__menu {
     position: fixed;
-    z-index: 9999;
+    /* Above the signal rail and modal backdrop, including short-height viewports. */
+    z-index: 10001;
     width: max-content;
     padding: 0.375rem;
     background: var(--surface-2);
