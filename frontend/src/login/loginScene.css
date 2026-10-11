@@ -1,353 +1,280 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   EOC / QUIET SIGNAL
-   Single-source styling for the entry Gate + Login + OTP.
-   Design principles: content first, quiet tonal surfaces, brief purposeful motion.
+   EOC / QUIET SIGNAL — Entry Gate + Login + OTP
+   ───────────────────────────────────────────────────────────────────────────
+   المبادئ (بالترتيب):
+   1) المحتوى أولًا: سطح واحد، عنوان واحد، حقلان، زر واحد.
+   2) لا تمرير: الجذر مثبّت على مقاس الشاشة بالضبط، وكل المقاسات تتنفّس بـvh
+      ⇒ لا تمرير عمودي أو أفقي في أي مقاس، ولا حاجة لقاعدة تمرير احتياطية.
+   3) لا طبقات زائدة: لا blur ولا backdrop-filter ولا طبقة تتبّع مؤشر ولا عنصر
+      مخفي يُبنى بلا داعٍ.
+   4) الحركة transform/opacity فقط، وبمدة موحّدة.
+
+   ⚠️ الوحدات: المقاسات هنا بالـpx عمدًا. الجذر في هذا المشروع مصغّر
+      (`html { font-size: clamp(...) }` بين 10.2px و14.25px)، فكل مقاس بـrem
+      يتقلّص 25% ويضيّع الأهداف اللمسية. الـpx يثبّت التصميم، والـvh يتكفّل
+      بالتنفّس الرأسي على الشاشات القصيرة.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Route frame: the entry experience owns exactly one viewport ─────────── */
+/* ── 1) الرموز: ثيم داكن + ثيم فاتح ─────────────────────────────────────── */
 .lx {
-  --qs-ease: cubic-bezier(.22, 1, .36, 1);
-  --qs-fast: 160ms;
-  --qs-mid: 280ms;
-  --qs-surface: #191b21;
-  --qs-surface-raised: #20232a;
-  --qs-border: rgba(202, 208, 220, .14);
-  --qs-red: #d91f36;
-  --qs-red-hover: #c51f34;
-  --qs-red-text: #ff8290;
-  --qs-muted: #a5aab5;
-  --bg: #111318;
-  --ink: #f3f4f7;
-  --muted: #a5aab5;
-  --surface: #191b21;
-  --surface-2: #20232a;
-  --surface-3: #292d35;
-  --accent: var(--qs-red);
-  --accent-glow: #f06d7e;
-  --ok: #74cfa6;
-  position: relative;
-  isolation: isolate;
-  display: block;
-  width: 100%;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: 100dvh !important;
-  overflow: hidden !important;
-  overscroll-behavior: none;
-  color: var(--ink);
-  background: var(--bg);
-  -webkit-tap-highlight-color: transparent;
+  /* أسطح ونصوص */
+  --lx-bg: #0e1014;
+  --lx-surface: #16181d;
+  --lx-surface-2: #1c1f25;
+  --lx-field: #1b1e24;
+  --lx-border: rgba(255, 255, 255, .08);
+  --lx-border-strong: rgba(255, 255, 255, .13);
+  --lx-ink: #f2f3f5;
+  --lx-muted: #98a0ab;
+  /* لون الهوية: الزر والتركيز فقط */
+  --lx-accent: #d91f36;
+  --lx-accent-hover: #c61c32;
+  --lx-accent-soft: rgba(217, 31, 54, .14);
+  --lx-ok: #4ec38c;
+  /* خلفية واحدة ثابتة */
+  --lx-scene-bg: radial-gradient(120% 88% at 50% -12%, #1a1d24 0%, #0e1014 62%), #0e1014;
+  --lx-shadow: 0 1px 2px rgba(0, 0, 0, .38), 0 18px 46px -26px rgba(0, 0, 0, .72);
+  /* منحنى واحد لكل الحركة */
+  --lx-ease: cubic-bezier(.22, 1, .36, 1);
+  --lx-fast: 160ms;
+  --lx-mid: 240ms;
+  /* مزامنة مع رموز النظام (بقية الواجهة تقرأ --accent/--ink/--bg) */
+  --bg: var(--lx-bg);
+  --ink: var(--lx-ink);
+  --muted: var(--lx-muted);
+  --surface: var(--lx-surface);
+  --surface-2: var(--lx-surface-2);
+  --accent: var(--lx-accent);
+  --ok: var(--lx-ok);
 }
 :root[data-theme="light"] .lx {
-  --qs-surface: #fff;
-  --qs-surface-raised: #f7f8fa;
-  --qs-border: rgba(36, 42, 55, .13);
-  --qs-red: #c51d34;
-  --qs-red-hover: #ad172c;
-  --qs-red-text: #b21b2f;
-  --qs-muted: #646b78;
-  --bg: #f4f5f7;
-  --ink: #1a1c22;
-  --muted: #646b78;
-  --surface: #fff;
-  --surface-2: #f7f8fa;
-  --surface-3: #eceef2;
-  --accent: var(--qs-red);
-  --accent-glow: #e66b7d;
-  --ok: #187c5b;
+  --lx-bg: #f5f6f8;
+  --lx-surface: #ffffff;
+  --lx-surface-2: #f7f8fa;
+  --lx-field: #f5f6f8;
+  --lx-border: rgba(17, 19, 24, .08);
+  --lx-border-strong: rgba(17, 19, 24, .13);
+  --lx-ink: #15171c;
+  --lx-muted: #6b7280;
+  --lx-accent: #c81d33;
+  --lx-accent-hover: #b0182c;
+  --lx-accent-soft: rgba(200, 29, 51, .09);
+  --lx-ok: #17845c;
+  --lx-scene-bg: radial-gradient(120% 88% at 50% -12%, #ffffff 0%, #eef0f4 62%), #f5f6f8;
+  --lx-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 20px 44px -28px rgba(16, 24, 40, .26);
+}
+
+/* ── 2) قفل الشاشة: الجذر = مقاس الشاشة بالضبط، بلا تمرير في أي اتجاه ────── */
+.lx {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+  overflow: hidden;
+  overscroll-behavior: none;
+  color: var(--lx-ink);
+  background: var(--lx-bg);
+  -webkit-tap-highlight-color: transparent;
 }
 html:has(.lx),
 body:has(.lx),
 #root:has(.lx) {
-  height: 100dvh !important;
+  height: 100% !important;
   min-height: 0 !important;
-  max-height: 100dvh !important;
+  max-height: 100% !important;
   overflow: hidden !important;
   overscroll-behavior: none;
 }
 body:has(.lx) { margin: 0 !important; }
+
 .lx,
 .lx * { box-sizing: border-box; }
 .lx button,
-.lx input { font-family: inherit; }
-.lx button,
-.lx input { touch-action: manipulation; }
+.lx input { font-family: inherit; touch-action: manipulation; }
+.lx button { cursor: pointer; }
 .lx [role="slider"] { touch-action: pan-y; }
+.lx ::selection { background: var(--lx-accent); color: #fff; }
+
+/* حلقة تركيز موحّدة للوحة المفاتيح وحدها */
 .lx button:focus-visible,
 .lx [role="slider"]:focus-visible,
 .lx input:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
-  outline-offset: 3px;
-}
-:root[data-theme="light"] .lx button:focus-visible,
-:root[data-theme="light"] .lx [role="slider"]:focus-visible,
-:root[data-theme="light"] .lx input:focus-visible {
-  outline-color: #5b50a4;
+  outline: 2px solid color-mix(in srgb, var(--lx-accent) 70%, white);
+  outline-offset: 2px;
 }
 
-/* ── Shared background: one low-contrast ambient light layer ─────────────── */
+/* ── 3) المشهد: طبقة واحدة ثابتة، بلا تتبّع مؤشر وبلا حركة دائمة ─────────── */
 .lx-scene {
   position: absolute;
   inset: 0;
   z-index: 0;
-  overflow: hidden;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 42rem 34rem at 82% 12%, rgba(125, 119, 203, .14), transparent 72%),
-    radial-gradient(ellipse 37rem 29rem at 7% 91%, rgba(94, 151, 194, .09), transparent 72%),
-    linear-gradient(138deg, #111318 0%, #15171e 56%, #111318 100%);
-}
-:root[data-theme="light"] .lx-scene {
-  background:
-    radial-gradient(ellipse 42rem 34rem at 82% 12%, rgba(139, 130, 215, .13), transparent 72%),
-    radial-gradient(ellipse 37rem 29rem at 7% 91%, rgba(111, 169, 209, .11), transparent 72%),
-    linear-gradient(138deg, #f7f8fa 0%, #eff1f5 56%, #f7f8fa 100%);
-}
-.lx-scene::before {
-  content: "";
-  position: absolute;
-  width: min(58vw, 62rem);
-  aspect-ratio: 1;
-  inset-block-start: -34%;
-  inset-inline-end: -18%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(143, 132, 223, .13), rgba(115, 162, 205, .035) 45%, transparent 71%);
-  transform: translate3d(0, 0, 0);
-  animation: qs-ambient 28s ease-in-out infinite alternate;
-}
-.lx-aurora {
-  position: absolute;
-  width: min(46vw, 48rem);
-  aspect-ratio: 1;
-  inset-inline-start: -22%;
-  inset-block-end: -54%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(91, 155, 204, .09), transparent 69%);
-  pointer-events: none;
-}
-.lx-light {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: var(--lx-pl, 0);
-  background: radial-gradient(28rem 24rem at 50% 48%, rgba(149, 138, 235, .045), transparent 74%);
-  transform: translate3d(calc(var(--lx-px, 50%) - 50%), calc(var(--lx-py, 50%) - 50%), 0);
-  will-change: transform, opacity;
-}
-:root[data-theme="light"] .lx-light {
-  background: radial-gradient(30rem 25rem at 50% 48%, rgba(143, 132, 222, .065), transparent 74%);
+  background: var(--lx-scene-bg);
 }
 
-/* ── Shared brand mark: single tile, reused by Framer Motion layoutId ────── */
+/* ── 4) تحكمات ثابتة (اللغة + الثيم): هدف لمس 44px في الأركان ───────────── */
+.lx > .lx-pill-btn,
+.lx > .lx-switch {
+  position: fixed;
+  z-index: 9999;
+  top: max(12px, env(safe-area-inset-top));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--lx-border);
+  border-radius: 999px;
+  color: var(--lx-ink);
+  background: color-mix(in srgb, var(--lx-surface) 94%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
+  transition:
+    background-color var(--lx-mid) var(--lx-ease),
+    border-color var(--lx-mid) var(--lx-ease),
+    transform var(--lx-fast) var(--lx-ease);
+}
+.lx > .lx-pill-btn {
+  inset-inline-start: 12px;
+  padding-inline: 13px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.lx > .lx-switch {
+  inset-inline-end: 12px;
+  width: 68px;
+  height: 44px;
+  padding: 0;
+  overflow: hidden;
+}
+.lx > .lx-pill-btn:hover,
+.lx > .lx-switch:hover { border-color: var(--lx-border-strong); }
+.lx > .lx-pill-btn:active,
+.lx > .lx-switch:active { transform: scale(.97); }
+
+.lx-switch-ic {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--lx-muted);
+  transform: translateY(-50%);
+  transition: color var(--lx-mid) var(--lx-ease);
+  pointer-events: none;
+}
+.lx-switch-ic svg { width: 15px; height: 15px; }
+.lx-switch-ic--s { inset-inline-start: 7px; }
+.lx-switch-ic--e { inset-inline-end: 7px; }
+/* الأيقونة الفعّالة فوق المحدّد ⇒ تباين واضح دائمًا (بلا أيقونة مدفونة) */
+.lx-switch:has(.lx-switch-knob--start) .lx-switch-ic--s,
+.lx-switch:has(.lx-switch-knob--end) .lx-switch-ic--e { color: #fff; }
+.lx-switch-knob {
+  position: absolute;
+  top: 6px;
+  inset-inline-start: 6px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--lx-accent);
+  transition: transform var(--lx-mid) var(--lx-ease);
+  pointer-events: none;
+}
+/* مسافة الحركة = عرض المفتاح 68 − المقبض 30 − هامشين 6+6 = 26px ⇒ تناظر تام */
+.lx-switch-knob--start { transform: translate3d(0, 0, 0); }
+.lx-switch-knob--end { transform: translate3d(26px, 0, 0); }
+.lx[dir="rtl"] .lx-switch-knob--end { transform: translate3d(-26px, 0, 0); }
+
+/* ═══════════════ 5) بوابة الاستكشاف: ختم + عنوان + إيماءة واحدة ═══════════ */
+.lx-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 3.5vh, 72px) clamp(16px, 5vw, 32px);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.lx-gate-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 480px);
+  height: 100%;
+  min-height: 0;
+  text-align: center;
+}
+.lx-gate-emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 0 0 clamp(12px, 2.6vh, 26px);
+}
+.lx-crest-stack {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: clamp(64px, 15vh, 128px);
+  aspect-ratio: 1;
+  border: 1px solid var(--lx-border);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--lx-surface) 70%, transparent);
+}
 .lx-crest,
 .lx-logo-tile {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,.88);
-  background: linear-gradient(150deg, #fff 0%, #f8f8fb 100%);
-  box-shadow: 0 10px 28px -20px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.95);
+  background: #fff;
+  border: 1px solid var(--lx-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 10px 26px -18px rgba(0, 0, 0, .55);
 }
 .lx-crest {
-  width: 5.25rem;
-  height: 5.25rem;
-  border-radius: 1.55rem;
-  transition: box-shadow var(--qs-mid) var(--qs-ease), border-color var(--qs-mid) ease;
+  width: clamp(46px, 10.4vh, 84px);
+  aspect-ratio: 1;
+  border-radius: clamp(14px, 2.8vh, 25px);
+  transition: border-color var(--lx-mid) var(--lx-ease);
 }
-.lx-crest.is-stamped,
-.lx-crest.is-done {
-  border-color: rgba(255,255,255,.98);
-  box-shadow: 0 14px 34px -23px rgba(0,0,0,.45), inset 0 1px 0 #fff;
-}
+.lx-crest.is-done { border-color: color-mix(in srgb, var(--lx-ok) 55%, var(--lx-border)); }
 .lx-crest img,
 .lx-logo-tile img {
-  width: 74%;
-  height: 74%;
+  width: 70%;
+  height: 70%;
   object-fit: contain;
 }
-.lx-crest-stack {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 8rem;
-  height: 8rem;
-  border: 1px solid rgba(165, 160, 207, .17);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 33% 25%, rgba(255,255,255,.11), transparent 28%),
-    radial-gradient(circle at 51% 52%, rgba(138,128,216,.11), transparent 65%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.018);
-}
-:root[data-theme="light"] .lx-crest-stack {
-  border-color: rgba(78, 82, 123, .12);
-  background:
-    radial-gradient(circle at 33% 25%, rgba(255,255,255,.96), transparent 28%),
-    radial-gradient(circle at 51% 52%, rgba(138,128,216,.075), transparent 65%);
-}
 
-/* ── Global language and theme controls: consistent 44px targets ─────────── */
-.lx > .lx-pill-btn,
-.lx > .lx-switch {
-  position: fixed;
-  z-index: 9999;
-  top: max(.75rem, env(safe-area-inset-top));
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  border: 1px solid var(--qs-border);
-  border-radius: 999px;
-  color: var(--ink);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 7px 22px -18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.045);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  transition: transform var(--qs-fast) var(--qs-ease), background-color var(--qs-mid) ease, border-color var(--qs-mid) ease;
-}
-.lx > .lx-pill-btn {
-  inset-inline-start: .9rem;
-  padding-inline: .78rem;
-  font-size: 13px;
-  font-weight: 750;
-  letter-spacing: .025em;
-}
-.lx > .lx-switch {
-  inset-inline-end: .9rem;
-  width: 74px;
-  height: 44px;
-  padding: 4px;
-  overflow: hidden;
-  cursor: pointer;
-}
-.lx > .lx-pill-btn:hover,
-.lx > .lx-switch:hover {
-  border-color: color-mix(in srgb, var(--accent) 32%, var(--qs-border));
-}
-.lx > .lx-pill-btn:active,
-.lx > .lx-switch:active { transform: scale(.98); }
-.lx-switch-ic {
-  position: absolute;
-  top: 50%;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  color: var(--muted);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.lx-switch-ic svg { width: 16px; height: 16px; }
-.lx-switch-ic--s { inset-inline-start: 8px; }
-.lx-switch-ic--e { inset-inline-end: 8px; }
-.lx-switch-knob {
-  position: absolute;
-  top: 6px;
-  inset-inline-start: 6px;
-  width: 30px;
-  height: 30px;
-  border: 1px solid rgba(255,255,255,.8);
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 2px 8px -4px rgba(0,0,0,.5);
-  transition: transform 240ms var(--qs-ease);
-  pointer-events: none;
-}
-.lx-switch-knob--start { transform: translate3d(0,0,0); }
-.lx-switch-knob--end { transform: translate3d(30px,0,0); }
-.lx[dir="rtl"] .lx-switch-knob--end { transform: translate3d(-30px,0,0); }
-:root[data-theme="light"] .lx > .lx-pill-btn,
-:root[data-theme="light"] .lx > .lx-switch {
-  color: #292c35;
-  background: rgba(255,255,255,.9);
-  border-color: rgba(38,44,57,.13);
-  box-shadow: 0 7px 22px -18px rgba(34,42,58,.22), inset 0 1px 0 #fff;
-}
-
-/* ── Gate: one mark, one heading, one instruction, one gesture ────────────── */
-.lx-gate {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 50;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  width: 100%;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: 100dvh !important;
-  padding: max(1rem, env(safe-area-inset-top)) 1rem max(.8rem, env(safe-area-inset-bottom));
-  overflow: hidden !important;
-  overscroll-behavior: none;
-  background: transparent;
-  isolation: isolate;
-}
-.lx-gate-board {
-  position: relative;
-  z-index: 1;
-  display: flex !important;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  width: min(100%, 43rem) !important;
-  max-width: 43rem !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  margin: 0 auto;
-  padding: 4.25rem 0 1.1rem !important;
-  text-align: center;
-}
-.lx-gate-board::before,
-.lx-gate-board::after { content: none !important; display: none !important; }
-.lx-gate-emblem {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  margin: 0 0 1.45rem !important;
-  isolation: isolate;
-}
-.lx-gate-emblem::after { content: none !important; display: none !important; }
 .lx-gate-title {
-  max-width: 100%;
-  margin: 0 !important;
-  color: var(--ink);
-  font-size: clamp(36px, 4.2vw, 58px) !important;
-  font-weight: 780 !important;
-  letter-spacing: -.047em !important;
-  line-height: 1.14 !important;
-  text-align: center;
+  margin: 0;
+  color: var(--lx-ink);
+  /* min(الارتفاع، العرض) ⇒ لا يتضخّم العنوان على الشاشات الضيقة */
+  font-size: clamp(24px, min(5.6vh, 8.4vw), 42px);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.15;
   text-wrap: balance;
-  background: linear-gradient(110deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 90%, #a6a2cf) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
-:root[data-theme="light"] .lx-gate-title {
-  background: linear-gradient(110deg, #191b22 0%, #535467 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.lx[dir="rtl"] .lx-gate-title {
-  font-size: clamp(34px, 3.8vw, 48px) !important;
-  letter-spacing: -.02em !important;
-  line-height: 1.3 !important;
-}
+.lx[dir="rtl"] .lx-gate-title { letter-spacing: 0; line-height: 1.3; }
 .lx-gate-sub {
-  max-width: 31rem;
-  margin: .72rem 0 0 !important;
-  color: var(--muted);
-  font-size: clamp(14px, 1.05vw, 16px) !important;
-  font-weight: 520;
-  letter-spacing: .04em;
-  line-height: 1.75 !important;
-  text-align: center;
+  margin: clamp(6px, 1.4vh, 14px) 0 0;
+  color: var(--lx-muted);
+  font-size: clamp(13px, 1.8vh, 15px);
+  font-weight: 500;
+  line-height: 1.6;
+  text-wrap: balance;
 }
-.lx[dir="rtl"] .lx-gate-sub { letter-spacing: 0 !important; }
+.lx[dir="rtl"] .lx-gate-sub { line-height: 1.75; }
+
+/* قراءة الحالة: مخفية بصريًّا ومقروءة للقارئ الشاشي */
 .lx-readout {
   position: absolute;
   width: 1px;
@@ -359,47 +286,41 @@ body:has(.lx) { margin: 0 !important; }
 .lx-granted {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
-  color: var(--ok);
-  font-size: .8rem;
+  gap: 6px;
+  color: var(--lx-ok);
+  font-size: 13px;
   font-weight: 700;
 }
-.lx-granted i { width: .38rem; height: .38rem; border-radius: 50%; background: var(--ok); }
+.lx-granted i { width: 6px; height: 6px; border-radius: 50%; background: var(--lx-ok); }
 .lx-pct { font-variant-numeric: tabular-nums; }
 
-/* Capsule remains the real pointer + keyboard slider; only its appearance changes. */
+/* ── مسار السحب: مقبض 44px، تعبئة بـ scaleX (بلا حركة تخطيط) ────────────── */
 .lx-gate-slider {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin: 2.2rem 0 0 !important;
+  margin-top: clamp(16px, 4.6vh, 42px);
 }
 .lx-track {
   position: relative;
-  width: min(100%, 25rem);
-  height: 58px;
+  width: min(100%, 336px);
+  height: clamp(52px, 7.4vh, 58px);
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border: 1px solid var(--lx-border-strong);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 55%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 12px 36px -30px rgba(0,0,0,.52);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  transition: border-color var(--qs-mid) ease, background-color var(--qs-mid) ease, box-shadow var(--qs-mid) ease;
-}
-:root[data-theme="light"] .lx-track {
-  background: rgba(255,255,255,.78);
-  border-color: rgba(44,49,66,.13);
-  box-shadow: inset 0 1px 0 #fff, 0 12px 36px -30px rgba(35,44,70,.2);
+  background: var(--lx-field);
+  transition:
+    border-color var(--lx-mid) var(--lx-ease),
+    box-shadow var(--lx-mid) var(--lx-ease);
 }
 .lx-track.is-dragging,
 .lx-track:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 58%, var(--qs-border));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 7%, transparent), inset 0 1px 0 rgba(255,255,255,.08);
+  border-color: color-mix(in srgb, var(--lx-accent) 45%, var(--lx-border-strong));
+  box-shadow: 0 0 0 3px var(--lx-accent-soft);
 }
 .lx-track.is-done {
-  border-color: color-mix(in srgb, var(--ok) 45%, var(--qs-border));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 7%, transparent);
+  border-color: color-mix(in srgb, var(--lx-ok) 45%, var(--lx-border-strong));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lx-ok) 12%, transparent);
 }
 .lx-fill-clip {
   position: absolute;
@@ -412,7 +333,7 @@ body:has(.lx) { margin: 0 !important; }
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 54%, #8583b9), var(--accent));
+  background: var(--lx-accent);
   transform: scaleX(var(--lx-p, 0));
   transform-origin: left center;
   will-change: transform;
@@ -423,649 +344,440 @@ body:has(.lx) { margin: 0 !important; }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-inline: 4.25rem;
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 680;
-  line-height: 1.25;
+  padding-inline: 54px;
+  color: var(--lx-ink);
+  font-size: clamp(13px, 1.85vh, 14px);
+  font-weight: 600;
+  line-height: 1.3;
   text-align: center;
   pointer-events: none;
 }
-.lx-track-copy { display: block; max-width: 100%; text-wrap: balance; }
+.lx-track-copy { display: block; max-width: 100%; }
+
 .lx-handle {
   position: absolute;
-  inset-block-start: 50%;
-  inset-inline-start: 6px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 44px !important;
-  height: 44px !important;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 1px solid rgba(255,255,255,.96);
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 5px 18px -11px rgba(0,0,0,.4), 0 0 0 3px color-mix(in srgb, var(--accent) 7%, transparent);
-  cursor: grab;
-  transform: translate3d(var(--lx-x, 0px), -50%, 0);
-  transition: border-color var(--qs-fast) ease, box-shadow var(--qs-fast) ease;
-  touch-action: pan-y;
-  will-change: transform;
-}
-.lx-handle:hover { box-shadow: 0 6px 20px -9px rgba(0,0,0,.36), 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent); }
-.lx-handle.is-dragging { cursor: grabbing; border-color: var(--accent); }
-.lx-handle.is-done { border-color: var(--ok); }
-.lx-handle-core {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 80%;
-  height: 80%;
-  border-radius: 50%;
-  background: #fff;
-}
-.lx-handle-core img { width: 68%; height: 68%; object-fit: contain; }
-.lx-handle-check { display: none; }
-.lx-handle.is-done .lx-handle-check {
-  position: absolute;
-  inset: 17%;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--ok);
-}
-.lx-handle-check svg { width: 100%; height: 100%; fill: none; stroke: #142017; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
-
-/* ── Login: one centered card with the form as the only focal point ───────── */
-.lx > .relative.z-10.flex.items-center.justify-center {
-  position: relative;
-  z-index: 1;
-  display: block !important;
-  width: 100%;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: 100dvh !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-}
-.lx-deck {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 4.6rem minmax(0, 1fr);
-  width: 100%;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: 100dvh !important;
-  overflow: hidden !important;
-  isolation: isolate;
-  background: transparent;
-  box-shadow: none;
-}
-.lx-ribbon {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  padding: .5rem clamp(5rem, 8vw, 7.5rem);
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
-  color: var(--ink);
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-}
-:root[data-theme="light"] .lx-ribbon {
-  border-bottom-color: rgba(30,37,52,.075);
-  background: rgba(255,255,255,.5);
-}
-.lx-ribbon-inner {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: min(100%, 46rem);
-}
-.lx-brand {
-  display: flex;
-  align-items: center;
-  gap: .78rem;
-  min-width: 0;
-}
-.lx-logo-tile {
-  width: 2.55rem;
-  height: 2.55rem;
-  border-radius: .85rem;
-}
-.lx-brand-copy { display: flex; flex-direction: column; gap: .16rem; min-width: 0; }
-.lx-brand-name {
-  margin: 0;
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 760;
-  letter-spacing: -.02em;
-  line-height: 1.3;
-}
-.lx-brand-subtitle {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.3;
-}
-.lx-ribbon-meta {
-  margin-inline-start: auto;
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.lx-clock { display: inline-block; }
-
-/* This was a fixed 100/100/100 decorative console, not live readiness data. */
-.lx-console { display: none !important; }
-.lx-deck > .flex.flex-col {
-  display: flex !important;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  padding: clamp(14px, 2.2vh, 24px) 16px;
-  overflow: hidden;
-}
-.lx-access-panel {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: min(100%, 31rem);
-  max-height: 100%;
-  padding: clamp(1.3rem, 3vw, 2.45rem);
-  border: 1px solid var(--qs-border);
-  border-radius: 1.8rem;
-  background: var(--qs-surface);
-  box-shadow: 0 26px 70px -48px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.035);
-}
-:root[data-theme="light"] .lx-access-panel {
-  background: #fff;
-  box-shadow: 0 25px 70px -48px rgba(35,42,58,.22), inset 0 1px 0 #fff;
-}
-.lx-access-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: center;
-  gap: 1.05rem;
-  width: 100%;
-  min-width: 0;
-  max-height: 100%;
-}
-.lx-access-intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .38rem;
-  min-width: 0;
-  text-align: center;
-}
-.lx-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: .48rem;
-  min-height: 1.3rem;
-  color: var(--qs-red-text);
-  font-size: 12px;
-  font-weight: 760;
-  letter-spacing: .04em;
-  line-height: 1.35;
-}
-.lx-eyebrow::before {
-  content: "";
-  width: .36rem;
-  height: .36rem;
-  border-radius: 50%;
-  background: currentColor;
-}
-.lx-form-title {
-  max-width: 100%;
-  margin: .08rem 0 0 !important;
-  color: var(--ink) !important;
-  font-size: clamp(30px, 2.1vw, 36px) !important;
-  font-weight: 790 !important;
-  letter-spacing: -.045em !important;
-  line-height: 1.15 !important;
-  text-align: center;
-  text-wrap: balance;
-}
-.lx[dir="rtl"] .lx-form-title {
-  font-size: clamp(29px, 2vw, 34px) !important;
-  letter-spacing: -.02em !important;
-  line-height: 1.35 !important;
-}
-.lx-form-copy {
-  max-width: 26rem;
-  margin: .12rem 0 0 !important;
-  color: var(--muted) !important;
-  font-size: 14px !important;
-  font-weight: 450;
-  line-height: 1.65 !important;
-  text-align: center;
-}
-.lx[dir="rtl"] .lx-form-copy { line-height: 1.8 !important; }
-.lx-trust {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .48rem;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 530;
-  line-height: 1.5;
-  text-align: center;
-}
-.lx-trust--top { display: none !important; }
-.lx-trust--bottom { margin-top: .7rem; }
-.lx-trust b {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 1px solid color-mix(in srgb, var(--ok) 36%, transparent);
-  border-radius: 50%;
-  color: var(--ok);
-}
-.lx-trust b svg { width: .72rem; height: .72rem; }
-.lx-form-column { width: 100%; min-width: 0; }
-.lx-credentials-form {
-  display: flex;
-  flex-direction: column;
-  gap: .75rem;
-  width: 100%;
-  margin: 0;
-}
-.lx-field { position: relative; min-width: 0; margin: 0; }
-.lx-field-glow {
-  position: absolute;
-  inset: 1.4rem .25rem -.15rem;
-  z-index: 0;
-  border-radius: .8rem;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  filter: blur(14px);
-  opacity: 0;
-  transition: opacity var(--qs-mid) ease;
-  pointer-events: none;
-}
-.lx-field:focus-within .lx-field-glow { opacity: .8; }
-.lx-label {
-  position: relative;
-  z-index: 1;
-  display: block;
-  margin: 0 0 .4rem .08rem;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1.45;
-}
-.lx-input-wrap { position: relative; z-index: 1; }
-.lx-input {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  padding: .7rem 2.9rem;
-  border: 1px solid var(--qs-border);
-  border-radius: .9rem;
-  color: var(--ink);
-  caret-color: var(--accent);
-  background: color-mix(in srgb, var(--qs-surface-raised) 86%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
-  font-size: 16px;
-  line-height: 1.4;
-  transition: border-color var(--qs-fast) ease, background-color var(--qs-fast) ease, box-shadow var(--qs-fast) ease;
-}
-.lx-input::placeholder { color: color-mix(in srgb, var(--muted) 78%, transparent); opacity: 1; }
-.lx-input:hover { border-color: color-mix(in srgb, var(--ink) 22%, var(--qs-border)); }
-.lx-input:focus {
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--qs-border));
-  background: var(--qs-surface);
-  outline: none;
-}
-/* Match the global input-focus selector's specificity so its !important glow cannot win. */
-.lx input.lx-input:not(.field):not(.eoc-manual-field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent) !important;
-}
-:root[data-theme="light"] .lx input.lx-input {
-  color: #1b1d23;
-  border-color: rgba(30,37,52,.14);
-  background: #f9fafc;
-  box-shadow: inset 0 1px 0 #fff;
-}
-:root[data-theme="light"] .lx input.lx-input:hover { border-color: rgba(30,37,52,.25); background: #fff; }
-:root[data-theme="light"] .lx input.lx-input:focus { border-color: rgba(197,29,52,.48); background: #fff; }
-:root[data-theme="light"] .lx input.lx-input:not(.field):not(.eoc-manual-field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus {
-  box-shadow: 0 0 0 3px rgba(197,29,52,.08) !important;
-}
-/* Chrome/Safari autofill and common password managers. */
-.lx input.lx-input:-webkit-autofill,
-.lx input.lx-input:-webkit-autofill:hover,
-.lx input.lx-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--ink) !important;
-  -webkit-box-shadow: 0 0 0 1000px var(--qs-surface-raised) inset !important;
-  caret-color: var(--accent);
-  transition: background-color 9999s ease-out 0s;
-}
-:root[data-theme="light"] .lx input.lx-input:-webkit-autofill,
-:root[data-theme="light"] .lx input.lx-input:-webkit-autofill:hover,
-:root[data-theme="light"] .lx input.lx-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #1b1d23 !important;
-  -webkit-box-shadow: 0 0 0 1000px #f9fafc inset !important;
-}
-.lx-input-ic {
-  position: absolute;
   top: 50%;
-  inset-inline-start: .92rem;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  transform: translateY(-50%);
-  transition: color var(--qs-fast) ease;
-  pointer-events: none;
-}
-.lx-input-ic svg { width: 1.05rem; height: 1.05rem; }
-.lx-field:focus-within .lx-input-ic { color: var(--accent); }
-.lx-eye {
-  position: absolute;
-  top: 50%;
-  inset-inline-end: .25rem;
+  inset-inline-start: 4px;
   z-index: 2;
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
   padding: 0;
+  border: 1px solid var(--lx-border);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 6px 16px -8px rgba(0, 0, 0, .4);
+  cursor: grab;
+  transform: translate3d(var(--lx-x, 0px), -50%, 0);
+  transition: border-color var(--lx-fast) ease, box-shadow var(--lx-fast) ease;
+  will-change: transform;
+}
+.lx-handle:hover { box-shadow: 0 1px 2px rgba(0, 0, 0, .1), 0 8px 20px -8px rgba(0, 0, 0, .45); }
+.lx-handle.is-dragging { cursor: grabbing; border-color: color-mix(in srgb, var(--lx-accent) 40%, var(--lx-border)); }
+.lx-handle.is-done { border-color: color-mix(in srgb, var(--lx-ok) 55%, var(--lx-border)); }
+.lx-handle-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+.lx-handle-core img { width: 62%; height: 62%; object-fit: contain; }
+.lx-handle-check { display: none; }
+.lx-handle.is-done .lx-handle-check {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--lx-ok);
+}
+.lx-handle-check svg {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ═══════════════ 6) بطاقة الدخول: سطح واحد في وسط الشاشة ════════════════ */
+.lx-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: clamp(12px, 3.5vh, 72px) clamp(16px, 4.4vw, 24px);
+  overflow: hidden;
+}
+.lx-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2.4vh, 24px);
+  width: min(100%, 392px);
+  max-height: 100%;
+  padding: clamp(12px, 3.4vh, 32px) clamp(16px, 4.6vw, 28px);
+  border: 1px solid var(--lx-border);
+  border-radius: clamp(14px, 2.6vh, 22px);
+  background: var(--lx-surface);
+  box-shadow: var(--lx-shadow);
+}
+.lx-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+.lx-logo-tile {
+  width: clamp(28px, 3.6vh, 36px);
+  aspect-ratio: 1;
+  border-radius: clamp(8px, 1.4vh, 11px);
+}
+.lx-brand-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--lx-muted);
+  font-size: clamp(12px, 1.6vh, 13px);
+  font-weight: 650;
+  letter-spacing: .01em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lx[dir="rtl"] .lx-brand-name { letter-spacing: 0; }
+.lx-card-body { min-width: 0; }
+
+/* ── نموذج الدخول: عنوان + سطر شرح + حقلان + زر ─────────────────────────── */
+.lx-form-column {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2vh, 18px);
+  min-width: 0;
+}
+.lx-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.lx-title {
+  margin: 0;
+  color: var(--lx-ink);
+  font-size: clamp(19px, 3.1vh, 25px);
+  font-weight: 700;
+  letter-spacing: -.022em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.lx[dir="rtl"] .lx-title { letter-spacing: 0; line-height: 1.4; }
+.lx-sub {
+  max-width: 296px;
+  margin: 0;
+  color: var(--lx-muted);
+  font-size: clamp(13px, 1.75vh, 14px);
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: center;
+  text-wrap: balance;
+}
+.lx[dir="rtl"] .lx-sub { line-height: 1.8; }
+
+.lx-credentials-form {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vh, 13px);
+  width: 100%;
+  margin: 0;
+}
+.lx-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.lx-label {
+  margin: 0 0 5px;
+  color: var(--lx-muted);
+  font-size: clamp(11px, 1.5vh, 12px);
+  font-weight: 600;
+  line-height: 1.4;
+  transition: color var(--lx-fast) ease;
+}
+.lx-field:focus-within .lx-label { color: var(--lx-ink); }
+.lx-input-wrap { position: relative; min-width: 0; }
+.lx-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(44px, 6.4vh, 48px);
+  padding: 0 44px;
+  border: 1px solid var(--lx-border-strong);
+  border-radius: clamp(10px, 1.6vh, 12px);
+  color: var(--lx-ink);
+  caret-color: var(--lx-accent);
+  background: var(--lx-field);
+  font-size: 16px;
+  line-height: 1.3;
+  transition:
+    border-color var(--lx-fast) ease,
+    background-color var(--lx-fast) ease,
+    box-shadow var(--lx-fast) ease;
+}
+.lx-input::placeholder { color: color-mix(in srgb, var(--lx-muted) 78%, transparent); opacity: 1; }
+.lx-input:hover { border-color: color-mix(in srgb, var(--lx-ink) 22%, var(--lx-border-strong)); }
+.lx-input:focus {
+  border-color: var(--lx-accent);
+  background: var(--lx-surface-2);
+  outline: none;
+}
+/* القاعدة العامة في index.css تفرض توهجًا بـ!important — نتجاوزها بتحديد أعلى */
+.lx input.lx-input:not(.field):not(.eoc-manual-field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus {
+  box-shadow: 0 0 0 3px var(--lx-accent-soft) !important;
+}
+/* Chrome/Safari autofill وقواعد إدارة كلمات المرور */
+.lx input.lx-input:-webkit-autofill,
+.lx input.lx-input:-webkit-autofill:hover,
+.lx input.lx-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--lx-ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--lx-field) inset !important;
+  caret-color: var(--lx-accent);
+  transition: background-color 9999s ease-out 0s;
+}
+.lx-input-ic {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 13px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: var(--lx-muted);
+  transform: translateY(-50%);
+  transition: color var(--lx-fast) ease;
+  pointer-events: none;
+}
+.lx-input-ic svg { width: 17px; height: 17px; }
+.lx-field:focus-within .lx-input-ic { color: var(--lx-accent); }
+.lx-eye {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 3px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   border: 0;
-  border-radius: .7rem;
-  color: var(--muted);
+  border-radius: 9px;
+  color: var(--lx-muted);
   background: transparent;
   transform: translateY(-50%);
-  transition: color var(--qs-fast) ease, background-color var(--qs-fast) ease;
+  transition: color var(--lx-fast) ease, background-color var(--lx-fast) ease;
 }
-.lx-eye:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 5%, transparent); }
-.lx-eye svg { width: 1.05rem; height: 1.05rem; }
-.lx-caps { margin: .35rem 0 0; color: var(--qs-red-text); font-size: 11px; line-height: 1.45; }
-.lx-caps i { display: inline-block; width: .38rem; height: .38rem; margin-inline-end: .3rem; border-radius: 50%; background: var(--accent); }
+.lx-eye:hover { color: var(--lx-ink); background: color-mix(in srgb, var(--lx-ink) 6%, transparent); }
+.lx-eye svg { width: 17px; height: 17px; }
+.lx-caps {
+  margin: 5px 0 0;
+  color: var(--lx-accent);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.lx-caps i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .lx-submit {
-  position: relative;
-  isolation: isolate;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .6rem;
+  gap: 8px;
   width: 100%;
-  min-height: 48px;
-  margin-top: .1rem;
-  padding: .7rem 1rem;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent) 72%, transparent);
-  border-radius: .9rem;
-  color: #fff !important;
-  background: var(--accent) !important;
-  box-shadow: 0 10px 26px -21px color-mix(in srgb, var(--accent) 85%, transparent), inset 0 1px 0 rgba(255,255,255,.18);
-  font-size: 14px;
-  font-weight: 760;
-  cursor: pointer;
-  transition: transform var(--qs-fast) var(--qs-ease), background-color var(--qs-fast) ease, box-shadow var(--qs-mid) ease;
+  min-height: clamp(44px, 6.4vh, 48px);
+  margin-top: 2px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: clamp(10px, 1.6vh, 12px);
+  color: #fff;
+  background: var(--lx-accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .16);
+  font-size: clamp(14px, 1.9vh, 15px);
+  font-weight: 650;
+  transition: background-color var(--lx-fast) ease, box-shadow var(--lx-fast) ease;
 }
-.lx-submit:hover { background: var(--qs-red-hover) !important; box-shadow: 0 12px 28px -19px color-mix(in srgb, var(--accent) 82%, transparent), inset 0 1px 0 rgba(255,255,255,.2); }
-.lx-submit:active { transform: scale(.99); }
-.lx-submit:disabled { opacity: .65; cursor: wait; }
+.lx-submit:hover:not(:disabled) { background: var(--lx-accent-hover); }
+.lx-submit:active:not(:disabled) { transform: scale(.99); }
+.lx-submit:disabled { opacity: .7; cursor: progress; }
 .lx-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255,255,255,.36);
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, .35);
   border-top-color: #fff;
   border-radius: 50%;
-  animation: qs-spin 700ms linear infinite;
+  animation: lx-spin 700ms linear infinite;
 }
+@keyframes lx-spin { to { transform: rotate(360deg); } }
+
+/* ── حالة الخطأ: لوح هادئ بحدّ خفيف، بلا خلفية مشبعة ────────────────────── */
 .lx-error {
   display: flex;
   align-items: flex-start;
-  gap: .65rem;
+  gap: 9px;
   width: 100%;
-  padding: .7rem .8rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
-  border-radius: .85rem;
-  color: var(--ink);
-  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--lx-accent) 26%, var(--lx-border));
+  border-radius: 12px;
+  background: var(--lx-accent-soft);
   text-align: start;
 }
-.lx-error-ic { display: grid; place-items: center; flex: 0 0 auto; color: var(--accent); }
-.lx-error-ic svg { width: 1rem; height: 1rem; }
+.lx-error-ic { display: grid; place-items: center; flex: 0 0 auto; padding-top: 1px; color: var(--lx-accent); }
+.lx-error-ic svg { width: 16px; height: 16px; }
+.lx-error-copy { min-width: 0; }
+.lx-error-title { margin: 0 0 2px; color: var(--lx-ink); font-size: 13px; font-weight: 700; line-height: 1.35; }
+.lx-error-text { margin: 0; color: var(--lx-muted); font-size: 12px; line-height: 1.55; }
 
-/* Secondary OTP action: visible, quiet, and keyboard/touch friendly. */
-.lx-backlink {
-  display: inline-flex;
+/* ── سطر الثقة: علامة واحدة + نص هادئ ───────────────────────────────────── */
+.lx-trust {
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: .55rem .8rem;
-  border: 1px solid var(--qs-border);
-  border-radius: 999px;
-  color: var(--muted);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 620;
-  transition: color var(--qs-fast) ease, background-color var(--qs-fast) ease, border-color var(--qs-fast) ease;
+  gap: 6px;
+  margin: 0;
+  color: var(--lx-muted);
+  font-size: clamp(11px, 1.5vh, 12px);
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
 }
-.lx-backlink:hover {
-  color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-  border-color: color-mix(in srgb, var(--ink) 18%, var(--qs-border));
-}
-.lx-backlink:active { transform: scale(.99); }
+.lx-trust > span { display: grid; place-items: center; flex: 0 0 auto; color: var(--lx-ok); }
+.lx-trust svg { width: 12px; height: 12px; }
 
-/* OTP: clear digits, 44px minimum interactive wrapper, no orbit decoration. */
+/* ── رمز التحقق (OTP): ست خانات واضحة، بلا زخرفة مدارية ─────────────────── */
 .lx-otp-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .85rem;
+  gap: clamp(12px, 1.9vh, 18px);
   width: 100%;
   text-align: center;
 }
 .lx-otp-panel > div:first-child { width: 100%; }
-.lx-otp-panel > button { min-height: 44px; }
 .otp-orbit-zone {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: .3rem;
+  gap: clamp(4px, 1.2vw, 8px);
   width: 100%;
   direction: ltr;
 }
 .otp-orbit-item {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 1 48px;
-  min-width: 44px;
-  height: 44px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: clamp(38px, 7vw, 46px);
 }
 .otp-box {
   display: block;
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  height: clamp(42px, 6.2vh, 48px);
   padding: 0;
-  border: 1px solid var(--qs-border);
-  border-radius: .7rem;
-  color: var(--ink);
-  caret-color: var(--accent);
-  background: var(--qs-surface-raised);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  border: 1px solid var(--lx-border-strong);
+  border-radius: clamp(9px, 1.5vh, 11px);
+  color: var(--lx-ink);
+  caret-color: var(--lx-accent);
+  background: var(--lx-field);
   font-size: 18px;
-  font-weight: 740;
+  font-weight: 700;
   line-height: 1;
   text-align: center;
-  transition: border-color var(--qs-fast) ease, box-shadow var(--qs-fast) ease, background-color var(--qs-fast) ease;
+  transition: border-color var(--lx-fast) ease, background-color var(--lx-fast) ease, box-shadow var(--lx-fast) ease;
 }
 .otp-box:focus {
-  border-color: color-mix(in srgb, var(--accent) 64%, var(--qs-border));
-  background: var(--qs-surface);
+  border-color: var(--lx-accent);
+  background: var(--lx-surface-2);
+  outline: none;
 }
-:root[data-theme="light"] .lx .otp-box {
-  color: #1b1d23;
-  background: #f8f9fb;
-  border-color: rgba(30,37,52,.14);
+.lx input.otp-box:not(.field):not(.eoc-manual-field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus {
+  box-shadow: 0 0 0 3px var(--lx-accent-soft) !important;
 }
-:root[data-theme="light"] .lx .otp-box:focus { background: #fff; }
 .lx input.otp-box:-webkit-autofill,
 .lx input.otp-box:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--ink) !important;
-  -webkit-box-shadow: 0 0 0 1000px var(--qs-surface-raised) inset !important;
+  -webkit-text-fill-color: var(--lx-ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--lx-field) inset !important;
 }
 .otp-box:disabled { opacity: .6; }
+.otp-orbit-zone.is-checking .otp-box { opacity: .5; }
 .otp-success-mark {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  flex: 0 0 auto;
+  width: clamp(42px, 6.2vh, 48px);
+  height: clamp(42px, 6.2vh, 48px);
   border-radius: 50%;
   color: #fff;
-  background: var(--ok);
+  background: var(--lx-ok);
+}
+.otp-success-mark svg { width: 60%; height: 60%; }
+.lx-backlink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--lx-border);
+  border-radius: 999px;
+  color: var(--lx-muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    color var(--lx-fast) ease,
+    background-color var(--lx-fast) ease,
+    border-color var(--lx-fast) ease;
+}
+.lx-backlink:hover {
+  color: var(--lx-ink);
+  background: color-mix(in srgb, var(--lx-ink) 5%, transparent);
+  border-color: var(--lx-border-strong);
+}
+.lx-backlink:active { transform: scale(.99); }
+
+/* ═══════════════ 7) مقاسات قصيرة: تقليص لا تمرير ════════════════════════ */
+/* أول ما يضيق الارتفاع تُسقَط السطور التزيينية (الشرح وسطر الثقة) وتُقلَّص
+   الحشوة والارتفاعات، فتبقى العناصر الوظيفية كاملة — ومعها متسع لرسالة خطأ
+   من سطرين أو ثلاثة بلا أي تمرير. */
+@media (max-height: 470px) {
+  .lx-stage { padding-block: 8px; }
+  .lx-card {
+    gap: 12px;
+    padding-block: 10px;
+    /* صمّام أمان أخير: لو استحال المقاس (شاشة أفقية ضعيفة الارتفاع + رسالة
+       خطأ طويلة) تصير البطاقة نفسها قابلة للتمرير بتمرير مخفي، فلا يُقتطع أي
+       نص. في كل المقاسات الطبيعية (سطح المكتب والشاشة الطويلة) لا يُفعَّل. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+  .lx-card::-webkit-scrollbar { width: 0; height: 0; }
+  .lx-sub,
+  .lx-trust { display: none; }
+  .lx-input,
+  .lx-submit { min-height: 40px; }
 }
 
-/* ── Layout compaction by viewport, not zoom or fixed desktop dimensions ──── */
-@media (min-width: 800px) {
-  .lx-access-panel { width: min(100%, 31rem); }
-  .lx-access-grid { gap: 1.2rem; }
-  .lx-gate-emblem { margin-bottom: 1.6rem !important; }
-}
-@media (max-width: 639px) {
-  .lx-deck { grid-template-rows: 3.9rem minmax(0, 1fr); }
-  .lx-ribbon { padding-inline: 4.4rem; }
-  .lx-brand { gap: .58rem; }
-  .lx-logo-tile { width: 34px; height: 34px; border-radius: 10px; }
-  .lx-brand-name { font-size: .76rem; }
-  .lx-brand-subtitle { font-size: .58rem; }
-  .lx-ribbon-meta { display: none; }
-  .lx-deck > .flex.flex-col { padding: 9px 10px; }
-  .lx-access-panel {
-    width: min(100%, 34rem);
-    padding: 1.2rem;
-    border-radius: 1.4rem;
-  }
-  .lx-access-grid { gap: .85rem; }
-  .lx-access-intro { gap: .28rem; }
-  .lx-form-title { font-size: clamp(25px, 6.6vw, 29px) !important; }
-  .lx[dir="rtl"] .lx-form-title { font-size: clamp(25px, 6.5vw, 28px) !important; }
-  .lx-form-copy { font-size: .76rem !important; line-height: 1.55 !important; }
-  .lx[dir="rtl"] .lx-form-copy { line-height: 1.7 !important; }
-  .lx-credentials-form { gap: .56rem; }
-  .lx-label { margin-bottom: .28rem; font-size: .65rem; }
-  .lx-input { min-height: 46px; padding-block: .55rem; border-radius: .78rem; }
-  .lx-submit { min-height: 46px; border-radius: .78rem; }
-  .lx-trust--bottom { margin-top: .4rem; font-size: .6rem; }
-  .lx-gate { padding-inline: .85rem; }
-  .lx-gate-board { padding-top: 3.7rem !important; padding-bottom: .75rem !important; }
-  .lx-crest-stack { width: 6.5rem; height: 6.5rem; }
-  .lx-crest { width: 4.5rem; height: 4.5rem; border-radius: 1.35rem; }
-  .lx-gate-emblem { margin-bottom: 1.05rem !important; }
-  .lx-gate-title { font-size: clamp(2rem, 8.2vw, 2.65rem) !important; }
-  .lx[dir="rtl"] .lx-gate-title { font-size: clamp(1.9rem, 7.8vw, 2.5rem) !important; }
-  .lx-gate-sub { max-width: 25rem; margin-top: .45rem !important; font-size: .77rem !important; }
-  .lx-gate-slider { margin-top: 1.55rem !important; }
-  .lx-track { width: min(100%, 360px); height: 54px; }
-  .lx-track-label { padding-inline: 3.5rem; font-size: .75rem; }
-}
-@media (max-width: 380px) {
-  .lx-deck > .flex.flex-col { padding: 5px 0; }
-  .lx-access-panel {
-    width: 100%;
-    padding: .9rem .5rem;
-    border-radius: 1.05rem;
-  }
-  .lx-access-grid { gap: .62rem; }
-  .lx-form-title { font-size: 24px !important; }
-  .lx[dir="rtl"] .lx-form-title { font-size: 1.52rem !important; }
-  .lx-form-copy { font-size: 11px !important; }
-  .lx-credentials-form { gap: .45rem; }
-  .lx-field-glow { display: none; }
-  .lx-label { font-size: 10px; margin-bottom: .22rem; }
-  .lx-input { min-height: 44px; padding-inline: 2.55rem; border-radius: .72rem; }
-  .lx-submit { min-height: 44px; }
-  .lx-trust--bottom { font-size: 10px; margin-top: .25rem; }
-  .lx-ribbon { padding-inline: 3.8rem; }
-  .lx-brand-name { font-size: .7rem; }
-  .lx-brand-subtitle { font-size: .53rem; }
-  .lx-gate-board { padding-top: 3.3rem !important; }
-  .lx-crest-stack { width: 5.9rem; height: 5.9rem; }
-  .lx-crest { width: 4.1rem; height: 4.1rem; border-radius: 1.25rem; }
-  .lx-gate-title { font-size: 1.85rem !important; }
-  .lx[dir="rtl"] .lx-gate-title { font-size: 1.82rem !important; }
-  .lx-gate-sub { font-size: .72rem !important; }
-  .lx-gate-slider { margin-top: 1.15rem !important; }
-  .lx-track { height: 52px; }
-  .otp-orbit-zone { gap: 0; justify-content: space-between; }
-  .otp-orbit-item { flex: 0 0 44px; width: 44px; min-width: 44px; }
-  .otp-box { width: 38px; height: 38px; }
-}
-@media (max-height: 740px) {
-  .lx-deck { grid-template-rows: 3.9rem minmax(0, 1fr); }
-  .lx-deck > .flex.flex-col { padding-block: 8px; }
-  .lx-access-panel { padding: 1.1rem 1.45rem; }
-  .lx-access-grid { gap: .62rem; }
-  .lx-access-intro { gap: .22rem; }
-  .lx-form-title { font-size: 1.72rem !important; }
-  .lx[dir="rtl"] .lx-form-title { font-size: 1.7rem !important; }
-  .lx-form-copy { font-size: .75rem !important; line-height: 1.45 !important; }
-  .lx-credentials-form { gap: .5rem; }
-  .lx-input { min-height: 42px; }
-  .lx-submit { min-height: 44px; }
-  .lx-field { margin: 0; }
-  .lx-trust--bottom { margin-top: .35rem; }
-  .lx-gate-board { padding-block: 3.25rem .55rem !important; }
-  .lx-crest-stack { width: 6.1rem; height: 6.1rem; }
-  .lx-crest { width: 4.2rem; height: 4.2rem; }
-  .lx-gate-emblem { margin-bottom: .75rem !important; }
-  .lx-gate-title { font-size: clamp(1.8rem, 4.2vh, 2.7rem) !important; }
-  .lx[dir="rtl"] .lx-gate-title { font-size: clamp(1.75rem, 4.1vh, 2.6rem) !important; }
-  .lx-gate-sub { margin-top: .35rem !important; }
-  .lx-gate-slider { margin-top: 1.1rem !important; }
-  .lx-track { height: 52px; }
-}
-@media (max-height: 640px) {
-  .lx-access-panel { padding: .9rem 1.2rem; border-radius: 1.25rem; }
-  .lx-access-grid { gap: .45rem; }
-  .lx-form-title { font-size: 1.55rem !important; }
-  .lx[dir="rtl"] .lx-form-title { font-size: 1.52rem !important; }
-  .lx-form-copy { font-size: 11px !important; }
-  .lx-credentials-form { gap: .38rem; }
-  .lx-label { margin-bottom: .18rem; font-size: 10px; }
-  .lx-input { min-height: 40px; }
-  .lx-submit { min-height: 42px; }
-  .lx-trust--bottom { display: none !important; }
-  .lx-gate-board { padding-block: 3rem .35rem !important; }
-  .lx-crest-stack { width: 5.5rem; height: 5.5rem; }
-  .lx-crest { width: 3.9rem; height: 3.9rem; }
-  .lx-gate-emblem { margin-bottom: .55rem !important; }
-  .lx-gate-title { font-size: 1.72rem !important; }
-  .lx[dir="rtl"] .lx-gate-title { font-size: 1.68rem !important; }
-  .lx-gate-slider { margin-top: .8rem !important; }
-}
-@media (max-height: 559px) {
-  /* Only sub-560px-tall / landscape viewports may scroll inside the current scene. */
-  .lx-gate { overflow-y: auto !important; }
-  .lx-gate-board { height: auto !important; min-height: 100%; padding-block: 3rem .75rem !important; }
-  .lx-deck > .flex.flex-col { overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; }
-  .lx-access-panel { flex: 0 0 auto; max-height: none; margin-block: auto; }
-}
-
-/* Reduced motion: no decorative looping or spatial transitions. */
+/* ═══════════════ 8) تقليل الحركة + انتقال المسار ════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   .lx *,
   .lx *::before,
@@ -1075,19 +787,11 @@ body:has(.lx) { margin: 0 !important; }
     transition-duration: .01ms !important;
     transition-delay: 0ms !important;
   }
-  .lx-light,
-  .lx-scene::before { animation: none !important; }
-}
-@keyframes qs-ambient {
-  from { transform: translate3d(-.6%, 0, 0) scale(1); }
-  to { transform: translate3d(.8%, -.4%, 0) scale(1.025); }
-}
-@keyframes qs-spin {
-  to { transform: rotate(360deg); }
+  .otp-box { transition: none; }
 }
 
-/* Successful-login route change: use the browser's native cross-document-like
-   view transition when supported; React navigation remains the same fallback. */
+/* Successful-login route change: the browser's native view transition when
+   supported; React navigation remains the same fallback. */
 @supports (view-transition-name: root) {
   ::view-transition-old(root),
   ::view-transition-new(root) {
