@@ -13,7 +13,8 @@
   --qs-surface-raised: #20232a;
   --qs-border: rgba(202, 208, 220, .14);
   --qs-red: #d91f36;
-  --qs-red-hover: #ed334a;
+  --qs-red-hover: #c51f34;
+  --qs-red-text: #ff8290;
   --qs-muted: #a5aab5;
   --bg: #111318;
   --ink: #f3f4f7;
@@ -43,6 +44,7 @@
   --qs-border: rgba(36, 42, 55, .13);
   --qs-red: #c51d34;
   --qs-red-hover: #ad172c;
+  --qs-red-text: #b21b2f;
   --qs-muted: #646b78;
   --bg: #f4f5f7;
   --ink: #1a1c22;
@@ -613,7 +615,7 @@ body:has(.lx) { margin: 0 !important; }
   align-items: center;
   gap: .48rem;
   min-height: 1.3rem;
-  color: var(--accent);
+  color: var(--qs-red-text);
   font-size: 12px;
   font-weight: 760;
   letter-spacing: .04em;
@@ -794,7 +796,7 @@ body:has(.lx) { margin: 0 !important; }
 }
 .lx-eye:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 5%, transparent); }
 .lx-eye svg { width: 1.05rem; height: 1.05rem; }
-.lx-caps { margin: .35rem 0 0; color: var(--accent); font-size: .7rem; line-height: 1.45; }
+.lx-caps { margin: .35rem 0 0; color: var(--qs-red-text); font-size: 11px; line-height: 1.45; }
 .lx-caps i { display: inline-block; width: .38rem; height: .38rem; margin-inline-end: .3rem; border-radius: 50%; background: var(--accent); }
 .lx-submit {
   position: relative;
