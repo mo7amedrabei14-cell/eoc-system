@@ -683,10 +683,7 @@ export default function Login() {
                 في commit سابق) ⇒ DOM ميت يُبنى في كل رسم، مع inline transform
                 يربط البارالاكس بـ dragProgress فيُجبر إعادة بناء لكل إطار.
                 أُزيل بالكامل — نفس الشكل، صفر عُقد. */}
-            <div className="lx-scene" aria-hidden="true">
-        <span className="lx-aurora" aria-hidden="true" />
-        <span className="lx-light" aria-hidden="true" />
-      </div>
+            
 
             <motion.div
               variants={GATE_RISE}
@@ -695,59 +692,30 @@ export default function Login() {
               className="lx-gate-board relative z-10 flex h-full flex-col items-center justify-center px-6 w-full max-w-[min(92vw,540px)] mx-auto"
             >
               {/* تظهر إشارة المسار مرة واحدة مع فتح الأطلس */}
-              {openingCeremony && (
-                <div className="lx-boot" aria-hidden="true">
-                  <div className="lx-boot-slash" />
-                  <span className="lx-boot-ring" />
-                  <span className="lx-boot-spark" style={{ insetInlineStart: '18%', top: '34%', animationDelay: '0.55s' }} />
-                  <span className="lx-boot-spark" style={{ insetInlineStart: '72%', top: '28%', animationDelay: '0.7s' }} />
-                  <span className="lx-boot-spark" style={{ insetInlineStart: '56%', top: '70%', animationDelay: '0.85s' }} />
-                  <span className="lx-boot-spark" style={{ insetInlineStart: '88%', top: '55%', animationDelay: '1s' }} />
-                </div>
-              )}
+}
 
               {/* ── ختم الهوية: الهلال هو علامة موجز الاستجابة ── */}
               <motion.div variants={GATE_ITEM} className="lx-gate-emblem relative">
                 <motion.div style={{ x: parSX, y: parSY }} className="lx-crest-stack">
-                  <span className="lx-crest-glow" aria-hidden="true" />
-                  <span className="lx-orbit" aria-hidden="true"><span className="lx-sat lx-sat--a" /></span>
-                  <span className="lx-orbit lx-orbit--inner" aria-hidden="true"><span className="lx-sat lx-sat--b" /></span>
-                  {/* تُحتفظ بعناصر الحلقة للتوافق؛ عرض التقدم الأساسي على مسار السحب */}
-                  <svg className="lx-halo" viewBox="0 0 100 100" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="lxHaloGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="var(--accent-glow)" />
-                        <stop offset="55%" stopColor="var(--lx-accent-hi)" />
-                        <stop offset="100%" stopColor="var(--accent)" />
-                      </linearGradient>
-                    </defs>
-                    <circle className="lx-halo-track" cx="50" cy="50" r="46" />
-                    <circle
-                      className="lx-halo-arc"
-                      cx="50" cy="50" r="46"
-                      strokeDasharray={HALO_C}
-                    />
-                  </svg>
-                  <div
+                  <motion.div
                     id="lx-crest"
+                    layoutId="erc-mark"
                     className={`lx-crest ${dragStage.goal || isUnlocking ? 'is-done' : ''}`}
                   >
-                    <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" />
-                  </div>
+                    <img src="/Egyptian_Red_Crescent.png" alt="الهلال الأحمر المصري" draggable="false" />
+                  </motion.div>
                 </motion.div>
               </motion.div>
 
               <motion.h2
                 variants={GATE_ITEM}
-                className="lx-gate-title mt-9"
-                style={language === 'ar' ? undefined : { letterSpacing: '-0.015em' }}
+                className="lx-gate-title"
               >
                 {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
               </motion.h2>
               <motion.p
                 variants={GATE_ITEM}
-                className="lx-gate-sub mt-2.5"
-                style={language === 'ar' ? { letterSpacing: '.12em', textTransform: 'none' } : undefined}
+                className="lx-gate-sub"
               >
                 {language === 'ar' ? 'أطلس الاستجابة الإنسانية · EOC' : 'HUMANITARIAN RESPONSE ATLAS · EOC'}
               </motion.p>
@@ -766,41 +734,13 @@ export default function Login() {
                   ref={trackRef}
                   className={`lx-track ${isDragging ? 'is-dragging' : ''} ${isUnlocking ? 'is-done' : ''}`}
                 >
-                  <span className="lx-track-shine" aria-hidden="true" />
-
-                  {/* تعبئة الجمرة: مقطع واحد يقصّ الشكل الكبسولي + تعبئة تُقاس بـ
-                      `scaleX` من `--lx-p`. كان العرض يُحرّك بـ `width` عبر انتقال
-                      ٠.٤٥s ⇒ حركة تخطيط بطيئة. الآن transform فقط: صفر تخطيط،
-                      وصفر رسم بعد الإطار الأول. */}
                   <span className="lx-fill-clip" aria-hidden="true">
                     <span className="lx-fill" />
-                    <span className="lx-fill-glow" />
-                  </span>
-                  {/* جمرة سافرة: كتلة ثابتة الحجم تُنقل بـ translate3d (compositor) */}
-                  <span className="lx-ember" aria-hidden="true" />
-
-                  {/* معينات المراحل — تشتعل تباعًا (من العتبات فقط، بلا رسم لكل إطار) */}
-                  {[0.33, 0.66, 0.92].map((p, i) => (
-                    <span
-                      key={p}
-                      className={`lx-tick ${dragStage.tick > i ? 'is-lit' : ''}`}
-                      style={{ insetInlineStart: `${p * 100}%` }}
-                      aria-hidden="true"
-                    />
-                  ))}
-
-                  {/* حلقة الهدف النهائي */}
-                  <span className={`lx-goal ${dragStage.goal ? 'is-lit' : ''}`} aria-hidden="true">
-                    <CheckIcon />
                   </span>
 
                   {/* التسمية المتطورة — تلاشيها من `--lx-p` في CSS */}
-                  <span className="lx-track-label">
-                    <span className="lx-shield-ic" aria-hidden="true"><ShieldIcon /></span>
-                    <span key={slideLabel} className="lx-morph whitespace-nowrap">{slideLabel}</span>
-                    <span className="lx-chevs" aria-hidden="true">
-                      <ChevronsIcon /><ChevronsIcon /><ChevronsIcon />
-                    </span>
+                  <span id="lx-gate-instruction" className="lx-track-label">
+                    <span key={slideLabel} className="lx-track-copy">{slideLabel}</span>
                   </span>
 
                   {/* مقبض السحب يحمل ختم الهوية */}
@@ -820,11 +760,8 @@ export default function Login() {
                     className={`lx-handle ${isDragging ? 'is-dragging' : 'is-idle'} ${isUnlocking ? 'is-done' : ''}`}
                     /* الموضع من `--lx-x` (CSS) — لا انتقال زمني أثناء السحب:
                        الحركة 1:1 مع الإصبع، والعودة يحرّكها النابض في JS. */
-                    style={{ width: '3.75rem', height: '3.75rem' }}
+                    aria-describedby="lx-gate-instruction"
                   >
-                    <span className="lx-handle-halo" aria-hidden="true" />
-                    {isUnlocking && <span className="lx-ripple lx-ripple--1" aria-hidden="true" />}
-                    {isUnlocking && <span className="lx-ripple lx-ripple--2" aria-hidden="true" />}
                     <span className="lx-handle-core">
                       <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
                       <span className="lx-handle-check" aria-hidden="true">
@@ -856,35 +793,23 @@ export default function Login() {
           animate={isMounted ? 'show' : 'hidden'}
         >
           {/* ─── الرباط العلوي: هوية القيادة + الحالة الحية ─── */}
-          <motion.div variants={DECK_CHILD} className="lx-ribbon relative shrink-0 px-5 sm:px-8 py-4">
-            <span className="lx-ribbon-line" aria-hidden="true" />
-            <span className="lx-ribbon-fade" aria-hidden="true" />
-            <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="lx-logo-tile shrink-0">
-                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-extrabold text-sm sm:text-base leading-tight tracking-tight">
+          <motion.div variants={DECK_CHILD} className="lx-ribbon">
+            <div className="lx-ribbon-inner">
+              <div className="lx-brand">
+                <motion.span layoutId="erc-mark" className="lx-logo-tile" aria-hidden="true">
+                  <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
+                </motion.span>
+                <div className="lx-brand-copy">
+                  <p className="lx-brand-name">
                     {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
                   </p>
-                  <p className="text-white/75 text-[max(0.6875rem,9.5px)] sm:text-xs font-medium">
-                    {language === 'ar' ? 'أطلس الاستجابة · مركز عمليات الطوارئ' : 'Response Atlas · Emergency Operations Center'}
+                  <p className="lx-brand-subtitle">
+                    {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Emergency Operations Center'}
                   </p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <span className="lx-chip hidden sm:inline-flex">
-                  <span className="lx-live-dot" aria-hidden="true" />
-                  <span className="text-[max(0.625rem,9px)] sm:text-[max(0.6875rem,9.5px)] font-bold tracking-[0.2em]">LIVE</span>
-                </span>
-                <span className="lx-chip">
-                  <span className="lx-clock"><OpsClock /></span>
-                </span>
-                <span className="hidden md:inline-flex text-white/60 text-[max(0.625rem,9px)] font-mono tracking-widest">
-                  EOC · OPS · v2.0.0
-                </span>
+              <div className="lx-ribbon-meta" aria-label={language === 'ar' ? 'الوقت المحلي' : 'Local time'}>
+                <span className="lx-clock"><OpsClock /></span>
               </div>
             </div>
           </motion.div>
@@ -922,24 +847,24 @@ export default function Login() {
             </motion.div>
 
             {/* نموذج الوصول الموحّد */}
-            <motion.div variants={DECK_CHILD} className="p-7 sm:p-10">
-              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start gap-8 lg:gap-12">
+            <motion.div variants={DECK_CHILD} className="lx-access-panel">
+              <div className="lx-access-grid">
                 {/* عمود المقدمة/الثقة */}
-                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
+                <div className="lx-access-intro">
                   <div>
-                    <span className="lx-eyebrow mb-3">
+                    <span className="lx-eyebrow">
                       {language === 'ar' ? 'مركز تنسيق الاستجابة' : 'RESPONSE COORDINATION'}
                     </span>
-                    <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
+                    <h3 className="lx-form-title">
                       {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Response Coordination Desk'}
                     </h3>
-                    <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
+                    <p className="lx-form-copy">
                       {language === 'ar'
                         ? 'تحقق من بيانات اعتمادك للدخول إلى مركز عمليات الطوارئ.'
                         : 'Verify your credentials to enter the response coordination desk.'}
                     </p>
                   </div>
-                  <div className="hidden lg:flex lx-trust">
+                  <div className="lx-trust lx-trust--top">
                     <b aria-hidden="true">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 12.5 9.5 17 19 7" />
@@ -950,22 +875,22 @@ export default function Login() {
                 </div>
 
                 {/* عمود النموذج — انتقال سينمائي بين الدخول ورمز التحقق */}
-                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
+                <div className="lx-form-column">
                   <AnimatePresence mode="wait" initial={false}>
                     {loginStage === 'verify' ? (
                       <motion.div
                         key="verify"
                         {...TAB_PAGE}
-                        className="flex flex-col items-center gap-6 text-center py-2"
+                        className="lx-otp-panel"
                       >
                         <div>
-                          <span className="lx-eyebrow mb-3">
+                          <span className="lx-eyebrow">
                             {language === 'ar' ? 'طبقة حماية إضافية' : 'ADDITIONAL SECURITY LAYER'}
                           </span>
-                          <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
+                          <h3 className="lx-form-title">
                             {language === 'ar' ? 'رمز التحقق' : 'Verification Code'}
                           </h3>
-                          <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
+                          <p className="lx-form-copy">
                             {language === 'ar'
                               ? 'أدخل رمز التحقق المكوّن من 6 أرقام لإكمال الدخول'
                               : 'Enter the 6-digit verification code to complete sign-in'}
@@ -989,14 +914,12 @@ export default function Login() {
                           {verifyDigits.map((d, i) => (
                             <span
                               key={i}
-                              className="otp-orbit-item inline-flex"
-                              style={{
-                                '--angle': `${i * 60 - 150}deg`,                                  '--line-x': `${(i - 2.5) * 3.625}rem`
-                              }}
+                              className="otp-orbit-item"
                             >
                               <input
                                 ref={(el) => (otpRefs.current[i] = el)}
                                 type="password"
+                                aria-label={language === 'ar' ? `الخانة ${i + 1} من 6` : `Digit ${i + 1} of 6`}
                                 inputMode="numeric"
                                 autoComplete="off"
                                 data-lpignore="true"
@@ -1053,10 +976,10 @@ export default function Login() {
                           </motion.div>
                         )}
 
-                        <form onSubmit={handleLogin} className="flex flex-col gap-5" autoComplete="off">
+                        <form onSubmit={handleLogin} className="lx-credentials-form" autoComplete="on">
                           <motion.div variants={FORM_ITEM} className={`lx-field ${username ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
-                            <label className="lx-label">
+                            <label className="lx-label" htmlFor="lx-username">
                               <span className="lx-label-dot" aria-hidden="true" />
                               {language === 'ar' ? 'الرقم التعريفي / المستخدم' : 'ID / Username'}
                             </label>
@@ -1064,12 +987,13 @@ export default function Login() {
                               <span className="lx-input-ic" aria-hidden="true"><UserIcon /></span>
                               <input
                                 ref={usernameRef}
+                                id="lx-username"
                                 type="text"
                                 required
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 placeholder={language === 'ar' ? 'أدخل اسم المستخدم الخاص بك' : 'Enter your Username'}
-                                autoComplete="new-password"
+                                autoComplete="username"
                                 className="lx-input"
 />
                             </div>
@@ -1077,20 +1001,21 @@ export default function Login() {
 
                           <motion.div variants={FORM_ITEM} className={`lx-field ${password ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
-                            <label className="lx-label">
+                            <label className="lx-label" htmlFor="lx-password">
                               <span className="lx-label-dot" aria-hidden="true" />
                               {language === 'ar' ? 'رمز المرور السري' : 'Secret password'}
                             </label>
                             <div className="lx-input-wrap">
                               <span className="lx-input-ic" aria-hidden="true"><LockIcon /></span>
                               <input
+                                id="lx-password"
                                 type={showPassword ? 'text' : 'password'}
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 onKeyUp={handleCaps}
                                 placeholder="********"
-                                autoComplete="new-password"
+                                autoComplete="current-password"
                                 className="lx-input"
 />
                               <button
@@ -1124,7 +1049,7 @@ export default function Login() {
                           </motion.button>
                         </form>
 
-                        <motion.div variants={FORM_ITEM} className="lx-trust lg:hidden justify-center">
+                        <motion.div variants={FORM_ITEM} className="lx-trust lx-trust--bottom">
                           <b aria-hidden="true">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 12.5 9.5 17 19 7" />
