@@ -427,6 +427,18 @@
 .app-shell #home-view-top > * {
   animation: none;
 }
+/* Generic route fallback (login/dashboard) shares the same single entrance. */
+.eoc-page-transitioning {
+  animation: eoc-page-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .eoc-page-transitioning {
+    animation-duration: 1ms !important;
+    will-change: auto;
+  }
+}
+
 .app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
   animation: eoc-page-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: transform, opacity;
