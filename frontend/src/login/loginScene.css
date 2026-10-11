@@ -1,2107 +1,32 @@
-/* ════════════════════════════════════════════════════════════════════════════
-   LX — LOGIN EXPERIENCE ("Cinematic Ember") — Unified with EOC Shell
-   ────────────────────────────────────────────────────────────────────────────
-   نظام البصريات الكامل لشاشة ما-قبل-الدخول (البوابة) وشاشة الدخول (سطح القيادة).
-   الآن موحّد مع: Liquid Glass materials, motion tokens, ambient background,
-   shadow budget, and performance budgets من index.css.
-
-   المبادئ:
-     • transform + opacity فقط في الحركات (لا reflow).
-     • كل الألوان من توكنات الثيم (--bg/--surface/--accent/...) ⇒ يعمل في الداكن والفاتح.
-     • احترام prefers-reduced-motion مع الإبقاء على الحركة المركّبة للأجهزة الأخرى.
-     • Glass وصفات موحّدة: --glass-heavy, --glass-medium, --glass-light
-     • حركة موحّدة: --spring-tight, --spring-soft, --ease-out-quick
-     • ظلال خفيفة: --shadow-contact, --shadow-ambient, --shadow-elevated
-   ════════════════════════════════════════════════════════════════════════════ */
-
-/* ── متغيرات محلية للتجربة (تستمد من توكنات النظام الموحّدة) ────────────────── */
-.lx {
-  --lx-accent-hi: color-mix(in srgb, var(--accent) 62%, #fff);
-  --lx-ember-hot: color-mix(in srgb, var(--accent) 78%, #ff7a3d);
-  --lx-glass-hi: color-mix(in srgb, var(--ink) 9%, transparent);
-  --lx-ring: color-mix(in srgb, var(--accent) 55%, transparent);
-  --lx-beam: color-mix(in srgb, var(--accent) 24%, transparent);
-
-  /* Glass recipes — تستمد من النظام الموحّد (Phase 4+5) */
-  --lx-glass-heavy: var(--glass-heavy);
-  --lx-glass-medium: var(--glass-medium);
-  --lx-glass-light: var(--glass-light);
-  --lx-glass-heavy-light: var(--glass-heavy-light);
-  --lx-glass-medium-light: var(--glass-medium-light);
-  --lx-glass-light-light: var(--glass-light-light);
-
-  /* Motion tokens — موحّدة مع النظام (Phase 2) */
-  --lx-spring-tight: var(--spring-tight);
-  --lx-spring-soft: var(--spring-soft);
-  --lx-ease-out-quick: var(--ease-out-quick);
-  --lx-ease-standard: var(--ease-standard);
-  --lx-dur-instant: var(--dur-instant);
-  --lx-dur-fast: var(--dur-fast);
-  --lx-dur-base: var(--dur-base);
-  --lx-dur-slow: var(--dur-slow);
-  --lx-dur-slower: var(--dur-slower);
-
-  /* Shadow budget — موحّدة (Phase 9) */
-  --lx-shadow-contact: var(--shadow-contact);
-  --lx-shadow-ambient: var(--shadow-ambient);
-  --lx-shadow-elevated: var(--shadow-elevated);
-  --lx-shadow-modal: var(--shadow-modal);
-
-  /* Blur budget — موحّد (Phase 2) */
-  --lx-blur-lg: var(--blur-lg);
-  --lx-blur-md: var(--blur-md);
-  --lx-blur-sm: var(--blur-sm);
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ١) خلفية البوابة — Ambient Background موحّد مع Dashboard (Phase 3)
-   ════════════════════════════════════════════════════════════════════════════
-   المشهد طبقة واحدة تُرسم مرة واحدة، لكنها مركّبة من **أربعة أدوار فضاء**
-   بترتيب مقصود (الأسبق في القائمة يُرسم فوق الأحدث):
-     ① أفق: ضوء هوية دافئ من أعلى اليسار ⇒ مصدر ضوء للمشهد كله
-     ② بؤرة: ضوء مركزي واسع خلف الهلال ⇒ الهلال «مضاء من بيئته» لا ملصق
-     ③ عمق: تعتيم خارجي يُرسم *فوق* النسيج ⇒ المستوى يتوارى عند الأطراف
-     ④ نسيج: شبكة عمليات 64px بحدّ شعري واحد
-   النتيجة: ظهور + عمق، بصفر حركة وبصفر JS.
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-scene {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  isolation: isolate;
-  pointer-events: none;
-}
-
-/* Dark: الوضع الليلي — أفق أحمر خافت + بؤرة بيضاء حمراء خلف الهلال */
-.lx-scene {
-  background-color: var(--bg);
-  background-image:
-    /* ① أفق */ radial-gradient(1250px 620px at 6% -14%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 66%),
-    /* ② بؤرة */ radial-gradient(760px 520px at 50% 44%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 68%),
-    /* ③ عمق */ radial-gradient(130% 108% at 50% 44%, transparent 34%, rgba(0, 0, 0, 0.55) 100%),
-    /* ④ نسيج */ linear-gradient(var(--border-hair) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
-  background-size: auto, auto, auto, 64px 64px, 64px 64px;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
-}
-
-/* Light: تركيبة نهارية مختلفة لا تبديل رموز — بؤرة دافئة، وتعتيم أدنى
-   (الضوء لا يُحجب في النهار) بل «غائم» عند الأطراف فقط. */
-:root[data-theme="light"] .lx-scene {
-  background-image:
-    radial-gradient(1250px 620px at 6% -14%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 62%),
-    radial-gradient(760px 520px at 50% 44%, rgba(255, 255, 255, 0.75), transparent 66%),
-    radial-gradient(130% 108% at 50% 44%, transparent 46%, color-mix(in srgb, #b8b2a9 22%, transparent) 100%),
-    linear-gradient(var(--border-hair) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
-  background-size: auto, auto, auto, 64px 64px, 64px 64px;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
-}
-
-/* إزالة العناصر الثقيلة: lx-aurora, lx-glow--a/b/c, lx-beam, lx-sweep, lx-vignette, lx-grain
-   كلها مستبدلة بالـ background-image أعلاه — أخف وأداء أعلى */
-
-/* لمعة الأرضية: مخروط ضوء باهت ينزل من الأعلى عبر مركز الشاشة ⇒ مستوى
-   مضيء يُثبّت الهلال في فضاء، بدل توهّج عائم على خلفية مسطّحة. */
-.lx-gate::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 74%;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--accent) 7%, transparent),
-    transparent 58%
-  );
-  clip-path: polygon(38% 0, 62% 0, 96% 100%, 4% 100%);
-  pointer-events: none;
-  /* فوق `.lx-scene` (الذي يملك خلفية معتمة) وتحت المحتوى (z-10) */
-  z-index: 2;
-}
-:root[data-theme="light"] .lx-gate::before {
-  /* الإسفين المخروطي (`clip-path` بحواف مستقيمة) كان يُقرأ كشريطين مائلين
-     على الخلفية الفاتحة ⇒ يُلغى تمامًا، ويُستبدل بماسة ضوء ناعمة بلا حواف. */
-  background: radial-gradient(64% 58% at 50% 0%, rgba(255, 255, 255, 0.85), transparent 70%);
-  clip-path: none;
-  height: 60%;
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٢) هلال البوابة (Crest) — قرص زجاجي + هالة SVG + أقمار مدارية
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-crest-stack {
-  position: relative;
-  width: clamp(6.75rem, 8.2vw, 9.25rem);
-  height: clamp(6.75rem, 8.2vw, 9.25rem);
-}
-
-/* بركة ضوء أسفل الهلال: قرص بيضوي واسع باهت يثبّت الهلال كجسم يطفو
-   فوق مستوى، لا ملصقًا في الفراغ. ثابت تمامًا (لا حركة، لا فلتر). */
-.lx-crest-stack::after {
-  content: "";
-  position: absolute;
-  inset-block-start: 88%;
-  inset-inline: 6%;
-  height: 34%;
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    color-mix(in srgb, var(--accent) 26%, transparent),
-    transparent 78%
-  );
-  transform: translateZ(0);
-  pointer-events: none;
-}
-:root[data-theme="light"] .lx-crest-stack::after {
-  background: radial-gradient(
-    closest-side,
-    color-mix(in srgb, var(--accent) 15%, transparent),
-    transparent 76%
-  );
-}
-
-.lx-crest-glow {
-  position: absolute;
-  inset: -34%;
-  border-radius: 62.4375rem;
-  /* 🚫 `filter: blur(18px)` اتشال: تدرّج شعاعي ناعم أصلاً، والفلتر كان يُجبر
-     المتصفح على إعادة تصوير (rasterize) الطبقة في كل إطار من نبضة التنفّس
-     اللانهائية. نفس الشكل — الآن transform/opacity فقط على الـ compositor. */
-  background: radial-gradient(
-    closest-side,
-    color-mix(in srgb, var(--accent) 38%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 14%, transparent) 44%,
-    transparent 72%
-  );
-  opacity: .8;
-  will-change: transform, opacity;
-  animation: lx-crest-breathe 3.8s ease-in-out infinite;
-}
-@keyframes lx-crest-breathe {
-  0%, 100% { opacity: .55; transform: scale(.96); }
-  50%      { opacity: .95; transform: scale(1.05); }
-}
-
-/* مدار الأقمار (يتباطأ ويتسارع مع السحب عبر style) */
-.lx-orbit {
-  position: absolute;
-  inset: -1.375rem;
-  border-radius: 62.4375rem;
-  border: 1px dashed color-mix(in srgb, var(--ink) 16%, transparent);
-  animation: lx-spin 26s linear infinite;
-}
-.lx-orbit--inner {
-  inset: -0.6875rem;
-  border-style: solid;
-  border-color: color-mix(in srgb, var(--ink) 7%, transparent);
-  animation: lx-spin-r 34s linear infinite;
-}
-@keyframes lx-spin   { to { transform: rotate(360deg); } }
-@keyframes lx-spin-r { to { transform: rotate(-360deg); } }
-
-/* أقمار تدور على حافّة الحلقات — تركب دوران الحلقة نفسها (متجاوبة، بلا أرقام ثابتة) */
-.lx-sat {
-  position: absolute;
-  top: -0.25rem;
-  inset-inline-start: 50%;
-  margin-inline-start: -0.2188rem;
-  width: 0.4375rem; height: 0.4375rem;
-  border-radius: 62.4375rem;
-  background: var(--lx-accent-hi);
-  box-shadow: 0 0 10px 2px var(--accent-glow);
-}
-.lx-sat--b {
-  top: auto;
-  bottom: -2.5px;
-  width: 0.25rem; height: 0.25rem;
-  margin-inline-start: -2px;
-  background: color-mix(in srgb, var(--ink) 55%, transparent);
-  box-shadow: none;
-  opacity: .75;
-}
-
-/* حلقة التقدم المرئية (SVG) — تمتلئ مع السحب */
-.lx-halo {
-  position: absolute;
-  inset: -0.8125rem;
-  width: calc(100% + 1.625rem);
-  height: calc(100% + 1.625rem);
-  transform: rotate(-90deg);
-  overflow: visible;
-}
-.lx-halo-track {
-  fill: none;
-  stroke: color-mix(in srgb, var(--ink) 10%, transparent);
-  stroke-width: 2;
-}
-.lx-halo-arc {
-  fill: none;
-  stroke: url(#lxHaloGrad);
-  stroke-width: 3;
-  stroke-linecap: round;
-  /* التقدّم يُشتقّ من `--lx-p` (يكتبه rAF واحد) — بلا انتقال زمني وبلا فلتر.
-     كان `drop-shadow` فلترًا يُعاد حسابه مع تغيّر dashoffset في كل إطار سحب. */
-  stroke-dashoffset: calc(var(--lx-halo-c, 289.0265) * (1 - var(--lx-p, 0)));
-}
-
-/* جذر البوابة: القيم الابتدائية + طول محيط الهالة (2π×46) */
-.lx-gate {
-  --lx-x: 0px;
-  --lx-p: 0;
-  --lx-halo-c: 289.0265;
-}
-
-/* القرص الزجاجي نفسه — Liquid Glass موحّد مع Sidebar/Header (Phase 4+5) */
-.lx-crest {
-  position: absolute;
-  inset: 0;
-  border-radius: 62.4375rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12%;
-  /* Unified glass recipe: --glass-heavy + blur-lg + saturate */
-  background: var(--lx-glass-heavy);
-  -webkit-backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
-          backdrop-filter: blur(var(--lx-blur-lg)) saturate(140%);
-  border: 1px solid var(--border);
-  /* إضاءة اتجاهية: مصدر ضوء واحد من فوق، وليس توهّجًا متساويًا في كل
-     الاتجاهات. اللمعة العلوية + الظل السفلي الداخلي هما ما يجعلان القرص
-     يقرأ كجسم زجاجي محدّب لا دائرة مسطّحة ملوّنة. */
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -16px 24px -14px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 0 0 1px var(--border),
-    0 22px 44px -26px rgba(0, 0, 0, 0.8),
-    0 0 44px -14px color-mix(in srgb, var(--accent) 38%, transparent);
-  transition: border-color var(--lx-dur-base) var(--lx-ease-out-quick),
-              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
-}
-.lx-crest.is-done {
-  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
-    0 0 24px -4px var(--ok-soft),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
-}
-
-/* Light mode glass crest — نفس الاتجاهية بإضاءة نهارية (تعتيم أنعم بكثير) */
-:root[data-theme="light"] .lx-crest {
-  background: var(--lx-glass-heavy-light);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -14px 22px -14px rgba(18, 22, 34, 0.16),
-    inset 0 0 0 1px rgba(20, 22, 34, 0.04),
-    0 0 0 1px var(--border),
-    0 20px 40px -26px rgba(18, 22, 34, 0.28),
-    0 0 40px -14px color-mix(in srgb, var(--accent) 26%, transparent);
-}
-:root[data-theme="light"] .lx-crest.is-done {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
-    0 0 24px -4px var(--ok-soft),
-    inset 0 0 0 1px rgba(20,22,34,0.04);
-}
-
-.lx-crest img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: 39%;
-  pointer-events: none;
-  user-select: none;
-  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, .25));
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٣) نصوص البوابة
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-gate-title {
-  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.18;
-  text-align: center;
-  color: var(--ink);
-  text-shadow: 0 2px 30px color-mix(in srgb, var(--bg) 80%, transparent);
-}
-[dir="ltr"] .lx-gate-title { letter-spacing: -0.015em; }
-
-.lx-gate-sub {
-  font-size: clamp(0.6875rem, .9vw, 0.8438rem);
-  font-weight: 700;
-  text-align: center;
-  color: var(--muted);
-  letter-spacing: .34em;
-  text-transform: uppercase;
-}
-[dir="rtl"] .lx-gate-sub { letter-spacing: .12em; text-transform: none; }
-
-/* ظهور نصي ناعم يُعاد تشغيله عند تغيّر المحتوى (key remount).
-   ⚡ مُهمّ: هذه الكتلة تُعاد *أثناء السحب* عند كل تغيّر مرحلة لنص التسمية،
-   وكانت تُحرّك `filter: blur(5px) → 0` ⇒ إعادة تصوير النص في منتصف الإيماءة
-   (بالضبط النوع الذي يجب تجنّبه: بلور أثناء الحركة). الآن opacity + إزاحة
-   صغيرة فقط، وأقصر (180ms) ⇒ يُحسّ كتغيير فوري لا كحركة تُشاهد. */
-.lx-morph {
-  animation: lx-morph-in 180ms var(--lx-ease-out-quick) both;
-}
-@keyframes lx-morph-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* شارة النسبة المئوية / التفعيل فوق المسار */
-.lx-readout {
-  height: 1.875rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.lx-pct {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--lx-accent-hi);
-  letter-spacing: .12em;
-  text-shadow: 0 0 18px var(--accent-glow);
-  font-variant-numeric: tabular-nums;
-}
-.lx-granted {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3125rem 0.875rem;
-  border-radius: 62.4375rem;
-  font-size: 0.6562rem;
-  font-weight: 800;
-  letter-spacing: .3em;
-  text-transform: uppercase;
-  color: var(--ok);
-  border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
-  background: var(--ok-soft);
-  box-shadow: 0 0 24px -4px var(--ok-soft), inset 0 0 12px var(--ok-soft);
-}
-.lx-granted i {
-  width: 0.375rem; height: 0.375rem;
-  border-radius: 62.4375rem;
-  background: var(--ok);
-  box-shadow: 0 0 10px var(--ok);
-  animation: lx-pulse-dot 1s ease-in-out infinite;
-}
-[dir="rtl"] .lx-granted { letter-spacing: .06em; }
-@keyframes lx-pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: .45; transform: scale(.72); }
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٤) مسار السحب — كبسولة زجاجية بجمرة متوهجة (موحّدة مع نظام Liquid Glass)
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-track {
-  position: relative;
-  width: 100%;
-  max-width: 30rem;
-  height: 4.25rem;
-  border-radius: 62.4375rem;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  /* Unified glass recipe: --glass-medium + blur-md + saturate */
-  background: var(--lx-glass-medium);
-  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
-          backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
-  border: 1px solid var(--border);
-  /* مادة اتجاهية: لمعة علوية (الضوء من فوق) + حوض سفلي غائر (حفرة التمرير)
-     + حدّ شعري + تلامس قصير. هذا ما يفرّق «حفرة زجاجية» عن «كبسولة مسطّحة». */
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -20px 30px -22px rgba(0, 0, 0, 0.7),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
-    0 0 0 1px var(--border),
-    0 24px 48px -30px rgba(0, 0, 0, 0.85);
-  /* حفرة التمرير: لون الحدّ فقط (سريع). خلط الظل في الانتقال كان يُجبر
-     إعادة تركيب الـ backdrop المُضبَّب عند كل تبديل حالة. */
-  transition: border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
-              background-color var(--lx-dur-fast) var(--lx-ease-out-quick);
-}
-.lx-track.is-dragging {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  /* 🚀 أثناء الحركة: بلا ضباب خلفي. البلور تحت عناصر تتحرك ⇒ إعادة تركيب
-     الـ backdrop في كل إطار، وهذا أغلى عنصر في الإيماءة كلها.
-     مادة شبه معتمة = نفس الجمال، بلا كلفة إطارات. */
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: color-mix(in srgb, var(--surface-2) 94%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
-}
-:root[data-theme="light"] .lx-track.is-dragging {
-  background: color-mix(in srgb, #ffffff 96%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 24px -4px var(--accent-soft),
-    inset 0 0 0 1px rgba(20,22,34,0.04);
-}
-.lx-track.is-done {
-  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
-    0 0 24px -4px var(--ok-soft),
-    inset 0 0 0 1px rgba(255,255,255,0.02);
-}
-
-/* Light mode glass track */
-:root[data-theme="light"] .lx-track {
-  background: var(--lx-glass-medium-light);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -18px 28px -22px rgba(18, 22, 34, 0.22),
-    inset 0 0 0 1px rgba(20, 22, 34, 0.04),
-    0 0 0 1px var(--border),
-    0 22px 44px -30px rgba(18, 22, 34, 0.3);
-}
-/* (أُدمجت قاعدة `.lx-track.is-dragging` الخاصة بالوضع الفاتح في الكتلة أعلاه) */:root[data-theme="light"] .lx-track.is-done {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--ok) 30%, transparent),
-    0 0 24px -4px var(--ok-soft),
-    inset 0 0 0 1px rgba(20,22,34,0.04);
-}
-
-/* لمعان علوي داخلي */
-.lx-track-shine {
-  position: absolute;
-  inset-inline: 2.125rem;
-  top: 0;
-  height: 1.5px;
-  border-radius: 62.4375rem;
-  /* لمعة مواصفاتية حقيقية: نقطة قوية في الثلث الأيسر تتلاشى عند الأطراف
-     (مصدر ضوء واحد) بدل خط متدرّج متساوٍ في اتجاه واحد. */
-  background: radial-gradient(
-    60% 100% at 26% 50%,
-    rgba(255, 255, 255, 0.55),
-    color-mix(in srgb, var(--ink) 22%, transparent) 48%,
-    transparent
-  );
-  pointer-events: none;
-}
-:root[data-theme="light"] .lx-track-shine {
-  background: radial-gradient(
-    60% 100% at 26% 50%,
-    rgba(255, 255, 255, 0.95),
-    color-mix(in srgb, var(--ink) 12%, transparent) 48%,
-    transparent
-  );
-}
-
-/* تعبئة الجمرة + حافة حارقة + توهج واسع */
-/* ── التعبئة: مقطع كبسولي ثابت + تعبئة تُقاس بـ scaleX ──────────────────
-   قبل: `width` يتحرّك بانتقال ٠.٤٥s (حركة تخطيط) + `filter: blur(16px)` على
-   عنصر يتغيّر عرضه في كل إطار ⇒ إعادة تخطيط + إعادة رسم + إعادة تصوير طوال
-   السحب. الآن: `transform: scaleX()` وحده (compositor). الشكل الكبسولي يضمنه
-   المقطع القاصّ، فلا يحدث أي تشوّه للحواف المستديرة من القياس. */
-.lx-fill-clip {
-  position: absolute;
-  top: 0.3125rem;
-  bottom: 0.3125rem;
-  inset-inline-start: 0.3125rem;
-  inset-inline-end: 0.3125rem;
-  border-radius: 62.4375rem;
-  overflow: hidden;
-  pointer-events: none;
-}
-.lx-fill {
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-  transform: scaleX(var(--lx-p, 0));
-  background: linear-gradient(90deg, var(--accent-softer), color-mix(in srgb, var(--accent) 82%, #000 0%) 60%, var(--accent));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 20%, transparent),
-    inset 0 0 14px color-mix(in srgb, var(--lx-ember-hot) 55%, transparent);
-}
-.lx-fill-glow {
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-  transform: scaleX(var(--lx-p, 0));
-  /* تدرّج ناعم بدل `filter: blur(16px)` — نفس الإحساس، بلا فلتر يُعاد حسابه */
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--accent) 26%, transparent) 62%,
-    color-mix(in srgb, var(--lx-ember-hot) 62%, transparent)
-  );
-  opacity: calc(0.4 + var(--lx-p, 0) * 0.5);
-  pointer-events: none;
-}
-
-/* 🪨 الجمرة السافرة: كتلة *ثابتة الحجم* تُنقل بـ translate3d ⇒ لا قياس،
-   لا قصّ، لا رسم. كانت سابقًا `filter: blur(16px)` على عنصر متغيّر العرض. */
-.lx-ember {
-  position: absolute;
-  top: 50%;
-  inset-inline-start: 0;
-  width: 4.75rem;
-  height: 4.75rem;
-  margin-top: -2.375rem;
-  margin-inline-start: 0.75rem;
-  border-radius: 62.4375rem;
-  transform: translate3d(var(--lx-x, 0px), 0, 0);
-  background: radial-gradient(
-    closest-side,
-    color-mix(in srgb, var(--lx-ember-hot) 62%, transparent),
-    color-mix(in srgb, var(--accent) 24%, transparent) 46%,
-    transparent 78%
-  );
-  opacity: calc(0.35 + var(--lx-p, 0) * 0.55);
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* علامات المراحل — معينات تشتعل */
-.lx-tick {
-  position: absolute;
-  top: 50%;
-  width: 0.4375rem; height: 0.4375rem;
-  border-radius: 2px;
-  transform: translate(-50%, -50%) rotate(45deg) scale(1);
-  background: color-mix(in srgb, var(--ink) 18%, transparent);
-  /* مدد قصيرة + نابض ضيّق: الاشتعال يجب أن يُحسّ فوريًّا لا “يتأرجح”.
-     (كان transform .45s بنابض مرتدّ — إحساس لعِب بطيء.) */
-  transition: background var(--lx-dur-fast) var(--lx-ease-out-quick),
-              box-shadow var(--lx-dur-fast) var(--lx-ease-out-quick),
-              transform 190ms cubic-bezier(0.32, 1, 0.5, 1);
-  pointer-events: none;
-}
-.lx-tick.is-lit {
-  background: var(--lx-accent-hi);
-  box-shadow: 0 0 12px 2px var(--accent-glow);
-  transform: translate(-50%, -50%) rotate(45deg) scale(1.35);
-}
-.lx-track.is-done .lx-tick.is-lit {
-  background: var(--ok);
-  box-shadow: 0 0 12px 2px var(--ok-soft);
-  transform: translate(-50%, -50%) rotate(45deg) scale(1.2);
-}
-
-/* هدف النهاية — حلقة تشتعل مع الاقتراب */
-.lx-goal {
-  position: absolute;
-  top: 50%;
-  inset-inline-end: 1rem;
-  width: 1.875rem; height: 1.875rem;
-  transform: translateY(-50%);
-  border-radius: 62.4375rem;
-  border: 1.5px dashed color-mix(in srgb, var(--ink) 24%, transparent);
-  display: grid;
-  place-items: center;
-  color: color-mix(in srgb, var(--ink) 40%, transparent);
-  transition: border-color var(--lx-dur-base) var(--lx-ease-out-quick),
-              color var(--lx-dur-base) var(--lx-ease-out-quick),
-              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
-              transform var(--lx-dur-base) cubic-bezier(0.32, 1, 0.5, 1);
-  pointer-events: none;
-}
-.lx-goal.is-lit {
-  border-color: var(--ok);
-  color: var(--ok);
-  border-style: solid;
-  box-shadow: 0 0 18px -2px var(--ok-soft), inset 0 0 10px var(--ok-soft);
-}
-
-/* التسمية المتطورة داخل المسار */
-.lx-track-label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.625rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: .04em;
-  color: color-mix(in srgb, var(--ink) 78%, transparent);
-  pointer-events: none;
-  /* التلاشي مع السحب من `--lx-p` (كان inline style يُحدَّث في كل إطار عبر React) */
-  opacity: max(0, calc(1 - var(--lx-p, 0) * 1.15));
-}
-
-/* الحشوات اللانهائية على العناصر الصغيرة تُترك لأنها transform/opacity فقط */
-.lx-orbit,
-.lx-orbit--inner,
-.lx-chevs svg,
-.lx-handle.is-idle .lx-handle-halo { will-change: transform, opacity; }
-.lx-track-label .lx-shield-ic {
-  color: color-mix(in srgb, var(--accent) 75%, var(--ink));
-  display: inline-flex;
-}
-
-/* أسهم متتالية تنبض */
-.lx-chevs {
-  display: inline-flex;
-  color: color-mix(in srgb, var(--accent) 80%, var(--ink));
-}
-.lx-chevs svg {
-  animation: lx-chev 1.5s var(--ease-out) infinite;
-}
-.lx-chevs svg:nth-child(2) { animation-delay: .18s; }
-.lx-chevs svg:nth-child(3) { animation-delay: .36s; }
-@keyframes lx-chev {
-  0%, 100% { opacity: .25; transform: translateX(0); }
-  40%      { opacity: 1;  transform: translateX(3px); }
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٥) مقبض السحب — كرة زجاجية بشعار الهلال
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-handle {
-  position: absolute;
-  top: 50%;
-  inset-inline-start: 0.3125rem;
-  z-index: 10;
-  border-radius: 62.4375rem;
-  cursor: grab;
-  touch-action: none;
-  outline: none;
-  /* الموضع: translate3d من متغيّر يكتبه rAF واحد. لا انتقال زمني ⇒ الإيماءة
-     1:1 مع الإصبع؛ والعودة يحرّكها نابض JS حرج التخميد (بلا انتقال CSS يزاحمها). */
-  transform: translate3d(var(--lx-x, 0px), -50%, 0);
-  will-change: transform;
-}
-.lx-handle.is-dragging { cursor: grabbing; }
-.lx-handle:focus-visible {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 65%, transparent), 0 0 0 7px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.lx-handle-halo {
-  position: absolute;
-  inset: -0.75rem;
-  border-radius: 62.4375rem;
-  /* تدرّج شعاعي بدل `filter: blur(11px)` — الفلتر كان يُعاد تصويره في كل
-     إطار من نبضة `lx-halo-breathe` اللانهائية *وأثناء السحب كله*. */
-  background: radial-gradient(
-    closest-side,
-    color-mix(in srgb, var(--accent) 52%, transparent),
-    color-mix(in srgb, var(--accent) 18%, transparent) 52%,
-    transparent 80%
-  );
-  opacity: .75;
-  transition: opacity var(--lx-dur-fast) var(--lx-ease-out-quick);
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-.lx-handle.is-idle .lx-handle-halo { animation: lx-halo-breathe 2.8s ease-in-out infinite; }
-.lx-handle.is-dragging .lx-handle-halo { opacity: 1; }
-@keyframes lx-halo-breathe {
-  0%, 100% { opacity: .38; transform: scale(.94); }
-  50%      { opacity: .85; transform: scale(1.06); }
-}
-
-.lx-handle-core {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 62.4375rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    radial-gradient(120% 120% at 30% 22%, #ffffff 0%, #f4f4f6 46%, #d9d9de 100%);
-  border: 1px solid rgba(255, 255, 255, .85);
-  box-shadow:
-    inset 0 1px 0 #fff,
-    inset 0 -7px 12px -8px rgba(0, 0, 0, .5),
-    0 10px 26px -8px rgba(0, 0, 0, .65),
-    0 0 20px -4px var(--accent-glow);
-  overflow: hidden;
-  /* كان انتقال .35s مع `--ease-spring`: إحساس ثقيل، وانتقال على `background`
-     (تدرّج) لا يُحرَّك أصلًا ⇒ يُزيل الفحص فقط. الآن تحوّل قصير صريح 170ms
-     بمنحنى يبدأ سريعًا وينتهي بسرعة ⇒ استجابة لمس فورية بلا ارتداد. */
-  transition: transform 170ms var(--lx-ease-out-quick), box-shadow 170ms var(--lx-ease-out-quick);
-}
-.lx-handle.is-dragging .lx-handle-core { transform: scale(1.05); }
-.lx-handle-core img {
-  width: 46%;
-  height: 46%;
-  object-fit: contain;
-  object-position: 39%;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .3));
-  transition: opacity .2s, transform .3s var(--ease-spring);
-}
-
-/* حالة الإتمام: انقلاب أخضر مع رسم علامة الصح */
-.lx-handle.is-done .lx-handle-core {
-  background: radial-gradient(120% 120% at 30% 22%, color-mix(in srgb, var(--ok) 84%, #fff) 0%, var(--ok) 58%, color-mix(in srgb, var(--ok) 72%, #000) 100%);
-  border-color: color-mix(in srgb, #fff 70%, var(--ok));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 60%, transparent),
-    0 10px 30px -8px rgba(0, 0, 0, .65),
-    0 0 34px 0 var(--ok-soft);
-}
-.lx-handle.is-done .lx-handle-core img { opacity: 0; transform: scale(.5); }
-.lx-handle-check {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  opacity: 0;
-}
-.lx-handle.is-done .lx-handle-check { opacity: 1; }
-.lx-handle-check svg {
-  width: 46%;
-  height: 46%;
-}
-.lx-handle-check path {
-  stroke: #fff;
-  stroke-width: 13;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-  stroke-dasharray: 90;
-  stroke-dashoffset: 90;
-}
-.lx-handle.is-done .lx-handle-check path { animation: lx-draw-check .4s var(--ease-out) .08s forwards; }
-@keyframes lx-draw-check { to { stroke-dashoffset: 0; } }
-
-/* حلقات نجاح متتالية */
-.lx-ripple {
-  position: absolute;
-  inset: 0;
-  border-radius: 62.4375rem;
-  border: 2px solid var(--ok);
-  opacity: 0;
-  pointer-events: none;
-}
-.lx-ripple--1 { animation: lx-ripple .8s var(--ease-out) .05s forwards; }
-.lx-ripple--2 { animation: lx-ripple .9s var(--ease-out) .22s forwards; }
-@keyframes lx-ripple {
-  0%   { transform: scale(.8);  opacity: .9; }
-  100% { transform: scale(2.1); opacity: 0; }
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٦) مراسم الافتتاح (Boot Ceremony) — ضربة ضوئية + شرارات + طابع
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-boot {
-  position: absolute;
-  inset: 0;
-  z-index: 70;
-  pointer-events: none;
-  animation: lx-boot-fade 1.9s var(--ease-out) forwards;
-}
-@keyframes lx-boot-fade {
-  0%   { opacity: 0; }
-  10%  { opacity: 1; }
-  82%  { opacity: 1; }
-  100% { opacity: 0; visibility: hidden; }
-}
-.lx-boot-slash {
-  position: absolute;
-  top: -22%; bottom: -22%;
-  inset-inline-start: 50%;
-  width: min(40vw, 23.75rem);
-  transform: translateX(-50%) rotate(-12deg);
-  background: linear-gradient(
-    100deg,
-    transparent,
-    color-mix(in srgb, var(--lx-accent-hi) 16%, transparent),
-    color-mix(in srgb, #fff 26%, transparent),
-    color-mix(in srgb, var(--lx-accent-hi) 16%, transparent),
-    transparent
-  );
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 26%, #000 74%, transparent);
-          mask-image: linear-gradient(90deg, transparent, #000 26%, #000 74%, transparent);
-  animation: lx-boot-slash 1.15s var(--ease-out) .1s both;
-}
-@keyframes lx-boot-slash {
-  0%   { translate: -46vw 0; opacity: 0; }
-  16%  { opacity: 1; }
-  100% { translate: 46vw 0;  opacity: 0; }
-}
-.lx-boot-spark {
-  position: absolute;
-  width: 0.3125rem; height: 0.3125rem;
-  border-radius: 62.4375rem;
-  background: color-mix(in srgb, var(--lx-accent-hi) 90%, #fff);
-  box-shadow: 0 0 14px 3px var(--accent-glow);
-  animation: lx-boot-spark .95s var(--ease-out) both;
-}
-@keyframes lx-boot-spark {
-  0%   { opacity: 0; transform: translateY(16px) scale(.4); }
-  30%  { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-26px) scale(.15); }
-}
-.lx-boot-ring {
-  position: absolute;
-  top: 50%; inset-inline-start: 50%;
-  width: 10.625rem; height: 10.625rem;
-  margin: -5.3125rem;
-  border-radius: 62.4375rem;
-  border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  animation: lx-boot-ring 1s var(--ease-out) .42s both;
-  pointer-events: none;
-}
-@keyframes lx-boot-ring {
-  0%   { transform: scale(.55); opacity: 0; }
-  38%  { opacity: .95; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-
-/* طابع الهلال: هبوط بنابض + وميض حلقة */
-/* ✨ «ختم» الهلال عند الظهور — المظهر الأول للمنتج كله.
-   ملاحظة أداء: النسخة السابقة كانت تُحرّك `filter: blur(6px) → 0` على *مركز*
-   المشهد (القرص + ٦ طبقات ظل + الأقمار) مع مفتاح وسيط `scale(1.045)` داخل
-   `--ease-spring` ⇒ بلور على عنصر يتحرك (أغلى حالة في الدليل كله) + ارتداد
-   مزدوج (المفتاح الوسيط + المنحنى النابضي). الآن: إزاحة صغيرة + تلاشي +
-   انضغاط بسيط ينفتح — وصول فوري بلا تجاوز ودون بلور أثناء الحركة. */
-@keyframes lx-stamp {
-  from { transform: translate3d(0, -12px, 0) scale(0.94); opacity: 0; }
-  to   { transform: none; opacity: 1; }
-}
-#lx-crest.is-stamped { animation: lx-stamp .42s var(--lx-ease-out-quick) .06s both; }
-
-/* تذييل البوابة */
-.lx-gate-foot {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.6562rem;
-  letter-spacing: .24em;
-  color: var(--faint);
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.lx-gate-foot::before,
-.lx-gate-foot::after {
-  content: "";
-  width: 2.125rem;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ink) 26%, transparent));
-}
-.lx-gate-foot::after {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 26%, transparent), transparent);
-}
-[dir="rtl"] .lx-gate-foot { letter-spacing: .1em; }
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٧) سطح القيادة (Deck) — لوحة زجاجية بحواف مضيئة (موحّدة مع نظام Liquid Glass)
-   ════════════════════════════════════════════════════════════════════════════ */
-/* ── سطح القيادة (بطاقة الدخول) — نفس لغة الشريط الطائر ──────────────────
-   ثلاث تدخّلات مقصودة في هذه الجولة:
-     ① `max-width` تحوّل من 900px ثابت إلى 56rem ⇒ البطاقة تتناسب مع مقياس
-        الجذر الجديد (≈975px عند 1920) بدل أن تبدو ضامرة بجانب واجهة كبرت.
-     ② الضباب نزل من `--lx-blur-lg` (16px) إلى `--lx-blur-md` (12px). هذه
-        أكبر مساحة مضبّبة في شاشة الدخول كلها، والفرق البصري بين 12 و16
-        غير مرئي على بطاقة عريضة بينما الفرق في الكلفة حقيقي.
-     ③ الظل صار سلمًا حقيقيًّا: تلامس ١px + حدّ ضوء داخلي + فصل بيئي عميق
-        واحد — بدل `--lx-shadow-ambient` العام المضاعف مع `0 0 0 1px` في
-        آن واحد (كان يقرأ كحافة سميكة لا كظل). */
-.lx-deck {
-  position: relative;
-  width: 100%;
-  max-width: 56rem;
-  border-radius: 1.75rem;
-  overflow: hidden;
-  background-color: var(--lx-glass-heavy);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 26%);
-  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(1.3);
-          backdrop-filter: blur(var(--lx-blur-md)) saturate(1.3);
-  border: 1px solid var(--border);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 32px 72px -40px rgba(0, 0, 0, 0.95);
-}
-
-/* الوضع الفاتح: مادة نهارية قائمة بذاتها (لا مجرد عكس للداكن) */
-:root[data-theme="light"] .lx-deck {
-  background-color: var(--lx-glass-heavy-light);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 28%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
-    0 1px 2px rgba(18, 22, 34, 0.06),
-    0 30px 66px -40px rgba(18, 22, 34, 0.32);
-}
-.lx-deck::before {
-  content: "";
-  position: absolute;
-  inset-inline: 8%;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, #fff 34%, transparent), transparent);
-  z-index: 5;
-  pointer-events: none;
-}
-
-/* (أُدمجت هنا قاعدة الوضع الفاتح المكرّرة: كانت هناك نسخة لاحقة في الملف
-   تغلب على المادة النهارية الجديدة فتُلغيها — قاعدة ثيم واحدة لكل سطح.) */
-
-/* ── الرباط الأحمر ── */
-.lx-ribbon {
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(120% 170% at 88% -30%, rgba(255, 255, 255, 0.14) 0%, transparent 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 46%),
-    linear-gradient(112deg, #3d0507 0%, #6b090e 40%, #9c1116 70%, #4a0608 100%);
-  color: #fff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
-}
-.lx-ribbon::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, .16) 1px, transparent 1.6px);
-  background-size: 20px 20px;
-  opacity: .10;
-}
-/* لمعة الرباط تسري عبره كل ٧.٥ث.
-   ملاحظة أداء (الأهم في هذا الملف): النسخة السابقة كانت تُحرّك
-   `inset-inline-start` من -18% إلى 108% **إلى ما لا نهاية** — أي حركة على خاصية
-   تخطيط، أبدية. هذا بالضبط ما يمنعه الدليل: "تجنّب: تحريك التخطيط".
-   الآن الحركة `transform: translateX()` + opacity فقط ⇒ إطارات الـ compositor.
-   كيف بقيت المسافة صحيحة دون معرفة عرض الرباط؟ عنصر اللمعة يأخذ `width: 100%`
-   من الرباط، ونسبة `translateX` تُحسب على **عرض العنصر نفسه** ⇒ -100% = عرض
-   الرباط كاملًا تمامًا، نفس مدى الرحلة السابقة بالحرف. واللمعة نفسها صارت
-   نطاقًا داخل التدرّج (مئوية) فلا تحتاج رقم 130px الثابت. */
-.lx-ribbon::after {
-  content: "";
-  position: absolute;
-  top: -60%; bottom: -60%;
-  inset-inline-start: 0;
-  width: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 36%,
-    rgba(255, 255, 255, .14) 50%,
-    transparent 64%
-  );
-  opacity: 0;
-  transform: rotate(18deg) translateX(-100%);
-  animation: lx-ribbon-sheen 7.5s var(--ease-out) infinite;
-  pointer-events: none;
-}
-@keyframes lx-ribbon-sheen {
-  0%        { transform: rotate(18deg) translateX(-100%); opacity: 0; }
-  12%       { opacity: 1; }
-  42%       { transform: rotate(18deg) translateX(100%);  opacity: 1; }
-  50%, 100% { transform: rotate(18deg) translateX(100%);  opacity: 0; }
-}
-/* RTL: اللمعة تتبع اتجاه القراءة (يمين ← يسار) — نفس الشكل، إشارة معاكسة */
-[dir="rtl"] .lx-ribbon::after { animation-name: lx-ribbon-sheen-rtl; }
-@keyframes lx-ribbon-sheen-rtl {
-  0%        { transform: rotate(-18deg) translateX(100%); opacity: 0; }
-  12%       { opacity: 1; }
-  42%       { transform: rotate(-18deg) translateX(-100%); opacity: 1; }
-  50%, 100% { transform: rotate(-18deg) translateX(-100%); opacity: 0; }
-}
-.lx-ribbon-line {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .4), transparent);
-}
-.lx-ribbon-fade {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: 1.375rem;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .28));
-  pointer-events: none;
-}
-
-.lx-logo-tile {
-  position: relative;
-  width: 2.875rem; height: 2.875rem;
-  border-radius: 0.875rem;
-  background: linear-gradient(160deg, #ffffff 0%, #ececef 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.3125rem;
-  box-shadow:
-    0 10px 24px -8px rgba(0, 0, 0, .55),
-    inset 0 1px 0 #fff,
-    0 0 0 1px rgba(255, 255, 255, .4);
-}
-.lx-logo-tile img {
-  width: 100%; height: 100%;
-  object-fit: contain;
-  object-position: 39%;
-}
-
-.lx-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 0.6875rem;
-  background: rgba(0, 0, 0, .3);
-  border: 1px solid rgba(255, 255, 255, .16);
-  -webkit-backdrop-filter: blur(6px);
-          backdrop-filter: blur(6px);
-  padding: 0.4375rem 0.75rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
-}
-.lx-live-dot {
-  width: 0.5rem; height: 0.5rem;
-  border-radius: 62.4375rem;
-  background: #fff;
-  box-shadow: 0 0 10px 1px rgba(255, 255, 255, .9);
-  animation: lx-pulse-dot 1.5s ease-in-out infinite;
-}
-.lx-clock {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .14em;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-/* ── منطقة الجاهزية — كونسول بزوايا تقنية ── */
-.lx-console {
-  position: relative;
-  background:
-    radial-gradient(60% 130% at 50% -30%, var(--accent-softer) 0%, transparent 62%),
-    color-mix(in srgb, var(--surface-2) 55%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
-}
-.lx-console::before,
-.lx-console::after {
-  content: "";
-  position: absolute;
-  width: 0.9375rem; height: 0.9375rem;
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  border-style: solid;
-  pointer-events: none;
-}
-.lx-console::before {
-  top: 0.75rem; inset-inline-start: 0.75rem;
-  border-width: 1.5px 0 0 1.5px;
-  border-start-start-radius: 6px;
-}
-.lx-console::after {
-  top: 0.75rem; inset-inline-end: 0.75rem;
-  border-width: 1.5px 1.5px 0 0;
-  border-start-end-radius: 6px;
-}
-
-.lx-radar {
-  position: relative;
-  width: 7.375rem; height: 7.375rem;
-  border-radius: 62.4375rem;
-  border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
-  background:
-    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--surface-3) 80%, transparent) 0%, var(--surface-2) 78%);
-  box-shadow:
-    inset 0 2px 14px rgba(0, 0, 0, .35),
-    0 0 44px -10px var(--accent-glow),
-    0 0 0 7px color-mix(in srgb, var(--ink) 3%, transparent);
-  overflow: hidden;
-}
-.lx-radar-sweep {
-  position: absolute;
-  inset: 0;
-  border-radius: 62.4375rem;
-  background: conic-gradient(from 0deg, var(--accent-glow) 0deg, transparent 76deg);
-  animation: lx-spin 4.2s linear infinite;
-}
-.lx-radar-ring {
-  position: absolute;
-  border-radius: 62.4375rem;
-  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
-}
-.lx-radar-ring--1 { inset: 17%; }
-.lx-radar-ring--2 { inset: 34%; }
-.lx-radar-blip {
-  position: absolute;
-  border-radius: 62.4375rem;
-  animation: lx-pulse-dot 2s ease-in-out infinite;
-}
-.lx-radar img {
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .5));
-}
-
-/* قياسات الجاهزية */
-.lx-gauge-num {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1;
-}
-.lx-gauge-num small {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--muted);
-  margin-inline-start: 2px;
-}
-.lx-gauge-bar {
-  height: 0.3125rem;
-  border-radius: 62.4375rem;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
-  overflow: hidden;
-  position: relative;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .25);
-}
-.lx-gauge-fill {
-  height: 100%;
-  border-radius: 62.4375rem;
-  transition: width 1.3s var(--ease-out);
-  position: relative;
-}
-.lx-gauge-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, .5), transparent 70%);
-  transform: translateX(-100%);
-}
-.lx-gauge-fill.is-full::after { animation: lx-gauge-shimmer 1.1s var(--ease-out) .9s; }
-@keyframes lx-gauge-shimmer {
-  to { transform: translateX(100%); }
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٨) النموذج — حقول زجاجية بتركيز متوهج
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  /* rem لا px: الوسم الصغير يجب أن ينمو بنفس نسبة الواجهة حوله وإلا انكسر
-     التسلسل البصري (عنوان 1.7rem يقف فوق وسم متجمّد من 11px). */
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: .26em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.lx-eyebrow::before {
-  content: "";
-  width: 1.625rem; height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-glow));
-  box-shadow: 0 0 8px var(--accent-glow);
-}
-[dir="rtl"] .lx-eyebrow { letter-spacing: .08em; }
-
-.lx-field {
-  position: relative;
-}
-.lx-field-glow {
-  position: absolute;
-  inset: -0.375rem -0.5rem;
-  border-radius: 1.375rem;
-  background: radial-gradient(60% 130% at 50% 120%, var(--accent-glow) 0%, transparent 70%);
-  filter: blur(14px);
-  opacity: 0;
-  transition: opacity .45s var(--ease-out);
-  pointer-events: none;
-}
-.lx-field:focus-within .lx-field-glow { opacity: .55; }
-
-.lx-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 0.5625rem;
-  transition: color .3s var(--ease-out);
-}
-[dir="rtl"] .lx-label { letter-spacing: .03em; }
-.lx-field:focus-within .lx-label { color: color-mix(in srgb, var(--accent) 80%, var(--muted)); }
-.lx-label-dot {
-  width: 0.3125rem; height: 0.3125rem;
-  border-radius: 62.4375rem;
-  background: color-mix(in srgb, var(--ink) 24%, transparent);
-  transition: background .3s, box-shadow .3s;
-}
-.lx-field:focus-within .lx-label-dot {
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent-glow);
-}
-
-.lx-input-wrap {
-  position: relative;
-  /* ⚠️ جذر المشكلة الحقيقية في الأيقونات الباهتة (ثلاث محاولات لون فشلت):
-     `.lx-input` يحمل `backdrop-filter` + خلفية بشفافية 0.74 ⇒ يُنشئ stacking
-     context ويُرسم فوق أي شقيق بلا `z-index`. وبما أن `<span class="lx-input-ic">`
-     يسبق `<input>` في ترتيب الـ DOM، كانت الأيقونة مدفونة تحت سطح الحقل
-     فتظهر كشبح داكن مهما تغيّر لونها (تُثبت ذلك `elementFromPoint` ⇒ INPUT).
-     الحل: طبقة صريحة للأيقونة فوق سطح الحقل — أي لون يُطبَّق الآن يظهر كما هو. */
-  isolation: isolate;
-}
-.lx-input-ic {
-  position: absolute;
-  z-index: 3;
-  top: 50%;
-  transform: translateY(-50%);
-  inset-inline-start: 1.0625rem;
-  display: inline-flex;
-  color: var(--faint);
-  transition: color .3s var(--ease-out), transform .3s var(--ease-spring);
-  pointer-events: none;
-}
-.lx-field:focus-within .lx-input-ic {
-  /* إبراز أحمر فاتح: `var(--accent)` الغامق كان يختفي على الخلفية الداكنة */
-  color: var(--lx-ic-focus);
-  transform: translateY(-50%) scale(1.08);
-}
-/* ── الحقول — وحدات rem لتنمو مع مقياس الجذر ─────────────────────────
-   كانت المقاسات بالبكسل (`font-size: 15px`، `padding: 16px`)، فحقل الدخول
-   يبقى ثابتًا بينما تكبر الواجهة حواليها ⇒ يبدو أصغر وأضعف. الآن
-   بالـ rem: 0.94rem ≈ 16.4px عند 1920 (كان 15px ثابتًا)، والحشوة تنمو معه.
-   والمدة انخفضت من ٣٠٠–٣٥٠ms إلى 160–180ms (نطاق عناصر التحكم في البرنامج)
-   مع منحنى `--lx-ease-out-quick` الذي يبدأ سريعًا ثم يستقر. */
-.lx-input {
-  width: 100%;
-  border-radius: 1.05rem;
-  border: 1px solid var(--border);
-  /* Unified glass recipe: --glass-light + blur-sm + saturate */
-  background:
-    linear-gradient(180deg, var(--lx-glass-light) 0%, transparent 40%),
-    color-mix(in srgb, var(--surface-2) 88%, transparent);
-  padding: 0.95rem 3.1rem;
-  font-size: 0.94rem;
-  font-weight: 600;
-  color: var(--ink);
-  outline: none;
-  -webkit-backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
-          backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    inset 0 -14px 22px -20px rgba(0, 0, 0, .8);
-  transition:
-    border-color 160ms var(--lx-ease-out-quick),
-    box-shadow 180ms var(--lx-ease-out-quick),
-    background-color 160ms var(--lx-ease-out-quick);
-}
-[dir="ltr"] .lx-input { padding-left: 3.25rem; padding-right: 3.25rem; }
-.lx-input::placeholder {
-  color: var(--muted);
-  font-weight: 500;
-}
-.lx-input:focus {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
-    0 10px 36px -12px var(--accent-glow);
-}
-/* Light mode input */
-:root[data-theme="light"] .lx-input {
-  background:
-    linear-gradient(180deg, var(--lx-glass-light-light) 0%, transparent 40%),
-    color-mix(in srgb, var(--surface-2) 88%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    inset 0 -14px 22px -20px rgba(0, 0, 0, .06);
-}
-:root[data-theme="light"] .lx-input:focus {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
-    0 10px 36px -12px var(--accent-glow);
-}
-/* الحقول التي مرّ عليها خطأ */
-.lx-field.has-error .lx-input {
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  animation: lx-field-shake .5s var(--ease-out);
-}
-@keyframes lx-field-shake {
-  12%, 88% { transform: translateX(-1px); }
-  24%, 76% { transform: translateX(3px); }
-  38%, 62% { transform: translateX(-5px); }
-  50%      { transform: translateX(5px); }
-}
-
-.lx-eye {
-  position: absolute;
-  z-index: 3;
-  top: 50%;
-  transform: translateY(-50%);
-  inset-inline-end: 0.5625rem;
-  padding: 0.5rem;
-  border-radius: 0.6875rem;
-  color: var(--faint);
-  transition: color .25s, background-color .25s, transform .2s var(--ease-spring);
-}
-.lx-eye:hover {
-  color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
-}
-.lx-eye:active { transform: translateY(-50%) scale(.88); }
-
-/* تنبيه Caps Lock */
-.lx-caps {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5625rem;
-  font-size: 0.7188rem;
-  font-weight: 700;
-  color: var(--warn);
-  animation: lx-morph-in .35s var(--ease-out) both;
-}
-.lx-caps i {
-  width: 0.4375rem; height: 0.4375rem;
-  border-radius: 62.4375rem;
-  background: var(--warn);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 70%, transparent);
-  animation: lx-pulse-dot 1.2s ease-in-out infinite;
-}
-
-/* ── زر الدخول — موحّد مع Button System (Phase 9/10) ── */
-.lx-submit {
-  position: relative;
-  width: 100%;
-  margin-top: 0.375rem;
-  border-radius: 1.0625rem;
-  padding: 1.0625rem 1.25rem;
-  font-size: 0.9062rem;
-  font-weight: 800;
-  letter-spacing: .05em;
-  color: #fff;
-  cursor: pointer;
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, #fff);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #fff) 0%, var(--accent) 52%, color-mix(in srgb, var(--accent) 78%, #000) 100%);
-  /* Shadow budget: contact + ambient + glow, no giant black shadows */
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.3),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
-  transition:
-    transform var(--lx-dur-fast) var(--lx-ease-snap),
-    box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
-    filter var(--lx-dur-base) var(--lx-ease-out-quick);
-  overflow: hidden;
-}
-/* لمعة زر الإنشاء — كانت تُحرّك `inset-inline-start` (خاصية تخطيط) عبر
-   انتقال عند المرور **وأنيميشن لا نهائي أثناء التحميل** (1.15s × ∞).
-   الآن: عنصر بعرض الزر كاملًا واللمعة نطاق داخل التدرّج ⇒ الإزاحة
-   `translateX(±100%)` تُقابل تمامًا عرض الزر، بلا أي رقم سحري مربوط بالعرض،
-   والحركة على الـ compositor في الحالتين. */
-.lx-submit::before {
-  content: "";
-  position: absolute;
-  top: 0; bottom: 0;
-  inset-inline-start: 0;
-  width: 100%;
-  background: linear-gradient(
-    100deg,
-    transparent 34%,
-    rgba(255, 255, 255, .3) 50%,
-    transparent 66%
-  );
-  transform: skewX(-14deg) translateX(-100%);
-  transition: transform .42s var(--lx-ease-out-quick);
-  pointer-events: none;
-}
-.lx-submit:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.4),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent),
-    0 0 24px -4px var(--accent-soft);
-}
-.lx-submit:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 72%, white);
-  outline-offset: 3px;
-}
-/* المرور: اللمعة تعبر الزر مرة واحدة ثم تتوقف خارج حدوده */
-.lx-submit:hover:not(:disabled)::before { transform: skewX(-14deg) translateX(100%); }
-.lx-submit:active:not(:disabled) { transform: translateY(0) scale(.982); }
-.lx-submit:disabled { cursor: default; opacity: 0.6; }
-.lx-submit.is-loading { pointer-events: none; }
-.lx-submit.is-loading::before {
-  transform: skewX(-14deg) translateX(-100%);
-  animation: lx-submit-sheen 1.15s var(--lx-ease-out-quick) infinite;
-}
-@keyframes lx-submit-sheen {
-  to { transform: skewX(-14deg) translateX(100%); }
-}
-/* RTL: اللمعة تعبر باتجاه القراءة */
-[dir="rtl"] .lx-submit.is-loading::before { animation-name: lx-submit-sheen-rtl; }
-@keyframes lx-submit-sheen-rtl {
-  from { transform: skewX(14deg) translateX(100%); }
-  to   { transform: skewX(14deg) translateX(-100%); }
-}
-
-.lx-spinner {
-  width: 1.1875rem; height: 1.1875rem;
-  border-radius: 62.4375rem;
-  border: 2.5px solid rgba(255, 255, 255, .28);
-  border-top-color: #fff;
-  animation: lx-spin .7s linear infinite;
-  box-shadow: 0 0 12px rgba(255, 255, 255, .25);
-}
-
-/* ── شريط الخطأ ── */
-.lx-error {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.8125rem;
-  border-radius: 1.0625rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
-    color-mix(in srgb, var(--accent-softer) 65%, transparent);
-  -webkit-backdrop-filter: blur(8px);
-          backdrop-filter: blur(8px);
-  padding: 0.875rem 1rem;
-  color: var(--ink);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent),
-    0 12px 34px -18px var(--accent-glow);
-  animation: lx-error-in .42s var(--lx-ease-out-quick) both;
-}
-/* دخول رسالة الخطأ: نُبقي «الرجّة» (فهي معلومة — تُشير إلى الرفض) ونُزيل
-   البلور الذي كان يُعاد تصويره في منتصف الحركة، ونُزيل التجاوز الوسيط
-   `scale(1.004)` الذي لا يُرى ويُطيل الرحلة. */
-@keyframes lx-error-in {
-  0%   { opacity: 0; transform: translate3d(0, -8px, 0) scale(.98); }
-  55%  { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-  72%  { transform: translate3d(-4px, 0, 0); }
-  84%  { transform: translate3d(3px, 0, 0); }
-  100% { opacity: 1; transform: none; }
-}
-.lx-error-ic {
-  flex-shrink: 0;
-  width: 2rem; height: 2rem;
-  border-radius: 62.4375rem;
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  box-shadow: 0 0 16px -4px var(--accent-glow);
-}
-
-/* سطر الثقة */
-.lx-trust {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5625rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.6562rem;
-  letter-spacing: .16em;
-  color: var(--faint);
-}
-.lx-trust b { color: var(--ok); font-weight: 400; display: inline-flex; }
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ٩) رمز التحقق OTP — صناديق زجاجية + مدار (موحّد مع Forms Phase 10)
-   ════════════════════════════════════════════════════════════════════════════ */
-.otp-orbit-zone {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6875rem;
-}
-.otp-box {
-  width: 3.375rem; height: 3.375rem;
-  border-radius: 1rem;
-  border: 1px solid var(--border);
-  /* Unified glass recipe: --glass-light + blur-sm + saturate */
-  background:
-    linear-gradient(180deg, var(--lx-glass-light) 0%, transparent 42%),
-    color-mix(in srgb, var(--surface-2) 90%, transparent);
-  color: var(--ink);
-  text-align: center;
-  font-size: 1.3125rem;
-  font-weight: 800;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  outline: none;
-  caret-color: var(--accent);
-  -webkit-backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
-          backdrop-filter: blur(var(--lx-blur-sm)) saturate(140%);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    inset 0 -12px 18px -18px rgba(0, 0, 0, .8);
-  transition:
-    border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
-    box-shadow var(--lx-dur-fast) var(--lx-ease-out-quick),
-    transform var(--lx-dur-instant) var(--lx-ease-snap),
-    background-color .3s;
-}
-.otp-box:focus {
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
-    0 8px 26px -10px var(--accent-glow);
-  transform: translateY(-2px);
-}
-.otp-box:not([value=""]) { border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
-
-/* Light mode OTP box */
-:root[data-theme="light"] .otp-box {
-  background:
-    linear-gradient(180deg, var(--lx-glass-light-light) 0%, transparent 42%),
-    color-mix(in srgb, var(--surface-2) 90%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    inset 0 -12px 18px -18px rgba(0, 0, 0, .06);
-}
-:root[data-theme="light"] .otp-box:focus {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent),
-    0 8px 26px -10px var(--accent-glow);
-}
-
-/* المدار: الصناديق تتجمع في حلقة دوّارة أثناء الفحص */
-.otp-orbit-zone.is-checking,
-.otp-orbit-zone.is-success {
-  min-height: 11.375rem;
-  min-width: 11.375rem;
-}
-.otp-orbit-zone.is-checking .otp-orbit-item,
-.otp-orbit-zone.is-success .otp-orbit-item {
-  position: absolute;
-  top: 50%; inset-inline-start: 50%;
-  margin: -1.6875rem;
-  width: 3.375rem; height: 3.375rem;
-}
-.otp-orbit-zone.is-checking .otp-orbit-item {
-  animation:
-    otp-form-circle .8s cubic-bezier(.22, .8, .25, 1) forwards,
-    otp-spin-circle 2s linear .8s infinite;
-}
-.otp-orbit-zone.is-checking .otp-box,
-.otp-orbit-zone.is-success .otp-box {
-  color: transparent !important;
-  caret-color: transparent;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 20px var(--accent-glow),
-    inset 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent);
-}
-@keyframes otp-form-circle {
-  from { transform: translateX(var(--line-x)) scale(.9); opacity: .6; }
-  to   { transform: rotate(var(--angle)) translateX(68px) scale(1); opacity: 1; }
-}
-@keyframes otp-spin-circle {
-  from { transform: rotate(var(--angle)) translateX(68px) scale(1); }
-  to   { transform: rotate(calc(var(--angle) + 360deg)) translateX(68px) scale(1); }
-}
-.otp-orbit-zone.is-success .otp-orbit-item {
-  animation: otp-collapse-success .7s cubic-bezier(.22, .8, .25, 1) forwards;
-}
-.otp-orbit-zone.is-success .otp-box {
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--ok) 40%, transparent),
-    0 0 20px var(--ok-soft),
-    inset 0 0 12px var(--ok-soft);
-}
-@keyframes otp-collapse-success {
-  from { transform: rotate(var(--angle)) translateX(68px) scale(1); opacity: 1; }
-  to   { transform: rotate(var(--angle)) translateX(0)    scale(.32); opacity: 0; }
-}
-.otp-success-mark {
-  position: absolute;
-  top: 50%; inset-inline-start: 50%;
-  width: 4.25rem; height: 4.25rem;
-  transform: translate(-50%, -50%) scale(.5);
-  display: grid;
-  place-items: center;
-  border-radius: 62.4375rem;
-  border: 1px solid var(--ok);
-  color: var(--ok);
-  background: var(--ok-soft);
-  box-shadow:
-    0 0 0 9px color-mix(in srgb, var(--ok) 6%, transparent),
-    0 0 40px var(--ok-soft);
-  opacity: 0;
-  pointer-events: none;
-}
-.otp-orbit-zone.is-success .otp-success-mark {
-  animation: otp-success-pop .55s cubic-bezier(.22, .8, .25, 1) .45s forwards;
-}
-.otp-success-mark svg {
-  width: 2.25rem; height: 2.25rem;
-  stroke-dasharray: 40;
-  stroke-dashoffset: 40;
-}
-.otp-orbit-zone.is-success .otp-success-mark svg {
-  animation: otp-success-draw .55s ease-out .72s forwards;
-}
-@keyframes otp-success-pop {
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-@keyframes otp-success-draw {
-  to { stroke-dashoffset: 0; }
-}
-
-/* رابط العودة */
-.lx-backlink {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--faint);
-  transition: color .25s;
-  padding: 0.375rem 0.625rem;
-  border-radius: 0.5625rem;
-}
-.lx-backlink:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ١٠) مفاتيح اللغة/الثيم العائمة — موحّدة مع Button/Glass System
-   ════════════════════════════════════════════════════════════════════════════ */
-.lx-pill-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 2.5rem;
-  padding: 0 1rem;
-  border-radius: 62.4375rem;
-  border: 1px solid var(--border);
-  /* Unified glass recipe: --glass-medium + blur-md + saturate */
-  background: var(--lx-glass-medium);
-  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
-          backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
-  font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: .18em;
-  color: var(--muted);
-  /* Shadow budget: contact + ambient only */
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
-    0 0 0 1px var(--border);
-  transition:
-    color var(--lx-dur-fast) var(--lx-ease-out-quick),
-    border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
-    transform var(--lx-dur-fast) var(--lx-ease-snap),
-    box-shadow var(--lx-dur-base) var(--lx-ease-out-quick);
-}
-.lx-pill-btn:hover {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 24px -4px var(--accent-soft);
-}
-.lx-pill-btn:active { transform: translateY(0) scale(.94); }
-
-/* Light mode pill button */
-:root[data-theme="light"] .lx-pill-btn {
-  background: var(--lx-glass-medium-light);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px var(--border);
-}
-:root[data-theme="light"] .lx-pill-btn:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 24px -4px var(--accent-soft);
-}
-
-.lx-switch {
-  position: relative;
-  width: 4.625rem; height: 2.5rem;
-  border-radius: 62.4375rem;
-  border: 1px solid var(--border);
-  /* Unified glass recipe: --glass-medium + blur-md + saturate */
-  background: var(--lx-glass-medium);
-  -webkit-backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
-          backdrop-filter: blur(var(--lx-blur-md)) saturate(140%);
-  /* Shadow budget: contact + ambient only */
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
-    0 0 0 1px var(--border);
-  transition: border-color var(--lx-dur-fast) var(--lx-ease-out-quick),
-              box-shadow var(--lx-dur-base) var(--lx-ease-out-quick),
-              transform var(--lx-dur-fast) var(--lx-ease-snap);
-}
-.lx-switch:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 24px -4px var(--accent-soft);
-}
-.lx-switch:active { transform: translateY(0) scale(.96); }
-
-/* Light mode switch */
-:root[data-theme="light"] .lx-switch {
-  background: var(--lx-glass-medium-light);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px var(--border);
-}
-:root[data-theme="light"] .lx-switch:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    var(--lx-shadow-ambient),
-    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-    0 0 24px -4px var(--accent-soft);
-}
-.lx-switch-ic {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1rem; height: 1rem;
-  color: var(--faint);
-  pointer-events: none;
-  /* فوق الإبهام: الإبهام صار توهّجًا محايدًا بلا أيقونة داخلية */
-  z-index: 1;
-  transition: color var(--lx-dur-fast) var(--lx-ease-out-quick);
-}
-/* الأيقونتان ثابتتان الهوية (قمر = داكن، شمس = فاتح) في كلتا الحالتين؛
-   والون الأبيض للأيقونة التي يغطيها الإبهام بالضبط. */
-:root[data-theme="dark"] .lx-switch-ic--s,
-:root[data-theme="light"] .lx-switch-ic--e { color: #fff; }
-/* المركز مضبوط بمعادلة واحدة: مركزي الأيقونة والإبهام متطابقان تمامًا */
-.lx-switch-ic--s { inset-inline-start: 0.71875rem; }
-.lx-switch-ic--e { inset-inline-end: 0.71875rem; }
-.lx-switch-knob {
-  position: absolute;
-  top: 0.25rem;
-  width: 1.9375rem; height: 1.9375rem;
-  border-radius: 62.4375rem;
-  z-index: 0;
-  background:
-    radial-gradient(120% 120% at 30% 20%, color-mix(in srgb, var(--lx-accent-hi) 70%, transparent) 0%, transparent 55%),
-    var(--accent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent),
-    0 6px 16px -4px var(--accent-glow);
-  /* السفر بـ transform (compositor) — كان `inset-inline-start` متحركًا ⇒ حركة تخطيط */
-  transform: translate3d(0, 0, 0);
-  transition: transform .38s var(--ease-spring);
-}
-.lx-switch-knob--start { inset-inline-start: 0.25rem; }
-/* `- 2px`: الإزاحات تُقاس من صندوق الحشوة (بعد حدّ 1px) بينما `width: 4.625rem`
-   تشمل الحدّ (border-box) ⇒ الحدّ يكسر التناظر ويزيح مركز الشمس بمقداره.
-   الطرد: منتصف الشمس = (4.625 - 2px - 1.125rem) من يسار الحشوة. */
-.lx-switch-knob--end   { inset-inline-start: 0.25rem; transform: translate3d(calc(2.1875rem - 2px), 0, 0); }
-[dir="rtl"] .lx-switch-knob--end { transform: translate3d(calc(-2.1875rem + 2px), 0, 0); }
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ١١) استجابة وتقليل الحركة
-   ════════════════════════════════════════════════════════════════════════════ */
-@media (max-width: 640px) {
-  .lx-grid, .lx-grain { display: none; }
-  .lx-glow { filter: blur(70px); }
-  .lx-beam { opacity: .5; }
-  .lx-track { height: 3.875rem; }
-  .lx-crest-stack { width: 6.25rem; height: 6.25rem; }
-  .lx-deck { border-radius: 1.375rem; }
-  .otp-box { width: 2.875rem; height: 2.875rem; border-radius: 0.875rem; font-size: 1.125rem; }
-  .otp-orbit-zone.is-checking .otp-orbit-item,
-  .otp-orbit-zone.is-success  .otp-orbit-item { margin: -1.4375rem; width: 2.875rem; height: 2.875rem; }
-  @keyframes otp-form-circle {
-    from { transform: translateX(var(--line-x)) scale(.9); opacity: .6; }
-    to   { transform: rotate(var(--angle)) translateX(58px) scale(1); opacity: 1; }
-  }
-  @keyframes otp-spin-circle {
-    from { transform: rotate(var(--angle)) translateX(58px) scale(1); }
-    to   { transform: rotate(calc(var(--angle) + 360deg)) translateX(58px) scale(1); }
-  }
-  @keyframes otp-collapse-success {
-    from { transform: rotate(var(--angle)) translateX(58px) scale(1); opacity: 1; }
-    to   { transform: rotate(var(--angle)) translateX(0)    scale(.32); opacity: 0; }
-  }
-}
-
-@media (min-width: 1920px) {
-  .lx-glow { filter: blur(150px); }
-}
-
-
-/* ════════════════════════════════════════════════════════════════════════════
-   ★ CINEMATIC EMBER — طبقة الصقل النهائية (تُضاف بعد كل ما سبق ⇒ آخر كلمة)
-   ────────────────────────────────────────────────────────────────────────────
-   لماذا قسم إضافي بدل تعديل كل قاعدة؟ لأن الملف يُحمَّل بعد index.css ⇒ هذه
-   القواعد تسود على القواعد المكافئة في التخطيط بلا أي `!important` وبلا لمس
-   أي شاشة أخرى. كل ما هنا مقيّد بـ `lx-` (شاشة الدخول وحدها).
-
-   ① توكنات الهوية والمواد والأشكال (Musical-Ember Design Tokens)
-   ② المشهد المحيط: أرضية عميقة + أورورا + نسيج + ضوء مؤشّر
-   ③ البوابة: هيكل مركزي + لوح زجاجي + ختم بهالة ومدارات
-   ════════════════════════════════════════════════════════════════════════════ */
-
-/* ── ① التوكنات ─────────────────────────────────────────────────────────── */
-.lx {
-  /* الهوية */
-  --lx-red: #c70000;
-  --lx-red-hi: #ff3b30;
-  --lx-amber: #ff9f0a;
-  --lx-emerald: #30d158;
-  --lx-amber-soft: color-mix(in srgb, var(--lx-amber) 15%, transparent);
-  --lx-hair: color-mix(in srgb, var(--ink) 14%, transparent);
-
-  /* المواد */
-  --lx-glass-edge: color-mix(in srgb, var(--ink) 16%, transparent);
-  --lx-glass-top: rgba(255, 255, 255, 0.09);
-  --lx-glass-top-strong: rgba(255, 255, 255, 0.16);
-
-  /* الأشكال والمقاسات */
-  --lx-r-sm: 0.9375rem;
-  --lx-r-md: 1.25rem;
-  --lx-r-lg: 1.75rem;
-  --lx-r-xl: 2.4rem;
-  --lx-r-pill: 999px;
-  --lx-field-h: 3.375rem;
-  --lx-control: 2.5rem;
-  --lx-track-h: 4.25rem;
-  --lx-crest: clamp(6.75rem, 8.2vw, 9.25rem);
-
-  /* الحركة */
-  --lx-ease-quick: cubic-bezier(0.16, 1, 0.3, 1);
-  --lx-ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  --lx-ease-snap: cubic-bezier(0.32, 1.35, 0.5, 1);
-
-  /* ميزانية الظل */
-  --lx-sh-contact: 0 1px 2px rgba(0, 0, 0, 0.42);
-  --lx-sh-ambient: 0 18px 44px -26px rgba(0, 0, 0, 0.85);
-  --lx-sh-depth: 0 34px 78px -46px rgba(0, 0, 0, 0.95);
-
-  /* ضوء المؤشّر (يكتبه rAF واحد في JS — لا حالة React) */
-  --lx-px: 50%;
-  --lx-py: 42%;
-  --lx-pl: 0;
-}
-
-:root[data-theme='light'] .lx {
-  /* تحييد الألوان الدافئة (كانت بنّية #4b4038) ⇒ الرمادي البارد هو ما يجعل
-     الفاتح يقرأ «نظيفًا» بلغة Apple/Google بدل الإحساس الطيَني. */
-  --lx-glass-edge: color-mix(in srgb, #2b3446 14%, transparent);
-  --lx-glass-top: rgba(255, 255, 255, 0.92);
-  --lx-glass-top-strong: rgba(255, 255, 255, 0.99);
-  --lx-hair: color-mix(in srgb, #2b3446 14%, transparent);
-  --lx-sh-contact: 0 1px 2px rgba(19, 26, 38, 0.08);
-  --lx-sh-ambient: 0 18px 44px -26px rgba(19, 26, 38, 0.30);
-  --lx-sh-depth: 0 34px 78px -46px rgba(19, 26, 38, 0.34);
-}
-
-.lx { background-color: var(--bg); -webkit-tap-highlight-color: transparent; }
-
-/* ── ② المشهد: أرضية + أورورا + نسيج + ضوء مؤشّر ────────────────────────── */
-.lx-scene {
-  background-color: #07090d;
-  background-image:
-    radial-gradient(120% 78% at 50% -18%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
-    radial-gradient(58% 44% at 8% 104%, var(--lx-amber-soft), transparent 62%),
-    radial-gradient(58% 48% at 96% 8%, rgba(96, 132, 152, 0.14), transparent 70%),
-    linear-gradient(168deg, #101319 0%, #0a0d12 46%, #070a0e 100%);
-  background-size: auto;
-  background-repeat: no-repeat;
-}
-/* الثيم الفاتح: إعادة تصميم كاملة للأرضية.
-   المشكلة السابقة: ثلاثة تدرّجات حمراء/كهرمانية فوق بعضها فوق قاعدة دافئة
-   ⇒ غسل وردي طيني + بقع غير متجانسة. الآن: قاعدة عاجية باردة، ماسة حمراء
-   واحدة ضيقة أعلى الشاشة (أثر هوية لا غسل)، بركة دافئة وحيدة أسفل اليسار،
-   وضوء بارد هادئ أعلى اليمين ⇒ عمق مقروء بلا تلطيخ. */
-:root[data-theme='light'] .lx-scene {
-  /* نفس تركيب الداكن (ماسة حمراء + وهج دافئ + ضوء بارد + نسيج) لكن على
-     مسند حيادي بارد مثل Apple (#fbfbfd) — لا عاجي/بيج، ولا غسل وردي. */
-  background-color: #f7f7fa;
-  background-image:
-    /* ماسة العلامة أعلى المركز — الأثر الرمزي نفسه (أهدأ من الداكن) */
-    radial-gradient(86% 48% at 50% -20%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
-    /* وهج كهرماني وحيد أسفل اليسار */
-    radial-gradient(48% 36% at 0% 106%, color-mix(in srgb, var(--lx-amber) 11%, transparent), transparent 66%),
-    /* ضوء بارد أعلى اليمين (لغة Google المادية) */
-    radial-gradient(60% 46% at 102% -6%, rgba(108, 142, 178, 0.14), transparent 72%),
-    /* ضوء أبيض علوي: إحساس السطح المصقول في صفحات Apple */
-    radial-gradient(130% 56% at 50% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
-    /* مسند بارد متدرّج بدل القاعدة الدافئة السابقة */
-    linear-gradient(172deg, #fdfdfe 0%, #f6f7fa 48%, #eef0f4 100%);
-  /* ⚠️ كان سبب "الأشرطة العريضة" في الفاتح: قاعدة أقدم في هذا الملف
-     (`:root[data-theme="light"] .lx-scene` بالسطور ~~٩٠) تحمل ٥ قيم لـ
-     `background-size`/`repeat` ومنها `64px 64px` + `repeat`، وأخصّصيتها
-     (0,2,0) أعلى من `.lx-scene` العامّ ⇒ كانت تغلب لأجل المتغيّرات الطويلة،
-     فيُرسم المسند المتدرّج نفسه على مقاس 64px مكرّرًا ⇒ أشرطة أفقية.
-     الآن تُثبَّت قيم الحجم/التكرار صريحًا لكل الطبقات أدناه. */
-  background-size: auto, auto, auto, auto, auto;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
-}
-
-/* حقل أورورا: ينزلق ببطء شديد (transform فقط، 52s) */
-.lx-aurora {
-  position: absolute;
-  inset: -14%;
-  pointer-events: none;
-  background:
-    radial-gradient(34% 30% at 26% 30%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 68%),
-    radial-gradient(30% 26% at 76% 24%, rgba(108, 146, 168, 0.13), transparent 70%),
-    radial-gradient(32% 28% at 62% 78%, var(--lx-amber-soft), transparent 70%);
-  transform: translate3d(0, 0, 0) scale(1.02);
-  will-change: transform;
-  animation: lx-aurora-drift 52s ease-in-out infinite alternate;
-}
-:root[data-theme='light'] .lx-aurora {
-  /* كانت 11/18/15% ⇒ بقع رطبة مرئية. الآن تنفّس لوني خفيف بارد فقط. */
-  background:
-    radial-gradient(30% 26% at 24% 28%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%),
-    radial-gradient(28% 24% at 78% 22%, rgba(122, 156, 196, 0.12), transparent 72%),
-    radial-gradient(30% 26% at 62% 80%, color-mix(in srgb, var(--lx-amber) 8%, transparent), transparent 72%);
-  opacity: 0.9;
-}
-@keyframes lx-aurora-drift {
-  from { transform: translate3d(-1.4%, -1%, 0) scale(1.02); }
-  to   { transform: translate3d(1.6%, 1.2%, 0) scale(1.06); }
-}
-
-/* النسيج: شبكة عمليات مخفّفة عند الأطراف + خريطة الأطلس بشفافية منخفضة */
-.lx-scene::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(var(--lx-hair) 1px, transparent 1px),
-    linear-gradient(90deg, var(--lx-hair) 1px, transparent 1px);
-  background-size: 64px 64px, 64px 64px;
-  opacity: 0.3;
-  -webkit-mask-image: radial-gradient(120% 100% at 50% 42%, #000 32%, transparent 82%);
-          mask-image: radial-gradient(120% 100% at 50% 42%, #000 32%, transparent 82%);
-}
-:root[data-theme='light'] .lx-scene::before {
-  /* طلب المستخدم الصريح: «شبكة زي الدارك أفضل من السادة خالص».
-     ⇒ نفس مقاس شبكة الداكن (64px) بنفس الحضور، لكن بخطّ حيادي بارد
-     (لا البنّي الذي كان يقرأ كبلاط)، وتلاشٍ ناعم عند الأطراف. */
-  --lx-hair: color-mix(in srgb, #2b3446 30%, transparent);
-  background-size: 64px 64px, 64px 64px;
-  opacity: 0.34;
-  -webkit-mask-image: radial-gradient(104% 86% at 50% 44%, #000 26%, transparent 84%);
-          mask-image: radial-gradient(104% 86% at 50% 44%, #000 26%, transparent 84%);
-}
-.lx-scene::after {
-  content: '';
-  position: absolute;
-  inset: -3%;
-  pointer-events: none;
-  background: url('/response-atlas.svg') center / cover no-repeat;
-  opacity: 0.09;
-  mix-blend-mode: screen;
-  transform: scale(1.03);
-  animation: lx-atlas-float 34s ease-in-out infinite alternate;
-}
-:root[data-theme='light'] .lx-scene::after {
-  /* كان `multiply` @0.11 باسم الأطلس ⇒ أشرطة رمادية عريضة تُفسد الفاتح.
-     الآن تُعاد وظيفتها إلى «إطار عمق» (vignette) بارد يعطي نفس الإحساس
-     السينمائي الموجود في الداكن، بلا حداية ولا أشرطة. */
-  display: block;
-  inset: -2%;
-  background: radial-gradient(128% 104% at 50% 40%, transparent 54%, rgba(23, 31, 44, 0.10) 100%);
-  background-size: auto;
-  background-repeat: no-repeat;
-  opacity: 1;
-  mix-blend-mode: normal;
-  transform: none;
-  animation: none;
-  -webkit-mask-image: none;
-          mask-image: none;
-}
-@keyframes lx-atlas-float {
-  from { transform: translate3d(-0.5%, -0.3%, 0) scale(1.03); }
-  to   { transform: translate3d(0.5%, 0.3%, 0) scale(1.05); }
-}
-
-/* ضوء المؤشّر: بقعة ضوء ناعمة تتبع المؤشّر (rAF واحد، بلا إعادة رسم) */
-.lx-light {
-  position: absolute;
-  inset: -10%;
-  pointer-events: none;
-  background:
-    radial-gradient(32rem 32rem at var(--lx-px) var(--lx-py), color-mix(in srgb, var(--accent) 16%, transparent), transparent 62%),
-    radial-gradient(22rem 22rem at calc(var(--lx-px) + 6%) calc(var(--lx-py) - 5%), var(--lx-amber-soft), transparent 66%);
-  opacity: var(--lx-pl);
-  transition: opacity 420ms var(--lx-ease-soft);
-  will-change: opacity;
-}
-:root[data-theme='light'] .lx-light {
-  background:
-    radial-gradient(32rem 32rem at var(--lx-px) var(--lx-py), color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%),
-    radial-gradient(22rem 22rem at calc(var(--lx-px) + 6%) calc(var(--lx-py) - 5%), color-mix(in srgb, var(--lx-amber) 12%, transparent), transparent 66%);
-}
-
-/* تدهور رشيق بلا backdrop-filter: المواد تبقى صالحة */
-@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-  .lx-deck, .lx-track, .lx-input, .lx-crest, .lx-pill-btn, .lx-switch, .otp-box, .lx-gate-board {
-    -webkit-backdrop-filter: none;
-            backdrop-filter: none;
-  }
-  .lx-deck { background-color: color-mix(in srgb, var(--surface-2) 97%, transparent); }
-  :root[data-theme='light'] .lx-deck { background-color: rgba(252, 251, 248, 0.97); }
-  .lx-input, .otp-box { background: color-mix(in srgb, var(--surface-3) 96%, transparent); }
-  .lx-track { background: color-mix(in srgb, var(--surface-2) 94%, transparent); }
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
-   EOC / QUIET SIGNAL — refined entry experience
-   Apple-inspired hierarchy + Material-inspired purposeful feedback.
-   CSS owns presentation only. Login/OTP/auth/session behavior stays unchanged.
+   EOC / QUIET SIGNAL
+   Single-source styling for the entry Gate + Login + OTP.
+   Design principles: content first, quiet tonal surfaces, brief purposeful motion.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Scope + viewport lock: the entry experience must never scroll ───────── */
+/* ── Route frame: the entry experience owns exactly one viewport ─────────── */
 .lx {
   --qs-ease: cubic-bezier(.22, 1, .36, 1);
   --qs-fast: 160ms;
-  --qs-mid: 320ms;
-  --qs-slow: 480ms;
+  --qs-mid: 280ms;
+  --qs-surface: #191b21;
+  --qs-surface-raised: #20232a;
+  --qs-border: rgba(202, 208, 220, .14);
   --qs-red: #d91f36;
-  --qs-red-hi: #f0445a;
-  --qs-blue: #8fb8ff;
-  --qs-violet: #a99bff;
-  --qs-ink: #171923;
-  --qs-muted: #777d8c;
-  --qs-line: rgba(128,137,155,.22);
-  --qs-glass: rgba(255,255,255,.055);
-  --qs-shadow: 0 24px 64px -42px rgba(0,0,0,.5);
-  --bg: #0d0e12;
-  --ink: #f4f5f8;
-  --muted: #9da2b0;
-  --surface: #17191f;
-  --surface-2: #20232b;
-  --surface-3: #292d37;
+  --qs-red-hover: #ed334a;
+  --qs-muted: #a5aab5;
+  --bg: #111318;
+  --ink: #f3f4f7;
+  --muted: #a5aab5;
+  --surface: #191b21;
+  --surface-2: #20232a;
+  --surface-3: #292d35;
   --accent: var(--qs-red);
-  --accent-glow: #ff7889;
-  --ok: #79d5ae;
+  --accent-glow: #f06d7e;
+  --ok: #74cfa6;
   position: relative;
   isolation: isolate;
+  display: block;
   width: 100%;
   height: 100dvh !important;
   min-height: 0 !important;
@@ -2113,20 +38,25 @@
   -webkit-tap-highlight-color: transparent;
 }
 :root[data-theme="light"] .lx {
-  --bg: #f5f6f8;
-  --ink: #181a20;
-  --muted: #747986;
+  --qs-surface: #fff;
+  --qs-surface-raised: #f7f8fa;
+  --qs-border: rgba(36, 42, 55, .13);
+  --qs-red: #c51d34;
+  --qs-red-hover: #ad172c;
+  --qs-muted: #646b78;
+  --bg: #f4f5f7;
+  --ink: #1a1c22;
+  --muted: #646b78;
   --surface: #fff;
   --surface-2: #f7f8fa;
-  --surface-3: #eef0f4;
-  --accent: #c81932;
-  --accent-glow: #f06c7d;
+  --surface-3: #eceef2;
+  --accent: var(--qs-red);
+  --accent-glow: #e66b7d;
   --ok: #187c5b;
-  --qs-line: rgba(30,37,52,.13);
-  --qs-glass: rgba(255,255,255,.76);
-  --qs-shadow: 0 24px 64px -42px rgba(34,42,58,.22);
 }
-html:has(.lx), body:has(.lx), #root:has(.lx) {
+html:has(.lx),
+body:has(.lx),
+#root:has(.lx) {
   height: 100dvh !important;
   min-height: 0 !important;
   max-height: 100dvh !important;
@@ -2134,17 +64,26 @@ html:has(.lx), body:has(.lx), #root:has(.lx) {
   overscroll-behavior: none;
 }
 body:has(.lx) { margin: 0 !important; }
-.lx, .lx * { box-sizing: border-box; }
-.lx button, .lx input { font-family: inherit; }
+.lx,
+.lx * { box-sizing: border-box; }
+.lx button,
+.lx input { font-family: inherit; }
+.lx button,
+.lx [role="slider"],
+.lx input { touch-action: manipulation; }
 .lx button:focus-visible,
 .lx [role="slider"]:focus-visible,
 .lx input:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
   outline-offset: 3px;
 }
-.lx button { -webkit-tap-highlight-color: transparent; }
+:root[data-theme="light"] .lx button:focus-visible,
+:root[data-theme="light"] .lx [role="slider"]:focus-visible,
+:root[data-theme="light"] .lx input:focus-visible {
+  outline-color: #5b50a4;
+}
 
-/* ── One quiet ambient wash, not a spectacle behind the interface ────────── */
+/* ── Shared background: one low-contrast ambient light layer ─────────────── */
 .lx-scene {
   position: absolute;
   inset: 0;
@@ -2152,48 +91,189 @@ body:has(.lx) { margin: 0 !important; }
   overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 42rem 34rem at 83% 14%, rgba(120,111,220,.14), transparent 72%),
-    radial-gradient(ellipse 38rem 29rem at 9% 89%, rgba(92,157,211,.09), transparent 74%),
-    linear-gradient(135deg, #0d0e12 0%, #11131a 54%, #101117 100%);
+    radial-gradient(ellipse 42rem 34rem at 82% 12%, rgba(125, 119, 203, .14), transparent 72%),
+    radial-gradient(ellipse 37rem 29rem at 7% 91%, rgba(94, 151, 194, .09), transparent 72%),
+    linear-gradient(138deg, #111318 0%, #15171e 56%, #111318 100%);
 }
 :root[data-theme="light"] .lx-scene {
   background:
-    radial-gradient(ellipse 42rem 34rem at 83% 14%, rgba(151,143,241,.14), transparent 72%),
-    radial-gradient(ellipse 38rem 29rem at 9% 89%, rgba(112,174,220,.1), transparent 74%),
-    linear-gradient(135deg, #f8f9fb 0%, #f1f3f7 55%, #f8f8fa 100%);
+    radial-gradient(ellipse 42rem 34rem at 82% 12%, rgba(139, 130, 215, .13), transparent 72%),
+    radial-gradient(ellipse 37rem 29rem at 7% 91%, rgba(111, 169, 209, .11), transparent 72%),
+    linear-gradient(138deg, #f7f8fa 0%, #eff1f5 56%, #f7f8fa 100%);
 }
 .lx-scene::before {
   content: "";
   position: absolute;
-  width: min(54vw, 58rem);
+  width: min(58vw, 62rem);
   aspect-ratio: 1;
-  inset-block-start: -30%;
+  inset-block-start: -34%;
   inset-inline-end: -18%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(153,143,255,.10), rgba(120,167,255,.035) 42%, transparent 70%);
-  pointer-events: none;
+  background: radial-gradient(circle, rgba(143, 132, 223, .13), rgba(115, 162, 205, .035) 45%, transparent 71%);
+  transform: translate3d(0, 0, 0);
+  animation: qs-ambient 28s ease-in-out infinite alternate;
 }
 .lx-aurora {
   position: absolute;
-  width: min(48vw, 46rem);
+  width: min(46vw, 48rem);
   aspect-ratio: 1;
   inset-inline-start: -22%;
-  inset-block-end: -52%;
+  inset-block-end: -54%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(91,155,204,.105), transparent 68%);
+  background: radial-gradient(circle, rgba(91, 155, 204, .09), transparent 69%);
   pointer-events: none;
 }
 .lx-light {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(28rem 24rem at 51% 46%, rgba(149,138,235,.035), transparent 74%);
+  opacity: var(--lx-pl, 0);
+  background: radial-gradient(28rem 24rem at 50% 48%, rgba(149, 138, 235, .045), transparent 74%);
+  transform: translate3d(calc(var(--lx-px, 50%) - 50%), calc(var(--lx-py, 50%) - 50%), 0);
+  will-change: transform, opacity;
 }
 :root[data-theme="light"] .lx-light {
-  background: radial-gradient(30rem 25rem at 51% 46%, rgba(143,132,222,.055), transparent 74%);
+  background: radial-gradient(30rem 25rem at 50% 48%, rgba(143, 132, 222, .065), transparent 74%);
 }
 
-/* ── Pre-login gate: memorable, calm, immediately legible ─────────────────── */
+/* ── Shared brand mark: single tile, reused by Framer Motion layoutId ────── */
+.lx-crest,
+.lx-logo-tile {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.88);
+  background: linear-gradient(150deg, #fff 0%, #f8f8fb 100%);
+  box-shadow: 0 10px 28px -20px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.95);
+}
+.lx-crest {
+  width: 5.25rem;
+  height: 5.25rem;
+  border-radius: 1.55rem;
+  transition: box-shadow var(--qs-mid) var(--qs-ease), border-color var(--qs-mid) ease;
+}
+.lx-crest.is-stamped,
+.lx-crest.is-done {
+  border-color: rgba(255,255,255,.98);
+  box-shadow: 0 14px 34px -23px rgba(0,0,0,.45), inset 0 1px 0 #fff;
+}
+.lx-crest img,
+.lx-logo-tile img {
+  width: 74%;
+  height: 74%;
+  object-fit: contain;
+}
+.lx-crest-stack {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 8rem;
+  height: 8rem;
+  border: 1px solid rgba(165, 160, 207, .17);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 33% 25%, rgba(255,255,255,.11), transparent 28%),
+    radial-gradient(circle at 51% 52%, rgba(138,128,216,.11), transparent 65%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.018);
+}
+:root[data-theme="light"] .lx-crest-stack {
+  border-color: rgba(78, 82, 123, .12);
+  background:
+    radial-gradient(circle at 33% 25%, rgba(255,255,255,.96), transparent 28%),
+    radial-gradient(circle at 51% 52%, rgba(138,128,216,.075), transparent 65%);
+}
+.lx-crest-glow {
+  position: absolute;
+  inset: -11%;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(140,130,223,.13), transparent 70%);
+  filter: blur(15px);
+  pointer-events: none;
+}
+
+/* ── Global language and theme controls: consistent 44px targets ─────────── */
+.lx > .lx-pill-btn,
+.lx > .lx-switch {
+  position: fixed;
+  z-index: 9999;
+  top: max(.75rem, env(safe-area-inset-top));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--qs-border);
+  border-radius: 999px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 7px 22px -18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.045);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: transform var(--qs-fast) var(--qs-ease), background-color var(--qs-mid) ease, border-color var(--qs-mid) ease;
+}
+.lx > .lx-pill-btn {
+  inset-inline-start: .9rem;
+  padding-inline: .78rem;
+  font-size: .78rem;
+  font-weight: 750;
+  letter-spacing: .025em;
+}
+.lx > .lx-switch {
+  inset-inline-end: .9rem;
+  width: 74px;
+  height: 44px;
+  padding: 4px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.lx > .lx-pill-btn:hover,
+.lx > .lx-switch:hover {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--qs-border));
+}
+.lx > .lx-pill-btn:active,
+.lx > .lx-switch:active { transform: scale(.98); }
+.lx-switch-ic {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.lx-switch-ic svg { width: 16px; height: 16px; }
+.lx-switch-ic--s { inset-inline-start: 8px; }
+.lx-switch-ic--e { inset-inline-end: 8px; }
+.lx-switch-knob {
+  position: absolute;
+  top: 6px;
+  inset-inline-start: 6px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 8px -4px rgba(0,0,0,.5);
+  transition: transform 240ms var(--qs-ease);
+  pointer-events: none;
+}
+.lx-switch-knob--start { transform: translate3d(0,0,0); }
+.lx-switch-knob--end { transform: translate3d(30px,0,0); }
+.lx[dir="rtl"] .lx-switch-knob--end { transform: translate3d(-30px,0,0); }
+:root[data-theme="light"] .lx > .lx-pill-btn,
+:root[data-theme="light"] .lx > .lx-switch {
+  color: #292c35;
+  background: rgba(255,255,255,.9);
+  border-color: rgba(38,44,57,.13);
+  box-shadow: 0 7px 22px -18px rgba(34,42,58,.22), inset 0 1px 0 #fff;
+}
+
+/* ── Gate: one mark, one heading, one instruction, one gesture ────────────── */
 .lx-gate {
   position: fixed !important;
   inset: 0 !important;
@@ -2205,313 +285,187 @@ body:has(.lx) { margin: 0 !important; }
   height: 100dvh !important;
   min-height: 0 !important;
   max-height: 100dvh !important;
-  padding: max(1rem, env(safe-area-inset-top)) 0 max(.8rem, env(safe-area-inset-bottom));
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(.8rem, env(safe-area-inset-bottom));
   overflow: hidden !important;
   overscroll-behavior: none;
-  isolation: isolate;
   background: transparent;
-}
-/* Reuse the single root scene instead of stacking a duplicate gate backdrop. */
-.lx-gate > .lx-scene { display: none !important; }
-.lx-gate::before,
-.lx-gate::after {
-  content: none !important;
-  display: none !important;
+  isolation: isolate;
 }
 .lx-gate-board {
   position: relative;
-  z-index: 2;
-  display: grid !important;
-  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
-  grid-template-areas:
-    "emblem title"
-    "emblem sub"
-    "emblem readout"
-    "emblem slider"
-    "foot foot";
-  align-content: center;
+  z-index: 1;
+  display: flex !important;
+  flex-direction: column;
   align-items: center;
-  justify-items: stretch;
-  gap: .1rem clamp(2rem, 5vw, 5.5rem);
-  width: min(84vw, 78rem) !important;
-  max-width: 78rem !important;
+  justify-content: center;
+  gap: 0;
+  width: min(100%, 43rem) !important;
+  max-width: 43rem !important;
   height: 100% !important;
   min-height: 0 !important;
   margin: 0 auto;
-  padding: 3.8rem 0 1rem !important;
+  padding: 4.25rem 0 1.1rem !important;
+  text-align: center;
 }
-.lx-gate-board::before {
-  content: "EGYPTIAN RED CRESCENT  /  HUMANITARIAN RESPONSE" !important;
-  display: block !important;
-  position: absolute;
-  inset-block-start: clamp(1.25rem, 3.5vh, 2.5rem);
-  inset-inline-start: 0;
-  color: var(--muted);
-  font-size: .63rem;
-  font-weight: 760;
-  letter-spacing: .16em;
-  line-height: 1.4;
-}
-.lx-gate-board::after {
-  content: none !important;
-  display: none !important;
-}
-.lx[dir="rtl"] .lx-gate-board {
-  grid-template-areas:
-    "title emblem"
-    "sub emblem"
-    "readout emblem"
-    "slider emblem"
-    "foot foot";
-}
+.lx-gate-board::before,
+.lx-gate-board::after { content: none !important; display: none !important; }
 .lx-gate-emblem {
-  grid-area: emblem;
+  position: relative;
   display: grid;
   place-items: center;
-  align-self: center;
-  justify-self: center;
-  width: 100%;
-  max-width: 25rem;
-  margin: 0 !important;
+  flex: 0 0 auto;
+  margin: 0 0 1.45rem !important;
   isolation: isolate;
 }
 .lx-gate-emblem::after { content: none !important; display: none !important; }
-.lx-crest-stack {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: clamp(11rem, 21vw, 19rem) !important;
-  height: clamp(11rem, 21vw, 19rem) !important;
-  border: 1px solid rgba(255,255,255,.13);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 24%, rgba(255,255,255,.13), transparent 29%),
-    radial-gradient(circle at 48% 48%, rgba(130,120,223,.16), transparent 61%),
-    radial-gradient(circle at 66% 68%, rgba(106,175,213,.095), transparent 65%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
-  transform-style: preserve-3d;
-
-}
-:root[data-theme="light"] .lx-crest-stack {
-  border-color: rgba(88,80,151,.13);
-  background:
-    radial-gradient(circle at 32% 24%, rgba(255,255,255,.98), transparent 29%),
-    radial-gradient(circle at 48% 48%, rgba(130,120,223,.12), transparent 61%),
-    radial-gradient(circle at 66% 68%, rgba(106,175,213,.1), transparent 65%);
-  box-shadow: 0 25px 70px -52px rgba(65,75,115,.3), inset 0 0 0 1px rgba(255,255,255,.95);
-}
-.lx-crest-stack::before {
-  content: "";
-  position: absolute;
-  inset: 7%;
-  border: 1px solid rgba(255,255,255,.15);
-  border-radius: 50%;
-  pointer-events: none;
-}
-.lx-crest-stack::after { content: none !important; display: none !important; }
-.lx-crest-glow {
-  position: absolute;
-  inset: -8%;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(circle, rgba(143,132,230,.16), transparent 68%);
-  filter: blur(16px);
-  opacity: .8;
-}
-.lx-orbit, .lx-orbit--inner {
-  border-color: rgba(175,169,228,.24) !important;
-  box-shadow: none !important;
-  animation: none !important;
-}
-.lx-orbit { inset: 0 !important; }
-.lx-orbit--inner { inset: 14% !important; opacity: .65; }
-.lx-sat { display: none !important; }
-.lx-halo { opacity: .38 !important; filter: none !important; }
-.lx-crest {
-  position: relative;
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  width: clamp(5.5rem, 9vw, 7.25rem) !important;
-  height: clamp(5.5rem, 9vw, 7.25rem) !important;
-  border: 1px solid rgba(255,255,255,.92);
-  border-radius: 1.65rem;
-  background: linear-gradient(150deg, #fff, #f5f6fa);
-  box-shadow: 0 17px 42px -28px rgba(0,0,0,.5), inset 0 1px 0 #fff;
-}
-.lx-crest img { width: 72%; height: 72%; object-fit: contain; }
 .lx-gate-title {
-  grid-area: title;
-  align-self: end;
   max-width: 100%;
   margin: 0 !important;
   color: var(--ink);
-  font-size: clamp(2.6rem, 5vw, 5rem) !important;
-  font-weight: 820 !important;
-  letter-spacing: -.055em !important;
-  line-height: 1.1 !important;
-  text-align: start;
+  font-size: clamp(2.3rem, 4.2vw, 3.55rem) !important;
+  font-weight: 780 !important;
+  letter-spacing: -.047em !important;
+  line-height: 1.14 !important;
+  text-align: center;
   text-wrap: balance;
-  background: linear-gradient(110deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 86%, var(--qs-violet)) 68%, color-mix(in srgb, var(--ink) 82%, var(--qs-blue)) 100%);
+  background: linear-gradient(110deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 90%, #a6a2cf) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: none;
 }
 :root[data-theme="light"] .lx-gate-title {
-  background: linear-gradient(110deg, #171923 0%, #45465a 72%, #6d668f 100%);
+  background: linear-gradient(110deg, #191b22 0%, #535467 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 .lx[dir="rtl"] .lx-gate-title {
-  font-size: clamp(2.45rem, 4.6vw, 4.6rem) !important;
-  letter-spacing: -.025em !important;
+  font-size: clamp(2.05rem, 3.8vw, 3.2rem) !important;
+  letter-spacing: -.02em !important;
   line-height: 1.3 !important;
-  text-align: right;
 }
 .lx-gate-sub {
-  grid-area: sub;
-  align-self: start;
-  max-width: 38rem;
-  margin: .4rem 0 0 !important;
+  max-width: 31rem;
+  margin: .72rem 0 0 !important;
   color: var(--muted);
-  font-size: clamp(.85rem, 1.1vw, 1.04rem) !important;
+  font-size: clamp(.82rem, 1.05vw, .98rem) !important;
   font-weight: 520;
-  letter-spacing: .11em;
-  line-height: 1.8 !important;
-  text-align: start;
+  letter-spacing: .04em;
+  line-height: 1.75 !important;
+  text-align: center;
 }
-.lx[dir="rtl"] .lx-gate-sub {
-  font-size: clamp(.94rem, 1.18vw, 1.1rem) !important;
-  letter-spacing: .015em !important;
-  text-align: right;
-}
+.lx[dir="rtl"] .lx-gate-sub { letter-spacing: 0 !important; }
 .lx-readout {
-  grid-area: readout;
-  min-height: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  margin: .7rem 0 0 !important;
-  color: var(--muted);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
-.lx-pct { color: var(--qs-blue); font-size: .78rem; font-weight: 700; letter-spacing: .1em; }
 .lx-granted {
   display: inline-flex;
   align-items: center;
-  gap: .5rem;
-  padding: .4rem .7rem;
-  border: 1px solid color-mix(in srgb, var(--ok) 32%, transparent);
-  border-radius: 999px;
+  gap: .45rem;
   color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 7%, transparent);
-  font-size: .78rem;
+  font-size: .8rem;
+  font-weight: 700;
 }
 .lx-granted i { width: .38rem; height: .38rem; border-radius: 50%; background: var(--ok); }
-.lx-gate-slider { grid-area: slider; width: 100%; margin: .75rem 0 0 !important; }
+.lx-pct { font-variant-numeric: tabular-nums; }
+
+/* Capsule remains the real pointer + keyboard slider; only its appearance changes. */
+.lx-gate-slider {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 2.2rem 0 0 !important;
+}
 .lx-track {
   position: relative;
-  width: 100%;
-  max-width: 40rem;
-  height: 4rem;
+  width: min(100%, 25rem);
+  height: 58px;
   overflow: hidden;
-  border: 1px solid var(--qs-line);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
   border-radius: 999px;
-  background: rgba(255,255,255,.055);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.075);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 12px 36px -30px rgba(0,0,0,.52);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  transition: border-color var(--qs-mid) var(--qs-ease), background-color var(--qs-mid) var(--qs-ease), box-shadow var(--qs-mid) var(--qs-ease);
+  transition: border-color var(--qs-mid) ease, background-color var(--qs-mid) ease, box-shadow var(--qs-mid) ease;
 }
 :root[data-theme="light"] .lx-track {
-  background: rgba(255,255,255,.82);
-  border-color: rgba(34,41,57,.12);
-  box-shadow: inset 0 1px 0 #fff, 0 8px 30px -26px rgba(35,44,70,.25);
+  background: rgba(255,255,255,.78);
+  border-color: rgba(44,49,66,.13);
+  box-shadow: inset 0 1px 0 #fff, 0 12px 36px -30px rgba(35,44,70,.2);
 }
-.lx-track.is-dragging, .lx-track:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 54%, var(--qs-line));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
+.lx-track.is-dragging,
+.lx-track:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--qs-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 7%, transparent), inset 0 1px 0 rgba(255,255,255,.08);
 }
 .lx-track.is-done {
-  border-color: color-mix(in srgb, var(--ok) 42%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--qs-border));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 7%, transparent);
 }
-.lx-track-shine {
+.lx-fill-clip {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(110deg, transparent 36%, rgba(255,255,255,.1) 50%, transparent 64%);
-  transform: translateX(-120%);
-  display: none !important;
 }
-.lx-fill-clip { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
 .lx-fill {
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 76%, #b9aaff), var(--accent));
+  border-radius: inherit;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 54%, #8583b9), var(--accent));
   transform: scaleX(var(--lx-p, 0));
   transform-origin: left center;
   will-change: transform;
 }
 .lx[dir="rtl"] .lx-fill { transform-origin: right center; }
-.lx-fill-glow { position: absolute; inset: 0; opacity: var(--lx-pl, 0); background: rgba(255,255,255,.17); }
-.lx-ember { display: none !important; }
-.lx-tick { opacity: .25; }
-.lx-tick.is-lit { opacity: .85; background: rgba(255,255,255,.88); }
-.lx-goal {
-  position: absolute;
-  inset-inline-end: .35rem;
-  inset-block: .35rem;
-  display: grid;
-  place-items: center;
-  width: 3.25rem;
-  border: 1px solid var(--qs-line);
-  border-radius: 50%;
-  color: var(--muted);
-  background: rgba(255,255,255,.06);
-  transition: color var(--qs-fast) ease, background-color var(--qs-fast) ease, transform var(--qs-fast) var(--qs-ease);
-}
-.lx-goal.is-lit { color: white; background: var(--accent); transform: scale(.96); }
 .lx-track-label {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: .65rem;
-  padding-inline: 4.8rem;
+  padding-inline: 4.25rem;
   color: var(--ink);
-  font-size: .83rem;
-  font-weight: 700;
-  letter-spacing: .01em;
+  font-size: .84rem;
+  font-weight: 680;
+  line-height: 1.25;
   text-align: center;
+  pointer-events: none;
 }
-.lx-shield-ic { display: inline-grid; place-items: center; color: var(--muted); }
-.lx-chevs { display: inline-flex; align-items: center; gap: .02rem; color: var(--muted); }
-.lx-chevs svg { width: .78rem; height: .78rem; animation: none !important; }
-.lx-chevs svg:nth-child(2) { animation-delay: .12s; }
-.lx-chevs svg:nth-child(3) { animation-delay: .24s; }
+.lx-track-copy { display: block; max-width: 100%; text-wrap: balance; }
 .lx-handle {
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-start: .28rem;
-  z-index: 5;
+  inset-inline-start: 6px;
+  z-index: 2;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255,255,255,.9);
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.96);
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 6px 20px -11px rgba(0,0,0,.48), 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: 0 5px 18px -11px rgba(0,0,0,.4), 0 0 0 3px color-mix(in srgb, var(--accent) 7%, transparent);
   cursor: grab;
   transform: translate3d(var(--lx-x, 0px), -50%, 0);
-  transition: box-shadow var(--qs-mid) var(--qs-ease), border-color var(--qs-mid) ease;
+  transition: border-color var(--qs-fast) ease, box-shadow var(--qs-fast) ease;
   touch-action: pan-y;
   will-change: transform;
 }
-.lx[dir="rtl"] .lx-handle { inset-inline-start: auto; inset-inline-end: .28rem; }
-.lx-handle:hover { box-shadow: 0 7px 23px -10px rgba(0,0,0,.38), 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent); }
+.lx[dir="rtl"] .lx-handle { inset-inline-start: auto; inset-inline-end: 6px; }
+.lx-handle:hover { box-shadow: 0 6px 20px -9px rgba(0,0,0,.36), 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent); }
 .lx-handle.is-dragging { cursor: grabbing; border-color: var(--accent); }
+.lx-handle.is-done { border-color: var(--ok); }
 .lx-handle-core {
   position: relative;
   display: grid;
@@ -2520,43 +474,24 @@ body:has(.lx) { margin: 0 !important; }
   height: 80%;
   border-radius: 50%;
   background: #fff;
-  box-shadow: inset 0 0 0 1px rgba(20,25,36,.06);
 }
 .lx-handle-core img { width: 68%; height: 68%; object-fit: contain; }
 .lx-handle-check { display: none; }
 .lx-handle.is-done .lx-handle-check {
   position: absolute;
-  inset: 18%;
+  inset: 17%;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: var(--ok);
 }
-.lx-handle-check svg { width: 100%; height: 100%; fill: none; stroke: #152016; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
-.lx-gate-foot {
-  grid-area: foot;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .55rem;
-  width: 100%;
-  margin: 1.5rem 0 0 !important;
-  padding-top: 1rem;
-  border-top: 1px solid var(--qs-line);
-  color: var(--muted);
-  font-size: .62rem;
-  font-weight: 650;
-  letter-spacing: .07em;
-  text-align: center;
-  opacity: .72;
-}
-.lx-gate-foot::before, .lx-gate-foot::after { content: none !important; display: none !important; }
+.lx-handle-check svg { width: 100%; height: 100%; fill: none; stroke: #142017; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
 
-/* ── Login deck: one clear hero panel + one quiet access panel ────────────── */
+/* ── Login: one centered card with the form as the only focal point ───────── */
 .lx > .relative.z-10.flex.items-center.justify-center {
-  display: flex !important;
-  align-items: stretch !important;
-  justify-content: stretch !important;
+  position: relative;
+  z-index: 1;
+  display: block !important;
   width: 100%;
   height: 100dvh !important;
   min-height: 0 !important;
@@ -2568,413 +503,279 @@ body:has(.lx) { margin: 0 !important; }
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 4.2rem minmax(0, 1fr);
-  grid-template-areas: "ribbon" "body";
+  grid-template-rows: 4.6rem minmax(0, 1fr);
   width: 100%;
   height: 100dvh !important;
   min-height: 0 !important;
   max-height: 100dvh !important;
-  border: 0;
-  border-radius: 0;
   overflow: hidden !important;
-  background: var(--bg);
-  box-shadow: none;
   isolation: isolate;
+  background: transparent;
+  box-shadow: none;
 }
-:root[data-theme="light"] .lx-deck { background: var(--bg); }
 .lx-ribbon {
   position: relative;
-  z-index: 8;
-  grid-area: ribbon;
+  z-index: 2;
   display: flex;
-  align-items: center;
-  min-height: 0;
-  padding: .6rem clamp(4.4rem, 7vw, 6.4rem) !important;
-  border-bottom: 1px solid var(--qs-line);
-  color: var(--ink);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  overflow: visible;
-}
-:root[data-theme="light"] .lx-ribbon { background: rgba(255,255,255,.78); border-bottom-color: rgba(32,38,52,.09); }
-.lx-ribbon-line, .lx-ribbon-fade { display: none !important; }
-.lx-ribbon .relative.z-10.flex.flex-wrap { width: 100%; }
-.lx-logo-tile {
-  display: grid;
-  place-items: center;
-  width: 2.7rem;
-  height: 2.7rem;
-  border: 1px solid rgba(255,255,255,.85);
-  border-radius: .8rem;
-  background: #fff;
-  box-shadow: 0 5px 17px -12px rgba(0,0,0,.3);
-  overflow: hidden;
-}
-.lx-logo-tile img { width: 82%; height: 82%; object-fit: contain; }
-.lx-ribbon .font-extrabold {
-  color: inherit;
-  font-size: .9rem;
-  font-weight: 780;
-  letter-spacing: -.02em;
-}
-.lx-ribbon .text-white\/75 { color: var(--muted) !important; }
-.lx-chip {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .4rem;
-  min-height: 1.9rem;
-  padding: .35rem .65rem;
-  border: 1px solid var(--qs-line);
-  border-radius: 999px;
-  color: var(--muted);
-  background: var(--qs-glass);
-  font-size: .61rem;
-  font-weight: 720;
-  letter-spacing: .07em;
+  min-height: 0;
+  padding: .5rem clamp(5rem, 8vw, 7.5rem);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
 }
-.lx-live-dot {
-  width: .38rem;
-  height: .38rem;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 11%, transparent);
-  animation: none !important;
+:root[data-theme="light"] .lx-ribbon {
+  border-bottom-color: rgba(30,37,52,.075);
+  background: rgba(255,255,255,.5);
 }
-.lx-clock { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-
-/* Art panel: restrained depth, no radar sweep or control-room graphics */
-.lx-console {
-  position: relative;
-  grid-area: visual;
-  isolation: isolate;
+.lx-ribbon-inner {
   display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: min(100%, 46rem);
+}
+.lx-brand {
+  display: flex;
+  align-items: center;
+  gap: .78rem;
+  min-width: 0;
+}
+.lx-logo-tile {
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: .85rem;
+}
+.lx-brand-copy { display: flex; flex-direction: column; gap: .16rem; min-width: 0; }
+.lx-brand-name {
+  margin: 0;
+  color: var(--ink);
+  font-size: .88rem;
+  font-weight: 760;
+  letter-spacing: -.02em;
+  line-height: 1.3;
+}
+.lx-brand-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: .67rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.lx-ribbon-meta {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lx-clock { display: inline-block; }
+
+/* This was a fixed 100/100/100 decorative console, not live readiness data. */
+.lx-console { display: none !important; }
+.lx-deck > .flex.flex-col {
+  display: flex !important;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(1.25rem, 3vh, 2rem);
-  min-width: 0;
+  width: 100%;
+  height: 100%;
   min-height: 0;
-  height: 100%;
-  padding: 2rem clamp(1rem, 3.4vw, 4.25rem) !important;
+  padding: clamp(14px, 2.2vh, 24px) 16px;
   overflow: hidden;
-  color: var(--ink);
-  background:
-    radial-gradient(ellipse 29rem 25rem at 51% 41%, rgba(131,120,222,.105), transparent 74%),
-    linear-gradient(145deg, color-mix(in srgb, var(--bg) 92%, #4b4f71), var(--bg));
 }
-:root[data-theme="light"] .lx-console {
-  background:
-    radial-gradient(ellipse 29rem 25rem at 51% 41%, rgba(130,120,221,.11), transparent 74%),
-    linear-gradient(145deg, #eef0f7, #f7f8fb);
-}
-.lx-console::before {
-  content: "A CALMER WAY TO CONNECT";
-  position: absolute;
-  inset-block-start: 2rem;
-  inset-inline: 1rem;
-  color: var(--muted);
-  font-size: .58rem;
-  font-weight: 760;
-  letter-spacing: .17em;
-  text-align: center;
-  opacity: .72;
-}
-.lx-console::after {
-  content: none !important;
-  display: none !important;
-}
-.lx[dir="rtl"] .lx-console::before {
-  content: "اتصال أبسط · أثر أكبر";
-  font-family: inherit;
-  font-size: .74rem;
-  letter-spacing: .015em;
-}
-.lx-radar {
+.lx-access-panel {
   position: relative;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: clamp(12rem, 23vw, 19.5rem) !important;
-  height: clamp(12rem, 23vw, 19.5rem) !important;
-  border: 1px solid rgba(150,145,207,.18);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 24%, rgba(255,255,255,.13), transparent 30%),
-    radial-gradient(circle at 50% 45%, rgba(138,128,226,.13), transparent 59%),
-    radial-gradient(circle at 67% 70%, rgba(111,175,209,.09), transparent 67%),
-    color-mix(in srgb, var(--bg) 72%, #292b3c);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 20px 60px -45px rgba(105,101,173,.28);
-  overflow: visible;
-
-}
-:root[data-theme="light"] .lx-radar {
-  border-color: rgba(85,79,150,.13);
-  background:
-    radial-gradient(circle at 32% 24%, rgba(255,255,255,.98), transparent 30%),
-    radial-gradient(circle at 50% 45%, rgba(138,128,226,.10), transparent 59%),
-    radial-gradient(circle at 67% 70%, rgba(111,175,209,.1), transparent 67%),
-    rgba(255,255,255,.45);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), 0 20px 60px -45px rgba(105,101,173,.2);
-}
-.lx-radar::before {
-  content: "";
-  position: absolute;
-  inset: 7%;
-  border: 1px solid rgba(165,159,218,.2);
-  border-radius: 50%;
-  pointer-events: none;
-}
-.lx-radar::after {
-  content: "";
-  position: absolute;
-  inset: -5%;
-  border: 1px solid rgba(150,145,207,.1);
-  border-radius: 50%;
-  pointer-events: none;
-}
-.lx-radar-ring { display: none !important; }
-.lx-radar-sweep, .lx-radar-blip { display: none !important; }
-.lx-radar-logo {
-  position: relative;
-  z-index: 3;
-  width: clamp(4.5rem, 7vw, 6.1rem) !important;
-  height: clamp(4.5rem, 7vw, 6.1rem) !important;
-  padding: .45rem;
-  border: 1px solid rgba(255,255,255,.94);
-  border-radius: 1.45rem;
-  object-fit: contain;
-  background: #fff;
-  box-shadow: 0 13px 35px -22px rgba(0,0,0,.35), inset 0 1px 0 #fff;
-}
-
-/* Tiny metrics: quiet typographic details, no floating glass card */
-.lx-deck .lx-console > .grid {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(.5rem, 1.5vw, 1.4rem) !important;
-  width: min(100%, 31rem);
-  max-width: 31rem;
-  padding: .55rem .25rem;
-  border: 0;
-  border-top: 1px solid var(--qs-line);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-.lx-deck .lx-console > .grid > * {
-  min-width: 0;
-  padding: .25rem;
-  gap: .42rem !important;
-  text-align: center;
-}
-.lx-gauge-num {
-  color: var(--ink) !important;
-  font-size: clamp(1rem, 1.5vw, 1.28rem) !important;
-  font-weight: 750 !important;
-  letter-spacing: -.045em;
-  line-height: 1.1;
-  text-shadow: none;
-}
-.lx-gauge-num small { font-size: .5em; opacity: .68; }
-.lx-gauge-bar { height: 2px !important; overflow: hidden; border-radius: 99px; background: var(--qs-line); }
-.lx-gauge-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent) !important;
-  box-shadow: none !important;
-  transition: width 650ms var(--qs-ease);
-}
-.lx-deck .lx-console > .grid .truncate {
-  color: var(--muted) !important;
-  font-size: clamp(.53rem, .68vw, .64rem) !important;
-  font-weight: 620;
-  letter-spacing: 0;
-  line-height: 1.45;
-}
-
-/* ── Access panel: quiet surface, clear hierarchy, easy focus ────────────── */
-.lx-deck > .flex.flex-col > :nth-child(2) {
-  position: relative;
-  z-index: 3;
-  grid-area: access;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  padding: clamp(1.5rem, 4vh, 3.5rem) clamp(1.3rem, 4vw, 4rem) !important;
-  border: 0;
-  border-inline-start: 1px solid var(--qs-line);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--bg) 96%, #fff);
-  overflow: hidden;
-}
-:root[data-theme="light"] .lx-deck > .flex.flex-col > :nth-child(2) {
-  border-inline-start-color: rgba(30,37,52,.08);
-  background: rgba(255,255,255,.72);
-}
-.lx[dir="rtl"] .lx-deck > .flex.flex-col > :nth-child(2) {
-  border-inline-start: 0;
-  border-inline-end: 1px solid var(--qs-line);
-}
-.lx-deck > .flex.flex-col > :nth-child(2) > .grid {
-  grid-template-columns: minmax(0, 1fr) !important;
-  align-items: center;
-  justify-items: stretch;
-  gap: clamp(1.05rem, 2.2vh, 1.7rem) !important;
-  width: min(100%, 29rem);
-  max-width: 29rem;
+  width: min(100%, 31rem);
   max-height: 100%;
-  margin-inline: auto;
-  overflow: visible;
+  padding: clamp(1.3rem, 3vw, 2.45rem);
+  border: 1px solid var(--qs-border);
+  border-radius: 1.8rem;
+  background: var(--qs-surface);
+  box-shadow: 0 26px 70px -48px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.035);
 }
-.lx-deck > .flex.flex-col > :nth-child(2) > .grid > :first-child {
+:root[data-theme="light"] .lx-access-panel {
+  background: #fff;
+  box-shadow: 0 25px 70px -48px rgba(35,42,58,.22), inset 0 1px 0 #fff;
+}
+.lx-access-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 1.05rem;
   width: 100%;
-  max-width: 29rem;
-  margin-inline: auto;
-  text-align: start;
+  min-width: 0;
+  max-height: 100%;
+}
+.lx-access-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .38rem;
+  min-width: 0;
+  text-align: center;
 }
 .lx-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
-  width: fit-content;
+  gap: .48rem;
   min-height: 1.3rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
   color: var(--accent);
-  background: transparent;
-  font-size: .64rem;
-  font-weight: 780;
-  letter-spacing: .085em;
+  font-size: .67rem;
+  font-weight: 760;
+  letter-spacing: .04em;
   line-height: 1.35;
 }
 .lx-eyebrow::before {
   content: "";
-  width: .35rem;
-  height: .35rem;
+  width: .36rem;
+  height: .36rem;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: none;
+  background: currentColor;
 }
-:root[data-theme="light"] .lx-eyebrow { color: var(--accent); }
-.lx-deck > .flex.flex-col > :nth-child(2) h3 {
-  max-width: 20ch;
-  margin-top: .65rem !important;
+.lx-form-title {
+  max-width: 100%;
+  margin: .08rem 0 0 !important;
   color: var(--ink) !important;
-  font-size: clamp(1.85rem, 2.7vw, 2.75rem) !important;
+  font-size: clamp(1.85rem, 2.9vw, 2.35rem) !important;
   font-weight: 790 !important;
-  letter-spacing: -.05em !important;
-  line-height: 1.14 !important;
+  letter-spacing: -.045em !important;
+  line-height: 1.15 !important;
+  text-align: center;
   text-wrap: balance;
 }
-.lx[dir="rtl"] .lx-deck > .flex.flex-col > :nth-child(2) h3 {
-  font-size: clamp(1.8rem, 2.65vw, 2.6rem) !important;
-  letter-spacing: -.025em !important;
-  line-height: 1.4 !important;
+.lx[dir="rtl"] .lx-form-title {
+  font-size: clamp(1.8rem, 2.8vw, 2.28rem) !important;
+  letter-spacing: -.02em !important;
+  line-height: 1.35 !important;
 }
-.lx-deck > .flex.flex-col > :nth-child(2) h3 + p {
-  max-width: 30rem;
-  margin-top: .65rem !important;
+.lx-form-copy {
+  max-width: 26rem;
+  margin: .12rem 0 0 !important;
   color: var(--muted) !important;
-  font-size: .85rem !important;
-  line-height: 1.7 !important;
+  font-size: .84rem !important;
+  font-weight: 450;
+  line-height: 1.65 !important;
+  text-align: center;
 }
+.lx[dir="rtl"] .lx-form-copy { line-height: 1.8 !important; }
 .lx-trust {
+  display: flex;
   align-items: center;
-  gap: .5rem;
+  justify-content: center;
+  gap: .48rem;
   color: var(--muted);
-  font-size: .67rem;
+  font-size: .65rem;
+  font-weight: 530;
   line-height: 1.5;
+  text-align: center;
 }
+.lx-trust--top { display: none !important; }
+.lx-trust--bottom { margin-top: .7rem; }
 .lx-trust b {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 1.35rem;
-  height: 1.35rem;
-  border: 1px solid color-mix(in srgb, var(--ok) 28%, transparent);
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--ok) 36%, transparent);
   border-radius: 50%;
   color: var(--ok);
-  background: transparent;
 }
-
-/* Inputs and button: touch-friendly but visually light */
-.lx-field {
-  position: relative;
-  min-width: 0;
-  margin-block-end: .7rem;
+.lx-trust b svg { width: .72rem; height: .72rem; }
+.lx-form-column { width: 100%; min-width: 0; }
+.lx-credentials-form {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  width: 100%;
+  margin: 0;
 }
+.lx-field { position: relative; min-width: 0; margin: 0; }
 .lx-field-glow {
   position: absolute;
-  inset: 1.25rem .4rem -.15rem;
+  inset: 1.4rem .25rem -.15rem;
   z-index: 0;
   border-radius: .8rem;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   filter: blur(14px);
   opacity: 0;
-  transition: opacity var(--qs-mid) var(--qs-ease);
+  transition: opacity var(--qs-mid) ease;
   pointer-events: none;
 }
 .lx-field:focus-within .lx-field-glow { opacity: .8; }
 .lx-label {
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: .45rem;
+  display: block;
   margin: 0 0 .4rem .08rem;
   color: var(--muted);
-  font-size: .68rem;
-  font-weight: 690;
-  letter-spacing: .015em;
+  font-size: .7rem;
+  font-weight: 650;
+  line-height: 1.45;
 }
-.lx-label-dot { display: none !important; }
 .lx-input-wrap { position: relative; z-index: 1; }
 .lx-input {
   display: block;
   width: 100%;
-  min-height: 3.15rem;
-  padding: .72rem 2.85rem;
-  border: 1px solid var(--qs-line);
+  min-width: 0;
+  min-height: 48px;
+  padding: .7rem 2.9rem;
+  border: 1px solid var(--qs-border);
   border-radius: .9rem;
   color: var(--ink);
   caret-color: var(--accent);
-  background: color-mix(in srgb, var(--surface) 74%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
-  font-size: .9rem;
+  background: color-mix(in srgb, var(--qs-surface-raised) 86%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  font-size: 16px;
+  line-height: 1.4;
   transition: border-color var(--qs-fast) ease, background-color var(--qs-fast) ease, box-shadow var(--qs-fast) ease;
 }
-.lx-input::placeholder { color: color-mix(in srgb, var(--muted) 76%, transparent); }
-.lx-input:hover { border-color: color-mix(in srgb, var(--ink) 23%, var(--qs-line)); }
+.lx-input::placeholder { color: color-mix(in srgb, var(--muted) 78%, transparent); opacity: 1; }
+.lx-input:hover { border-color: color-mix(in srgb, var(--ink) 22%, var(--qs-border)); }
 .lx-input:focus {
-  border-color: color-mix(in srgb, var(--accent) 58%, var(--qs-line));
-  background: var(--surface);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--qs-border));
+  background: var(--qs-surface);
   outline: none;
 }
-:root[data-theme="light"] .lx-input {
+/* Match the global input-focus selector's specificity so its !important glow cannot win. */
+.lx input.lx-input:not(.field):not(.eoc-manual-field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent) !important;
+}
+:root[data-theme="light"] .lx input.lx-input {
   color: #1b1d23;
-  background: #fff;
   border-color: rgba(30,37,52,.14);
+  background: #f9fafc;
   box-shadow: inset 0 1px 0 #fff;
 }
-:root[data-theme="light"] .lx-input:hover { border-color: rgba(30,37,52,.26); }
-:root[data-theme="light"] .lx-input:focus {
-  background: #fff;
-  border-color: rgba(200,25,50,.46);
-  box-shadow: 0 0 0 3px rgba(200,25,50,.075);
+:root[data-theme="light"] .lx input.lx-input:hover { border-color: rgba(30,37,52,.25); background: #fff; }
+:root[data-theme="light"] .lx input.lx-input:focus { border-color: rgba(197,29,52,.48); background: #fff; }
+:root[data-theme="light"] .lx input.lx-input:not(.field):not(.eoc-manual-field):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus {
+  box-shadow: 0 0 0 3px rgba(197,29,52,.08) !important;
+}
+/* Chrome/Safari autofill and common password managers. */
+.lx input.lx-input:-webkit-autofill,
+.lx input.lx-input:-webkit-autofill:hover,
+.lx input.lx-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--qs-surface-raised) inset !important;
+  caret-color: var(--accent);
+  transition: background-color 9999s ease-out 0s;
+}
+:root[data-theme="light"] .lx input.lx-input:-webkit-autofill,
+:root[data-theme="light"] .lx input.lx-input:-webkit-autofill:hover,
+:root[data-theme="light"] .lx input.lx-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1b1d23 !important;
+  -webkit-box-shadow: 0 0 0 1000px #f9fafc inset !important;
 }
 .lx-input-ic {
   position: absolute;
   top: 50%;
-  inset-inline-start: .95rem;
+  inset-inline-start: .92rem;
   z-index: 2;
   display: grid;
   place-items: center;
@@ -2983,28 +784,28 @@ body:has(.lx) { margin: 0 !important; }
   transition: color var(--qs-fast) ease;
   pointer-events: none;
 }
-.lx-input-ic svg { width: 1rem; height: 1rem; }
+.lx-input-ic svg { width: 1.05rem; height: 1.05rem; }
 .lx-field:focus-within .lx-input-ic { color: var(--accent); }
 .lx-eye {
   position: absolute;
   top: 50%;
-  inset-inline-end: .45rem;
+  inset-inline-end: .25rem;
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
-  border-radius: .65rem;
+  border-radius: .7rem;
   color: var(--muted);
   background: transparent;
   transform: translateY(-50%);
   transition: color var(--qs-fast) ease, background-color var(--qs-fast) ease;
 }
 .lx-eye:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 5%, transparent); }
-.lx-eye svg { width: 1rem; height: 1rem; }
-.lx-caps { margin-top: .4rem; color: var(--accent); font-size: .68rem; line-height: 1.45; }
+.lx-eye svg { width: 1.05rem; height: 1.05rem; }
+.lx-caps { margin: .35rem 0 0; color: var(--accent); font-size: .7rem; line-height: 1.45; }
 .lx-caps i { display: inline-block; width: .38rem; height: .38rem; margin-inline-end: .3rem; border-radius: 50%; background: var(--accent); }
 .lx-submit {
   position: relative;
@@ -3012,335 +813,261 @@ body:has(.lx) { margin: 0 !important; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .55rem;
+  gap: .6rem;
   width: 100%;
-  min-height: 3.15rem;
-  margin-top: .15rem;
+  min-height: 48px;
+  margin-top: .1rem;
+  padding: .7rem 1rem;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 72%, transparent);
   border-radius: .9rem;
   color: #fff !important;
-  background: linear-gradient(105deg, var(--qs-red) 0%, var(--qs-red-hi) 100%) !important;
-  box-shadow: 0 8px 22px -15px color-mix(in srgb, var(--accent) 76%, transparent), inset 0 1px 0 rgba(255,255,255,.2);
-  font-size: .9rem;
+  background: var(--accent) !important;
+  box-shadow: 0 10px 26px -21px color-mix(in srgb, var(--accent) 85%, transparent), inset 0 1px 0 rgba(255,255,255,.18);
+  font-size: .91rem;
   font-weight: 760;
-  transition: transform var(--qs-fast) var(--qs-ease), box-shadow var(--qs-mid) var(--qs-ease), filter var(--qs-fast) ease;
+  cursor: pointer;
+  transition: transform var(--qs-fast) var(--qs-ease), background-color var(--qs-fast) ease, box-shadow var(--qs-mid) ease;
 }
-.lx-submit::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(105deg, transparent 25%, rgba(255,255,255,.13) 50%, transparent 75%);
-  transform: translateX(-120%);
-  transition: transform 620ms var(--qs-ease);
-}
-.lx-submit:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--accent) 76%, transparent); }
-.lx-submit:hover::before { transform: translateX(120%); }
+.lx-submit:hover { background: var(--qs-red-hover) !important; box-shadow: 0 12px 28px -19px color-mix(in srgb, var(--accent) 82%, transparent), inset 0 1px 0 rgba(255,255,255,.2); }
 .lx-submit:active { transform: scale(.99); }
-.lx-submit:disabled { opacity: .62; cursor: wait; }
-.lx-deck button:not(.lx-pill-btn):not(.lx-switch):not([role="slider"]) {
-  transition: color var(--qs-fast) ease, background-color var(--qs-fast) ease, transform var(--qs-fast) var(--qs-ease), border-color var(--qs-fast) ease;
+.lx-submit:disabled { opacity: .65; cursor: wait; }
+.lx-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255,255,255,.36);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: qs-spin 700ms linear infinite;
 }
-.lx-deck button:not(.lx-pill-btn):not(.lx-switch):not([role="slider"]):active { transform: scale(.985); }
+.lx-error {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  width: 100%;
+  padding: .7rem .8rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  border-radius: .85rem;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  text-align: start;
+}
+.lx-error-ic { display: grid; place-items: center; flex: 0 0 auto; color: var(--accent); }
+.lx-error-ic svg { width: 1rem; height: 1rem; }
 
-/* OTP states use the same language and preserve their existing behavior */
+/* OTP: clear digits, 44px minimum interactive wrapper, no orbit decoration. */
+.lx-otp-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .85rem;
+  width: 100%;
+  text-align: center;
+}
+.lx-otp-panel > div:first-child { width: 100%; }
+.lx-otp-panel > button { min-height: 44px; }
 .otp-orbit-zone {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: .4rem;
+  gap: .3rem;
+  width: 100%;
+  direction: ltr;
+}
+.otp-orbit-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 48px;
+  min-width: 44px;
+  height: 44px;
 }
 .otp-box {
-  width: clamp(2.35rem, 3.2vw, 2.85rem);
-  height: 2.85rem;
-  border: 1px solid var(--qs-line);
-  border-radius: .8rem;
+  display: block;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--qs-border);
+  border-radius: .7rem;
   color: var(--ink);
   caret-color: var(--accent);
-  background: var(--surface);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
-  font-size: 1.1rem;
-  font-weight: 760;
+  background: var(--qs-surface-raised);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  font-size: 1.15rem;
+  font-weight: 740;
+  line-height: 1;
   text-align: center;
-  transition: transform var(--qs-fast) var(--qs-ease), border-color var(--qs-fast) ease, box-shadow var(--qs-fast) ease;
+  transition: border-color var(--qs-fast) ease, box-shadow var(--qs-fast) ease, background-color var(--qs-fast) ease;
 }
 .otp-box:focus {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--accent) 62%, var(--qs-line));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
-  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--qs-border));
+  background: var(--qs-surface);
 }
-.otp-box:disabled { opacity: .62; }
-:root[data-theme="light"] .otp-box { color: #1b1d23; background: #fff; }
+:root[data-theme="light"] .lx .otp-box {
+  color: #1b1d23;
+  background: #f8f9fb;
+  border-color: rgba(30,37,52,.14);
+}
+:root[data-theme="light"] .lx .otp-box:focus { background: #fff; }
+.lx input.otp-box:-webkit-autofill,
+.lx input.otp-box:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--qs-surface-raised) inset !important;
+}
+.otp-box:disabled { opacity: .6; }
 .otp-success-mark {
   display: grid;
   place-items: center;
-  width: 2.65rem;
-  height: 2.65rem;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   color: #fff;
   background: var(--ok);
 }
 
-/* Language/theme switchers: compact, quiet, always above both scenes */
-.lx-pill-btn, .lx-switch {
-  position: fixed;
-  top: max(.8rem, env(safe-area-inset-top));
-  z-index: 9999;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.25rem;
-  padding: .45rem .68rem;
-  border: 1px solid var(--qs-line);
-  border-radius: 999px;
-  color: var(--ink);
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  box-shadow: 0 6px 20px -16px rgba(0,0,0,.38);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  transition: background-color var(--qs-fast) ease, border-color var(--qs-fast) ease, transform var(--qs-fast) var(--qs-ease);
+/* ── Layout compaction by viewport, not zoom or fixed desktop dimensions ──── */
+@media (min-width: 800px) {
+  .lx-access-panel { width: min(100%, 31rem); }
+  .lx-access-grid { gap: 1.2rem; }
+  .lx-gate-emblem { margin-bottom: 1.6rem !important; }
 }
-.lx-pill-btn { inset-inline-start: .9rem; }
-.lx-switch { inset-inline-end: .9rem; }
-.lx-pill-btn:hover, .lx-switch:hover {
-  border-color: color-mix(in srgb, var(--accent) 34%, var(--qs-line));
-  transform: translateY(-1px);
-}
-.lx-pill-btn:active, .lx-switch:active { transform: scale(.98); }
-:root[data-theme="light"] .lx-pill-btn,
-:root[data-theme="light"] .lx-switch {
-  color: #282a32;
-  background: rgba(255,255,255,.88);
-  border-color: rgba(32,38,52,.12);
-  box-shadow: 0 6px 20px -16px rgba(34,42,58,.2);
-}
-
-/* ── Real viewport layouts: lock the frame, adapt the content ─────────────── */
-@media (min-width: 1120px) and (min-height: 720px) {
-  .lx-deck {
-    grid-template-columns: minmax(0, 1fr) minmax(29rem, .96fr);
-    grid-template-rows: 4.2rem minmax(0, 1fr);
-    grid-template-areas: "ribbon ribbon" "visual access";
-  }
-  .lx-deck > .lx-ribbon { grid-area: ribbon; }
-  .lx-deck > .flex.flex-col { display: contents !important; }
-  .lx-deck > .flex.flex-col > .lx-console { grid-area: visual; }
-  .lx-deck > .flex.flex-col > :nth-child(2) { grid-area: access; }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid {
-    width: min(100%, 30rem);
-    gap: clamp(1.05rem, 2.4vh, 1.65rem) !important;
-  }
-  .lx-deck > .flex.flex-col > :nth-child(2) h3 { font-size: clamp(2rem, 2.7vw, 2.8rem) !important; }
-}
-@media (min-width: 641px) and (max-width: 1119px) and (min-height: 620px) {
-  .lx-deck {
-    grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
-    grid-template-rows: 4rem minmax(0, 1fr);
-    grid-template-areas: "ribbon ribbon" "visual access";
-  }
-  .lx-deck > .lx-ribbon { grid-area: ribbon; }
-  .lx-deck > .flex.flex-col { display: contents !important; }
-  .lx-deck > .flex.flex-col > .lx-console { grid-area: visual; gap: 1.25rem; padding: 2rem 1rem !important; }
-  .lx-radar { width: clamp(8.5rem, 19vw, 13rem) !important; height: clamp(8.5rem, 19vw, 13rem) !important; }
-  .lx-radar-logo { width: 3.8rem !important; height: 3.8rem !important; border-radius: 1.05rem; }
-  .lx-deck .lx-console > .grid { gap: .35rem !important; }
-  .lx-deck .lx-console > .grid .truncate { font-size: .49rem !important; }
-  .lx-console::before { inset-block-start: 1.3rem; font-size: .5rem; }
-  .lx-deck > .flex.flex-col > :nth-child(2) { grid-area: access; padding: 1.2rem 1.1rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid { gap: .9rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) h3 { font-size: clamp(1.6rem, 3vw, 2.1rem) !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) h3 + p { font-size: .76rem !important; }
-  .lx-input { min-height: 2.8rem; padding-block: .55rem; }
-  .lx-submit { min-height: 2.85rem; }
-  .lx-field { margin-block-end: .42rem; }
-}
-/* Phone: show the access task, not a miniature dashboard. */
-@media (max-width: 640px) {
-  .lx-gate { padding: max(3.8rem, env(safe-area-inset-top)) .9rem max(.7rem, env(safe-area-inset-bottom)); }
-  .lx-gate-board {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "emblem" "title" "sub" "readout" "slider" "foot";
-    align-content: center;
-    justify-items: center;
-    gap: .2rem;
-    width: min(100%, 32rem) !important;
-    max-width: 32rem !important;
-    padding: 2.7rem .15rem .45rem !important;
-  }
-  .lx[dir="rtl"] .lx-gate-board {
-    grid-template-areas: "emblem" "title" "sub" "readout" "slider" "foot";
-  }
-  .lx-gate-board::before { inset-block-start: .85rem; font-size: .49rem; letter-spacing: .09em; }
-  .lx-gate-emblem { margin: .2rem 0 .5rem !important; }
-  .lx-crest-stack { width: clamp(8rem, 32vw, 10rem) !important; height: clamp(8rem, 32vw, 10rem) !important; }
-  .lx-crest { width: 4.6rem !important; height: 4.6rem !important; border-radius: 1.25rem; }
-  .lx-gate-title { align-self: center; margin-top: .45rem !important; font-size: clamp(1.95rem, 8vw, 2.7rem) !important; line-height: 1.14 !important; text-align: center !important; }
-  .lx[dir="rtl"] .lx-gate-title { font-size: clamp(1.9rem, 7.8vw, 2.55rem) !important; line-height: 1.32 !important; }
-  .lx-gate-sub { margin-top: .4rem !important; font-size: .68rem !important; letter-spacing: .035em; text-align: center !important; }
-  .lx[dir="rtl"] .lx-gate-sub { font-size: .82rem !important; letter-spacing: .01em !important; }
-  .lx-readout { min-height: .6rem; margin-top: .15rem !important; justify-content: center; }
-  .lx-gate-slider { margin-top: .3rem !important; }
-  .lx-track { height: 3.6rem; }
-  .lx-track-label { gap: .35rem; padding-inline: 3.9rem; font-size: .64rem; }
-  .lx-handle { width: 3rem !important; height: 3rem !important; }
-  .lx-goal { width: 2.65rem; inset: .42rem; }
-  .lx-gate-foot { margin-top: .9rem !important; padding-top: .65rem; font-size: .46rem; letter-spacing: .035em; }
-  .lx-pill-btn { inset-inline-start: .65rem; }
-  .lx-switch { inset-inline-end: .65rem; }
-
-  .lx-deck {
-    display: flex;
-    flex-direction: column;
-    height: 100dvh !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-  .lx-ribbon { flex: 0 0 3.85rem; min-height: 3.85rem; padding: .55rem 3.6rem !important; }
-  .lx-logo-tile { width: 2.25rem; height: 2.25rem; border-radius: .65rem; }
-  .lx-ribbon .font-extrabold { font-size: .72rem; }
-  .lx-ribbon .text-white\/75 { font-size: .55rem; }
-  .lx-ribbon .flex.flex-wrap { gap: .35rem; }
-  .lx-chip { min-height: 1.65rem; padding: .25rem .42rem; font-size: .5rem; }
-  .lx-deck > .flex.flex-col {
-    display: flex !important;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    overflow: hidden;
-  }
-  .lx-console { display: none !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    padding: .85rem 1.15rem max(.85rem, env(safe-area-inset-bottom)) !important;
-    border: 0 !important;
-    background: transparent;
-    overflow: hidden;
-  }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) !important;
-    align-content: center;
-    gap: .85rem !important;
+@media (max-width: 639px) {
+  .lx-deck { grid-template-rows: 3.9rem minmax(0, 1fr); }
+  .lx-ribbon { padding-inline: 4.4rem; }
+  .lx-brand { gap: .58rem; }
+  .lx-logo-tile { width: 2.35rem; height: 2.35rem; border-radius: .72rem; }
+  .lx-brand-name { font-size: .76rem; }
+  .lx-brand-subtitle { font-size: .58rem; }
+  .lx-ribbon-meta { display: none; }
+  .lx-deck > .flex.flex-col { padding: 9px 10px; }
+  .lx-access-panel {
     width: min(100%, 29rem);
-    max-width: 29rem;
-    max-height: 100%;
-    overflow: visible;
+    padding: 1.2rem;
+    border-radius: 1.4rem;
   }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid > :first-child {
-    max-width: 29rem;
-    text-align: center;
-    margin-inline: auto;
-  }
-  .lx-eyebrow { margin-inline: auto; min-height: 1rem; font-size: .56rem; }
-  .lx-deck > .flex.flex-col > :nth-child(2) h3 {
-    max-width: 18ch;
-    margin: .35rem auto 0 !important;
-    font-size: clamp(1.65rem, 7vw, 2.1rem) !important;
-    line-height: 1.16 !important;
-    text-align: center;
-  }
-  .lx[dir="rtl"] .lx-deck > .flex.flex-col > :nth-child(2) h3 {
-    font-size: clamp(1.72rem, 7.2vw, 2.15rem) !important;
-    line-height: 1.32 !important;
-  }
-  .lx-deck > .flex.flex-col > :nth-child(2) h3 + p {
-    max-width: 25rem;
-    margin: .3rem auto 0 !important;
-    font-size: .74rem !important;
-    line-height: 1.5 !important;
-    text-align: center;
-  }
-  .lx-trust { justify-content: center; font-size: .59rem; }
-  .lx-field { margin-block-end: .45rem; }
-  .lx-label { margin-bottom: .28rem; font-size: .61rem; }
-  .lx-input { min-height: 2.85rem; padding: .55rem 2.5rem; border-radius: .78rem; font-size: 16px; }
-  .lx-submit { min-height: 2.9rem; margin-top: .1rem; border-radius: .78rem; font-size: .83rem; }
-  .lx-deck form.flex.flex-col.gap-5 { gap: .62rem !important; }
-  .otp-orbit-zone { gap: .28rem; }
-  .otp-box { width: clamp(2.12rem, 9.4vw, 2.55rem); height: 2.55rem; border-radius: .7rem; font-size: 1rem; }
+  .lx-access-grid { gap: .85rem; }
+  .lx-access-intro { gap: .28rem; }
+  .lx-form-title { font-size: clamp(1.6rem, 6.6vw, 2rem) !important; }
+  .lx[dir="rtl"] .lx-form-title { font-size: clamp(1.58rem, 6.5vw, 1.98rem) !important; }
+  .lx-form-copy { font-size: .76rem !important; line-height: 1.55 !important; }
+  .lx[dir="rtl"] .lx-form-copy { line-height: 1.7 !important; }
+  .lx-credentials-form { gap: .56rem; }
+  .lx-label { margin-bottom: .28rem; font-size: .65rem; }
+  .lx-input { min-height: 46px; padding-block: .55rem; border-radius: .78rem; }
+  .lx-submit { min-height: 46px; border-radius: .78rem; }
+  .lx-trust--bottom { margin-top: .4rem; font-size: .6rem; }
+  .lx-gate { padding-inline: .85rem; }
+  .lx-gate-board { padding-top: 3.7rem !important; padding-bottom: .75rem !important; }
+  .lx-crest-stack { width: 6.5rem; height: 6.5rem; }
+  .lx-crest { width: 4.5rem; height: 4.5rem; border-radius: 1.35rem; }
+  .lx-gate-emblem { margin-bottom: 1.05rem !important; }
+  .lx-gate-title { font-size: clamp(2rem, 8.2vw, 2.65rem) !important; }
+  .lx[dir="rtl"] .lx-gate-title { font-size: clamp(1.9rem, 7.8vw, 2.5rem) !important; }
+  .lx-gate-sub { max-width: 25rem; margin-top: .45rem !important; font-size: .77rem !important; }
+  .lx-gate-slider { margin-top: 1.55rem !important; }
+  .lx-track { height: 54px; }
+  .lx-track-label { padding-inline: 3.5rem; font-size: .75rem; }
 }
 @media (max-width: 380px) {
-  .lx-ribbon { padding-inline: 3.35rem !important; }
-  .lx-ribbon .font-extrabold { font-size: .66rem; }
-  .lx-ribbon .text-white\/75 { font-size: .5rem; }
-  .lx-deck > .flex.flex-col > :nth-child(2) { padding-inline: .85rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid { gap: .65rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) h3 { font-size: 1.58rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) h3 + p { font-size: .69rem !important; }
-  .lx-field { margin-block-end: .3rem; }
-  .lx-input { min-height: 2.7rem; }
-  .lx-submit { min-height: 2.75rem; }
-  .otp-box { width: 2rem; height: 2.35rem; }
+  .lx-deck > .flex.flex-col { padding: 5px 0; }
+  .lx-access-panel {
+    width: 100%;
+    padding: .9rem .5rem;
+    border-radius: 1.05rem;
+  }
+  .lx-access-grid { gap: .62rem; }
+  .lx-form-title { font-size: 1.52rem !important; }
+  .lx[dir="rtl"] .lx-form-title { font-size: 1.52rem !important; }
+  .lx-form-copy { font-size: .7rem !important; }
+  .lx-credentials-form { gap: .45rem; }
+  .lx-field-glow { display: none; }
+  .lx-label { font-size: .61rem; margin-bottom: .22rem; }
+  .lx-input { min-height: 44px; padding-inline: 2.55rem; border-radius: .72rem; }
+  .lx-submit { min-height: 44px; }
+  .lx-trust--bottom { font-size: .56rem; margin-top: .25rem; }
+  .lx-ribbon { padding-inline: 3.8rem; }
+  .lx-brand-name { font-size: .7rem; }
+  .lx-brand-subtitle { font-size: .53rem; }
+  .lx-gate-board { padding-top: 3.3rem !important; }
+  .lx-crest-stack { width: 5.9rem; height: 5.9rem; }
+  .lx-crest { width: 4.1rem; height: 4.1rem; border-radius: 1.25rem; }
+  .lx-gate-title { font-size: 1.85rem !important; }
+  .lx[dir="rtl"] .lx-gate-title { font-size: 1.82rem !important; }
+  .lx-gate-sub { font-size: .72rem !important; }
+  .lx-gate-slider { margin-top: 1.15rem !important; }
+  .lx-track { height: 52px; }
+  .otp-orbit-zone { gap: 0; justify-content: space-between; }
+  .otp-orbit-item { flex: 0 0 44px; width: 44px; min-width: 44px; }
+  .otp-box { width: 38px; height: 38px; }
 }
 @media (max-height: 740px) {
-  .lx-gate-board { padding-block: 2.8rem .5rem !important; gap: 0 clamp(1.3rem, 4vw, 3rem); }
-  .lx-crest-stack { width: clamp(8rem, 18vh, 13rem) !important; height: clamp(8rem, 18vh, 13rem) !important; }
-  .lx-gate-title { font-size: clamp(2rem, 4.8vh, 3.15rem) !important; }
-  .lx-gate-sub { margin-top: .2rem !important; }
-  .lx-gate-slider { margin-top: .35rem !important; }
-  .lx-gate-foot { margin-top: .75rem !important; padding-top: .6rem; }
+  .lx-deck { grid-template-rows: 3.9rem minmax(0, 1fr); }
+  .lx-deck > .flex.flex-col { padding-block: 8px; }
+  .lx-access-panel { padding: 1.1rem 1.45rem; }
+  .lx-access-grid { gap: .62rem; }
+  .lx-access-intro { gap: .22rem; }
+  .lx-form-title { font-size: 1.72rem !important; }
+  .lx[dir="rtl"] .lx-form-title { font-size: 1.7rem !important; }
+  .lx-form-copy { font-size: .75rem !important; line-height: 1.45 !important; }
+  .lx-credentials-form { gap: .5rem; }
+  .lx-input { min-height: 42px; }
+  .lx-submit { min-height: 44px; }
+  .lx-field { margin: 0; }
+  .lx-trust--bottom { margin-top: .35rem; }
+  .lx-gate-board { padding-block: 3.25rem .55rem !important; }
+  .lx-crest-stack { width: 6.1rem; height: 6.1rem; }
+  .lx-crest { width: 4.2rem; height: 4.2rem; }
+  .lx-gate-emblem { margin-bottom: .75rem !important; }
+  .lx-gate-title { font-size: clamp(1.8rem, 4.2vh, 2.7rem) !important; }
+  .lx[dir="rtl"] .lx-gate-title { font-size: clamp(1.75rem, 4.1vh, 2.6rem) !important; }
+  .lx-gate-sub { margin-top: .35rem !important; }
+  .lx-gate-slider { margin-top: 1.1rem !important; }
+  .lx-track { height: 52px; }
 }
-@media (max-height: 720px) {
-  .lx-deck > .flex.flex-col > .lx-console { display: none !important; }
-  .lx-deck {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 3.8rem minmax(0, 1fr);
-    grid-template-areas: "ribbon" "access";
-  }
-  .lx-deck > .lx-ribbon { grid-area: ribbon; }
-  .lx-deck > .flex.flex-col { display: contents !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) { grid-area: access; border: 0; padding-block: .75rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid { gap: .6rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid > :first-child h3 { font-size: 1.72rem !important; }
-  .lx-field { margin-block-end: .3rem; }
-  .lx-input { min-height: 2.75rem; }
-  .lx-submit { min-height: 2.8rem; }
-  .lx-trust { font-size: .58rem; }
+@media (max-height: 640px) {
+  .lx-access-panel { padding: .9rem 1.2rem; border-radius: 1.25rem; }
+  .lx-access-grid { gap: .45rem; }
+  .lx-form-title { font-size: 1.55rem !important; }
+  .lx[dir="rtl"] .lx-form-title { font-size: 1.52rem !important; }
+  .lx-form-copy { font-size: .69rem !important; }
+  .lx-credentials-form { gap: .38rem; }
+  .lx-label { margin-bottom: .18rem; font-size: .62rem; }
+  .lx-input { min-height: 40px; }
+  .lx-submit { min-height: 42px; }
+  .lx-trust--bottom { display: none !important; }
+  .lx-gate-board { padding-block: 3rem .35rem !important; }
+  .lx-crest-stack { width: 5.5rem; height: 5.5rem; }
+  .lx-crest { width: 3.9rem; height: 3.9rem; }
+  .lx-gate-emblem { margin-bottom: .55rem !important; }
+  .lx-gate-title { font-size: 1.72rem !important; }
+  .lx[dir="rtl"] .lx-gate-title { font-size: 1.68rem !important; }
+  .lx-gate-slider { margin-top: .8rem !important; }
 }
-@media (max-height: 600px) {
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid { gap: .35rem !important; }
-  .lx-deck > .flex.flex-col > :nth-child(2) > .grid > :first-child h3 + p { display: none !important; }
-  .lx-trust { display: none !important; }
-  .lx-field { margin-block-end: .16rem; }
-  .lx-label { margin-bottom: .18rem; }
-  .lx-input { min-height: 2.45rem; }
-  .lx-submit { min-height: 2.5rem; }
-  .lx-deck form.flex.flex-col.gap-5 { gap: .38rem !important; }
+@media (max-height: 559px) {
+  /* Only sub-560px-tall / landscape viewports may scroll inside the current scene. */
+  .lx-gate { overflow-y: auto !important; }
+  .lx-gate-board { height: auto !important; min-height: 100%; padding-block: 3rem .75rem !important; }
+  .lx-deck > .flex.flex-col { overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; }
+  .lx-access-panel { flex: 0 0 auto; max-height: none; margin-block: auto; }
 }
 
-/* The original CSS uses no layout-changing animation on the access frame.
-   Only short, interruptible feedback remains: translate/opacity and focus. */
+/* Reduced motion: no decorative looping or spatial transitions. */
 @media (prefers-reduced-motion: reduce) {
-  .lx *, .lx *::before, .lx *::after {
+  .lx *,
+  .lx *::before,
+  .lx *::after {
     scroll-behavior: auto !important;
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
+    animation: none !important;
     transition-duration: .01ms !important;
+    transition-delay: 0ms !important;
   }
-  .lx-crest-stack, .lx-radar, .lx-track-shine, .lx-chevs svg { animation: none !important; }
+  .lx-light,
+  .lx-scene::before { animation: none !important; }
 }
-@keyframes qs-mark-float {
-  from { transform: translate3d(0,0,0); }
-  to { transform: translate3d(0,-4px,0); }
+@keyframes qs-ambient {
+  from { transform: translate3d(-.6%, 0, 0) scale(1); }
+  to { transform: translate3d(.8%, -.4%, 0) scale(1.025); }
 }
-@keyframes qs-soft-sheen {
-  0%, 74%, 100% { transform: translateX(-120%); }
-  83%, 91% { transform: translateX(120%); }
+@keyframes qs-spin {
+  to { transform: rotate(360deg); }
 }
-@keyframes qs-chev {
-  0%, 100% { opacity: .32; transform: translateX(0); }
-  50% { opacity: .85; transform: translateX(2px); }
-}
-
-/* ── Final cascade guard: one scene, no competing transforms, no idle clutter ─ */
-.lx-gate > .lx-scene { display: none !important; }
-.lx-boot { display: none !important; }
-.lx-crest-stack, .lx-radar { animation: none !important; }
-.lx-track-shine { display: none !important; animation: none !important; }
-.lx-chevs svg { animation: none !important; }
