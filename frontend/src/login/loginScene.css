@@ -2428,3 +2428,204 @@
 .lx-ribbon::after { animation-duration: 7.5s; }
 .lx-handle-core { transition-duration: var(--lx-dur-fast); }
 .lx-submit { transition-duration: var(--lx-dur-instant), var(--lx-dur-fast), var(--lx-dur-fast); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTH REDESIGN / v2 — “Cinematic Command”
+   A composition-level redesign: split operational identity from the sign-in
+   workspace, with a quieter material palette and deliberate light direction.
+   Scoped to the authentication experience only; no global scale/font changes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.lx {
+  --lx-auth-edge: color-mix(in srgb, var(--ink) 11%, transparent);
+  --lx-auth-panel: color-mix(in srgb, var(--surface) 92%, transparent);
+  --lx-auth-ease: cubic-bezier(.2,.72,.22,1);
+}
+.lx-scene {
+  background-color: var(--bg-deep);
+  background-image:
+    radial-gradient(ellipse 58rem 42rem at 8% 10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 68%),
+    radial-gradient(ellipse 48rem 36rem at 92% 88%, rgba(80, 116, 145, .13), transparent 72%),
+    radial-gradient(ellipse 85% 90% at 50% 48%, transparent 42%, rgba(0,0,0,.5) 100%),
+    linear-gradient(var(--border-hair) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-hair) 1px, transparent 1px);
+  background-size: auto, auto, auto, 72px 72px, 72px 72px;
+}
+:root[data-theme="light"] .lx-scene {
+  background-color: #f3f5f8;
+  background-image:
+    radial-gradient(ellipse 58rem 42rem at 8% 10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 68%),
+    radial-gradient(ellipse 48rem 36rem at 92% 88%, rgba(80,116,145,.10), transparent 72%),
+    radial-gradient(ellipse 85% 90% at 50% 48%, rgba(255,255,255,.08) 42%, rgba(69,80,94,.09) 100%),
+    linear-gradient(rgba(33,45,58,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(33,45,58,.035) 1px, transparent 1px);
+}
+.lx-gate-board {
+  width: min(100%, 47rem);
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1.4rem, 5vw, 4rem);
+  border: 1px solid var(--lx-auth-edge);
+  border-radius: 2.25rem;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 62%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-2) 78%, transparent), color-mix(in srgb, var(--surface) 84%, transparent));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent), 0 36px 100px -56px rgba(0,0,0,.72);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+:root[data-theme="light"] .lx-gate-board {
+  background: linear-gradient(145deg, rgba(255,255,255,.88), rgba(248,249,251,.74));
+  border-color: rgba(38,49,61,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 32px 80px -54px rgba(35,45,58,.4);
+}
+.lx-crest-stack { width: clamp(7.5rem, 11vw, 10rem); height: clamp(7.5rem, 11vw, 10rem); }
+.lx-crest-glow { inset: -24%; opacity: .72; }
+.lx-gate-title {
+  max-width: 13ch;
+  font-size: clamp(2rem, 4.4vw, 3.35rem);
+  line-height: 1.08;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.lx-gate-sub {
+  max-width: 34rem;
+  font-size: clamp(.95rem, 1.3vw, 1.08rem);
+  line-height: 1.8;
+  text-wrap: pretty;
+}
+.lx-gate-foot { margin-top: 2.35rem; opacity: .78; }
+
+/* The entry action stays a real, accessible slider; the track reads as a
+   deliberate instrument rather than a generic pill-shaped control. */
+.lx-track {
+  max-width: 25rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 82%, transparent), color-mix(in srgb, var(--surface) 94%, transparent));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), 0 16px 38px -28px rgba(0,0,0,.9);
+}
+.lx-handle { box-shadow: 0 5px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.65); }
+
+/* New desktop composition: identity and readiness occupy their own column;
+   the form is a quiet, spacious workspace. All existing React flow is intact. */
+.lx-deck {
+  width: min(76rem, calc(100vw - 3.5rem));
+  max-width: 76rem;
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid var(--lx-auth-edge);
+  background: var(--lx-auth-panel);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), 0 40px 110px -58px rgba(0,0,0,.8);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  backdrop-filter: blur(22px) saturate(1.35);
+}
+:root[data-theme="light"] .lx-deck {
+  background: rgba(255,255,255,.83);
+  border-color: rgba(37,48,62,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 35px 90px -60px rgba(37,48,62,.38);
+}
+.lx-ribbon {
+  min-height: 5.5rem;
+  padding-block: 1.2rem;
+  border-bottom: 1px solid var(--lx-auth-edge);
+  background: linear-gradient(105deg, color-mix(in srgb, var(--surface-2) 78%, transparent), color-mix(in srgb, var(--surface) 54%, transparent));
+}
+:root[data-theme="light"] .lx-ribbon {
+  background: linear-gradient(105deg, rgba(255,255,255,.94), rgba(246,248,250,.72));
+  border-bottom-color: rgba(37,48,62,.1);
+}
+.lx-logo-tile {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 1.05rem;
+  box-shadow: 0 8px 24px -16px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.92);
+}
+.lx-deck > .flex.flex-col {
+  display: grid;
+  grid-template-columns: minmax(17rem, .86fr) minmax(0, 1.14fr);
+  align-items: stretch;
+}
+.lx-deck > .flex.flex-col > .lx-console {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  justify-content: center;
+  gap: clamp(2rem, 4vw, 3.25rem);
+  padding: clamp(2rem, 4vw, 3.5rem) clamp(1.5rem, 3vw, 2.75rem);
+  border-inline-end: 1px solid var(--lx-auth-edge);
+  background:
+    radial-gradient(ellipse 130% 70% at 50% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 70%, transparent), color-mix(in srgb, var(--surface) 74%, transparent));
+}
+:root[data-theme="light"] .lx-deck > .flex.flex-col > .lx-console {
+  background:
+    radial-gradient(ellipse 130% 70% at 50% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(244,247,250,.94), rgba(250,251,252,.66));
+}
+.lx-radar { width: clamp(7.5rem, 12vw, 9.25rem); height: clamp(7.5rem, 12vw, 9.25rem); }
+.lx-deck > .flex.flex-col > div.p-7 {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  align-self: center;
+  padding: clamp(2rem, 4.2vw, 4rem);
+}
+.lx-deck .lx-eyebrow { letter-spacing: .16em; }
+.lx-deck .lx-input {
+  min-height: 3.55rem;
+  border-radius: 1rem;
+  border-color: color-mix(in srgb, var(--ink) 13%, transparent);
+  background: color-mix(in srgb, var(--surface-3) 54%, transparent);
+  transition: border-color 220ms var(--lx-auth-ease), box-shadow 220ms var(--lx-auth-ease), background 220ms var(--lx-auth-ease), transform 220ms var(--lx-auth-ease);
+}
+:root[data-theme="light"] .lx-deck .lx-input { background: rgba(245,247,250,.85); border-color: rgba(37,48,62,.14); }
+.lx-deck .lx-field:focus-within .lx-input { transform: translateY(-1px); }
+.lx-deck .lx-submit {
+  min-height: 3.65rem;
+  border-radius: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 12px 28px -18px color-mix(in srgb, var(--accent) 90%, transparent);
+  transition: transform 220ms var(--lx-auth-ease), box-shadow 220ms var(--lx-auth-ease), filter 220ms var(--lx-auth-ease);
+}
+.lx-deck .lx-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.34), 0 18px 34px -18px color-mix(in srgb, var(--accent) 92%, transparent); }
+.otp-box {
+  min-width: 3.25rem;
+  min-height: 3.5rem;
+  border-radius: 1rem;
+  transition: transform 180ms var(--lx-auth-ease), border-color 180ms var(--lx-auth-ease), box-shadow 180ms var(--lx-auth-ease);
+}
+.otp-box:focus { transform: translateY(-2px); }
+
+@media (max-width: 900px) {
+  .lx-deck { width: min(42rem, calc(100vw - 2rem)); }
+  .lx-deck > .flex.flex-col { display: flex; flex-direction: column; }
+  .lx-deck > .flex.flex-col > .lx-console {
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--lx-auth-edge);
+    padding: 2rem 1.5rem;
+    gap: 1.75rem;
+  }
+  .lx-deck > .flex.flex-col > div.p-7 { padding: 2rem clamp(1.25rem, 5vw, 2.5rem); }
+  .lx-radar { width: 6.5rem; height: 6.5rem; }
+}
+@media (max-width: 480px) {
+  .lx-deck { width: calc(100vw - 1.25rem); border-radius: 1.25rem; }
+  .lx-ribbon { padding: 1rem; }
+  .lx-logo-tile { width: 2.75rem; height: 2.75rem; border-radius: .85rem; }
+  .lx-deck > .flex.flex-col > .lx-console { padding: 1.5rem 1rem; gap: 1.25rem; }
+  .lx-deck > .flex.flex-col > div.p-7 { padding: 1.5rem 1rem; }
+  .lx-gate-board { padding: 2rem 1.15rem 1.5rem; border-radius: 1.5rem; }
+  .lx-gate-title { font-size: clamp(1.8rem, 8vw, 2.25rem); }
+  .lx-gate-sub { font-size: .92rem; }
+  .otp-box { min-width: 2.65rem; min-height: 3rem; }
+}
+@media (max-width: 340px) {
+  .lx-deck > .flex.flex-col > div.p-7 { padding-inline: .8rem; }
+  .lx-deck .grid.grid-cols-3 { gap: .35rem; }
+  .lx-gate-board { padding-inline: .9rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-deck, .lx-deck *, .lx-gate-board, .lx-gate-board * {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
