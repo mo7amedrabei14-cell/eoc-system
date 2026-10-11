@@ -8,7 +8,7 @@ import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serv
 import { checkServerHealth } from './serverHealthCore';
 // 🔇 شاشة الدخول ليها مؤشرها الخاص (سبينر الزر) — حبة العمل العامة مكتومة هنا تماماً
 import { setWorkingSuppressed } from './workingToast';
-import { EASE_OUT } from './motion/tokens';
+import { EASE_EMPHASIZED, EASE_STANDARD, DUR, STAGGER, enterStep } from './motion/tokens';
 // 🎬 نظام بصريات الدخول — ملف منفصل ببادئة lx- حتى لا يمس لوحة التحكم
 import './login/loginScene.css';
 
@@ -43,64 +43,68 @@ const AlertIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
   </svg>
 );
-const CheckIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12.5 9.2 17 19 7" />
+const SunIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <circle cx="12" cy="12" r="4" />
+    <path strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+  </svg>
+);
+const MoonIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
   </svg>
 );
 
-/* ── منحنى واحد لكل الحركة: تسارع فوري وهبوط هادئ (بلا ارتداد) ── */
-const EASE = [0.22, 1, 0.36, 1];
+/* ── منحنى واحد ومدة واحدة لكل حركة (من motion/tokens) ─────────────────────
+   المنحنى M3 emphasized-decelerate، والتتابع 40–60ms بين العناصر. */
+const END = EASE_EMPHASIZED;
+const EASE_STD = EASE_STANDARD;
 
-/* ── توصيفات حركة البوابة والبطاقة (variants للتتابع المرحلي) ── */
-const GATE_RISE = {
-  /* دخول هادئ: مسافة قصيرة + opacity، بدون blur أو قفزة نابضية. */
-  hidden: { opacity: 0, y: 12, scale: 0.995 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.44, ease: EASE, staggerChildren: 0.045, delayChildren: 0.06 } },
+const GATE_BOARD = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { duration: DUR.mid, ease: END, staggerChildren: STAGGER.item, delayChildren: STAGGER.lead },
+  },
 };
 const GATE_ITEM = {
-  hidden: { opacity: 0, y: 9 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.34, ease: EASE } },
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: enterStep() },
 };
-const CARD_ENTER = {
-  hidden: { opacity: 0, y: 14, scale: 0.995 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.48, ease: EASE, delayChildren: 0.045, staggerChildren: 0.04 } },
+const CARD_IN = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: DUR.mid, ease: END } },
 };
 const CARD_CHILD = {
-  hidden: { opacity: 0, y: 9 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.36, ease: EASE } },
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: enterStep() },
 };
 const FORM_COL = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.32, ease: EASE, staggerChildren: 0.035, delayChildren: 0.035 } },
-  exit: { opacity: 0, y: -5, transition: { duration: 0.15, ease: EASE_OUT } },
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { duration: DUR.mid, ease: END, delayChildren: STAGGER.lead, staggerChildren: STAGGER.item },
+  },
 };
 const FORM_ITEM = {
-  hidden: { opacity: 0, y: 7 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.26, ease: EASE } },
-};
-const TAB_PAGE = {
-  initial: { opacity: 0, y: 7 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: EASE } },
-  exit: { opacity: 0, y: -4, transition: { duration: 0.14, ease: EASE_OUT } },
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: enterStep() },
 };
 
-/* System Reduced Motion: the same state transitions, expressed as a brief fade only. */
+/* System Reduced Motion: نفس تغييرات الحالة، لكن بلا أي إزاحة أو تتابع. */
+const STILL = { duration: 0.01, ease: EASE_STD };
 const FADE_GROUP = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: 0.01, staggerChildren: 0, delayChildren: 0 } },
-  exit: { opacity: 0, transition: { duration: 0.01 } },
+  show: { opacity: 1, transition: { ...STILL, staggerChildren: 0, delayChildren: 0 } },
 };
 const FADE_ITEM = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: 0.01 } },
-  exit: { opacity: 0, transition: { duration: 0.01 } },
+  show: { opacity: 1, transition: STILL },
 };
-const FADE_PAGE = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.01 } },
-  exit: { opacity: 0, transition: { duration: 0.01 } },
-};
+
+/* ── الختم هو عقدة واحدة تُنقل بـtransform بين البوابة والبطاقة ─────────────
+   لذا يحتاج قياس مستطيلين فقط (موضع البوابة، موضع بطاقة الدخول) ثم يتحرك. */
+const CREST_BASE = 64; // يطابق --lx-crest-base في loginScene.css
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -182,6 +186,52 @@ export default function Login() {
   const isRTL = language === 'ar';
   const reduceMotion = useReducedMotion();
 
+  /* ── هندسة الختم (بصريات خالصة): مستطيل البوابة مقابل مستطيل رأس البطاقة ──
+     لا منطق أعمال هنا — قياسان وحركة واحدة، ودورة إعادة القياس عند أي تغيّر
+     مقاس (خطأ يظهر، تبديل لغة، دوران الشاشة) حتى لا ينفصل الشعار عن بطاقته. */
+  const crestLayerRef = useRef(null);
+  const gateSlotRef = useRef(null);
+  const cardSlotRef = useRef(null);
+  const cardRef = useRef(null);
+  const [crestGeo, setCrestGeo] = useState({ x: 0, y: 0, s: 1, dur: 0 });
+
+  const measureCrest = useCallback((animate, mounted) => {
+    const layer = crestLayerRef.current;
+    const target = mounted ? cardSlotRef.current : gateSlotRef.current;
+    if (!layer || !target) return;
+    const l = layer.getBoundingClientRect();
+    const t = target.getBoundingClientRect();
+    if (!t.width) return;
+    setCrestGeo({
+      x: Math.round((t.left + t.width / 2 - (l.left + l.width / 2)) * 10) / 10,
+      y: Math.round((t.top + t.height / 2 - (l.top + l.height / 2)) * 10) / 10,
+      s: Math.round((t.width / CREST_BASE) * 1000) / 1000,
+      dur: animate && !reduceMotion ? DUR.rise * 1000 : 0,
+    });
+  }, [reduceMotion]);
+
+  // أول قياس: بلا حركة (الصفحة تُرسم في موضعها النهائي — لا قفزة عند التحميل)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => measureCrest(false, false));
+    return () => cancelAnimationFrame(id);
+  }, [measureCrest]);
+
+  // لحظة العبور: الختم ينتقل من البوابة إلى موضعه في بطاقة الدخول (حركة واحدة)
+  useEffect(() => {
+    measureCrest(true, isMounted);
+  }, [isMounted, measureCrest]);
+
+  // إعادة القياس عند أي تغيّر مقاس (بدون حركة) — الشعار يبقى ملتصقًا ببطاقته
+  useEffect(() => {
+    const ids = [cardRef.current, gateSlotRef.current, cardSlotRef.current, crestLayerRef.current].filter(Boolean);
+    if (!ids.length || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => measureCrest(false, isMounted));
+    ids.forEach((el) => ro.observe(el));
+    const onWin = () => measureCrest(false, isMounted);
+    window.addEventListener('resize', onWin);
+    return () => { ro.disconnect(); window.removeEventListener('resize', onWin); };
+  }, [isMounted, measureCrest]);
+
   // Progressive enhancement around the existing successful route change.
   // Unsupported browsers and reduced-motion users retain immediate navigation.
   const navigateWithEntryTransition = useCallback((to) => {
@@ -244,8 +294,8 @@ export default function Login() {
     setDragProgress(1);
     paint(maxX, maxX);
     if (navigator.vibrate) try { navigator.vibrate([10, 30, 20]); } catch { /* وضع الاهتزاز غير مدعوم */ }
-    setTimeout(() => setIsMounted(true), 160);   // كارت الدخول يبدأ بالدخول
-    setTimeout(() => setShowGate(false), 860);    // البوابة تُزال من الـ DOM
+    setTimeout(() => setIsMounted(true), 200);   // بطاقة الدخول تبدأ بالظهور
+    setTimeout(() => setShowGate(false), 620);   // البوابة تُزال من الـ DOM بعد اكتمال الحركة
   };
 
   // انتقال قصير لأي حركة غير السحب (لوحة المفاتيح / الإكمال):
@@ -496,12 +546,13 @@ export default function Login() {
     }
   };
 
-  // تركيبة نصية تتطور مع مراحل السحب
-  const slideLabel = dragStage.label >= 2
-    ? t('تم — جاري فتح مركز الاستجابة', 'Done — opening the response desk')
-    : dragStage.label >= 1
-      ? t('واصل السحب لفتح الأطلس…', 'Keep sliding to unfold the atlas…')
-      : t('اسحب لاستكشاف أطلس الاستجابة', 'Slide to explore the response atlas');
+  const backToForm = () => {
+    setLoginStage('form');
+    setPendingAuthData(null);
+    setVerifyDigits(['', '', '', '', '', '']);
+    setVerifyStage('idle');
+    setVerifyError(false);
+  };
 
   return (
     <div className="lx" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -509,44 +560,36 @@ export default function Login() {
       <ServerDownOverlay health={serverHealth} lang={language} />
       <ServerRecoveryBanner health={serverHealth} lang={language} />
 
-      {/* ═══════════ الخلفية المحيطة — طبقة واحدة ثابتة (`.lx-scene`) ═══════════
-          لا تتتبّع المؤشر ولا تتحرك: تدرّج واحد هادئ ⇒ صفر إعادة رسم، وصفر طبقة
-          شفافة عابرة فوق العناصر التفاعلية. */}
-      <div className="lx-scene" aria-hidden="true" />
+      {/* ═══════════ الخلفية: تدرّج واحد + هالتان تنجرفان ببطء شديد ═══════════
+          الحركة على transform فقط (بلا filter: blur وبلا طبقة تتبّع مؤشر) ⇒
+          لا إعادة رسم على الخيط الرئيسي. */}
+      <div className="lx-scene" aria-hidden="true">
+        <span className="lx-aurora" />
+      </div>
 
-      {/* ═══════════ تحكمات ثابتة: اللغة + الثيم ─────────────── */}
-      <motion.button
-        type="button"
-        initial={reduceMotion ? false : { opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={reduceMotion ? { duration: 0.01 } : { duration: 0.4, ease: EASE, delay: 0.24 }}
-        onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-        title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
-        aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
-        className="lx-pill-btn"
+      {/* ═══════════ الختم: عقدة واحدة تعيش بين البوابة والبطاقة ═══════════
+          لا تختفي ولا يُعاد تركيبها بنسخة ثانية — الموضع مكتوب كمتغيّرات CSS
+          والحركة transform فقط، فلا وميض عند العبور. */}
+      <motion.div
+        ref={crestLayerRef}
+        className="lx-crest-layer"
+        aria-hidden="true"
+        initial={reduceMotion ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={reduceMotion ? { ...STILL } : { duration: DUR.enter, ease: END }}
+        style={{
+          '--lx-crest-x': `${crestGeo.x}px`,
+          '--lx-crest-y': `${crestGeo.y}px`,
+          '--lx-crest-s': crestGeo.s,
+          '--lx-crest-dur': `${crestGeo.dur}ms`,
+        }}
       >
-        {language === 'ar' ? 'EN' : 'AR'}
-      </motion.button>
-
-      <motion.button
-        type="button"
-        initial={reduceMotion ? false : { opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={reduceMotion ? { duration: 0.01 } : { duration: 0.4, ease: EASE, delay: 0.3 }}
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        aria-label={t('تفعيل الوضع الفاتح', 'Enable light mode')}
-        className="lx-switch"
-      >
-        <span className="lx-switch-ic lx-switch-ic--s" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
+        <span className="lx-crest">
+          <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
         </span>
-        <span className="lx-switch-ic lx-switch-ic--e" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
-        </span>
-        <span aria-hidden="true" className={`lx-switch-knob ${theme === 'dark' ? 'lx-switch-knob--start' : 'lx-switch-knob--end'}`} />
-      </motion.button>
+      </motion.div>
 
-      {/* ═══════════ بوابة استكشاف أطلس الاستجابة ═══════════ */}
+      {/* ═══════════ بوابة الاستكشاف: ختم + عنوان + إيماءة واحدة ═══════════ */}
       <AnimatePresence>
         {showGate && (
           <motion.div
@@ -555,63 +598,54 @@ export default function Login() {
             className="lx-gate"
             dir="ltr"
             initial={{ opacity: 1 }}
-            /* الخروج: opacity + إزاحة صغيرة فقط. كان `filter: blur(14px)` متحرّكًا
+            /* الخروج: تلاشٍ قصير فقط. كان `filter: blur(14px)` متحرّكًا
                ⇒ مسح كامل الشاشة وإعادة رسمها بفلتر طوال مدة الخروج. */
-            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.995 }}
-            transition={reduceMotion ? { duration: 0.01 } : { duration: 0.38, ease: EASE }}
+            animate={{ opacity: isUnlocking ? 0 : 1 }}
+            exit={{ opacity: 0 }}
+            transition={reduceMotion ? { ...STILL } : { duration: DUR.mid, ease: END }}
             style={{ pointerEvents: isUnlocking ? 'none' : 'auto' }}
           >
             <motion.div
-              variants={reduceMotion ? FADE_GROUP : GATE_RISE}
+              variants={reduceMotion ? FADE_GROUP : GATE_BOARD}
               initial="hidden"
               animate="show"
               className="lx-gate-board"
             >
-              {/* ── ختم الهوية: الهلال هو علامة موجز الاستجابة ── */}
+              {/* مساحة الختم: الرسم نفسه من طبقة الختم أعلاه — هنا تُحفظ المساحة فقط */}
               <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-gate-emblem">
-                <div className="lx-crest-stack">
-                  <motion.div
-                    id="lx-crest"
-                    layoutId="erc-mark"
-                    transition={reduceMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 380, damping: 32 }}
-                    className={`lx-crest ${dragStage.goal || isUnlocking ? 'is-done' : ''}`}
-                  >
-                    <img src="/Egyptian_Red_Crescent.png" alt="الهلال الأحمر المصري" draggable="false" />
-                  </motion.div>
-                </div>
+                <span ref={gateSlotRef} className="lx-crest-slot" />
               </motion.div>
 
               <motion.h2 variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-gate-title">
                 {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
               </motion.h2>
               <motion.p variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-gate-sub">
-                {language === 'ar' ? 'أطلس الاستجابة الإنسانية · EOC' : 'HUMANITARIAN RESPONSE ATLAS · EOC'}
+                {language === 'ar' ? 'أطلس الاستجابة الإنسانية · مركز عمليات الطوارئ' : 'Humanitarian response atlas · operations center'}
               </motion.p>
 
               {/* قراءة النسبة المئوية / شارة التفعيل — مقروءة للقارئ الشاشي بلا شغل بصري */}
               <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-readout">
                 {dragStage.pct && <span className="lx-pct" ref={pctRef} />}
                 {dragProgress === 1 && (
-                  <span className="lx-granted"><i />{t('مُفعّل', 'ACTIVATED')}</span>
+                  <span className="lx-granted"><i />{t('مُفعّل', 'Activated')}</span>
                 )}
               </motion.div>
 
-              {/* ── مسار السحب ── */}
+              {/* ── مسار السحب: كبسولة واحدة + مقبض أبيض دائري + تعليمة واحدة ── */}
               <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-gate-slider">
                 <div
                   ref={trackRef}
                   className={`lx-track ${isDragging ? 'is-dragging' : ''} ${isUnlocking ? 'is-done' : ''}`}
                 >
-                  <span className="lx-fill-clip" aria-hidden="true">
-                    <span className="lx-fill" />
+                  <span className="lx-track-fill-wrap" aria-hidden="true">
+                    <span className="lx-track-fill" />
                   </span>
 
-                  {/* التسمية المتطورة — تتلاشى مع تقدّم السحب من `--lx-p` في CSS */}
                   <span id="lx-gate-instruction" className="lx-track-label">
-                    <span key={slideLabel} className="lx-track-copy">{slideLabel}</span>
+                    {t('اسحب للدخول', 'Slide to enter')}
                   </span>
 
-                  {/* مقبض السحب يحمل ختم الهوية */}
+                  {/* مقبض السحب — هدف لمس ≥48px */}
                   <div
                     ref={handleRef}
                     onPointerDown={handlePointerDown}
@@ -624,17 +658,19 @@ export default function Login() {
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.round(dragProgress * 100)}
-                    aria-label={language === 'ar' ? 'اسحب لاستكشاف أطلس الاستجابة' : 'Slide to explore the response atlas'}
-                    className={`lx-handle ${isDragging ? 'is-dragging' : 'is-idle'} ${isUnlocking ? 'is-done' : ''}`}
-                    /* الموضع من `--lx-x` (CSS) — لا انتقال زمني أثناء السحب:
-                       الحركة 1:1 مع الإصبع، والعودة يحرّكها النابض في JS. */
+                    aria-label={t('اسحب للدخول إلى مركز عمليات الطوارئ', 'Slide to enter the response coordination desk')}
                     aria-describedby="lx-gate-instruction"
+                    className={`lx-handle ${isDragging ? 'is-dragging' : 'is-idle'} ${isUnlocking ? 'is-done' : ''}`}
                   >
-                    <span className="lx-handle-core">
-                      <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
-                      <span className="lx-handle-check" aria-hidden="true">
-                        <svg viewBox="0 0 100 100"><path d="M 22 55 L 42 75 L 80 32" /></svg>
-                      </span>
+                    <span className="lx-handle-ic lx-handle-ic--go" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </span>
+                    <span className="lx-handle-ic lx-handle-ic--done" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12.5 9.2 17 19 7" />
+                      </svg>
                     </span>
                   </div>
                 </div>
@@ -644,214 +680,224 @@ export default function Login() {
         )}
       </AnimatePresence>
 
-      {/* ═══════════ بطاقة الدخول — سطح واحد في منتصف الشاشة ═══════════ */}
+      {/* ═══════════ بطاقة الدخول — سطح واحد في منتصف الشاشة ═══════════
+          قبل الفتح تكون غير مرئية وغير قابلة للتركيز (visibility) فلا يصل
+          الكيبورد إلى نموذج مخفي، ومع ذلك تُحسب مستطيلاتها لانتقال الختم. */}
       <div className="lx-stage">
         <motion.div
-          className="lx-card"
-          variants={reduceMotion ? FADE_GROUP : CARD_ENTER}
+          ref={cardRef}
+          className={`lx-card ${isMounted ? 'is-mounted' : ''}`}
+          variants={reduceMotion ? FADE_GROUP : CARD_IN}
           initial="hidden"
           animate={isMounted ? 'show' : 'hidden'}
+          /* قبل الفتح: خارج الشجرة التفاعلية تمامًا — لا تركيز ولا نقر ولا قراءة */
+          inert={isMounted ? undefined : true}
         >
-          {/* ─── ترويسة الهوية: نفس الختم ينتقل من البوابة إلى البطاقة (layoutId) ─── */}
+          {/* رأس البطاقة: مساحة الختم فقط (الرسم من طبقة الختم) */}
           <motion.div variants={reduceMotion ? FADE_ITEM : CARD_CHILD} className="lx-card-head">
-            <motion.span
-              layoutId="erc-mark"
-              transition={reduceMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 380, damping: 32 }}
-              className="lx-logo-tile"
-              aria-hidden="true"
-            >
-              <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
-            </motion.span>
-            <span className="lx-brand-name">
-              {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
-            </span>
+            <span ref={cardSlotRef} className="lx-crest-slot" aria-hidden="true" />
+            <span className="lx-sr-only">{language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}</span>
           </motion.div>
 
-          {/* ─── نموذج الوصول / رمز التحقق — انتقال هادئ بين الحالتين ─── */}
           <div className="lx-card-body">
-            <AnimatePresence mode="wait" initial={false}>
-              {loginStage === 'verify' ? (
-                <motion.div
-                  key="verify"
-                  {...(reduceMotion ? FADE_PAGE : TAB_PAGE)}
-                  className="lx-otp-panel"
-                >
-                  <div>
-                    <h3 className="lx-title">
-                      {language === 'ar' ? 'رمز التحقق' : 'Verification Code'}
-                    </h3>
-                    <p className="lx-sub">
-                      {language === 'ar'
-                        ? 'أدخل رمز التحقق المكوّن من 6 أرقام لإكمال الدخول'
-                        : 'Enter the 6-digit verification code to complete sign-in'}
-                    </p>
-                  </div>
-
-                  {verifyError && (
-                    <div className="lx-error" role="alert">
-                      <span className="lx-error-ic" aria-hidden="true"><AlertIcon /></span>
-                      <div className="lx-error-copy">
-                        <p className="lx-error-title">{language === 'ar' ? 'رمز غير صحيح' : 'Incorrect code'}</p>
-                        <p className="lx-error-text">{language === 'ar' ? 'تأكد من الرمز وحاول مرة أخرى' : 'Check the code and try again'}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div
-                    dir="ltr"
-                    className={`otp-orbit-zone ${verifyStage === 'checking' ? 'is-checking' : ''} ${verifyStage === 'success' ? 'is-success' : ''}`}
-                  >
-                    {verifyDigits.map((d, i) => (
-                      <span key={i} className="otp-orbit-item">
-                        <input
-                          ref={(el) => (otpRefs.current[i] = el)}
-                          type="password"
-                          aria-label={language === 'ar' ? `الخانة ${i + 1} من 6` : `Digit ${i + 1} of 6`}
-                          inputMode="numeric"
-                          autoComplete="off"
-                          data-lpignore="true"
-                          data-1p-ignore="true"
-                          maxLength={1}
-                          value={verifyStage === 'checking' || verifyStage === 'success' ? '' : d}
-                          disabled={verifyStage === 'checking'}
-                          onChange={(e) => handleOtpChange(i, e.target.value)}
-                          onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                          onPaste={i === 0 ? handleOtpPaste : undefined}
-                          className="otp-box"
-                        />
-                      </span>
-                    ))}
-                    {verifyStage === 'success' && (
-                      <span className="otp-success-mark" aria-label={language === 'ar' ? 'تم التحقق بنجاح' : 'Verification successful'}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M5 12.5 9.2 17 19 7" />
-                        </svg>
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginStage('form');
-                      setPendingAuthData(null);
-                      setVerifyDigits(['', '', '', '', '', '']);
-                      setVerifyStage('idle');
-                      setVerifyError(false);
-                    }}
-                    className="lx-backlink"
-                  >
-                    {language === 'ar' ? 'العودة لتسجيل الدخول' : 'Back to sign in'}
-                  </button>
+            {/* ── نموذج الدخول ── */}
+            <div
+              className={`lx-panel ${loginStage === 'form' ? 'is-active' : ''}`}
+              aria-hidden={loginStage !== 'form'}
+              inert={loginStage === 'form' ? undefined : true}
+            >
+              <motion.div
+                variants={reduceMotion ? FADE_GROUP : FORM_COL}
+                initial="hidden"
+                animate={isMounted ? 'show' : 'hidden'}
+                className="lx-stack"
+              >
+                <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-intro">
+                  <h1 className="lx-title">{t('مركز عمليات الطوارئ', 'Response Coordination Desk')}</h1>
+                  <p className="lx-sub">
+                    {t('سجّل الدخول بحسابك للمتابعة', 'Sign in with your account to continue')}
+                  </p>
                 </motion.div>
-              ) : (
-                <motion.div
-                  key="form"
-                  variants={reduceMotion ? FADE_GROUP : FORM_COL}
-                  initial="hidden"
-                  animate="show"
-                  exit="exit"
-                  className="lx-form-column"
-                >
-                  {errorMsg && (
-                    <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-error" role="alert">
-                      <span className="lx-error-ic" aria-hidden="true"><AlertIcon /></span>
-                      <div className="lx-error-copy">
-                        <p className="lx-error-title">{language === 'ar' ? 'تعذّر الدخول' : 'Sign-in failed'}</p>
-                        <p className="lx-error-text">{errorMsg}</p>
-                      </div>
-                    </motion.div>
-                  )}
 
-                  <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-intro">
-                    <h3 className="lx-title">
-                      {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Response Coordination Desk'}
-                    </h3>
-                    <p className="lx-sub">
-                      {language === 'ar'
-                        ? 'تحقق من بيانات اعتمادك للدخول إلى مركز عمليات الطوارئ.'
-                        : 'Verify your credentials to enter the response coordination desk.'}
-                    </p>
+                <form onSubmit={handleLogin} className="lx-form" autoComplete="on" noValidate>
+                  {/* حقول مجمّعة: صفّان في سطح واحد بفاصل رفيع — لا إطار لكل حقل */}
+                  <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-group">
+                    <div className="lx-row">
+                      <label className="lx-sr-only" htmlFor="lx-username">
+                        {t('الرقم التعريفي / المستخدم', 'ID / Username')}
+                      </label>
+                      <span className="lx-row-ic" aria-hidden="true"><UserIcon /></span>
+                      {/* lx-username / lx-password: خطّافا استقرار لأدوات القياس والاختبار */}
+                      <input
+                        ref={usernameRef}
+                        id="lx-username"
+                        type="text"
+                        required
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder={t('الرقم التعريفي / المستخدم', 'ID / Username')}
+                        autoComplete="username"
+                        className="lx-input lx-username"
+                      />
+                    </div>
+
+                    <span className="lx-row-sep" role="presentation" />
+
+                    <div className="lx-row">
+                      <label className="lx-sr-only" htmlFor="lx-password">
+                        {t('رمز المرور السري', 'Secret password')}
+                      </label>
+                      <span className="lx-row-ic" aria-hidden="true"><LockIcon /></span>
+                      <input
+                        id="lx-password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onKeyUp={handleCaps}
+                        placeholder={t('رمز المرور السري', 'Password')}
+                        autoComplete="current-password"
+                        aria-describedby="lx-hint"
+                        className="lx-input lx-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')}
+                        className="lx-eye"
+                      >
+                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                      </button>
+                    </div>
                   </motion.div>
 
-                  <form onSubmit={handleLogin} className="lx-credentials-form" autoComplete="on">
-                    <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-field">
-                      <label className="lx-label" htmlFor="lx-username">
-                        {language === 'ar' ? 'الرقم التعريفي / المستخدم' : 'ID / Username'}
-                      </label>
-                      <div className="lx-input-wrap">
-                        <span className="lx-input-ic" aria-hidden="true"><UserIcon /></span>
-                        <input
-                          ref={usernameRef}
-                          id="lx-username"
-                          type="text"
-                          required
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder={language === 'ar' ? 'أدخل اسم المستخدم الخاص بك' : 'Enter your Username'}
-                          autoComplete="username"
-                          className="lx-input"
-                        />
-                      </div>
-                    </motion.div>
-
-                    <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-field">
-                      <label className="lx-label" htmlFor="lx-password">
-                        {language === 'ar' ? 'رمز المرور السري' : 'Secret password'}
-                      </label>
-                      <div className="lx-input-wrap">
-                        <span className="lx-input-ic" aria-hidden="true"><LockIcon /></span>
-                        <input
-                          id="lx-password"
-                          type={showPassword ? 'text' : 'password'}
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          onKeyUp={handleCaps}
-                          placeholder="********"
-                          autoComplete="current-password"
-                          className="lx-input"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          aria-label={showPassword ? (language === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (language === 'ar' ? 'إظهار كلمة المرور' : 'Show password')}
-                          className="lx-eye"
-                        >
-                          {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                      </div>
-                      {capsLock && (
-                        <p className="lx-caps">
-                          <i aria-hidden="true" />
-                          {language === 'ar' ? 'مفتاح Caps Lock مفعّل — راجع حالة الأحرف' : 'Caps Lock is on — check letter case'}
-                        </p>
-                      )}
-                    </motion.div>
-
-                    <motion.button
-                      variants={reduceMotion ? FADE_ITEM : FORM_ITEM}
-                      whileTap={reduceMotion || isLoading ? undefined : { scale: 0.985 }}
-                      type="submit"
-                      disabled={isLoading}
-                      className={`lx-submit ${isLoading ? 'is-loading' : ''}`}
-                    >
-                      {isLoading && <span className="lx-spinner" aria-hidden="true" />}
-                      {isLoading
-                        ? (language === 'ar' ? 'جاري التحقق من الهوية…' : 'Verifying identity…')
-                        : (language === 'ar' ? 'تسجيل الدخول' : 'Sign In')}
-                    </motion.button>
-                  </form>
-
-                  <motion.p variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-trust">
-                    <span aria-hidden="true"><CheckIcon /></span>
-                    {language === 'ar' ? 'قناة مشفرة · دخول موثّق فقط' : 'TLS ENCRYPTED · AUTHENTICATED ONLY'}
+                  {/* سطر محجوز: تنبيه Caps Lock — لا يزحزح أي شيء لأنه موجود دائمًا */}
+                  <motion.p variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-hint" id="lx-hint" aria-live="polite">
+                    {capsLock ? (
+                      <span className="lx-hint-caps">
+                        <i aria-hidden="true" />
+                        {t('مفتاح Caps Lock مفعّل', 'Caps Lock is on')}
+                      </span>
+                    ) : null}
                   </motion.p>
+
+                  {/* الخطأ: صف يُفتح انتقاليًّا (لا يُدفع المحتوى فجأة) */}
+                  <div className={`lx-alert ${errorMsg ? 'is-shown' : ''}`} role="alert" aria-live="assertive">
+                    <div className="lx-alert-inner">
+                      <span className="lx-alert-ic" aria-hidden="true"><AlertIcon /></span>
+                      <p className="lx-alert-text">{errorMsg}</p>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    variants={reduceMotion ? FADE_ITEM : FORM_ITEM}
+                    whileTap={reduceMotion || isLoading ? undefined : { scale: 0.98 }}
+                    transition={{ duration: DUR.fast, ease: EASE_STD }}
+                    type="submit"
+                    disabled={isLoading}
+                    className={`lx-submit ${isLoading ? 'is-loading' : ''}`}
+                  >
+                    {isLoading && <span className="lx-spinner" aria-hidden="true" />}
+                    <span className="lx-submit-label">
+                      {isLoading ? t('جاري التحقق…', 'Verifying…') : t('تسجيل الدخول', 'Sign in')}
+                    </span>
+                  </motion.button>
+                </form>
+              </motion.div>
+            </div>
+
+            {/* ── رمز التحقق (OTP) — نفس السطح، تبادل تلاشٍ بلا تغيّر مقاس ── */}
+            <div
+              className={`lx-panel ${loginStage === 'verify' ? 'is-active' : ''}`}
+              aria-hidden={loginStage !== 'verify'}
+              inert={loginStage === 'verify' ? undefined : true}
+            >
+              <motion.div
+                variants={reduceMotion ? FADE_GROUP : FORM_COL}
+                initial="hidden"
+                animate={isMounted ? 'show' : 'hidden'}
+                className="lx-stack lx-stack--center"
+              >
+                <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-intro">
+                  <h1 className="lx-title">{t('رمز التحقق', 'Verification Code')}</h1>
+                  <p className="lx-sub">
+                    {t('أدخل الرمز المكوّن من 6 أرقام لإكمال الدخول', 'Enter the 6-digit code to complete sign-in')}
+                  </p>
                 </motion.div>
-              )}
-            </AnimatePresence>
+
+                <div className={`lx-alert lx-alert--otp ${verifyError ? 'is-shown' : ''}`} role="alert" aria-live="assertive">
+                  <div className="lx-alert-inner">
+                    <span className="lx-alert-ic" aria-hidden="true"><AlertIcon /></span>
+                    <p className="lx-alert-text">{t('رمز غير صحيح — تأكد من الرمز وحاول مرة أخرى', 'Incorrect code — check it and try again')}</p>
+                  </div>
+                </div>
+
+                <div
+                  dir="ltr"
+                  className={`lx-otp ${verifyStage === 'checking' ? 'is-checking' : ''} ${verifyStage === 'success' ? 'is-success' : ''}`}
+                >
+                  {verifyDigits.map((d, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => (otpRefs.current[i] = el)}
+                      type="password"
+                      aria-label={language === 'ar' ? `الخانة ${i + 1} من 6` : `Digit ${i + 1} of 6`}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      maxLength={1}
+                      value={verifyStage === 'checking' || verifyStage === 'success' ? '' : d}
+                      disabled={verifyStage === 'checking'}
+                      onChange={(e) => handleOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      onPaste={i === 0 ? handleOtpPaste : undefined}
+                      className="lx-otp-box"
+                    />
+                  ))}
+                  {verifyStage === 'success' && (
+                    <span className="lx-otp-ok" aria-label={t('تم التحقق بنجاح', 'Verification successful')}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M5 12.5 9.2 17 19 7" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+
+                <button type="button" onClick={backToForm} className="lx-backlink">
+                  {t('العودة لتسجيل الدخول', 'Back to sign in')}
+                </button>
+              </motion.div>
+            </div>
           </div>
+
+          <motion.p variants={reduceMotion ? FADE_ITEM : CARD_CHILD} className="lx-trust">
+            {t('دخول مقيّد لمنسوبي الهلال الأحمر المصري', 'Restricted to Egyptian Red Crescent staff')}
+          </motion.p>
         </motion.div>
+      </div>
+
+      {/* ═══════════ تحكمات ثابتة (اللغة + الثيم): مجموعة واحدة، أهداف 44px ═══════
+          في نهاية الترتيب المنطقي كي يبدأ الكيبورد من البوابة نفسها. */}
+      <div className="lx-controls">
+        <button
+          type="button"
+          onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+          title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
+          aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
+          className="lx-ctl"
+        >
+          {language === 'ar' ? 'EN' : 'AR'}
+        </button>
+        <span className="lx-ctl-sep" role="presentation" />
+        <button
+          type="button"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          aria-label={t('تفعيل الوضع الفاتح', 'Enable light mode')}
+          className="lx-ctl"
+        >
+          {theme === 'dark' ? <MoonIcon /> : <SunIcon />}
+        </button>
       </div>
     </div>
   );

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>لقطات إعادة تصميم البوابة والدخول — قبل/بعد</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 32px; background: #0d0f13; color: #f4f5f7;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Noto Sans Arabic", sans-serif; }
+      h1 { font-size: 24px; font-weight: 600; margin: 0 0 8px; }
+      h2 { font-size: 16px; font-weight: 600; margin: 40px 0 12px; color: #a4abb6; }
+      p.note { color: #a4abb6; font-size: 13px; line-height: 1.7; max-width: 900px; margin: 0 0 24px; }
+      .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+      figure { margin: 0; border: 1px solid rgba(255,255,255,.09); border-radius: 16px; overflow: hidden; background: #15181d; }
+      figure img { display: block; width: 100%; height: auto; }
+      figcaption { padding: 8px 12px; font-size: 12px; color: #a4abb6; direction: ltr; text-align: left; }
+      .strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
+      .strip figure { flex: 0 0 260px; }
+    </style>
+  </head>
+  <body>
+    <h1>شاشتا البوابة والدخول — قبل/بعد</h1>
+    <p class="note">
+      كل اللقطات من نفس الأداة ونفس البيئة (Chromium 149 headless، السيرفر الحقيقي على :8000).
+      الأرقام الكاملة في <code>CRITIQUE.md</code> و<code>README.md</code>.
+    </p>
+
+    <h2>قبل — النسخة السابقة</h2>
+    <div class="grid">
+      <figure><img src="before-gate-1920x1080-dark-ar.jpg" alt="قبل: البوابة" /><figcaption>before · gate · 1920×1080 · dark · ar</figcaption></figure>
+      <figure><img src="before-login-1920x1080-dark-ar.jpg" alt="قبل: الدخول" /><figcaption>before · login · 1920×1080 · dark · ar</figcaption></figure>
+      <figure><img src="before-gate-1920x1080-light-en.jpg" alt="قبل: البوابة فاتح" /><figcaption>before · gate · 1920×1080 · light · en</figcaption></figure>
+      <figure><img src="before-login-1920x1080-light-en.jpg" alt="قبل: الدخول فاتح" /><figcaption>before · login · 1920×1080 · light · en</figcaption></figure>
+      <figure><img src="before-login-error-dark-ar.jpg" alt="قبل: الخطأ" /><figcaption>before · error · dark · ar</figcaption></figure>
+    </div>
+
+    <h2>بعد — التصميم الجديد</h2>
+    <div class="grid">
+      <figure><img src="after-gate-1920x1080-dark-ar.jpg" alt="بعد: البوابة" /><figcaption>after · gate · 1920×1080 · dark · ar</figcaption></figure>
+      <figure><img src="after-login-1920x1080-dark-ar.jpg" alt="بعد: الدخول" /><figcaption>after · login · 1920×1080 · dark · ar</figcaption></figure>
+      <figure><img src="after-gate-1920x1080-light-ar.jpg" alt="بعد: البوابة فاتح" /><figcaption>after · gate · 1920×1080 · light · ar</figcaption></figure>
+      <figure><img src="after-login-1920x1080-light-ar.jpg" alt="بعد: الدخول فاتح" /><figcaption>after · login · 1920×1080 · light · ar</figcaption></figure>
+      <figure><img src="after-gate-1920x1080-dark-en.jpg" alt="بعد: البوابة إنجليزي" /><figcaption>after · gate · 1920×1080 · dark · en</figcaption></figure>
+      <figure><img src="after-login-1920x1080-dark-en.jpg" alt="بعد: الدخول إنجليزي" /><figcaption>after · login · 1920×1080 · dark · en</figcaption></figure>
+      <figure><img src="after-gate-1920x1080-light-en.jpg" alt="بعد: البوابة فاتح إنجليزي" /><figcaption>after · gate · 1920×1080 · light · en</figcaption></figure>
+      <figure><img src="after-login-1920x1080-light-en.jpg" alt="بعد: الدخول فاتح إنجليزي" /><figcaption>after · login · 1920×1080 · light · en</figcaption></figure>
+      <figure><img src="after-login-error-dark-ar.jpg" alt="بعد: الخطأ" /><figcaption>after · error 401 · dark · ar</figcaption></figure>
+      <figure><img src="after-gate-390x844-dark-ar.jpg" alt="بعد: البوابة جوال" /><figcaption>after · gate · 390×844 · dark · ar</figcaption></figure>
+      <figure><img src="after-login-390x844-dark-ar.jpg" alt="بعد: الدخول جوال" /><figcaption>after · login · 390×844 · dark · ar</figcaption></figure>
+      <figure><img src="after-login-390x844-light-en.jpg" alt="بعد: الدخول جوال فاتح" /><figcaption>after · login · 390×844 · light · en</figcaption></figure>
+    </div>
+
+    <h2>تسلسل الانتقال (سحب ← بطاقة) بأزمنة مقيسة فعليًّا</h2>
+    <div class="strip">
+      <figure><img src="after-sequence-01-t76ms.jpg" alt="إطار 1" /><figcaption>+76ms</figcaption></figure>
+      <figure><img src="after-sequence-02-t239ms.jpg" alt="إطار 2" /><figcaption>+239ms</figcaption></figure>
+      <figure><img src="after-sequence-03-t458ms.jpg" alt="إطار 3" /><figcaption>+458ms</figcaption></figure>
+      <figure><img src="after-sequence-04-t641ms.jpg" alt="إطار 4" /><figcaption>+641ms</figcaption></figure>
+      <figure><img src="after-sequence-05-t824ms.jpg" alt="إطار 5" /><figcaption>+824ms</figcaption></figure>
+      <figure><img src="after-sequence-06-t987ms.jpg" alt="إطار 6" /><figcaption>+987ms</figcaption></figure>
+      <figure><img src="after-sequence-07-t1157ms.jpg" alt="إطار 7" /><figcaption>+1157ms</figcaption></figure>
+    </div>
+  </body>
+</html>

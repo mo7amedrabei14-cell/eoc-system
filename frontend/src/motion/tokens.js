@@ -21,6 +21,27 @@ export const SPRING_LAYOUT = { type: 'spring', stiffness: 380, damping: 32 };
 
 // ── Easing للمخارج القصيرة (الخروج لا يجب أن يُحسّ) ────────────────────────
 export const EASE_OUT = [0.16, 1, 0.3, 1];
+
+// ── دخول/خروج الدخول والصعود (المسار الانتقالي لمنتجات Apple/M3) ─────────────
+// منحنى M3 الرسمي "emphasized-decelerate": تسارع فوري وهبوط طويل هادئ بلا ارتداد.
+// مصدر واحد للمنحنى في JS (framer) وفي CSS (--lx-ease) ⇒ نفس الإحساس بالحرف.
+export const EASE_EMPHASIZED = [0.05, 0.7, 0.1, 1];
+// المنحنى القياسي: لتغييرات الحالة الصغيرة (تركيز/ضغط/تلاشٍ).
+export const EASE_STANDARD = [0.2, 0, 0, 1];
+
+// ── سلّم المدد الموحّد (ثوانٍ، كما يريد framer) ────────────────────────────
+export const DUR = {
+  fast: 0.16,   // تغيّر حالة فوري الإحساس
+  mid: 0.24,    // تبديل/تلاشٍ
+  enter: 0.32,  // عنصر يدخل
+  rise: 0.44,   // البطاقة/الختم يصعد إلى موضعه
+};
+
+// ── إيقاع التتابع: 40–60ms بين العناصر (بند المواصفة 4) ────────────────────
+export const STAGGER = { item: 0.05, lead: 0.06 };
+
+/** دخول عنصر واحد: نفس المدة والمنحنى دائمًا — لا اجتهاد لكل عنصر. */
+export const enterStep = (delay = 0) => ({ duration: DUR.enter, ease: EASE_EMPHASIZED, delay });
 export const EXIT_FAST = { duration: 0.16, ease: EASE_OUT };
 
 // ── دخول متتابع (Staggered Entrances) ──────────────────────────────────────
