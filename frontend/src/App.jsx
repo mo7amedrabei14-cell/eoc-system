@@ -20,6 +20,13 @@ const DASHBOARD_SURFACE = '#main-scroll-container > div.p-4';
  */
 const pageTransitionAnimations = new WeakMap();
 
+function readActiveNavigationIndex() {
+  // Read the existing active navigation item only; do not change sidebar behavior.
+  const items = Array.from(document.querySelectorAll('.nav-shell .nav-item'));
+  const activeItem = document.querySelector('.nav-shell .nav-item.is-active');
+  return activeItem ? items.indexOf(activeItem) : -1;
+}
+
 /**
  * Single motion owner for route and in-dashboard view changes.
  * Web Animations API runs one compositor animation on the arriving surface;
