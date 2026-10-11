@@ -96,26 +96,33 @@ function VisualTransitionFallback() {
   useEffect(() => {
     if (!ENABLE_VISUAL_TRANSITIONS || location.pathname !== '/dashboard' || reduceMotion) return undefined;
 
-    const readActivePage = () => document.querySelector('.nav-item.is-active');
+    // Read the existing page title as a signal. The sidebar's DOM/classes are
+    // not observed or modified; the title itself never receives animation.
+    const pageTitle = document.querySelector('#main-scroll-container > header h1');
+    if (!pageTitle) return undefined;
+    const readActivePage = () => pageTitle.textContent?.trim() ?? '';
     let activePage = readActivePage();
-    const observedItems = Array.from(document.querySelectorAll('.nav-item'));
+    let titleFrame = 0;
 
     const observer = new MutationObserver(() => {
-      const nextPage = readActivePage();
-      if (!nextPage || nextPage === activePage) return;
-      activePage = nextPage;
+      if (titleFrame) window.cancelAnimationFrame(titleFrame);
+      titleFrame = window.requestAnimationFrame(() => {
+        titleFrame = 0;
+        const nextPage = readActivePage();
+        if (nextPage === activePage) return;
+        activePage = nextPage;
 
-      // A route transition or login never causes this tab-only entrance.
-      if (document.documentElement.dataset.eocViewTransition) return;
-      animateSurface(document.querySelector(DASHBOARD_SURFACE), tabAnimationRef);
+        // A route transition or login never causes this tab-only entrance.
+        if (document.documentElement.dataset.eocViewTransition) return;
+        animateSurface(document.querySelector(DASHBOARD_SURFACE), tabAnimationRef);
+      });
     });
 
-    observedItems.forEach((item) => {
-      observer.observe(item, { attributes: true, attributeFilter: ['class'] });
-    });
+    observer.observe(pageTitle, { childList: true, subtree: true, characterData: true });
 
     return () => {
       observer.disconnect();
+      if (titleFrame) window.cancelAnimationFrame(titleFrame);
       tabAnimationRef.current?.stop();
       tabAnimationRef.current = null;
     };
