@@ -39,7 +39,7 @@ function animateSurface(surface, animationRef) {
 
   // Interrupt at the actual visual frame; animate transform components only.
   animationRef.current?.stop();
-  animationRef.current = animate(
+  const controls = animate(
     surface,
     {
       opacity: [startOpacity, 1],
@@ -49,6 +49,16 @@ function animateSurface(surface, animationRef) {
     },
     { duration: 0.34, ease: [0.2, 0, 0, 1] },
   );
+  animationRef.current = controls;
+
+  // Remove transient inline animation styles at rest so the content wrapper
+  // does not become a permanent containing block/stacking context.
+  controls.then(() => {
+    if (animationRef.current !== controls) return;
+    surface.style.removeProperty('transform');
+    surface.style.removeProperty('opacity');
+    animationRef.current = null;
+  });
 }
 
 /**
