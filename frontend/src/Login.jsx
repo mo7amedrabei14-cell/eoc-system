@@ -159,6 +159,23 @@ const TAB_PAGE = {
   exit: { opacity: 0, y: -4, transition: { duration: 0.14, ease: EASE_OUT } },
 };
 
+/* System Reduced Motion: the same state transitions, expressed as a brief fade only. */
+const FADE_GROUP = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.01, staggerChildren: 0, delayChildren: 0 } },
+  exit: { opacity: 0, transition: { duration: 0.01 } },
+};
+const FADE_ITEM = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.01 } },
+  exit: { opacity: 0, transition: { duration: 0.01 } },
+};
+const FADE_PAGE = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.01 } },
+  exit: { opacity: 0, transition: { duration: 0.01 } },
+};
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -633,9 +650,9 @@ export default function Login() {
       {/* ═══════════ تحكمات ثابتة: اللغة + الثيم ─────────────── */}
       <motion.button
         type="button"
-        initial={{ opacity: 0, y: -14 }}
+        initial={reduceMotion ? false : { opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING_SOFT, delay: 0.26 }}
+        transition={reduceMotion ? { duration: 0.01 } : { ...SPRING_SOFT, delay: 0.26 }}
         onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
         title={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
         aria-label={language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
@@ -646,9 +663,9 @@ export default function Login() {
 
       <motion.button
         type="button"
-        initial={{ opacity: 0, y: -14 }}
+        initial={reduceMotion ? false : { opacity: 0, y: -14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING_SOFT, delay: 0.32 }}
+        transition={reduceMotion ? { duration: 0.01 } : { ...SPRING_SOFT, delay: 0.32 }}
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         aria-label={t('تفعيل الوضع الفاتح', 'Enable light mode')}
         className="lx-switch fixed top-4 end-5 z-[9999]"
@@ -673,8 +690,8 @@ export default function Login() {
             initial={{ opacity: 1 }}
             /* الخروج: opacity + scale فقط. كان `filter: blur(14px)` متحرّكًا
                ⇒ مسح كامل الشاشة وإعادة رسمها بفلتر طوال مدة الخروج. */
-            exit={{ opacity: 0, y: -8, scale: 0.995 }}
-            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.995 }}
+            transition={reduceMotion ? { duration: 0.01 } : { duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             style={{ pointerEvents: isUnlocking ? 'none' : 'auto' }}
           >
             {/* 🌫️ مشهد البوابة — طبقة واحدة في CSS (`.lx-scene`).
@@ -686,7 +703,7 @@ export default function Login() {
             
 
             <motion.div
-              variants={GATE_RISE}
+              variants={reduceMotion ? FADE_GROUP : GATE_RISE}
               initial="hidden"
               animate="show"
               className="lx-gate-board relative z-10 flex h-full flex-col items-center justify-center px-6 w-full max-w-[min(92vw,540px)] mx-auto"
@@ -695,11 +712,12 @@ export default function Login() {
 }
 
               {/* ── ختم الهوية: الهلال هو علامة موجز الاستجابة ── */}
-              <motion.div variants={GATE_ITEM} className="lx-gate-emblem relative">
+              <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-gate-emblem relative">
                 <motion.div style={{ x: parSX, y: parSY }} className="lx-crest-stack">
                   <motion.div
                     id="lx-crest"
                     layoutId="erc-mark"
+                    transition={reduceMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 380, damping: 32 }}
                     className={`lx-crest ${dragStage.goal || isUnlocking ? 'is-done' : ''}`}
                   >
                     <img src="/Egyptian_Red_Crescent.png" alt="الهلال الأحمر المصري" draggable="false" />
@@ -708,20 +726,20 @@ export default function Login() {
               </motion.div>
 
               <motion.h2
-                variants={GATE_ITEM}
+                variants={reduceMotion ? FADE_ITEM : GATE_ITEM}
                 className="lx-gate-title"
               >
                 {language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
               </motion.h2>
               <motion.p
-                variants={GATE_ITEM}
+                variants={reduceMotion ? FADE_ITEM : GATE_ITEM}
                 className="lx-gate-sub"
               >
                 {language === 'ar' ? 'أطلس الاستجابة الإنسانية · EOC' : 'HUMANITARIAN RESPONSE ATLAS · EOC'}
               </motion.p>
 
               {/* قراءة النسبة المئوية / شارة التفعيل */}
-              <motion.div variants={GATE_ITEM} className="lx-readout mt-7">
+              <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-readout mt-7">
                 {dragStage.pct && <span className="lx-pct" ref={pctRef} />}
                 {dragProgress === 1 && (
                   <span className="lx-granted lx-morph"><i />{t('مُفعّل', 'ACTIVATED')}</span>
@@ -729,7 +747,7 @@ export default function Login() {
               </motion.div>
 
               {/* ── مسار السحب ── */}
-              <motion.div variants={GATE_ITEM} className="lx-gate-slider w-full flex justify-center">
+              <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-gate-slider w-full flex justify-center">
                 <div
                   ref={trackRef}
                   className={`lx-track ${isDragging ? 'is-dragging' : ''} ${isUnlocking ? 'is-done' : ''}`}
@@ -772,13 +790,7 @@ export default function Login() {
                 </div>
               </motion.div>
 
-              <motion.p
-                variants={GATE_ITEM}
-                className="lx-gate-foot mt-9"
-                style={language === 'ar' ? { letterSpacing: '.1em' } : undefined}
-              >
-                {language === 'ar' ? 'مركز تنسيق الاستجابة · الهلال الأحمر المصري' : 'RESPONSE COORDINATION · EGYPTIAN RED CRESCENT'}
-              </motion.p>
+
             </motion.div>
           </motion.div>
         )}
@@ -788,15 +800,15 @@ export default function Login() {
       <div className="relative z-10 flex items-center justify-center min-h-[100dvh] p-4 sm:p-8">
         <motion.div
           className="lx-deck"
-          variants={DECK_ENTER}
+          variants={reduceMotion ? FADE_GROUP : DECK_ENTER}
           initial="hidden"
           animate={isMounted ? 'show' : 'hidden'}
         >
           {/* ─── الرباط العلوي: هوية القيادة + الحالة الحية ─── */}
-          <motion.div variants={DECK_CHILD} className="lx-ribbon">
+          <motion.div variants={reduceMotion ? FADE_ITEM : DECK_CHILD} className="lx-ribbon">
             <div className="lx-ribbon-inner">
               <div className="lx-brand">
-                <motion.span layoutId="erc-mark" className="lx-logo-tile" aria-hidden="true">
+                <motion.span layoutId="erc-mark" transition={reduceMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 380, damping: 32 }} className="lx-logo-tile" aria-hidden="true">
                   <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
                 </motion.span>
                 <div className="lx-brand-copy">
@@ -817,7 +829,7 @@ export default function Login() {
           {/* ─── الجسم: كونسول الجاهزية + نموذج الوصول ─── */}
           <div className="flex flex-col">
             {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة */}
-            <motion.div variants={DECK_CHILD} className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
+            <motion.div variants={reduceMotion ? FADE_ITEM : DECK_CHILD} className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
               {/* الرادار */}
               <div className="lx-radar shrink-0" aria-hidden="true">
                 <div className="lx-radar-sweep" />
@@ -847,7 +859,7 @@ export default function Login() {
             </motion.div>
 
             {/* نموذج الوصول الموحّد */}
-            <motion.div variants={DECK_CHILD} className="lx-access-panel">
+            <motion.div variants={reduceMotion ? FADE_ITEM : DECK_CHILD} className="lx-access-panel">
               <div className="lx-access-grid">
                 {/* عمود المقدمة/الثقة */}
                 <div className="lx-access-intro">
@@ -880,7 +892,7 @@ export default function Login() {
                     {loginStage === 'verify' ? (
                       <motion.div
                         key="verify"
-                        {...TAB_PAGE}
+                        {...(reduceMotion ? FADE_PAGE : TAB_PAGE)}
                         className="lx-otp-panel"
                       >
                         <div>
@@ -960,14 +972,14 @@ export default function Login() {
                     ) : (
                       <motion.div
                         key="form"
-                        variants={FORM_COL}
+                        variants={reduceMotion ? FADE_GROUP : FORM_COL}
                         initial="hidden"
                         animate="show"
                         exit="exit"
                         className="flex flex-col gap-5"
                       >
                         {errorMsg && (
-                          <motion.div variants={FORM_ITEM} className="lx-error" role="alert">
+                          <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-error" role="alert">
                             <span className="lx-error-ic" aria-hidden="true"><AlertIcon /></span>
                             <div className="text-sm leading-snug">
                               <p className="font-bold mb-0.5">{language === 'ar' ? 'تعذّر الدخول' : 'Sign-in failed'}</p>
@@ -977,7 +989,7 @@ export default function Login() {
                         )}
 
                         <form onSubmit={handleLogin} className="lx-credentials-form" autoComplete="on">
-                          <motion.div variants={FORM_ITEM} className={`lx-field ${username ? 'is-filled' : ''}`}>
+                          <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className={`lx-field ${username ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
                             <label className="lx-label" htmlFor="lx-username">
                               <span className="lx-label-dot" aria-hidden="true" />
@@ -999,7 +1011,7 @@ export default function Login() {
                             </div>
                           </motion.div>
 
-                          <motion.div variants={FORM_ITEM} className={`lx-field ${password ? 'is-filled' : ''}`}>
+                          <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className={`lx-field ${password ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
                             <label className="lx-label" htmlFor="lx-password">
                               <span className="lx-label-dot" aria-hidden="true" />
@@ -1036,8 +1048,8 @@ export default function Login() {
                           </motion.div>
 
                           <motion.button
-                            variants={FORM_ITEM}
-                            whileTap={isLoading ? undefined : { scale: 0.982 }}
+                            variants={reduceMotion ? FADE_ITEM : FORM_ITEM}
+                            whileTap={reduceMotion || isLoading ? undefined : { scale: 0.982 }}
                             type="submit"
                             disabled={isLoading}
                             className={`lx-submit ${isLoading ? 'is-loading' : ''}`}
@@ -1049,7 +1061,7 @@ export default function Login() {
                           </motion.button>
                         </form>
 
-                        <motion.div variants={FORM_ITEM} className="lx-trust lx-trust--bottom">
+                        <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className="lx-trust lx-trust--bottom">
                           <b aria-hidden="true">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.4">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 12.5 9.5 17 19 7" />
