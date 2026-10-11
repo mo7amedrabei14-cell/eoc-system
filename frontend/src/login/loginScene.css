@@ -3337,3 +3337,10 @@ body:has(.lx) { margin: 0 !important; }
   0%, 100% { opacity: .32; transform: translateX(0); }
   50% { opacity: .85; transform: translateX(2px); }
 }
+
+/* ── Final cascade guard: one scene, no competing transforms, no idle clutter ─ */
+.lx-gate > .lx-scene { display: none !important; }
+.lx-boot { display: none !important; }
+.lx-crest-stack, .lx-radar { animation: none !important; }
+.lx-track-shine { display: none !important; animation: none !important; }
+.lx-chevs svg { animation: none !important; }
