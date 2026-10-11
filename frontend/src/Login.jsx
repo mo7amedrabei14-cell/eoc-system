@@ -166,7 +166,11 @@ const LAMP_FIREFLIES = [
   [61, 29, 4, 32, -24], [69, 61, 3, 27, -13], [77, 16, 3, 35, -6],
   [86, 72, 4, 30, -19], [93, 39, 3, 33, -9], [12, 84, 3, 38, -26],
   [46, 48, 3, 25, -17], [73, 87, 4, 34, -3], [57, 9, 3, 29, -22],
-  [29, 51, 4, 37, -7],
+  [29, 51, 4, 37, -7], [5, 48, 3, 35, -12], [20, 8, 4, 32, -25],
+  [37, 43, 3, 30, -5], [49, 92, 4, 37, -18], [64, 47, 3, 27, -10],
+  [82, 54, 4, 36, -21], [96, 85, 3, 29, -3], [15, 33, 4, 38, -14],
+  [28, 90, 3, 26, -23], [44, 61, 4, 31, -8], [58, 36, 3, 34, -17],
+  [72, 7, 4, 28, -1], [89, 24, 3, 33, -19], [8, 73, 4, 30, -6],
 ];
 
 function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone = false, showCaption = false }) {
@@ -1064,9 +1068,9 @@ export default function Login() {
       </AnimatePresence>
 
       {/* ═══════════ كارت القيادة (Command Deck) ═══════════ */}
-      <div className="relative z-10 flex items-center justify-center min-h-[100dvh] p-4 sm:p-8">
+      <div className="lx-stage-shell relative z-10 min-h-[100dvh]">
         <motion.div
-          className="lx-deck"
+          className={`lx-deck ${loginStage === 'verify' ? 'is-verifying' : ''}`}
           variants={DECK_ENTER}
           initial="hidden"
           animate={lampOn && isMounted ? 'show' : 'hidden'}
@@ -1131,21 +1135,36 @@ export default function Login() {
             </motion.div>
 
             {/* نموذج الوصول الموحّد */}
-            <motion.div variants={DECK_CHILD} className="p-7 sm:p-10">
+            <motion.div variants={DECK_CHILD} className="p-7 sm:p-10" dir={isRTL ? 'rtl' : 'ltr'}>
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start gap-8 lg:gap-12">
-                {/* عمود المقدمة/الثقة */}
-                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
-                  <div>
+                {/* Brand stays visible inside the glass login card; no secondary auth options. */}
+                <div className="lx-login-intro w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
+                  <div className="lx-login-brand">
+                    <span className="lx-login-brand-mark">
+                      <img
+                        src="/Egyptian_Red_Crescent.png"
+                        alt={language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
+                        draggable="false"
+                      />
+                    </span>
+                    <span className="lx-login-brand-copy">
+                      <strong>{language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}</strong>
+                      <span>{language === 'ar' ? 'مركز عمليات الطوارئ' : 'Emergency Operations Center'}</span>
+                    </span>
+                  </div>
+                  <div className="lx-login-intro-copy">
                     <span className="lx-eyebrow mb-3">
-                      {language === 'ar' ? 'مركز تنسيق الاستجابة' : 'RESPONSE COORDINATION'}
+                      {language === 'ar' ? 'دخول آمن · مركز العمليات' : 'SECURE ACCESS · OPERATIONS CENTER'}
                     </span>
                     <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
-                      {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Response Coordination Desk'}
+                      {loginStage === 'verify'
+                        ? (language === 'ar' ? 'التحقق من الهوية' : 'Identity verification')
+                        : (language === 'ar' ? 'مرحبًا بعودتك' : 'Welcome Back')}
                     </h3>
                     <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
-                      {language === 'ar'
-                        ? 'تحقق من بيانات اعتمادك للدخول إلى مركز عمليات الطوارئ.'
-                        : 'Verify your credentials to enter the response coordination desk.'}
+                      {loginStage === 'verify'
+                        ? (language === 'ar' ? 'أكمل خطوة التحقق لإتمام تسجيل الدخول.' : 'Complete verification to finish signing in.')
+                        : (language === 'ar' ? 'أدخل بياناتك للوصول إلى مركز عمليات الطوارئ.' : 'Enter your credentials to access the Emergency Operations Center.')}
                     </p>
                   </div>
                   <div className="hidden lg:flex lx-trust">
