@@ -263,7 +263,6 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
     stopSpring();
     dragRef.current = { active: true, startX: event.clientX, startY: event.clientY, x: 0, y: 0, pointerId: event.pointerId };
     setIsDragging(true);
-    setCordHintEnabled(false);
     try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer capture may be unavailable */ }
   };
 
