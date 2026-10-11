@@ -3815,3 +3815,35 @@
   direction: ltr;
   unicode-bidi: isolate;
 }
+
+
+/* Extend Arabic RTL treatment across the complete sign-in panel, from
+   the secure-access heading through the credential fields and helper text. */
+.lx[dir="rtl"] .lx-deck .p-7 > .grid {
+  direction: rtl;
+}
+.lx[dir="rtl"] .lx-deck .lx-login-intro,
+.lx[dir="rtl"] .lx-deck .lx-login-intro-copy,
+.lx[dir="rtl"] .lx-deck .lx-login-brand-copy,
+.lx[dir="rtl"] .lx-deck .lx-trust,
+.lx[dir="rtl"] .lx-deck .lx-field,
+.lx[dir="rtl"] .lx-deck .lx-label,
+.lx[dir="rtl"] .lx-deck .lx-caps,
+.lx[dir="rtl"] .lx-deck .lx-error,
+.lx[dir="rtl"] .lx-deck .lx-backlink {
+  direction: rtl;
+  text-align: right;
+}
+.lx[dir="rtl"] .lx-deck .lx-login-intro-copy :is(h3, p, span),
+.lx[dir="rtl"] .lx-deck .lx-login-brand-copy :is(strong, span),
+.lx[dir="rtl"] .lx-deck .lx-trust span,
+.lx[dir="rtl"] .lx-deck .lx-error :is(p, div) {
+  text-align: right;
+}
+.lx[dir="rtl"] .lx-deck .lx-input {
+  direction: rtl;
+  text-align: right;
+}
+.lx[dir="rtl"] .lx-deck .lx-input::placeholder {
+  text-align: right;
+}
