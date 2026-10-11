@@ -1064,9 +1064,9 @@ export default function Login() {
       </AnimatePresence>
 
       {/* ═══════════ كارت القيادة (Command Deck) ═══════════ */}
-      <div className="relative z-10 flex items-center justify-center min-h-[100dvh] p-4 sm:p-8">
+      <div className="lx-stage-shell relative z-10 min-h-[100dvh]">
         <motion.div
-          className="lx-deck"
+          className={`lx-deck ${loginStage === 'verify' ? 'is-verifying' : ''}`}
           variants={DECK_ENTER}
           initial="hidden"
           animate={lampOn && isMounted ? 'show' : 'hidden'}
@@ -1131,21 +1131,36 @@ export default function Login() {
             </motion.div>
 
             {/* نموذج الوصول الموحّد */}
-            <motion.div variants={DECK_CHILD} className="p-7 sm:p-10">
+            <motion.div variants={DECK_CHILD} className="p-7 sm:p-10" dir={isRTL ? 'rtl' : 'ltr'}>
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start gap-8 lg:gap-12">
-                {/* عمود المقدمة/الثقة */}
-                <div className="w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
-                  <div>
+                {/* Brand stays visible inside the glass login card; no secondary auth options. */}
+                <div className="lx-login-intro w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
+                  <div className="lx-login-brand">
+                    <span className="lx-login-brand-mark">
+                      <img
+                        src="/Egyptian_Red_Crescent.png"
+                        alt={language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
+                        draggable="false"
+                      />
+                    </span>
+                    <span className="lx-login-brand-copy">
+                      <strong>{language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}</strong>
+                      <span>{language === 'ar' ? 'مركز عمليات الطوارئ' : 'Emergency Operations Center'}</span>
+                    </span>
+                  </div>
+                  <div className="lx-login-intro-copy">
                     <span className="lx-eyebrow mb-3">
-                      {language === 'ar' ? 'مركز تنسيق الاستجابة' : 'RESPONSE COORDINATION'}
+                      {language === 'ar' ? 'دخول آمن · مركز العمليات' : 'SECURE ACCESS · OPERATIONS CENTER'}
                     </span>
                     <h3 className="text-2xl md:text-[1.7rem] font-bold text-[var(--ink)] tracking-tight mt-3">
-                      {language === 'ar' ? 'مركز عمليات الطوارئ' : 'Response Coordination Desk'}
+                      {loginStage === 'verify'
+                        ? (language === 'ar' ? 'التحقق من الهوية' : 'Identity verification')
+                        : (language === 'ar' ? 'مرحبًا بعودتك' : 'Welcome Back')}
                     </h3>
                     <p className="text-[var(--muted)] text-sm mt-2 leading-relaxed">
-                      {language === 'ar'
-                        ? 'تحقق من بيانات اعتمادك للدخول إلى مركز عمليات الطوارئ.'
-                        : 'Verify your credentials to enter the response coordination desk.'}
+                      {loginStage === 'verify'
+                        ? (language === 'ar' ? 'أكمل خطوة التحقق لإتمام تسجيل الدخول.' : 'Complete verification to finish signing in.')
+                        : (language === 'ar' ? 'أدخل بياناتك للوصول إلى مركز عمليات الطوارئ.' : 'Enter your credentials to access the Emergency Operations Center.')}
                     </p>
                   </div>
                   <div className="hidden lg:flex lx-trust">
