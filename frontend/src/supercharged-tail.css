@@ -446,7 +446,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .eoc-page-transitioning {
+  .eoc-page-transitioning,
+  .app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
     animation-duration: 1ms !important;
     will-change: auto;
   }
