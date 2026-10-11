@@ -10,6 +10,7 @@ import { checkServerHealth } from './serverHealthCore';
 import { setWorkingSuppressed } from './workingToast';
 // 🎛️ توكنات الحركة الموحّدة للنظام (نوابض + easing فخم)
 import { SPRING, SPRING_SOFT, EASE_OUT } from './motion/tokens';
+import { runVisualTransition } from './motion/visualTransitions';
 // 🎬 نظام البصريات «الجمرة السينمائية» — ملف منفصل ببادئة lx- حتى لا يمس لوحة التحكم
 import './login/loginScene.css';
 
@@ -712,7 +713,7 @@ export default function Login() {
 
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/dashboard');
+        runVisualTransition(() => navigate('/dashboard'));
       } else if (response.status >= 500) {
         setErrorMsg(language === 'ar'
           ? `🚫 السيرفر رد بخطأ (${response.status}) — جرّب تاني، ولو تكرر رستر السيرفر ثم اضغط Ctrl+Shift+R.`
@@ -734,7 +735,7 @@ export default function Login() {
     if (!pendingAuthData) return;
     sessionStorage.setItem('access_token', pendingAuthData.access_token);
     sessionStorage.setItem('user', JSON.stringify(pendingAuthData.user));
-    navigate('/dashboard');
+    runVisualTransition(() => navigate('/dashboard'));
   };
 
   const resetVerification = () => {
