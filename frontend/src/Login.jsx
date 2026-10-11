@@ -261,6 +261,20 @@ export default function Login() {
 
   // بارالاكس لطيف لختم الأطلس مع حركة المؤشر (يُلغى تلقائيًا مع reduced-motion)
   const reduceMotion = useReducedMotion();
+
+  // Progressive enhancement around the existing successful route change.
+  // Unsupported browsers and reduced-motion users retain immediate navigation.
+  const navigateWithEntryTransition = useCallback((to) => {
+    if (reduceMotion || typeof document.startViewTransition !== 'function') {
+      navigate(to);
+      return;
+    }
+    try {
+      document.startViewTransition(() => navigate(to));
+    } catch {
+      navigate(to);
+    }
+  }, [navigate, reduceMotion]);
   const parX = useMotionValue(0);
   const parY = useMotionValue(0);
   const parSX = useSpring(parX, { stiffness: 55, damping: 17 });
@@ -512,7 +526,7 @@ export default function Login() {
 
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/dashboard');
+        navigateWithEntryTransition('/dashboard');
       } else if (response.status >= 500) {
         setErrorMsg(language === 'ar'
           ? `🚫 السيرفر رد بخطأ (${response.status}) — جرّب تاني، ولو تكرر رستر السيرفر ثم اضغط Ctrl+Shift+R.`
@@ -534,7 +548,7 @@ export default function Login() {
     if (!pendingAuthData) return;
     sessionStorage.setItem('access_token', pendingAuthData.access_token);
     sessionStorage.setItem('user', JSON.stringify(pendingAuthData.user));
-    navigate('/dashboard');
+    navigateWithEntryTransition('/dashboard');
   };
 
   const resetVerification = () => {
