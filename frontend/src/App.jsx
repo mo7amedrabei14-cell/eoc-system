@@ -6,6 +6,7 @@ import Dashboard, { WorkingToast } from './Dashboard';
 import { installWorkingAuto } from './workingToast';
 import CustomTooltipLayer from './components/CustomTooltipLayer';
 import './motion/premiumPageTransitions.css';
+import { ENABLE_VISUAL_TRANSITIONS } from './motion/visualTransitions';
 
 // ⛑️ حبة العمل العامة — مركّبة على مستوى التطبيق كله (تشمل شاشة الدخول وأي صفحة)
 installWorkingAuto();
@@ -51,7 +52,7 @@ function VisualTransitionFallback() {
   useLayoutEffect(() => {
     const changed = previousPathRef.current !== location.pathname;
     previousPathRef.current = location.pathname;
-    if (!changed || reduceMotion) return undefined;
+    if (!ENABLE_VISUAL_TRANSITIONS || !changed || reduceMotion) return undefined;
 
     // The browser's native transition already owns this route change.
     if (document.documentElement.dataset.eocViewTransition) return undefined;
@@ -69,7 +70,7 @@ function VisualTransitionFallback() {
   }, [location.pathname, reduceMotion]);
 
   useEffect(() => {
-    if (location.pathname !== '/dashboard' || reduceMotion) return undefined;
+    if (!ENABLE_VISUAL_TRANSITIONS || location.pathname !== '/dashboard' || reduceMotion) return undefined;
 
     const readActivePage = () => document.querySelector('.nav-item.is-active');
     let activePage = readActivePage();
