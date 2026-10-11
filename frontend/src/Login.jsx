@@ -167,7 +167,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
-  const [showGate, setShowGate] = useState(true);
+  const [showGate, setShowGate] = useState(false);
   // Visual-only lamp interaction: never affects authentication, gate, or OTP state.
   const [lampOn, setLampOn] = useState(true);
   const [lampPulling, setLampPulling] = useState(false);
@@ -185,7 +185,7 @@ export default function Login() {
     return () => setWorkingSuppressed(false);
   }, []);
 
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted, setIsMounted] = useState(true);
   // 🔐 خطوة تحقق إضافية بكود 6 أرقام — تظهر فقط لحساب الأونر بعد نجاح الدخول العادي
   const [loginStage, setLoginStage] = useState('form'); // 'form' | 'verify'
   const [pendingAuthData, setPendingAuthData] = useState(null);
@@ -196,7 +196,7 @@ export default function Login() {
   const OWNER_VERIFICATION_CODE = '301014';
   // إشارة فتح الأطلس تظهر مرة واحدة عند تحميل الشاشة
   // الافتتاحية تعمل دائمًا عند كل Refresh بدون أي استثناء.
-  const [openingCeremony, setOpeningCeremony] = useState(true);
+  const [openingCeremony, setOpeningCeremony] = useState(false);
   const usernameRef = useRef(null);
   // 🩺 مراقبة السيرفر الحقيقية (نبضة /api/health كل 20 ثانية)
   const serverHealth = useServerHealth();
