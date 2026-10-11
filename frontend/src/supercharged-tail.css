@@ -273,10 +273,6 @@
 }
 
 .app-shell #main-scroll-container > div .kpi-card {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--kpi-tone, var(--accent)) 7%, transparent), transparent 46%),
-    linear-gradient(180deg, var(--dashboard-card-top), transparent 48%),
-    linear-gradient(145deg, var(--sc-surface-3), var(--sc-surface-1) 78%);
   border-color: color-mix(in srgb, var(--sc-hair-strong) 82%, var(--kpi-tone, var(--accent)));
   box-shadow:
     inset 0 1px 0 var(--sc-light-top),
@@ -286,8 +282,7 @@
   transition:
     transform 240ms var(--sc-ease),
     border-color 240ms var(--sc-ease),
-    box-shadow 240ms var(--sc-ease),
-    background-color 240ms var(--sc-ease);
+    box-shadow 240ms var(--sc-ease);
 }
 [dir="rtl"] .app-shell #main-scroll-container > div .kpi-card {
   box-shadow:
@@ -295,10 +290,6 @@
     inset 0 0 0 1px color-mix(in srgb, var(--sc-hair) 44%, transparent),
     inset -3px 0 0 color-mix(in srgb, var(--kpi-tone, var(--accent)) 58%, transparent),
     0 12px 30px -23px rgba(0, 0, 0, 0.8);
-}
-.app-shell #main-scroll-container > div .kpi-card::after {
-  opacity: 0.72;
-  transition: opacity 240ms var(--sc-ease);
 }
 .app-shell #main-scroll-container > div .kpi-card > div:first-child > div {
   box-shadow:
