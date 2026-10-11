@@ -1,5 +1,8 @@
 import { flushSync } from 'react-dom';
 
+// One-line rollback switch: set false to disable all transitions from this pass.
+export const ENABLE_VISUAL_TRANSITIONS = true;
+
 let transitionSequence = 0;
 
 const prefersReducedMotion = () => (
@@ -17,7 +20,8 @@ export function runVisualTransition(update, { enabled = true } = {}) {
   if (typeof update !== 'function') return undefined;
 
   if (
-    !enabled
+    !ENABLE_VISUAL_TRANSITIONS
+    || !enabled
     || typeof document === 'undefined'
     || typeof document.startViewTransition !== 'function'
     || prefersReducedMotion()
