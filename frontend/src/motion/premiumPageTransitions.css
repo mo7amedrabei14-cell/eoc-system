@@ -46,11 +46,6 @@
     0 0 80px 18px rgba(199, 0, 0, .13);
 }
 
-@keyframes eoc-dashboard-page-arrive {
-  0% { opacity: .24; transform: translate3d(30px, 12px, 0) scale(.986); }
-  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .eoc-route-curtain { display: none !important; }
 }
