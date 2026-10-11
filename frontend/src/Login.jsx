@@ -196,6 +196,9 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
   const springFrameRef = useRef(0);
   const dragRef = useRef({ active: false, startX: 0, startY: 0, x: 0, y: 0, pointerId: null });
   const [isDragging, setIsDragging] = useState(false);
+  // Keep the native pull hint, but dismiss it for the rest of the drag interaction.
+  // Re-enable it only after the pointer leaves the cord, preventing a stuck tooltip.
+  const [isCordHintEnabled, setCordHintEnabled] = useState(true);
 
   const paintString = (x, y) => {
     const cord = cordRef.current;
@@ -263,6 +266,7 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
     stopSpring();
     dragRef.current = { active: true, startX: event.clientX, startY: event.clientY, x: 0, y: 0, pointerId: event.pointerId };
     setIsDragging(true);
+    setCordHintEnabled(false);
     try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer capture may be unavailable */ }
   };
 
@@ -318,6 +322,8 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
           ref={cordRef}
           type="button"
           className="lx-lamp-cord"
+          title={isCordHintEnabled ? cordLabel : undefined}
+          onPointerLeave={() => setCordHintEnabled(true)}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
