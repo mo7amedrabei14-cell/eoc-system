@@ -69,8 +69,8 @@ body:has(.lx) { margin: 0 !important; }
 .lx button,
 .lx input { font-family: inherit; }
 .lx button,
-.lx [role="slider"],
 .lx input { touch-action: manipulation; }
+.lx [role="slider"] { touch-action: pan-y; }
 .lx button:focus-visible,
 .lx [role="slider"]:focus-visible,
 .lx input:focus-visible {
@@ -947,13 +947,13 @@ body:has(.lx) { margin: 0 !important; }
   .lx-deck { grid-template-rows: 3.9rem minmax(0, 1fr); }
   .lx-ribbon { padding-inline: 4.4rem; }
   .lx-brand { gap: .58rem; }
-  .lx-logo-tile { width: 2.35rem; height: 2.35rem; border-radius: .72rem; }
+  .lx-logo-tile { width: 34px; height: 34px; border-radius: 10px; }
   .lx-brand-name { font-size: .76rem; }
   .lx-brand-subtitle { font-size: .58rem; }
   .lx-ribbon-meta { display: none; }
   .lx-deck > .flex.flex-col { padding: 9px 10px; }
   .lx-access-panel {
-    width: min(100%, 29rem);
+    width: min(100%, 34rem);
     padding: 1.2rem;
     border-radius: 1.4rem;
   }
@@ -977,7 +977,7 @@ body:has(.lx) { margin: 0 !important; }
   .lx[dir="rtl"] .lx-gate-title { font-size: clamp(1.9rem, 7.8vw, 2.5rem) !important; }
   .lx-gate-sub { max-width: 25rem; margin-top: .45rem !important; font-size: .77rem !important; }
   .lx-gate-slider { margin-top: 1.55rem !important; }
-  .lx-track { height: 54px; }
+  .lx-track { width: min(100%, 360px); height: 54px; }
   .lx-track-label { padding-inline: 3.5rem; font-size: .75rem; }
 }
 @media (max-width: 380px) {
