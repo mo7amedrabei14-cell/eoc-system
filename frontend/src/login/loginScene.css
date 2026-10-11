@@ -183,15 +183,6 @@ body:has(.lx) { margin: 0 !important; }
     radial-gradient(circle at 33% 25%, rgba(255,255,255,.96), transparent 28%),
     radial-gradient(circle at 51% 52%, rgba(138,128,216,.075), transparent 65%);
 }
-.lx-crest-glow {
-  position: absolute;
-  inset: -11%;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(circle, rgba(140,130,223,.13), transparent 70%);
-  filter: blur(15px);
-  pointer-events: none;
-}
 
 /* ── Global language and theme controls: consistent 44px targets ─────────── */
 .lx > .lx-pill-btn,
@@ -852,6 +843,29 @@ body:has(.lx) { margin: 0 !important; }
 }
 .lx-error-ic { display: grid; place-items: center; flex: 0 0 auto; color: var(--accent); }
 .lx-error-ic svg { width: 1rem; height: 1rem; }
+
+/* Secondary OTP action: visible, quiet, and keyboard/touch friendly. */
+.lx-backlink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: .55rem .8rem;
+  border: 1px solid var(--qs-border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 620;
+  transition: color var(--qs-fast) ease, background-color var(--qs-fast) ease, border-color var(--qs-fast) ease;
+}
+.lx-backlink:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border-color: color-mix(in srgb, var(--ink) 18%, var(--qs-border));
+}
+.lx-backlink:active { transform: scale(.99); }
 
 /* OTP: clear digits, 44px minimum interactive wrapper, no orbit decoration. */
 .lx-otp-panel {
