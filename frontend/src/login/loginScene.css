@@ -3853,8 +3853,11 @@
 }
 /* OTP digits must stay visually centered even when the surrounding login panel is RTL. */
 .lx[dir="rtl"] .otp-orbit-zone .otp-box {
-  direction: ltr;
-  text-align: center;
+  direction: ltr !important;
+  text-align: center !important;
+  text-indent: 0 !important;
+  padding-inline: 0 !important;
+  unicode-bidi: isolate;
 }
 
 /* Keep Latin codes, numeric OTP, and technical identifiers readable. */
