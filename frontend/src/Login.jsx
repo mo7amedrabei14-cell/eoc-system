@@ -168,6 +168,17 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(true);
+  // Visual-only lamp interaction: never affects authentication, gate, or OTP state.
+  const [lampOn, setLampOn] = useState(true);
+  const [lampPulling, setLampPulling] = useState(false);
+  const lampPullTimerRef = useRef(null);
+  const handleLampPull = () => {
+    if (lampPullTimerRef.current) clearTimeout(lampPullTimerRef.current);
+    setLampPulling(true);
+    setLampOn((value) => !value);
+    lampPullTimerRef.current = setTimeout(() => setLampPulling(false), 480);
+  };
+  useEffect(() => () => { if (lampPullTimerRef.current) clearTimeout(lampPullTimerRef.current); }, []);
   // 🔇 كتم الحبة في شاشة الدخول — مؤشر التحميل هنا هو سبينر زر الدخول نفسه
   useEffect(() => {
     setWorkingSuppressed(true);
@@ -894,20 +905,33 @@ export default function Login() {
           <div className="flex flex-col">
             {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة */}
             <motion.div variants={DECK_CHILD} className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
-              {/* الرادار */}
-              <div className="lx-radar shrink-0" aria-hidden="true">
-                <div className="lx-radar-sweep" />
-                <span className="lx-radar-ring lx-radar-ring--1" />
-                <span className="lx-radar-ring lx-radar-ring--2" />
-                <span className="lx-radar-blip" style={{ top: '13%', insetInlineEnd: '26%', width: '0.4375rem', height: '0.4375rem', background: 'var(--accent)' }} />
-                <span className="lx-radar-blip" style={{ bottom: '21%', insetInlineStart: '23%', width: '0.3125rem', height: '0.3125rem', background: 'var(--ok)', animationDelay: '1.1s' }} />
-                <img
-  src="/Egyptian_Red_Crescent.png"
-  alt="الهلال الأحمر المصري"
-  draggable="false"
-  className="lx-radar-logo"
-  />
-
+              {/* Interactive lamp — visual-only control; authentication flow remains untouched. */}
+              <div className={`lx-lamp-stage ${lampOn ? 'is-on' : 'is-off'} ${lampPulling ? 'is-pulling' : ''}`}>
+                <span className="lx-lamp-aura" aria-hidden="true" />
+                <span className="lx-lamp-cone" aria-hidden="true" />
+                <div className="lx-lamp" aria-label={t('مصباح تفاعلي للزينة','Decorative interactive lamp')}>
+                  <span className="lx-lamp-head" aria-hidden="true">
+                    <span className="lx-lamp-bulb" />
+                  </span>
+                  <span className="lx-lamp-neck" aria-hidden="true" />
+                  <span className="lx-lamp-stem" aria-hidden="true" />
+                  <span className="lx-lamp-foot" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="lx-lamp-cord"
+                    onClick={handleLampPull}
+                    aria-label={lampOn ? t('إطفاء المصباح','Turn lamp off') : t('إضاءة المصباح','Turn lamp on')}
+                    aria-pressed={lampOn}
+                    title={lampOn ? t('اسحب الحبل لإطفاء الضوء','Pull the cord to switch the light off') : t('اسحب الحبل لتشغيل الضوء','Pull the cord to switch the light on')}
+                  >
+                    <span className="lx-lamp-string" aria-hidden="true" />
+                    <span className="lx-lamp-pull" aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="lx-lamp-caption" aria-live="polite">
+                  <span className="lx-lamp-status-dot" aria-hidden="true" />
+                  <span>{lampOn ? t('مركز العمليات · جاهز','OPERATIONS CENTER · READY') : t('الإضاءة في وضع الاستعداد','AMBIENT LIGHT STANDBY')}</span>
+                </div>
               </div>
 
               {/* القياسات: صف ثلاثي متناظر */}
