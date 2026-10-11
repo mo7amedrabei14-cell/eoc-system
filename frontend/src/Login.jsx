@@ -708,8 +708,7 @@ export default function Login() {
               animate="show"
               className="lx-gate-board relative z-10 flex h-full flex-col items-center justify-center px-6 w-full max-w-[min(92vw,540px)] mx-auto"
             >
-              {/* تظهر إشارة المسار مرة واحدة مع فتح الأطلس */}
-}
+              {/* Shared ERC mark — one quiet entry gesture */}
 
               {/* ── ختم الهوية: الهلال هو علامة موجز الاستجابة ── */}
               <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-gate-emblem relative">
