@@ -2951,3 +2951,124 @@
   .lx-lamp-cord { animation: none !important; }
   .lx-lamp-stage *, .lx-lamp-stage { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PULL-CORD LOGIN REVEAL — visual states only; authentication remains unchanged.
+   0: lamp-only blackout; 1: reveal login; 2: warm light shift; 3: blackout.
+   ERC brand red remains #c70000 throughout.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.lx.lx-phase-0,
+.lx.lx-phase-3 {
+  position: relative;
+  min-height: 100dvh;
+  background: #000 !important;
+  color: #fff !important;
+  overflow: hidden !important;
+}
+.lx.lx-phase-0 > *:not(.lx-lamp-darkroom),
+.lx.lx-phase-3 > *:not(.lx-lamp-darkroom) {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+.lx-lamp-darkroom {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #000;
+  color: #fff;
+  animation: lx-darkroom-in 520ms cubic-bezier(.2,.7,.2,1) both;
+}
+.lx-lamp-stage--solo {
+  width: 100vw;
+  max-width: none;
+  min-height: 100dvh;
+  height: 100dvh;
+  gap: 0;
+  justify-content: center;
+  align-items: center;
+}
+.lx-lamp-stage--solo .lx-lamp {
+  transform: scale(1.08) translateY(-.2rem);
+  transform-origin: center;
+}
+.lx-lamp-stage--solo .lx-lamp-aura {
+  width: min(82vw, 30rem);
+  height: min(82vw, 30rem);
+}
+.lx-lamp-darkroom.is-off .lx-lamp-aura,
+.lx-lamp-darkroom.is-off .lx-lamp-cone {
+  opacity: 0 !important;
+}
+.lx-lamp-darkroom.is-off .lx-lamp-bulb {
+  background: #282a31 !important;
+  box-shadow: none !important;
+}
+.lx-lamp-darkroom.is-off .lx-lamp-head {
+  background: linear-gradient(145deg,#272932 0%,#15161c 48%,#08090c 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -8px 15px rgba(0,0,0,.5) !important;
+}
+.lx-lamp-darkroom.is-off .lx-lamp-neck,
+.lx-lamp-darkroom.is-off .lx-lamp-stem,
+.lx-lamp-darkroom.is-off .lx-lamp-foot {
+  filter: brightness(.66);
+}
+@keyframes lx-darkroom-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The second pull changes the light's colour temperature, not the ERC brand. */
+.lx.lx-phase-2 .lx-scene {
+  background-image:
+    radial-gradient(ellipse 48rem 42rem at 22% 52%, rgba(255,177,64,.16), transparent 68%),
+    radial-gradient(ellipse 40rem 34rem at 84% 82%, rgba(255,155,54,.08), transparent 72%),
+    radial-gradient(ellipse 85% 90% at 50% 48%, transparent 40%, rgba(0,0,0,.42) 100%),
+    radial-gradient(circle, rgba(255,246,220,.42) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255,229,178,.2) 0 1px, transparent 1.5px);
+  background-size: auto, auto, auto, 117px 113px, 173px 167px;
+  background-position: center, center, center, 18px 12px, 63px 49px;
+}
+.lx.lx-phase-2 .lx-console {
+  background:
+    radial-gradient(ellipse 100% 72% at 50% 42%, rgba(255,174,64,.17), transparent 72%),
+    linear-gradient(160deg, color-mix(in srgb, var(--surface-2) 76%, transparent), color-mix(in srgb, var(--surface) 78%, transparent));
+}
+.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-aura {
+  background: radial-gradient(circle, rgba(255,190,82,.24), rgba(255,161,57,.09) 34%, transparent 72%);
+}
+.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-cone {
+  background: linear-gradient(180deg, rgba(255,219,135,.37), rgba(255,174,63,.17) 42%, transparent 100%);
+}
+.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-bulb {
+  background: #fff2cc;
+  box-shadow: 0 0 10px 5px rgba(255,244,210,.95), 0 0 28px 14px rgba(255,177,64,.58), 0 0 65px 30px rgba(255,150,42,.32);
+}
+.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-head {
+  background: linear-gradient(145deg,#6b4c30 0%,#39291f 48%,#17120e 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 0 34px rgba(255,177,64,.22);
+}
+.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-status-dot {
+  background: #ffb84d;
+  box-shadow: 0 0 0 4px rgba(255,184,77,.12), 0 0 15px rgba(255,184,77,.6);
+}
+.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-pull {
+  background: linear-gradient(110deg,#fff0c4,#e9a33b 54%,#8c4c00);
+}
+.lx.lx-phase-2 .lx-deck {
+  border-color: rgba(255,184,77,.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 0 1px rgba(255,255,255,.02), 0 1px 2px rgba(0,0,0,.5), 0 32px 72px -40px rgba(255,155,54,.25);
+}
+@media (max-width: 480px) {
+  .lx-lamp-stage--solo .lx-lamp { transform: scale(.9) translateY(-.15rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-lamp-darkroom { animation-duration: .01ms !important; }
+}

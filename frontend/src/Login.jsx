@@ -168,14 +168,16 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(false);
-  // Visual-only lamp interaction: never affects authentication, gate, or OTP state.
-  const [lampOn, setLampOn] = useState(true);
+  // Pull-cord presentation cycle only: 0 = lamp-only, 1 = reveal login,
+  // 2 = shift the ambient light colour, 3 = lights out. A further pull restarts.
+  const [lampPhase, setLampPhase] = useState(0);
+  const lampOn = lampPhase !== 3;
   const [lampPulling, setLampPulling] = useState(false);
   const lampPullTimerRef = useRef(null);
   const handleLampPull = () => {
     if (lampPullTimerRef.current) clearTimeout(lampPullTimerRef.current);
     setLampPulling(true);
-    setLampOn((value) => !value);
+    setLampPhase((phase) => (phase + 1) % 4);
     lampPullTimerRef.current = setTimeout(() => setLampPulling(false), 480);
   };
   useEffect(() => () => { if (lampPullTimerRef.current) clearTimeout(lampPullTimerRef.current); }, []);
@@ -624,7 +626,7 @@ export default function Login() {
   return (
     <div
       ref={lxRootRef}
-      className="lx relative min-h-[100dvh] bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white"
+      className={`lx lx-phase-${lampPhase} relative min-h-[100dvh] bg-[var(--bg)] text-[var(--ink)] font-sans overflow-x-hidden selection:bg-[var(--accent)] selection:text-white`}
       dir={isRTL ? 'rtl' : 'ltr'}
       onPointerMove={handleGatePointerMove}
       onPointerLeave={handleScenePointerLeave}
@@ -632,6 +634,36 @@ export default function Login() {
       {/* 🩺 شاشة وقوع السيرفر — تظهر على صفحة الدخول نفسها (أول مكان بيوصل له الشباب) */}
       <ServerDownOverlay health={serverHealth} lang={language} />
       <ServerRecoveryBanner health={serverHealth} lang={language} />
+
+      {/* Full-screen lamp reveal. Only the lamp and pull cord exist visually
+          before the first pull and after the third pull; authentication is untouched. */}
+      {(lampPhase === 0 || lampPhase === 3) && (
+        <div className={`lx-lamp-darkroom ${lampOn ? 'is-on' : 'is-off'}`} dir="ltr">
+          <div className={`lx-lamp-stage lx-lamp-stage--solo ${lampOn ? 'is-on' : 'is-off'} ${lampPulling ? 'is-pulling' : ''}`}>
+            <span className="lx-lamp-aura" aria-hidden="true" />
+            <span className="lx-lamp-cone" aria-hidden="true" />
+            <div className="lx-lamp" aria-label={t('مصباح تفاعلي','Interactive lamp')}>
+              <span className="lx-lamp-head" aria-hidden="true">
+                <span className="lx-lamp-bulb" />
+              </span>
+              <span className="lx-lamp-neck" aria-hidden="true" />
+              <span className="lx-lamp-stem" aria-hidden="true" />
+              <span className="lx-lamp-foot" aria-hidden="true" />
+              <button
+                type="button"
+                className="lx-lamp-cord"
+                onClick={handleLampPull}
+                aria-label={lampOn ? t('اسحب الحبل لعرض تسجيل الدخول','Pull to reveal login') : t('اسحب الحبل لإضاءة المصباح','Pull to relight the lamp')}
+                aria-pressed={lampOn}
+                title={lampOn ? t('اسحب الحبل','Pull the cord') : t('اسحب الحبل لإعادة الإضاءة','Pull to turn the light back on')}
+              >
+                <span className="lx-lamp-string" aria-hidden="true" />
+                <span className="lx-lamp-pull" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══════════ الخلفية المحيطة — طبقة واحدة (`.lx-scene`) ═══════════
           كانت 9 عناصر (aurora / glow×3 / beam / grid / sweep / vignette / grain)
