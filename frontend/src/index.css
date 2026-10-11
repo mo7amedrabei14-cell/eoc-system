@@ -633,8 +633,11 @@ a, button { -webkit-tap-highlight-color: transparent; }
    السطح في ملفّين. أُزيلت لتُصبح المصدر واحدًا. */
 
 /* بطاقة / لوح — سطح خلفي مرتفع (Phase 9: lighter shadows, cleaner depth) */
-.card-surface {
+/* KPI cards use their own transparent surface; keep the generic fill off them. */
+.card-surface:not(.kpi-card) {
   background: var(--surface);
+}
+.card-surface {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   /* Lighter, cleaner shadows - contact + ambient only, no giant black shadows */
