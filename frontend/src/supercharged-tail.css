@@ -430,7 +430,8 @@
 /* One directional, scroll-like entrance for the page surface only.
    Direction is provided by App.jsx from the currently selected navigation item;
    this stylesheet intentionally does not style or animate the sidebar. */
-.eoc-page-transitioning {
+.eoc-page-transitioning,
+.app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
   animation: eoc-page-scroll-arrive 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: transform, opacity;
 }
