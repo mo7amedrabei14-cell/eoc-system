@@ -325,7 +325,6 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
           onKeyDown={handleKeyDown}
           aria-label={cordLabel}
           aria-pressed={lampOn}
-          title={cordLabel}
         >
           <svg className="lx-lamp-string-svg" viewBox="0 0 32 160" aria-hidden="true">
             <path ref={pathRef} d="M 16 0 Q 16 54 16 108" />
