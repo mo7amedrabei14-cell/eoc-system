@@ -1,49 +1,23 @@
-/* Motion-inspired, lifecycle-safe transitions for EOC.
-   The native View Transition API snapshots old/new UI without mounting two
-   React pages. Motion's transform+opacity animation is the complete fallback. */
+/* Unified navigation-motion policy.
+   App.jsx owns the only page-arrival animation (Web Animations API).
+   Native View Transition pseudo-elements are intentionally unused so routed
+   pages and dashboard views cannot start competing snapshot/keyframe layers. */
 
-.lx-deck .p-7 > .grid,
-#main-scroll-container > div.p-4 {
-  view-transition-name: eoc-primary-surface;
+/* A page-level arrival owns the movement: cancel decorative entrance effects
+   on the direct view root and on table rows. Keep live status flashes intact. */
+.app-shell #main-scroll-container > div.p-4 > .animate-fade-in-up {
+  animation: none !important;
 }
 
-/* The shared surface morphs between the existing login workspace and dashboard
-   content. Page shell/root gets only a restrained opacity hand-off; no sidebar
-   element has a transition name or per-element animation. */
-/* Keep the document/sidebar snapshot effectively still; the named content
-   surface below carries the visible transition. */
-::view-transition-group(root),
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 1ms;
-}
-
-::view-transition-group(eoc-primary-surface) {
-  animation-duration: 520ms;
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
-
-::view-transition-old(eoc-primary-surface) {
-  animation: eoc-surface-exit 140ms cubic-bezier(0.4, 0, 1, 1) both;
-}
-
-::view-transition-new(eoc-primary-surface) {
-  animation: eoc-surface-enter 520ms cubic-bezier(0.2, 0, 0, 1) both;
-}
-
-@keyframes eoc-surface-exit {
-  to { opacity: 0; transform: translate3d(0, -5px, 0) scale(1.02); }
-}
-
-@keyframes eoc-surface-enter {
-  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+#main-scroll-container table tbody tr:nth-child(-n+14):not(.mission-flash-row):not(.focus-row) {
+  animation: none !important;
+  animation-delay: 0ms !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation-duration: 1ms !important;
+  .app-shell #main-scroll-container > div,
+  .app-shell #home-view-top > * {
+    animation: none !important;
+    transition: none !important;
   }
 }
