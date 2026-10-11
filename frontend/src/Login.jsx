@@ -9,7 +9,7 @@ import { checkServerHealth } from './serverHealthCore';
 // 🔇 شاشة الدخول ليها مؤشرها الخاص (سبينر الزر) — حبة العمل العامة مكتومة هنا تماماً
 import { setWorkingSuppressed } from './workingToast';
 // 🎛️ توكنات الحركة الموحّدة للنظام (نوابض + easing فخم)
-import { SPRING, SPRING_SOFT, EASE_OUT } from './motion/tokens';
+import { SPRING_SOFT, EASE_OUT } from './motion/tokens';
 // 🎬 نظام البصريات «الجمرة السينمائية» — ملف منفصل ببادئة lx- حتى لا يمس لوحة التحكم
 import './login/loginScene.css';
 
