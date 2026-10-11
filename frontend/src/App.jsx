@@ -18,43 +18,48 @@ const DASHBOARD_SURFACE = '#main-scroll-container > div.p-4';
  * A CSS class drives the complete entrance; it never competes with a second
  * Framer Motion transform animation on the same surface.
  */
-const pageTransitionHandlers = new WeakMap();
+const pageTransitionAnimations = new WeakMap();
 
-function readActiveNavigationIndex() {
-  // Read the existing navigation state only. The sidebar DOM and behavior are untouched.
-  const items = Array.from(document.querySelectorAll('.nav-shell .nav-item'));
-  const activeItem = document.querySelector('.nav-shell .nav-item.is-active');
-  return activeItem ? items.indexOf(activeItem) : -1;
-}
+/**
+ * Single motion owner for route and in-dashboard view changes.
+ * Web Animations API runs one compositor animation on the arriving surface;
+ * no CSS keyframes or native View Transition snapshots compete with it.
+ */
+function triggerAutoScrollTransition(surface, direction = 1) {
+  if (!surface || typeof surface.animate !== 'function') return;
 
-function triggerPageTransition(surface, direction = 1) {
-  if (!surface) return;
-  const previousHandler = pageTransitionHandlers.get(surface);
-  if (previousHandler) surface.removeEventListener('animationend', previousHandler);
+  const previous = pageTransitionAnimations.get(surface);
+  if (previous) previous.cancel();
 
-  // Positive direction enters from below (scrolling down); negative enters from above.
-  surface.style.setProperty('--eoc-page-enter-y', direction < 0 ? '-28px' : '28px');
-  surface.classList.remove('eoc-page-transitioning');
-  // Restart the single CSS animation at the actual navigation boundary.
-  void surface.offsetWidth;
-  surface.classList.add('eoc-page-transitioning');
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
 
-  const finish = (event) => {
-    // animationend bubbles from page descendants; only the surface animation owns cleanup.
-    if (event.target !== surface || event.animationName !== 'eoc-page-scroll-arrive') return;
-    surface.classList.remove('eoc-page-transitioning');
-    surface.style.removeProperty('--eoc-page-enter-y');
-    surface.removeEventListener('animationend', finish);
-    pageTransitionHandlers.delete(surface);
+  const offset = direction < 0 ? -34 : 34;
+  const animation = surface.animate(
+    [
+      { opacity: 0.82, transform: `translate3d(0, ${offset}px, 0)` },
+      { opacity: 1, transform: 'translate3d(0, 0, 0)' },
+    ],
+    {
+      duration: 460,
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      fill: 'none',
+    },
+  );
+
+  pageTransitionAnimations.set(surface, animation);
+  const clear = () => {
+    if (pageTransitionAnimations.get(surface) === animation) {
+      pageTransitionAnimations.delete(surface);
+    }
   };
-  pageTransitionHandlers.set(surface, finish);
-  surface.addEventListener('animationend', finish);
+  animation.addEventListener('finish', clear, { once: true });
+  animation.addEventListener('cancel', clear, { once: true });
 }
 
 /**
- * Keep route fallback and in-dashboard page changes on the same single
- * compositor animation. Native View Transitions own route snapshots when
- * available; the fallback is skipped while that API is active.
+ * Route changes and sidebar-driven view changes share the same single
+ * auto-scroll motion. The existing page title and navigation state are read
+ * only to decide when and in which direction to animate.
  */
 function VisualTransitionFallback() {
   const location = useLocation();
@@ -65,8 +70,7 @@ function VisualTransitionFallback() {
     previousPathRef.current = location.pathname;
     if (!ENABLE_VISUAL_TRANSITIONS || !changed) return undefined;
 
-    if (document.documentElement.dataset.eocViewTransition) return undefined;
-    triggerPageTransition(
+    triggerAutoScrollTransition(
       location.pathname === '/dashboard'
         ? document.querySelector(DASHBOARD_SURFACE)
         : (
@@ -104,9 +108,7 @@ function VisualTransitionFallback() {
           : 1;
         if (nextNavigationIndex >= 0) activeNavigationIndex = nextNavigationIndex;
 
-        // The browser snapshot owns any route transition; this is tab-only.
-        if (document.documentElement.dataset.eocViewTransition) return;
-        triggerPageTransition(document.querySelector(DASHBOARD_SURFACE), direction);
+        triggerAutoScrollTransition(document.querySelector(DASHBOARD_SURFACE), direction);
       });
     });
 
