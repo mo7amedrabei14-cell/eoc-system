@@ -2558,7 +2558,7 @@ select.field {
 }
 
 /* (د) تحسين دخول البطاقات/الخطوط — انزلاق رقيق غير قافز */
-.kpi-card { transition: border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), transform 0.3s var(--ease-out), background-color 0.3s var(--ease-out); }
+
 
 /* (هـ) مقدمة العنوان: خط تحته يتمدد من المركز */
 .eyebrow { position: relative; }
