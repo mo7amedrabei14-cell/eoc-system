@@ -510,11 +510,12 @@
 .working-pill::after { opacity: 0.55; }
 .working-text { background-image: none; color: var(--ink); }
 
-/* Modal forms: stay above the sticky header and page content */
+/* Modal forms: above page chrome, but below the shared select menu and signal rail.
+   Both are portaled/fixed at z-index 9999 so modal validation remains visible. */
 .eoc-modal-layer {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 10000 !important;
+  z-index: 9000 !important;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
