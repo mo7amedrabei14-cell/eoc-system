@@ -427,28 +427,26 @@
 .app-shell #home-view-top > * {
   animation: none;
 }
-/* Generic route fallback (login/dashboard) shares the same single entrance. */
-.eoc-page-transitioning {
-  animation: eoc-page-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+/* One directional, scroll-like entrance for the page surface only.
+   Direction is provided by App.jsx from the currently selected navigation item;
+   this stylesheet intentionally does not style or animate the sidebar. */
+.eoc-page-transitioning,
+.app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
+  animation: eoc-page-scroll-arrive 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: transform, opacity;
 }
-@media (prefers-reduced-motion: reduce) {
-  .eoc-page-transitioning {
-    animation-duration: 1ms !important;
-    will-change: auto;
+@keyframes eoc-page-scroll-arrive {
+  from {
+    opacity: 0.72;
+    transform: translate3d(0, var(--eoc-page-enter-y, 28px), 0) scale(0.997);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
-
-.app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
-  animation: eoc-page-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: transform, opacity;
-}
-@keyframes eoc-page-arrive {
-  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.995); }
-  68% { opacity: 1; transform: translate3d(0, -1px, 0) scale(1); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
 @media (prefers-reduced-motion: reduce) {
+  .eoc-page-transitioning,
   .app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
     animation-duration: 1ms !important;
     will-change: auto;

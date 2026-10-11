@@ -20,23 +20,35 @@ const DASHBOARD_SURFACE = '#main-scroll-container > div.p-4';
  */
 const pageTransitionHandlers = new WeakMap();
 
-function triggerPageTransition(surface) {
+function readActiveNavigationIndex() {
+  // Read the existing navigation state only. The sidebar DOM and behavior are untouched.
+  const items = Array.from(document.querySelectorAll('.nav-shell .nav-item'));
+  const activeItem = document.querySelector('.nav-shell .nav-item.is-active');
+  return activeItem ? items.indexOf(activeItem) : -1;
+}
+
+function triggerPageTransition(surface, direction = 1) {
   if (!surface) return;
   const previousHandler = pageTransitionHandlers.get(surface);
   if (previousHandler) surface.removeEventListener('animationend', previousHandler);
 
+  // Positive direction enters from below (scrolling down); negative enters from above.
+  surface.style.setProperty('--eoc-page-enter-y', direction < 0 ? '-28px' : '28px');
   surface.classList.remove('eoc-page-transitioning');
   // Restart the single CSS animation at the actual navigation boundary.
   void surface.offsetWidth;
   surface.classList.add('eoc-page-transitioning');
 
-  const finish = () => {
+  const finish = (event) => {
+    // animationend bubbles from page descendants; only the surface animation owns cleanup.
+    if (event.target !== surface || event.animationName !== 'eoc-page-scroll-arrive') return;
     surface.classList.remove('eoc-page-transitioning');
+    surface.style.removeProperty('--eoc-page-enter-y');
     surface.removeEventListener('animationend', finish);
     pageTransitionHandlers.delete(surface);
   };
   pageTransitionHandlers.set(surface, finish);
-  surface.addEventListener('animationend', finish, { once: true });
+  surface.addEventListener('animationend', finish);
 }
 
 /**
@@ -74,6 +86,7 @@ function VisualTransitionFallback() {
 
     const readActivePage = () => pageTitle.textContent?.trim() ?? '';
     let activePage = readActivePage();
+    let activeNavigationIndex = readActiveNavigationIndex();
     let titleFrame = 0;
 
     const observer = new MutationObserver(() => {
@@ -84,9 +97,16 @@ function VisualTransitionFallback() {
         if (nextPage === activePage) return;
         activePage = nextPage;
 
+        const nextNavigationIndex = readActiveNavigationIndex();
+        const direction = activeNavigationIndex >= 0 && nextNavigationIndex >= 0
+          && nextNavigationIndex !== activeNavigationIndex
+          ? (nextNavigationIndex > activeNavigationIndex ? 1 : -1)
+          : 1;
+        if (nextNavigationIndex >= 0) activeNavigationIndex = nextNavigationIndex;
+
         // The browser snapshot owns any route transition; this is tab-only.
         if (document.documentElement.dataset.eocViewTransition) return;
-        triggerPageTransition(document.querySelector(DASHBOARD_SURFACE));
+        triggerPageTransition(document.querySelector(DASHBOARD_SURFACE), direction);
       });
     });
 
