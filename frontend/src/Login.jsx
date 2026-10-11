@@ -44,25 +44,6 @@ const AlertIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
   </svg>
 );
-const ShieldIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
-);
-const CheckIcon = () => (
-  <svg width="0.8125rem" height="0.8125rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12.5 9.5 17 19 7" />
-  </svg>
-);
-const ChevronsIcon = () => (
-  <svg width="0.8125rem" height="0.8125rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M13 6l6 6-6 6M5 6l6 6-6 6" />
-  </svg>
-);
-
-/* محيط حلقة تقدّم الهلال (SVG) — r = 46 في نظام إحداثيات 100×100 */
-const HALO_C = 2 * Math.PI * 46;
-
 /* ─────────────────────────────────────────────────────────────
    ساعة تشغيل مباشرة داخل الرباط العلوي (بدون Backend)
    ───────────────────────────────────────────────────────────── */
@@ -741,7 +722,7 @@ export default function Login() {
               <motion.div variants={reduceMotion ? FADE_ITEM : GATE_ITEM} className="lx-readout mt-7">
                 {dragStage.pct && <span className="lx-pct" ref={pctRef} />}
                 {dragProgress === 1 && (
-                  <span className="lx-granted lx-morph"><i />{t('مُفعّل', 'ACTIVATED')}</span>
+                   <span className="lx-granted"><i />{t('مُفعّل', 'ACTIVATED')}</span>
                 )}
               </motion.div>
 
@@ -991,7 +972,6 @@ export default function Login() {
                           <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className={`lx-field ${username ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
                             <label className="lx-label" htmlFor="lx-username">
-                              <span className="lx-label-dot" aria-hidden="true" />
                               {language === 'ar' ? 'الرقم التعريفي / المستخدم' : 'ID / Username'}
                             </label>
                             <div className="lx-input-wrap">
@@ -1013,7 +993,6 @@ export default function Login() {
                           <motion.div variants={reduceMotion ? FADE_ITEM : FORM_ITEM} className={`lx-field ${password ? 'is-filled' : ''}`}>
                             <span className="lx-field-glow" aria-hidden="true" />
                             <label className="lx-label" htmlFor="lx-password">
-                              <span className="lx-label-dot" aria-hidden="true" />
                               {language === 'ar' ? 'رمز المرور السري' : 'Secret password'}
                             </label>
                             <div className="lx-input-wrap">
