@@ -3692,3 +3692,70 @@
 @media (prefers-reduced-motion: reduce) {
   .lx-room-light,.lx-firefly,.lx-night-sky-stars { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+
+/* Fine finishing: match the reference's open-room backdrop rather than a framed app panel. */
+.lx.lx-phase-0 .lx-lamp-stage--solo { width: 58vw !important; }
+.lx.lx-phase-0 .lx-scene {
+  background-color: #08090c !important;
+  background-image: radial-gradient(circle at 35% 45%,#131720 0%,#08090c 85%) !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+}
+.lx.lx-phase-1 .lx-scene {
+  background-color: #0e1117 !important;
+  background-image:
+    radial-gradient(ellipse 45rem 36rem at 35% 48%,rgba(255,213,79,.09),transparent 74%),
+    radial-gradient(circle at 35% 45%,#19202c 0%,#0e1117 85%) !important;
+  background-size: auto,cover !important;
+  background-repeat: no-repeat !important;
+}
+.lx.lx-phase-2 .lx-scene {
+  background-color: #071419 !important;
+  background-image:
+    radial-gradient(ellipse 45rem 36rem at 35% 48%,rgba(0,229,255,.11),transparent 74%),
+    radial-gradient(circle at 35% 45%,#14232b 0%,#080f14 85%) !important;
+  background-size: auto,cover !important;
+  background-repeat: no-repeat !important;
+}
+.lx.lx-phase-3 .lx-scene {
+  background-color: #130c1b !important;
+  background-image:
+    radial-gradient(ellipse 45rem 36rem at 35% 48%,rgba(213,0,249,.13),transparent 74%),
+    radial-gradient(circle at 35% 45%,#24152d 0%,#100b18 85%) !important;
+  background-size: auto,cover !important;
+  background-repeat: no-repeat !important;
+}
+.lx-deck .p-7 > .grid {
+  opacity: 0;
+  transform: translateX(2.8rem) scale(.96);
+  filter: blur(12px);
+  pointer-events: none;
+  transition:
+    opacity .6s cubic-bezier(.16,1,.3,1),
+    transform .6s cubic-bezier(.16,1,.3,1),
+    filter .6s ease,
+    border-color .8s cubic-bezier(.16,1,.3,1),
+    box-shadow .8s cubic-bezier(.16,1,.3,1);
+}
+.lx.lx-phase-1 .lx-deck .p-7 > .grid,
+.lx.lx-phase-2 .lx-deck .p-7 > .grid,
+.lx.lx-phase-3 .lx-deck .p-7 > .grid {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  filter: blur(0);
+  pointer-events: auto;
+  transition-delay: .15s;
+}
+.lx.lx-phase-0 .lx-stage-shell { visibility: hidden !important; pointer-events: none !important; }
+.lx.lx-phase-0 .lx-lamp-darkroom { visibility: visible !important; pointer-events: auto !important; }
+.lx.lx-phase-0 .lx-lamp-darkroom .lx-lamp-cord { pointer-events: auto !important; }
+.lx.lx-phase-1 .lx-lamp-darkroom,
+.lx.lx-phase-2 .lx-lamp-darkroom,
+.lx.lx-phase-3 .lx-lamp-darkroom { display: none !important; }
+@media (max-width: 950px) {
+  .lx.lx-phase-0 .lx-lamp-stage--solo { width: 100vw !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-deck .p-7 > .grid { transition-duration: .01ms !important; }
+}
