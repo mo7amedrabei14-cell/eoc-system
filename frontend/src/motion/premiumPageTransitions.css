@@ -1,51 +1,58 @@
-/* Motion UI-inspired transitions: one curtain between routes, spring-soft
-   content entrance on selected dashboard page changes. Sidebar is untouched. */
+/* Motion-inspired, lifecycle-safe transitions for EOC.
+   The native View Transition API snapshots old/new UI without mounting two
+   React pages. Motion's transform+opacity animation is the complete fallback. */
 
-.eoc-route-transition {
-  min-height: 100dvh;
-  width: 100%;
+.lx-deck .p-7 > .grid,
+#main-scroll-container > div.p-4 {
+  view-transition-name: eoc-primary-surface;
 }
 
-/* Starts as a fine seam at viewport center, opens to cover, then wipes away. */
-.eoc-route-curtain {
-  position: fixed;
-  z-index: 99999;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  clip-path: inset(0 50% 0 50%);
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at 50% 48%, rgba(199, 0, 0, 0.22), transparent 56%),
-    linear-gradient(112deg, #07080b 0%, #11151d 40%, #1b090c 54%, #08090c 100%);
-  will-change: clip-path, opacity;
-  contain: paint;
+/* The shared surface morphs between the existing login workspace and dashboard
+   content. Page shell/root gets only a restrained opacity hand-off; no sidebar
+   element has a transition name or per-element animation. */
+::view-transition-old(root) {
+  animation: eoc-root-exit 140ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
-.eoc-route-curtain::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: .5;
-  background:
-    linear-gradient(90deg, transparent 0%, rgba(255,255,255,.035) 50%, transparent 100%),
-    repeating-linear-gradient(0deg, transparent 0 5.5rem, rgba(255,255,255,.018) 5.55rem 5.6rem);
+::view-transition-new(root) {
+  animation: eoc-root-enter 220ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
-.eoc-route-curtain__beam {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, .72);
-  box-shadow:
-    0 0 8px rgba(199, 0, 0, .9),
-    0 0 30px 8px rgba(199, 0, 0, .32),
-    0 0 80px 18px rgba(199, 0, 0, .13);
+::view-transition-group(eoc-primary-surface) {
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(eoc-primary-surface) {
+  animation: eoc-surface-exit 140ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(eoc-primary-surface) {
+  animation: eoc-surface-enter 360ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes eoc-root-exit {
+  to { opacity: 0.985; }
+}
+
+@keyframes eoc-root-enter {
+  from { opacity: 0.985; }
+  to { opacity: 1; }
+}
+
+@keyframes eoc-surface-exit {
+  to { opacity: 0; transform: translate3d(0, -5px, 0) scale(0.995); }
+}
+
+@keyframes eoc-surface-enter {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.992); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .eoc-route-curtain { display: none !important; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 1ms !important;
+  }
 }
