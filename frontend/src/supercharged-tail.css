@@ -420,28 +420,54 @@
   animation-timing-function: var(--sc-spring);
 }
 
-.app-shell #main-scroll-container > div {
-  animation: eoc-stage-arrive 220ms var(--sc-ease) both;
-}
-@keyframes eoc-stage-arrive {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+/* Page motion is owned by App.jsx through one explicit state class.
+   Do not animate every content child on mount: that stacked with the surface
+   transition and made some dashboard pages appear to have ghost layers. */
+.app-shell #main-scroll-container > div,
 .app-shell #home-view-top > * {
-  animation: eoc-section-arrive 380ms var(--sc-ease) both;
+  animation: none;
 }
-.app-shell #home-view-top > :nth-child(1) { animation-delay: 20ms; }
-.app-shell #home-view-top > :nth-child(2) { animation-delay: 45ms; }
-.app-shell #home-view-top > :nth-child(3) { animation-delay: 70ms; }
-.app-shell #home-view-top > :nth-child(4) { animation-delay: 95ms; }
-.app-shell #home-view-top > :nth-child(5) { animation-delay: 120ms; }
-.app-shell #home-view-top > :nth-child(6) { animation-delay: 145ms; }
-.app-shell #home-view-top > :nth-child(7) { animation-delay: 170ms; }
-.app-shell #home-view-top > :nth-child(8) { animation-delay: 195ms; }
-.app-shell #home-view-top > :nth-child(9) { animation-delay: 220ms; }
-@keyframes eoc-section-arrive {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Generic route fallback (login/dashboard) shares the same single entrance. */
+.eoc-page-transitioning {
+  animation: eoc-page-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .eoc-page-transitioning {
+    animation-duration: 1ms !important;
+    will-change: auto;
+  }
+}
+
+.app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
+  animation: eoc-page-arrive 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@keyframes eoc-page-arrive {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.995); }
+  68% { opacity: 1; transform: translate3d(0, -1px, 0) scale(1); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
+    animation-duration: 1ms !important;
+    will-change: auto;
+  }
+}
+
+/* The shared sidebar selector has one traveling surface; tune its travel and
+   its delayed light-trail without adding another animated element per link. */
+.app-shell .nav-shell::before {
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms linear;
+}
+.app-shell .nav-shell::after {
+  transition: transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms linear;
+}
+.app-shell .nav-item {
+  transition:
+    background-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root[data-theme="light"] .app-shell #main-scroll-container > div .kpi-card {
