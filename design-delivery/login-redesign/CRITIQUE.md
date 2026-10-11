@@ -2,7 +2,8 @@
 
 المرجع: `fix/contacts-table-visual-parity` عند الالتزام `b7ecf63` (قبل إعادة التصميم).
 كل رقم هنا مقيس لا مُقدَّر: متصفح Chromium 149 (headless shell) عبر CDP، والسيرفر الحقيقي
-على `:8000` (Vite dev على `:5174`)، وأداة القياس `_lx_audit.mjs` (غير مُلتزمة في الريبو).
+على `:8000` (Vite dev على `:5174`)، وأداة القياس `audit-harness.mjs` (مُلتزمة بجانب هذا الملف)،
+ومُستخرِج الأرقام `evidence/extract.mjs` ⇒ `evidence/summary.json`.
 
 المنهج:
 - **CLS حقيقي** عبر `PerformanceObserver('layout-shift')` مُثبَّت *قبل* أي سكربت في الصفحة.

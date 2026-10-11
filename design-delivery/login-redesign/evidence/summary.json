@@ -1,0 +1,277 @@
+{
+  "generated": "2026-10-11T08:26:34.702Z",
+  "source": "_lx_out",
+  "layout": {
+    "rows": 44,
+    "zoomRows": 4,
+    "cells": 96,
+    "cleanCells": 96,
+    "unclean": [],
+    "maxOverflowPx": 0,
+    "totalInnerScrollers": 0,
+    "contrastMin": 5,
+    "contrastFailSum": "0",
+    "contrastMinByTheme": {
+      "dark": 5,
+      "light": 5.56
+    },
+    "perViewport": [
+      {
+        "viewport": "1920x1080",
+        "cells": 12,
+        "clean": 12
+      },
+      {
+        "viewport": "1600x900",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "1536x864",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "1440x900",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "1366x768",
+        "cells": 12,
+        "clean": 12
+      },
+      {
+        "viewport": "1280x720",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "1024x768",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "390x844",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "360x640",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "844x390",
+        "cells": 8,
+        "clean": 8
+      },
+      {
+        "viewport": "320x568",
+        "cells": 8,
+        "clean": 8
+      }
+    ]
+  },
+  "flow": {
+    "generated": "2026-10-11T08:20:25.938Z",
+    "cases": [
+      "loadGate",
+      "gateToLogin",
+      "errorPath",
+      "capsLock",
+      "keyboardGate",
+      "reducedMotion"
+    ],
+    "cls": {
+      "load": 0,
+      "cross": 0,
+      "error": 0.00044
+    },
+    "frames": {
+      "load": {
+        "p50": 16.7,
+        "p95": 66.7,
+        "max": 996.9,
+        "count": 61
+      },
+      "cross": {
+        "p50": 16.7,
+        "p95": 33.3,
+        "max": 50.1,
+        "count": 157
+      },
+      "error": {
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.3,
+        "count": 196
+      }
+    },
+    "errorShift": {
+      "card": {
+        "x": 0,
+        "y": 6.6,
+        "w": 0,
+        "h": 13.2
+      },
+      "submit": {
+        "x": 0,
+        "y": 6.6,
+        "w": 0,
+        "h": 0
+      },
+      "group": {
+        "x": 0,
+        "y": 6.6,
+        "w": 0,
+        "h": 0
+      }
+    },
+    "capsLockShift": {
+      "cardHBefore": 416.2,
+      "cardHAfter": 416.2,
+      "btnYBefore": 382.9,
+      "btnYAfter": 382.9,
+      "hintHBefore": 20,
+      "hintHAfter": 20
+    },
+    "crest": {
+      "pops": {
+        "hardPops": 0,
+        "maxOpacityJumpPerFrame": 0
+      },
+      "frame": {
+        "x": 4.5,
+        "y": 25.6,
+        "w": 9.1,
+        "h": 9.1
+      }
+    },
+    "card": {
+      "pops": {
+        "hardPops": 0,
+        "maxOpacityJumpPerFrame": 0.065
+      }
+    },
+    "reducedMotion": {
+      "reduce": true,
+      "firstVisibleMs": 2313,
+      "settleMs": 2313,
+      "instant": true
+    },
+    "keyboardGate": {
+      "tabsBeforeUnlock": [
+        {
+          "tag": "DIV",
+          "cls": "lx-handle is-idle ",
+          "role": "slider"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "lx-ctl",
+          "role": null
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "lx-ctl",
+          "role": null
+        },
+        {
+          "tag": "BODY",
+          "cls": "",
+          "role": null
+        },
+        {
+          "tag": "DIV",
+          "cls": "lx-handle is-idle ",
+          "role": "slider"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "lx-ctl",
+          "role": null
+        }
+      ],
+      "focusAfterUnlock": {
+        "active": "lx-input lx-username",
+        "id": "lx-username"
+      },
+      "tabsAfterUnlock": [
+        {
+          "tag": "INPUT",
+          "cls": "lx-input lx-password",
+          "role": null
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "lx-eye",
+          "role": null
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "lx-submit ",
+          "role": null
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "lx-ctl",
+          "role": null
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "lx-ctl",
+          "role": null
+        },
+        {
+          "tag": "BODY",
+          "cls": "",
+          "role": null
+        },
+        {
+          "tag": "INPUT",
+          "cls": "lx-input lx-username",
+          "role": null
+        },
+        {
+          "tag": "INPUT",
+          "cls": "lx-input lx-password",
+          "role": null
+        }
+      ]
+    },
+    "staticChecks": {
+      "oversizeCount": 0,
+      "innerScrollers": 0,
+      "contrastFail": [],
+      "hitFails": 0,
+      "fontSizes": [
+        12,
+        16,
+        32
+      ]
+    }
+  },
+  "auroraAB": [
+    {
+      "tag": "abOn1",
+      "cross": 16.7,
+      "p95": 33.4
+    },
+    {
+      "tag": "abOff1",
+      "cross": 16.7,
+      "p95": 33.3
+    },
+    {
+      "tag": "abOff2",
+      "cross": 16.7,
+      "p95": 33.3
+    },
+    {
+      "tag": "abOn2",
+      "cross": 16.7,
+      "p95": 33.3
+    }
+  ]
+}

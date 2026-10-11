@@ -328,7 +328,7 @@ class Session {
     await this.rpc('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode, ...extra });
   }
   async drag(sel = '.lx-handle', steps = 16, stepDelay = 22) {
-    const r = await this.evaluate(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); const tr = document.querySelector('.lx-track') || el.parentElement; if (!el || !tr) return null; const a = el.getBoundingClientRect(), b = tr.getBoundingClientRect(); return { hx: a.left + a.width / 2, hy: a.top + a.height / 2, rx: b.right - a.width / 2 - 4, ry: b.top + b.height / 2 }; })()`);
+    const r = await this.evaluate(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return null; const tr = document.querySelector('.lx-track') || el.parentElement; if (!tr) return null; const a = el.getBoundingClientRect(), b = tr.getBoundingClientRect(); return { hx: a.left + a.width / 2, hy: a.top + a.height / 2, rx: b.right - a.width / 2 - 4, ry: b.top + b.height / 2 }; })()`);
     if (!r) throw new Error('drag target missing: ' + sel);
     await this.mouse('mouseMoved', r.hx, r.hy);
     await this.mouse('mousePressed', r.hx, r.hy, { button: 'left', clickCount: 1, buttons: 1 });
