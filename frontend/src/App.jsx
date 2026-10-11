@@ -22,10 +22,9 @@ function DashboardPageMotion() {
     const observers = [];
     const timers = new Set();
 
-    const readActivePage = () => {
-      const active = document.querySelector('.nav-item.is-active');
-      return active?.getAttribute('aria-label') || active?.textContent?.trim() || '';
-    };
+    // Compare the selected nav element itself, not its label; language changes
+    // must never be mistaken for a page change.
+    const readActivePage = () => document.querySelector('.nav-item.is-active');
 
     const animateCurrentPage = () => {
       if (frame) window.cancelAnimationFrame(frame);
@@ -67,7 +66,7 @@ function DashboardPageMotion() {
           animateCurrentPage();
         }
       });
-      observer.observe(item, { attributes: true, attributeFilter: ['class', 'aria-label'] });
+      observer.observe(item, { attributes: true, attributeFilter: ['class'] });
       observers.push(observer);
     });
 
