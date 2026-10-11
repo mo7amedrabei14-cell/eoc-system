@@ -172,6 +172,8 @@ const LAMP_FIREFLIES = [
 function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone = false, showCaption = false }) {
   const cordRef = useRef(null);
   const pathRef = useRef(null);
+  const headRef = useRef(null);
+  const coneRef = useRef(null);
   const springFrameRef = useRef(0);
   const dragRef = useRef({ active: false, startX: 0, startY: 0, x: 0, y: 0, pointerId: null });
   const [isDragging, setIsDragging] = useState(false);
@@ -222,6 +224,20 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
     if (springFrameRef.current) cancelAnimationFrame(springFrameRef.current);
   }, []);
 
+  const handleLampParallax = (event) => {
+    if (event.pointerType === 'touch' || dragRef.current.active) return;
+    const nx = (event.clientX / Math.max(1, window.innerWidth) - 0.5) * 2;
+    const head = headRef.current;
+    const cone = coneRef.current;
+    if (head) head.style.transform = `translateX(-50%) rotate(${(nx * 4.5).toFixed(2)}deg) skewX(${(nx * 2).toFixed(2)}deg)`;
+    if (cone) cone.style.transform = `translateX(-50%) rotate(${(nx * 3).toFixed(2)}deg) translateX(${(nx * 12).toFixed(2)}px)`;
+  };
+
+  const resetLampParallax = () => {
+    if (headRef.current) headRef.current.style.transform = '';
+    if (coneRef.current) coneRef.current.style.transform = '';
+  };
+
   const handlePointerDown = (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault();
@@ -267,13 +283,13 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
     : (!lampOn ? 'Pull the cord to turn on the lamp' : 'Pull the cord to change the light');
 
   return (
-    <div className={`lx-lamp-stage ${lampOn ? 'is-on' : 'is-off'} ${lampPulling ? 'is-pulling' : ''} ${isDragging ? 'is-dragging' : ''} ${standalone ? 'lx-lamp-stage--solo' : ''}`}>
+    <div onPointerMove={handleLampParallax} onPointerLeave={resetLampParallax} className={`lx-lamp-stage ${lampOn ? 'is-on' : 'is-off'} ${lampPulling ? 'is-pulling' : ''} ${isDragging ? 'is-dragging' : ''} ${standalone ? 'lx-lamp-stage--solo' : ''}`}>
       <span className="lx-lamp-aura" aria-hidden="true" />
-      <span className="lx-lamp-cone" aria-hidden="true" />
+      <span ref={coneRef} className="lx-lamp-cone" aria-hidden="true" />
       <span className="lx-desk-surface" aria-hidden="true" />
       <div className="lx-lamp" aria-label={language === 'ar' ? 'مصباح تفاعلي' : 'Interactive lamp'}>
         <span className="lx-lamp-finial" aria-hidden="true" />
-        <span className="lx-lamp-head" aria-hidden="true"><span className="lx-lamp-bulb" /></span>
+        <span ref={headRef} className="lx-lamp-head" aria-hidden="true"><span className="lx-lamp-bulb" /></span>
         <span className="lx-lamp-glow" aria-hidden="true" />
         <span className="lx-lamp-neck" aria-hidden="true" />
         <span className="lx-lamp-stem" aria-hidden="true" />
@@ -1053,7 +1069,7 @@ export default function Login() {
           className="lx-deck"
           variants={DECK_ENTER}
           initial="hidden"
-          animate={isMounted ? 'show' : 'hidden'}
+          animate={lampOn && isMounted ? 'show' : 'hidden'}
         >
           {/* ─── الرباط العلوي: هوية القيادة + الحالة الحية ─── */}
           <motion.div variants={DECK_CHILD} className="lx-ribbon relative shrink-0 px-5 sm:px-8 py-4">
