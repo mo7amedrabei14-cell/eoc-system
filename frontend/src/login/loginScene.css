@@ -3810,6 +3810,12 @@
 .lx[dir="rtl"] :is(input[type="password"], input[type="email"], input[type="tel"], input[inputmode="numeric"]) {
   text-align: right;
 }
+/* OTP digits must stay visually centered even when the surrounding login panel is RTL. */
+.lx[dir="rtl"] .otp-orbit-zone .otp-box {
+  direction: ltr;
+  text-align: center;
+}
+
 /* Keep Latin codes, numeric OTP, and technical identifiers readable. */
 .lx[dir="rtl"] :is(.lx-otp, .lx-otp input, [dir="ltr"], .font-mono) {
   direction: ltr;
