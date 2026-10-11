@@ -1083,3 +1083,19 @@ body:has(.lx) { margin: 0 !important; }
 @keyframes qs-spin {
   to { transform: rotate(360deg); }
 }
+
+/* Successful-login route change: use the browser's native cross-document-like
+   view transition when supported; React navigation remains the same fallback. */
+@supports (view-transition-name: root) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 280ms;
+    animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: .01ms !important;
+  }
+}
