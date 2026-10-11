@@ -3780,3 +3780,38 @@
 @media (prefers-reduced-motion: reduce) {
   .lx-login-brand-mark img { transform: none; }
 }
+
+
+/* Arabic login copy: enforce natural RTL reading and alignment.
+   Scoped to the authentication experience; no layout or behavior changes. */
+.lx[dir="rtl"] {
+  direction: rtl;
+}
+.lx[dir="rtl"] :is(
+  .lx-gate-title,
+  .lx-gate-sub,
+  .lx-lamp-caption,
+  .lx-deck,
+  .lx-login,
+  .lx-form,
+  .lx-auth,
+  label,
+  .lx-error,
+  .lx-helper,
+  .lx-description
+) {
+  direction: rtl;
+  text-align: right;
+}
+.lx[dir="rtl"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea, select) {
+  direction: rtl;
+  text-align: right;
+}
+.lx[dir="rtl"] :is(input[type="password"], input[type="email"], input[type="tel"], input[inputmode="numeric"]) {
+  text-align: right;
+}
+/* Keep Latin codes, numeric OTP, and technical identifiers readable. */
+.lx[dir="rtl"] :is(.lx-otp, .lx-otp input, [dir="ltr"], .font-mono) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
