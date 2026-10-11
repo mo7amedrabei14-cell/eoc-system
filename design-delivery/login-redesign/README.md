@@ -209,11 +209,12 @@ Layout / Materials / Motion) وM3 (Text fields / Buttons / Motion / Shape) وع�
 ## ١٣) نص الـ PR
 
 **النسخة المعتمدة والمنشورة فعليًّا:** [`PR-BODY.md`](PR-BODY.md) — هذا هو النص الموجود الآن على
-[PR #13](https://github.com/mo7amedrabei14-cell/eoc-system/pull/13) (مُحدَّث: 96/96 حالة وCLS 0.00043–0.00044
-والالتزام `90ec001`؛ ولم يبق فيه أي رقم من التشغيل الواحد الذي لم يتكرر).
+[PR #13](https://github.com/mo7amedrabei14-cell/eoc-system/pull/13) (مُحدَّث: 96/96 حالة وCLS 0.00043–0.00044؛
+ولم يبق فيه أي رقم من التشغيل الواحد الذي لم يتكرر).
 
 **الرابط:** https://github.com/mo7amedrabei14-cell/eoc-system/pull/13 — `open` · `merged: false` ·
-`base: main` · `head: 90ec001` · **بدون merge**.
+`base: main` · `head:` آخر التزام على `fix/contacts-table-visual-parity` (GitHub يعرضه لحظيًّا، ولذلك لا
+أُثبّت هاشًا هنا حتى لا تتقادم الوثيقة نفسها كلما تُحدِّثت) · **بدون merge**.
 
 ملخّص قصير للمراجعة السريعة:
 

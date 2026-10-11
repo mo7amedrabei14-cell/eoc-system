@@ -1,7 +1,9 @@
 # نص الـ PR — جاهز للنسخ على GitHub
 
 **العنوان:** Redesign the gate + login as one calm, jump-free surface
-**الفرع:** `fix/contacts-table-visual-parity` ⇒ `main` · **الالتزام:** `90ec001` · **بدون merge**
+**الفرع:** `fix/contacts-table-visual-parity` ⇒ `main` · **بدون merge**
+
+(هاش الالتزام مقصود عدم تثبيته هنا: GitHub يعرض رأس الفرع الحالي بنفسه، والوثيقة لا تتقادم كلما أُضيف التزام.)
 
 ---
 
