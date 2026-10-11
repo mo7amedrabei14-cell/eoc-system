@@ -253,6 +253,8 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
     returnString(drag.x, drag.y);
   };
 
+  const handlePointerUp = (event) => finishPull(event, true);
+
   const handleKeyDown = (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
