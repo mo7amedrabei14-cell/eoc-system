@@ -14,9 +14,9 @@ installWorkingAuto();
 const DASHBOARD_SURFACE = '#main-scroll-container > div.p-4';
 
 /**
- * One owner for dashboard page motion.
- * A CSS class drives the complete entrance; it never competes with a second
- * Framer Motion transform animation on the same surface.
+ * One motion owner for route and dashboard view changes.
+ * The surface animation is created and cancelled through one Web Animations
+ * handle so repeated navigation cannot stack competing entrance animations.
  */
 const pageTransitionAnimations = new WeakMap();
 
