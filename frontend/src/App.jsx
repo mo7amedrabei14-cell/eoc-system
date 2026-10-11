@@ -43,8 +43,8 @@ function triggerAutoScrollTransition(surface, direction = 1) {
   const offset = direction < 0 ? -34 : 34;
   const animation = surface.animate(
     [
-      { opacity: 0.82, transform: `translate3d(0, ${offset}px, 0)` },
-      { opacity: 1, transform: 'translate3d(0, 0, 0)' },
+      { transform: `translate3d(0, ${offset}px, 0)` },
+      { transform: 'translate3d(0, 0, 0)' },
     ],
     {
       duration: 460,
