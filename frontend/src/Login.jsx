@@ -128,36 +128,35 @@ function Gauge({ g, active }) {
 
 /* ── توصيفات حركة البوابة وسطح القيادة (variants للتتابع المرحلي) ── */
 const GATE_RISE = {
-  /* كانت `filter: blur()` جزءًا من الدخول ⇒ مسح وإعادة رسم سطح شبه كامل الشاشة
-     كل إطار. الآن opacity + transform فقط — نفس قاعدة مخارج البوابة أدناه. */
-  hidden: { opacity: 0, y: 26 },
-  show: { opacity: 1, y: 0, transition: { ...SPRING_SOFT, staggerChildren: 0.06, delayChildren: 0.10 } },
+  /* دخول هادئ: مسافة قصيرة + opacity، بدون blur أو قفزة نابضية. */
+  hidden: { opacity: 0, y: 12, scale: 0.995 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.44, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.045, delayChildren: 0.06 } },
 };
 const GATE_ITEM = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: SPRING_SOFT },
+  hidden: { opacity: 0, y: 9 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] } },
 };
 const DECK_ENTER = {
-  hidden: { opacity: 0, y: 38, scale: 0.985 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { ...SPRING_SOFT, delayChildren: 0.08, staggerChildren: 0.06 } },
+  hidden: { opacity: 0, y: 14, scale: 0.995 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.48, ease: [0.22, 1, 0.36, 1], delayChildren: 0.045, staggerChildren: 0.04 } },
 };
 const DECK_CHILD = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: SPRING_SOFT },
+  hidden: { opacity: 0, y: 9 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.36, ease: [0.22, 1, 0.36, 1] } },
 };
 const FORM_COL = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { ...SPRING_SOFT, staggerChildren: 0.05, delayChildren: 0.05 } },
-  exit: { opacity: 0, y: -10, transition: { duration: 0.18, ease: EASE_OUT } },
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.035, delayChildren: 0.035 } },
+  exit: { opacity: 0, y: -5, transition: { duration: 0.15, ease: EASE_OUT } },
 };
 const FORM_ITEM = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0, transition: SPRING },
+  hidden: { opacity: 0, y: 7 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1] } },
 };
 const TAB_PAGE = {
-  initial: { opacity: 0, y: 14 },
-  animate: { opacity: 1, y: 0, transition: SPRING_SOFT },
-  exit: { opacity: 0, y: -10, transition: { duration: 0.18, ease: EASE_OUT } },
+  initial: { opacity: 0, y: 7 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } },
+  exit: { opacity: 0, y: -4, transition: { duration: 0.14, ease: EASE_OUT } },
 };
 
 export default function Login() {
@@ -674,8 +673,8 @@ export default function Login() {
             initial={{ opacity: 1 }}
             /* الخروج: opacity + scale فقط. كان `filter: blur(14px)` متحرّكًا
                ⇒ مسح كامل الشاشة وإعادة رسمها بفلتر طوال مدة الخروج. */
-            exit={{ opacity: 0, scale: 1.04 }}
-            transition={{ duration: 0.34, ease: EASE_OUT }}
+            exit={{ opacity: 0, y: -8, scale: 0.995 }}
+            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             style={{ pointerEvents: isUnlocking ? 'none' : 'auto' }}
           >
             {/* 🌫️ مشهد البوابة — طبقة واحدة في CSS (`.lx-scene`).
