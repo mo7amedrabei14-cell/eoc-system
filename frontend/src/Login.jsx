@@ -160,6 +160,172 @@ const TAB_PAGE = {
   exit: { opacity: 0, y: -10, transition: { duration: 0.18, ease: EASE_OUT } },
 };
 
+const LAMP_FIREFLIES = [
+  [9, 22, 3, 28, -4], [17, 66, 4, 34, -15], [24, 34, 3, 31, -8],
+  [33, 78, 3, 26, -20], [41, 18, 4, 36, -11], [52, 73, 3, 29, -2],
+  [61, 29, 4, 32, -24], [69, 61, 3, 27, -13], [77, 16, 3, 35, -6],
+  [86, 72, 4, 30, -19], [93, 39, 3, 33, -9], [12, 84, 3, 38, -26],
+  [46, 48, 3, 25, -17], [73, 87, 4, 34, -3], [57, 9, 3, 29, -22],
+  [29, 51, 4, 37, -7],
+];
+
+function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone = false, showCaption = false }) {
+  const cordRef = useRef(null);
+  const pathRef = useRef(null);
+  const headRef = useRef(null);
+  const coneRef = useRef(null);
+  const springFrameRef = useRef(0);
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, x: 0, y: 0, pointerId: null });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const paintString = (x, y) => {
+    const cord = cordRef.current;
+    if (cord) {
+      cord.style.setProperty('--pull-x', `${x.toFixed(2)}px`);
+      cord.style.setProperty('--pull-y', `${y.toFixed(2)}px`);
+    }
+    if (pathRef.current) {
+      pathRef.current.setAttribute('d', `M 16 0 Q ${(16 + x * 0.3).toFixed(2)} ${((54 + y) * 0.5).toFixed(2)} ${(16 + x).toFixed(2)} ${(108 + y).toFixed(2)}`);
+    }
+  };
+
+  const stopSpring = () => {
+    if (springFrameRef.current) cancelAnimationFrame(springFrameRef.current);
+    springFrameRef.current = 0;
+  };
+
+  const returnString = (initialX, initialY) => {
+    stopSpring();
+    let x = initialX;
+    let y = initialY;
+    let vx = 0;
+    let vy = 0;
+    const stiffness = 0.16;
+    const damping = 0.78;
+    const step = () => {
+      const ax = -stiffness * x;
+      const ay = -stiffness * y;
+      vx = (vx + ax) * damping;
+      vy = (vy + ay) * damping;
+      x += vx;
+      y += vy;
+      paintString(x, y);
+      if (Math.abs(x) > 0.1 || Math.abs(y) > 0.1 || Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) {
+        springFrameRef.current = requestAnimationFrame(step);
+      } else {
+        springFrameRef.current = 0;
+        paintString(0, 0);
+      }
+    };
+    springFrameRef.current = requestAnimationFrame(step);
+  };
+
+  useEffect(() => () => {
+    if (springFrameRef.current) cancelAnimationFrame(springFrameRef.current);
+  }, []);
+
+  const handleLampParallax = (event) => {
+    if (event.pointerType === 'touch' || dragRef.current.active) return;
+    const nx = (event.clientX / Math.max(1, window.innerWidth) - 0.5) * 2;
+    const head = headRef.current;
+    const cone = coneRef.current;
+    if (head) head.style.transform = `translateX(-50%) rotate(${(nx * 4.5).toFixed(2)}deg) skewX(${(nx * 2).toFixed(2)}deg)`;
+    if (cone) cone.style.transform = `translateX(-50%) rotate(${(nx * 3).toFixed(2)}deg) translateX(${(nx * 12).toFixed(2)}px)`;
+  };
+
+  const resetLampParallax = () => {
+    if (headRef.current) headRef.current.style.transform = '';
+    if (coneRef.current) coneRef.current.style.transform = '';
+  };
+
+  const handlePointerDown = (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    stopSpring();
+    dragRef.current = { active: true, startX: event.clientX, startY: event.clientY, x: 0, y: 0, pointerId: event.pointerId };
+    setIsDragging(true);
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer capture may be unavailable */ }
+  };
+
+  const handlePointerMove = (event) => {
+    const drag = dragRef.current;
+    if (!drag.active) return;
+    const rawX = (event.clientX - drag.startX) * 0.35;
+    const rawY = Math.max(0, event.clientY - drag.startY) * 0.75;
+    drag.x = Math.max(-40, Math.min(40, rawX));
+    drag.y = Math.min(145, rawY);
+    paintString(drag.x, drag.y);
+  };
+
+  const finishPull = (event, allowTrigger = true) => {
+    const drag = dragRef.current;
+    if (!drag.active) return;
+    drag.active = false;
+    setIsDragging(false);
+    try {
+      if (event?.currentTarget?.hasPointerCapture?.(drag.pointerId)) event.currentTarget.releasePointerCapture(drag.pointerId);
+    } catch { /* safe on browsers that drop pointer capture */ }
+    if (allowTrigger && drag.y > 35) onPull();
+    returnString(drag.x, drag.y);
+  };
+
+  const handlePointerUp = (event) => finishPull(event, true);
+
+  const handleKeyDown = (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onPull();
+    returnString(0, 48);
+  };
+
+  const cordLabel = language === 'ar'
+    ? (!lampOn ? 'اسحب الحبل لتشغيل المصباح' : 'اسحب الحبل لتغيير لون الإضاءة')
+    : (!lampOn ? 'Pull the cord to turn on the lamp' : 'Pull the cord to change the light');
+
+  return (
+    <div onPointerMove={handleLampParallax} onPointerLeave={resetLampParallax} className={`lx-lamp-stage ${lampOn ? 'is-on' : 'is-off'} ${lampPulling ? 'is-pulling' : ''} ${isDragging ? 'is-dragging' : ''} ${standalone ? 'lx-lamp-stage--solo' : ''}`}>
+      <span className="lx-lamp-aura" aria-hidden="true" />
+      <span ref={coneRef} className="lx-lamp-cone" aria-hidden="true" />
+      <span className="lx-desk-surface" aria-hidden="true" />
+      <div className="lx-lamp" aria-label={language === 'ar' ? 'مصباح تفاعلي' : 'Interactive lamp'}>
+        <span className="lx-lamp-finial" aria-hidden="true" />
+        <span ref={headRef} className="lx-lamp-head" aria-hidden="true"><span className="lx-lamp-bulb" /></span>
+        <span className="lx-lamp-glow" aria-hidden="true" />
+        <span className="lx-lamp-neck" aria-hidden="true" />
+        <span className="lx-lamp-stem" aria-hidden="true" />
+        <span className="lx-lamp-joint" aria-hidden="true" />
+        <span className="lx-lamp-foot" aria-hidden="true" />
+        <button
+          ref={cordRef}
+          type="button"
+          className="lx-lamp-cord"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={(event) => finishPull(event, false)}
+          onKeyDown={handleKeyDown}
+          aria-label={cordLabel}
+          aria-pressed={lampOn}
+          title={cordLabel}
+        >
+          <svg className="lx-lamp-string-svg" viewBox="0 0 32 160" aria-hidden="true">
+            <path ref={pathRef} d="M 16 0 Q 16 54 16 108" />
+          </svg>
+          <span className="lx-lamp-pull" aria-hidden="true"><span className="lx-lamp-pull-ridge" /></span>
+        </button>
+      </div>
+      {showCaption && (
+        <div className="lx-lamp-caption" aria-live="polite">
+          <span className="lx-lamp-status-dot" aria-hidden="true" />
+          <span>{lampOn
+            ? (language === 'ar' ? 'مصباح العمليات · نشط' : 'OPERATIONS LAMP · ON')
+            : (language === 'ar' ? 'الإضاءة في وضع الاستعداد' : 'AMBIENT LIGHT STANDBY')}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -168,10 +334,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [showGate, setShowGate] = useState(false);
-  // Pull-cord presentation cycle only: 0 = lamp-only, 1 = reveal login,
-  // 2 = shift the ambient light colour, 3 = lights out. A further pull restarts.
+  // Presentation-only lamp cycle, matching the supplied interaction:
+  // OFF (lamp only) -> warm gold -> cyber cyan -> violet -> OFF.
   const [lampPhase, setLampPhase] = useState(0);
-  const lampOn = lampPhase !== 3;
+  const lampOn = lampPhase !== 0;
   const [lampPulling, setLampPulling] = useState(false);
   const lampPullTimerRef = useRef(null);
   const handleLampPull = () => {
@@ -635,33 +801,16 @@ export default function Login() {
       <ServerDownOverlay health={serverHealth} lang={language} />
       <ServerRecoveryBanner health={serverHealth} lang={language} />
 
-      {/* Full-screen lamp reveal. Only the lamp and pull cord exist visually
-          before the first pull and after the third pull; authentication is untouched. */}
-      {(lampPhase === 0 || lampPhase === 3) && (
-        <div className={`lx-lamp-darkroom ${lampOn ? 'is-on' : 'is-off'}`} dir="ltr">
-          <div className={`lx-lamp-stage lx-lamp-stage--solo ${lampOn ? 'is-on' : 'is-off'} ${lampPulling ? 'is-pulling' : ''}`}>
-            <span className="lx-lamp-aura" aria-hidden="true" />
-            <span className="lx-lamp-cone" aria-hidden="true" />
-            <div className="lx-lamp" aria-label={t('مصباح تفاعلي','Interactive lamp')}>
-              <span className="lx-lamp-head" aria-hidden="true">
-                <span className="lx-lamp-bulb" />
-              </span>
-              <span className="lx-lamp-neck" aria-hidden="true" />
-              <span className="lx-lamp-stem" aria-hidden="true" />
-              <span className="lx-lamp-foot" aria-hidden="true" />
-              <button
-                type="button"
-                className="lx-lamp-cord"
-                onClick={handleLampPull}
-                aria-label={lampOn ? t('اسحب الحبل لعرض تسجيل الدخول','Pull to reveal login') : t('اسحب الحبل لإضاءة المصباح','Pull to relight the lamp')}
-                aria-pressed={lampOn}
-                title={lampOn ? t('اسحب الحبل','Pull the cord') : t('اسحب الحبل لإعادة الإضاءة','Pull to turn the light back on')}
-              >
-                <span className="lx-lamp-string" aria-hidden="true" />
-                <span className="lx-lamp-pull" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
+      {/* First state: the only visible content is the full-screen lamp. */}
+      {lampPhase === 0 && (
+        <div className="lx-lamp-darkroom is-off" dir="ltr">
+          <LampAssembly
+            lampOn={false}
+            lampPulling={lampPulling}
+            onPull={handleLampPull}
+            language={language}
+            standalone
+          />
         </div>
       )}
 
@@ -672,7 +821,30 @@ export default function Login() {
       <div className="lx-scene" aria-hidden="true">
         <span className="lx-aurora" aria-hidden="true" />
         <span className="lx-light" aria-hidden="true" />
+        <span className="lx-room-light" />
+        <span className="lx-night-sky">
+          <span className="lx-night-sky-stars" />
+          <span className="lx-night-sky-frame" />
+        </span>
       </div>
+      {lampOn && (
+        <div className="lx-fireflies" aria-hidden="true">
+          {LAMP_FIREFLIES.map(([x, y, size, duration, delay], index) => (
+            <span
+              key={index}
+              className="lx-firefly"
+              style={{
+                left: `${x}%`,
+                top: `${y}%`,
+                '--lx-firefly-size': `${size}px`,
+                '--lx-fly-duration': `${duration}s`,
+                '--lx-fly-delay': `${delay}s`,
+                '--lx-fly-shift': `${(index % 2 ? -1 : 1) * (12 + (index % 5) * 5)}px`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* ═══════════ تحكمات ثابتة: اللغة + الثيم ─────────────── */}
       <motion.button
@@ -897,7 +1069,7 @@ export default function Login() {
           className="lx-deck"
           variants={DECK_ENTER}
           initial="hidden"
-          animate={isMounted ? 'show' : 'hidden'}
+          animate={lampOn && isMounted ? 'show' : 'hidden'}
         >
           {/* ─── الرباط العلوي: هوية القيادة + الحالة الحية ─── */}
           <motion.div variants={DECK_CHILD} className="lx-ribbon relative shrink-0 px-5 sm:px-8 py-4">
@@ -937,34 +1109,14 @@ export default function Login() {
           <div className="flex flex-col">
             {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة */}
             <motion.div variants={DECK_CHILD} className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
-              {/* Interactive lamp — visual-only control; authentication flow remains untouched. */}
-              <div className={`lx-lamp-stage ${lampOn ? 'is-on' : 'is-off'} ${lampPulling ? 'is-pulling' : ''}`}>
-                <span className="lx-lamp-aura" aria-hidden="true" />
-                <span className="lx-lamp-cone" aria-hidden="true" />
-                <div className="lx-lamp" aria-label={t('مصباح تفاعلي للزينة','Decorative interactive lamp')}>
-                  <span className="lx-lamp-head" aria-hidden="true">
-                    <span className="lx-lamp-bulb" />
-                  </span>
-                  <span className="lx-lamp-neck" aria-hidden="true" />
-                  <span className="lx-lamp-stem" aria-hidden="true" />
-                  <span className="lx-lamp-foot" aria-hidden="true" />
-                  <button
-                    type="button"
-                    className="lx-lamp-cord"
-                    onClick={handleLampPull}
-                    aria-label={lampOn ? t('إطفاء المصباح','Turn lamp off') : t('إضاءة المصباح','Turn lamp on')}
-                    aria-pressed={lampOn}
-                    title={lampOn ? t('اسحب الحبل لإطفاء الضوء','Pull the cord to switch the light off') : t('اسحب الحبل لتشغيل الضوء','Pull the cord to switch the light on')}
-                  >
-                    <span className="lx-lamp-string" aria-hidden="true" />
-                    <span className="lx-lamp-pull" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="lx-lamp-caption" aria-live="polite">
-                  <span className="lx-lamp-status-dot" aria-hidden="true" />
-                  <span>{lampOn ? t('مركز العمليات · جاهز','OPERATIONS CENTER · READY') : t('الإضاءة في وضع الاستعداد','AMBIENT LIGHT STANDBY')}</span>
-                </div>
-              </div>
+              {/* Interactive lamp — presentation-only pull cycle, separate from auth state. */}
+              <LampAssembly
+                lampOn={lampOn}
+                lampPulling={lampPulling}
+                onPull={handleLampPull}
+                language={language}
+                showCaption
+              />
 
               {/* القياسات: صف ثلاثي متناظر */}
               <div className="w-full max-w-md grid grid-cols-3 gap-6 sm:gap-8">

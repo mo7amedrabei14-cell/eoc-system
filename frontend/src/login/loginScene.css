@@ -2954,20 +2954,46 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PULL-CORD LOGIN REVEAL — visual states only; authentication remains unchanged.
-   0: lamp-only blackout; 1: reveal login; 2: warm light shift; 3: blackout.
-   ERC brand red remains #c70000 throughout.
+   COZY LAMP LOGIN — adapted to ERC without replacing authentication UI.
+   Primary UI accent remains #c70000; only the lamp/ambient light cycles colour.
+   Phase 0: lamp only, off. 1: warm. 2: cyber cyan. 3: violet. Then repeat.
    ═══════════════════════════════════════════════════════════════════════════ */
 .lx.lx-phase-0,
+.lx.lx-phase-1 {
+  --lx-lamp-color: #ffd54f;
+  --lx-lamp-core: #fff9c4;
+  --lx-lamp-glow-strong: rgba(255,213,79,.65);
+  --lx-lamp-glow-soft: rgba(255,193,7,.25);
+  --lx-lamp-beam-start: rgba(255,235,150,.85);
+  --lx-lamp-beam-mid: rgba(255,213,79,.25);
+}
+.lx.lx-phase-2 {
+  --lx-lamp-color: #00e5ff;
+  --lx-lamp-core: #e0f7fa;
+  --lx-lamp-glow-strong: rgba(0,229,255,.65);
+  --lx-lamp-glow-soft: rgba(0,188,212,.25);
+  --lx-lamp-beam-start: rgba(128,243,255,.85);
+  --lx-lamp-beam-mid: rgba(0,229,255,.25);
+}
 .lx.lx-phase-3 {
+  --lx-lamp-color: #d500f9;
+  --lx-lamp-core: #f3e5f5;
+  --lx-lamp-glow-strong: rgba(213,0,249,.65);
+  --lx-lamp-glow-soft: rgba(171,71,188,.25);
+  --lx-lamp-beam-start: rgba(234,128,252,.85);
+  --lx-lamp-beam-mid: rgba(213,0,249,.25);
+}
+
+/* True blackout: hide every app layer while retaining one accessible lamp. */
+.lx.lx-phase-0 {
   position: relative;
   min-height: 100dvh;
-  background: #000 !important;
-  color: #fff !important;
+  height: 100dvh;
+  background: #08090c !important;
+  color: #f0f6fc !important;
   overflow: hidden !important;
 }
-.lx.lx-phase-0 > *:not(.lx-lamp-darkroom),
-.lx.lx-phase-3 > *:not(.lx-lamp-darkroom) {
+.lx.lx-phase-0 > *:not(.lx-lamp-darkroom) {
   visibility: hidden !important;
   pointer-events: none !important;
 }
@@ -2982,11 +3008,13 @@
   min-height: 100dvh;
   overflow: hidden;
   isolation: isolate;
-  background: #000;
-  color: #fff;
-  animation: lx-darkroom-in 520ms cubic-bezier(.2,.7,.2,1) both;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(30,34,43,.24), transparent 44%),
+    #08090c;
+  color: #f0f6fc;
+  animation: lx-darkroom-in 650ms cubic-bezier(.16,1,.3,1) both;
 }
-.lx-lamp-stage--solo {
+.lx-lamp-darkroom .lx-lamp-stage--solo {
   width: 100vw;
   max-width: none;
   min-height: 100dvh;
@@ -2996,79 +3024,237 @@
   align-items: center;
 }
 .lx-lamp-stage--solo .lx-lamp {
-  transform: scale(1.08) translateY(-.2rem);
+  transform: scale(1.12) translateY(-.25rem);
   transform-origin: center;
 }
 .lx-lamp-stage--solo .lx-lamp-aura {
-  width: min(82vw, 30rem);
-  height: min(82vw, 30rem);
+  width: min(84vw, 34rem);
+  height: min(84vw, 34rem);
 }
-.lx-lamp-darkroom.is-off .lx-lamp-aura,
-.lx-lamp-darkroom.is-off .lx-lamp-cone {
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-aura,
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-cone,
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-glow,
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-desk-surface {
   opacity: 0 !important;
 }
-.lx-lamp-darkroom.is-off .lx-lamp-bulb {
-  background: #282a31 !important;
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-bulb {
+  background: #292d35 !important;
   box-shadow: none !important;
 }
-.lx-lamp-darkroom.is-off .lx-lamp-head {
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-head {
   background: linear-gradient(145deg,#272932 0%,#15161c 48%,#08090c 100%) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -8px 15px rgba(0,0,0,.5) !important;
 }
-.lx-lamp-darkroom.is-off .lx-lamp-neck,
-.lx-lamp-darkroom.is-off .lx-lamp-stem,
-.lx-lamp-darkroom.is-off .lx-lamp-foot {
-  filter: brightness(.66);
-}
-@keyframes lx-darkroom-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-finial,
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-neck,
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-stem,
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-joint,
+.lx.lx-phase-0 .lx-lamp-darkroom.is-off .lx-lamp-foot {
+  filter: brightness(.62);
 }
 
-/* The second pull changes the light's colour temperature, not the ERC brand. */
-.lx.lx-phase-2 .lx-scene {
+/* Room ambience: a dim window, warm/cool light pool and drifting dust motes. */
+.lx-room-light {
+  position: absolute;
+  z-index: 0;
+  top: -20%;
+  left: -10%;
+  width: min(1100px, 115vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(.6);
+  background: radial-gradient(circle, var(--lx-lamp-glow-soft) 0%, transparent 70%);
+  transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+}
+.lx.lx-phase-1 .lx-room-light,
+.lx.lx-phase-2 .lx-room-light,
+.lx.lx-phase-3 .lx-room-light { opacity: 1; transform: scale(1.4); }
+.lx-night-sky {
+  position: absolute;
+  z-index: 1;
+  top: clamp(1.2rem, 5vh, 2.5rem);
+  left: clamp(1.2rem, 4vw, 4rem);
+  width: clamp(5.8rem, 10vw, 10rem);
+  height: clamp(8.5rem, 24vh, 15rem);
+  border: 4px solid rgba(255,255,255,.055);
+  border-radius: 12px;
+  overflow: hidden;
+  opacity: .58;
+  background: linear-gradient(180deg,#050811,#0c1220);
+  box-shadow: inset 0 0 20px rgba(0,0,0,.8), 0 10px 30px rgba(0,0,0,.4);
+  transition: opacity .8s ease;
+}
+.lx-night-sky-stars {
+  position: absolute;
+  inset: 0;
   background-image:
-    radial-gradient(ellipse 48rem 42rem at 22% 52%, rgba(255,177,64,.16), transparent 68%),
-    radial-gradient(ellipse 40rem 34rem at 84% 82%, rgba(255,155,54,.08), transparent 72%),
-    radial-gradient(ellipse 85% 90% at 50% 48%, transparent 40%, rgba(0,0,0,.42) 100%),
-    radial-gradient(circle, rgba(255,246,220,.42) 0 1px, transparent 1.5px),
-    radial-gradient(circle, rgba(255,229,178,.2) 0 1px, transparent 1.5px);
-  background-size: auto, auto, auto, 117px 113px, 173px 167px;
-  background-position: center, center, center, 18px 12px, 63px 49px;
+    radial-gradient(1px 1px at 20px 30px,#fff,transparent),
+    radial-gradient(1px 1px at 40px 70px,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 90px 40px,#aed581,transparent),
+    radial-gradient(1px 1px at 75% 55%,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 70% 78%,#81d4fa,transparent),
+    radial-gradient(1px 1px at 32% 84%,#fff,transparent);
+  animation: lx-stars-twinkle 4s ease-in-out infinite alternate;
 }
-.lx.lx-phase-2 .lx-console {
-  background:
-    radial-gradient(ellipse 100% 72% at 50% 42%, rgba(255,174,64,.17), transparent 72%),
-    linear-gradient(160deg, color-mix(in srgb, var(--surface-2) 76%, transparent), color-mix(in srgb, var(--surface) 78%, transparent));
+.lx-night-sky-frame { position: absolute; inset: 50% 0 auto; height: 3px; background: rgba(255,255,255,.07); }
+.lx-night-sky-frame::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -8rem;
+  bottom: -8rem;
+  width: 3px;
+  background: rgba(255,255,255,.07);
 }
-.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-aura {
-  background: radial-gradient(circle, rgba(255,190,82,.24), rgba(255,161,57,.09) 34%, transparent 72%);
+@keyframes lx-stars-twinkle { from { opacity: .3; } to { opacity: .9; } }
+
+.lx-fireflies { position: fixed; inset: 0; z-index: 15; overflow: hidden; pointer-events: none; }
+.lx-firefly {
+  position: absolute;
+  width: var(--lx-firefly-size,3px);
+  height: var(--lx-firefly-size,3px);
+  border-radius: 50%;
+  background: var(--lx-lamp-color);
+  box-shadow: 0 0 12px 3px var(--lx-lamp-glow-strong),0 0 24px var(--lx-lamp-color);
+  opacity: .45;
+  animation: lx-firefly-drift var(--lx-fly-duration,30s) ease-in-out var(--lx-fly-delay,0s) infinite alternate;
+  transition: background-color .5s ease,box-shadow .5s ease;
 }
-.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-cone {
-  background: linear-gradient(180deg, rgba(255,219,135,.37), rgba(255,174,63,.17) 42%, transparent 100%);
+@keyframes lx-firefly-drift {
+  0% { transform: translate3d(0,0,0) scale(.8); opacity: .18; }
+  35% { transform: translate3d(var(--lx-fly-shift,16px),-18px,0) scale(1.2); opacity: .78; }
+  68% { transform: translate3d(calc(var(--lx-fly-shift,16px) * -.6),12px,0) scale(.9); opacity: .34; }
+  100% { transform: translate3d(0,-8px,0) scale(1); opacity: .65; }
 }
-.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-bulb {
-  background: #fff2cc;
-  box-shadow: 0 0 10px 5px rgba(255,244,210,.95), 0 0 28px 14px rgba(255,177,64,.58), 0 0 65px 30px rgba(255,150,42,.32);
+
+/* Detailed hardware, volumetric beam and draggable cord with spring return. */
+.lx-lamp-finial {
+  position: absolute; z-index: 4; top: .48rem; left: 50%;
+  width: 1.12rem; height: .5rem; transform: translateX(-50%);
+  border-radius: .5rem .5rem 0 0;
+  background: linear-gradient(180deg,#d4af37 0%,#856404 100%);
+  box-shadow: 0 -2px 5px rgba(0,0,0,.5);
 }
-.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-head {
-  background: linear-gradient(145deg,#6b4c30 0%,#39291f 48%,#17120e 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 0 34px rgba(255,177,64,.22);
+.lx-lamp-head {
+  background: linear-gradient(135deg,#24292e 0%,#161b22 60%,#0d1117 100%);
+  border-bottom: 3px solid #111418;
+  transition: transform .2s cubic-bezier(.16,1,.3,1),box-shadow .5s ease,background .5s ease;
 }
-.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-status-dot {
-  background: #ffb84d;
-  box-shadow: 0 0 0 4px rgba(255,184,77,.12), 0 0 15px rgba(255,184,77,.6);
+.lx.lx-phase-1 .lx-lamp-stage.is-on .lx-lamp-head,
+.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-head,
+.lx.lx-phase-3 .lx-lamp-stage.is-on .lx-lamp-head {
+  box-shadow: inset 0 -4px 15px var(--lx-lamp-glow-soft),inset 0 3px 6px rgba(255,255,255,.25),0 0 30px var(--lx-lamp-glow-soft);
 }
-.lx.lx-phase-2 .lx-lamp-stage.is-on .lx-lamp-pull {
-  background: linear-gradient(110deg,#fff0c4,#e9a33b 54%,#8c4c00);
+.lx-lamp-stage.is-on .lx-lamp-bulb {
+  background: var(--lx-lamp-core) !important;
+  box-shadow: 0 0 20px 8px var(--lx-lamp-color),0 0 45px 25px var(--lx-lamp-glow-strong),0 0 90px 45px var(--lx-lamp-glow-soft) !important;
+}
+.lx-lamp-stage.is-on .lx-lamp-aura {
+  background: radial-gradient(circle,var(--lx-lamp-glow-strong) 0%,var(--lx-lamp-glow-soft) 36%,transparent 72%);
+  opacity: 1; transform: translate(-50%,-50%) scale(1.12);
+}
+.lx-lamp-stage.is-on .lx-lamp-cone {
+  background: linear-gradient(180deg,var(--lx-lamp-beam-start) 0%,var(--lx-lamp-beam-mid) 50%,transparent 100%);
+  opacity: .95;
+}
+.lx-lamp-glow {
+  position: absolute; z-index: 2; top: 5.05rem; left: 50%;
+  width: 6.9rem; height: 1.75rem; transform: translateX(-50%);
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 0 45px 25px var(--lx-lamp-glow-strong),0 0 90px 45px var(--lx-lamp-glow-soft);
+  opacity: 0; pointer-events: none; transition: opacity .4s cubic-bezier(.16,1,.3,1);
+}
+.lx-lamp-stage.is-on .lx-lamp-glow { opacity: .72; }
+.lx-desk-surface {
+  position: absolute; z-index: -1; bottom: -3rem;
+  width: min(650px,150vw); height: 7.5rem; border-radius: 50%;
+  background: radial-gradient(ellipse at center,var(--lx-lamp-glow-strong) 0%,var(--lx-lamp-glow-soft) 55%,transparent 75%);
+  opacity: 0; pointer-events: none; transition: opacity .5s ease;
+}
+.lx-lamp-stage.is-on .lx-desk-surface { opacity: .9; }
+.lx-lamp-joint {
+  position: absolute; z-index: 4; bottom: 1.72rem; left: 50%;
+  width: 1.12rem; height: .62rem; transform: translateX(-50%);
+  border-radius: 4px;
+  background: linear-gradient(90deg,#856404 0%,#ffd700 50%,#856404 100%);
+}
+.lx-lamp-cord {
+  width: 2.6rem; height: 9rem; cursor: grab; touch-action: none; user-select: none;
+  -webkit-tap-highlight-color: transparent; animation: lx-cord-sway 4.4s ease-in-out infinite;
+}
+.lx-lamp-cord:active { cursor: grabbing; }
+.lx-lamp-stage.is-dragging .lx-lamp-cord { animation: none !important; }
+.lx-lamp-string-svg {
+  position: absolute; top: 0; left: 50%; width: 2rem; height: 8.5rem;
+  transform: translateX(-50%); overflow: visible; pointer-events: none;
+}
+.lx-lamp-string-svg path {
+  fill: none; stroke: #7d8590; stroke-width: 2.2; stroke-linecap: round;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.8));
+}
+.lx-lamp-pull {
+  top: 6.35rem; bottom: auto; width: .88rem; height: 1.48rem;
+  transform: translate(calc(-50% + var(--pull-x,0px)),var(--pull-y,0px));
+  background: linear-gradient(180deg,color-mix(in srgb,var(--lx-lamp-color) 70%,#fff),var(--lx-lamp-color) 60%,color-mix(in srgb,var(--lx-lamp-color) 60%,#090a0e));
+  border-radius: 7px;
+  box-shadow: inset 0 2px 3px rgba(255,255,255,.38),0 4px 10px rgba(0,0,0,.8),0 0 12px var(--lx-lamp-glow-soft);
+  transition: box-shadow .2s ease,filter .2s ease;
+}
+.lx-lamp-pull-ridge {
+  width: 4px; height: 12px; position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%); border-radius: 2px; background: rgba(0,0,0,.25);
+}
+.lx-lamp-cord:hover .lx-lamp-pull,
+.lx-lamp-cord:focus-visible .lx-lamp-pull {
+  box-shadow: inset 0 2px 3px rgba(255,255,255,.55),0 6px 14px rgba(0,0,0,.9),0 0 12px var(--lx-lamp-glow-soft);
+  filter: brightness(1.15);
+}
+.lx-lamp-cord:focus-visible { outline: 2px solid #c70000; outline-offset: 4px; border-radius: 1rem; }
+.lx-lamp-stage.is-pulling .lx-lamp-cord { animation: lx-cord-pull 480ms cubic-bezier(.2,.72,.22,1) both; }
+.lx-lamp-caption { display: flex; align-items: center; justify-content: center; gap: .65rem; color: var(--muted); font-size: .67rem; font-weight: 750; letter-spacing: .13em; text-align: center; }
+[dir="rtl"] .lx-lamp-caption { letter-spacing: .02em; }
+.lx-lamp-status-dot { width: .48rem; height: .48rem; flex: 0 0 auto; border-radius: 50%; background: var(--lx-lamp-color); transition: background 450ms ease,box-shadow 450ms ease; }
+.lx-lamp-stage.is-on .lx-lamp-status-dot { background: var(--lx-lamp-color); box-shadow: 0 0 0 4px var(--lx-lamp-glow-soft),0 0 15px var(--lx-lamp-glow-strong); }
+@keyframes lx-cord-sway { 0%,100% { rotate: 2deg; } 50% { rotate: -2deg; } }
+@keyframes lx-cord-pull { 0% { rotate: 0deg; } 32% { rotate: 0deg; translate: 0 13px; } 65% { rotate: -2deg; translate: 0 3px; } 100% { rotate: 0deg; translate: 0 0; } }
+
+/* Mood changes the ambient room, never the ERC-red action controls. */
+.lx.lx-phase-1 .lx-scene,
+.lx.lx-phase-2 .lx-scene,
+.lx.lx-phase-3 .lx-scene {
+  background-image:
+    radial-gradient(1100px 780px at 35% 45%, color-mix(in srgb,var(--lx-lamp-glow-soft) 90%,transparent), transparent 72%),
+    radial-gradient(760px 520px at 8% 0%, color-mix(in srgb,var(--accent) 6%,transparent), transparent 66%),
+    radial-gradient(130% 108% at 50% 48%, transparent 34%, rgba(0,0,0,.5) 100%),
+    linear-gradient(var(--border-hair) 1px,transparent 1px),
+    linear-gradient(90deg,var(--border-hair) 1px,transparent 1px);
+  background-size: auto,auto,auto,64px 64px,64px 64px;
+  background-repeat: no-repeat,no-repeat,no-repeat,repeat,repeat;
+}
+.lx.lx-phase-1 .lx-console,
+.lx.lx-phase-2 .lx-console,
+.lx.lx-phase-3 .lx-console {
+  background: radial-gradient(ellipse 100% 72% at 50% 42%,var(--lx-lamp-glow-soft),transparent 72%),linear-gradient(160deg,color-mix(in srgb,var(--surface-2) 76%,transparent),color-mix(in srgb,var(--surface) 78%,transparent));
+  transition: background .8s cubic-bezier(.16,1,.3,1);
 }
 .lx.lx-phase-2 .lx-deck {
-  border-color: rgba(255,184,77,.22);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 0 1px rgba(255,255,255,.02), 0 1px 2px rgba(0,0,0,.5), 0 32px 72px -40px rgba(255,155,54,.25);
+  border-color: rgba(0,229,255,.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(255,255,255,.02),0 1px 2px rgba(0,0,0,.5),0 32px 72px -40px rgba(0,229,255,.22);
+}
+.lx.lx-phase-3 .lx-deck {
+  border-color: rgba(213,0,249,.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07),inset 0 0 0 1px rgba(255,255,255,.02),0 1px 2px rgba(0,0,0,.5),0 32px 72px -40px rgba(213,0,249,.22);
+}
+@media (max-width: 900px) {
+  .lx-lamp-stage--solo .lx-lamp { transform: scale(.94) translateY(-.15rem); }
+  .lx-night-sky { display: none; }
 }
 @media (max-width: 480px) {
-  .lx-lamp-stage--solo .lx-lamp { transform: scale(.9) translateY(-.15rem); }
+  .lx-lamp-stage--solo .lx-lamp { transform: scale(.8) translateY(-.15rem); }
+  .lx-lamp-stage--solo .lx-lamp-cord { left: calc(50% + 3.7rem); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lx-lamp-darkroom { animation-duration: .01ms !important; }
+  .lx-lamp-darkroom,.lx-firefly,.lx-night-sky-stars { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
