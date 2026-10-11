@@ -420,39 +420,6 @@
   animation-timing-function: var(--sc-spring);
 }
 
-/* Page motion is owned by App.jsx through one explicit state class.
-   Do not animate every content child on mount: that stacked with the surface
-   transition and made some dashboard pages appear to have ghost layers. */
-.app-shell #main-scroll-container > div,
-.app-shell #home-view-top > * {
-  animation: none;
-}
-/* One directional, scroll-like entrance for the page surface only.
-   Direction is provided by App.jsx from the currently selected navigation item;
-   this stylesheet intentionally does not style or animate the sidebar. */
-.eoc-page-transitioning,
-.app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
-  animation: eoc-page-scroll-arrive 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
-}
-@keyframes eoc-page-scroll-arrive {
-  from {
-    opacity: 0.72;
-    transform: translate3d(0, var(--eoc-page-enter-y, 28px), 0) scale(0.997);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .eoc-page-transitioning,
-  .app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
-    animation-duration: 1ms !important;
-    will-change: auto;
-  }
-}
-
 /* The shared sidebar selector has one traveling surface; tune its travel and
    its delayed light-trail without adding another animated element per link. */
 .app-shell .nav-shell::before {
