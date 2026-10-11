@@ -13,7 +13,7 @@
   /* الجذر: مُصغَّر إلى 75٪ من المقياس السابق (٧٥٪ من 13.6px ≈ 10.2px).
      ⚠️ أُزيل `font-size` عن `body` و`#root`: `rem` داخلهما يحلّ إلى حجم `html`
      فعلي، كان يُطبّق تصغيرًا ثانياً ⇒ المقياس المزدوج. الآن يرثون `html` مباشرة. */
-  html { overflow-x: hidden; max-width: 100vw; font-size: clamp(10.2px, 7.2px + 0.825vw, 12px); }
+  html { overflow-x: hidden; max-width: 100vw; font-size: clamp(12.75px, 9px + 1.03125vw, 15px); }
   body, #root { overflow-x: hidden; max-width: 100vw; }
 
   /* Main content area — no horizontal padding that could cause overflow */
@@ -519,4 +519,101 @@
 
   /* شريط التمرير المتراكب لا يشغل مساحة ⇒ لا حاجة للحجز */
   #main-scroll-container { scrollbar-gutter: auto; }
+}
+
+
+/* ── Mobile-only corrective pass (2026-10-12) ─────────────────────────────── */
+@media (max-width: 767px) {
+  /* Keep the sidebar's navigation scrollable so owner-only items at the end
+     remain reachable; keep its action/footer area outside the scrolling region. */
+  .sidebar-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .sidebar-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebar-actions { flex: 0 0 auto; }
+
+  /* iOS Safari auto-zooms inputs below 16px. Keep the visual viewport steady
+     while typing, without disabling pinch zoom or changing desktop behavior. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+
+  /* Tables already explicitly wrapped for horizontal scrolling (including
+     the mission history log) retain desktop table semantics instead of being
+     converted into stacked cards. Other mobile tables keep their card layout. */
+  .table-shell.overflow-x-auto {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .table-shell.overflow-x-auto table {
+    display: table !important;
+    width: max-content;
+    min-width: 520px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .table-shell.overflow-x-auto thead { display: table-header-group !important; }
+  .table-shell.overflow-x-auto tbody { display: table-row-group !important; }
+  .table-shell.overflow-x-auto tr {
+    display: table-row !important;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .table-shell.overflow-x-auto th,
+  .table-shell.overflow-x-auto td {
+    display: table-cell !important;
+    white-space: nowrap;
+    padding: 0.65rem 0.8rem;
+    vertical-align: middle;
+  }
+  .table-shell.overflow-x-auto td::before { display: none !important; }
+  .table-shell.overflow-x-auto tbody tr:hover { background: var(--surface-hover); }
+
+  /* Long mission-status filter labels wrap cleanly instead of colliding.
+     Scope to the compact button group used by the mission status filters. */
+  .app-shell div:has(> button[class*="px-3"][class*="py-1.5"]) {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+    max-width: 100%;
+  }
+  .app-shell div:has(> button[class*="px-3"][class*="py-1.5"]) > div[class*="w-px"] {
+    flex: 1 0 100%;
+    width: 100%;
+    height: 1px;
+    margin-inline: 0;
+  }
+  .app-shell div:has(> button[class*="px-3"][class*="py-1.5"]) > button {
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    white-space: normal;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
 }
