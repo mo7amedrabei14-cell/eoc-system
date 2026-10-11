@@ -3759,3 +3759,24 @@
 @media (prefers-reduced-motion: reduce) {
   .lx-deck .p-7 > .grid { transition-duration: .01ms !important; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FINISHING — visually centered ERC crest inside its glass tile.
+   The small optical offset compensates for the mark's asymmetric transparent
+   bounds; the frame itself remains perfectly centered and unchanged in size.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.lx-login-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lx-login-brand-mark img {
+  object-position: 50% 50%;
+  transform: translate(-1px, -1.5px);
+}
+
+/* Respect platform accessibility preferences without changing page behavior. */
+@media (prefers-reduced-motion: reduce) {
+  .lx-login-brand-mark img { transform: none; }
+}

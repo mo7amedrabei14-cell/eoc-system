@@ -1,0 +1,38 @@
+/* EOC premium route + dashboard page transitions.
+   Motion is limited to route opacity and the active page surface below the
+   dashboard header. Sidebar nodes never receive classes or animation styles. */
+
+.eoc-route-transition {
+  min-height: 100dvh;
+}
+
+@keyframes eoc-page-arrive {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.992);
+  }
+  68% {
+    opacity: 1;
+    transform: translate3d(0, -1px, 0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.eoc-page-arrive {
+  animation: eoc-page-arrive 580ms cubic-bezier(0.22, 1, 0.36, 1)
+    var(--eoc-page-delay, 0ms) both;
+  transform-origin: 50% 0;
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eoc-page-arrive {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+}

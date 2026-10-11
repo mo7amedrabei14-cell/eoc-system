@@ -155,9 +155,23 @@ const FORM_ITEM = {
   show: { opacity: 1, y: 0, transition: SPRING },
 };
 const TAB_PAGE = {
-  initial: { opacity: 0, y: 14 },
-  animate: { opacity: 1, y: 0, transition: SPRING_SOFT },
-  exit: { opacity: 0, y: -10, transition: { duration: 0.18, ease: EASE_OUT } },
+  // Directional, spring-soft movement makes the credential form and OTP feel like
+  // two connected steps in one journey instead of a content swap.
+  initial: { opacity: 0, x: 34, y: 10, scale: 0.978 },
+  animate: {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    scale: 1,
+    transition: { ...SPRING_SOFT, opacity: { duration: 0.24, ease: EASE_OUT } },
+  },
+  exit: {
+    opacity: 0,
+    x: -26,
+    y: -6,
+    scale: 0.988,
+    transition: { duration: 0.23, ease: EASE_OUT },
+  },
 };
 
 const LAMP_FIREFLIES = [
