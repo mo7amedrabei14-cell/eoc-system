@@ -16,22 +16,36 @@ const DASHBOARD_SURFACE = '#main-scroll-container > div.p-4';
 function animateSurface(surface, animationRef) {
   if (!surface) return;
   const computed = window.getComputedStyle(surface);
-  const currentTransform = computed.transform;
-  const isAtRest = currentTransform === 'none';
   const opacity = Number.parseFloat(computed.opacity);
-  const startOpacity = isAtRest ? 0.68 : (Number.isFinite(opacity) ? opacity : 0.82);
-  const startTransform = isAtRest
-    ? 'translate3d(0px, 12px, 0px) scale(0.992)'
-    : currentTransform;
+  let startX = 0;
+  let startY = 12;
+  let startScale = 0.992;
 
-  // Interrupt the previous animation from its current visual frame: rapid
-  // tab clicks won't stack animations or jump back to a hard-coded start pose.
+  // If a previous animation is in flight, decompose its current computed matrix
+  // so the new animation continues from the visible frame instead of snapping.
+  if (computed.transform !== 'none' && typeof DOMMatrixReadOnly !== 'undefined') {
+    try {
+      const matrix = new DOMMatrixReadOnly(computed.transform);
+      startX = matrix.m41;
+      startY = matrix.m42;
+      startScale = Math.hypot(matrix.m11, matrix.m12) || 1;
+    } catch {
+      // Keep the subtle default entrance if the transform cannot be decomposed.
+    }
+  }
+
+  const isAtRest = computed.transform === 'none';
+  const startOpacity = isAtRest ? 0.68 : (Number.isFinite(opacity) ? opacity : 0.82);
+
+  // Interrupt at the actual visual frame; animate transform components only.
   animationRef.current?.stop();
   animationRef.current = animate(
     surface,
     {
       opacity: [startOpacity, 1],
-      transform: [startTransform, 'translate3d(0px, 0px, 0px) scale(1)'],
+      x: [startX, 0],
+      y: [startY, 0],
+      scale: [startScale, 1],
     },
     { duration: 0.34, ease: [0.2, 0, 0, 1] },
   );
