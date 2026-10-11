@@ -3212,6 +3212,47 @@
   filter: brightness(1.15);
 }
 .lx-lamp-cord:focus-visible { outline: 2px solid #c70000; outline-offset: 4px; border-radius: 1rem; }
+
+/* Use an app-owned hover hint instead of the browser's native title tooltip.
+   Native title popups can remain visible after pointer capture/drag interactions;
+   this hint follows hover/focus state and is explicitly suppressed while dragging. */
+.lx-lamp-hint {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + .8rem);
+  z-index: 20;
+  width: max-content;
+  max-width: min(16rem, 65vw);
+  padding: .55rem .8rem;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: .75rem;
+  background: rgba(18,22,29,.92);
+  color: #f0f6fc;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: .75rem;
+  font-weight: 650;
+  line-height: 1.45;
+  text-align: center;
+  direction: rtl;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-44%) translateX(-4px);
+  transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
+}
+.lx-lamp-cord:hover .lx-lamp-hint,
+.lx-lamp-cord:focus-visible .lx-lamp-hint {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+.lx-lamp-stage.is-dragging .lx-lamp-hint {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: none;
+}
 .lx-lamp-stage.is-pulling .lx-lamp-cord { animation: lx-cord-pull 480ms cubic-bezier(.2,.72,.22,1) both; }
 .lx-lamp-caption { display: flex; align-items: center; justify-content: center; gap: .65rem; color: var(--muted); font-size: .67rem; font-weight: 750; letter-spacing: .13em; text-align: center; }
 [dir="rtl"] .lx-lamp-caption { letter-spacing: .02em; }
@@ -3812,8 +3853,11 @@
 }
 /* OTP digits must stay visually centered even when the surrounding login panel is RTL. */
 .lx[dir="rtl"] .otp-orbit-zone .otp-box {
-  direction: ltr;
-  text-align: center;
+  direction: ltr !important;
+  text-align: center !important;
+  text-indent: 0 !important;
+  padding-inline: 0 !important;
+  unicode-bidi: isolate;
 }
 
 /* Keep Latin codes, numeric OTP, and technical identifiers readable. */
