@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import { animate, AnimatePresence, MotionConfig, motion, useAnimate, useReducedMotion } from 'framer-motion';
 import Login from './Login';
 import Dashboard, { WorkingToast } from './Dashboard';
 import { installWorkingAuto } from './workingToast';
@@ -13,56 +13,45 @@ installWorkingAuto();
 
 function DashboardPageMotion() {
   const location = useLocation();
+  const reduceMotion = useReducedMotion();
+  const activePageRef = useRef(null);
+  const pageAnimationRef = useRef(null);
 
   useEffect(() => {
     if (location.pathname !== '/dashboard') return undefined;
 
-    let frame = 0;
-    let activePage = '';
-    const observers = [];
-    const timers = new Set();
-
-    // Compare the selected nav element itself, not its label; language changes
-    // must never be mistaken for a page change.
     const readActivePage = () => document.querySelector('.nav-item.is-active');
 
     const animateCurrentPage = () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        // Animate only the page surface below the fixed header. The sidebar is never touched.
-        const surface = document.querySelector('#main-scroll-container > div.p-4');
-        if (!surface) return;
+      const surface = document.querySelector('#main-scroll-container > div.p-4');
+      if (!surface || reduceMotion) return;
 
-        const nodes = Array.from(surface.children).filter((node) => node instanceof HTMLElement);
-        if (!nodes.length) return;
-
-        nodes.forEach((node, index) => {
-          node.classList.remove('eoc-page-arrive');
-          node.style.setProperty('--eoc-page-delay', `${Math.min(index, 4) * 32}ms`);
-        });
-        // One shared layout read restarts the entry animation without per-node forced layouts.
-        void surface.offsetWidth;
-        nodes.forEach((node) => node.classList.add('eoc-page-arrive'));
-
-        const timer = window.setTimeout(() => {
-          nodes.forEach((node) => {
-            node.classList.remove('eoc-page-arrive');
-            node.style.removeProperty('--eoc-page-delay');
-          });
-          timers.delete(timer);
-        }, 920);
-        timers.add(timer);
-      });
+      // Stop any in-flight page transition before starting the next one.
+      pageAnimationRef.current?.stop();
+      pageAnimationRef.current = animate(
+        surface,
+        {
+          opacity: [0.32, 1],
+          x: [30, 0],
+          y: [12, 0],
+          scale: [0.986, 1],
+        },
+        {
+          duration: 0.62,
+          ease: [0.22, 1, 0.36, 1],
+        },
+      );
     };
 
-    activePage = readActivePage();
-    // Observe only nav selection state; clicks, data refreshes, filters and forms don't trigger it.
+    // Record the currently selected page, but do not replay an entry animation
+    // on mount. This avoids stacking a second intro on top of the route curtain.
+    activePageRef.current = readActivePage();
+    const observers = [];
     document.querySelectorAll('.nav-item').forEach((item) => {
       const observer = new MutationObserver(() => {
         const nextPage = readActivePage();
-        if (nextPage && nextPage !== activePage) {
-          activePage = nextPage;
+        if (nextPage && nextPage !== activePageRef.current) {
+          activePageRef.current = nextPage;
           animateCurrentPage();
         }
       });
@@ -70,40 +59,82 @@ function DashboardPageMotion() {
       observers.push(observer);
     });
 
-    // The first dashboard render also enters gently after authentication.
-    animateCurrentPage();
-
     return () => {
-      if (frame) window.cancelAnimationFrame(frame);
       observers.forEach((observer) => observer.disconnect());
-      timers.forEach((timer) => window.clearTimeout(timer));
+      pageAnimationRef.current?.stop();
+      pageAnimationRef.current = null;
     };
-  }, [location.pathname]);
+  }, [location.pathname, reduceMotion]);
 
   return null;
+}
+
+/**
+ * An original curtain-style transition inspired by Motion UI's page-transition
+ * and curtains concepts. It uses the already-installed Motion runtime, not a
+ * paid Motion+ component or an additional dependency.
+ */
+function PageRouteCurtain() {
+  const location = useLocation();
+  const reduceMotion = useReducedMotion();
+  const [scope, animateCurtain] = useAnimate();
+  const previousPathRef = useRef(location.pathname);
+
+  useEffect(() => {
+    if (previousPathRef.current === location.pathname) return undefined;
+    previousPathRef.current = location.pathname;
+    if (reduceMotion || !scope.current) return undefined;
+
+    const controls = animateCurtain(
+      scope.current,
+      {
+        clipPath: [
+          'inset(0 50% 0 50%)',
+          'inset(0 0% 0 0%)',
+          'inset(0 0% 0 0%)',
+          'inset(0 0 0 100%)',
+        ],
+        opacity: [0, 1, 1, 0],
+      },
+      {
+        duration: 0.9,
+        times: [0, 0.28, 0.7, 1],
+        ease: [0.22, 1, 0.36, 1],
+      },
+    );
+
+    return () => controls.stop();
+  }, [location.pathname, reduceMotion, animateCurtain, scope]);
+
+  return (
+    <div
+      ref={scope}
+      className="eoc-route-curtain"
+      aria-hidden="true"
+    >
+      <span className="eoc-route-curtain__beam" />
+    </div>
+  );
 }
 
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
-    <AnimatePresence initial={false} mode="sync">
+    // wait prevents Login and Dashboard from being mounted on top of each other
+    // during their hand-off. The curtain supplies the visible transition.
+    <AnimatePresence initial={false} mode="wait">
       <motion.div
         key={location.pathname}
         className="eoc-route-transition"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       >
         <Routes location={location}>
-          {/* المسار الأساسي بيودي على صفحة الدخول */}
           <Route path="/" element={<Login />} />
-
-          {/* مسار لوحة التحكم */}
           <Route path="/dashboard" element={<Dashboard />} />
-
-          {/* لو اليوزر كتب أي رابط غلط، يرجعه لصفحة الدخول */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </motion.div>
@@ -119,6 +150,7 @@ function App() {
         <CustomTooltipLayer />
         <DashboardPageMotion />
         <AnimatedRoutes />
+        <PageRouteCurtain />
       </MotionConfig>
     </BrowserRouter>
   );
