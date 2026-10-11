@@ -18,15 +18,25 @@ const DASHBOARD_SURFACE = '#main-scroll-container > div.p-4';
  * A CSS class drives the complete entrance; it never competes with a second
  * Framer Motion transform animation on the same surface.
  */
+const pageTransitionHandlers = new WeakMap();
+
 function triggerPageTransition(surface) {
   if (!surface) return;
+  const previousHandler = pageTransitionHandlers.get(surface);
+  if (previousHandler) surface.removeEventListener('animationend', previousHandler);
+
   surface.classList.remove('eoc-page-transitioning');
   // Restart the single CSS animation at the actual navigation boundary.
   void surface.offsetWidth;
   surface.classList.add('eoc-page-transitioning');
-  surface.addEventListener('animationend', () => {
+
+  const finish = () => {
     surface.classList.remove('eoc-page-transitioning');
-  }, { once: true });
+    surface.removeEventListener('animationend', finish);
+    pageTransitionHandlers.delete(surface);
+  };
+  pageTransitionHandlers.set(surface, finish);
+  surface.addEventListener('animationend', finish, { once: true });
 }
 
 /**
