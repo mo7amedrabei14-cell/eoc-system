@@ -2993,7 +2993,7 @@
   color: #f0f6fc !important;
   overflow: hidden !important;
 }
-.lx.lx-phase-0 > *:not(.lx-lamp-darkroom) {
+.lx.lx-phase-0 > *:not(.lx-lamp-darkroom):not(.lx-neon-crest) {
   visibility: hidden !important;
   pointer-events: none !important;
 }
@@ -3951,4 +3951,83 @@
 }
 .lx[dir="rtl"] .lx-deck .lx-input::placeholder {
   text-align: right;
+}
+
+
+/* Pre-light neon sign — reuse the official ERC image; never redraw the emblem. */
+.lx-neon-crest {
+  position: fixed;
+  top: 50%;
+  left: 74%;
+  z-index: 10001;
+  display: grid;
+  place-items: center;
+  width: clamp(8.5rem, 18vw, 15rem);
+  opacity: 1;
+  transform: translate3d(-50%, -50%, 0) scale(1);
+  transform-origin: center;
+  pointer-events: none;
+  will-change: opacity, transform, filter;
+  transition:
+    opacity 560ms cubic-bezier(.16,1,.3,1),
+    transform 820ms cubic-bezier(.16,1,.3,1),
+    filter 560ms cubic-bezier(.16,1,.3,1);
+}
+.lx-neon-crest img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 2px rgba(255,255,255,.96))
+    drop-shadow(0 0 7px rgba(255,40,62,.94))
+    drop-shadow(0 0 19px rgba(199,0,0,.78))
+    drop-shadow(0 0 36px rgba(199,0,0,.42));
+}
+
+/* Once the lamp turns on, the sign exits left in Arabic while the form reveals. */
+.lx.lx-phase-1 .lx-neon-crest,
+.lx.lx-phase-2 .lx-neon-crest,
+.lx.lx-phase-3 .lx-neon-crest {
+  z-index: 31;
+  opacity: 0;
+  filter: blur(2px);
+  transform: translate3d(calc(-50% - 14vw), -50%, 0) scale(.84);
+}
+.lx[dir="ltr"].lx-phase-1 .lx-neon-crest,
+.lx[dir="ltr"].lx-phase-2 .lx-neon-crest,
+.lx[dir="ltr"].lx-phase-3 .lx-neon-crest {
+  transform: translate3d(calc(-50% + 14vw), -50%, 0) scale(.84);
+}
+
+@media (max-width: 950px) {
+  .lx-neon-crest {
+    left: 78%;
+    width: clamp(5.75rem, 20vw, 8.5rem);
+  }
+  .lx.lx-phase-1 .lx-neon-crest,
+  .lx.lx-phase-2 .lx-neon-crest,
+  .lx.lx-phase-3 .lx-neon-crest {
+    transform: translate3d(calc(-50% - 18vw), -50%, 0) scale(.8);
+  }
+  .lx[dir="ltr"].lx-phase-1 .lx-neon-crest,
+  .lx[dir="ltr"].lx-phase-2 .lx-neon-crest,
+  .lx[dir="ltr"].lx-phase-3 .lx-neon-crest {
+    transform: translate3d(calc(-50% + 18vw), -50%, 0) scale(.8);
+  }
+}
+@media (max-width: 480px) {
+  .lx-neon-crest {
+    top: 45%;
+    left: 78%;
+    width: clamp(5rem, 21vw, 6.5rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-neon-crest {
+    transition-duration: .01ms;
+    will-change: auto;
+  }
 }
