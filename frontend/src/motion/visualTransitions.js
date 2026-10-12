@@ -18,7 +18,7 @@ const nextFrame = () => new Promise((resolve) => {
 const getWipeDirection = () => {
   const loginRoot = document.querySelector('.lx[dir="rtl"], .lx[dir="ltr"]');
   const appDirectionRoot = document.querySelector(
-    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl], body[dir="ltr"]',
+    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl"], body[dir="ltr"]',
   );
   const direction = loginRoot?.getAttribute('dir')
     || appDirectionRoot?.getAttribute('dir')
