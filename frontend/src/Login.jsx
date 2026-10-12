@@ -825,6 +825,11 @@ export default function Login() {
       <ServerDownOverlay health={serverHealth} lang={language} />
       <ServerRecoveryBanner health={serverHealth} lang={language} />
 
+      {/* Reuse the official ERC logo asset as the pre-light neon sign. */}
+      <div className="lx-neon-crest" aria-hidden="true">
+        <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
+      </div>
+
       {/* One persistent root-level lamp: its DOM and position survive every phase. */}
       <div className={`lx-lamp-darkroom ${lampOn ? 'is-on' : 'is-off'}`} dir="ltr">
         <LampAssembly
