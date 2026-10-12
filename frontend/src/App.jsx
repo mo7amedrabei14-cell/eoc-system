@@ -77,17 +77,9 @@ function VisualTransitionFallback() {
   useLayoutEffect(() => {
     const changed = previousPathRef.current !== location.pathname;
     previousPathRef.current = location.pathname;
-    if (!ENABLE_VISUAL_TRANSITIONS || !changed) return undefined;
+    if (!ENABLE_VISUAL_TRANSITIONS || !changed || location.pathname !== '/dashboard') return undefined;
 
-    triggerAutoScrollTransition(
-      location.pathname === '/dashboard'
-        ? document.querySelector(DASHBOARD_SURFACE)
-        : (
-          document.querySelector('.lx.lx-phase-0 .lx-lamp-darkroom')
-          || document.querySelector('.lx-deck .p-7 > .grid')
-          || document.querySelector('.lx-stage-shell')
-        ),
-    );
+    triggerAutoScrollTransition(document.querySelector(DASHBOARD_SURFACE));
     return undefined;
   }, [location.pathname]);
 

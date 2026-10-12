@@ -3012,7 +3012,7 @@
     radial-gradient(circle at 50% 48%, rgba(30,34,43,.24), transparent 44%),
     #08090c;
   color: #f0f6fc;
-  animation: lx-darkroom-in 650ms cubic-bezier(.16,1,.3,1) both;
+  animation: none;
 }
 .lx-lamp-darkroom .lx-lamp-stage--solo {
   width: 100vw;
@@ -3896,4 +3896,90 @@
 }
 .lx[dir="rtl"] .lx-deck .lx-input::placeholder {
   text-align: right;
+}
+
+
+/* Keep the interactive lamp on one fixed screen anchor while the login deck enters.
+   The hidden placeholder keeps the console's original layout without animating the lamp. */
+.lx-lamp-darkroom {
+  animation: none !important;
+  place-items: stretch !important;
+}
+.lx-lamp-darkroom .lx-lamp-stage--solo {
+  position: absolute !important;
+  inset: 0 auto auto 0 !important;
+  width: 58vw !important;
+  max-width: none !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+}
+.lx-lamp-fixed-anchor {
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  display: grid !important;
+  place-items: stretch !important;
+  width: 58vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  z-index: 31 !important;
+  pointer-events: none !important;
+}
+.lx-lamp-fixed-anchor > .lx-lamp-stage {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  pointer-events: auto !important;
+}
+.lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+.lx-lamp-fixed-anchor .lx-lamp {
+  transform: scale(1.02) translateY(-.1rem) !important;
+  transform-origin: center;
+}
+.lx-lamp-stage--placeholder {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+@media (max-width: 950px) {
+  .lx-lamp-darkroom .lx-lamp-stage--solo {
+    width: 100vw !important;
+    height: 44dvh !important;
+    min-height: 20rem !important;
+  }
+  .lx-lamp-fixed-anchor {
+    width: 100vw !important;
+    height: 44dvh !important;
+    min-height: 20rem !important;
+  }
+  .lx-lamp-fixed-anchor > .lx-lamp-stage {
+    height: 44dvh !important;
+    min-height: 20rem !important;
+  }
+  .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx-lamp-fixed-anchor .lx-lamp {
+    transform: scale(.82) translateY(-.1rem) !important;
+  }
+}
+@media (max-width: 480px) {
+  .lx-lamp-darkroom .lx-lamp-stage--solo {
+    height: 38dvh !important;
+    min-height: 16rem !important;
+  }
+  .lx-lamp-fixed-anchor {
+    height: 38dvh !important;
+    min-height: 16rem !important;
+  }
+  .lx-lamp-fixed-anchor > .lx-lamp-stage {
+    height: 38dvh !important;
+    min-height: 16rem !important;
+  }
+}
+@media (max-height: 680px) and (min-width: 951px) {
+  .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx-lamp-fixed-anchor .lx-lamp {
+    transform: scale(.82) translateY(-.1rem) !important;
+  }
 }
