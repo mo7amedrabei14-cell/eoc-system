@@ -1,6 +1,6 @@
-/* Full-viewport entrance curtain used only for successful login navigation.
-   A single fixed layer covers the old page, swaps routes while covered, then
-   clips away to reveal the dashboard. It never animates the login card itself. */
+/* Premium full-viewport transition: a red light field, glass orbit and moving
+   specular edge. The route changes under the field; no login/dashboard layout
+   or surface is transformed. */
 .eoc-page-clip-wipe {
   position: fixed;
   inset: 0;
@@ -10,12 +10,132 @@
   height: 100dvh;
   margin: 0;
   padding: 0;
+  overflow: hidden;
   border: 0;
-  background: #c70000;
-  clip-path: var(--eoc-wipe-start, inset(0 100% 0 0));
+  isolation: isolate;
+  background: #970008;
+  clip-path: ellipse(0% 136% at var(--eoc-wipe-entry-x, 0%) 50%);
   pointer-events: none;
   user-select: none;
-  contain: strict;
+  contain: layout paint;
   transform: translateZ(0);
   will-change: clip-path;
+}
+
+.eoc-page-clip-wipe__field {
+  position: absolute;
+  inset: -8%;
+  z-index: 0;
+  display: block;
+  background:
+    radial-gradient(
+      74% 112% at var(--eoc-wipe-entry-x, 0%) 50%,
+      rgba(255, 104, 104, 0.56) 0%,
+      rgba(229, 20, 30, 0.27) 36%,
+      transparent 68%
+    ),
+    radial-gradient(
+      62% 74% at 76% 15%,
+      rgba(255, 231, 231, 0.15) 0%,
+      rgba(255, 200, 200, 0.055) 28%,
+      transparent 66%
+    ),
+    radial-gradient(
+      74% 76% at 69% 88%,
+      rgba(65, 0, 10, 0.28) 0%,
+      transparent 66%
+    ),
+    linear-gradient(126deg, #690008 0%, #a9000d 28%, #d10a12 53%, #930008 100%);
+  transform: scale(1.04);
+  will-change: transform;
+}
+
+.eoc-page-clip-wipe__orbit {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: var(--eoc-wipe-entry-x, 0%);
+  display: block;
+  width: min(112vmax, 1480px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 246, 246, 0.22);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.055) 0%,
+      rgba(255, 255, 255, 0.018) 38%,
+      transparent 69%
+    );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.035),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.075),
+    inset 0 0 100px rgba(255, 255, 255, 0.035),
+    0 0 110px rgba(255, 195, 195, 0.055);
+  opacity: 0.12;
+  transform: translate3d(-50%, -50%, 0) scale(0.82);
+  will-change: transform, opacity;
+}
+
+.eoc-page-clip-wipe__edge {
+  position: absolute;
+  z-index: 2;
+  top: -18%;
+  bottom: -18%;
+  left: 50%;
+  display: block;
+  width: clamp(4.5rem, 12vw, 13rem);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 232, 232, 0.035) 23%,
+    rgba(255, 255, 255, 0.2) 39%,
+    rgba(255, 255, 255, 0.62) 50%,
+    rgba(255, 232, 232, 0.2) 61%,
+    rgba(255, 232, 232, 0.035) 77%,
+    transparent 100%
+  );
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transform: translate3d(-56vw, 0, 0);
+  will-change: transform, opacity;
+}
+
+.eoc-page-clip-wipe__edge::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  display: block;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 18%,
+    rgba(255, 255, 255, 0.82) 48%,
+    rgba(255, 255, 255, 0.46) 68%,
+    transparent 100%
+  );
+  box-shadow: 0 0 22px 4px rgba(255, 236, 236, 0.22);
+  content: "";
+}
+
+@media (max-width: 640px) {
+  .eoc-page-clip-wipe__orbit {
+    width: 152vmax;
+  }
+
+  .eoc-page-clip-wipe__edge {
+    width: clamp(3rem, 24vw, 7rem);
+    filter: blur(9px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eoc-page-clip-wipe,
+  .eoc-page-clip-wipe * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
