@@ -208,7 +208,7 @@ kbd,
 /* العمق: مادة متدرّجة + حد شعري + حافة ضوء داخلية. بلا عزل هنا (انظر الشرح
    أعلاه): البطاقة قد تحتضن طبقة fixed مضمّنة. */
 .card-surface {
-  background: transparent;
+  background: var(--sc-elev-1);
   border: 1px solid var(--sc-hair);
   box-shadow:
     var(--sc-shadow-1),
@@ -1068,10 +1068,7 @@ button.nav-item {
   overflow: hidden !important;
 }
 
-.stat-card,
-.glass-panel,
-.card,
-.dashboard-card {
+.stat-card {
   background: transparent !important;
 }
 
