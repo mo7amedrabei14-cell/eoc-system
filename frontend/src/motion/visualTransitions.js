@@ -18,7 +18,7 @@ const nextFrame = () => new Promise((resolve) => {
 const getWipeDirection = () => {
   const loginRoot = document.querySelector('.lx[dir="rtl"], .lx[dir="ltr"]');
   const appDirectionRoot = document.querySelector(
-    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl"], body[dir="ltr"]',
+    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl], body[dir="ltr"]',
   );
   const direction = loginRoot?.getAttribute('dir')
     || appDirectionRoot?.getAttribute('dir')
@@ -29,10 +29,9 @@ const getWipeDirection = () => {
 };
 
 /**
- * Move one opaque, full-screen surface through the viewport in a single
- * direction. The existing route/action is executed only when the old screen
- * is completely covered; the same surface then continues off-screen to reveal
- * the destination. Login and logout use mirrored starting edges.
+ * Keep the curtain in the foreground while the destination renders underneath.
+ * Update the route immediately, then move the same curtain across the new screen
+ * in one uninterrupted sweep. Login and logout use mirrored starting edges.
  */
 export function runVisualTransition(update, { enabled = true, mode = 'enter' } = {}) {
   if (typeof update !== 'function') return undefined;
@@ -91,42 +90,26 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
   let updateStarted = false;
   const finished = (async () => {
     try {
-      // First leg: the same surface glides over the outgoing screen.
-      const coverMotion = curtain.animate(
-        [
-          { transform: 'translate3d(' + startX + ', 0, 0)' },
-          { transform: 'translate3d(0, 0, 0)' },
-        ],
-        {
-          // Slower, more deliberate curtain travel: 620ms -> 900ms.
-          duration: 900,
-          easing: 'cubic-bezier(.55, 0, .15, .72)',
-          fill: 'forwards',
-        },
-      );
-
-      await coverMotion.finished;
-
-      // The actual login/logout handler executes once beneath the opaque layer.
+      // Render the destination immediately behind the foreground curtain.
+      // flushSync prevents React from deferring the route change until the wipe ends.
       updateStarted = true;
       flushSync(() => update());
 
-      // Continue the exact same surface, in the same direction, without a
-      // second curtain, a direction reversal, or a separate highlight animation.
-      const revealMotion = curtain.animate(
+      // One uninterrupted sweep: the app is already active behind the curtain
+      // while it crosses the viewport. No cover/reveal pause or second motion.
+      const wipeMotion = curtain.animate(
         [
-          { transform: 'translate3d(0, 0, 0)' },
+          { transform: 'translate3d(' + startX + ', 0, 0)' },
           { transform: 'translate3d(' + finishX + ', 0, 0)' },
         ],
         {
-          // Match the cover leg so the full wipe feels continuous.
-          duration: 900,
-          easing: 'cubic-bezier(.2, .066, .55, 1)',
+          duration: 1800,
+          easing: 'cubic-bezier(.76, 0, .24, 1)',
           fill: 'forwards',
         },
       );
 
-      await revealMotion.finished;
+      await wipeMotion.finished;
     } catch (error) {
       // Never leave the interface covered if animation is interrupted.
       if (!updateStarted) {
