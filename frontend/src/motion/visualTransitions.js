@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 
-// One-line rollback switch: set false to disable all transitions from this pass.
+// One-line rollback switch for the shared full-page transition.
 export const ENABLE_VISUAL_TRANSITIONS = true;
 
 let transitionSequence = 0;
@@ -28,17 +28,11 @@ const getWipeDirection = () => {
   return direction === 'rtl' ? 'rtl' : 'ltr';
 };
 
-const createTransitionLayer = (className) => {
-  const layer = document.createElement('span');
-  layer.className = className;
-  layer.setAttribute('aria-hidden', 'true');
-  return layer;
-};
-
 /**
- * A full-viewport, elliptical light aperture for login and logout navigation.
- * The route changes behind the opaque field, then a second aperture reveals
- * the destination. All motion is decorative; the navigation callback runs once.
+ * Move one opaque, full-screen surface through the viewport in a single
+ * direction. The existing route/action is executed only when the old screen
+ * is completely covered; the same surface then continues off-screen to reveal
+ * the destination. Login and logout use mirrored starting edges.
  */
 export function runVisualTransition(update, { enabled = true, mode = 'enter' } = {}) {
   if (typeof update !== 'function') return undefined;
@@ -69,20 +63,13 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
   };
 
   const isRtl = getWipeDirection() === 'rtl';
-  const leadingX = isRtl ? '100%' : '0%';
-  const trailingX = isRtl ? '0%' : '100%';
-  // Logout runs the same choreography from the opposite edge.
-  const entryX = mode === 'exit' ? trailingX : leadingX;
-  const exitX = mode === 'exit' ? leadingX : trailingX;
-  const collapsedEntry = 'ellipse(0% 136% at ' + entryX + ' 50%)';
-  const expandedEntry = 'ellipse(168% 192% at ' + entryX + ' 50%)';
-  const expandedExit = 'ellipse(168% 192% at ' + exitX + ' 50%)';
-  const collapsedExit = 'ellipse(0% 136% at ' + exitX + ' 50%)';
+  // Enter from the leading edge; logout enters from the opposite edge.
+  const entersFromRight = (mode === 'enter') === isRtl;
+  const startX = entersFromRight ? '100vw' : '-100vw';
+  const finishX = entersFromRight ? '-100vw' : '100vw';
   const canAnimate = typeof Element !== 'undefined'
     && typeof Element.prototype.animate === 'function';
 
-  // Keep reduced-motion and unsupported-browser behavior immediate, and mark
-  // the route swap so the app-level fallback cannot add a competing animation.
   if (prefersReducedMotion() || !canAnimate) {
     try {
       flushSync(() => update());
@@ -97,77 +84,49 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
   curtain.className = 'eoc-page-clip-wipe';
   curtain.setAttribute('aria-hidden', 'true');
   curtain.dataset.direction = isRtl ? 'rtl' : 'ltr';
-  curtain.style.setProperty('--eoc-wipe-entry-x', entryX);
-  curtain.style.setProperty('--eoc-wipe-exit-x', exitX);
-  curtain.style.clipPath = collapsedEntry;
-
-  const field = createTransitionLayer('eoc-page-clip-wipe__field');
-  const orbit = createTransitionLayer('eoc-page-clip-wipe__orbit');
-  const edge = createTransitionLayer('eoc-page-clip-wipe__edge');
-  curtain.append(field, orbit, edge);
+  curtain.dataset.mode = mode === 'exit' ? 'exit' : 'enter';
+  curtain.style.transform = 'translate3d(' + startX + ', 0, 0)';
   document.body.appendChild(curtain);
-
-  const edgeTravel = entryX === '0%'
-    ? ['translate3d(-56vw, 0, 0)', 'translate3d(56vw, 0, 0)']
-    : ['translate3d(56vw, 0, 0)', 'translate3d(-56vw, 0, 0)'];
 
   let updateStarted = false;
   const finished = (async () => {
     try {
+      // First leg: the same surface glides over the outgoing screen.
       const coverMotion = curtain.animate(
-        [{ clipPath: collapsedEntry }, { clipPath: expandedEntry }],
-        { duration: 560, easing: 'cubic-bezier(.72, 0, .16, 1)', fill: 'forwards' },
-      );
-      const edgeCoverMotion = edge.animate(
         [
-          { transform: edgeTravel[0], opacity: 0 },
-          { transform: edgeTravel[1], opacity: 0.92, offset: 0.76 },
-          { transform: edgeTravel[1], opacity: 0 },
+          { transform: 'translate3d(' + startX + ', 0, 0)' },
+          { transform: 'translate3d(0, 0, 0)' },
         ],
-        { duration: 560, easing: 'cubic-bezier(.52, 0, .2, 1)', fill: 'both' },
-      );
-      orbit.animate(
-        [
-          { transform: 'translate3d(-50%, -50%, 0) scale(.82)', opacity: 0.12 },
-          { transform: 'translate3d(-50%, -50%, 0) scale(1)', opacity: 0.42 },
-        ],
-        { duration: 560, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'both' },
+        {
+          duration: 620,
+          easing: 'cubic-bezier(.55, 0, .15, .72)',
+          fill: 'forwards',
+        },
       );
 
       await coverMotion.finished;
-      await edgeCoverMotion.finished;
 
+      // The actual login/logout handler executes once beneath the opaque layer.
       updateStarted = true;
       flushSync(() => update());
 
-      // Paint the next route under the aperture before the reveal begins.
-      await nextFrame();
-      await nextFrame();
-
+      // Continue the exact same surface, in the same direction, without a
+      // second curtain, a direction reversal, or a separate highlight animation.
       const revealMotion = curtain.animate(
-        [{ clipPath: expandedExit }, { clipPath: collapsedExit }],
-        { duration: 820, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'forwards' },
-      );
-      const edgeRevealMotion = edge.animate(
         [
-          { transform: edgeTravel[0], opacity: 0 },
-          { transform: edgeTravel[1], opacity: 0.72, offset: 0.34 },
-          { transform: edgeTravel[1], opacity: 0 },
+          { transform: 'translate3d(0, 0, 0)' },
+          { transform: 'translate3d(' + finishX + ', 0, 0)' },
         ],
-        { duration: 820, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'both' },
-      );
-      orbit.animate(
-        [
-          { transform: 'translate3d(-50%, -50%, 0) scale(1)', opacity: 0.42 },
-          { transform: 'translate3d(-50%, -50%, 0) scale(1.08)', opacity: 0 },
-        ],
-        { duration: 820, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'both' },
+        {
+          duration: 620,
+          easing: 'cubic-bezier(.2, .066, .55, 1)',
+          fill: 'forwards',
+        },
       );
 
       await revealMotion.finished;
-      await edgeRevealMotion.finished;
     } catch (error) {
-      // Never leave the login covered if a transition is interrupted.
+      // Never leave the interface covered if animation is interrupted.
       if (!updateStarted) {
         updateStarted = true;
         flushSync(() => update());
