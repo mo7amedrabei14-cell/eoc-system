@@ -5,6 +5,22 @@ export const ENABLE_VISUAL_TRANSITIONS = true;
 
 let transitionSequence = 0;
 
+/**
+ * Dashboard motion is a response to a real sidebar selection, not to a heading
+ * text mutation, initial mount, language change, or an unavailable nav snapshot.
+ */
+export function getPageTransitionDirection(previousIndex, nextIndex) {
+  if (
+    !Number.isInteger(previousIndex)
+    || !Number.isInteger(nextIndex)
+    || previousIndex < 0
+    || nextIndex < 0
+    || previousIndex === nextIndex
+  ) return 0;
+
+  return nextIndex > previousIndex ? 1 : -1;
+}
+
 const prefersReducedMotion = () => (
   typeof window !== 'undefined'
   && typeof window.matchMedia === 'function'
