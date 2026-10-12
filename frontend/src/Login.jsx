@@ -820,19 +820,6 @@ export default function Login() {
       <ServerDownOverlay health={serverHealth} lang={language} />
       <ServerRecoveryBanner health={serverHealth} lang={language} />
 
-      {/* First state: the only visible content is the full-screen lamp. */}
-      {lampPhase === 0 && (
-        <div className="lx-lamp-darkroom is-off" dir="ltr">
-          <LampAssembly
-            lampOn={false}
-            lampPulling={lampPulling}
-            onPull={handleLampPull}
-            language={language}
-            standalone
-          />
-        </div>
-      )}
-
       {/* ═══════════ الخلفية المحيطة — طبقة واحدة (`.lx-scene`) ═══════════
           كانت 9 عناصر (aurora / glow×3 / beam / grid / sweep / vignette / grain)
           بلا أي قاعدة CSS، ومعها inline transform مربوط بـ dragProgress ⇒ تُبنى
@@ -1084,6 +1071,17 @@ export default function Login() {
 
       {/* ═══════════ كارت القيادة (Command Deck) ═══════════ */}
       <div className="lx-stage-shell relative z-10 min-h-[100dvh]">
+        {/* Persistent lamp plane: outside .lx-deck's enter/exit motion. */}
+        <div className={`lx-lamp-darkroom ${lampOn ? 'is-on' : 'is-off'}`} dir="ltr">
+          <LampAssembly
+            lampOn={lampOn}
+            lampPulling={lampPulling}
+            onPull={handleLampPull}
+            language={language}
+            standalone
+            showCaption={lampOn}
+          />
+        </div>
         <motion.div
           className={`lx-deck ${loginStage === 'verify' ? 'is-verifying' : ''}`}
           variants={DECK_ENTER}
@@ -1128,14 +1126,8 @@ export default function Login() {
           <div className="flex flex-col">
             {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة */}
             <motion.div variants={DECK_CHILD} className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
-              {/* Interactive lamp — presentation-only pull cycle, separate from auth state. */}
-              <LampAssembly
-                lampOn={lampOn}
-                lampPulling={lampPulling}
-                onPull={handleLampPull}
-                language={language}
-                showCaption
-              />
+              {/* Preserve the old console footprint; the real lamp is outside the animated tree. */}
+              <div className="lx-lamp-stage lx-lamp-stage--placeholder" aria-hidden="true" />
 
               {/* القياسات: صف ثلاثي متناظر */}
               <div className="w-full max-w-md grid grid-cols-3 gap-6 sm:gap-8">

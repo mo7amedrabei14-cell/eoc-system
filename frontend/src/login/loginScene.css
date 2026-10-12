@@ -2993,7 +2993,7 @@
   color: #f0f6fc !important;
   overflow: hidden !important;
 }
-.lx.lx-phase-0 > *:not(.lx-lamp-darkroom) {
+.lx.lx-phase-0 > *:not(.lx-lamp-darkroom):not(.lx-stage-shell) {
   visibility: hidden !important;
   pointer-events: none !important;
 }
@@ -3012,7 +3012,7 @@
     radial-gradient(circle at 50% 48%, rgba(30,34,43,.24), transparent 44%),
     #08090c;
   color: #f0f6fc;
-  animation: lx-darkroom-in 650ms cubic-bezier(.16,1,.3,1) both;
+  animation: none;
 }
 .lx-lamp-darkroom .lx-lamp-stage--solo {
   width: 100vw;
@@ -3788,12 +3788,9 @@
   pointer-events: auto;
   transition-delay: .15s;
 }
-.lx.lx-phase-0 .lx-stage-shell { visibility: hidden !important; pointer-events: none !important; }
+.lx.lx-phase-0 .lx-stage-shell > .lx-deck { visibility: hidden !important; pointer-events: none !important; }
 .lx.lx-phase-0 .lx-lamp-darkroom { visibility: visible !important; pointer-events: auto !important; }
 .lx.lx-phase-0 .lx-lamp-darkroom .lx-lamp-cord { pointer-events: auto !important; }
-.lx.lx-phase-1 .lx-lamp-darkroom,
-.lx.lx-phase-2 .lx-lamp-darkroom,
-.lx.lx-phase-3 .lx-lamp-darkroom { display: none !important; }
 @media (max-width: 950px) {
   .lx.lx-phase-0 .lx-lamp-stage--solo { width: 100vw !important; }
 }
@@ -3896,4 +3893,102 @@
 }
 .lx[dir="rtl"] .lx-deck .lx-input::placeholder {
   text-align: right;
+}
+
+
+/* Same lamp DOM/anchor across OFF and lit phases, outside all animated login surfaces. */
+.lx-stage-shell > .lx-lamp-darkroom {
+  position: absolute !important;
+  inset: 0 !important;
+  animation: none !important;
+}
+.lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom,
+.lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom,
+.lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom {
+  z-index: 31 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  overflow: visible !important;
+  animation: none !important;
+}
+.lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo,
+.lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo,
+.lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  width: 58vw !important;
+  max-width: none !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  pointer-events: auto !important;
+}
+.lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+.lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+.lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp {
+  transform: scale(1.02) translateY(-.1rem) !important;
+}
+.lx-lamp-stage--solo .lx-lamp-caption {
+  position: absolute !important;
+  inset-block-start: calc(50% + 13.5rem) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: max-content;
+  max-width: 90%;
+  margin: 0 !important;
+  pointer-events: none !important;
+}
+.lx-lamp-stage--placeholder {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+@media (max-width: 950px) {
+  .lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom,
+  .lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom,
+  .lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom {
+    inset: 0 auto auto 0 !important;
+    width: 100vw !important;
+    height: 44dvh !important;
+    min-height: 20rem !important;
+  }
+  .lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo,
+  .lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo,
+  .lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo {
+    inset: 0 auto auto 0 !important;
+    width: 100vw !important;
+    height: 44dvh !important;
+    min-height: 20rem !important;
+  }
+  .lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp {
+    transform: scale(.93) translateY(-.1rem) !important;
+  }
+  .lx-lamp-stage--solo .lx-lamp-caption { inset-block-start: calc(50% + 12.5rem) !important; }
+}
+@media (max-width: 480px) {
+  .lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom,
+  .lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom,
+  .lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom {
+    height: 38dvh !important;
+    min-height: 16rem !important;
+  }
+  .lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo,
+  .lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo,
+  .lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo {
+    height: 38dvh !important;
+    min-height: 16rem !important;
+  }
+  .lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp {
+    transform: scale(.8) translateY(-.1rem) !important;
+  }
+  .lx-lamp-stage--solo .lx-lamp-caption { inset-block-start: calc(50% + 10.8rem) !important; }
+}
+@media (max-height: 680px) and (min-width: 951px) {
+  .lx.lx-phase-1 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx.lx-phase-2 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp,
+  .lx.lx-phase-3 .lx-stage-shell > .lx-lamp-darkroom .lx-lamp-stage--solo .lx-lamp {
+    transform: scale(.82) translateY(-.1rem) !important;
+  }
 }
