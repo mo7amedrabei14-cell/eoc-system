@@ -13,6 +13,7 @@ import { SPRING, SPRING_SOFT, EASE_OUT } from './motion/tokens';
 import { runVisualTransition } from './motion/visualTransitions';
 // 🎬 نظام البصريات «الجمرة السينمائية» — ملف منفصل ببادئة lx- حتى لا يمس لوحة التحكم
 import './login/loginScene.css';
+import ERCVectorLogo from './ERCVectorLogo';
 
 
 /* ─────────────────────────────────────────────────────────────
@@ -970,7 +971,7 @@ export default function Login() {
                     id="lx-crest"
                     className={`lx-crest ${dragStage.goal || isUnlocking ? 'is-done' : ''}`}
                   >
-                    <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" />
+                    <ERCVectorLogo label={language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'} />
                   </div>
                 </motion.div>
               </motion.div>
@@ -1064,7 +1065,7 @@ export default function Login() {
                     {isUnlocking && <span className="lx-ripple lx-ripple--1" aria-hidden="true" />}
                     {isUnlocking && <span className="lx-ripple lx-ripple--2" aria-hidden="true" />}
                     <span className="lx-handle-core">
-                      <img src="/Egyptian_Red_Crescent.png" alt="" draggable="false" />
+                      <ERCVectorLogo decorative />
                       <span className="lx-handle-check" aria-hidden="true">
                         <svg viewBox="0 0 100 100"><path d="M 22 55 L 42 75 L 80 32" /></svg>
                       </span>
@@ -1100,7 +1101,7 @@ export default function Login() {
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="lx-logo-tile shrink-0">
-                  <img src="/Egyptian_Red_Crescent.png" alt="ERC Logo" draggable="false" />
+                  <ERCVectorLogo label={language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'} />
                 </span>
                 <div className="min-w-0">
                   <p className="font-extrabold text-sm sm:text-base leading-tight tracking-tight">
@@ -1153,11 +1154,7 @@ export default function Login() {
                 <div className="lx-login-intro w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
                   <div className="lx-login-brand">
                     <span className="lx-login-brand-mark">
-                      <img
-                        src="/Egyptian_Red_Crescent.png"
-                        alt={language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}
-                        draggable="false"
-                      />
+                      <ERCVectorLogo label={language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'} />
                     </span>
                     <span className="lx-login-brand-copy">
                       <strong>{language === 'ar' ? 'الهلال الأحمر المصري' : 'Egyptian Red Crescent'}</strong>

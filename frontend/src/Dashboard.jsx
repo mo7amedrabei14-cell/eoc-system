@@ -2,6 +2,7 @@ import { useSyncExternalStore, useState, useEffect, useRef, useCallback, useMemo
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
 import { runVisualTransition } from './motion/visualTransitions';
+import ERCVectorLogo from './ERCVectorLogo';
 import EocSelect from './components/EocSelect';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Circle, CircleMarker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -3148,7 +3149,7 @@ useEffect(() => {
                 className="sidebar-brand w-12 h-12 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-strong)] flex items-center justify-center p-2 shrink-0"
                 data-sidebar-tooltip={!isSidebarOpen ? (userData?.full_name || translate('المالك', language)) : undefined}
               >
-                <img src="/Egyptian_Red_Crescent.png" alt="Egyptian Red Crescent" draggable="false" className="max-w-full max-h-full w-full aspect-square object-contain object-[39%] pointer-events-none" />
+                <ERCVectorLogo label="Egyptian Red Crescent" className="max-w-full max-h-full w-full aspect-square pointer-events-none" />
               </div>
               <div className="sidebar-copy min-w-0">
                 <h2 className="text-base font-extrabold tracking-wide truncate">{userData?.full_name || translate('المالك', language)}</h2>
