@@ -52,9 +52,9 @@ function triggerPageTransition(surface, direction = 1) {
 }
 
 /**
- * Keep route fallback and in-dashboard page changes on the same single
- * compositor animation. Native View Transitions own route snapshots when
- * available; the fallback is skipped while that API is active.
+ * Keep in-dashboard page changes on the existing compositor fallback.
+ * Successful login navigation uses the full-page clip-wipe curtain, whose
+ * root marker suppresses this fallback until the new route is revealed.
  */
 function VisualTransitionFallback() {
   const location = useLocation();
@@ -96,7 +96,7 @@ function VisualTransitionFallback() {
           : 1;
         if (nextNavigationIndex >= 0) activeNavigationIndex = nextNavigationIndex;
 
-        // The browser snapshot owns any route transition; this is tab-only.
+        // The login clip-wipe owns route changes; this observer is tab-only.
         if (document.documentElement.dataset.eocViewTransition) return;
         triggerPageTransition(document.querySelector(DASHBOARD_SURFACE), direction);
       });
