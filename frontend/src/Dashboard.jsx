@@ -12,7 +12,7 @@ import { translate } from './i18n.js';
 import { classifyActivity } from './activityMap';
 import { parseParticipantRows, PARTICIPANT_IMPORT_HEADERS } from './participantImport';
 // 🩺 حارس السيرفر: نبضة حقيقية على /api/health + شاشة الوقوع الحاجبة
-import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serverHealth';
+import { useServerHealth, ServerDownOverlay } from './serverHealth';
 // 💾 المسودات المحلية: أي استمارة مفتوحة بتتسجّل على جهاز المستخدم قبل الإرسال
 import { useFormDraft, DraftRestoreBar, DraftSavedHint } from './drafts';
 import { captureFields, applyFieldsWhenReady } from './draftsStore';
@@ -2111,34 +2111,17 @@ useEffect(() => {
   const [liveMissionEvents, setLiveMissionEvents] = useState([]);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
 
-  // 📶 مؤشر اتصال المتصفح (Offline/Online) — حالة حرجة في غرفة العمليات:
-  // عند انقطاع النت نعرض شريطًا واضحًا، وعند عودته نقول "تتم استعادة الاتصال"
-  // ثم نعود هادئين — كله عبر tokens (يعمل في الوضعين) وبدون كبح للحركة.
+  // 📶 راقب انقطاع اتصال المتصفح؛ لا تعرض إشعارًا عند عودة الاتصال.
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  const [justReconnected, setJustReconnected] = useState(false);
-  const reconnectedTimerRef = useRef(null);
   useEffect(() => {
-    const goOnline = () => {
-      setIsOnline(true);
-      setJustReconnected(true);
-      if (reconnectedTimerRef.current) clearTimeout(reconnectedTimerRef.current);
-      // «تتم استعادة الاتصال» لفترة قصيرة فقط ثم تختفي من تلقاء نفسها
-      reconnectedTimerRef.current = setTimeout(() => setJustReconnected(false), 3200);
-    };
-    const goOffline = () => {
-      setIsOnline(false);
-      setJustReconnected(false);
-      if (reconnectedTimerRef.current) clearTimeout(reconnectedTimerRef.current);
-    };
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
-    if (isOnline) goOnline(); // في حال كانت آخر حالة محفوظة Online — شريط الاستعادة يختفي
     return () => {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
-      if (reconnectedTimerRef.current) clearTimeout(reconnectedTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 🩺 حارس السيرفر: نبضة حقيقية على /api/health — مفيش أي اعتماد على
@@ -3435,46 +3418,25 @@ useEffect(() => {
 
 </header>
 
-        {/* 🩺 حارس السيرفر: شاشة حاجبة عند وقوع السيرفر/القاعدة + شريط عند الرجوع */}
+        {/* 🩺 حارس السيرفر: شاشة حاجبة عند وقوع السيرفر/القاعدة */}
         <ServerDownOverlay health={serverHealth} lang={language} pendingForms={outboxCount} />
-        <ServerRecoveryBanner health={serverHealth} lang={language} />
 
-        {/* 📶 شريط حالة الاتصال — يظهر فقط عند انقطاع النت أو لحظة عودة الاتصال */}
-        {(!isOnline || justReconnected) && (
+        {/* 📶 اعرض تنبيه انقطاع الإنترنت فقط، بلا رسالة عند عودة الاتصال */}
+        {!isOnline && (
           <div
             role="status"
             aria-live="polite"
-            className={`flex items-center justify-center gap-2.5 px-4 py-2 text-xs font-bold text-white border-b ${
-              !isOnline
-                ? 'bg-[var(--accent)] border-[var(--accent-deep)]'
-                : 'bg-[var(--ok)] border-[var(--ok-soft)] text-white'
-            } ${!isOnline ? 'conn-banner-offline' : 'conn-banner-back'}`}
+            className="flex items-center justify-center gap-2.5 px-4 py-2 text-xs font-bold text-white border-b bg-[var(--accent)] border-[var(--accent-deep)] conn-banner-offline"
           >
-            {!isOnline ? (
-              <>
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-70"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-                </span>
-                <span className="tracking-wide">
-                  {language === 'en'
-                    ? 'Connection lost — check your network. The system will reconnect automatically.'
-                    : 'انقطع الاتصال بالإنترنت — تحقق من الشبكة. سيُعاود النظام الاتصال تلقائيًا.'}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-60"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-                </span>
-                <span className="tracking-wide">
-                  {language === 'en'
-                    ? 'Connection restored — synchronizing data…'
-                    : 'تمت استعادة الاتصال — جارٍ مزامنة البيانات…'}
-                </span>
-              </>
-            )}
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-70"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+            </span>
+            <span className="tracking-wide">
+              {language === 'en'
+                ? 'Connection lost — check your network. The system will reconnect automatically.'
+                : 'انقطع الاتصال بالإنترنت — تحقق من الشبكة. سيُعاود النظام الاتصال تلقائيًا.'}
+            </span>
           </div>
         )}
 
