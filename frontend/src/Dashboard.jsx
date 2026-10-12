@@ -3572,6 +3572,30 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   const [egyptEqs, setEgyptEqs] = useState([]);
   const [selectedBranchName, setSelectedBranchName] = useState(null);
 
+  const [isHomeFullscreen, setIsHomeFullscreen] = useState(false);
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsHomeFullscreen(document.fullscreenElement === document.getElementById('home-view-top'));
+    };
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
+
+  const toggleHomeFullscreen = async () => {
+    const homeView = document.getElementById('home-view-top');
+    if (!homeView) return;
+    try {
+      if (document.fullscreenElement === homeView) {
+        await document.exitFullscreen();
+      } else {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        await homeView.requestFullscreen();
+      }
+    } catch (error) {
+      console.error('Unable to toggle dashboard fullscreen:', error);
+    }
+  };
+
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const [filterDate, setFilterDate] = useState(getLocalDate());
   // 🌙 بعد منتصف الليل: لو المستخدم سايب التاريخ على «اليوم»، ينقل لليوم الجديد تلقائياً
@@ -3857,6 +3881,21 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
           {selectedBranchName && (
             <button onClick={() => setSelectedBranchName(null)} className="btn-ghost px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 active:scale-[0.97]">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
           )}
+
+          <button
+            type="button"
+            onClick={toggleHomeFullscreen}
+            className="btn-ghost px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 active:scale-[0.97]"
+            title={isHomeFullscreen ? 'إنهاء ملء الشاشة' : 'ملء الشاشة'}
+            aria-label={isHomeFullscreen ? 'Exit full screen' : 'Enter full screen'}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              {isHomeFullscreen
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4v5H4m11-5v5h5M4 15h5v5m11-5h-5v5" />
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4h4m8 0h4v4M4 16v4h4m8 0h4v-4" />}
+            </svg>
+            {isHomeFullscreen ? 'إنهاء ملء الشاشة' : 'ملء الشاشة'}
+          </button>
         </div>
       </div>
 
