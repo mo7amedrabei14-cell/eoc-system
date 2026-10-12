@@ -62,6 +62,10 @@ export function AuthEntryTransitionProvider({ children }) {
     sourceSelector = DEFAULT_LOGIN_LOGO,
     sourceMode = 'login',
   } = {}) => {
+    // Ignore rapid duplicate activations while one logo-led route transition owns the screen.
+    if (phaseRef.current !== 'idle' || startTimerRef.current !== null) {
+      return Promise.resolve({ cancelled: true });
+    }
     clearTimers();
     if (resolveVisualRef.current) {
       resolveVisualRef.current({ cancelled: true });
