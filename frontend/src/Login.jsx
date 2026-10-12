@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } 
 import { BASE } from './apiBase';
 // 🩺 حارس السيرفر: لو السيرفر واقع، صفحة الدخول نفسها تقول الحقيقة بدل رسالة
 // "تعذر الاتصال" العامة — والتلميذ يشوف تعليمات الرستر و Ctrl+Shift+R فوراً.
-import { useServerHealth, ServerDownOverlay, ServerRecoveryBanner } from './serverHealth';
+import { useServerHealth, ServerDownOverlay } from './serverHealth';
 import { checkServerHealth } from './serverHealthCore';
 // 🔇 شاشة الدخول ليها مؤشرها الخاص (سبينر الزر) — حبة العمل العامة مكتومة هنا تماماً
 import { setWorkingSuppressed } from './workingToast';
@@ -823,7 +823,6 @@ export default function Login() {
     >
       {/* 🩺 شاشة وقوع السيرفر — تظهر على صفحة الدخول نفسها (أول مكان بيوصل له الشباب) */}
       <ServerDownOverlay health={serverHealth} lang={language} />
-      <ServerRecoveryBanner health={serverHealth} lang={language} />
 
       {/* One persistent root-level lamp: its DOM and position survive every phase. */}
       <div className={`lx-lamp-darkroom ${lampOn ? 'is-on' : 'is-off'}`} dir="ltr">
