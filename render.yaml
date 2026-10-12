@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: osiris-eoc-embed
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./deployment/osiris-embed/Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: EOC_ALLOWED_ORIGIN
+        sync: false
