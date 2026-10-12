@@ -3096,59 +3096,9 @@ select.field {
   animation: sd-foot-pulse 1.7s var(--ease-in-out, ease-in-out) infinite;
 }
 
-/* شريط الرجوع بعد انقطاع حقيقي (غير حاجب — البيانات سليمة) */
-.server-recover-banner {
-  position: fixed;
-  top: 0;
-  inset-inline: 0;
-  z-index: 4990;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  color: #fff;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--ok) 92%, #000), var(--ok));
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-  animation: sd-slide-down 300ms ease-out;
-}
-.server-recover-banner--restart {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #000), var(--accent));
-}
-.server-recover-banner b { font-weight: 900; }
-.server-recover-sub { display: block; font-size: 0.75rem; opacity: 0.92; margin-top: 2px; }
-.server-recover-btn {
-  flex: 0 0 auto;
-  padding: 0.5625rem 0.875rem;
-  border-radius: 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 800;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  cursor: pointer;
-}
-.server-recover-btn:hover { background: rgba(255, 255, 255, 0.26); }
-.server-recover-close {
-  flex: 0 0 auto;
-  width: 1.875rem;
-  height: 1.875rem;
-  border-radius: 62.4375rem;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: transparent;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 800;
-  cursor: pointer;
-}
-@keyframes sd-slide-down {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
 /* احترام تقليل الحركة (أجهزة الميدان البطيئة/الحساسة) */
 @media (prefers-reduced-motion: reduce) {
-  .sd-plug, .sd-ring, .sd-dot, .server-recover-banner { animation: none !important; }
+  .sd-plug, .sd-ring, .sd-dot { animation: none !important; }
   /* الجملة تفضل كبيرة وواضحة — بس بلا وميض (احترام إعدادات إمكانية الوصول) */
   .server-down-foot { animation: none !important; opacity: 1; border-color: color-mix(in srgb, var(--accent) 70%, transparent); }
 }
