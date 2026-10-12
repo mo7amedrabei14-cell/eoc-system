@@ -127,7 +127,7 @@ function Gauge({ g, active }) {
   );
 }
 
-/* ── توصيفات حركة البوابة وسطح القيادة (variants للتتابع المرحلي) ── */
+/* ── توصيفات حركة البوابة وانتقالات النموذج الداخلي ── */
 const GATE_RISE = {
   /* كانت `filter: blur()` جزءًا من الدخول ⇒ مسح وإعادة رسم سطح شبه كامل الشاشة
      كل إطار. الآن opacity + transform فقط — نفس قاعدة مخارج البوابة أدناه. */
@@ -136,14 +136,6 @@ const GATE_RISE = {
 };
 const GATE_ITEM = {
   hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: SPRING_SOFT },
-};
-const DECK_ENTER = {
-  hidden: { opacity: 0, y: 38, scale: 0.985 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { ...SPRING_SOFT, delayChildren: 0.08, staggerChildren: 0.06 } },
-};
-const DECK_CHILD = {
-  hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: SPRING_SOFT },
 };
 const FORM_COL = {
@@ -377,7 +369,6 @@ export default function Login() {
     return () => setWorkingSuppressed(false);
   }, []);
 
-  const [isMounted, setIsMounted] = useState(true);
   // 🔐 خطوة تحقق إضافية بكود 6 أرقام — تظهر فقط لحساب الأونر بعد نجاح الدخول العادي
   const [loginStage, setLoginStage] = useState('form'); // 'form' | 'verify'
   const [pendingAuthData, setPendingAuthData] = useState(null);
@@ -554,7 +545,6 @@ export default function Login() {
     setDragProgress(1);
     paint(maxX, maxX);
     if (navigator.vibrate) try { navigator.vibrate([10, 30, 20]); } catch { /* وضع الاهتزاز غير مدعوم */ }
-    setTimeout(() => setIsMounted(true), 160);   // كارت الدخول يبدأ بالدخول
     setTimeout(() => setShowGate(false), 860);    // البوابة تُزال من الـ DOM
   };
 
@@ -1088,14 +1078,9 @@ export default function Login() {
 
       {/* ═══════════ كارت القيادة (Command Deck) ═══════════ */}
       <div className="lx-stage-shell relative z-10 min-h-[100dvh]">
-        <motion.div
-          className={`lx-deck ${loginStage === 'verify' ? 'is-verifying' : ''}`}
-          variants={DECK_ENTER}
-          initial="hidden"
-          animate={lampOn && isMounted ? 'show' : 'hidden'}
-        >
+        <div className={`lx-deck ${loginStage === 'verify' ? 'is-verifying' : ''}`}>
           {/* ─── الرباط العلوي: هوية القيادة + الحالة الحية ─── */}
-          <motion.div variants={DECK_CHILD} className="lx-ribbon relative shrink-0 px-5 sm:px-8 py-4">
+          <div className="lx-ribbon relative shrink-0 px-5 sm:px-8 py-4">
             <span className="lx-ribbon-line" aria-hidden="true" />
             <span className="lx-ribbon-fade" aria-hidden="true" />
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
@@ -1126,12 +1111,12 @@ export default function Login() {
                 </span>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* ─── الجسم: كونسول الجاهزية + نموذج الوصول ─── */}
           <div className="flex flex-col">
             {/* شريط الجاهزية الموحّد: رادار مركزي + قياسات صفّية متناظرة */}
-            <motion.div variants={DECK_CHILD} className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
+            <div className="lx-console relative overflow-hidden px-6 sm:px-8 pt-9 pb-7 flex flex-col items-center gap-7">
               {/* Reserved footprint only; the live lamp is fixed at the login root. */}
               <div className="lx-lamp-stage lx-lamp-stage--placeholder" aria-hidden="true" />
 
@@ -1145,10 +1130,10 @@ export default function Login() {
                   <Gauge key={g.key} g={g} active={gaugesOn} />
                 ))}
               </div>
-            </motion.div>
+            </div>
 
             {/* نموذج الوصول الموحّد */}
-            <motion.div variants={DECK_CHILD} className="p-7 sm:p-10" dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className="p-7 sm:p-10" dir={isRTL ? 'rtl' : 'ltr'}>
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-start gap-8 lg:gap-12">
                 {/* Brand stays visible inside the glass login card; no secondary auth options. */}
                 <div className="lx-login-intro w-full max-w-md mx-auto lg:max-w-none lg:mx-0 flex flex-col gap-4 lg:gap-5 lg:pt-1">
@@ -1378,9 +1363,9 @@ export default function Login() {
                   </AnimatePresence>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
