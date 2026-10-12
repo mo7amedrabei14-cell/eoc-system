@@ -1,6 +1,6 @@
-/* Premium full-viewport transition: a red light field, glass orbit and moving
-   specular edge. The route changes under the field; no login/dashboard layout
-   or surface is transformed. */
+/* Premium full-viewport transition: a cool mineral-glass light field,
+   pearl orbit and soft specular edge. The route changes under the field;
+   no login/dashboard layout or surface is transformed. */
 .eoc-page-clip-wipe {
   position: fixed;
   inset: 0;
@@ -13,9 +13,9 @@
   overflow: hidden;
   border: 0;
   isolation: isolate;
-  background: #970008;
+  background: #26364b;
   clip-path: ellipse(0% 136% at var(--eoc-wipe-entry-x, 0%) 50%);
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
   contain: layout paint;
   transform: translateZ(0);
@@ -29,23 +29,31 @@
   display: block;
   background:
     radial-gradient(
-      74% 112% at var(--eoc-wipe-entry-x, 0%) 50%,
-      rgba(255, 104, 104, 0.56) 0%,
-      rgba(229, 20, 30, 0.27) 36%,
+      78% 118% at var(--eoc-wipe-entry-x, 0%) 50%,
+      rgba(210, 232, 255, 0.38) 0%,
+      rgba(125, 169, 211, 0.2) 34%,
+      transparent 70%
+    ),
+    radial-gradient(
+      64% 76% at 76% 14%,
+      rgba(247, 250, 255, 0.22) 0%,
+      rgba(216, 227, 248, 0.075) 30%,
       transparent 68%
     ),
     radial-gradient(
-      62% 74% at 76% 15%,
-      rgba(255, 231, 231, 0.15) 0%,
-      rgba(255, 200, 200, 0.055) 28%,
-      transparent 66%
+      76% 80% at 70% 90%,
+      rgba(116, 116, 165, 0.19) 0%,
+      transparent 68%
     ),
-    radial-gradient(
-      74% 76% at 69% 88%,
-      rgba(65, 0, 10, 0.28) 0%,
-      transparent 66%
-    ),
-    linear-gradient(126deg, #690008 0%, #a9000d 28%, #c70000 44%, #d10a12 56%, #930008 100%);
+    linear-gradient(
+      126deg,
+      #111923 0%,
+      #23364b 23%,
+      #3e6384 43%,
+      #6b86a8 59%,
+      #42465f 79%,
+      #171e2a 100%
+    );
   transform: scale(1.04);
   will-change: transform;
 }
@@ -58,20 +66,20 @@
   display: block;
   width: min(112vmax, 1480px);
   aspect-ratio: 1;
-  border: 1px solid rgba(255, 246, 246, 0.22);
+  border: 1px solid rgba(238, 246, 255, 0.22);
   border-radius: 50%;
   background:
     radial-gradient(
       circle at 50% 50%,
-      rgba(255, 255, 255, 0.055) 0%,
-      rgba(255, 255, 255, 0.018) 38%,
+      rgba(243, 249, 255, 0.07) 0%,
+      rgba(221, 235, 255, 0.025) 38%,
       transparent 69%
     );
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.035),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.075),
-    inset 0 0 100px rgba(255, 255, 255, 0.035),
-    0 0 110px rgba(255, 195, 195, 0.055);
+    0 0 0 1px rgba(239, 247, 255, 0.035),
+    inset 0 0 0 1px rgba(239, 247, 255, 0.075),
+    inset 0 0 100px rgba(230, 241, 255, 0.04),
+    0 0 110px rgba(166, 202, 242, 0.065);
   opacity: 0.12;
   transform: translate3d(-50%, -50%, 0) scale(0.82);
   will-change: transform, opacity;
@@ -88,11 +96,11 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 232, 232, 0.035) 23%,
-    rgba(255, 255, 255, 0.2) 39%,
-    rgba(255, 255, 255, 0.62) 50%,
-    rgba(255, 232, 232, 0.2) 61%,
-    rgba(255, 232, 232, 0.035) 77%,
+    rgba(224, 239, 255, 0.035) 23%,
+    rgba(233, 244, 255, 0.18) 39%,
+    rgba(248, 252, 255, 0.54) 50%,
+    rgba(220, 237, 255, 0.18) 61%,
+    rgba(224, 239, 255, 0.035) 77%,
     transparent 100%
   );
   filter: blur(12px);
@@ -112,12 +120,12 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.08) 18%,
-    rgba(255, 255, 255, 0.82) 48%,
-    rgba(255, 255, 255, 0.46) 68%,
+    rgba(236, 246, 255, 0.08) 18%,
+    rgba(250, 253, 255, 0.76) 48%,
+    rgba(214, 232, 255, 0.4) 68%,
     transparent 100%
   );
-  box-shadow: 0 0 22px 4px rgba(255, 236, 236, 0.22);
+  box-shadow: 0 0 22px 4px rgba(209, 230, 255, 0.2);
   content: "";
 }
 
