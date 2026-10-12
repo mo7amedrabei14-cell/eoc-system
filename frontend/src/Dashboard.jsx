@@ -3846,7 +3846,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
   const weatherDateLabel = filterDate || getLocalDate();
 
   return (
-    <div id="home-view-top" className="space-y-8 pb-10 animate-fade-in-up scroll-mt-6">
+    <div id="home-view-top" className="space-y-8 pb-10 animate-fade-in-up scroll-mt-6" style={isHomeFullscreen ? { minHeight: '100vh', overflowY: 'auto', padding: '24px', background: 'var(--bg)' } : undefined}>
       {/* 🛰️ حزام قيادة العمليات: ساعة حية + LIVE + ملخص تشغيلي فوري */}
       <div className="ops-band p-5 md:p-6 spot-card">
         <div className="flex flex-wrap items-center justify-between gap-5 relative z-10">
