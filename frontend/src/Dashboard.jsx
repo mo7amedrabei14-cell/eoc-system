@@ -3572,6 +3572,7 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   const [egyptEqs, setEgyptEqs] = useState([]);
   const [selectedBranchName, setSelectedBranchName] = useState(null);
 
+
   const getLocalDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   const [filterDate, setFilterDate] = useState(getLocalDate());
   // 🌙 بعد منتصف الليل: لو المستخدم سايب التاريخ على «اليوم»، ينقل لليوم الجديد تلقائياً
@@ -3857,6 +3858,7 @@ const activeDaily = dailyMissions.filter(m => !isFinishedStatus(m.status)).lengt
           {selectedBranchName && (
             <button onClick={() => setSelectedBranchName(null)} className="btn-ghost px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 active:scale-[0.97]">إلغاء التحديد (عرض الجمهورية) <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg></button>
           )}
+
         </div>
       </div>
 
@@ -4298,6 +4300,30 @@ function PowerBiView({ lang = 'ar' }) {
   const [spinning, setSpinning] = useState(false);
   const wrapRef = useRef(null);
   const [frameH, setFrameH] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(document.fullscreenElement === wrapRef.current);
+    };
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    const view = wrapRef.current;
+    if (!view) return;
+    try {
+      if (document.fullscreenElement === view) {
+        await document.exitFullscreen();
+      } else {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        await view.requestFullscreen();
+      }
+    } catch (error) {
+      console.error('Unable to toggle indicators fullscreen:', error);
+    }
+  };
 
   // 🔄 إعادة تحميل الإطار كل ساعة — من غير ما تخرج من الصفحة
   useEffect(() => {
@@ -4336,7 +4362,9 @@ function PowerBiView({ lang = 'ar' }) {
     <div
       ref={wrapRef}
       className="flex flex-col p-2 md:p-3 min-h-0"
-      style={{ height: frameH ? `${frameH}px` : '70vh' }}
+      style={isFullscreen
+        ? { height: '100vh', width: '100vw', padding: '12px', background: 'var(--bg)' }
+        : { height: frameH ? `${frameH}px` : '70vh' }}
     >
       <div className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden relative flex-1 min-h-0">
 
@@ -4348,6 +4376,28 @@ function PowerBiView({ lang = 'ar' }) {
           allowFullScreen
           loading="lazy"
         />
+
+        {/* ⛶ زر ملء الشاشة — مقابل زر التحديث مباشرةً */}
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? (lang === 'ar' ? 'إنهاء ملء الشاشة' : 'Exit fullscreen') : (lang === 'ar' ? 'ملء الشاشة' : 'Fullscreen')}
+          aria-label={isFullscreen ? (lang === 'ar' ? 'إنهاء ملء الشاشة' : 'Exit fullscreen') : (lang === 'ar' ? 'ملء الشاشة' : 'Fullscreen')}
+          className="group absolute top-3 right-3 z-10 flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
+                     text-[var(--ink)] bg-[var(--surface-2)]/85 backdrop-blur-md
+                     border border-[var(--border-strong)] shadow-[var(--shadow-1)]
+                     transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 ease-[var(--ease-out)]
+                     hover:bg-[var(--accent)] hover:text-white hover:border-[var(--accent)] hover:shadow-[var(--shadow-accent)]
+                     active:scale-95"
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {isFullscreen
+              ? <path d="M9 4v5H4m11-5v5h5M4 15h5v5m11-5h-5v5" />
+              : <path d="M4 8V4h4m8 0h4v4M4 16v4h4m8 0h4v-4" />}
+          </svg>
+          {isFullscreen ? (lang === 'ar' ? 'إنهاء ملء الشاشة' : 'Exit fullscreen') : (lang === 'ar' ? 'ملء الشاشة' : 'Fullscreen')}
+        </button>
 
         {/* 🔄 زر التحديث العائم — صفر مساحة من الصفحة */}
         <button
