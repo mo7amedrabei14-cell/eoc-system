@@ -105,6 +105,11 @@ export function AuthEntryTransitionProvider({ children }) {
 
     return new Promise((resolve) => {
       resolveVisualRef.current = resolve;
+      if (sourceModeRef.current === 'logout') {
+        // Sign-out starts immediately from the sidebar crest; only sign-in keeps the one-second pause.
+        setTransitionPhase('running');
+        return;
+      }
       startTimerRef.current = setTimeout(() => {
         startTimerRef.current = null;
         setTransitionPhase('running');

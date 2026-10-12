@@ -117,6 +117,9 @@ test('crest travel starts from the existing login or sidebar logo and preserves 
   assert.ok(transition.includes("DEFAULT_LOGIN_LOGO = '.lx-login-brand-mark .erc-vector-logo'"));
   assert.ok(transition.includes('sourceSelector = DEFAULT_LOGIN_LOGO'));
   assert.ok(transition.includes('ENTRY_START_DELAY_MS = 1000'));
+  assert.ok(transition.includes("if (sourceModeRef.current === 'logout')"));
+  assert.ok(transition.includes("setTransitionPhase('running');\n        return;"));
+  assert.ok(transition.includes('}, ENTRY_START_DELAY_MS);'));
   assert.ok(transition.includes('DASHBOARD_COVER_HOLD_MS = 2000'));
   assert.ok(transition.includes('rect.left + rect.width / 2 - window.innerWidth / 2'));
   assert.ok(css.includes('html[data-eoc-crest-motion="login"] .lx-login-brand-mark .erc-vector-logo'));
