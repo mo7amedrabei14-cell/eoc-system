@@ -58,13 +58,39 @@ export function runVisualTransition(update, { enabled = true } = {}) {
     }
   };
 
+  const signalRouteFallback = () => {
+    if (root.dataset.eocViewTransition !== token) return;
+    root.dataset.eocViewTransitionFallback = token;
+    clearMarker();
+
+    // Let React finish the current commit first. App.jsx consumes the token either
+    // during its route layout effect or from this event; a consumed token cannot
+    // play the fallback twice.
+    const notify = () => {
+      if (root.dataset.eocViewTransitionFallback !== token) return;
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('eoc:route-transition-fallback', { detail: { token } }));
+      }
+    };
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(notify);
+    } else {
+      setTimeout(notify, 0);
+    }
+  };
+
   try {
     const transition = document.startViewTransition(() => {
       updateStarted = true;
       flushSync(() => update());
       updateCompleted = true;
     });
-    transition.finished.then(clearMarker, clearMarker);
+    transition.finished.then(
+      clearMarker,
+      // A native transition can be skipped during rapid route changes. If this
+      // transition still owns the marker, use CSS instead of silently losing motion.
+      signalRouteFallback,
+    );
     return transition;
   } catch (error) {
     // A rejected start before the callback can safely use the normal CSS fallback.
@@ -77,8 +103,7 @@ export function runVisualTransition(update, { enabled = true } = {}) {
     // If the route update completed but the browser rejected the visual snapshot,
     // tell App.jsx to run its one-layer CSS fallback. Never replay the update.
     if (updateCompleted) {
-      root.dataset.eocViewTransitionFallback = token;
-      clearMarker();
+      signalRouteFallback();
       return undefined;
     }
 
