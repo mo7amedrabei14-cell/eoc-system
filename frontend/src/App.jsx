@@ -41,10 +41,12 @@ function triggerAutoScrollTransition(surface, direction = 1) {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
 
   const offset = direction < 0 ? -34 : 34;
+  // Do not animate opacity on this shared surface: that fades every descendant card,
+  // making cards appear transparent only while navigation motion is running.
   const animation = surface.animate(
     [
-      { opacity: 0.82, transform: `translate3d(0, ${offset}px, 0)` },
-      { opacity: 1, transform: 'translate3d(0, 0, 0)' },
+      { transform: `translate3d(0, ${offset}px, 0)` },
+      { transform: 'translate3d(0, 0, 0)' },
     ],
     {
       duration: 460,

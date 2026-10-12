@@ -632,9 +632,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
    النسخة القديمة كانت تُعاد بنفس القيم من هنا أيضًا ⇒ قاعدتان لنفس
    السطح في ملفّين. أُزيلت لتُصبح المصدر واحدًا. */
 
-/* بطاقة / لوح — سطح خلفي مرتفع (Phase 9: lighter shadows, cleaner depth) */
+/* بطاقة / لوح — الحدود والظلال في هذه الطبقة؛ شفافية السطح يحددها supercharged.css. */
 .card-surface {
-  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   /* Lighter, cleaner shadows - contact + ambient only, no giant black shadows */
