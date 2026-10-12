@@ -133,7 +133,7 @@ export function AuthEntryTransitionProvider({ children }) {
             initial={{ opacity: 0, scale: 0.24, rotate: -18, y: 16 }}
             animate={phase === 'running'
               ? {
-                  opacity: 1,
+                  opacity: [0, 1, 1],
                   scale: [0.24, 1.055, 1],
                   rotate: [-18, 4, 0],
                   y: [16, -2, 0],
