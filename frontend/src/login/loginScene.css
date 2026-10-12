@@ -309,7 +309,7 @@
     inset 0 0 0 1px rgba(20,22,34,0.04);
 }
 
-.lx-crest img {
+.lx-crest .erc-vector-logo {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -735,7 +735,7 @@
   transition: transform 170ms var(--lx-ease-out-quick), box-shadow 170ms var(--lx-ease-out-quick);
 }
 .lx-handle.is-dragging .lx-handle-core { transform: scale(1.05); }
-.lx-handle-core img {
+.lx-handle-core .erc-vector-logo {
   width: 46%;
   height: 46%;
   object-fit: contain;
@@ -754,7 +754,7 @@
     0 10px 30px -8px rgba(0, 0, 0, .65),
     0 0 34px 0 var(--ok-soft);
 }
-.lx-handle.is-done .lx-handle-core img { opacity: 0; transform: scale(.5); }
+.lx-handle.is-done .lx-handle-core .erc-vector-logo { opacity: 0; transform: scale(.5); }
 .lx-handle-check {
   position: absolute;
   inset: 0;
@@ -1045,7 +1045,7 @@
     inset 0 1px 0 #fff,
     0 0 0 1px rgba(255, 255, 255, .4);
 }
-.lx-logo-tile img {
+.lx-logo-tile .erc-vector-logo {
   width: 100%; height: 100%;
   object-fit: contain;
   object-position: 39%;
@@ -3462,7 +3462,7 @@
   background: linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.035));
   box-shadow: inset 0 1px 0 rgba(255,255,255,.2),0 8px 20px rgba(0,0,0,.15);
 }
-.lx-login-brand-mark img {
+.lx-login-brand-mark .erc-vector-logo {
   display: block;
   width: 100%;
   height: 100%;
@@ -3863,14 +3863,14 @@
   align-items: center;
   justify-content: center;
 }
-.lx-login-brand-mark img {
+.lx-login-brand-mark .erc-vector-logo {
   object-position: 50% 50%;
   transform: translate(-1px, -1.5px);
 }
 
 /* Respect platform accessibility preferences without changing page behavior. */
 @media (prefers-reduced-motion: reduce) {
-  .lx-login-brand-mark img { transform: none; }
+  .lx-login-brand-mark .erc-vector-logo { transform: none; }
 }
 
 
@@ -3947,4 +3947,53 @@
 }
 .lx[dir="rtl"] .lx-deck .lx-input::placeholder {
   text-align: right;
+}
+
+
+/* Egyptian Red Crescent — faithful vector traced from the repository's existing artwork.
+   The main pre-login emblem draws its actual contour on entry and retracts on unlock. */
+.erc-vector-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+}
+.erc-vector-logo__path {
+  fill: #cc0000;
+}
+.lx-crest .erc-vector-logo__path {
+  fill: #cc0000;
+  stroke: #ff3939;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  fill-opacity: 0;
+  stroke-opacity: .94;
+  animation: erc-crest-draw-in 1.05s cubic-bezier(.2,.72,.2,1) .18s both;
+}
+.lx-crest.is-done .erc-vector-logo__path {
+  animation: erc-crest-draw-out .34s cubic-bezier(.55,.06,.68,.19) both;
+}
+@keyframes erc-crest-draw-in {
+  0% { stroke-dashoffset: 1000; fill-opacity: 0; stroke-opacity: .94; }
+  72% { stroke-dashoffset: 0; fill-opacity: 0; stroke-opacity: .82; }
+  100% { stroke-dashoffset: 0; fill-opacity: 1; stroke-opacity: 0; }
+}
+@keyframes erc-crest-draw-out {
+  0% { stroke-dashoffset: 0; fill-opacity: 1; stroke-opacity: 0; }
+  16% { stroke-dashoffset: 0; fill-opacity: .8; stroke-opacity: .94; }
+  100% { stroke-dashoffset: 1000; fill-opacity: 0; stroke-opacity: .94; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-crest .erc-vector-logo__path,
+  .lx-crest.is-done .erc-vector-logo__path {
+    animation: none;
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    stroke-opacity: 0;
+  }
 }
