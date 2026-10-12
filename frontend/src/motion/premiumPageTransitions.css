@@ -23,21 +23,24 @@
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* The transition group owns the only spatial transform/size morph.
+   Old/new snapshots only fade; nested transforms here made the surface feel
+   like it moved twice while the browser was already morphing its geometry. */
 ::view-transition-old(eoc-primary-surface) {
-  animation: eoc-surface-exit 140ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: eoc-surface-exit 150ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
 ::view-transition-new(eoc-primary-surface) {
-  animation: eoc-surface-enter 520ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: eoc-surface-enter 300ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 @keyframes eoc-surface-exit {
-  to { opacity: 0; transform: translate3d(0, -5px, 0) scale(1.02); }
+  to { opacity: 0; }
 }
 
 @keyframes eoc-surface-enter {
-  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
