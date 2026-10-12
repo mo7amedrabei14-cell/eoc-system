@@ -36,9 +36,9 @@ const createTransitionLayer = (className) => {
 };
 
 /**
- * A full-viewport, elliptical light aperture for successful login navigation.
+ * A full-viewport, elliptical light aperture for login and logout navigation.
  * The route changes behind the opaque field, then a second aperture reveals
- * the dashboard. All motion is decorative; the navigation callback runs once.
+ * the destination. All motion is decorative; the navigation callback runs once.
  */
 export function runVisualTransition(update, { enabled = true, mode = 'enter' } = {}) {
   if (typeof update !== 'function') return undefined;
@@ -96,7 +96,7 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
   const curtain = document.createElement('div');
   curtain.className = 'eoc-page-clip-wipe';
   curtain.setAttribute('aria-hidden', 'true');
-  curtain.dataset.direction = direction;
+  curtain.dataset.direction = isRtl ? 'rtl' : 'ltr';
   curtain.style.setProperty('--eoc-wipe-entry-x', entryX);
   curtain.style.setProperty('--eoc-wipe-exit-x', exitX);
   curtain.style.clipPath = collapsedEntry;
