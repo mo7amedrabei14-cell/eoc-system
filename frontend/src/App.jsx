@@ -6,7 +6,7 @@ import Dashboard, { WorkingToast } from './Dashboard';
 import { installWorkingAuto } from './workingToast';
 import CustomTooltipLayer from './components/CustomTooltipLayer';
 import './motion/premiumPageTransitions.css';
-import { ENABLE_VISUAL_TRANSITIONS, runVisualTransition } from './motion/visualTransitions';
+import { ENABLE_VISUAL_TRANSITIONS } from './motion/visualTransitions';
 
 // ⛑️ حبة العمل العامة — مركّبة على مستوى التطبيق كله (تشمل شاشة الدخول وأي صفحة)
 installWorkingAuto();
@@ -59,60 +59,6 @@ function triggerPageTransition(surface, direction = 1) {
 function VisualTransitionFallback() {
   const location = useLocation();
   const previousPathRef = useRef(location.pathname);
-
-  // Capture the existing logout control before its handler navigates away.
-  // Replay the same click only once the shared full-page curtain is opaque.
-  useEffect(() => {
-    if (!ENABLE_VISUAL_TRANSITIONS || location.pathname !== '/dashboard') return undefined;
-
-    const root = document.documentElement;
-    const logoutLabel = /(?:log\s*out|logout|sign\s*out|signout|تسجيل\s*الخروج|خروج|إنهاء\s*الجلسة|انهاء\s*الجلسة)/i;
-
-    const handleLogoutCapture = (event) => {
-      if (root.dataset.eocLogoutReplay === '1') return;
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-
-      const control = target.closest('button, a, [role="button"], [role="menuitem"], [data-action]');
-      if (!control) return;
-
-      const label = [
-        control.innerText,
-        control.getAttribute('aria-label'),
-        control.getAttribute('title'),
-        control.getAttribute('data-tooltip'),
-        control.getAttribute('data-action'),
-        control.getAttribute('data-testid'),
-      ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-
-      if (!logoutLabel.test(label)) return;
-      if (control.matches(':disabled') || control.getAttribute('aria-disabled') === 'true') return;
-
-      // Block repeated logout attempts while the curtain owns the transition.
-      if (root.dataset.eocViewTransition) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-
-      runVisualTransition(() => {
-        if (!control.isConnected) return;
-        root.dataset.eocLogoutReplay = '1';
-        try {
-          control.click();
-        } finally {
-          delete root.dataset.eocLogoutReplay;
-        }
-      }, { mode: 'exit' });
-    };
-
-    document.addEventListener('click', handleLogoutCapture, true);
-    return () => document.removeEventListener('click', handleLogoutCapture, true);
-  }, [location.pathname]);
 
   useLayoutEffect(() => {
     const changed = previousPathRef.current !== location.pathname;
