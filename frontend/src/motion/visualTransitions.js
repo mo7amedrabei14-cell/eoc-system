@@ -18,7 +18,7 @@ const nextFrame = () => new Promise((resolve) => {
 const getWipeDirection = () => {
   const loginRoot = document.querySelector('.lx[dir="rtl"], .lx[dir="ltr"]');
   const appDirectionRoot = document.querySelector(
-    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl"], body[dir="ltr"]',
+    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl], body[dir="ltr"]',
   );
   const direction = loginRoot?.getAttribute('dir')
     || appDirectionRoot?.getAttribute('dir')
@@ -98,7 +98,8 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
           { transform: 'translate3d(0, 0, 0)' },
         ],
         {
-          duration: 620,
+          // Slower, more deliberate curtain travel: 620ms -> 900ms.
+          duration: 900,
           easing: 'cubic-bezier(.55, 0, .15, .72)',
           fill: 'forwards',
         },
@@ -118,7 +119,8 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
           { transform: 'translate3d(' + finishX + ', 0, 0)' },
         ],
         {
-          duration: 620,
+          // Match the cover leg so the full wipe feels continuous.
+          duration: 900,
           easing: 'cubic-bezier(.2, .066, .55, 1)',
           fill: 'forwards',
         },
