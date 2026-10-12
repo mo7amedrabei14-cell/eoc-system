@@ -8,6 +8,9 @@ const devEnv = readFileSync(new URL('../../.env.development', import.meta.url), 
 const deploymentRoot = new URL('../../../deployment/osiris-embed/', import.meta.url);
 const compose = readFileSync(new URL('docker-compose.yml', deploymentRoot), 'utf8');
 const proxy = readFileSync(new URL('nginx.conf.template', deploymentRoot), 'utf8');
+const renderDockerfile = readFileSync(new URL('Dockerfile.render', deploymentRoot), 'utf8');
+const renderProxy = readFileSync(new URL('nginx.render.conf.template', deploymentRoot), 'utf8');
+const renderBlueprint = readFileSync(new URL('../../../render.yaml', import.meta.url), 'utf8');
 
 test('OSIRIS is reachable from dashboard navigation and respects the existing youth exclusion', () => {
   assert.match(dashboard, /import OsirisAiView from '\.\/osiris\/OsirisAiView';/);
@@ -45,4 +48,13 @@ test('the self-hosting proxy removes SAMEORIGIN blocking but restricts framing t
   assert.ok(proxy.includes('proxy_hide_header X-Frame-Options;'));
   assert.ok(proxy.includes('frame-ancestors ${EOC_ALLOWED_ORIGIN}'));
   assert.ok(proxy.includes('proxy_pass http://osiris-app:3000;'));
+});
+
+test('the Render deployment hosts OSIRIS externally through the same-origin-safe proxy', () => {
+  assert.ok(renderBlueprint.includes('plan: free'));
+  assert.ok(renderBlueprint.includes('dockerfilePath: ./deployment/osiris-embed/Dockerfile.render'));
+  assert.ok(renderDockerfile.includes('FROM ghcr.io/simplifaisoul/osiris:latest'));
+  assert.ok(renderDockerfile.includes('EOC_ALLOWED_ORIGIN'));
+  assert.ok(renderProxy.includes('proxy_pass http://127.0.0.1:3000;'));
+  assert.ok(renderProxy.includes('frame-ancestors ${EOC_ALLOWED_ORIGIN}'));
 });
