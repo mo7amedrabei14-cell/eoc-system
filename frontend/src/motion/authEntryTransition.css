@@ -8,7 +8,7 @@
   place-items: center;
   overflow: hidden;
   isolation: isolate;
-  background: #050505;
+  background: transparent;
   color: #fff;
   pointer-events: auto;
   transform-origin: center;
@@ -60,7 +60,7 @@
   stroke-linejoin: round;
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
-  fill-opacity: 0;
+  fill-opacity: 1;
   stroke-opacity: 0.92;
   animation: eoc-auth-crest-draw 1.06s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
 }
@@ -129,8 +129,8 @@
   transition: opacity 160ms ease, transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes eoc-auth-crest-draw {
-  0% { stroke-dashoffset: 1000; fill-opacity: 0; stroke-opacity: 0.92; }
-  76% { stroke-dashoffset: 0; fill-opacity: 0; stroke-opacity: 0.88; }
+  0% { stroke-dashoffset: 1000; fill-opacity: 1; stroke-opacity: 0.92; }
+  76% { stroke-dashoffset: 0; fill-opacity: 1; stroke-opacity: 0.88; }
   100% { stroke-dashoffset: 0; fill-opacity: 1; stroke-opacity: 0; }
 }
 @keyframes eoc-auth-status-pulse {
@@ -156,4 +156,13 @@
   }
   .eoc-auth-transition__status-dot { opacity: 1; transform: none; }
   .eoc-auth-transition__progress > span { transform: translateX(0); }
+}
+
+
+/* During travel, hide only the original SVG after the duplicate is aligned
+   pixel-for-pixel above it; this makes the existing brand mark feel like the
+   same element lifting out of the login card or sidebar. */
+html[data-eoc-crest-motion="login"] .lx-login-brand-mark .erc-vector-logo,
+html[data-eoc-crest-motion="logout"] .sidebar-brand .erc-vector-logo {
+  opacity: 0 !important;
 }

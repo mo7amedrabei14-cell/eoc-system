@@ -7,6 +7,7 @@ import './authEntryTransition.css';
 const AuthEntryTransitionContext = createContext(null);
 const ENTRY_START_DELAY_MS = 1000;
 const DASHBOARD_COVER_HOLD_MS = 2000;
+const DEFAULT_LOGIN_LOGO = '.lx-login-brand-mark .erc-vector-logo';
 let authTransitionSequence = 0;
 
 export function AuthEntryTransitionProvider({ children }) {
@@ -14,7 +15,9 @@ export function AuthEntryTransitionProvider({ children }) {
   const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState('idle');
   const [statusText, setStatusText] = useState('SECURE ACCESS · EOC');
+  const [originFrame, setOriginFrame] = useState({ x: 0, y: 0, scale: 0.24 });
   const phaseRef = useRef('idle');
+  const sourceModeRef = useRef('login');
   const resolveVisualRef = useRef(null);
   const startTimerRef = useRef(null);
   const holdTimerRef = useRef(null);
@@ -27,6 +30,7 @@ export function AuthEntryTransitionProvider({ children }) {
       if (markerRef.current && root.dataset.eocViewTransition === markerRef.current) {
         delete root.dataset.eocViewTransition;
       }
+      delete root.dataset.eocCrestMotion;
     }
     markerRef.current = '';
   }, []);
@@ -44,10 +48,20 @@ export function AuthEntryTransitionProvider({ children }) {
 
   const setTransitionPhase = useCallback((nextPhase) => {
     phaseRef.current = nextPhase;
+    if (typeof document !== 'undefined') {
+      if (nextPhase === 'running') {
+        document.documentElement.dataset.eocCrestMotion = sourceModeRef.current;
+      } else if (nextPhase === 'idle') {
+        delete document.documentElement.dataset.eocCrestMotion;
+      }
+    }
     setPhase(nextPhase);
   }, []);
 
-  const beginEntryTransition = useCallback((message) => {
+  const beginEntryTransition = useCallback((message, {
+    sourceSelector = DEFAULT_LOGIN_LOGO,
+    sourceMode = 'login',
+  } = {}) => {
     clearTimers();
     if (resolveVisualRef.current) {
       resolveVisualRef.current({ cancelled: true });
@@ -55,10 +69,30 @@ export function AuthEntryTransitionProvider({ children }) {
     }
     clearTransitionMarker();
     originPathRef.current = location.pathname;
+    sourceModeRef.current = sourceMode === 'logout' ? 'logout' : 'login';
     setStatusText(message || 'SECURE ACCESS · EOC');
 
-    // Suppress the generic route fade immediately; the logo layer owns this
-    // transition, but it stays invisible for the requested first second.
+    // The travel layer starts from the exact screen position of the brand mark
+    // already on the page. The SVG source is hidden only when the travel layer
+    // appears, so the movement reads as that same logo leaving its original slot.
+    let nextFrame = { x: 0, y: 0, scale: 0.24 };
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const source = document.querySelector(sourceSelector);
+      const rect = source?.getBoundingClientRect();
+      if (rect && rect.width > 0 && rect.height > 0) {
+        const targetWidth = Math.max(136, Math.min(192, window.innerWidth * 0.15));
+        const targetHeight = targetWidth * (281 / 214);
+        nextFrame = {
+          x: rect.left + rect.width / 2 - window.innerWidth / 2,
+          y: rect.top + rect.height / 2 - window.innerHeight / 2,
+          scale: Math.max(0.06, Math.min(1, rect.height / targetHeight)),
+        };
+      }
+    }
+    setOriginFrame(nextFrame);
+
+    // Suppress the generic route fade immediately; the travel layer owns this
+    // transition. The original logo stays visible during the requested one-second wait.
     if (typeof document !== 'undefined') {
       const marker = 'auth-entry-' + String(++authTransitionSequence);
       markerRef.current = marker;
@@ -144,13 +178,9 @@ export function AuthEntryTransitionProvider({ children }) {
           role="status"
           aria-live="polite"
           aria-busy="true"
-          initial={{ opacity: 0, scale: 1.012 }}
-          animate={phase === 'closing'
-            ? { opacity: 0, scale: 1.018 }
-            : { opacity: 1, scale: 1 }}
-          transition={phase === 'closing'
-            ? { duration: reducedMotion ? 0.12 : 0.34, ease: [0.16, 1, 0.3, 1] }
-            : { duration: reducedMotion ? 0.08 : 0.2, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 1, scale: 1 }}
+          animate={phase === 'closing' ? { opacity: 0, scale: 1.012 } : { opacity: 1, scale: 1 }}
+          transition={{ duration: phase === 'closing' ? (reducedMotion ? 0.12 : 0.34) : 0, ease: [0.16, 1, 0.3, 1] }}
           onAnimationComplete={() => {
             if (phaseRef.current === 'closing') {
               setTransitionPhase('idle');
@@ -158,15 +188,31 @@ export function AuthEntryTransitionProvider({ children }) {
             }
           }}
         >
-          <div className="eoc-auth-transition__backdrop" aria-hidden="true" />
+          <motion.div
+            className="eoc-auth-transition__backdrop"
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: phase === 'closing' ? 0 : 1 }}
+            transition={{ duration: reducedMotion ? 0.08 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+          />
 
           <div className="eoc-auth-transition__ring-stage" aria-hidden="true">
             <motion.span
               className="eoc-auth-transition__ring"
-              initial={{ opacity: 0, scale: 0.18 }}
+              initial={{
+                opacity: 0,
+                x: originFrame.x,
+                y: originFrame.y,
+                scale: Math.max(0.05, originFrame.scale * 0.78),
+              }}
               animate={phase === 'running'
-                ? { opacity: [0, 0.48, 0], scale: [0.18, 0.68, 2.65] }
-                : { opacity: 0, scale: 2.65 }}
+                ? {
+                    opacity: [0, 0.48, 0],
+                    x: [originFrame.x, 0, 0],
+                    y: [originFrame.y, 0, 0],
+                    scale: [Math.max(0.05, originFrame.scale * 0.78), 0.68, 2.65],
+                  }
+                : { opacity: 0, x: 0, y: 0, scale: 2.65 }}
               transition={phase === 'running'
                 ? {
                     duration: reducedMotion ? 0.12 : 1.26,
@@ -179,17 +225,24 @@ export function AuthEntryTransitionProvider({ children }) {
 
           <motion.div
             className="eoc-auth-transition__logo"
-            initial={{ opacity: 0, scale: 0.24, rotate: -18, y: 16 }}
+            initial={{
+              opacity: 1,
+              scale: originFrame.scale,
+              x: originFrame.x,
+              y: originFrame.y,
+              rotate: 0,
+            }}
             animate={phase === 'running'
               ? {
-                  opacity: [0, 1, 1],
-                  scale: [0.24, 1.055, 1],
-                  rotate: [-18, 4, 0],
-                  y: [16, -2, 0],
+                  opacity: [1, 1, 1],
+                  scale: [originFrame.scale, 1.035, 1],
+                  x: [originFrame.x, 0, 0],
+                  y: [originFrame.y, -2, 0],
+                  rotate: [0, 2, 0],
                 }
               : phase === 'closing'
-                ? { opacity: 0, scale: 1.18, rotate: 8, y: -8 }
-                : { opacity: 1, scale: 1, rotate: 0, y: 0 }}
+                ? { opacity: 0, scale: 1.14, x: 0, y: -8, rotate: 8 }
+                : { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }}
             transition={phase === 'running'
               ? {
                   duration: reducedMotion ? 0.12 : 1.32,

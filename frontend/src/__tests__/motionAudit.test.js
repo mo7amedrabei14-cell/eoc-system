@@ -92,14 +92,26 @@ test('tab motion ignores language/direction-only heading changes and observes ac
   assert.match(app, /observer\.observe\(navShell, \{ attributes: true, subtree: true, attributeFilter: \['class'\] \}\)/);
 });
 
-test('all SPA logout-to-login paths use the shared route transition helper without changing auth operations', () => {
+test('manual sign-out uses the sidebar crest transition; forced and 401 exits keep their shared fallback', () => {
   const dashboard = read('../Dashboard.jsx');
-  assert.match(dashboard, /import \{ runVisualTransition \} from ['"]\.\/motion\/visualTransitions['"]/);
-  const calls = dashboard.match(/runVisualTransition\(\(\) => \{/g) ?? [];
-  assert.equal(calls.length, 3, 'manual logout, forced logout, and the explicit 401 route should be animated');
-  assert.match(dashboard, /const handleLogout = \(\) => \{\s*clearStoredAuth\(\);\s*runVisualTransition\(\(\) => \{\s*setUserData\(null\);\s*navigate\('\/'\);\s*\}\);\s*\}/);
+  assert.match(dashboard, /import \\{ runVisualTransition \\} from ['"]\\.\\/motion\\/visualTransitions['"]/);
+  assert.match(dashboard, /import \\{ useAuthEntryTransition \\} from ['"]\\.\\/motion\\/AuthEntryTransition['"]/);
+  const calls = dashboard.match(/runVisualTransition\\(\\(\\) => \\{/g) ?? [];
+  assert.equal(calls.length, 2, 'only forced logout and explicit 401 routes use the generic fallback');
+  assert.match(dashboard, /const handleLogout = async \\(\\) => \\{[\\s\\S]*?sourceSelector: '\\.sidebar-brand \\\.erc-vector-logo',[\\s\\S]*?sourceMode: 'logout',[\\s\\S]*?\\);\\s*if \\(motionResult\\?\\.cancelled\\) return;[\\s\\S]*?clearStoredAuth\\(\\);\\s*setUserData\\(null\\);\\s*navigate\\('\\/'\\);\\s*\\};/);
 });
 
+test('crest travel starts from the existing login or sidebar logo, hides the source only while moving, and keeps route timings', () => {
+  const transition = read('../motion/AuthEntryTransition.jsx');
+  const css = read('../motion/authEntryTransition.css');
+  assert.match(transition, /DEFAULT_LOGIN_LOGO = '\\.lx-login-brand-mark \\\.erc-vector-logo'/);
+  assert.match(transition, /sourceSelector = DEFAULT_LOGIN_LOGO/);
+  assert.match(transition, /ENTRY_START_DELAY_MS = 1000/);
+  assert.match(transition, /DASHBOARD_COVER_HOLD_MS = 2000/);
+  assert.match(transition, /rect\.left \+ rect\.width \/ 2 - window\.innerWidth \/ 2/);
+  assert.match(css, /html\\[data-eoc-crest-motion="login"\\] \\.lx-login-brand-mark \\.erc-vector-logo/);
+  assert.match(css, /html\\[data-eoc-crest-motion="logout"\\] \\.sidebar-brand \\.erc-vector-logo/);
+});
 test('unsupported browser transition API executes the update once', () => {
   const mock = installBrowserMock({ supportsTransitions: false });
   try {

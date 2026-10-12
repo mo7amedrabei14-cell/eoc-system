@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر م�
 import { useNavigate } from 'react-router-dom';
 import { runVisualTransition } from './motion/visualTransitions';
 import ERCVectorLogo from './ERCVectorLogo';
+import { useAuthEntryTransition } from './motion/AuthEntryTransition';
 import EocSelect from './components/EocSelect';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Circle, CircleMarker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -1749,6 +1750,7 @@ function fmtHours(hours, lang = 'ar') {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { beginEntryTransition, prepareDashboardReveal } = useAuthEntryTransition();
   const initialAuthRef = useRef(getStoredAuth());
 
   // 💡 1. نسحب اليوزر من اللحظة الأولى (Synchronous) عشان نمنع أي خطفة أو تحميل متأخر
@@ -2849,12 +2851,22 @@ useEffect(() => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const motionResult = await beginEntryTransition(
+      language === 'ar' ? 'جارٍ إنهاء الجلسة الآمنة' : 'ENDING SECURE SESSION',
+      {
+        sourceSelector: '.sidebar-brand .erc-vector-logo',
+        sourceMode: 'logout',
+      }
+    );
+    if (motionResult?.cancelled) return;
+
+    prepareDashboardReveal(language === 'ar'
+      ? 'تم إنهاء الجلسة · العودة لتسجيل الدخول'
+      : 'SESSION CLOSED · RETURNING TO SIGN IN');
     clearStoredAuth();
-    runVisualTransition(() => {
-      setUserData(null);
-      navigate('/');
-    });
+    setUserData(null);
+    navigate('/');
   };
 
 
