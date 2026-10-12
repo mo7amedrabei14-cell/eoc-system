@@ -12,6 +12,22 @@ const prefersReducedMotion = () => (
 );
 
 /**
+ * Decide whether a dashboard surface should animate from a sidebar change.
+ * Invalid/initial indices and same-page mutations must never replay the entrance.
+ */
+export function getPageTransitionDirection(previousIndex, nextIndex) {
+  if (
+    !Number.isInteger(previousIndex)
+    || !Number.isInteger(nextIndex)
+    || previousIndex < 0
+    || nextIndex < 0
+    || previousIndex === nextIndex
+  ) return 0;
+
+  return nextIndex > previousIndex ? 1 : -1;
+}
+
+/**
  * Run the existing UI update inside the browser's View Transition snapshot.
  * The callback itself keeps the original state/navigation work intact; no route
  * keys, delayed mounts, or extra React page instances are introduced.
