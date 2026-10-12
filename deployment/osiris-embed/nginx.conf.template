@@ -25,6 +25,6 @@ server {
         # OSIRIS sets X-Frame-Options: SAMEORIGIN. Hide it only at this
         # controlled proxy, then allow the exact EOC origin via CSP.
         proxy_hide_header X-Frame-Options;
-        add_header Content-Security-Policy "frame-ancestors 'self' ${EOC_ALLOWED_ORIGIN}" always;
+        add_header Content-Security-Policy "frame-ancestors ${EOC_ALLOWED_ORIGIN}" always;
     }
 }
