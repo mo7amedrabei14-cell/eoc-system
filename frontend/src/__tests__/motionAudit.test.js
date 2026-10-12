@@ -207,10 +207,12 @@ test('a stale cancelled transition cannot replace a newer route transition', asy
     let updates = 0;
     const first = runVisualTransition(() => { updates += 1; });
     const firstToken = root.dataset.eocViewTransition;
+    root.dataset.eocViewTransitionFallback = 'stale-fallback-token';
     const second = runVisualTransition(() => { updates += 1; });
     const secondToken = root.dataset.eocViewTransition;
 
     assert.notEqual(firstToken, secondToken);
+    assert.equal(root.dataset.eocViewTransitionFallback, undefined, 'new transition clears a stale fallback token');
     rejectFirst(new Error('superseded'));
     await first.finished.catch(() => {});
     await Promise.resolve();
