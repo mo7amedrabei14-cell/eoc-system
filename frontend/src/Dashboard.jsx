@@ -1,6 +1,7 @@
 import { useSyncExternalStore, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
+import { runVisualTransition } from './motion/visualTransitions';
 import EocSelect from './components/EocSelect';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Circle, CircleMarker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -2861,9 +2862,11 @@ useEffect(() => {
   };
 
   const handleLogout = () => {
-    clearStoredAuth();
-    setUserData(null);
-    navigate('/');
+    runVisualTransition(() => {
+      clearStoredAuth();
+      setUserData(null);
+      navigate('/');
+    }, { mode: 'exit' });
   };
 
 
