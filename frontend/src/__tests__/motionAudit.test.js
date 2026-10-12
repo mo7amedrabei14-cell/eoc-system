@@ -166,3 +166,59 @@ test('failure after the route update marks a visual fallback instead of replayin
     assert.equal(typeof root.dataset.eocViewTransitionFallback, 'string');
   });
 });
+
+
+test('a skipped native transition falls back when it still owns the route marker', async () => {
+  let rejectFinished;
+  await withFakeBrowser({
+    startViewTransition(callback) {
+      callback();
+      return {
+        finished: new Promise((_, reject) => { rejectFinished = reject; }),
+      };
+    },
+  }, async (root) => {
+    let updates = 0;
+    const transition = runVisualTransition(() => { updates += 1; });
+    const token = root.dataset.eocViewTransition;
+    rejectFinished(new Error('native transition skipped'));
+    await transition.finished.catch(() => {});
+    await Promise.resolve();
+
+    assert.equal(updates, 1, 'a skipped snapshot must never replay navigation');
+    assert.equal(root.dataset.eocViewTransition, undefined);
+    assert.equal(root.dataset.eocViewTransitionFallback, token);
+  });
+});
+
+test('a stale cancelled transition cannot replace a newer route transition', async () => {
+  let rejectFirst;
+  let starts = 0;
+  await withFakeBrowser({
+    startViewTransition(callback) {
+      callback();
+      starts += 1;
+      if (starts === 1) {
+        return { finished: new Promise((_, reject) => { rejectFirst = reject; }) };
+      }
+      return { finished: new Promise(() => {}) };
+    },
+  }, async (root) => {
+    let updates = 0;
+    const first = runVisualTransition(() => { updates += 1; });
+    const firstToken = root.dataset.eocViewTransition;
+    const second = runVisualTransition(() => { updates += 1; });
+    const secondToken = root.dataset.eocViewTransition;
+
+    assert.notEqual(firstToken, secondToken);
+    rejectFirst(new Error('superseded'));
+    await first.finished.catch(() => {});
+    await Promise.resolve();
+
+    assert.equal(updates, 2);
+    assert.equal(root.dataset.eocViewTransition, secondToken);
+    assert.equal(root.dataset.eocViewTransitionFallback, undefined);
+    // The second transition intentionally remains pending in this controlled test.
+    assert.equal(typeof second.finished.then, 'function');
+  });
+});
