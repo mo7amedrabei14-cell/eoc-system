@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom';
 
-// One-line rollback switch: set false to disable all transitions from this pass.
+// One-line rollback switch for the shared full-page transition.
 export const ENABLE_VISUAL_TRANSITIONS = true;
 
 let transitionSequence = 0;
@@ -17,19 +17,24 @@ const nextFrame = () => new Promise((resolve) => {
 
 const getWipeDirection = () => {
   const loginRoot = document.querySelector('.lx[dir="rtl"], .lx[dir="ltr"]');
+  const appDirectionRoot = document.querySelector(
+    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl"], body[dir="ltr"]',
+  );
   const direction = loginRoot?.getAttribute('dir')
+    || appDirectionRoot?.getAttribute('dir')
     || document.documentElement.getAttribute('dir')
+    || document.body?.getAttribute('dir')
     || 'ltr';
   return direction === 'rtl' ? 'rtl' : 'ltr';
 };
 
 /**
- * Change routes under one full-viewport ERC-red clip wipe.
- * The curtain covers the complete current page, the original update runs once
- * while covered, then the curtain wipes away to reveal the next page. A root
- * marker prevents the dashboard fallback from adding a second entrance motion.
+ * Move one opaque, full-screen surface through the viewport in a single
+ * direction. The existing route/action is executed only when the old screen
+ * is completely covered; the same surface then continues off-screen to reveal
+ * the destination. Login and logout use mirrored starting edges.
  */
-export function runVisualTransition(update, { enabled = true } = {}) {
+export function runVisualTransition(update, { enabled = true, mode = 'enter' } = {}) {
   if (typeof update !== 'function') return undefined;
   if (typeof document === 'undefined') {
     update();
@@ -57,14 +62,14 @@ export function runVisualTransition(update, { enabled = true } = {}) {
     clearMarker();
   };
 
-  const direction = getWipeDirection();
-  const startClip = direction === 'rtl' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-  const revealClip = direction === 'rtl' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)';
+  const isRtl = getWipeDirection() === 'rtl';
+  // Enter from the leading edge; logout enters from the opposite edge.
+  const entersFromRight = (mode === 'enter') === isRtl;
+  const startX = entersFromRight ? '100vw' : '-100vw';
+  const finishX = entersFromRight ? '-100vw' : '100vw';
   const canAnimate = typeof Element !== 'undefined'
     && typeof Element.prototype.animate === 'function';
 
-  // Keep reduced-motion and unsupported-browser behavior immediate, and mark
-  // the route swap so the app-level fallback cannot add a competing animation.
   if (prefersReducedMotion() || !canAnimate) {
     try {
       flushSync(() => update());
@@ -78,34 +83,50 @@ export function runVisualTransition(update, { enabled = true } = {}) {
   const curtain = document.createElement('div');
   curtain.className = 'eoc-page-clip-wipe';
   curtain.setAttribute('aria-hidden', 'true');
-  curtain.style.setProperty('--eoc-wipe-start', startClip);
-  curtain.style.setProperty('--eoc-wipe-end', revealClip);
-  curtain.style.clipPath = startClip;
+  curtain.dataset.direction = isRtl ? 'rtl' : 'ltr';
+  curtain.dataset.mode = mode === 'exit' ? 'exit' : 'enter';
+  curtain.style.transform = 'translate3d(' + startX + ', 0, 0)';
   document.body.appendChild(curtain);
 
   let updateStarted = false;
   const finished = (async () => {
     try {
-      await curtain.animate(
-        [{ clipPath: startClip }, { clipPath: 'inset(0)' }],
-        { duration: 440, easing: 'cubic-bezier(.76,0,.24,1)', fill: 'forwards' },
-      ).finished;
+      // First leg: the same surface glides over the outgoing screen.
+      const coverMotion = curtain.animate(
+        [
+          { transform: 'translate3d(' + startX + ', 0, 0)' },
+          { transform: 'translate3d(0, 0, 0)' },
+        ],
+        {
+          duration: 620,
+          easing: 'cubic-bezier(.55, 0, .15, .72)',
+          fill: 'forwards',
+        },
+      );
 
+      await coverMotion.finished;
+
+      // The actual login/logout handler executes once beneath the opaque layer.
       updateStarted = true;
       flushSync(() => update());
 
-      // Give React the next page a paint beneath the opaque curtain before
-      // revealing it. No second page/card animation is started.
-      await nextFrame();
-      await nextFrame();
+      // Continue the exact same surface, in the same direction, without a
+      // second curtain, a direction reversal, or a separate highlight animation.
+      const revealMotion = curtain.animate(
+        [
+          { transform: 'translate3d(0, 0, 0)' },
+          { transform: 'translate3d(' + finishX + ', 0, 0)' },
+        ],
+        {
+          duration: 620,
+          easing: 'cubic-bezier(.2, .066, .55, 1)',
+          fill: 'forwards',
+        },
+      );
 
-      await curtain.animate(
-        [{ clipPath: 'inset(0)' }, { clipPath: revealClip }],
-        { duration: 720, easing: 'cubic-bezier(.76,0,.24,1)', fill: 'forwards' },
-      ).finished;
+      await revealMotion.finished;
     } catch (error) {
-      // If the cover animation is unavailable or cancelled, preserve the
-      // original navigation exactly once rather than leaving login stuck.
+      // Never leave the interface covered if animation is interrupted.
       if (!updateStarted) {
         updateStarted = true;
         flushSync(() => update());

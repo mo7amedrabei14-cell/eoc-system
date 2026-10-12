@@ -53,8 +53,8 @@ function triggerPageTransition(surface, direction = 1) {
 
 /**
  * Keep in-dashboard page changes on the existing compositor fallback.
- * Successful login navigation uses the full-page clip-wipe curtain, whose
- * root marker suppresses this fallback until the new route is revealed.
+ * Login and logout both use the full-page clip-wipe curtain, whose root
+ * marker suppresses this fallback until the destination route is revealed.
  */
 function VisualTransitionFallback() {
   const location = useLocation();
