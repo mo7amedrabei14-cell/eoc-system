@@ -108,9 +108,14 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
         },
       );
 
-      const updateAtCoveredMidpoint = () => {
+      // Use the animation frame timestamp instead of Animation.currentTime:
+      // currentTime may briefly be null while the browser is starting the effect.
+      // Keep the current screen mounted until the midpoint, then run the existing
+      // action (including logout cleanup and navigation) exactly once.
+      const animationStartedAt = performance.now();
+      const updateAtCoveredMidpoint = (frameTime) => {
         if (updateStarted) return;
-        if (wipeMotion.currentTime >= 900) {
+        if (frameTime - animationStartedAt >= 900) {
           updateStarted = true;
           flushSync(() => update());
           return;
