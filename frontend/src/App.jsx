@@ -86,6 +86,25 @@ function triggerPageTransition(surface, direction = 1) {
 function VisualTransitionFallback() {
   const location = useLocation();
   const previousPathRef = useRef(location.pathname);
+  const latestPathRef = useRef(location.pathname);
+  latestPathRef.current = location.pathname;
+
+  // A native transition may be skipped after the route commit (for example,
+  // during rapid login/logout). Recover through the same CSS path exactly once.
+  useEffect(() => {
+    const onRouteTransitionFallback = (event) => {
+      const root = document.documentElement;
+      const token = event?.detail?.token;
+      if (!token || root.dataset.eocViewTransitionFallback !== token) return;
+
+      delete root.dataset.eocViewTransitionFallback;
+      const selector = ROUTE_SURFACE_SELECTORS[latestPathRef.current];
+      if (selector) triggerRouteFallback(document.querySelector(selector));
+    };
+
+    window.addEventListener('eoc:route-transition-fallback', onRouteTransitionFallback);
+    return () => window.removeEventListener('eoc:route-transition-fallback', onRouteTransitionFallback);
+  }, []);
 
   useLayoutEffect(() => {
     const changed = previousPathRef.current !== location.pathname;
