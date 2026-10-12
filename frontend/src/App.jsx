@@ -6,12 +6,39 @@ import Dashboard, { WorkingToast } from './Dashboard';
 import { installWorkingAuto } from './workingToast';
 import CustomTooltipLayer from './components/CustomTooltipLayer';
 import './motion/premiumPageTransitions.css';
-import { ENABLE_VISUAL_TRANSITIONS } from './motion/visualTransitions';
+import { ENABLE_VISUAL_TRANSITIONS, getPageTransitionDirection } from './motion/visualTransitions';
 
 // ⛑️ حبة العمل العامة — مركّبة على مستوى التطبيق كله (تشمل شاشة الدخول وأي صفحة)
 installWorkingAuto();
 
 const DASHBOARD_SURFACE = '#main-scroll-container > div.p-4';
+const ROUTE_SURFACE_SELECTORS = {
+  '/': '.lx',
+  '/dashboard': '.app-shell',
+};
+const ROUTE_FALLBACK_CLASS = 'eoc-route-fallback-enter';
+const routeFallbackHandlers = new WeakMap();
+
+function triggerRouteFallback(surface) {
+  if (!surface) return;
+
+  const previousHandler = routeFallbackHandlers.get(surface);
+  if (previousHandler) surface.removeEventListener('animationend', previousHandler);
+
+  surface.classList.remove(ROUTE_FALLBACK_CLASS);
+  // Re-start only this route shell's entrance when the native snapshot is unavailable.
+  void surface.offsetWidth;
+  surface.classList.add(ROUTE_FALLBACK_CLASS);
+
+  const finish = (event) => {
+    if (event.target !== surface || event.animationName !== 'eoc-route-fallback-arrive') return;
+    surface.classList.remove(ROUTE_FALLBACK_CLASS);
+    surface.removeEventListener('animationend', finish);
+    routeFallbackHandlers.delete(surface);
+  };
+  routeFallbackHandlers.set(surface, finish);
+  surface.addEventListener('animationend', finish);
+}
 
 /**
  * One owner for dashboard page motion.
@@ -63,10 +90,36 @@ function VisualTransitionFallback() {
   useLayoutEffect(() => {
     const changed = previousPathRef.current !== location.pathname;
     previousPathRef.current = location.pathname;
-    if (!ENABLE_VISUAL_TRANSITIONS || !changed || location.pathname !== '/dashboard') return undefined;
+    if (!ENABLE_VISUAL_TRANSITIONS || !changed) return undefined;
 
-    if (document.documentElement.dataset.eocViewTransition) return undefined;
-    triggerPageTransition(document.querySelector(DASHBOARD_SURFACE));
+    const surfaceSelector = ROUTE_SURFACE_SELECTORS[location.pathname];
+    if (!surfaceSelector) return undefined;
+    const root = document.documentElement;
+
+    // A failed native snapshot after navigation has already committed must fall
+    // back visually, without repeating the navigation/state callback.
+    if (root.dataset.eocViewTransitionFallback) {
+      delete root.dataset.eocViewTransitionFallback;
+      triggerRouteFallback(document.querySelector(surfaceSelector));
+      return undefined;
+    }
+
+    const nativeTransitionToken = root.dataset.eocViewTransition;
+    if (nativeTransitionToken) {
+      // runVisualTransition can report a native rejection after this layout effect
+      // ran inside flushSync. Wait one frame, then fall back only if that exact
+      // transition marked itself as rejected; successful snapshots never double-play.
+      const frame = window.requestAnimationFrame(() => {
+        if (root.dataset.eocViewTransitionFallback !== nativeTransitionToken) return;
+        delete root.dataset.eocViewTransitionFallback;
+        triggerRouteFallback(document.querySelector(surfaceSelector));
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }
+
+    // Unsupported native View Transitions use the same single-shell visual path
+    // for both login and logout.
+    triggerRouteFallback(document.querySelector(surfaceSelector));
     return undefined;
   }, [location.pathname]);
 
@@ -76,8 +129,8 @@ function VisualTransitionFallback() {
     const pageTitle = document.querySelector('#main-scroll-container > header h1');
     if (!pageTitle) return undefined;
 
-    const readActivePage = () => pageTitle.textContent?.trim() ?? '';
-    let activePage = readActivePage();
+    // Heading mutations also happen on initial render and language changes.
+    // Only a real active-sidebar-index change represents a dashboard page navigation.
     let activeNavigationIndex = readActiveNavigationIndex();
     let titleFrame = 0;
 
@@ -85,23 +138,15 @@ function VisualTransitionFallback() {
       if (titleFrame) window.cancelAnimationFrame(titleFrame);
       titleFrame = window.requestAnimationFrame(() => {
         titleFrame = 0;
-        const nextPage = readActivePage();
-        if (nextPage === activePage) return;
-        activePage = nextPage;
-
         const nextNavigationIndex = readActiveNavigationIndex();
-        const direction = activeNavigationIndex >= 0 && nextNavigationIndex >= 0
-          && nextNavigationIndex !== activeNavigationIndex
-          ? (nextNavigationIndex > activeNavigationIndex ? 1 : -1)
-          : 1;
-        if (nextNavigationIndex >= 0) activeNavigationIndex = nextNavigationIndex;
+        const direction = getPageTransitionDirection(activeNavigationIndex, nextNavigationIndex);
+        activeNavigationIndex = nextNavigationIndex;
 
-        // The browser snapshot owns any route transition; this is tab-only.
-        if (document.documentElement.dataset.eocViewTransition) return;
+        // Route snapshot owns login/logout motion; title-only mutations must not replay it.
+        if (direction === 0 || document.documentElement.dataset.eocViewTransition) return;
         triggerPageTransition(document.querySelector(DASHBOARD_SURFACE), direction);
       });
     });
-
     observer.observe(pageTitle, { childList: true, subtree: true, characterData: true });
 
     return () => {
