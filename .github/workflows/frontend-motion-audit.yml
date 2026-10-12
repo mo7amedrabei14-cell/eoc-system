@@ -10,6 +10,11 @@ on:
       - '.github/workflows/frontend-motion-audit.yml'
   workflow_dispatch:
 
+# Keep rapid fix-up commits from running redundant dependency installs in parallel.
+concurrency:
+  group: frontend-motion-regression-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
