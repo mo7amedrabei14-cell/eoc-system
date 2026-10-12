@@ -1,9 +1,29 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   getPageTransitionDirection,
   runVisualTransition,
 } from '../motion/visualTransitions.js';
+
+const appSource = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
+const transitionStyles = readFileSync(new URL('../motion/premiumPageTransitions.css', import.meta.url), 'utf8');
+
+test('route snapshot children fade only; the transition group owns spatial movement', () => {
+  const exit = transitionStyles.match(/@keyframes eoc-surface-exit\\s*\\{([\\s\\S]*?)\\n\\}/)?.[1];
+  const enter = transitionStyles.match(/@keyframes eoc-surface-enter\\s*\\{([\\s\\S]*?)\\n\\}/)?.[1];
+  assert.ok(exit, 'exit keyframe must exist');
+  assert.ok(enter, 'enter keyframe must exist');
+  assert.doesNotMatch(exit, /transform\\s*:/);
+  assert.doesNotMatch(enter, /transform\\s*:/);
+  assert.match(transitionStyles, /::view-transition-group\\(eoc-primary-surface\\)[\\s\\S]*?animation-duration:\\s*520ms/);
+});
+
+test('dashboard entrance replay is keyed to a real sidebar change, not heading text', () => {
+  assert.match(appSource, /getPageTransitionDirection\\(activeNavigationIndex, nextNavigationIndex\\)/);
+  assert.doesNotMatch(appSource, /const readActivePage/);
+  assert.doesNotMatch(appSource, /if \\(nextPage === activePage\\) return/);
+});
 
 test('initial/unknown sidebar indices do not replay the dashboard entrance', () => {
   assert.equal(getPageTransitionDirection(-1, 0), 0);
