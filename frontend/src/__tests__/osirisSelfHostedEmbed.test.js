@@ -44,5 +44,5 @@ test('the self-hosting proxy removes SAMEORIGIN blocking but restricts framing t
   assert.match(compose, /github\.com\/simplifaisoul\/osiris\.git#0aaba3838b550f83eeeaea99e5179d24f85ad65c/);
   assert.ok(proxy.includes('proxy_hide_header X-Frame-Options;'));
   assert.ok(proxy.includes('frame-ancestors ${EOC_ALLOWED_ORIGIN}'));
-  assert.ok(proxy.includes('proxy_pass http://osiris-app:3000/'));
+  assert.ok(proxy.includes('proxy_pass http://osiris-app:3000;'));
 });
