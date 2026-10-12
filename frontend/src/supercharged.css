@@ -883,7 +883,7 @@ kbd,
    المقابل مكسب أداء ضيّال: عدّاد نصّي داخل بطاقة لا يُعيد تخطيط الشبكة
    بطبيعته لأن الشبكة تعتمد على مسار واحد ثابت. */
 .kpi-card {
-  background: var(--sc-elev-1);
+  background: transparent;
   border: 1px solid var(--sc-hair);
   box-shadow: var(--sc-shadow-1), inset 0 1px 0 var(--sc-light-top);
 }
