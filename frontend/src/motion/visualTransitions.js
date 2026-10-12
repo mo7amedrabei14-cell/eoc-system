@@ -23,11 +23,17 @@ const getWipeDirection = () => {
   return direction === 'rtl' ? 'rtl' : 'ltr';
 };
 
+const createTransitionLayer = (className) => {
+  const layer = document.createElement('span');
+  layer.className = className;
+  layer.setAttribute('aria-hidden', 'true');
+  return layer;
+};
+
 /**
- * Change routes under one full-viewport ERC-red clip wipe.
- * The curtain covers the complete current page, the original update runs once
- * while covered, then the curtain wipes away to reveal the next page. A root
- * marker prevents the dashboard fallback from adding a second entrance motion.
+ * A full-viewport, elliptical light aperture for successful login navigation.
+ * The route changes behind the opaque field, then a second aperture reveals
+ * the dashboard. All motion is decorative; the navigation callback runs once.
  */
 export function runVisualTransition(update, { enabled = true } = {}) {
   if (typeof update !== 'function') return undefined;
@@ -58,8 +64,12 @@ export function runVisualTransition(update, { enabled = true } = {}) {
   };
 
   const direction = getWipeDirection();
-  const startClip = direction === 'rtl' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-  const revealClip = direction === 'rtl' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)';
+  const entryX = direction === 'rtl' ? '100%' : '0%';
+  const exitX = direction === 'rtl' ? '0%' : '100%';
+  const collapsedEntry = 'ellipse(0% 136% at ' + entryX + ' 50%)';
+  const expandedEntry = 'ellipse(168% 192% at ' + entryX + ' 50%)';
+  const expandedExit = 'ellipse(168% 192% at ' + exitX + ' 50%)';
+  const collapsedExit = 'ellipse(0% 136% at ' + exitX + ' 50%)';
   const canAnimate = typeof Element !== 'undefined'
     && typeof Element.prototype.animate === 'function';
 
@@ -78,34 +88,78 @@ export function runVisualTransition(update, { enabled = true } = {}) {
   const curtain = document.createElement('div');
   curtain.className = 'eoc-page-clip-wipe';
   curtain.setAttribute('aria-hidden', 'true');
-  curtain.style.setProperty('--eoc-wipe-start', startClip);
-  curtain.style.setProperty('--eoc-wipe-end', revealClip);
-  curtain.style.clipPath = startClip;
+  curtain.dataset.direction = direction;
+  curtain.style.setProperty('--eoc-wipe-entry-x', entryX);
+  curtain.style.setProperty('--eoc-wipe-exit-x', exitX);
+  curtain.style.clipPath = collapsedEntry;
+
+  const field = createTransitionLayer('eoc-page-clip-wipe__field');
+  const orbit = createTransitionLayer('eoc-page-clip-wipe__orbit');
+  const edge = createTransitionLayer('eoc-page-clip-wipe__edge');
+  curtain.append(field, orbit, edge);
   document.body.appendChild(curtain);
+
+  const edgeTravel = direction === 'rtl'
+    ? ['translate3d(56vw, 0, 0)', 'translate3d(-56vw, 0, 0)']
+    : ['translate3d(-56vw, 0, 0)', 'translate3d(56vw, 0, 0)'];
 
   let updateStarted = false;
   const finished = (async () => {
     try {
-      await curtain.animate(
-        [{ clipPath: startClip }, { clipPath: 'inset(0)' }],
-        { duration: 440, easing: 'cubic-bezier(.76,0,.24,1)', fill: 'forwards' },
-      ).finished;
+      const coverMotion = curtain.animate(
+        [{ clipPath: collapsedEntry }, { clipPath: expandedEntry }],
+        { duration: 560, easing: 'cubic-bezier(.72, 0, .16, 1)', fill: 'forwards' },
+      );
+      const edgeCoverMotion = edge.animate(
+        [
+          { transform: edgeTravel[0], opacity: 0 },
+          { transform: edgeTravel[1], opacity: 0.92, offset: 0.76 },
+          { transform: edgeTravel[1], opacity: 0 },
+        ],
+        { duration: 560, easing: 'cubic-bezier(.52, 0, .2, 1)', fill: 'both' },
+      );
+      orbit.animate(
+        [
+          { transform: 'translate3d(-50%, -50%, 0) scale(.82)', opacity: 0.12 },
+          { transform: 'translate3d(-50%, -50%, 0) scale(1)', opacity: 0.42 },
+        ],
+        { duration: 560, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'both' },
+      );
+
+      await coverMotion.finished;
+      await edgeCoverMotion.finished;
 
       updateStarted = true;
       flushSync(() => update());
 
-      // Give React the next page a paint beneath the opaque curtain before
-      // revealing it. No second page/card animation is started.
+      // Paint the next route under the aperture before the reveal begins.
       await nextFrame();
       await nextFrame();
 
-      await curtain.animate(
-        [{ clipPath: 'inset(0)' }, { clipPath: revealClip }],
-        { duration: 720, easing: 'cubic-bezier(.76,0,.24,1)', fill: 'forwards' },
-      ).finished;
+      const revealMotion = curtain.animate(
+        [{ clipPath: expandedExit }, { clipPath: collapsedExit }],
+        { duration: 820, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'forwards' },
+      );
+      const edgeRevealMotion = edge.animate(
+        [
+          { transform: edgeTravel[0], opacity: 0 },
+          { transform: edgeTravel[1], opacity: 0.72, offset: 0.34 },
+          { transform: edgeTravel[1], opacity: 0 },
+        ],
+        { duration: 820, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'both' },
+      );
+      orbit.animate(
+        [
+          { transform: 'translate3d(-50%, -50%, 0) scale(1)', opacity: 0.42 },
+          { transform: 'translate3d(-50%, -50%, 0) scale(1.08)', opacity: 0 },
+        ],
+        { duration: 820, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'both' },
+      );
+
+      await revealMotion.finished;
+      await edgeRevealMotion.finished;
     } catch (error) {
-      // If the cover animation is unavailable or cancelled, preserve the
-      // original navigation exactly once rather than leaving login stuck.
+      // Never leave the login covered if a transition is interrupted.
       if (!updateStarted) {
         updateStarted = true;
         flushSync(() => update());
