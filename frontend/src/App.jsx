@@ -129,8 +129,10 @@ function VisualTransitionFallback() {
     const pageTitle = document.querySelector('#main-scroll-container > header h1');
     if (!pageTitle) return undefined;
 
-    // Heading mutations also happen on initial render and language changes.
-    // Only a real active-sidebar-index change represents a dashboard page navigation.
+    // Watch only the title and nav classes—not the full dashboard tree. A motion
+    // begins only after the active nav item actually changes, regardless of which
+    // React node commits first during a rapid tab click.
+    const navShell = document.querySelector('.nav-shell');
     let activeNavigationIndex = readActiveNavigationIndex();
     let titleFrame = 0;
 
@@ -148,6 +150,14 @@ function VisualTransitionFallback() {
       });
     });
     observer.observe(pageTitle, { childList: true, subtree: true, characterData: true });
+    if (navShell) {
+      observer.observe(navShell, {
+        attributes: true,
+        attributeFilter: ['class'],
+        childList: true,
+        subtree: true,
+      });
+    }
 
     return () => {
       observer.disconnect();
