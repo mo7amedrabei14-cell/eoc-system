@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const dashboard = readFileSync(new URL('../Dashboard.jsx', import.meta.url), 'utf8');
 const component = readFileSync(new URL('../osiris/OsirisAiView.jsx', import.meta.url), 'utf8');
+const devEnv = readFileSync(new URL('../../.env.development', import.meta.url), 'utf8');
 const deploymentRoot = new URL('../../../deployment/osiris-embed/', import.meta.url);
 const compose = readFileSync(new URL('docker-compose.yml', deploymentRoot), 'utf8');
 const proxy = readFileSync(new URL('nginx.conf.template', deploymentRoot), 'utf8');
@@ -20,7 +21,10 @@ test('OSIRIS is reachable from dashboard navigation and respects the existing yo
 test('the dashboard never embeds the public demo directly when self-hosting is not configured', () => {
   assert.match(component, /VITE_OSIRIS_URL/);
   assert.match(component, /const OSIRIS_EMBED_URL = resolveSelfHostedOsirisUrl\(\)/);
-  assert.match(component, /if \(!OSIRIS_EMBED_URL\)/);
+  assert.match(component, /if \(!OSIRIS_EMBED_URL \|\| serviceStatus !== 'ready'\)/);
+  assert.match(component, /fetch\\(new URL\\('\\/api\\/health', OSIRIS_EMBED_URL\\)\\.href/);
+  assert.match(component, /setServiceCheckKey\\(value => value \\+ 1\\)/);
+  assert.match(devEnv, /VITE_OSIRIS_URL=http:\\/\\/localhost:3001/);
   assert.match(component, /src=\{OSIRIS_EMBED_URL\}/);
   assert.match(component, /href=\{OFFICIAL_OSIRIS_URL\}/);
   assert.match(component, /setFrameKey\(value => value \+ 1\)/);

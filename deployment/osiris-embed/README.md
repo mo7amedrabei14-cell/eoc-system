@@ -2,19 +2,22 @@
 
 This deployment runs the official OSIRIS repository in its own container and fronts it with a small Nginx proxy. The proxy removes the upstream `X-Frame-Options: SAMEORIGIN` header and permits framing only from the configured EOC origin. It does not modify OSIRIS source code or expose its internal application port directly.
 
-## 1. Start the OSIRIS service
+## 1. Local development on Windows
 
-1. Copy `.env.example` to `.env`.
-2. Set `EOC_ALLOWED_ORIGIN` to the exact EOC origin. For local Vite development, use `http://localhost:5173`. For production, use the full HTTPS origin, for example `https://eoc.example.org` (no path and no trailing slash).
-3. Run:
+The frontend development environment defaults to `http://localhost:3001`. From the EOC repository root, start OSIRIS in a separate container. Compose defaults the allowed parent origin to `http://localhost:5173` for local development, so no environment file is needed:
 
-```bash
-docker compose up --build -d
+```powershell
+cd .\deployment\osiris-embed
+docker compose up -d --build
 docker compose ps
 docker compose logs -f osiris-app osiris-embed-proxy
 ```
 
-The proxy is bound to `127.0.0.1:3001` by default. Open it locally at `http://localhost:3001` to verify OSIRIS is running.
+Keep Docker Desktop running. After pulling this branch, restart the Vite dev server (`Ctrl+C`, then `npm run dev` in `frontend`). The proxy is available at `http://localhost:3001`. If it is not running, the page gives a retry action instead of staying on a blank loading overlay.
+
+## 2. Production HTTPS
+
+Do not embed the loopback HTTP address in a deployed HTTPS EOC page; browsers block mixed content. Publish the proxy through a TLS-terminating reverse proxy or HTTPS-capable hosting layer, for example as `https://osiris.example.org` pointing to `http://127.0.0.1:3001`. Keep the upstream app port private. Set `EOC_ALLOWED_ORIGIN` to the exact deployed EOC origin and restart the compose stack after changing it. In the production frontend build environment, set `VITE_OSIRIS_URL=https://osiris.example.org` and rebuild/redeploy the frontend.
 
 ## 2. Production HTTPS
 
@@ -22,7 +25,7 @@ Do not embed the loopback HTTP address in a deployed HTTPS EOC page; browsers bl
 
 ## 3. Connect the EOC frontend
 
-Set `VITE_OSIRIS_URL=https://osiris.example.org` in the EOC frontend's build environment. For local development, create `frontend/.env.local` with that value (for a local proxy, use `VITE_OSIRIS_URL=http://localhost:3001`). Rebuild and redeploy the EOC frontend after changing it: Vite embeds `VITE_*` variables at build time.
+The tracked `frontend/.env.development` points local Vite development to `http://localhost:3001`; do not use that address in a production build. Production deployments must set `VITE_OSIRIS_URL` to the public HTTPS URL of the self-hosted instance. Vite embeds `VITE_*` values at build time, so rebuild and redeploy the frontend after changing the variable.
 
 The EOC page includes refresh, fullscreen, and an external-open fallback. It embeds only the self-hosted URL; if the variable is empty or points directly at `osirisai.live`, the page shows a configuration prompt rather than a broken iframe. The official demo remains available through the external link.
 

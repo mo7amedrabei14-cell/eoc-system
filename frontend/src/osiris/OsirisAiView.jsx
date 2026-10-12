@@ -25,6 +25,8 @@ function OsirisAiView({ lang = 'ar' }) {
   const refreshTimeoutRef = useRef(null);
   const refreshLockRef = useRef(false);
   const [frameH, setFrameH] = useState(null);
+  const [serviceCheckKey, setServiceCheckKey] = useState(0);
+  const [serviceStatus, setServiceStatus] = useState(OSIRIS_EMBED_URL ? 'checking' : 'unconfigured');
   const [frameKey, setFrameKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [frameLoaded, setFrameLoaded] = useState(false);
@@ -32,6 +34,36 @@ function OsirisAiView({ lang = 'ar' }) {
   const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
   const isFullscreen = nativeFullscreen || fallbackFullscreen;
   const isArabic = lang === 'ar';
+  const isLocalDevelopment = Boolean(import.meta.env?.DEV);
+  const isLocalService = Boolean(
+    OSIRIS_EMBED_URL
+    && ['localhost', '127.0.0.1'].includes(new URL(OSIRIS_EMBED_URL).hostname),
+  );
+
+  useEffect(() => {
+    if (!OSIRIS_EMBED_URL) return undefined;
+    let active = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    // An opaque no-cors response is enough: this probe checks reachability only.
+    fetch(new URL('/api/health', OSIRIS_EMBED_URL).href, {
+      mode: 'no-cors',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then(() => {
+        if (active) setServiceStatus('ready');
+      })
+      .catch(() => {
+        if (active) setServiceStatus('unavailable');
+      })
+      .finally(() => window.clearTimeout(timeout));
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [serviceCheckKey]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -128,7 +160,21 @@ function OsirisAiView({ lang = 'ar' }) {
     : (isFullscreen ? 'Exit full screen' : 'Full screen');
   const wrapperStyle = { height: frameH ? String(frameH) + 'px' : '70vh' };
 
-  if (!OSIRIS_EMBED_URL) {
+  if (!OSIRIS_EMBED_URL || serviceStatus !== 'ready') {
+    const missingConfiguration = !OSIRIS_EMBED_URL;
+    const statusMessage = missingConfiguration
+      ? (isArabic
+        ? 'لم يتم إعداد عنوان نسخة OSIRIS المستضافة بعد. يجب تشغيل النسخة المستقلة والسماح بالتضمين من دومين EOC قبل عرض الخريطة هنا.'
+        : 'The self-hosted OSIRIS URL is not configured yet. Start the standalone instance and allow embedding from the EOC origin before loading the map here.')
+      : serviceStatus === 'checking'
+        ? (isArabic ? 'جارٍ التحقق من اتصال خدمة OSIRIS…' : 'Checking the OSIRIS service connection…')
+        : isLocalService
+          ? (isArabic
+            ? 'خدمة OSIRIS المحلية لا تستجيب على المنفذ 3001. شغّل حاويات OSIRIS ثم اضغط إعادة المحاولة.'
+            : 'The local OSIRIS service is not responding on port 3001. Start the OSIRIS containers, then retry.')
+          : (isArabic
+            ? 'تعذر الاتصال بنسخة OSIRIS المستضافة. تحقق من عنوان VITE_OSIRIS_URL ومن أن الخدمة تعمل عبر HTTPS.'
+            : 'The self-hosted OSIRIS instance is unreachable. Check VITE_OSIRIS_URL and confirm the service is running over HTTPS.');
     return (
       <div ref={wrapRef} className="flex flex-col p-2 md:p-3 min-h-0" style={wrapperStyle} dir={isArabic ? 'rtl' : 'ltr'}>
         <section className="card-surface relative flex flex-1 min-h-0 items-center justify-center overflow-hidden rounded-3xl border border-[var(--border)] p-6 md:p-10">
@@ -141,14 +187,28 @@ function OsirisAiView({ lang = 'ar' }) {
               </svg>
             </div>
             <h2 className="text-xl md:text-2xl font-bold text-[var(--ink)]">OSIRIS AI</h2>
-            <p className="max-w-lg text-sm md:text-base leading-7 text-[var(--muted)]">
-              {isArabic
-                ? 'لم يتم إعداد عنوان نسخة OSIRIS المستضافة بعد. يجب تشغيل النسخة المستقلة والسماح بالتضمين من دومين EOC قبل عرض الخريطة هنا.'
-                : 'The self-hosted OSIRIS URL is not configured yet. Start the standalone instance and allow embedding from the EOC origin before loading the map here.'}
-            </p>
-            <p className="text-xs leading-6 text-[var(--faint)]">
-              {isArabic ? 'متغير الإعداد المطلوب: VITE_OSIRIS_URL' : 'Required build setting: VITE_OSIRIS_URL'}
-            </p>
+            <p className="max-w-lg text-sm md:text-base leading-7 text-[var(--muted)]">{statusMessage}</p>
+            {missingConfiguration && (
+              <p className="text-xs leading-6 text-[var(--faint)]">
+                {isArabic ? 'متغير الإعداد المطلوب: VITE_OSIRIS_URL' : 'Required build setting: VITE_OSIRIS_URL'}
+              </p>
+            )}
+            {!missingConfiguration && isLocalDevelopment && isLocalService && serviceStatus === 'unavailable' && (
+              <div className="w-full max-w-xl rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-3 text-left" dir="ltr">
+                <p className="mb-2 text-xs font-semibold text-[var(--muted)]">PowerShell — from repository root</p>
+                <code className="block whitespace-pre-wrap break-all text-xs leading-6 text-[var(--ink)]">cd .\\deployment\\osiris-embed; docker compose up -d --build</code>
+              </div>
+            )}
+            {!missingConfiguration && (
+              <button
+                type="button"
+                disabled={serviceStatus === 'checking'}
+                onClick={() => { setServiceStatus('checking'); setServiceCheckKey(value => value + 1); }}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-strong)] bg-[var(--surface-2)] px-4 py-2.5 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+              >
+                {isArabic ? 'إعادة المحاولة' : 'Try again'}
+              </button>
+            )}
             <a
               href={OFFICIAL_OSIRIS_URL}
               target="_blank"

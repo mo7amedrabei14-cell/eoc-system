@@ -16,7 +16,7 @@ services:
     depends_on:
       - osiris-app
     environment:
-      EOC_ALLOWED_ORIGIN: ${EOC_ALLOWED_ORIGIN:?Set the exact EOC origin in .env}
+      EOC_ALLOWED_ORIGIN: ${EOC_ALLOWED_ORIGIN:-http://localhost:5173}
       NGINX_ENVSUBST_FILTER: '^(EOC_ALLOWED_ORIGIN)$'
     ports:
       - "127.0.0.1:${OSIRIS_PUBLIC_PORT:-3001}:8080"
