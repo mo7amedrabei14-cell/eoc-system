@@ -48,6 +48,8 @@ export function runVisualTransition(update, { enabled = true } = {}) {
 
   const root = document.documentElement;
   const token = String(++transitionSequence);
+  // A newer native transition supersedes any queued CSS fallback from an older one.
+  delete root.dataset.eocViewTransitionFallback;
   root.dataset.eocViewTransition = token;
   let updateStarted = false;
   let updateCompleted = false;
