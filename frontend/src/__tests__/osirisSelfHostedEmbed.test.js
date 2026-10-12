@@ -34,6 +34,6 @@ test('the dashboard never embeds the public demo directly when self-hosting is n
 test('the self-hosting proxy removes SAMEORIGIN blocking but restricts framing to the configured EOC origin', () => {
   assert.match(compose, /github\.com\/simplifaisoul\/osiris\.git#0aaba3838b550f83eeeaea99e5179d24f85ad65c/);
   assert.match(proxy, /proxy_hide_header X-Frame-Options;/);
-  assert.match(proxy, /frame-ancestors 'self' \$\{EOC_ALLOWED_ORIGIN\}/);
+  assert.match(proxy, /frame-ancestors \$\{EOC_ALLOWED_ORIGIN\}/);
   assert.match(proxy, /proxy_pass http:\/\/osiris-app:3000/);
 });
