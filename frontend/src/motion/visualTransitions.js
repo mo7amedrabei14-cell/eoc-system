@@ -1,5 +1,3 @@
-import { flushSync } from 'react-dom';
-
 // One-line rollback switch for the shared full-page transition.
 export const ENABLE_VISUAL_TRANSITIONS = true;
 
@@ -72,7 +70,7 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
 
   if (prefersReducedMotion() || !canAnimate) {
     try {
-      flushSync(() => update());
+      update();
     } catch (error) {
       clearMarker();
       throw error;
@@ -108,7 +106,7 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
 
       // The actual login/logout handler executes once beneath the opaque layer.
       updateStarted = true;
-      flushSync(() => update());
+      update();
 
       // Continue the exact same surface, in the same direction, without a
       // second curtain, a direction reversal, or a separate highlight animation.
@@ -129,7 +127,7 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
       // Never leave the interface covered if animation is interrupted.
       if (!updateStarted) {
         updateStarted = true;
-        flushSync(() => update());
+        update();
       } else if (error?.name !== 'AbortError') {
         throw error;
       }
