@@ -66,7 +66,7 @@ function VisualTransitionFallback() {
     if (!ENABLE_VISUAL_TRANSITIONS || location.pathname !== '/dashboard') return undefined;
 
     const root = document.documentElement;
-    const logoutLabel = /(?:log\\s*out|logout|sign\\s*out|signout|تسجيل\\s*الخروج|خروج|إنهاء\\s*الجلسة|انهاء\\s*الجلسة)/i;
+    const logoutLabel = /(?:log\s*out|logout|sign\s*out|signout|تسجيل\s*الخروج|خروج|إنهاء\s*الجلسة|انهاء\s*الجلسة)/i;
 
     const handleLogoutCapture = (event) => {
       if (root.dataset.eocLogoutReplay === '1') return;
@@ -83,7 +83,7 @@ function VisualTransitionFallback() {
         control.getAttribute('data-tooltip'),
         control.getAttribute('data-action'),
         control.getAttribute('data-testid'),
-      ].filter(Boolean).join(' ').replace(/\\s+/g, ' ').trim();
+      ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 
       if (!logoutLabel.test(label)) return;
       if (control.matches(':disabled') || control.getAttribute('aria-disabled') === 'true') return;
