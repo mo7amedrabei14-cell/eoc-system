@@ -6,6 +6,7 @@ import Dashboard, { WorkingToast } from './Dashboard';
 import { installWorkingAuto } from './workingToast';
 import CustomTooltipLayer from './components/CustomTooltipLayer';
 import './motion/premiumPageTransitions.css';
+import { AuthEntryTransitionProvider } from './motion/AuthEntryTransition';
 import { ENABLE_VISUAL_TRANSITIONS } from './motion/visualTransitions';
 
 // ⛑️ حبة العمل العامة — مركّبة على مستوى التطبيق كله (تشمل شاشة الدخول وأي صفحة)
@@ -175,15 +176,17 @@ function App() {
   return (
     <BrowserRouter>
       <MotionConfig reducedMotion="user">
-        <WorkingToast />
-        <CustomTooltipLayer />
-        <VisualTransitionFallback />
-        <Routes>
-          {/* Keep the original routes and React lifecycle; no keyed route wrappers. */}
-          <Route path="/" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+        <AuthEntryTransitionProvider>
+          <WorkingToast />
+          <CustomTooltipLayer />
+          <VisualTransitionFallback />
+          <Routes>
+            {/* Keep the original routes and React lifecycle; no keyed route wrappers. */}
+            <Route path="/" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </AuthEntryTransitionProvider>
       </MotionConfig>
     </BrowserRouter>
   );
