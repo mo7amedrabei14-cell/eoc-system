@@ -3768,25 +3768,15 @@
   background-repeat: no-repeat !important;
 }
 .lx-deck .p-7 > .grid {
-  opacity: 0;
-  transform: translateX(2.8rem) scale(.96);
-  filter: blur(12px);
-  pointer-events: none;
-  transition:
-    opacity .6s cubic-bezier(.16,1,.3,1),
-    transform .6s cubic-bezier(.16,1,.3,1),
-    filter .6s ease,
-    border-color .8s cubic-bezier(.16,1,.3,1),
-    box-shadow .8s cubic-bezier(.16,1,.3,1);
-}
-.lx.lx-phase-1 .lx-deck .p-7 > .grid,
-.lx.lx-phase-2 .lx-deck .p-7 > .grid,
-.lx.lx-phase-3 .lx-deck .p-7 > .grid {
+  /* One reveal owner: the red clip-wipe curtain below. Keep the card itself still. */
   opacity: 1;
-  transform: translateX(0) scale(1);
-  filter: blur(0);
+  transform: none;
+  filter: none;
   pointer-events: auto;
-  transition-delay: .15s;
+  transition:
+    border-color .8s cubic-bezier(.16,1,.3,1),
+    box-shadow .8s cubic-bezier(.16,1,.3,1),
+    background .8s cubic-bezier(.16,1,.3,1);
 }
 .lx.lx-phase-0 .lx-stage-shell { visibility: hidden !important; pointer-events: none !important; }
 .lx.lx-phase-0 .lx-lamp-darkroom { visibility: visible !important; pointer-events: auto !important; }
@@ -3951,4 +3941,40 @@
 }
 .lx[dir="rtl"] .lx-deck .lx-input::placeholder {
   text-align: right;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOGIN ENTRY — one Motion-style clip wipe, no parent/card animation stacking.
+   The card stays in place; a single ERC-red curtain clears it in reading order.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.lx-deck .p-7 > .grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #c70000;
+  clip-path: inset(0);
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes lx-login-clip-wipe-rtl {
+  0%, 12% { clip-path: inset(0); }
+  100% { clip-path: inset(0 100% 0 0); }
+}
+@keyframes lx-login-clip-wipe-ltr {
+  0%, 12% { clip-path: inset(0); }
+  100% { clip-path: inset(0 0 0 100%); }
+}
+.lx.lx-phase-1 .lx-deck .p-7 > .grid::after {
+  opacity: 1;
+  animation: lx-login-clip-wipe-rtl 940ms cubic-bezier(.76,0,.24,1) both;
+}
+.lx[dir="ltr"].lx-phase-1 .lx-deck .p-7 > .grid::after {
+  animation-name: lx-login-clip-wipe-ltr;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx.lx-phase-1 .lx-deck .p-7 > .grid::after {
+    animation-duration: .01ms;
+  }
 }
