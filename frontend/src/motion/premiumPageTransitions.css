@@ -1,6 +1,6 @@
-/* Premium full-viewport transition: a cool mineral-glass light field,
-   pearl orbit and soft specular edge. The route changes under the field;
-   no login/dashboard layout or surface is transformed. */
+/* One continuous full-viewport curtain, using the same red-to-black
+   atmospheric fade as the top of the EOC sidebar. The route changes while
+   the single surface is fully covering the screen. */
 .eoc-page-clip-wipe {
   position: fixed;
   inset: 0;
@@ -12,132 +12,32 @@
   padding: 0;
   overflow: hidden;
   border: 0;
-  isolation: isolate;
-  background: #26364b;
-  clip-path: ellipse(0% 136% at var(--eoc-wipe-entry-x, 0%) 50%);
   pointer-events: auto;
   user-select: none;
-  contain: layout paint;
-  transform: translateZ(0);
-  will-change: clip-path;
-}
-
-.eoc-page-clip-wipe__field {
-  position: absolute;
-  inset: -8%;
-  z-index: 0;
-  display: block;
-  background:
+  contain: strict;
+  background-color: #030407;
+  background-image:
     radial-gradient(
-      78% 118% at var(--eoc-wipe-entry-x, 0%) 50%,
-      rgba(210, 232, 255, 0.38) 0%,
-      rgba(125, 169, 211, 0.2) 34%,
-      transparent 70%
-    ),
-    radial-gradient(
-      64% 76% at 76% 14%,
-      rgba(247, 250, 255, 0.22) 0%,
-      rgba(216, 227, 248, 0.075) 30%,
-      transparent 68%
-    ),
-    radial-gradient(
-      76% 80% at 70% 90%,
-      rgba(116, 116, 165, 0.19) 0%,
-      transparent 68%
+      120% 34% at 78% 0%,
+      rgba(199, 0, 0, 0.36) 0%,
+      rgba(199, 0, 0, 0.19) 28%,
+      rgba(100, 0, 8, 0.07) 52%,
+      transparent 72%
     ),
     linear-gradient(
-      126deg,
-      #111923 0%,
-      #23364b 23%,
-      #3e6384 43%,
-      #6b86a8 59%,
-      #42465f 79%,
-      #171e2a 100%
-    );
-  transform: scale(1.04);
-  will-change: transform;
-}
-
-.eoc-page-clip-wipe__orbit {
-  position: absolute;
-  z-index: 1;
-  top: 50%;
-  left: var(--eoc-wipe-entry-x, 0%);
-  display: block;
-  width: min(112vmax, 1480px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(238, 246, 255, 0.22);
-  border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at 50% 50%,
-      rgba(243, 249, 255, 0.07) 0%,
-      rgba(221, 235, 255, 0.025) 38%,
-      transparent 69%
+      180deg,
+      #460007 0%,
+      #300006 13%,
+      #21070c 27%,
+      #14090e 46%,
+      #0a090d 72%,
+      #030407 100%
     );
   box-shadow:
-    0 0 0 1px rgba(239, 247, 255, 0.035),
-    inset 0 0 0 1px rgba(239, 247, 255, 0.075),
-    inset 0 0 100px rgba(230, 241, 255, 0.04),
-    0 0 110px rgba(166, 202, 242, 0.065);
-  opacity: 0.12;
-  transform: translate3d(-50%, -50%, 0) scale(0.82);
-  will-change: transform, opacity;
-}
-
-.eoc-page-clip-wipe__edge {
-  position: absolute;
-  z-index: 2;
-  top: -18%;
-  bottom: -18%;
-  left: 50%;
-  display: block;
-  width: clamp(4.5rem, 12vw, 13rem);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(224, 239, 255, 0.035) 23%,
-    rgba(233, 244, 255, 0.18) 39%,
-    rgba(248, 252, 255, 0.54) 50%,
-    rgba(220, 237, 255, 0.18) 61%,
-    rgba(224, 239, 255, 0.035) 77%,
-    transparent 100%
-  );
-  filter: blur(12px);
-  mix-blend-mode: screen;
-  opacity: 0;
-  transform: translate3d(-56vw, 0, 0);
-  will-change: transform, opacity;
-}
-
-.eoc-page-clip-wipe__edge::after {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  display: block;
-  width: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(236, 246, 255, 0.08) 18%,
-    rgba(250, 253, 255, 0.76) 48%,
-    rgba(214, 232, 255, 0.4) 68%,
-    transparent 100%
-  );
-  box-shadow: 0 0 22px 4px rgba(209, 230, 255, 0.2);
-  content: "";
-}
-
-@media (max-width: 640px) {
-  .eoc-page-clip-wipe__orbit {
-    width: 152vmax;
-  }
-
-  .eoc-page-clip-wipe__edge {
-    width: clamp(3rem, 24vw, 7rem);
-    filter: blur(9px);
-  }
+    inset 0 1px 0 rgba(255, 255, 255, 0.065),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.018);
+  transform: translate3d(-100vw, 0, 0);
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
