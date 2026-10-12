@@ -87,51 +87,62 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
   document.body.appendChild(curtain);
 
   let updateStarted = false;
+  let updateError = null;
+  let midpointTimer = null;
+
+  const runUpdateOnce = () => {
+    if (updateStarted) return;
+    updateStarted = true;
+    try {
+      // React Router/state updates run normally behind the body-level curtain.
+      // Avoid forcing a synchronous React commit from inside the animation.
+      update();
+    } catch (error) {
+      updateError = error;
+    }
+  };
+
   const finished = (async () => {
     try {
-      // First leg: the same surface glides over the outgoing screen.
-      const coverMotion = curtain.animate(
+      // One uninterrupted compositor animation: cover, pass the covered
+      // midpoint, and reveal. The tiny midpoint hold gives the background
+      // route/state update time to begin without splitting the motion in two.
+      const wipeDuration = 1800;
+      const midpoint = wipeDuration / 2;
+      const wipeMotion = curtain.animate(
         [
-          { transform: 'translate3d(' + startX + ', 0, 0)' },
-          { transform: 'translate3d(0, 0, 0)' },
+          { transform: 'translate3d(' + startX + ', 0, 0)', offset: 0 },
+          { transform: 'translate3d(0, 0, 0)', offset: 0.49 },
+          { transform: 'translate3d(0, 0, 0)', offset: 0.51 },
+          { transform: 'translate3d(' + finishX + ', 0, 0)', offset: 1 },
         ],
         {
-          duration: 620,
-          easing: 'cubic-bezier(.55, 0, .15, .72)',
+          duration: wipeDuration,
+          easing: 'linear',
           fill: 'forwards',
         },
       );
 
-      await coverMotion.finished;
+      // The callback is not tied to Animation.currentTime (which can be null
+      // during startup). The curtain is fully opaque at this point.
+      midpointTimer = window.setTimeout(runUpdateOnce, midpoint);
 
-      // The actual login/logout handler executes once beneath the opaque layer.
-      updateStarted = true;
-      update();
-
-      // Continue the exact same surface, in the same direction, without a
-      // second curtain, a direction reversal, or a separate highlight animation.
-      const revealMotion = curtain.animate(
-        [
-          { transform: 'translate3d(0, 0, 0)' },
-          { transform: 'translate3d(' + finishX + ', 0, 0)' },
-        ],
-        {
-          duration: 620,
-          easing: 'cubic-bezier(.2, .066, .55, 1)',
-          fill: 'forwards',
-        },
-      );
-
-      await revealMotion.finished;
-    } catch (error) {
-      // Never leave the interface covered if animation is interrupted.
-      if (!updateStarted) {
-        updateStarted = true;
-        update();
-      } else if (error?.name !== 'AbortError') {
-        throw error;
+      try {
+        await wipeMotion.finished;
+      } catch (error) {
+        // A cancelled animation must never strand the user on the old route.
+        if (error?.name !== 'AbortError') throw error;
       }
+
+      // Safety net for throttled timers or an interrupted animation.
+      runUpdateOnce();
+      if (updateError) throw updateError;
+    } catch (error) {
+      runUpdateOnce();
+      if (updateError) throw updateError;
+      if (error?.name !== 'AbortError') throw error;
     } finally {
+      if (midpointTimer !== null) window.clearTimeout(midpointTimer);
       curtain.remove();
       clearMarker();
     }
