@@ -11,10 +11,28 @@ const prefersReducedMotion = () => (
   && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 );
 
+function scheduleFallback(root, token) {
+  if (root.dataset.eocViewTransition !== token) return;
+  delete root.dataset.eocViewTransition;
+
+  const notify = () => {
+    // A newer transition may have started before this fallback frame.
+    if (root.dataset.eocViewTransition) return;
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+    window.dispatchEvent(new CustomEvent('eoc:route-transition-fallback'));
+  };
+
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(notify);
+  } else {
+    Promise.resolve().then(notify);
+  }
+}
+
 /**
- * Run the existing UI update inside the browser's View Transition snapshot.
- * The callback itself keeps the original state/navigation work intact; no route
- * keys, delayed mounts, or extra React page instances are introduced.
+ * Run an existing route/state update inside the native View Transition API.
+ * The update runs exactly once; a rejected/cancelled visual transition signals
+ * a single CSS fallback rather than attempting the navigation a second time.
  */
 export function runVisualTransition(update, { enabled = true } = {}) {
   if (typeof update !== 'function') return undefined;
@@ -46,16 +64,15 @@ export function runVisualTransition(update, { enabled = true } = {}) {
       updateStarted = true;
       flushSync(() => update());
     });
-    transition.finished.then(clearMarker, clearMarker);
+    transition.finished.then(clearMarker, () => scheduleFallback(root, token));
     return transition;
   } catch (error) {
-    clearMarker();
-    // Fall back only when the browser rejected the transition before running
-    // the callback. Never run the same navigation/state update twice.
     if (!updateStarted) {
+      clearMarker();
       update();
       return undefined;
     }
+    scheduleFallback(root, token);
     throw error;
   }
 }

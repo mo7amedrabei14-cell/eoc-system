@@ -2163,9 +2163,9 @@
 .lx-halo, .lx-orbit, .lx-orbit--inner, .lx-crest-glow { display: block; }
 .lx-crest-glow {
   opacity: calc(0.4 + var(--lx-p, 0) * 0.5);
-  animation: lx-crest-breathe 4.4s ease-in-out infinite;
+  animation: lx-crest-glow-breathe 4.4s ease-in-out infinite;
 }
-@keyframes lx-crest-breathe {
+@keyframes lx-crest-glow-breathe {
   0%, 100% { transform: scale(0.97); }
   50%      { transform: scale(1.05); }
 }
@@ -2177,7 +2177,6 @@
   animation: lx-spin-r 44s linear infinite;
   border-color: color-mix(in srgb, var(--ink) 9%, transparent);
 }
-@keyframes lx-spin-r { to { transform: rotate(-360deg); } }
 .lx-halo-arc { opacity: calc(0.5 + var(--lx-p, 0) * 0.5); }
 .lx-gate-title { margin-top: 1.6rem; }
 .lx-gate-sub { margin-top: 0.6rem; }
@@ -3258,9 +3257,6 @@
 [dir="rtl"] .lx-lamp-caption { letter-spacing: .02em; }
 .lx-lamp-status-dot { width: .48rem; height: .48rem; flex: 0 0 auto; border-radius: 50%; background: var(--lx-lamp-color); transition: background 450ms ease,box-shadow 450ms ease; }
 .lx-lamp-stage.is-on .lx-lamp-status-dot { background: var(--lx-lamp-color); box-shadow: 0 0 0 4px var(--lx-lamp-glow-soft),0 0 15px var(--lx-lamp-glow-strong); }
-@keyframes lx-cord-sway { 0%,100% { rotate: 2deg; } 50% { rotate: -2deg; } }
-@keyframes lx-cord-pull { 0% { rotate: 0deg; } 32% { rotate: 0deg; translate: 0 13px; } 65% { rotate: -2deg; translate: 0 3px; } 100% { rotate: 0deg; translate: 0 0; } }
-
 /* Mood changes the ambient room, never the ERC-red action controls. */
 .lx.lx-phase-1 .lx-scene,
 .lx.lx-phase-2 .lx-scene,

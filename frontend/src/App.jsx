@@ -56,19 +56,61 @@ function triggerPageTransition(surface, direction = 1) {
  * compositor animation. Native View Transitions own route snapshots when
  * available; the fallback is skipped while that API is active.
  */
+const routeFallbackHandlers = new WeakMap();
+
+function triggerLoginRouteFallback(surface) {
+  if (!surface) return;
+  const previousHandler = routeFallbackHandlers.get(surface);
+  if (previousHandler) surface.removeEventListener('animationend', previousHandler);
+  surface.classList.remove('eoc-route-fallback-enter');
+  void surface.offsetWidth;
+
+  const finish = (event) => {
+    if (event.target !== surface || event.animationName !== 'eoc-route-fallback-fade') return;
+    surface.classList.remove('eoc-route-fallback-enter');
+    surface.removeEventListener('animationend', finish);
+    routeFallbackHandlers.delete(surface);
+  };
+  routeFallbackHandlers.set(surface, finish);
+  surface.addEventListener('animationend', finish);
+  surface.classList.add('eoc-route-fallback-enter');
+}
+
+function triggerRouteFallback(pathname) {
+  if (pathname === '/dashboard') {
+    triggerPageTransition(document.querySelector(DASHBOARD_SURFACE));
+  } else if (pathname === '/') {
+    triggerLoginRouteFallback(document.querySelector('.lx'));
+  }
+}
+
 function VisualTransitionFallback() {
   const location = useLocation();
   const previousPathRef = useRef(location.pathname);
+  const latestPathRef = useRef(location.pathname);
 
   useLayoutEffect(() => {
     const changed = previousPathRef.current !== location.pathname;
     previousPathRef.current = location.pathname;
-    if (!ENABLE_VISUAL_TRANSITIONS || !changed || location.pathname !== '/dashboard') return undefined;
+    latestPathRef.current = location.pathname;
+    if (!ENABLE_VISUAL_TRANSITIONS || !changed) return undefined;
 
+    // The native snapshot owns the motion when it succeeds. Use a single CSS
+    // fallback on the destination when the API is unsupported or unavailable.
     if (document.documentElement.dataset.eocViewTransition) return undefined;
-    triggerPageTransition(document.querySelector(DASHBOARD_SURFACE));
+    triggerRouteFallback(location.pathname);
     return undefined;
   }, [location.pathname]);
+
+  useEffect(() => {
+    const onTransitionFallback = () => {
+      // Ignore a superseded transition while a newer one owns the snapshots.
+      if (document.documentElement.dataset.eocViewTransition) return;
+      triggerRouteFallback(latestPathRef.current);
+    };
+    window.addEventListener('eoc:route-transition-fallback', onTransitionFallback);
+    return () => window.removeEventListener('eoc:route-transition-fallback', onTransitionFallback);
+  }, []);
 
   useEffect(() => {
     if (!ENABLE_VISUAL_TRANSITIONS || location.pathname !== '/dashboard') return undefined;
@@ -79,6 +121,8 @@ function VisualTransitionFallback() {
     const readActivePage = () => pageTitle.textContent?.trim() ?? '';
     let activePage = readActivePage();
     let activeNavigationIndex = readActiveNavigationIndex();
+    let activeLanguage = document.documentElement.lang;
+    let activeDirection = document.documentElement.dir;
     let titleFrame = 0;
 
     const observer = new MutationObserver(() => {
@@ -86,15 +130,27 @@ function VisualTransitionFallback() {
       titleFrame = window.requestAnimationFrame(() => {
         titleFrame = 0;
         const nextPage = readActivePage();
-        if (nextPage === activePage) return;
-        activePage = nextPage;
-
         const nextNavigationIndex = readActiveNavigationIndex();
-        const direction = activeNavigationIndex >= 0 && nextNavigationIndex >= 0
-          && nextNavigationIndex !== activeNavigationIndex
-          ? (nextNavigationIndex > activeNavigationIndex ? 1 : -1)
-          : 1;
+        const pageChanged = nextPage !== activePage;
+        const previousNavigationIndex = activeNavigationIndex;
+        const navigationChanged = nextNavigationIndex >= 0
+          && previousNavigationIndex >= 0
+          && nextNavigationIndex !== previousNavigationIndex;
+        const nextLanguage = document.documentElement.lang;
+        const nextDirection = document.documentElement.dir;
+        const localeChanged = nextLanguage !== activeLanguage || nextDirection !== activeDirection;
+
+        activePage = nextPage;
         if (nextNavigationIndex >= 0) activeNavigationIndex = nextNavigationIndex;
+        activeLanguage = nextLanguage;
+        activeDirection = nextDirection;
+
+        // Updating language/direction changes the heading too, but is not page navigation.
+        if (localeChanged || (!pageChanged && !navigationChanged)) return;
+
+        const direction = navigationChanged
+          ? (nextNavigationIndex > previousNavigationIndex ? 1 : -1)
+          : 1;
 
         // The browser snapshot owns any route transition; this is tab-only.
         if (document.documentElement.dataset.eocViewTransition) return;
@@ -103,6 +159,8 @@ function VisualTransitionFallback() {
     });
 
     observer.observe(pageTitle, { childList: true, subtree: true, characterData: true });
+    const navShell = document.querySelector('.nav-shell');
+    if (navShell) observer.observe(navShell, { attributes: true, subtree: true, attributeFilter: ['class'] });
 
     return () => {
       observer.disconnect();
