@@ -10,7 +10,7 @@ import { checkServerHealth } from './serverHealthCore';
 import { setWorkingSuppressed } from './workingToast';
 // 🎛️ توكنات الحركة الموحّدة للنظام (نوابض + easing فخم)
 import { SPRING, SPRING_SOFT, EASE_OUT } from './motion/tokens';
-import { runVisualTransition } from './motion/visualTransitions';
+import { useAuthEntryTransition } from './motion/AuthEntryTransition';
 // 🎬 نظام البصريات «الجمرة السينمائية» — ملف منفصل ببادئة lx- حتى لا يمس لوحة التحكم
 import './login/loginScene.css';
 import ERCVectorLogo from './ERCVectorLogo';
@@ -424,6 +424,7 @@ export default function Login() {
   }, [theme]);
 
   const navigate = useNavigate();
+  const { beginEntryTransition, cancelEntryTransition, prepareDashboardReveal } = useAuthEntryTransition();
 
   /* ── بوابة استكشاف الأطلس — محرّك متغيّرات CSS ──
      ⚡ المسألة كلها كانت في مكان واحد: كل إطار من السحب كان يمرّر setDragX +
@@ -686,44 +687,59 @@ export default function Login() {
     setErrorMsg('');
     setIsLoading(true);
 
+    // Start the logo-led foreground motion immediately while the existing
+    // health check and authentication request continue asynchronously.
+    const entryMotion = beginEntryTransition(
+      language === 'ar' ? 'جارٍ تأمين جلسة الدخول إلى مركز العمليات' : 'SECURING YOUR EOC SESSION'
+    );
+    let keepTransition = false;
+
     try {
-      // 🩺 نبضة فورية مع كل محاولة دخول: فشل النبضة = السيرفر واقع فعلاً، فالرسالة
-      //    تكون "السيرفر مش شغال" بدل "بيانات الدخول غلط" (اللي كانت بتضلّل الناس).
+      // Preserve the existing server health check and its user-facing errors.
       const health = await checkServerHealth({ timeoutMs: 8000 });
       if (!health.reachable) {
         setErrorMsg(language === 'ar'
           ? '🚫 السيرفر مش شغال دلوقتي (مش مشكلة في بياناتك) — رستر السيرفر ثم اضغط Ctrl+Shift+R.'
           : '🚫 The server is down right now (not your credentials) — restart it, then press Ctrl+Shift+R.');
-        setIsLoading(false);
         return;
       }
+
       const response = await fetch(`${BASE}/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ username, password }),
       });
-      // ✅ قراءة آمنة: لو السيرفر رجّع HTML (504 من بوابة الاستضافة) ما نقعش في خطأ غامض
+      // Keep the existing safe JSON parse for HTML gateway errors (for example, 504).
       const data = await response.json().catch(() => ({}));
+
       if (response.ok) {
-        // نفس منطق تحديد الأونر المستخدم بالظبط في لوحة التحكم (Dashboard.jsx)
         const userRole = (data.user?.role || '').toUpperCase();
         const isOwnerAccount = data.user?.is_global_admin === true || userRole === 'OWNER' || userRole === 'المالك';
 
         if (isOwnerAccount) {
-          // 🔐 حساب الأونر: نوقف هنا ونطلب رمز التحقق قبل ما نكمل فعليًا للداشبورد
+          // Owner accounts still complete the existing verification step first.
           setPendingAuthData(data);
           setLoginStage('verify');
-          setIsLoading(false);
           return;
         }
 
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('user', JSON.stringify(data.user));
-        runVisualTransition(() => navigate('/dashboard'));
+
+        // Do not navigate until the logo motion has reached its final pose.
+        // If the backend takes longer, the foreground holds cleanly on the mark.
+        const motionResult = await entryMotion;
+        if (motionResult?.cancelled) return;
+
+        prepareDashboardReveal(language === 'ar'
+          ? 'تم التحقق من الهوية · جارٍ فتح مركز العمليات'
+          : 'IDENTITY VERIFIED · OPENING OPERATIONS CENTER');
+        keepTransition = true;
+        navigate('/dashboard');
       } else if (response.status >= 500) {
         setErrorMsg(language === 'ar'
           ? `🚫 السيرفر رد بخطأ (${response.status}) — جرّب تاني، ولو تكرر رستر السيرفر ثم اضغط Ctrl+Shift+R.`
-          : `🚫 Server error (${response.status}) — retry, and if it persists restart the server then press Ctrl+Shift+R.`);
+          : `🚫 Server error (${response.status}) — retry, and if it persists restart the server and press Ctrl+Shift+R.`);
       } else {
         setErrorMsg(language === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid login credentials');
       }
@@ -732,16 +748,27 @@ export default function Login() {
         ? 'تعذر الاتصال بالخادم المركزي — تأكد من الشبكة، ولو الشبكة تمام رستر السيرفر واضغط Ctrl+Shift+R.'
         : 'Unable to reach the central server — check your network; if that is fine, restart the server and press Ctrl+Shift+R.');
     } finally {
+      // Failed credentials, unreachable API, and the owner OTP handoff all
+      // dismiss the foreground layer. No authentication outcome is changed.
+      if (!keepTransition) cancelEntryTransition();
       setIsLoading(false);
     }
   };
 
-  // 🔐 إتمام دخول الأونر بعد نجاح رمز التحقق
-  const finishOwnerLogin = () => {
+  // Owner login uses the same logo transition only after its existing OTP succeeds.
+  const finishOwnerLogin = async () => {
     if (!pendingAuthData) return;
     sessionStorage.setItem('access_token', pendingAuthData.access_token);
     sessionStorage.setItem('user', JSON.stringify(pendingAuthData.user));
-    runVisualTransition(() => navigate('/dashboard'));
+
+    const motionResult = await beginEntryTransition(
+      language === 'ar' ? 'جارٍ فتح مركز العمليات' : 'OPENING THE OPERATIONS CENTER'
+    );
+    if (motionResult?.cancelled) return;
+    prepareDashboardReveal(language === 'ar'
+      ? 'تم التحقق من الهوية · جارٍ فتح مركز العمليات'
+      : 'IDENTITY VERIFIED · OPENING OPERATIONS CENTER');
+    navigate('/dashboard');
   };
 
   const resetVerification = () => {
