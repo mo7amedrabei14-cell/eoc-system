@@ -17,8 +17,13 @@ const nextFrame = () => new Promise((resolve) => {
 
 const getWipeDirection = () => {
   const loginRoot = document.querySelector('.lx[dir="rtl"], .lx[dir="ltr"]');
+  const appDirectionRoot = document.querySelector(
+    '#root [dir="rtl"], #root [dir="ltr"], body[dir="rtl"], body[dir="ltr"]',
+  );
   const direction = loginRoot?.getAttribute('dir')
+    || appDirectionRoot?.getAttribute('dir')
     || document.documentElement.getAttribute('dir')
+    || document.body?.getAttribute('dir')
     || 'ltr';
   return direction === 'rtl' ? 'rtl' : 'ltr';
 };
@@ -35,7 +40,7 @@ const createTransitionLayer = (className) => {
  * The route changes behind the opaque field, then a second aperture reveals
  * the dashboard. All motion is decorative; the navigation callback runs once.
  */
-export function runVisualTransition(update, { enabled = true } = {}) {
+export function runVisualTransition(update, { enabled = true, mode = 'enter' } = {}) {
   if (typeof update !== 'function') return undefined;
   if (typeof document === 'undefined') {
     update();
@@ -63,9 +68,12 @@ export function runVisualTransition(update, { enabled = true } = {}) {
     clearMarker();
   };
 
-  const direction = getWipeDirection();
-  const entryX = direction === 'rtl' ? '100%' : '0%';
-  const exitX = direction === 'rtl' ? '0%' : '100%';
+  const isRtl = getWipeDirection() === 'rtl';
+  const leadingX = isRtl ? '100%' : '0%';
+  const trailingX = isRtl ? '0%' : '100%';
+  // Logout runs the same choreography from the opposite edge.
+  const entryX = mode === 'exit' ? trailingX : leadingX;
+  const exitX = mode === 'exit' ? leadingX : trailingX;
   const collapsedEntry = 'ellipse(0% 136% at ' + entryX + ' 50%)';
   const expandedEntry = 'ellipse(168% 192% at ' + entryX + ' 50%)';
   const expandedExit = 'ellipse(168% 192% at ' + exitX + ' 50%)';
@@ -99,9 +107,9 @@ export function runVisualTransition(update, { enabled = true } = {}) {
   curtain.append(field, orbit, edge);
   document.body.appendChild(curtain);
 
-  const edgeTravel = direction === 'rtl'
-    ? ['translate3d(56vw, 0, 0)', 'translate3d(-56vw, 0, 0)']
-    : ['translate3d(-56vw, 0, 0)', 'translate3d(56vw, 0, 0)'];
+  const edgeTravel = entryX === '0%'
+    ? ['translate3d(-56vw, 0, 0)', 'translate3d(56vw, 0, 0)']
+    : ['translate3d(56vw, 0, 0)', 'translate3d(-56vw, 0, 0)'];
 
   let updateStarted = false;
   const finished = (async () => {
