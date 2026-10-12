@@ -334,7 +334,12 @@ function LampAssembly({ lampOn, lampPulling, onPull, language = 'ar', standalone
         </button>
       </div>
       {showCaption && (
-        <div className="lx-lamp-caption" aria-live="polite">
+        <div
+          className="lx-lamp-caption"
+          aria-live={lampOn ? 'polite' : undefined}
+          aria-hidden={!lampOn}
+          style={lampOn ? undefined : { visibility: 'hidden' }}
+        >
           <span className="lx-lamp-status-dot" aria-hidden="true" />
           <span>{lampOn
             ? (language === 'ar' ? 'مصباح العمليات · نشط' : 'OPERATIONS LAMP · ON')
@@ -828,7 +833,7 @@ export default function Login() {
           onPull={handleLampPull}
           language={language}
           standalone
-          showCaption={lampOn}
+          showCaption
         />
       </div>
 
