@@ -89,27 +89,41 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
 
   let updateStarted = false;
   const finished = (async () => {
+    let wipeMotion;
+    let frameId = 0;
     try {
-      // Render the destination immediately behind the foreground curtain.
-      // flushSync prevents React from deferring the route change until the wipe ends.
-      updateStarted = true;
-      flushSync(() => update());
-
-      // One uninterrupted sweep: the app is already active behind the curtain
-      // while it crosses the viewport. No cover/reveal pause or second motion.
-      const wipeMotion = curtain.animate(
+      // Keep the current screen and its controls alive until the curtain reaches
+      // the midpoint. This preserves logout cleanup/navigation ordering while
+      // still running the route change underneath one uninterrupted animation.
+      wipeMotion = curtain.animate(
         [
           { transform: 'translate3d(' + startX + ', 0, 0)' },
+          { transform: 'translate3d(0, 0, 0)', offset: 0.5 },
           { transform: 'translate3d(' + finishX + ', 0, 0)' },
         ],
         {
           duration: 1800,
-          easing: 'cubic-bezier(.76, 0, .24, 1)',
+          easing: 'linear',
           fill: 'forwards',
         },
       );
 
+      const updateAtCoveredMidpoint = () => {
+        if (updateStarted) return;
+        if (wipeMotion.currentTime >= 900) {
+          updateStarted = true;
+          flushSync(() => update());
+          return;
+        }
+        frameId = window.requestAnimationFrame(updateAtCoveredMidpoint);
+      };
+
+      frameId = window.requestAnimationFrame(updateAtCoveredMidpoint);
       await wipeMotion.finished;
+      if (!updateStarted) {
+        updateStarted = true;
+        flushSync(() => update());
+      }
     } catch (error) {
       // Never leave the interface covered if animation is interrupted.
       if (!updateStarted) {
@@ -119,6 +133,7 @@ export function runVisualTransition(update, { enabled = true, mode = 'enter' } =
         throw error;
       }
     } finally {
+      if (frameId) window.cancelAnimationFrame(frameId);
       curtain.remove();
       clearMarker();
     }
