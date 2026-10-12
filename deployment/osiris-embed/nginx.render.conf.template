@@ -1,0 +1,30 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen \${PORT};
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_connect_timeout 30s;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+
+        # Remove only the upstream framing header. The CSP allowlist below
+        # permits embedding from the one explicitly configured EOC origin.
+        proxy_hide_header X-Frame-Options;
+        add_header Content-Security-Policy "frame-ancestors \${EOC_ALLOWED_ORIGIN}" always;
+    }
+}
