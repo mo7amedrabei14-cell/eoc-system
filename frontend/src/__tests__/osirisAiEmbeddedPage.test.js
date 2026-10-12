@@ -37,7 +37,7 @@ test('Osiris AI fullscreen enters/exits through the browser API and has a CSS fa
   assert.match(osirisComponent, /fallbackFullscreen \? 'fixed inset-0 z-\[9999\] h-screen w-screen/);
   assert.match(osirisComponent, /aria-pressed=\{isFullscreen\}/);
   assert.match(osirisComponent, /absolute top-3 right-3 z-10/);
-  assert.match(osirisComponent, /lang === 'ar' \? \(isFullscreen \? 'الخروج من ملء الشاشة' : 'ملء الشاشة'\)/);
+  assert.match(osirisComponent, /lang === 'ar'\s+\? \(isFullscreen \? 'الخروج من ملء الشاشة' : 'ملء الشاشة'\)/);
 });
 
 test('Osiris AI retains responsive sizing without a perpetual measurement timer', () => {
