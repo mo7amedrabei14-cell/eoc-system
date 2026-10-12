@@ -1972,6 +1972,7 @@ useEffect(() => {
   const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, eq_intel: 0, ai_news: 0, audit: 0, handover: 0, weather: 0, gov_contacts: 0 });
 
   const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, isYouth, weatherEligible } = getRoleFlags(userData);
+  const isOsirisExcluded = String(userData?.username || '').trim().toLowerCase() === 'yveoc';
 
   // ════════════════════════════════════════════════════════════════════════
   // 🧭 مؤشّر التنقّل السافر (Phase C) — سطح واحد ينتقل بـ transform فقط
@@ -2749,6 +2750,7 @@ useEffect(() => {
   }, [activeTab]);
   // 💡 3. دالة الانتقال الذكية (بتفتح الصفحة، تقفل الموبايل، وتمسح الإشعار)
   const handleNavigation = (tabName) => {
+  if (tabName === 'osiris_ai' && isOsirisExcluded) tabName = 'missions';
   if (isYouth && tabName === 'home') tabName = 'missions';
   setActiveTab(tabName);
     setNewUpdates(prev => ({ ...prev, [tabName]: false })); // إخفاء النقطة الحمراء بعد قراءة التحديث
@@ -2870,7 +2872,7 @@ useEffect(() => {
       case 'eq_intel': return (!isYouth && weatherEligible)
         ? <MemoEqIntelView lang={language} liveUpdateVersion={liveUpdateVersion.eq_intel} isOwner={isOwner} focusTarget={focusTarget} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
-      case 'osiris_ai': return (!isYouth && weatherEligible)
+      case 'osiris_ai': return (!isOsirisExcluded)
         ? <MemoOsirisAiView lang={language} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
       case 'gov_contacts': return (!isYouth && weatherEligible)
@@ -2908,7 +2910,7 @@ useEffect(() => {
         ...(!isYouth && weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'eq_intel', icon: <EarthquakeIcon />, ar: 'استخبارات الزلازل', en: 'Earthquake Intelligence' }] : []),
-        ...(!isYouth && weatherEligible ? [{ id: 'osiris_ai', icon: <PowerBiIcon />, ar: 'Osiris AI', en: 'Osiris AI' }] : []),
+        ...(!isOsirisExcluded ? [{ id: 'osiris_ai', icon: <PowerBiIcon />, ar: 'Osiris AI', en: 'Osiris AI' }] : []),
         { id: 'missions', icon: <AlertIcon />, ar: 'سجل المهام الميدانية', en: 'Field Missions', update: newUpdates.missions },
         ...((isOwner || isSupervisor || isJoker || isYouth) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
         ...(!isYouth ? [{ id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news }] : []),
@@ -3180,7 +3182,7 @@ useEffect(() => {
             {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
             {!isYouth && weatherEligible && <NavItem icon={<EarthquakeIcon />} label={language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence'} isActive={activeTab === 'eq_intel'} onClick={() => handleNavigation('eq_intel')} isOpen={isSidebarOpen} hasUpdate={newUpdates.eq_intel} />}
-            {!isYouth && weatherEligible && <NavItem icon={<PowerBiIcon />} label="Osiris AI" isActive={activeTab === 'osiris_ai'} onClick={() => handleNavigation('osiris_ai')} isOpen={isSidebarOpen} />}
+            {!isOsirisExcluded && <NavItem icon={<PowerBiIcon />} label="Osiris AI" isActive={activeTab === 'osiris_ai'} onClick={() => handleNavigation('osiris_ai')} isOpen={isSidebarOpen} />}
 
             {/* 🛠️ القسم التشغيلي: كل الباقي بنفس ترتيبها — إدخال يدوي ومتابعة تشغيلية */}
             {isSidebarOpen && <p className="px-3 pt-3 pb-1.5 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
@@ -4387,29 +4389,103 @@ const OSIRIS_AI_EMBED_URL = 'https://osirisai.live/';
 
 function OsirisAiView({ lang = 'ar' }) {
   const wrapRef = useRef(null);
+  const cardRef = useRef(null);
+  const refreshTimeoutRef = useRef(null);
+  const refreshLockRef = useRef(false);
   const [frameH, setFrameH] = useState(null);
+  const [frameKey, setFrameKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
+  const isFullscreen = nativeFullscreen || fallbackFullscreen;
 
-  // Use the same measured viewport and frame surface as the existing main indicators page.
+  // Match the existing indicators page sizing without polling every second.
   useLayoutEffect(() => {
     const measure = () => {
       const el = wrapRef.current;
       if (!el) return;
       const scroller = document.getElementById('main-scroll-container');
       const bottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight;
-      const parentPad = parseFloat(getComputedStyle(el.parentElement).paddingBottom) || 0;
+      const parent = el.parentElement;
+      const parentPad = parent ? (parseFloat(getComputedStyle(parent).paddingBottom) || 0) : 0;
       const available = bottom - el.getBoundingClientRect().top - parentPad;
       const next = Math.max(360, Math.floor(available));
       setFrameH(prev => (prev === next ? prev : next));
     };
+
     measure();
     window.addEventListener('resize', measure);
-    const t = setInterval(measure, 1000);
-    return () => { window.removeEventListener('resize', measure); clearInterval(t); };
+    const scroller = document.getElementById('main-scroll-container');
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    if (wrapRef.current) observer?.observe(wrapRef.current);
+    if (scroller) observer?.observe(scroller);
+    return () => {
+      window.removeEventListener('resize', measure);
+      observer?.disconnect();
+    };
   }, []);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      const active = document.fullscreenElement === cardRef.current;
+      setNativeFullscreen(active);
+      if (active) setFallbackFullscreen(false);
+    };
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
+
+  useEffect(() => () => {
+    if (refreshTimeoutRef.current !== null) window.clearTimeout(refreshTimeoutRef.current);
+  }, []);
+
+  const refreshContent = () => {
+    if (refreshLockRef.current) return;
+    refreshLockRef.current = true;
+    setRefreshing(true);
+    setFrameKey(value => value + 1);
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      refreshLockRef.current = false;
+      refreshTimeoutRef.current = null;
+      setRefreshing(false);
+    }, 1400);
+  };
+
+  const toggleFullscreen = async () => {
+    const card = cardRef.current;
+    if (!card) return;
+    if (fallbackFullscreen) {
+      setFallbackFullscreen(false);
+      return;
+    }
+    if (document.fullscreenElement === card) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        setFallbackFullscreen(false);
+      }
+      return;
+    }
+    try {
+      if (document.fullscreenElement && typeof document.exitFullscreen === 'function') {
+        await document.exitFullscreen();
+      }
+      if (typeof card.requestFullscreen !== 'function') throw new Error('Fullscreen API unavailable');
+      await card.requestFullscreen();
+      setFallbackFullscreen(false);
+    } catch {
+      // Keep the toolbar available when the browser declines Fullscreen API.
+      setFallbackFullscreen(true);
+    }
+  };
 
   const externalLabel = lang === 'ar'
     ? 'فتح في نافذة جديدة إذا تعذّر التضمين'
     : 'Open in a new tab if embedding is unavailable';
+  const refreshLabel = lang === 'ar' ? 'تحديث المحتوى' : 'Refresh content';
+  const fullscreenLabel = lang === 'ar'
+    ? (isFullscreen ? 'الخروج من ملء الشاشة' : 'ملء الشاشة')
+    : (isFullscreen ? 'Exit full screen' : 'Full screen');
 
   return (
     <div
@@ -4417,21 +4493,73 @@ function OsirisAiView({ lang = 'ar' }) {
       className="flex flex-col p-2 md:p-3 min-h-0"
       style={{ height: frameH ? String(frameH) + 'px' : '70vh' }}
     >
-      <div className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden relative flex-1 min-h-0">
+      <div
+        ref={cardRef}
+        className={`card-surface rounded-3xl border border-[var(--border)] overflow-hidden relative flex-1 min-h-0 ${fallbackFullscreen ? 'fixed inset-0 z-[9999] h-screen w-screen !rounded-none !border-0' : ''}`}
+      >
         <iframe
+          key={frameKey}
           title="Osiris AI"
           src={OSIRIS_AI_EMBED_URL}
           className="absolute inset-0 w-full h-full border-0"
           allowFullScreen
-          loading="lazy"
+          loading="eager"
         />
-        <a
-          href={OSIRIS_AI_EMBED_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={externalLabel}
-          aria-label={externalLabel}
-          className="group absolute top-3 left-3 z-10 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
+
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+          <a
+            href={OSIRIS_AI_EMBED_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={externalLabel}
+            aria-label={externalLabel}
+            className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
+                       text-[var(--ink)] bg-[var(--surface-2)]/85 backdrop-blur-md
+                       border border-[var(--border-strong)] shadow-[var(--shadow-1)]
+                       transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 ease-[var(--ease-out)]
+                       hover:bg-[var(--accent)] hover:text-white hover:border-[var(--accent)] hover:shadow-[var(--shadow-accent)]
+                       active:scale-95"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M14 3h7v7" />
+              <path d="M10 14 21 3" />
+              <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+            </svg>
+            {lang === 'ar' ? 'فتح خارج النظام' : 'Open externally'}
+          </a>
+
+          <button
+            type="button"
+            onClick={refreshContent}
+            disabled={refreshing}
+            title={refreshLabel}
+            aria-label={refreshLabel}
+            className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
+                       text-[var(--ink)] bg-[var(--surface-2)]/85 backdrop-blur-md
+                       border border-[var(--border-strong)] shadow-[var(--shadow-1)]
+                       transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 ease-[var(--ease-out)]
+                       hover:bg-[var(--accent)] hover:text-white hover:border-[var(--accent)] hover:shadow-[var(--shadow-accent)]
+                       active:scale-95 disabled:cursor-wait disabled:opacity-70"
+          >
+            <svg
+              className={`w-3.5 h-3.5 transition-transform duration-700 ${refreshing ? 'animate-spin' : ''}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            >
+              <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4" />
+              <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4" />
+            </svg>
+            {lang === 'ar' ? 'تحديث' : 'Refresh'}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          title={fullscreenLabel}
+          aria-label={fullscreenLabel}
+          aria-pressed={isFullscreen}
+          className="group absolute top-3 right-3 z-10 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
                      text-[var(--ink)] bg-[var(--surface-2)]/85 backdrop-blur-md
                      border border-[var(--border-strong)] shadow-[var(--shadow-1)]
                      transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 ease-[var(--ease-out)]
@@ -4439,12 +4567,24 @@ function OsirisAiView({ lang = 'ar' }) {
                      active:scale-95"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M14 3h7v7" />
-            <path d="M10 14 21 3" />
-            <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+            {isFullscreen ? (
+              <>
+                <path d="M8 3v5H3" />
+                <path d="M16 3v5h5" />
+                <path d="M3 16h5v5" />
+                <path d="M21 16h-5v5" />
+              </>
+            ) : (
+              <>
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
+              </>
+            )}
           </svg>
-          {lang === 'ar' ? 'فتح خارج النظام' : 'Open externally'}
-        </a>
+          {fullscreenLabel}
+        </button>
       </div>
     </div>
   );
