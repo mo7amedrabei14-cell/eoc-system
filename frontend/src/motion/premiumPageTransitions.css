@@ -45,7 +45,7 @@
       rgba(65, 0, 10, 0.28) 0%,
       transparent 66%
     ),
-    linear-gradient(126deg, #690008 0%, #a9000d 28%, #d10a12 53%, #930008 100%);
+    linear-gradient(126deg, #690008 0%, #a9000d 28%, #c70000 44%, #d10a12 56%, #930008 100%);
   transform: scale(1.04);
   will-change: transform;
 }
