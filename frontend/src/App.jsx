@@ -6,7 +6,7 @@ import Dashboard, { WorkingToast } from './Dashboard';
 import { installWorkingAuto } from './workingToast';
 import CustomTooltipLayer from './components/CustomTooltipLayer';
 import './motion/premiumPageTransitions.css';
-import { ENABLE_VISUAL_TRANSITIONS } from './motion/visualTransitions';
+import { ENABLE_VISUAL_TRANSITIONS, getPageTransitionDirection } from './motion/visualTransitions';
 
 // ⛑️ حبة العمل العامة — مركّبة على مستوى التطبيق كله (تشمل شاشة الدخول وأي صفحة)
 installWorkingAuto();
@@ -76,8 +76,8 @@ function VisualTransitionFallback() {
     const pageTitle = document.querySelector('#main-scroll-container > header h1');
     if (!pageTitle) return undefined;
 
-    const readActivePage = () => pageTitle.textContent?.trim() ?? '';
-    let activePage = readActivePage();
+    // The heading text can change after the route snapshot or when language changes.
+    // Only a real active-sidebar-index change is a dashboard navigation event.
     let activeNavigationIndex = readActiveNavigationIndex();
     let titleFrame = 0;
 
@@ -85,23 +85,16 @@ function VisualTransitionFallback() {
       if (titleFrame) window.cancelAnimationFrame(titleFrame);
       titleFrame = window.requestAnimationFrame(() => {
         titleFrame = 0;
-        const nextPage = readActivePage();
-        if (nextPage === activePage) return;
-        activePage = nextPage;
-
         const nextNavigationIndex = readActiveNavigationIndex();
-        const direction = activeNavigationIndex >= 0 && nextNavigationIndex >= 0
-          && nextNavigationIndex !== activeNavigationIndex
-          ? (nextNavigationIndex > activeNavigationIndex ? 1 : -1)
-          : 1;
-        if (nextNavigationIndex >= 0) activeNavigationIndex = nextNavigationIndex;
+        const direction = getPageTransitionDirection(activeNavigationIndex, nextNavigationIndex);
+        activeNavigationIndex = nextNavigationIndex;
 
-        // The browser snapshot owns any route transition; this is tab-only.
-        if (document.documentElement.dataset.eocViewTransition) return;
+        // Ignore initial mount / unavailable indices / title-only changes. Also leave
+        // the route morph entirely to the native View Transition when it is active.
+        if (direction === 0 || document.documentElement.dataset.eocViewTransition) return;
         triggerPageTransition(document.querySelector(DASHBOARD_SURFACE), direction);
       });
     });
-
     observer.observe(pageTitle, { childList: true, subtree: true, characterData: true });
 
     return () => {
