@@ -34,6 +34,7 @@ export function runVisualTransition(update, { enabled = true } = {}) {
   const token = String(++transitionSequence);
   root.dataset.eocViewTransition = token;
   let updateStarted = false;
+  let updateCompleted = false;
 
   const clearMarker = () => {
     if (root.dataset.eocViewTransition === token) {
@@ -45,17 +46,27 @@ export function runVisualTransition(update, { enabled = true } = {}) {
     const transition = document.startViewTransition(() => {
       updateStarted = true;
       flushSync(() => update());
+      updateCompleted = true;
     });
     transition.finished.then(clearMarker, clearMarker);
     return transition;
   } catch (error) {
-    clearMarker();
-    // Fall back only when the browser rejected the transition before running
-    // the callback. Never run the same navigation/state update twice.
+    // A rejected start before the callback can safely use the normal CSS fallback.
     if (!updateStarted) {
+      clearMarker();
       update();
       return undefined;
     }
+
+    // If the route update completed but the browser rejected the visual snapshot,
+    // tell App.jsx to run its one-layer CSS fallback. Never replay the update.
+    if (updateCompleted) {
+      root.dataset.eocViewTransitionFallback = token;
+      clearMarker();
+      return undefined;
+    }
+
+    clearMarker();
     throw error;
   }
 }
