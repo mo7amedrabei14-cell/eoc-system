@@ -1,49 +1,62 @@
-/* Motion-inspired, lifecycle-safe transitions for EOC.
-   The native View Transition API snapshots old/new UI without mounting two
-   React pages. Motion's transform+opacity animation is the complete fallback. */
-
-.lx-deck .p-7 > .grid,
-#main-scroll-container > div.p-4 {
-  view-transition-name: eoc-primary-surface;
+/* One route shell owns login/logout motion. Naming the persistent roots makes
+   the route transition symmetric even when the login card is hidden behind the lamp.
+   Child surfaces are intentionally NOT named: nested snapshots caused compounded
+   transforms and made the movement look like two stacked animations. */
+.lx,
+.app-shell {
+  view-transition-name: eoc-route-surface;
 }
 
-/* The shared surface morphs between the existing login workspace and dashboard
-   content. Page shell/root gets only a restrained opacity hand-off; no sidebar
-   element has a transition name or per-element animation. */
-/* Keep the document/sidebar snapshot effectively still; the named content
-   surface below carries the visible transition. */
+/* Keep the unnamed document background/sidebar shell still; the route surface
+   below owns the visible entrance. Its bounds are the viewport in both routes,
+   so the group itself must not add another scale/translate animation. */
 ::view-transition-group(root),
 ::view-transition-old(root),
-::view-transition-new(root) {
+::view-transition-new(root),
+::view-transition-group(eoc-route-surface) {
   animation-duration: 1ms;
 }
 
-::view-transition-group(eoc-primary-surface) {
-  animation-duration: 520ms;
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+::view-transition-old(eoc-route-surface) {
+  animation: eoc-route-exit 160ms cubic-bezier(0.4, 0, 1, 1) both;
 }
 
-::view-transition-old(eoc-primary-surface) {
-  animation: eoc-surface-exit 140ms cubic-bezier(0.4, 0, 1, 1) both;
+::view-transition-new(eoc-route-surface) {
+  animation: eoc-route-enter 440ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
-::view-transition-new(eoc-primary-surface) {
-  animation: eoc-surface-enter 520ms cubic-bezier(0.2, 0, 0, 1) both;
+/* Exactly one moving layer: the incoming route. The old route only fades. */
+@keyframes eoc-route-exit {
+  to { opacity: 0; }
 }
 
-@keyframes eoc-surface-exit {
-  to { opacity: 0; transform: translate3d(0, -5px, 0) scale(1.02); }
-}
-
-@keyframes eoc-surface-enter {
-  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.985); }
+@keyframes eoc-route-enter {
+  from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.99); }
   to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
 
+/* Same incoming-surface motion when the browser has no native View Transition API,
+   or when starting a native transition was rejected after the route update committed. */
+.eoc-route-fallback-enter {
+  animation: eoc-route-fallback-arrive 440ms cubic-bezier(0.2, 0, 0, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes eoc-route-fallback-arrive {
+  from { opacity: 0; transform: translate3d(0, 16px, 0) scale(0.99); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Tab-only motion remains separate and is owned by App.jsx after a real sidebar change. */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation-duration: 1ms !important;
+  }
+
+  .eoc-route-fallback-enter {
+    animation-duration: 1ms !important;
+    will-change: auto;
   }
 }
