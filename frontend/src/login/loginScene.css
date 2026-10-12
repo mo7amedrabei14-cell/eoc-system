@@ -3954,7 +3954,13 @@
 }
 
 
-/* Pre-light neon sign — reuse the official ERC image; never redraw the emblem. */
+/* Pre-light ERC crest with a traveling Google-style gradient frame.
+   Keep the original official image; remove the neon drop-shadow from the logo itself. */
+@property --lx-crest-frame-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
 .lx-neon-crest {
   position: fixed;
   top: 50%;
@@ -3963,31 +3969,65 @@
   display: grid;
   place-items: center;
   width: clamp(8.5rem, 18vw, 15rem);
+  isolation: isolate;
   opacity: 1;
   transform: translate3d(-50%, -50%, 0) scale(1);
   transform-origin: center;
   pointer-events: none;
-  will-change: opacity, transform, filter;
+  will-change: opacity, transform;
   transition:
     opacity 560ms cubic-bezier(.16,1,.3,1),
-    transform 820ms cubic-bezier(.16,1,.3,1),
-    filter 560ms cubic-bezier(.16,1,.3,1);
+    transform 820ms cubic-bezier(.16,1,.3,1);
+}
+.lx-neon-crest::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -11px;
+  padding: 2px;
+  border-radius: 1.75rem;
+  background: conic-gradient(
+    from var(--lx-crest-frame-angle),
+    transparent 0deg,
+    #4285f4 42deg,
+    #34a853 128deg,
+    #fbbc05 212deg,
+    #ea4335 292deg,
+    #4285f4 328deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: lx-crest-frame-flow 3.8s linear infinite;
+  pointer-events: none;
+}
+.lx-neon-crest::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -11px;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 1.75rem;
+  pointer-events: none;
 }
 .lx-neon-crest img {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
   user-select: none;
   pointer-events: none;
-  filter:
-    drop-shadow(0 0 2px rgba(255,255,255,.96))
-    drop-shadow(0 0 7px rgba(255,40,62,.94))
-    drop-shadow(0 0 19px rgba(199,0,0,.78))
-    drop-shadow(0 0 36px rgba(199,0,0,.42));
+  filter: none !important;
+}
+@keyframes lx-crest-frame-flow {
+  to { --lx-crest-frame-angle: 360deg; }
 }
 
-/* Once the lamp turns on, the sign exits left in Arabic while the form reveals. */
+/* When the lamp turns on, the framed logo exits left in Arabic as the form reveals. */
 .lx.lx-phase-1 .lx-neon-crest,
 .lx.lx-phase-2 .lx-neon-crest,
 .lx.lx-phase-3 .lx-neon-crest {
@@ -4029,5 +4069,9 @@
   .lx-neon-crest {
     transition-duration: .01ms;
     will-change: auto;
+  }
+  .lx-neon-crest::before {
+    animation-duration: .01ms;
+    animation-iteration-count: 1;
   }
 }
