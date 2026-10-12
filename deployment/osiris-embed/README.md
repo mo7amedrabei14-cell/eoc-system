@@ -1,38 +1,35 @@
 # Self-hosted OSIRIS embed for EOC
 
-This deployment runs the official OSIRIS repository in its own container and fronts it with a small Nginx proxy. The proxy removes the upstream `X-Frame-Options: SAMEORIGIN` header and permits framing only from the configured EOC origin. It does not modify OSIRIS source code or expose its internal application port directly.
+This setup runs the official OSIRIS application in a separate container and places a small Nginx proxy in front of it. The proxy removes OSIRIS's `X-Frame-Options: SAMEORIGIN` header and restricts framing to the configured EOC origin. The OSIRIS application itself is pinned to a specific upstream commit.
 
 ## 1. Local development on Windows
 
-The frontend development environment defaults to `http://localhost:3001`. From the EOC repository root, start OSIRIS in a separate container. Compose defaults the allowed parent origin to `http://localhost:5173` for local development, so no environment file is needed:
+The tracked `frontend/.env.development` points local Vite development to `http://localhost:3001`. From the EOC repository root, run:
 
 ```powershell
 cd .\deployment\osiris-embed
 docker compose up -d --build
 docker compose ps
-docker compose logs -f osiris-app osiris-embed-proxy
+docker compose logs --tail 100 osiris-app osiris-embed-proxy
 ```
 
-Keep Docker Desktop running. After pulling this branch, restart the Vite dev server (`Ctrl+C`, then `npm run dev` in `frontend`). The proxy is available at `http://localhost:3001`. If it is not running, the page gives a retry action instead of staying on a blank loading overlay.
+For local development, Compose defaults `EOC_ALLOWED_ORIGIN` to `http://localhost:5173`, so no environment file is needed. Keep Docker Desktop running. Restart the Vite dev server after pulling this branch (`Ctrl+C`, then `npm run dev` in `frontend`). OSIRIS is served through the local proxy at `http://localhost:3001`. If the app is not running, the EOC page shows a connection error and a retry button rather than a fake loading state.
 
 ## 2. Production HTTPS
 
-Do not embed the loopback HTTP address in a deployed HTTPS EOC page; browsers block mixed content. Publish the proxy through a TLS-terminating reverse proxy or HTTPS-capable hosting layer, for example as `https://osiris.example.org` pointing to `http://127.0.0.1:3001`. Keep the upstream app port private. Set `EOC_ALLOWED_ORIGIN` to the exact deployed EOC origin and restart the compose stack after changing it. In the production frontend build environment, set `VITE_OSIRIS_URL=https://osiris.example.org` and rebuild/redeploy the frontend.
+Do not use `localhost:3001` in a deployed HTTPS EOC page; each remote user's `localhost` refers to their own device, and HTTPS pages block insecure HTTP iframes. Publish the proxy through a TLS-terminating reverse proxy or an HTTPS-capable hosting layer, e.g. `https://osiris.example.org` pointing internally to `http://127.0.0.1:3001`. Keep the Node application port private.
 
-## 2. Production HTTPS
-
-Do not embed the loopback HTTP address in a deployed HTTPS EOC page; browsers block mixed content. Publish the proxy through a TLS-terminating reverse proxy or HTTPS-capable hosting layer, for example as `https://osiris.example.org` pointing to `http://127.0.0.1:3001`. Keep the upstream app port private. Set `EOC_ALLOWED_ORIGIN` to the exact deployed EOC origin and restart the compose stack after changing it.
+Set `EOC_ALLOWED_ORIGIN` to the exact production EOC origin (scheme, hostname and optional port only, with no path or trailing slash) before starting the container. Do not leave the local default in a public deployment.
 
 ## 3. Connect the EOC frontend
 
-The tracked `frontend/.env.development` points local Vite development to `http://localhost:3001`; do not use that address in a production build. Production deployments must set `VITE_OSIRIS_URL` to the public HTTPS URL of the self-hosted instance. Vite embeds `VITE_*` values at build time, so rebuild and redeploy the frontend after changing the variable.
+For local Vite development, `frontend/.env.development` already sets `VITE_OSIRIS_URL=http://localhost:3001`. For production, set `VITE_OSIRIS_URL` to the public HTTPS URL of the self-hosted OSIRIS instance in the frontend's build environment, then rebuild and redeploy the frontend. Vite embeds `VITE_*` settings at build time, so changing the variable without a rebuild will not update the deployed page.
 
-The EOC page includes refresh, fullscreen, and an external-open fallback. It embeds only the self-hosted URL; if the variable is empty or points directly at `osirisai.live`, the page shows a configuration prompt rather than a broken iframe. The official demo remains available through the external link.
+The public `https://osirisai.live` demo remains available through the external-open link only; it is not embedded directly because its framing policy blocks cross-origin iframes.
 
-## Security and operating notes
+## 4. Security and operating notes
 
-- The proxy's `frame-ancestors` policy is limited to `EOC_ALLOWED_ORIGIN`; do not replace it with `*`.
-- The browser still enforces user permissions for camera/microphone features.
-- Public data layers can work without API keys, but OSIRIS features that rely on optional providers, the separate RECON scanner, or AI-provider credentials need their own configuration. Do not commit secrets.
-- The OSIRIS source context is pinned to a specific upstream commit so builds are reproducible. Review upstream changes before intentionally updating the pinned revision.
-- This compose bundle requires a Docker host. It does not itself create free cloud hosting, a public DNS name, or TLS certificates; those must be provided by the hosting environment.
+- The proxy's `frame-ancestors` policy must list the exact EOC origin; never replace it with `*`.
+- The container and proxy require a Docker host. This repository does not create public hosting, a DNS name, or TLS certificates by itself.
+- Most public-data layers work without API keys. Optional providers, the separate RECON scanner and AI-provider features may need their own configuration. Do not commit secrets.
+- The OSIRIS upstream source is pinned for reproducibility; review upstream changes before updating the commit.
