@@ -1,0 +1,25 @@
+services:
+  osiris-app:
+    build:
+      context: https://github.com/simplifaisoul/osiris.git#0aaba3838b550f83eeeaea99e5179d24f85ad65c
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  osiris-embed-proxy:
+    image: nginx:alpine
+    depends_on:
+      - osiris-app
+    environment:
+      EOC_ALLOWED_ORIGIN: ${EOC_ALLOWED_ORIGIN:?Set the exact EOC origin in .env}
+      NGINX_ENVSUBST_FILTER: '^(EOC_ALLOWED_ORIGIN)$'
+    ports:
+      - "127.0.0.1:${OSIRIS_PUBLIC_PORT:-3001}:8080"
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    restart: unless-stopped

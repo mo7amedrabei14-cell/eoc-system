@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر م�
 import { useNavigate } from 'react-router-dom';
 import { runVisualTransition } from './motion/visualTransitions';
 import EocSelect from './components/EocSelect';
+import OsirisAiView from './osiris/OsirisAiView';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Circle, CircleMarker, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -1972,6 +1973,7 @@ useEffect(() => {
   const [liveUpdateVersion, setLiveUpdateVersion] = useState({ missions: 0, local_news: 0, global_disasters: 0, earthquakes: 0, eq_intel: 0, ai_news: 0, audit: 0, handover: 0, weather: 0, gov_contacts: 0 });
 
   const { userRole, isOwner, isSupervisor, isJoker, isVolunteer, isYouth, weatherEligible } = getRoleFlags(userData);
+  const isOsirisExcluded = String(userData?.username || '').trim().toLowerCase() === 'yveoc';
 
   // ════════════════════════════════════════════════════════════════════════
   // 🧭 مؤشّر التنقّل السافر (Phase C) — سطح واحد ينتقل بـ transform فقط
@@ -2749,6 +2751,7 @@ useEffect(() => {
   }, [activeTab]);
   // 💡 3. دالة الانتقال الذكية (بتفتح الصفحة، تقفل الموبايل، وتمسح الإشعار)
   const handleNavigation = (tabName) => {
+  if (tabName === 'osiris_ai' && isOsirisExcluded) tabName = 'missions';
   if (isYouth && tabName === 'home') tabName = 'missions';
   setActiveTab(tabName);
     setNewUpdates(prev => ({ ...prev, [tabName]: false })); // إخفاء النقطة الحمراء بعد قراءة التحديث
@@ -2870,6 +2873,9 @@ useEffect(() => {
       case 'eq_intel': return (!isYouth && weatherEligible)
         ? <MemoEqIntelView lang={language} liveUpdateVersion={liveUpdateVersion.eq_intel} isOwner={isOwner} focusTarget={focusTarget} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
+      case 'osiris_ai': return (!isOsirisExcluded)
+        ? <OsirisAiView lang={language} />
+        : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
       case 'gov_contacts': return (!isYouth && weatherEligible)
         ? <MemoGovernorateContactsView branches={branchesList} isOwner={isOwner} isJoker={isJoker} isSupervisor={isSupervisor} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.gov_contacts} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
@@ -2905,6 +2911,7 @@ useEffect(() => {
         ...(!isYouth && weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'eq_intel', icon: <EarthquakeIcon />, ar: 'استخبارات الزلازل', en: 'Earthquake Intelligence' }] : []),
+        ...(!isOsirisExcluded ? [{ id: 'osiris_ai', icon: <GlobalWorldIcon />, ar: 'Osiris AI', en: 'Osiris AI' }] : []),
         { id: 'missions', icon: <AlertIcon />, ar: 'سجل المهام الميدانية', en: 'Field Missions', update: newUpdates.missions },
         ...((isOwner || isSupervisor || isJoker || isYouth) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
         ...(!isYouth ? [{ id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news }] : []),
@@ -3176,6 +3183,7 @@ useEffect(() => {
             {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
             {!isYouth && weatherEligible && <NavItem icon={<EarthquakeIcon />} label={language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence'} isActive={activeTab === 'eq_intel'} onClick={() => handleNavigation('eq_intel')} isOpen={isSidebarOpen} hasUpdate={newUpdates.eq_intel} />}
+            {!isOsirisExcluded && <NavItem icon={<GlobalWorldIcon />} label="Osiris AI" isActive={activeTab === 'osiris_ai'} onClick={() => handleNavigation('osiris_ai')} isOpen={isSidebarOpen} />}
 
             {/* 🛠️ القسم التشغيلي: كل الباقي بنفس ترتيبها — إدخال يدوي ومتابعة تشغيلية */}
             {isSidebarOpen && <p className="px-3 pt-3 pb-1.5 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
@@ -3278,6 +3286,7 @@ useEffect(() => {
                   {activeTab === 'weather' && (language === 'ar' ? 'توقعات الطقس' : 'Weather Forecasts')}
                   {activeTab === 'weather_intel' && (language === 'ar' ? 'استخبارات الطقس اليومية' : 'Daily Weather Intelligence')}
                   {activeTab === 'eq_intel' && (language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence')}
+                  {activeTab === 'osiris_ai' && 'Osiris AI'}
                   {activeTab === 'missions' && 'إدارة المهام الميدانية'}
                   {activeTab === 'human_resources' && 'سجل القوة البشرية'}
                   {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
