@@ -2870,6 +2870,9 @@ useEffect(() => {
       case 'eq_intel': return (!isYouth && weatherEligible)
         ? <MemoEqIntelView lang={language} liveUpdateVersion={liveUpdateVersion.eq_intel} isOwner={isOwner} focusTarget={focusTarget} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
+      case 'osiris_ai': return (!isYouth && weatherEligible)
+        ? <MemoOsirisAiView lang={language} />
+        : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
       case 'gov_contacts': return (!isYouth && weatherEligible)
         ? <MemoGovernorateContactsView branches={branchesList} isOwner={isOwner} isJoker={isJoker} isSupervisor={isSupervisor} userRole={userRole} lang={language} liveUpdateVersion={liveUpdateVersion.gov_contacts} />
         : <div className="card-surface p-8 text-center rounded-3xl border border-[var(--border)]"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة غير متاحة لهذا الدور.' : 'This page is not available for this role.'}</p></div>;
@@ -2905,6 +2908,7 @@ useEffect(() => {
         ...(!isYouth && weatherEligible ? [{ id: 'weather', icon: <WeatherIcon />, ar: 'توقعات الطقس', en: 'Weather Forecasts', update: newUpdates.weather }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'weather_intel', icon: <WeatherIntelIcon />, ar: 'استخبارات الطقس اليومية', en: 'Daily Weather Intelligence' }] : []),
         ...(!isYouth && weatherEligible ? [{ id: 'eq_intel', icon: <EarthquakeIcon />, ar: 'استخبارات الزلازل', en: 'Earthquake Intelligence' }] : []),
+        ...(!isYouth && weatherEligible ? [{ id: 'osiris_ai', icon: <PowerBiIcon />, ar: 'Osiris AI', en: 'Osiris AI' }] : []),
         { id: 'missions', icon: <AlertIcon />, ar: 'سجل المهام الميدانية', en: 'Field Missions', update: newUpdates.missions },
         ...((isOwner || isSupervisor || isJoker || isYouth) ? [{ id: 'human_resources', icon: <UsersIcon />, ar: 'سجل القوة البشرية', en: 'Human Resources', update: newUpdates.missions }] : []),
         ...(!isYouth ? [{ id: 'local_news', icon: <NewsIcon />, ar: 'سجل الأخبار المحلية', en: 'Local News', update: newUpdates.local_news }] : []),
@@ -3176,6 +3180,7 @@ useEffect(() => {
             {!isYouth && <NavItem icon={<AIIcon />} label="رصد الذكاء الاصطناعي" isActive={activeTab === 'ai_news'} onClick={() => handleNavigation('ai_news')} isOpen={isSidebarOpen} hasUpdate={newUpdates.ai_news} />}
             {!isYouth && weatherEligible && <NavItem icon={<WeatherIntelIcon />} label={language === 'ar' ? 'استخبارات الطقس' : 'Weather Intelligence'} isActive={activeTab === 'weather_intel'} onClick={() => handleNavigation('weather_intel')} isOpen={isSidebarOpen} />}
             {!isYouth && weatherEligible && <NavItem icon={<EarthquakeIcon />} label={language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence'} isActive={activeTab === 'eq_intel'} onClick={() => handleNavigation('eq_intel')} isOpen={isSidebarOpen} hasUpdate={newUpdates.eq_intel} />}
+            {!isYouth && weatherEligible && <NavItem icon={<PowerBiIcon />} label="Osiris AI" isActive={activeTab === 'osiris_ai'} onClick={() => handleNavigation('osiris_ai')} isOpen={isSidebarOpen} />}
 
             {/* 🛠️ القسم التشغيلي: كل الباقي بنفس ترتيبها — إدخال يدوي ومتابعة تشغيلية */}
             {isSidebarOpen && <p className="px-3 pt-3 pb-1.5 text-[max(0.625rem,9px)] font-extrabold uppercase tracking-[0.16em] text-[var(--faint)]">الوحدات التشغيلية</p>}
@@ -3278,6 +3283,7 @@ useEffect(() => {
                   {activeTab === 'weather' && (language === 'ar' ? 'توقعات الطقس' : 'Weather Forecasts')}
                   {activeTab === 'weather_intel' && (language === 'ar' ? 'استخبارات الطقس اليومية' : 'Daily Weather Intelligence')}
                   {activeTab === 'eq_intel' && (language === 'ar' ? 'استخبارات الزلازل' : 'Earthquake Intelligence')}
+                  {activeTab === 'osiris_ai' && 'Osiris AI'}
                   {activeTab === 'missions' && 'إدارة المهام الميدانية'}
                   {activeTab === 'human_resources' && 'سجل القوة البشرية'}
                   {activeTab === 'local_news' && 'سجل الأخبار المحلية'}
@@ -4376,6 +4382,74 @@ function PowerBiView({ lang = 'ar' }) {
   );
 }
 const MemoPowerBiView = memo(PowerBiView);
+
+const OSIRIS_AI_EMBED_URL = 'https://osirisai.live/';
+
+function OsirisAiView({ lang = 'ar' }) {
+  const wrapRef = useRef(null);
+  const [frameH, setFrameH] = useState(null);
+
+  // Use the same measured viewport and frame surface as the existing main indicators page.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const scroller = document.getElementById('main-scroll-container');
+      const bottom = scroller ? scroller.getBoundingClientRect().bottom : window.innerHeight;
+      const parentPad = parseFloat(getComputedStyle(el.parentElement).paddingBottom) || 0;
+      const available = bottom - el.getBoundingClientRect().top - parentPad;
+      const next = Math.max(360, Math.floor(available));
+      setFrameH(prev => (prev === next ? prev : next));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const t = setInterval(measure, 1000);
+    return () => { window.removeEventListener('resize', measure); clearInterval(t); };
+  }, []);
+
+  const externalLabel = lang === 'ar'
+    ? 'فتح في نافذة جديدة إذا تعذّر التضمين'
+    : 'Open in a new tab if embedding is unavailable';
+
+  return (
+    <div
+      ref={wrapRef}
+      className="flex flex-col p-2 md:p-3 min-h-0"
+      style={{ height: frameH ? String(frameH) + 'px' : '70vh' }}
+    >
+      <div className="card-surface rounded-3xl border border-[var(--border)] overflow-hidden relative flex-1 min-h-0">
+        <iframe
+          title="Osiris AI"
+          src={OSIRIS_AI_EMBED_URL}
+          className="absolute inset-0 w-full h-full border-0"
+          allowFullScreen
+          loading="lazy"
+        />
+        <a
+          href={OSIRIS_AI_EMBED_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={externalLabel}
+          aria-label={externalLabel}
+          className="group absolute top-3 left-3 z-10 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold
+                     text-[var(--ink)] bg-[var(--surface-2)]/85 backdrop-blur-md
+                     border border-[var(--border-strong)] shadow-[var(--shadow-1)]
+                     transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-200 ease-[var(--ease-out)]
+                     hover:bg-[var(--accent)] hover:text-white hover:border-[var(--accent)] hover:shadow-[var(--shadow-accent)]
+                     active:scale-95"
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M14 3h7v7" />
+            <path d="M10 14 21 3" />
+            <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+          </svg>
+          {lang === 'ar' ? 'فتح خارج النظام' : 'Open externally'}
+        </a>
+      </div>
+    </div>
+  );
+}
+const MemoOsirisAiView = memo(OsirisAiView);
 
 
 // ==========================================
