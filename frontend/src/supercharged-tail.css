@@ -273,10 +273,8 @@
 }
 
 .app-shell #main-scroll-container > div .kpi-card {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--kpi-tone, var(--accent)) 7%, transparent), transparent 46%),
-    linear-gradient(180deg, var(--dashboard-card-top), transparent 48%),
-    linear-gradient(145deg, var(--sc-surface-3), var(--sc-surface-1) 78%);
+  background: transparent !important;
+  background-image: none !important;
   border-color: color-mix(in srgb, var(--sc-hair-strong) 82%, var(--kpi-tone, var(--accent)));
   box-shadow:
     inset 0 1px 0 var(--sc-light-top),
@@ -433,15 +431,13 @@
 .eoc-page-transitioning,
 .app-shell #main-scroll-container > div.p-4.eoc-page-transitioning {
   animation: eoc-page-scroll-arrive 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+  will-change: transform;
 }
 @keyframes eoc-page-scroll-arrive {
   from {
-    opacity: 0.72;
     transform: translate3d(0, var(--eoc-page-enter-y, 28px), 0) scale(0.997);
   }
   to {
-    opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
   }
 }
@@ -657,4 +653,12 @@
 .app-shell .eoc-handover-table-surface.wx-frozen tr:hover .wx-sticky-col,
 .app-shell .eoc-handover-table-surface.wx-frozen tr:hover .wx-sticky-corner {
   background-color: var(--sc-surface-2) !important;
+}
+
+
+/* Statistical cards only: transparent fill, while preserving their existing accents and shadows. */
+.kpi-card,
+.stat-card {
+  background: transparent !important;
+  background-image: none !important;
 }
