@@ -5,6 +5,8 @@ import ERCVectorLogo from '../ERCVectorLogo';
 import './authEntryTransition.css';
 
 const AuthEntryTransitionContext = createContext(null);
+const ENTRY_START_DELAY_MS = 1000;
+const DASHBOARD_COVER_HOLD_MS = 2000;
 let authTransitionSequence = 0;
 
 export function AuthEntryTransitionProvider({ children }) {
@@ -12,7 +14,10 @@ export function AuthEntryTransitionProvider({ children }) {
   const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState('idle');
   const [statusText, setStatusText] = useState('SECURE ACCESS · EOC');
+  const phaseRef = useRef('idle');
   const resolveVisualRef = useRef(null);
+  const startTimerRef = useRef(null);
+  const holdTimerRef = useRef(null);
   const originPathRef = useRef(location.pathname);
   const markerRef = useRef('');
 
@@ -26,7 +31,24 @@ export function AuthEntryTransitionProvider({ children }) {
     markerRef.current = '';
   }, []);
 
+  const clearTimers = useCallback(() => {
+    if (startTimerRef.current !== null) {
+      clearTimeout(startTimerRef.current);
+      startTimerRef.current = null;
+    }
+    if (holdTimerRef.current !== null) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }, []);
+
+  const setTransitionPhase = useCallback((nextPhase) => {
+    phaseRef.current = nextPhase;
+    setPhase(nextPhase);
+  }, []);
+
   const beginEntryTransition = useCallback((message) => {
+    clearTimers();
     if (resolveVisualRef.current) {
       resolveVisualRef.current({ cancelled: true });
       resolveVisualRef.current = null;
@@ -35,55 +57,82 @@ export function AuthEntryTransitionProvider({ children }) {
     originPathRef.current = location.pathname;
     setStatusText(message || 'SECURE ACCESS · EOC');
 
-    // Mark this as an app-owned route transition so the existing generic route
-    // fallback does not compete with the logo-led reveal.
+    // Suppress the generic route fade immediately; the logo layer owns this
+    // transition, but it stays invisible for the requested first second.
     if (typeof document !== 'undefined') {
       const marker = 'auth-entry-' + String(++authTransitionSequence);
       markerRef.current = marker;
       document.documentElement.dataset.eocViewTransition = marker;
     }
 
-    setPhase('running');
     return new Promise((resolve) => {
       resolveVisualRef.current = resolve;
+      startTimerRef.current = setTimeout(() => {
+        startTimerRef.current = null;
+        setTransitionPhase('running');
+      }, ENTRY_START_DELAY_MS);
     });
-  }, [clearTransitionMarker, location.pathname]);
+  }, [clearTransitionMarker, clearTimers, location.pathname, setTransitionPhase]);
 
   const completeVisualTransition = useCallback(() => {
-    setPhase((current) => (current === 'running' ? 'holding' : current));
+    if (phaseRef.current !== 'running') return;
+    setTransitionPhase('holding');
     const resolve = resolveVisualRef.current;
     resolveVisualRef.current = null;
     if (resolve) resolve({ cancelled: false });
+  }, [setTransitionPhase]);
+
+  const prepareDashboardReveal = useCallback((message) => {
+    setStatusText(message || 'IDENTITY VERIFIED · OPENING OPERATIONS CENTER');
   }, []);
 
   const cancelEntryTransition = useCallback(() => {
+    clearTimers();
     const resolve = resolveVisualRef.current;
     resolveVisualRef.current = null;
     if (resolve) resolve({ cancelled: true });
-    setPhase((current) => (current === 'idle' ? 'idle' : 'closing'));
-  }, []);
+
+    if (phaseRef.current === 'idle') {
+      clearTransitionMarker();
+      setPhase('idle');
+      return;
+    }
+    setTransitionPhase('closing');
+  }, [clearTimers, clearTransitionMarker, setTransitionPhase]);
 
   useEffect(() => {
-    if (
-      (phase === 'running' || phase === 'holding')
-      && location.pathname !== originPathRef.current
-    ) {
+    if (location.pathname === originPathRef.current) return;
+
+    // Navigation is allowed only after the logo reaches its final pose. Once
+    // the destination mounts, keep the logo curtain in front for two seconds
+    // so dashboard initialization remains invisible to the user.
+    if (phaseRef.current === 'running') {
       const resolve = resolveVisualRef.current;
       resolveVisualRef.current = null;
       if (resolve) resolve({ cancelled: true });
-      setPhase('closing');
+      setTransitionPhase('closing');
+      return;
     }
-  }, [location.pathname, phase]);
+
+    if (phaseRef.current === 'holding') {
+      if (holdTimerRef.current !== null) clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = setTimeout(() => {
+        holdTimerRef.current = null;
+        setTransitionPhase('closing');
+      }, DASHBOARD_COVER_HOLD_MS);
+    }
+  }, [location.pathname, phase, setTransitionPhase]);
 
   useEffect(() => () => {
+    clearTimers();
     clearTransitionMarker();
     if (resolveVisualRef.current) {
       resolveVisualRef.current({ cancelled: true });
       resolveVisualRef.current = null;
     }
-  }, [clearTransitionMarker]);
+  }, [clearTimers, clearTransitionMarker]);
 
-  const contextValue = { beginEntryTransition, cancelEntryTransition };
+  const contextValue = { beginEntryTransition, cancelEntryTransition, prepareDashboardReveal };
 
   return (
     <AuthEntryTransitionContext.Provider value={contextValue}>
@@ -103,9 +152,9 @@ export function AuthEntryTransitionProvider({ children }) {
             ? { duration: reducedMotion ? 0.12 : 0.34, ease: [0.16, 1, 0.3, 1] }
             : { duration: reducedMotion ? 0.08 : 0.2, ease: [0.16, 1, 0.3, 1] }}
           onAnimationComplete={() => {
-            if (phase === 'closing') {
+            if (phaseRef.current === 'closing') {
+              setTransitionPhase('idle');
               clearTransitionMarker();
-              setPhase('idle');
             }
           }}
         >
@@ -149,15 +198,17 @@ export function AuthEntryTransitionProvider({ children }) {
                 }
               : { duration: reducedMotion ? 0.12 : 0.3, ease: [0.16, 1, 0.3, 1] }}
             onAnimationComplete={() => {
-              if (phase === 'running') completeVisualTransition();
+              if (phaseRef.current === 'running') completeVisualTransition();
             }}
           >
             <ERCVectorLogo label="Egyptian Red Crescent" />
           </motion.div>
 
           <div className="eoc-auth-transition__status">
-            <span className="eoc-auth-transition__status-label">{statusText}</span>
-            <span className="eoc-auth-transition__status-dot" aria-hidden="true" />
+            <div className="eoc-auth-transition__status-copy" dir="auto">
+              <span className="eoc-auth-transition__status-dot" aria-hidden="true" />
+              <span className="eoc-auth-transition__status-label">{statusText}</span>
+            </div>
             <span className="eoc-auth-transition__progress" aria-hidden="true">
               <span />
             </span>

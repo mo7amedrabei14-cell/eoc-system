@@ -1,5 +1,5 @@
-/* Logo-led sign-in transition. One uninterrupted foreground layer bridges
-   the existing sign-in request and the already-mounted destination dashboard. */
+/* Logo-led sign-in transition. The curtain remains in front during
+   authentication and for two seconds after the dashboard route mounts. */
 .eoc-auth-transition {
   position: fixed;
   inset: 0;
@@ -70,26 +70,34 @@
   inset-inline: 1.25rem;
   bottom: max(2.25rem, calc(env(safe-area-inset-bottom, 0px) + 1.4rem));
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  column-gap: 0.55rem;
-  row-gap: 0.9rem;
-  color: rgba(255, 255, 255, 0.66);
-  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.13em;
+  gap: 0.8rem;
+  color: rgba(255, 255, 255, 0.78);
   text-align: center;
-  text-transform: uppercase;
+}
+.eoc-auth-transition__status-copy {
+  display: flex;
+  width: 100%;
+  max-width: min(88vw, 48rem);
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  text-align: center;
+  font-family: "IBM Plex Sans Arabic", "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: clamp(0.86rem, 1.15vw, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  line-height: 1.65;
 }
 .eoc-auth-transition__status-label {
-  max-width: min(82vw, 36rem);
-  line-height: 1.7;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .eoc-auth-transition__status-dot {
-  width: 0.38rem;
-  height: 0.38rem;
+  width: 0.42rem;
+  height: 0.42rem;
   flex: 0 0 auto;
   border-radius: 50%;
   background: #c70000;
@@ -97,19 +105,20 @@
   animation: eoc-auth-status-pulse 1.4s ease-in-out infinite;
 }
 .eoc-auth-transition__progress {
-  position: absolute;
-  inset-inline-start: 50%;
-  bottom: -0.9rem;
-  width: 8rem;
-  height: 1px;
+  position: relative;
+  display: block;
+  width: min(16rem, 72vw);
+  height: 3px;
+  border-radius: 999px;
   overflow: hidden;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 14px rgba(199, 0, 0, 0.16);
 }
 .eoc-auth-transition__progress > span {
   display: block;
   width: 38%;
   height: 100%;
+  border-radius: inherit;
   transform-origin: left center;
   background: linear-gradient(90deg, transparent, #c70000 38%, #ff3f48);
   animation: eoc-auth-progress 1.35s cubic-bezier(0.16, 1, 0.3, 1) infinite;

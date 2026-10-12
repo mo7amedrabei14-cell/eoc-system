@@ -424,7 +424,7 @@ export default function Login() {
   }, [theme]);
 
   const navigate = useNavigate();
-  const { beginEntryTransition, cancelEntryTransition } = useAuthEntryTransition();
+  const { beginEntryTransition, cancelEntryTransition, prepareDashboardReveal } = useAuthEntryTransition();
 
   /* ── بوابة استكشاف الأطلس — محرّك متغيّرات CSS ──
      ⚡ المسألة كلها كانت في مكان واحد: كل إطار من السحب كان يمرّر setDragX +
@@ -731,6 +731,9 @@ export default function Login() {
         const motionResult = await entryMotion;
         if (motionResult?.cancelled) return;
 
+        prepareDashboardReveal(language === 'ar'
+          ? 'تم التحقق من الهوية · جارٍ فتح مركز العمليات'
+          : 'IDENTITY VERIFIED · OPENING OPERATIONS CENTER');
         keepTransition = true;
         navigate('/dashboard');
       } else if (response.status >= 500) {
@@ -762,6 +765,9 @@ export default function Login() {
       language === 'ar' ? 'جارٍ فتح مركز العمليات' : 'OPENING THE OPERATIONS CENTER'
     );
     if (motionResult?.cancelled) return;
+    prepareDashboardReveal(language === 'ar'
+      ? 'تم التحقق من الهوية · جارٍ فتح مركز العمليات'
+      : 'IDENTITY VERIFIED · OPENING OPERATIONS CENTER');
     navigate('/dashboard');
   };
 
