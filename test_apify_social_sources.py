@@ -216,6 +216,22 @@ class ApifySocialSourceTests(unittest.TestCase):
 
 
 
+    def test_monthly_cap_has_a_hard_ceiling_of_one_thousand(self):
+        state = self._state()
+        state["monthly_used"] = 1000
+        with patch.dict(os.environ, {
+            "APIFY_API_TOKEN": "test-token",
+            "APIFY_MONTHLY_RESULT_CAP": "5000",
+            "APIFY_DAILY_RESULT_CAP": "50",
+        }, clear=False):
+            with patch.object(S, "_get_or_create_budget_store", return_value="store-id"):
+                with patch.object(S, "_read_budget", return_value=state):
+                    with patch.object(S, "_save_budget", return_value=True):
+                        with patch.object(S, "_actor_request") as actor:
+                            rows = S.fetch_apify_social_articles(["حريق"], now=self.now)
+        self.assertEqual(rows, [])
+        actor.assert_not_called()
+
     def test_apify_bad_request_logs_safe_diagnostic(self):
         class BadRequest:
             status_code = 400
