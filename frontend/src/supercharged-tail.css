@@ -663,18 +663,87 @@
   background-image: none !important;
 }
 
-/* HR register table viewport-height fix — scoped to its 10-column table */
-#main-scroll-container > div.p-4 div[class~="flex"][class~="flex-col"]:has(
-  > div[class~="flex-1"][class~="overflow-auto"] > table > thead > tr > th:nth-child(10):last-child
+/* Responsive viewport space for the five requested registers.
+   Geometry only: no table colors, typography, cells, or page layout are changed.
+   Each selector identifies a register by its existing table structure. */
+
+/* These five views use the same viewport-filling column pattern as System Log. */
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div.table-shell > div[class~="flex-1"][class~="overflow-auto"] > table[class~="min-w-[68.75rem]"]
+),
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div.card-surface[class~="h-[41.25rem]"] > div.eoc-table-shell > table[class~="min-w-[62.5rem]"]
+),
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div[class~="h-[40.625rem]"] > div.eoc-table-shell > table[class~="min-w-[45rem]"]
+),
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div[class~="flex-col"][class~="overflow-hidden"] > div.table-shell[class~="overflow-x-auto"] > table[class~="min-w-[45rem]"]
 ) {
-  height: clamp(24rem, calc(100dvh - 20rem), 56rem);
-  min-height: 24rem;
+  display: flex;
+  flex-direction: column;
+  height: max(85vh, 44rem);
+  min-height: max(85vh, 44rem);
 }
 
-#main-scroll-container > div.p-4 div[class~="flex-1"][class~="overflow-auto"]:has(
-  > table > thead > tr > th:nth-child(10):last-child
-) {
-  flex: 1 1 auto;
+/* Remove fixed rem-height limits from the workforce, local-news, and global-disaster table cards. */
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div.card-surface[class~="h-[41.25rem]"] > div.eoc-table-shell > table[class~="min-w-[62.5rem]"]
+) > div.card-surface[class~="h-[41.25rem]"],
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div[class~="h-[40.625rem]"] > div.eoc-table-shell > table[class~="min-w-[45rem]"]
+) > div[class~="h-[40.625rem]"] {
+  height: auto !important;
+  max-height: none !important;
   min-height: 0;
+  flex: 1 1 0%;
+}
+
+/* Let the table scroll area consume all remaining height inside its card. */
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div.card-surface[class~="h-[41.25rem]"] > div.eoc-table-shell > table[class~="min-w-[62.5rem]"]
+) > div.card-surface[class~="h-[41.25rem]"] > div.eoc-table-shell,
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div[class~="h-[40.625rem]"] > div.eoc-table-shell > table[class~="min-w-[45rem]"]
+) > div[class~="h-[40.625rem]"] > div.eoc-table-shell {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Mission register: its existing flex table shell must be allowed to grow/shrink. */
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div.table-shell > div[class~="flex-1"][class~="overflow-auto"] > table[class~="min-w-[68.75rem]"]
+) > div.table-shell {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div.table-shell > div[class~="flex-1"][class~="overflow-auto"] > table[class~="min-w-[68.75rem]"]
+) > div.table-shell > div[class~="flex-1"][class~="overflow-auto"] {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Handover log: make its existing horizontal-only wrapper fill the available
+   vertical space too, while retaining the same table and horizontal scrolling. */
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div[class~="flex-col"][class~="overflow-hidden"] > div.table-shell[class~="overflow-x-auto"] > table[class~="min-w-[45rem]"]
+) > div[class~="flex-col"][class~="overflow-hidden"]:has(
+  > div.table-shell[class~="overflow-x-auto"] > table[class~="min-w-[45rem]"]
+) {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: auto !important;
+}
+
+#main-scroll-container > div[class~="p-4"] > div:has(
+  > div[class~="flex-col"][class~="overflow-hidden"] > div.table-shell[class~="overflow-x-auto"] > table[class~="min-w-[45rem]"]
+) > div[class~="flex-col"][class~="overflow-hidden"] > div.table-shell[class~="overflow-x-auto"] {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto !important;
   overscroll-behavior: contain;
 }
