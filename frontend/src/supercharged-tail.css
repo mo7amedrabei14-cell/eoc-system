@@ -662,3 +662,19 @@
   background: transparent !important;
   background-image: none !important;
 }
+
+/* HR register table viewport-height fix — scoped to its 10-column table */
+#main-scroll-container > div.p-4 div[class~="flex"][class~="flex-col"]:has(
+  > div[class~="flex-1"][class~="overflow-auto"] > table > thead > tr > th:nth-child(10):last-child
+) {
+  height: clamp(24rem, calc(100dvh - 20rem), 56rem);
+  min-height: 24rem;
+}
+
+#main-scroll-container > div.p-4 div[class~="flex-1"][class~="overflow-auto"]:has(
+  > table > thead > tr > th:nth-child(10):last-child
+) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
