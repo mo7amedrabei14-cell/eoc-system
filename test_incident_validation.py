@@ -88,5 +88,22 @@ class IncidentValidationTests(unittest.TestCase):
         self.assertFalse(is_probable_real_incident(article, ai_data))
 
 
+
+    def test_accepts_incident_with_arabic_cause_verb_and_global_location(self):
+        article = {
+            "title": "كلب أعمى يتسبب في حريق هائل بأمريكا",
+            "text": "كلب أعمى يتسبب في حريق هائل بأمريكا.",
+        }
+        accepted, reason = validate_incident(article)
+        self.assertTrue(accepted, reason)
+
+    def test_accepts_incident_report_using_noun_form_and_non_egyptian_location(self):
+        article = {
+            "title": "اندلاع حريق في ناقلة نفط شرق مضيق هرمز",
+            "text": "أفادت تقارير باندلاع حريق في ناقلة نفط شرق مضيق هرمز.",
+        }
+        accepted, reason = validate_incident(article)
+        self.assertTrue(accepted, reason)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

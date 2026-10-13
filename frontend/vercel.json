@@ -31,7 +31,8 @@
   "git": {
     "deploymentEnabled": {
       "feature/apify-social-radar-budget-2026-10-13": false,
-      "fix/osiris-real-incident-validation-2026-10-13": false
+      "fix/osiris-real-incident-validation-2026-10-13": false,
+      "fix/social-search-budget-safe-2026-10-13": false
     }
   }
 }
