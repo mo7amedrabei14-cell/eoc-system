@@ -3,6 +3,7 @@
 import os
 import unittest
 from datetime import datetime, timezone, timedelta
+from email.utils import format_datetime
 from unittest.mock import patch
 
 import social_media_sources as S
@@ -27,6 +28,10 @@ class SocialMediaSourceTests(unittest.TestCase):
 
     def test_recent_filter_accepts_recent_iso_timestamp(self):
         value = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
+        self.assertTrue(S._is_recent(value, 3))
+
+    def test_recent_filter_accepts_rfc822_feed_timestamp(self):
+        value = format_datetime(datetime.now(timezone.utc) - timedelta(minutes=10))
         self.assertTrue(S._is_recent(value, 3))
 
     def test_recent_filter_rejects_old_iso_timestamp(self):
