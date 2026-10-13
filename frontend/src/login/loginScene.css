@@ -2958,14 +2958,16 @@
    Phase 0: lamp only, off. 1: warm. 2: cyber cyan. 3: violet. Then repeat.
    ═══════════════════════════════════════════════════════════════════════════ */
 .lx.lx-phase-0,
+
 .lx.lx-phase-1 {
-  --lx-lamp-color: #ffd54f;
-  --lx-lamp-core: #fff9c4;
-  --lx-lamp-glow-strong: rgba(255,213,79,.65);
-  --lx-lamp-glow-soft: rgba(255,193,7,.25);
-  --lx-lamp-beam-start: rgba(255,235,150,.85);
-  --lx-lamp-beam-mid: rgba(255,213,79,.25);
+  --lx-lamp-color: #c70000;
+  --lx-lamp-core: #ffe5e5;
+  --lx-lamp-glow-strong: rgba(199, 0, 0, .65);
+  --lx-lamp-glow-soft: rgba(199, 0, 0, .25);
+  --lx-lamp-beam-start: rgba(255, 180, 180, .85);
+  --lx-lamp-beam-mid: rgba(199, 0, 0, .25);
 }
+
 .lx.lx-phase-2 {
   --lx-lamp-color: #00e5ff;
   --lx-lamp-core: #e0f7fa;
@@ -3653,8 +3655,10 @@
 .lx-lamp-string-svg { height: 8.5rem; }
 .lx-lamp-pull { top: 6.35rem; }
 
-.lx.lx-phase-1 .lx-deck .p-7 > .grid { border-color: rgba(255,213,79,.2); }
-
+.lx.lx-phase-1 .lx-deck .p-7 > .grid {
+  border-color: rgba(199, 0, 0, .25);
+  box-shadow: 0 30px 60px rgba(0,0,0,.56), 0 0 30px -5px rgba(199,0,0,.25);
+}
 /* The lamp sits in the left half of the blackout, as in the reference video. */
 .lx.lx-phase-0 .lx-lamp-stage--solo {
   position: absolute;
