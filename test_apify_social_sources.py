@@ -137,6 +137,13 @@ class ApifySocialSourceTests(unittest.TestCase):
         self.assertTrue(writes[-1]["slot_consumed"])
         self.assertEqual(actor.call_count, 2)
 
+    def test_search_payload_uses_high_signal_queries_not_generic_fire_keyword(self):
+        payload = S._actor_payload("Facebook", ["حريق"])
+        self.assertTrue(payload["mustContainQuery"])
+        self.assertIn("حريق منزل", payload["searchQueries"])
+        self.assertIn("انقلاب سيارة", payload["searchQueries"])
+        self.assertNotIn("حريق", payload["searchQueries"])
+
     def test_apify_rejects_literary_post_even_if_it_contains_incident_words(self):
         post = self._post(10, "Facebook")
         post["message"] = "نص أدبي/شاعري نشر على وسائل التواصل الاجتماعي ولا يمثل أي حادث أمني أو طارئ حقيقي. حريق الذكريات."
