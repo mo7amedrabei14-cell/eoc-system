@@ -4,6 +4,7 @@ The module deliberately has no network or database dependencies so its decisions
 can be regression-tested deterministically.
 """
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from difflib import SequenceMatcher
 from hashlib import sha256
 from html import unescape
@@ -84,7 +85,10 @@ def _timestamp(item):
         try:
             if isinstance(value, (int, float)):
                 return datetime.fromtimestamp(float(value), tz=timezone.utc)
-            parsed = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+            try:
+                parsed = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+            except ValueError:
+                parsed = parsedate_to_datetime(str(value).strip())
             if parsed.tzinfo is None:
                 parsed = parsed.replace(tzinfo=timezone.utc)
             return parsed.astimezone(timezone.utc)
