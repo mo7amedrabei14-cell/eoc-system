@@ -50,6 +50,37 @@ class ApifySocialSourceTests(unittest.TestCase):
         self.assertEqual(fb["link"], "https://www.facebook.com/posts/example")
         self.assertEqual(ig["link"], "https://www.instagram.com/p/example/")
 
+    def test_existing_budget_store_is_reused_without_creating_another(self):
+        class Response:
+            ok = True
+            status_code = 200
+            def json(self):
+                return {"data": {"items": [
+                    {"id": "existing-store-id", "name": S.BUDGET_STORE_NAME}
+                ]}}
+        with patch.object(S.requests, "get", return_value=Response()) as get:
+            with patch.object(S.requests, "post") as post:
+                self.assertEqual(S._get_or_create_budget_store("test-token"), "existing-store-id")
+                get.assert_called_once()
+                post.assert_not_called()
+
+    def test_budget_store_is_created_only_when_none_exists(self):
+        class EmptyResponse:
+            ok = True
+            status_code = 200
+            def json(self):
+                return {"data": {"items": []}}
+        class CreatedResponse:
+            ok = True
+            status_code = 201
+            def json(self):
+                return {"data": {"id": "new-store-id"}}
+        with patch.object(S.requests, "get", return_value=EmptyResponse()) as get:
+            with patch.object(S.requests, "post", return_value=CreatedResponse()) as post:
+                self.assertEqual(S._get_or_create_budget_store("test-token"), "new-store-id")
+                get.assert_called_once()
+                post.assert_called_once()
+
     def test_no_token_disables_apify_without_network_calls(self):
         with patch.dict(os.environ, {"APIFY_API_TOKEN": ""}, clear=False):
             with patch.object(S, "_get_or_create_budget_store") as store:

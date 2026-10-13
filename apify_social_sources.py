@@ -189,16 +189,44 @@ def _auth_headers(token):
 
 
 def _get_or_create_budget_store(token):
-    """Get or create one durable, private Apify KVS by its stable name."""
+    """Reuse the same durable Apify KVS across every scheduled runner."""
+    headers = _auth_headers(token)
     try:
+        # Names are labels, not guaranteed unique IDs. Search existing stores first;
+        # creating a new store blindly on every run would reset the monthly counter.
+        offset = 0
+        page_size = 100
+        for _ in range(50):  # fail closed after checking up to 5,000 stores
+            response = requests.get(
+                f"{API_BASE}/key-value-stores",
+                params={"limit": page_size, "offset": offset},
+                headers=headers,
+                timeout=20,
+            )
+            if not response.ok:
+                print(f"⚠️ Apify: تعذّر فحص مخازن الميزانية (HTTP {response.status_code}); أوقف البحث لحماية الرصيد.")
+                return None
+            payload = response.json()
+            data = payload.get("data", {}) if isinstance(payload, dict) else {}
+            items = data.get("items", []) if isinstance(data, dict) else []
+            for item in items:
+                if isinstance(item, dict) and item.get("name") == BUDGET_STORE_NAME and item.get("id"):
+                    return str(item["id"])
+            if not items or len(items) < page_size:
+                break
+            offset += len(items)
+        else:
+            print("⚠️ Apify: لم أعثر على مخزن الميزانية ضمن أول 5,000 مخزن؛ أوقف البحث بدل إنشاء مخزن قد يعيد ضبط السقف.")
+            return None
+
         response = requests.post(
             f"{API_BASE}/key-value-stores",
             params={"name": BUDGET_STORE_NAME},
-            headers=_auth_headers(token),
+            headers=headers,
             timeout=20,
         )
         if not response.ok:
-            print(f"⚠️ Apify: تعذّر الوصول إلى مخزن ميزانية الرصد (HTTP {response.status_code}); أوقف البحث لحماية الرصيد.")
+            print(f"⚠️ Apify: تعذّر إنشاء مخزن ميزانية الرصد (HTTP {response.status_code}); أوقف البحث لحماية الرصيد.")
             return None
         data = response.json().get("data", {})
         store_id = data.get("id")

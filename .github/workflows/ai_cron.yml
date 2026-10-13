@@ -5,6 +5,11 @@ on:
     - cron: '*/30 * * * *'
   workflow_dispatch:
 
+# Keep a scheduled scan and a manual run from spending budget concurrently.
+concurrency:
+  group: ai-radar-scan
+  cancel-in-progress: false
+
 jobs:
   scan-news:
     runs-on: ubuntu-latest
