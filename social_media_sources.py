@@ -19,7 +19,7 @@ USER_AGENT = os.environ.get(
     "EOC-AI-Radar/1.0 (emergency incident monitoring; contact system administrator)",
 )
 GRAPH_VERSION = os.environ.get("META_GRAPH_API_VERSION", "v24.0").strip() or "v24.0"
-REQUEST_TIMEOUT = 18
+REQUEST_TIMEOUT = 12
 
 
 def _csv(name):
@@ -330,6 +330,43 @@ def _instagram(keywords, max_age_hours):
     return articles
 
 
+def _extra_social_rss(keywords, max_age_hours):
+    """Read optional RSS/Atom feeds from approved social-feed bridges.
+
+    Set OSINT_EXTRA_SOCIAL_FEEDS to entries in the form
+    label::https://feed-url|another label::https://another-feed-url.
+    HTTPS is required; entries are deliberately explicit and capped.
+    """
+    articles = []
+    configured = os.environ.get("OSINT_EXTRA_SOCIAL_FEEDS", "").strip()
+    for entry_config in configured.split("|")[:20]:
+        if "::" not in entry_config:
+            continue
+        label, url = (part.strip() for part in entry_config.split("::", 1))
+        if not label or not url.lower().startswith("https://"):
+            continue
+        response = None
+        try:
+            response = _http_get(url)
+            if not response.ok:
+                _warn(f"Social RSS/{label}", response)
+                continue
+            feed = feedparser.parse(response.content)
+            for entry in feed.entries[:25]:
+                title = getattr(entry, "title", "")
+                summary = BeautifulSoup(getattr(entry, "summary", ""), "html.parser").get_text(" ", strip=True)
+                published = getattr(entry, "published", None) or getattr(entry, "updated", None)
+                if not _matches(f"{title} {summary}", keywords) or not _is_recent(published, max_age_hours):
+                    continue
+                articles.append(_article(
+                    title, summary, getattr(entry, "link", ""),
+                    f"Social RSS: {label}", published,
+                ))
+        except Exception:
+            _warn(f"Social RSS/{label}", response)
+    return articles
+
+
 def fetch_social_articles(keywords, max_age_hours=3):
     """Collect recent, keyword-matching posts from enabled social adapters.
 
@@ -345,6 +382,7 @@ def fetch_social_articles(keywords, max_age_hours=3):
         ("X", _x),
         ("Facebook", _facebook),
         ("Instagram", _instagram),
+        ("Extra social RSS", _extra_social_rss),
     )
     for platform, adapter in adapters:
         try:
