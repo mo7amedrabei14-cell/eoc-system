@@ -52,6 +52,29 @@ class SocialMediaSourceTests(unittest.TestCase):
         self.assertEqual(items[0]["link"], "https://t.me/erc_alerts/123")
         self.assertIn("حريق", items[0]["text"])
 
+
+    def test_extra_social_rss_feed_is_configurable(self):
+        now = datetime.now(timezone.utc).isoformat()
+        class Entry:
+            title = "حريق كبير في القاهرة"
+            summary = "بلاغ حريق وإصابات"
+            link = "https://social-feed.example/post/123"
+            published = now
+        class Feed:
+            entries = [Entry()]
+        class Response:
+            ok = True
+            status_code = 200
+            content = b"<rss></rss>"
+        config = "Public Telegram mirror::https://feeds.example/telegram.xml"
+        with patch.dict(os.environ, {"OSINT_EXTRA_SOCIAL_FEEDS": config}):
+            with patch.object(S, "_http_get", return_value=Response()):
+                with patch.object(S.feedparser, "parse", return_value=Feed()):
+                    items = S._extra_social_rss(["حريق"], 3)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["publisher"], "Social RSS: Public Telegram mirror")
+        self.assertEqual(items[0]["link"], Entry.link)
+
     def test_unconfigured_authenticated_sources_are_skipped(self):
         names = (
             "X_API_BEARER_TOKEN", "META_ACCESS_TOKEN", "META_FACEBOOK_PAGE_IDS",
