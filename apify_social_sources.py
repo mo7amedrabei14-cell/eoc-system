@@ -324,6 +324,80 @@ def _safe_apify_error_detail(response, token=None):
     return detail[:320] or "لم يُرجع Apify تفاصيل للخطأ"
 
 
+def _failed_actor_run_detail(response, token, base_detail):
+    """Enrich an Actor-run-failed API response with its own status/log, without rerunning it."""
+    match = re.search(r"run ID:\\s*([A-Za-z0-9_-]+)", str(base_detail or ""), re.IGNORECASE)
+    if not match or "run-failed" not in str(base_detail or "").lower():
+        return base_detail
+
+    run_id = match.group(1)
+    headers = _auth_headers(token)
+    diagnostics = []
+
+    def _redact(value):
+        value = str(value or "")
+        if token:
+            value = value.replace(token, "[REDACTED]")
+        value = re.sub(r"(?i)Bearer\\s+\\S+", "Bearer [REDACTED]", value)
+        value = re.sub(
+            r"(?i)(APIFY_API_TOKEN|ACCESS[_-]?TOKEN|TOKEN)\\s*[:=]\\s*['\" ]?[^\\s,'\"}]+",
+            r"\\1=[REDACTED]",
+            value,
+        )
+        return re.sub(r"\\s+", " ", value).strip()
+
+    # This is a metadata/log read for the existing failed run, not a second Actor run.
+    try:
+        run_response = requests.get(
+            f"{API_BASE}/actor-runs/{quote(run_id, safe='')}",
+            headers=headers,
+            timeout=10,
+        )
+        if run_response.ok:
+            payload = run_response.json()
+            data = payload.get("data", payload) if isinstance(payload, dict) else {}
+            status = data.get("status")
+            status_message = data.get("statusMessage") or data.get("status_message")
+            exit_code = data.get("exitCode")
+            summary = " ".join(
+                part for part in (
+                    f"status={status}" if status else "",
+                    f"exitCode={exit_code}" if exit_code is not None else "",
+                    _redact(status_message) if status_message else "",
+                ) if part
+            )
+            if summary:
+                diagnostics.append(summary[:220])
+    except Exception:
+        pass
+
+    try:
+        log_response = requests.get(
+            f"{API_BASE}/actor-runs/{quote(run_id, safe='')}/log",
+            params={"stream": "0"},
+            headers=headers,
+            timeout=10,
+        )
+        if log_response.ok:
+            lines = [
+                _redact(line)
+                for line in str(log_response.text or "").splitlines()
+                if re.search(
+                    r"error|exception|traceback|failed|fatal|timeout|proxy|invalid|rate.?limit|blocked",
+                    line,
+                    re.IGNORECASE,
+                )
+            ]
+            if lines:
+                diagnostics.append("log=" + " | ".join(lines[-2:])[:300])
+    except Exception:
+        pass
+
+    if not diagnostics:
+        return base_detail
+    return (str(base_detail or "") + " | " + " | ".join(diagnostics))[:700]
+
+
 def _actor_request(actor_id, payload, token):
     """Run one Actor with a hard cap of one chargeable result and a tiny cost ceiling."""
     try:
@@ -350,6 +424,8 @@ def _actor_request(actor_id, payload, token):
         return None, "uncertain"
     if not response.ok:
         detail = _safe_apify_error_detail(response, token)
+        if "run-failed" in detail.lower():
+            detail = _failed_actor_run_detail(response, token, detail)
         print(f"⚠️ Apify/{actor_id}: رفض الطلب (HTTP {response.status_code}) — {detail}")
         return [], "recoverable"
     try:
@@ -371,15 +447,20 @@ def _actor_payload(platform, keywords, slot_index=0):
         return {
             "searchQueries": queries,
             "sortBy": "recent",
-            "startDate": "1 day",
+            # Use the documented day-count form, avoiding Actor-specific parsing
+            # ambiguity around the singular relative string "1 day".
+            "startDate": "1",
             "mustContainQuery": True,
             "maxPostsPerQuery": 1,
             "maxItems": 1,
             "compact": True,
             "includePostDetails": False,
             "monitorMode": True,
-            "monitorStoreName": "eoc-ai-radar-facebook",
-            "maxConcurrency": 1,
+            # Start a clean per-query monitor checkpoint after the repeated FAILED
+            # runs. The separate EOC-AI-Radar-Social-Budget store remains untouched.
+            "monitorStoreName": "eoc-ai-radar-facebook-v2",
+            # The Actor documents 2 as the safe default for query concurrency.
+            "maxConcurrency": 2,
         }
     return {
         "keywords": queries,
