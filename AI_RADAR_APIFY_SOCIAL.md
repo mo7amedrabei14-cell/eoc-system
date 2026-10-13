@@ -3,7 +3,7 @@
 ## What this change does
 - Connects the existing AI Radar to the two configured Apify Actors: `topapi~facebook-search-posts-scraper` and `seemuapps~instagram-keyword-posts-scraper`.
 - Uses high-signal incident-reporting phrases for social searches and then applies deterministic content validation; generic words alone are not sufficient for acceptance.
-- Accepts a social post only when it has an explicit publication timestamp no older than 30 minutes, a matching keyword, and a usable post URL. Unknown timestamps fail closed.
+- Accepts a social post only when it has an explicit publication timestamp no older than 30 minutes, a usable post URL, and incident-specific evidence. Unknown timestamps, literary content, and metaphorical posts without factual context fail closed.
 - Sends accepted posts into the existing multi-source deduplication, AI/fallback analysis, and EOC API flow.
 - Limits collection to at most one chargeable result per 30-minute UTC slot across both platforms. The preferred platform alternates; the other is queried in the same slot only if the preferred Actor returns a confirmed empty/non-billable result.
 - Uses the Apify API's `maxItems=1` per Actor request and `maxTotalChargeUsd=0.01` as a per-run charge guard. Facebook also has an Actor-level `maxItems=1` and monitor mode. Extra Instagram dataset rows, if returned despite the charge cap, are not forwarded; the newest timestamped matching row is selected.
@@ -29,7 +29,7 @@ Both Vercel configuration files disable branch deployments for `feature/apify-so
 
 ## Incident validation and budget protection (2026-10-13)
 - Social search now uses high-signal event-report phrases rather than the entire generic incident keyword list; this is intended to reduce non-incident posts *before* Apify selects a billable dataset result.
-- Facebook's exact-query filter remains enabled, and the 30-minute publication-age condition is unchanged.
+- Facebook's exact-query filter remains enabled, and the 30-minute publication-age condition is unchanged. The Actor supports date/day filters rather than a documented exact 30-minute pre-filter, so strict age validation still happens immediately after retrieval; the one-result charge cap is retained to bound this residual risk.
 - A deterministic local gate rejects explicit literary/poetic/fictional wording and figurative posts before deduplication and Gemini. Strongly evidenced incidents pass normally. If Apify has already returned a billable but underspecified incident-shaped post, it may pass to Gemini solely for an explicit `is_real_incident=true` decision; delivery still fails closed without that positive decision. The gate runs again immediately before the EOC API write.
 - Gemini is asked to classify whether a candidate describes an actual, specific emergency event; an explicit negative decision blocks the write. If Gemini is unavailable, local validation remains mandatory.
 - The Apify result cap, monthly/daily caps, reserved budget accounting, and no-concurrent-run protections are not relaxed. If a paid Actor nevertheless returns an irrelevant result, it is rejected rather than written as a false incident; the search is narrowed to reduce this case. A source-side scraper cannot prove semantic truth before it has returned a post, so this reduces—not mathematically eliminates—the risk of paying for a false positive.
