@@ -294,6 +294,41 @@ def _save_budget(store_id, token, state):
         return False
 
 
+def _safe_apify_error_detail(response, token=None):
+    """Return a short, redacted diagnostic from an Apify 4xx response."""
+    detail = ""
+    try:
+        payload = response.json()
+        if isinstance(payload, dict):
+            error = payload.get("error")
+            if isinstance(error, dict):
+                detail = " - ".join(
+                    str(error.get(key) or "").strip()
+                    for key in ("type", "message")
+                    if str(error.get(key) or "").strip()
+                )
+            elif isinstance(error, str):
+                detail = error
+            elif payload.get("message"):
+                detail = str(payload["message"])
+    except Exception:
+        pass
+
+    if not detail:
+        detail = str(getattr(response, "text", "") or "")
+    secret = token or os.environ.get("APIFY_API_TOKEN", "")
+    if secret:
+        detail = detail.replace(secret, "[REDACTED]")
+    detail = re.sub(r"(?i)\\bbearer\\s+[^\\s,;]+", "Bearer [REDACTED]", detail)
+    detail = re.sub(
+        r'''(?i)(["']?token["']?\\s*[:=]\\s*["']?)[^"'\\s,}]+''',
+        r"\\1[REDACTED]",
+        detail,
+    )
+    detail = re.sub(r"\\s+", " ", detail).strip()
+    return detail[:320] or "لم يُرجع Apify تفاصيل للخطأ"
+
+
 def _actor_request(actor_id, payload, token):
     """Run one Actor with a hard cap of one chargeable result and a tiny cost ceiling."""
     try:
@@ -319,7 +354,8 @@ def _actor_request(actor_id, payload, token):
         print(f"⚠️ Apify/{actor_id}: فشل مؤقت (HTTP {response.status_code}); احتُسب الحجز احترازيًا.")
         return None, "uncertain"
     if not response.ok:
-        print(f"⚠️ Apify/{actor_id}: رفض الطلب (HTTP {response.status_code}).")
+        detail = _safe_apify_error_detail(response, token)
+        print(f"⚠️ Apify/{actor_id}: رفض الطلب (HTTP {response.status_code}) — {detail}")
         return [], "recoverable"
     try:
         value = response.json()
@@ -330,9 +366,12 @@ def _actor_request(actor_id, payload, token):
     return value, "ok"
 
 
-def _actor_payload(platform, keywords):
-    """Strict, high-signal search to reduce billable non-incident posts."""
+def _actor_payload(platform, keywords, slot_index=0):
+    """Strict, high-signal search; rotate query order without raising item/charge caps."""
     queries = list(SOCIAL_INCIDENT_SEARCH_QUERIES)
+    if queries:
+        offset = max(0, int(slot_index)) % len(queries)
+        queries = queries[offset:] + queries[:offset]
     if platform == "Facebook":
         return {
             "searchQueries": queries,
@@ -405,7 +444,9 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
         print(f"⏸️ Apify: وصل الرصد إلى سقف اليوم ({state['daily_used']}/{daily_cap} نتيجة محتسبة).")
         return []
 
-    platforms = ["Facebook", "Instagram"] if slot_index % 2 == 0 else ["Instagram", "Facebook"]
+    # Facebook is the primary feed because its search can sort newest-first.
+    # Instagram is a fallback only when Facebook returns no rows / a recoverable error.
+    platforms = ["Facebook", "Instagram"]
     articles = []
     max_age_minutes = max(1, int(max_age_minutes))
 
@@ -416,7 +457,7 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
             break
 
         actor_id = FACEBOOK_ACTOR if platform == "Facebook" else INSTAGRAM_ACTOR
-        payload = _actor_payload(platform, clean_keywords)
+        payload = _actor_payload(platform, clean_keywords, slot_index=slot_index)
 
         state["monthly_used"] += 1
         state["daily_used"] += 1
