@@ -2,7 +2,7 @@
 
 ## What this change does
 - Connects the existing AI Radar to the two configured Apify Actors: `topapi~facebook-search-posts-scraper` and `seemuapps~instagram-keyword-posts-scraper`.
-- Searches with the same incident keywords used by the existing RSS/news scanner.
+- Uses high-signal incident-reporting phrases for social searches and then applies deterministic content validation; generic words alone are not sufficient for acceptance.
 - Accepts a social post only when it has an explicit publication timestamp no older than 30 minutes, a matching keyword, and a usable post URL. Unknown timestamps fail closed.
 - Sends accepted posts into the existing multi-source deduplication, AI/fallback analysis, and EOC API flow.
 - Limits collection to at most one chargeable result per 30-minute UTC slot across both platforms. The preferred platform alternates; the other is queried in the same slot only if the preferred Actor returns a confirmed empty/non-billable result.
@@ -24,7 +24,7 @@ The Actors' own keyword search and publication-date ranking can change. The filt
 The branch-specific `apify_social_tests.yml` workflow runs offline unit tests only. It does not call Apify, Gemini, or EOC and does not consume credits. Live authentication and end-to-end delivery require a manually initiated production-like scan; that live scan was not run during implementation to avoid spending the owner's Apify balance or inserting test records into EOC.
 
 ## Vercel safeguard
-Both Vercel configuration files disable branch deployments for `feature/apify-social-radar-budget-2026-10-13` through `git.deploymentEnabled`. That branch-specific guard should be retained until the owner decides how to integrate the change; main-branch production settings are otherwise unchanged.
+Both Vercel configuration files disable branch deployments for `feature/apify-social-radar-budget-2026-10-13` and `fix/osiris-real-incident-validation-2026-10-13` through `git.deploymentEnabled`. That branch-specific guard should be retained until the owner decides how to integrate the change; main-branch production settings are otherwise unchanged.
 
 
 ## Incident validation and budget protection (2026-10-13)

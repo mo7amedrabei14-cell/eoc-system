@@ -1,6 +1,8 @@
 import unittest
 
 from incident_validation import validate_incident, is_probable_real_incident
+from unittest.mock import patch
+import ai_radar as R
 
 
 class IncidentValidationTests(unittest.TestCase):
@@ -43,7 +45,7 @@ class IncidentValidationTests(unittest.TestCase):
 
     def test_ambiguous_paid_candidate_requires_explicit_ai_confirmation(self):
         article = {
-            "title": "بلاغ",
+            "title": "خبر عاجل",
             "text": "حادث",
             "_requires_ai_confirmation": True,
         }
@@ -59,6 +61,20 @@ class IncidentValidationTests(unittest.TestCase):
         accepted, reason = validate_incident(article, {"is_real_incident": False})
         self.assertFalse(accepted)
         self.assertIn("الذكاء الاصطناعي", reason)
+
+    def test_send_report_does_not_write_explicit_non_incident(self):
+        article = {
+            "title": "حريق الذكريات",
+            "text": "نص أدبي/شاعري نشر على وسائل التواصل الاجتماعي ولا يمثل أي حادث أمني أو طارئ حقيقي.",
+            "link": "https://facebook.com/posts/literary-example",
+            "publisher": "Facebook: test",
+        }
+        before = R.send_stats.get("rejected", 0)
+        with patch.object(R.requests, "post") as post:
+            result = R.send_report(article, {"is_real_incident": False})
+        self.assertFalse(result)
+        post.assert_not_called()
+        self.assertEqual(R.send_stats.get("rejected", 0), before + 1)
 
     def test_rejects_ai_description_that_identifies_literary_content(self):
         article = {
