@@ -31,6 +31,7 @@ jobs:
           SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-backend-neon.vercel.app' }}
           # Public channel/page identifiers are repository Actions Variables.
           OSINT_TELEGRAM_CHANNELS: ${{ vars.OSINT_TELEGRAM_CHANNELS }}
+          OSINT_EXTRA_SOCIAL_FEEDS: ${{ vars.OSINT_EXTRA_SOCIAL_FEEDS }}
           OSINT_YOUTUBE_CHANNEL_IDS: ${{ vars.OSINT_YOUTUBE_CHANNEL_IDS }}
           OSINT_REDDIT_SUBREDDITS: ${{ vars.OSINT_REDDIT_SUBREDDITS }}
           META_FACEBOOK_PAGE_IDS: ${{ vars.META_FACEBOOK_PAGE_IDS }}
