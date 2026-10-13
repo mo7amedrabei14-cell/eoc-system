@@ -1,6 +1,8 @@
 """Offline tests for Apify freshness, mapping, and durable result-budget guards."""
+import io
 import os
 import unittest
+from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
@@ -169,6 +171,51 @@ class ApifySocialSourceTests(unittest.TestCase):
         self.assertEqual(rows, [])
         actor.assert_not_called()
 
+
+
+    def test_apify_bad_request_logs_safe_diagnostic(self):
+        class BadRequest:
+            status_code = 400
+            ok = False
+            text = "bad request"
+            def json(self):
+                return {"error": {"type": "invalid-value", "message": "invalid input test-token"}}
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rows, outcome = S._actor_request(S.FACEBOOK_ACTOR, {}, "test-token")
+        self.assertEqual(rows, [])
+        self.assertEqual(outcome, "recoverable")
+        self.assertIn("invalid-value", output.getvalue())
+        self.assertNotIn("test-token", output.getvalue())
+
+    def test_query_order_rotates_without_raising_per_run_limits(self):
+        first = S._actor_payload("Facebook", ["حادث"], slot_index=0)
+        second = S._actor_payload("Facebook", ["حادث"], slot_index=1)
+        self.assertNotEqual(first["searchQueries"][0], second["searchQueries"][0])
+        self.assertEqual(set(first["searchQueries"]), set(second["searchQueries"]))
+        self.assertEqual(first["maxItems"], 1)
+        self.assertEqual(second["maxItems"], 1)
+        self.assertEqual(S.MAX_TOTAL_CHARGE_USD_PER_RUN, 0.01)
+
+    def test_facebook_is_primary_on_every_half_hour_slot(self):
+        reference = self.now + timedelta(minutes=30)
+        state = self._state()
+        post = self._post(5, "Instagram")
+        post["timestamp"] = (reference - timedelta(minutes=5)).isoformat()
+        with patch.dict(os.environ, {"APIFY_API_TOKEN": "test-token"}, clear=False):
+            with patch.object(S, "_get_or_create_budget_store", return_value="store-id"):
+                with patch.object(S, "_read_budget", return_value=state):
+                    with patch.object(S, "_save_budget", return_value=True):
+                        with patch.object(
+                            S, "_actor_request",
+                            side_effect=[([], "recoverable"), ([post], "ok")],
+                        ) as actor:
+                            rows = S.fetch_apify_social_articles(["حريق"], now=reference)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["platform"], "Instagram")
+        attempted = [call.args[0] for call in actor.call_args_list]
+        self.assertEqual(attempted, [S.FACEBOOK_ACTOR, S.INSTAGRAM_ACTOR])
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
