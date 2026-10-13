@@ -5,6 +5,7 @@ on:
     branches:
       - feature/apify-social-radar-budget-2026-10-13
       - fix/osiris-real-incident-validation-2026-10-13
+      - fix/social-search-budget-safe-2026-10-13
 
 permissions:
   contents: read
