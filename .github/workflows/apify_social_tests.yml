@@ -1,0 +1,25 @@
+name: Apify social intake tests
+
+on:
+  push:
+    branches:
+      - feature/apify-social-radar-budget-2026-10-13
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check requests
+      - name: Test Apify adapter without spending credits
+        run: python -m unittest -v test_apify_social_sources.py

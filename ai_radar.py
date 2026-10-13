@@ -17,6 +17,7 @@ except ImportError:
 
 from ai_news_dedupe import canonicalize_url, deduplicate_articles
 from social_media_sources import fetch_social_articles
+from apify_social_sources import fetch_apify_social_articles
 
 # ==========================================
 # 1. System Config & Keys
@@ -48,6 +49,7 @@ GEMINI_CALLS_PER_MODEL_CAP = int(os.environ.get("GEMINI_CALLS_PER_MODEL_CAP", "2
 # ⏱️ نافذة الرصد تتجاوز الجدول بقدر مناسب لتغطية تأخير GitHub Actions؛
 #    نافذة 3 ساعات تغلق الفجوة حول التشغيل كل ساعة، مع حماية التكرار متعددة المستويات.
 RADAR_MAX_AGE_HOURS = int(os.environ.get("RADAR_MAX_AGE_HOURS", "3") or 3)
+APIFY_SOCIAL_MAX_AGE_MINUTES = int(os.environ.get("APIFY_SOCIAL_MAX_AGE_MINUTES", "30") or 30)
 gemini_calls_today = 0
 gemini_calls_by_model = {}
 
@@ -749,6 +751,14 @@ def run_ai_scanner():
     # one unavailable platform does not stop the rest of the hourly collection.
     social_articles = fetch_social_articles(KEYWORDS, max_age_hours=RADAR_MAX_AGE_HOURS)
     all_articles.extend(social_articles)
+
+    # Apify public-post search is budgeted separately and applies a strict 30-minute freshness filter.
+    # Its durable monthly/daily counters live in Apify KVS so GitHub runners cannot reset the cap.
+    try:
+        apify_articles = fetch_apify_social_articles(KEYWORDS, max_age_minutes=APIFY_SOCIAL_MAX_AGE_MINUTES)
+        all_articles.extend(apify_articles)
+    except Exception as exc:
+        print(f"⚠️ تعذّر إكمال بحث Apify الاجتماعي ({type(exc).__name__}).")
 
     # Phase 1.c: multi-level dedupe against stored records and within this batch:
     # canonical URL -> exact normalized title -> close title/body within time window.
