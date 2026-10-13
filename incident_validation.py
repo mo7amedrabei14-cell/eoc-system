@@ -127,9 +127,34 @@ def validate_incident(article, ai_data=None):
     has_reporting = bool(_REPORTING_OR_RESPONSE.search(source_text))
     has_place = bool(_PHYSICAL_CONTEXT.search(source_text) or _KNOWN_EGYPTIAN_PLACES.search(source_text))
     if not has_reporting and not has_place:
+        # If an Apify result has already consumed a billable result slot, do not
+        # silently discard an otherwise incident-shaped ambiguous post. Route it
+        # to Gemini, and allow delivery only on an explicit positive verdict.
+        if (
+            article.get("_requires_ai_confirmation")
+            and isinstance(ai_data, dict)
+            and ai_data.get("is_real_incident") is True
+        ):
+            return True, "أكد Gemini أن نتيجة المصدر المدفوعة تصف واقعة فعلية"
         return False, "لا توجد قرائن واقعية كافية: مكان محدد أو فعل إخباري/استجابة طوارئ"
 
     return True, "اجتاز فحص الواقعة الفعلية الأولي"
+
+
+def is_ai_confirmation_candidate(article):
+    """True only for ambiguous incident-shaped text eligible for a paid-result AI check."""
+    if not isinstance(article, dict):
+        return False
+    source_text = _source_text(article)
+    if not source_text:
+        return False
+    if any(pattern.search(source_text) for pattern in _EXPLICIT_NON_NEWS):
+        return False
+    if not _INCIDENT_TERMS.search(source_text):
+        return False
+    if _METAPHORICAL_LANGUAGE.search(source_text) and not _REPORTING_OR_RESPONSE.search(source_text):
+        return False
+    return True
 
 
 def is_probable_real_incident(article, ai_data=None):

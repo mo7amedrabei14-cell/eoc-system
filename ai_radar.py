@@ -18,7 +18,7 @@ except ImportError:
 from ai_news_dedupe import canonicalize_url, deduplicate_articles
 from social_media_sources import fetch_social_articles
 from apify_social_sources import fetch_apify_social_articles
-from incident_validation import validate_incident, is_probable_real_incident
+from incident_validation import validate_incident, is_probable_real_incident, is_ai_confirmation_candidate
 
 # ==========================================
 # 1. System Config & Keys
@@ -783,6 +783,13 @@ def run_ai_scanner():
         valid_incident, validation_reason = validate_incident(article)
         if valid_incident:
             validated_articles.append(article)
+        elif article.get("_requires_ai_confirmation") and is_ai_confirmation_candidate(article):
+            # Apify may already have charged for this single result. A genuinely
+            # ambiguous incident-shaped post gets one AI eligibility decision, not
+            # an automatic discard; the delivery guard still requires a positive
+            # is_real_incident=True verdict. Explicit literary content is never queued.
+            validated_articles.append(article)
+            print(f"🔎 نتيجة Apify مدفوعة: تمر إلى Gemini للتحقق النهائي قبل الإرسال | {str(article.get('title') or '')[:90]}")
         else:
             rejected_before_ai += 1
             link = str(article.get("link") or "")

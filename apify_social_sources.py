@@ -11,7 +11,7 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import quote
 
 import requests
-from incident_validation import validate_incident
+from incident_validation import validate_incident, is_ai_confirmation_candidate
 
 
 API_BASE = "https://api.apify.com/v2"
@@ -146,7 +146,14 @@ def _article_from_post(item, platform, keywords, max_age_minutes, now):
     }
     valid, reason = validate_incident(article)
     if not valid:
-        print(f"⛔ Apify/{platform}: استبعاد نتيجة غير مؤهلة قبل الإرسال ({reason}).")
+        if is_ai_confirmation_candidate(article):
+            # The Actor result has already been returned and may be billable.
+            # Preserve a potentially real but underspecified incident for an explicit
+            # Gemini verdict; explicit poetry/metaphor/non-event text never reaches here.
+            article["_requires_ai_confirmation"] = True
+            print(f"🔎 Apify/{platform}: نتيجة مدفوعة تحتاج تأكيد Gemini قبل الإرسال ({reason}).")
+            return article
+        print(f"⛔ Apify/{platform}: استبعاد نتيجة غير مؤهلة قبل التحليل ({reason}).")
         return None
     return article
 

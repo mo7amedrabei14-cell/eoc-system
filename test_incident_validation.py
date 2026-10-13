@@ -41,6 +41,16 @@ class IncidentValidationTests(unittest.TestCase):
         }
         self.assertTrue(is_probable_real_incident(article))
 
+    def test_ambiguous_paid_candidate_requires_explicit_ai_confirmation(self):
+        article = {
+            "title": "بلاغ",
+            "text": "حادث",
+            "_requires_ai_confirmation": True,
+        }
+        self.assertFalse(is_probable_real_incident(article))
+        self.assertTrue(is_probable_real_incident(article, {"is_real_incident": True}))
+        self.assertFalse(is_probable_real_incident(article, {"is_real_incident": False}))
+
     def test_rejects_ai_false_verdict_even_if_keywords_exist(self):
         article = {
             "title": "حريق في مخزن بالقاهرة",
