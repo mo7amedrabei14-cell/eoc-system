@@ -326,7 +326,7 @@ def _safe_apify_error_detail(response, token=None):
 
 def _failed_actor_run_detail(response, token, base_detail):
     """Enrich an Actor-run-failed API response with its own status/log, without rerunning it."""
-    match = re.search(r"run ID:\\s*([A-Za-z0-9_-]+)", str(base_detail or ""), re.IGNORECASE)
+    match = re.search(r"run ID:\s*([A-Za-z0-9_-]+)", str(base_detail or ""), re.IGNORECASE)
     if not match or "run-failed" not in str(base_detail or "").lower():
         return base_detail
 
@@ -338,13 +338,13 @@ def _failed_actor_run_detail(response, token, base_detail):
         value = str(value or "")
         if token:
             value = value.replace(token, "[REDACTED]")
-        value = re.sub(r"(?i)Bearer\\s+\\S+", "Bearer [REDACTED]", value)
+        value = re.sub(r"(?i)Bearer\s+\S+", "Bearer [REDACTED]", value)
         value = re.sub(
-            r"(?i)(APIFY_API_TOKEN|ACCESS[_-]?TOKEN|TOKEN)\\s*[:=]\\s*['\" ]?[^\\s,'\"}]+",
-            r"\\1=[REDACTED]",
+            r"(?i)(APIFY_API_TOKEN|ACCESS[_-]?TOKEN|TOKEN)\s*[:=]\s*['\" ]?[^\s,'\"}]+,
+            r"\1=[REDACTED]",
             value,
         )
-        return re.sub(r"\\s+", " ", value).strip()
+        return re.sub(r"\s+", " ", value).strip()
 
     # This is a metadata/log read for the existing failed run, not a second Actor run.
     try:
@@ -507,7 +507,8 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
         return []
     state = _normalize_budget_state(raw_state, reference)
 
-    monthly_cap = _int_env("APIFY_MONTHLY_RESULT_CAP", 1000)
+    # Never allow configuration to exceed the requested hard ceiling, even if a repo variable is mis-set.
+    monthly_cap = min(1000, _int_env("APIFY_MONTHLY_RESULT_CAP", 1000))
     daily_cap = _int_env("APIFY_DAILY_RESULT_CAP", 50)
     slot_key, slot_index = _current_slot(reference)
 
