@@ -18,7 +18,7 @@ except ImportError:
 from ai_news_dedupe import canonicalize_url, deduplicate_articles
 from social_media_sources import fetch_social_articles
 from apify_social_sources import fetch_apify_social_articles
-from incident_validation import validate_incident, is_probable_real_incident, is_ai_confirmation_candidate
+from incident_validation import validate_incident, is_ai_confirmation_candidate
 
 # ==========================================
 # 1. System Config & Keys
