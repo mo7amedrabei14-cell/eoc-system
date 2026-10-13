@@ -340,7 +340,7 @@ def _failed_actor_run_detail(response, token, base_detail):
             value = value.replace(token, "[REDACTED]")
         value = re.sub(r"(?i)Bearer\s+\S+", "Bearer [REDACTED]", value)
         value = re.sub(
-            r"(?i)(APIFY_API_TOKEN|ACCESS[_-]?TOKEN|TOKEN)\s*[:=]\s*['\" ]?[^\s,'\"}]+,
+            r"(?i)(APIFY_API_TOKEN|ACCESS[_-]?TOKEN|TOKEN)\s*[:=]\s*['\" ]?[^\s,'\"}]+",
             r"\1=[REDACTED]",
             value,
         )
