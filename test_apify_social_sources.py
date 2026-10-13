@@ -182,8 +182,9 @@ class ApifySocialSourceTests(unittest.TestCase):
                 return {"error": {"type": "invalid-value", "message": "invalid input test-token"}}
 
         output = io.StringIO()
-        with redirect_stdout(output):
-            rows, outcome = S._actor_request(S.FACEBOOK_ACTOR, {}, "test-token")
+        with patch.object(S.requests, "post", return_value=BadRequest()):
+            with redirect_stdout(output):
+                rows, outcome = S._actor_request(S.FACEBOOK_ACTOR, {}, "test-token")
         self.assertEqual(rows, [])
         self.assertEqual(outcome, "recoverable")
         self.assertIn("invalid-value", output.getvalue())
