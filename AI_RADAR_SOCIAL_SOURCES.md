@@ -41,7 +41,7 @@ Add these **Secrets** only where required:
 | \`REDDIT_ACCESS_TOKEN\` | Reddit OAuth access token; alternatively configure the four credentials below |
 | \`REDDIT_CLIENT_ID\`, \`REDDIT_CLIENT_SECRET\`, \`REDDIT_USERNAME\`, \`REDDIT_PASSWORD\` | Optional Reddit script-app OAuth credentials used to obtain a token for a run |
 
-Telegram public channel previews and public YouTube channel feeds can run without those platform API tokens when channel identifiers are set. X, Facebook, Instagram, and Reddit require approved/valid API credentials and can remain inactive until configured. No credentials are written into source code. The connectors match incident keywords and recent timestamps, then enter the same dedupe and analysis pipeline as RSS articles.
+Telegram public channel previews and public YouTube channel feeds can run without those platform API tokens when channel identifiers are set. X, Facebook, Instagram, and Reddit require approved/valid API credentials and can remain inactive until configured. For platforms without a public feed connector (for example TikTok or Threads), an HTTPS feed URL from a provider you are authorized to use can be added through `OSINT_EXTRA_SOCIAL_FEEDS`; this does not bypass that platform's permissions or API restrictions. No credentials are written into source code. The connectors match incident keywords and recent timestamps, then enter the same dedupe and analysis pipeline as RSS articles.
 
 ## Verification
 
