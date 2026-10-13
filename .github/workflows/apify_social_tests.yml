@@ -19,7 +19,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install test dependency
-        run: python -m pip install --disable-pip-version-check requests
-      - name: Test Apify adapter without spending credits
-        run: python -m unittest -v test_apify_social_sources.py
+      - name: Install offline test dependencies
+        run: python -m pip install --disable-pip-version-check requests feedparser beautifulsoup4
+      - name: Test Apify adapter and social/news dedupe without spending credits
+        run: python -m unittest -v test_apify_social_sources.py test_ai_news_dedupe.py test_social_media_sources.py
+      - name: Test existing AI analysis resilience without live model calls
+        run: python test_ai_radar_resilience.py
