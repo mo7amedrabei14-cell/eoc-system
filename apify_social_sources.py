@@ -319,13 +319,8 @@ def _safe_apify_error_detail(response, token=None):
     secret = token or os.environ.get("APIFY_API_TOKEN", "")
     if secret:
         detail = detail.replace(secret, "[REDACTED]")
-    detail = re.sub(r"(?i)\\bbearer\\s+[^\\s,;]+", "Bearer [REDACTED]", detail)
-    detail = re.sub(
-        r'''(?i)(["']?token["']?\\s*[:=]\\s*["']?)[^"'\\s,}]+''',
-        r"\\1[REDACTED]",
-        detail,
-    )
-    detail = re.sub(r"\\s+", " ", detail).strip()
+    detail = re.sub(r"(?i)Bearer\s+\S+", "Bearer [REDACTED]", detail)
+    detail = re.sub(r"\s+", " ", detail).strip()
     return detail[:320] or "لم يُرجع Apify تفاصيل للخطأ"
 
 
