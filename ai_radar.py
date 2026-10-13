@@ -9,13 +9,14 @@ import sys
 import random
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-from ai_news_dedupe import canonicalize_url, deduplicate_articles
-from social_media_sources import fetch_social_articles
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
+
+from ai_news_dedupe import canonicalize_url, deduplicate_articles
+from social_media_sources import fetch_social_articles
 
 # ==========================================
 # 1. System Config & Keys
