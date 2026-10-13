@@ -98,31 +98,33 @@ class ApifySocialSourceTests(unittest.TestCase):
                             rows = S.fetch_apify_social_articles(["حريق"], now=self.now)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["platform"], "Facebook")
-        self.assertEqual(state["daily_used"], 1)
-        self.assertEqual(state["monthly_used"], 1)
-        self.assertTrue(state["slot_consumed"])
+        self.assertEqual(writes[-1]["daily_used"], 1)
+        self.assertEqual(writes[-1]["monthly_used"], 1)
+        self.assertTrue(writes[-1]["slot_consumed"])
         actor.assert_called_once()
         self.assertGreaterEqual(len(writes), 2)
 
     def test_stale_result_is_charged_conservatively_but_never_forwarded(self):
         state = self._state()
+        writes = []
         with patch.dict(os.environ, {"APIFY_API_TOKEN": "test-token"}, clear=False):
             with patch.object(S, "_get_or_create_budget_store", return_value="store-id"):
                 with patch.object(S, "_read_budget", return_value=state):
-                    with patch.object(S, "_save_budget", return_value=True):
+                    with patch.object(S, "_save_budget", side_effect=lambda store, token, value: writes.append(dict(value)) or True):
                         with patch.object(S, "_actor_request", return_value=([self._post(31, "Facebook")], "ok")) as actor:
                             rows = S.fetch_apify_social_articles(["حريق"], now=self.now)
         self.assertEqual(rows, [])
-        self.assertEqual(state["monthly_used"], 1)
-        self.assertTrue(state["slot_consumed"])
+        self.assertEqual(writes[-1]["monthly_used"], 1)
+        self.assertTrue(writes[-1]["slot_consumed"])
         actor.assert_called_once()
 
     def test_empty_first_platform_falls_back_to_second_within_same_slot(self):
         state = self._state()
+        writes = []
         with patch.dict(os.environ, {"APIFY_API_TOKEN": "test-token"}, clear=False):
             with patch.object(S, "_get_or_create_budget_store", return_value="store-id"):
                 with patch.object(S, "_read_budget", return_value=state):
-                    with patch.object(S, "_save_budget", return_value=True):
+                    with patch.object(S, "_save_budget", side_effect=lambda store, token, value: writes.append(dict(value)) or True):
                         with patch.object(
                             S, "_actor_request",
                             side_effect=[([], "ok"), ([self._post(5, "Instagram")], "ok")],
@@ -130,10 +132,30 @@ class ApifySocialSourceTests(unittest.TestCase):
                             rows = S.fetch_apify_social_articles(["حريق"], now=self.now)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["platform"], "Instagram")
-        self.assertEqual(state["daily_used"], 1)
-        self.assertEqual(state["monthly_used"], 1)
-        self.assertTrue(state["slot_consumed"])
+        self.assertEqual(writes[-1]["daily_used"], 1)
+        self.assertEqual(writes[-1]["monthly_used"], 1)
+        self.assertTrue(writes[-1]["slot_consumed"])
         self.assertEqual(actor.call_count, 2)
+
+    def test_search_payload_uses_high_signal_queries_not_generic_fire_keyword(self):
+        payload = S._actor_payload("Facebook", ["حريق"])
+        self.assertTrue(payload["mustContainQuery"])
+        self.assertIn("حريق منزل", payload["searchQueries"])
+        self.assertIn("انقلاب سيارة", payload["searchQueries"])
+        self.assertNotIn("حريق", payload["searchQueries"])
+
+    def test_apify_rejects_literary_post_even_if_it_contains_incident_words(self):
+        post = self._post(10, "Facebook")
+        post["message"] = "نص أدبي/شاعري نشر على وسائل التواصل الاجتماعي ولا يمثل أي حادث أمني أو طارئ حقيقي. حريق الذكريات."
+        article = S._article_from_post(post, "Facebook", ["حريق"], 30, self.now)
+        self.assertIsNone(article)
+
+    def test_apify_routes_ambiguous_paid_incident_to_ai_confirmation(self):
+        post = self._post(10, "Facebook")
+        post["message"] = "حادث"
+        article = S._article_from_post(post, "Facebook", ["حادث"], 30, self.now)
+        self.assertIsNotNone(article)
+        self.assertTrue(article.get("_requires_ai_confirmation"))
 
     def test_monthly_or_daily_cap_blocks_actor_calls(self):
         state = self._state()

@@ -18,6 +18,7 @@ except ImportError:
 from ai_news_dedupe import canonicalize_url, deduplicate_articles
 from social_media_sources import fetch_social_articles
 from apify_social_sources import fetch_apify_social_articles
+from incident_validation import validate_incident, is_ai_confirmation_candidate
 
 # ==========================================
 # 1. System Config & Keys
@@ -487,14 +488,17 @@ def analyze_batch_with_ai(articles_batch):
 
     prompt = f"""
 أنت خبير أمني ومدير استراتيجيات في غرفة عمليات طوارئ (EOC) متقدمة.
-قم بتحليل هذه المجموعة من الأخبار ({len(articles_batch)} أخبار) واستخرج البيانات التالية لكل خبر.
+قم بتحليل هذه المجموعة من المرشحات ({len(articles_batch)} عناصر). لا تفترض أن كل منشور مرشح خبر حقيقي لمجرد احتوائه على كلمة مفتاحية.
+لكل عنصر، حدّد أولاً هل النص يصف واقعة طوارئ/حادثاً فعلياً ومحدداً بصيغة إخبارية، أم أنه شعر/نص أدبي/مجاز/رأي/إعادة نشر قديم/محتوى لا يثبت وقوع حادث. عند الشك اجعل is_real_incident=false ولا تختلق تفاصيل.
 
 أعد النتيجة كـ JSON array فقط، بدون أي نص إضافية أو ```:
 [
   {{
     "title": "العنوان الأصلي",
-    "incident_description": "ملخص تكتيكي للحادث يبرز حجم الخسائر والتهديدات",
-    "news_type": "تصنيف الحادث",
+    "is_real_incident": true,
+    "rejection_reason": "",
+    "incident_description": "ملخص تكتيكي لواقعة حقيقية فقط",
+    "news_type": "تصنيف الحادث أو غير مؤهل",
     "governorate": "لو الحادث داخل مصر اكتب اسم المحافظة المصرية فقط (ولو في محافظة البحر الأحمر اكتب: البحر الأحمر). ولو الحادث خارج مصر اكتب اسم الدولة التي وقع فيها الحادث فقط — ممنوع تكتب اسم مدينة أو اسم الموقع/الصحيفة الناشر. ولو الحادث في بحر أو مياه دولية اكتب اسم البحر. ولو مش معروف اكتب -.",
     "area_name": "المنطقة",
     "street_name": "الشارع",
@@ -610,7 +614,7 @@ def scan_single_source(publisher, url, now_utc):
 # 6. Send Report to API
 # ==========================================
 # 📊 عدّادات الجولة — تُطبع في نهاية التشغيل لتشخيص أي فشل إرسال فوراً من لوج GitHub
-send_stats = {"ok": 0, "dup": 0, "fail": 0, "auth_fail": 0}
+send_stats = {"ok": 0, "dup": 0, "fail": 0, "auth_fail": 0, "rejected": 0}
 
 
 def _build_tactical_report(article, ai_data):
@@ -634,7 +638,17 @@ def _build_tactical_report(article, ai_data):
 
 
 def send_report(article, ai_data):
-    """Send a single article report to the EOC API — التحليل هنا مضمون (AI أو احتياطي محلي)."""
+    """Send only incident-qualified articles; never write literary/non-event posts."""
+    valid_incident, validation_reason = validate_incident(article, ai_data)
+    if not valid_incident:
+        send_stats["rejected"] = send_stats.get("rejected", 0) + 1
+        link = str(article.get("link") or "")
+        processed_news_links.discard(link)
+        normalized_link = canonicalize_url(link)
+        if normalized_link:
+            processed_news_links.discard(normalized_link)
+        print(f"⛔ منع إرسال منشور غير مؤهل كحادث ({validation_reason}): {str(article.get('title') or '')[:90]}")
+        return False
     if not isinstance(ai_data, dict) or not ai_data:
         ai_data = fallback_analysis(article, "رد فارغ من محرّك التحليل")
     if ai_data:
@@ -723,7 +737,7 @@ def run_ai_scanner():
     if not SYSTEM_TOKEN:
         print("🛑 SYSTEM_TOKEN غير مُعد — سيتم المسح والتحليل بلا إرسال! راجع Secrets في GitHub")
 
-    send_stats.update({"ok": 0, "dup": 0, "fail": 0, "auth_fail": 0})
+    send_stats.update({"ok": 0, "dup": 0, "fail": 0, "auth_fail": 0, "rejected": 0})
     gemini_calls_today = 0
     gemini_calls_by_model.clear()
     dead_models.clear()
@@ -760,7 +774,38 @@ def run_ai_scanner():
     except Exception as exc:
         print(f"⚠️ تعذّر إكمال بحث Apify الاجتماعي ({type(exc).__name__}).")
 
-    # Phase 1.c: multi-level dedupe against stored records and within this batch:
+    # Phase 1.c: deterministic eligibility gate BEFORE dedupe and Gemini calls.
+    # This saves downstream quota on keyword-matching poems, metaphors and non-events.
+    raw_candidate_count = len(all_articles)
+    validated_articles = []
+    rejected_before_ai = 0
+    for article in all_articles:
+        valid_incident, validation_reason = validate_incident(article)
+        if valid_incident:
+            validated_articles.append(article)
+        elif article.get("_requires_ai_confirmation") and is_ai_confirmation_candidate(article):
+            # Apify may already have charged for this single result. A genuinely
+            # ambiguous incident-shaped post gets one AI eligibility decision, not
+            # an automatic discard; the delivery guard still requires a positive
+            # is_real_incident=True verdict. Explicit literary content is never queued.
+            validated_articles.append(article)
+            print(f"🔎 نتيجة Apify مدفوعة: تمر إلى Gemini للتحقق النهائي قبل الإرسال | {str(article.get('title') or '')[:90]}")
+        else:
+            rejected_before_ai += 1
+            link = str(article.get("link") or "")
+            processed_news_links.discard(link)
+            normalized_link = canonicalize_url(link)
+            if normalized_link:
+                processed_news_links.discard(normalized_link)
+            print(f"⛔ استبعاد قبل التحليل لتوفير الحصة: {validation_reason} | {str(article.get('title') or '')[:90]}")
+    all_articles = validated_articles
+    print(
+        f"🛡️ فحص أهلية الحوادث: {raw_candidate_count} مرشحًا | "
+        f"استُبعد قبل تحليل Gemini: {rejected_before_ai} | "
+        f"بقيت {len(all_articles)} واقعة محتملة."
+    )
+
+    # Phase 1.d: multi-level dedupe against stored records and within this batch:
     # canonical URL -> exact normalized title -> close title/body within time window.
     all_articles, dedupe_stats = deduplicate_articles(all_articles, existing_records)
     for article in all_articles:
@@ -778,7 +823,7 @@ def run_ai_scanner():
     )
 
     if not all_articles:
-        print("ℹ️ لا توجد أخبار جديدة مطابقة.")
+        print("ℹ️ لا توجد أخبار جديدة اجتازت شرط الواقعة الفعلية وحداثة النشر.")
         print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء.")
         return
 
@@ -805,7 +850,7 @@ def run_ai_scanner():
 
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] ✅ تم الانتهاء من المسح (Gemini calls: {gemini_calls_today}/{GEMINI_DAILY_LIMIT})")
     # 📊 ملخص الجولة — أول ما تقرأه في اللوج لتعرف فوراً هل وصلت الأخبار أم لا ولماذا
-    print(f"\n📈 ملخص الجولة: رُصد {len(all_articles)} خبر | أُرسل بنجاح {send_stats['ok']} | مكرر محفوظ {send_stats['dup']} | فشل إرسال {send_stats['fail']}")
+    print(f"\n📈 ملخص الجولة: مرشحات المصدر {raw_candidate_count} | رُفضت قبل التحليل {rejected_before_ai} | اجتازت إزالة التكرار {len(all_articles)} | أُرسل {send_stats['ok']} | رُفض بعد التحليل {send_stats['rejected']} | مكرر محفوظ {send_stats['dup']} | فشل إرسال {send_stats['fail']}")
     if send_stats["auth_fail"]:
         print("🛑 تشخيص: فشل إرسال 401/403 ⇒ SYSTEM_TOKEN في Secrets غير صحيح/فارغ — صححه ثم أعد التشغيل")
     elif len(all_articles) and send_stats["ok"] == 0 and send_stats["fail"] == 0 and not SYSTEM_TOKEN:

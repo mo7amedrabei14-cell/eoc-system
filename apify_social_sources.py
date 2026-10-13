@@ -1,8 +1,8 @@
 """Budget-capped Apify public-post collection for the EOC AI Radar.
 
-Only public/search-accessible posts are considered. Each half-hour slot permits at
-most one billable result across Facebook and Instagram. The shared budget is stored
-in a named Apify Key-Value Store so limits survive ephemeral GitHub Actions runners.
+The search itself uses high-signal incident phrases (not generic words such as
+"death", "fire", or "emergency") to reduce irrelevant paid results before they
+reach the dataset. Every result is still checked locally before being forwarded.
 """
 from datetime import datetime, timedelta, timezone
 import os
@@ -11,6 +11,7 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import quote
 
 import requests
+from incident_validation import validate_incident, is_ai_confirmation_candidate
 
 
 API_BASE = "https://api.apify.com/v2"
@@ -20,6 +21,19 @@ FACEBOOK_ACTOR = "topapi~facebook-search-posts-scraper"
 INSTAGRAM_ACTOR = "seemuapps~instagram-keyword-posts-scraper"
 REQUEST_TIMEOUT = 210
 MAX_TOTAL_CHARGE_USD_PER_RUN = 0.01
+
+# Prioritize incident-reporting phrases rather than broad, metaphor-prone words.
+# mustContainQuery=true makes the Actor apply these queries strictly to post text.
+SOCIAL_INCIDENT_SEARCH_QUERIES = [
+    # Short but incident-specific terms keep exact-match search useful. Avoid
+    # generic standalone words such as "حريق" that frequently occur metaphorically.
+    "حادث مروري", "انقلاب سيارة", "انقلاب ميكروباص", "تصادم", "اصطدام", "دهس",
+    "اندلاع حريق", "نشوب حريق", "حريق منزل", "حريق مصنع", "حريق مخزن",
+    "الحماية المدنية", "سيارات الإطفاء", "انهيار عقار", "انهيار مبنى",
+    "سقوط عقار", "انفجار", "تسرب غاز", "سيول", "فيضانات", "زلزال",
+    "غرق مركب", "انتشال جثامين", "مصرع في حادث", "إصابات في حادث",
+    "اشتباكات", "إطلاق نار", "تسمم جماعي", "سقوط طائرة", "خروج قطار عن القضبان",
+]
 
 
 def _int_env(name, default, minimum=1):
@@ -93,7 +107,9 @@ def _article_from_post(item, platform, keywords, max_age_minutes, now):
         "message", "caption", "text", "description", "content", "title",
     ))
     body = re.sub(r"\s+", " ", str(body_value or "")).strip()
-    if not body or not any(str(word).casefold() in body.casefold() for word in keywords if str(word).strip()):
+    title_value = _first_value(item, ("title", "post_title", "caption", "message", "text"))
+    title = re.sub(r"\s+", " ", str(title_value or body)).strip()[:220]
+    if not body:
         return None
 
     link = _first_value(item, (
@@ -116,20 +132,29 @@ def _article_from_post(item, platform, keywords, max_age_minutes, now):
             "page_name", "pageName",
         )) or "")
 
-    title = _first_value(item, ("title", "post_title", "caption", "message", "text"))
-    title = re.sub(r"\s+", " ", str(title or body)).strip()[:220]
-    text = body[:5000]
     image = _first_value(item, ("image", "image_url", "thumbnail", "displayUrl", "display_url"))
     publisher = f"{platform}: {author}" if author else f"{platform} (Apify)"
-    return {
+    article = {
         "title": title or body[:220],
-        "text": text,
+        "text": body[:5000],
         "link": str(link).strip(),
         "publisher": publisher,
         "image_url": str(image or "لا توجد صورة"),
         "published_at": published.isoformat(),
         "platform": platform,
     }
+    valid, reason = validate_incident(article)
+    if not valid:
+        if is_ai_confirmation_candidate(article):
+            # The Actor result has already been returned and may be billable.
+            # Preserve a potentially real but underspecified incident for an explicit
+            # Gemini verdict; explicit poetry/metaphor/non-event text never reaches here.
+            article["_requires_ai_confirmation"] = True
+            print(f"🔎 Apify/{platform}: نتيجة مدفوعة تحتاج تأكيد Gemini قبل الإرسال ({reason}).")
+            return article
+        print(f"⛔ Apify/{platform}: استبعاد نتيجة غير مؤهلة قبل التحليل ({reason}).")
+        return None
+    return article
 
 
 def _new_budget_state(now):
@@ -192,11 +217,9 @@ def _get_or_create_budget_store(token):
     """Reuse the same durable Apify KVS across every scheduled runner."""
     headers = _auth_headers(token)
     try:
-        # Names are labels, not guaranteed unique IDs. Search existing stores first;
-        # creating a new store blindly on every run would reset the monthly counter.
         offset = 0
         page_size = 100
-        for _ in range(50):  # fail closed after checking up to 5,000 stores
+        for _ in range(50):
             response = requests.get(
                 f"{API_BASE}/key-value-stores",
                 params={"limit": page_size, "offset": offset},
@@ -308,9 +331,11 @@ def _actor_request(actor_id, payload, token):
 
 
 def _actor_payload(platform, keywords):
+    """Strict, high-signal search to reduce billable non-incident posts."""
+    queries = list(SOCIAL_INCIDENT_SEARCH_QUERIES)
     if platform == "Facebook":
         return {
-            "searchQueries": list(keywords),
+            "searchQueries": queries,
             "sortBy": "recent",
             "startDate": "1 day",
             "mustContainQuery": True,
@@ -323,7 +348,7 @@ def _actor_payload(platform, keywords):
             "maxConcurrency": 1,
         }
     return {
-        "keywords": list(keywords),
+        "keywords": queries,
         "maxPostsPerKeyword": 1,
         "dateFrom": "1 day",
         "postType": "all",
@@ -393,8 +418,6 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
         actor_id = FACEBOOK_ACTOR if platform == "Facebook" else INSTAGRAM_ACTOR
         payload = _actor_payload(platform, clean_keywords)
 
-        # Reserve one chargeable result before calling Apify. If the runner dies after
-        # an Actor starts, the persisted reservation prevents another call in this slot.
         state["monthly_used"] += 1
         state["daily_used"] += 1
         state["slot_attempted"].append(platform)
@@ -410,8 +433,6 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
         rows, outcome = _actor_request(actor_id, payload, token)
 
         if rows:
-            # maxItems=1 at API level caps billed results. The Actor may return more
-            # dataset rows (notably Instagram), but only one item is considered here.
             state["slot_reserved"] = False
             state["pending_platform"] = None
             state["slot_consumed"] = True
@@ -427,9 +448,9 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
             candidates.sort(key=lambda pair: pair[0], reverse=True)
             if candidates:
                 result = candidates[0][1]
-                print(f"📱 Apify/{platform}: منشور حديث مطابق خلال {max_age_minutes} دقيقة.")
+                print(f"📱 Apify/{platform}: منشور حادث مؤهل خلال {max_age_minutes} دقيقة.")
                 return [result]
-            print(f"ℹ️ Apify/{platform}: استهلكت نتيجة البحث حصة واحدة لكنها أقدم من النافذة أو بلا وقت/رابط/كلمة مطابقة.")
+            print(f"ℹ️ Apify/{platform}: رُفضت نتيجة المصدر لأنها لم تجتز شروط الوقت/الواقعة؛ حُفظ حجز الميزانية لتجنب الإنفاق المكرر.")
             return []
 
         if outcome == "uncertain":
@@ -440,8 +461,6 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
             _save_budget(store_id, token, state)
             return []
 
-        # A confirmed empty/non-billable response releases the reservation and permits
-        # one fallback attempt on the other platform in this same half-hour slot.
         state["monthly_used"] = max(0, state["monthly_used"] - 1)
         state["daily_used"] = max(0, state["daily_used"] - 1)
         state["slot_reserved"] = False
