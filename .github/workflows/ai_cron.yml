@@ -2,7 +2,7 @@ name: AI Radar Scanner 🤖
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -27,4 +27,21 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
+          # Set this to the active backend base URL, or to /api/ai-news itself.
+          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-backend-neon.vercel.app' }}
+          # Public channel/page identifiers are repository Actions Variables.
+          OSINT_TELEGRAM_CHANNELS: ${{ vars.OSINT_TELEGRAM_CHANNELS }}
+          OSINT_YOUTUBE_CHANNEL_IDS: ${{ vars.OSINT_YOUTUBE_CHANNEL_IDS }}
+          OSINT_REDDIT_SUBREDDITS: ${{ vars.OSINT_REDDIT_SUBREDDITS }}
+          META_FACEBOOK_PAGE_IDS: ${{ vars.META_FACEBOOK_PAGE_IDS }}
+          META_INSTAGRAM_USER_IDS: ${{ vars.META_INSTAGRAM_USER_IDS }}
+          META_GRAPH_API_VERSION: ${{ vars.META_GRAPH_API_VERSION || 'v24.0' }}
+          # Platform access tokens/credentials belong in Actions Secrets only.
+          X_API_BEARER_TOKEN: ${{ secrets.X_API_BEARER_TOKEN }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          REDDIT_ACCESS_TOKEN: ${{ secrets.REDDIT_ACCESS_TOKEN }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
         run: python ai_radar.py
