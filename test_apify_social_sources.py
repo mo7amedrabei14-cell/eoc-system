@@ -145,6 +145,49 @@ class ApifySocialSourceTests(unittest.TestCase):
         self.assertIn("حريق منزل", payload["searchQueries"])
         self.assertIn("انقلاب سيارة", payload["searchQueries"])
         self.assertNotIn("حريق", payload["searchQueries"])
+        self.assertEqual(payload["startDate"], "1")
+        self.assertEqual(payload["maxConcurrency"], 2)
+        self.assertTrue(payload["monitorMode"])
+        self.assertEqual(payload["monitorStoreName"], "eoc-ai-radar-facebook-v2")
+        self.assertEqual(payload["maxPostsPerQuery"], 1)
+        self.assertEqual(payload["maxItems"], 1)
+        self.assertEqual(S.MAX_TOTAL_CHARGE_USD_PER_RUN, 0.01)
+
+    def test_failed_actor_run_diagnostics_read_existing_run_without_rerunning(self):
+        class FailedResponse:
+            status_code = 400
+            ok = False
+            text = "Actor run failed"
+            def json(self):
+                return {
+                    "error": {
+                        "type": "run-failed",
+                        "message": "Actor run did not succeed (run ID: abcDEF123, status: FAILED).",
+                    }
+                }
+
+        class RunMetadata:
+            ok = True
+            def json(self):
+                return {"data": {"status": "FAILED", "statusMessage": "Invalid startDate input"}}
+
+        class RunLog:
+            ok = True
+            text = "INFO start\nERROR Invalid startDate input with token=test-token\n"
+
+        output = io.StringIO()
+        with patch.dict(os.environ, {"APIFY_API_TOKEN": "test-token"}, clear=False):
+            with patch.object(S.requests, "post", return_value=FailedResponse()) as actor_post:
+                with patch.object(S.requests, "get", side_effect=[RunMetadata(), RunLog()]) as diagnostic_get:
+                    with redirect_stdout(output):
+                        rows, outcome = S._actor_request(S.FACEBOOK_ACTOR, {"searchQueries": ["حادث"]}, "test-token")
+        self.assertEqual(rows, [])
+        self.assertEqual(outcome, "recoverable")
+        self.assertIn("Invalid startDate input", output.getvalue())
+        self.assertNotIn("test-token", output.getvalue())
+        actor_post.assert_called_once()
+        self.assertEqual(diagnostic_get.call_count, 2)
+        self.assertIn("/actor-runs/abcDEF123/log", diagnostic_get.call_args_list[1].args[0])
 
     def test_apify_rejects_literary_post_even_if_it_contains_incident_words(self):
         post = self._post(10, "Facebook")
@@ -172,6 +215,22 @@ class ApifySocialSourceTests(unittest.TestCase):
         actor.assert_not_called()
 
 
+
+    def test_monthly_cap_has_a_hard_ceiling_of_one_thousand(self):
+        state = self._state()
+        state["monthly_used"] = 1000
+        with patch.dict(os.environ, {
+            "APIFY_API_TOKEN": "test-token",
+            "APIFY_MONTHLY_RESULT_CAP": "5000",
+            "APIFY_DAILY_RESULT_CAP": "50",
+        }, clear=False):
+            with patch.object(S, "_get_or_create_budget_store", return_value="store-id"):
+                with patch.object(S, "_read_budget", return_value=state):
+                    with patch.object(S, "_save_budget", return_value=True):
+                        with patch.object(S, "_actor_request") as actor:
+                            rows = S.fetch_apify_social_articles(["حريق"], now=self.now)
+        self.assertEqual(rows, [])
+        actor.assert_not_called()
 
     def test_apify_bad_request_logs_safe_diagnostic(self):
         class BadRequest:
