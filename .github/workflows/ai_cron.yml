@@ -2,12 +2,18 @@ name: AI Radar Scanner 🤖
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
+
+# Keep a scheduled scan and a manual run from spending budget concurrently.
+concurrency:
+  group: ai-radar-scan
+  cancel-in-progress: false
 
 jobs:
   scan-news:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: تحميل ملفات المشروع
@@ -26,6 +32,10 @@ jobs:
       - name: تشغيل محرك الذكاء الاصطناعي
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          APIFY_SOCIAL_MAX_AGE_MINUTES: ${{ vars.APIFY_SOCIAL_MAX_AGE_MINUTES || '30' }}
+          APIFY_DAILY_RESULT_CAP: ${{ vars.APIFY_DAILY_RESULT_CAP || '50' }}
+          APIFY_MONTHLY_RESULT_CAP: ${{ vars.APIFY_MONTHLY_RESULT_CAP || '1000' }}
           SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
           # Set this to the active backend base URL, or to /api/ai-news itself.
           SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-backend-neon.vercel.app' }}
