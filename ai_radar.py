@@ -9,6 +9,8 @@ import sys
 import random
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from ai_news_dedupe import canonicalize_url, deduplicate_articles
+from social_media_sources import fetch_social_articles
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -20,7 +22,14 @@ except ImportError:
 # ==========================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN")
-SYSTEM_API_URL = "https://eoc-backend-neon.vercel.app/api/ai-news"
+# Accept either a backend base URL or the full AI-news endpoint. This keeps the
+# GitHub workflow portable when the API host changes, without hard-coding it twice.
+_configured_api_url = (os.environ.get("SYSTEM_API_URL") or "https://eoc-backend-neon.vercel.app").strip().rstrip("/")
+SYSTEM_API_URL = (
+    _configured_api_url
+    if _configured_api_url.endswith("/api/ai-news")
+    else f"{_configured_api_url}/api/ai-news"
+)
 
 # ==========================================
 # Quota & Model Chain — كل النماذج هنا مجانية (Free Tier فقط)
@@ -35,8 +44,8 @@ SYSTEM_API_URL = "https://eoc-backend-neon.vercel.app/api/ai-news"
 #    بديلة عند 429/404/503 + تحليل احتياطي محلي مضمون آخر الطريق.
 GEMINI_DAILY_LIMIT = int(os.environ.get("GEMINI_DAILY_LIMIT", "60") or 60)
 GEMINI_CALLS_PER_MODEL_CAP = int(os.environ.get("GEMINI_CALLS_PER_MODEL_CAP", "20") or 20)
-# ⏱️ نافذة الرصد: الكرون كل ساعتين ⇒ نافذة 1 ساعة كانت تفقد ما نُشر بين الجولات.
-#    3 ساعات (قابلة للضبط) تغلق الفجوة مع تكرار الجولات، والتكرار محمي بالروابط.
+# ⏱️ نافذة الرصد تتجاوز الجدول بقدر مناسب لتغطية تأخير GitHub Actions؛
+#    نافذة 3 ساعات تغلق الفجوة حول التشغيل كل ساعة، مع حماية التكرار متعددة المستويات.
 RADAR_MAX_AGE_HOURS = int(os.environ.get("RADAR_MAX_AGE_HOURS", "3") or 3)
 gemini_calls_today = 0
 gemini_calls_by_model = {}
@@ -155,18 +164,43 @@ RSS_FEEDS = {
     "العربية (مصر)": "https://www.alarabiya.net/egypt.rss"
 }
 
-# Load already-processed links to avoid duplicates
+# Historical records are loaded at the start of every run so that URL/title
+# dedupe remains effective across GitHub Actions workers and across hourly runs.
 processed_news_links = set()
-try:
-    if SYSTEM_TOKEN:
-        headers = {"Authorization": f"Bearer {SYSTEM_TOKEN}"}
-        res = requests.get(SYSTEM_API_URL, headers=headers, timeout=10)
-        if res.ok:
-            for news in res.json():
-                if news.get("news_link"):
-                    processed_news_links.add(news.get("news_link"))
-except Exception:
-    pass
+
+
+def load_existing_news():
+    """Load stored news once per run and seed URL-level duplicate protection."""
+    processed_news_links.clear()
+    if not SYSTEM_TOKEN:
+        print("⚠️ SYSTEM_TOKEN غير مُعد — لا يمكن تحميل سجل الأخبار السابق.")
+        return []
+    try:
+        response = requests.get(
+            SYSTEM_API_URL,
+            headers={"Authorization": f"Bearer {SYSTEM_TOKEN}"},
+            timeout=25,
+        )
+        if not response.ok:
+            print(f"⚠️ تعذّر تحميل السجل السابق للأخبار ({response.status_code}) — سيعمل منع التكرار داخل الجولة فقط.")
+            return []
+        rows = response.json()
+        if not isinstance(rows, list):
+            print("⚠️ رد غير متوقع من سجل أخبار الرادار — سيعمل منع التكرار داخل الجولة فقط.")
+            return []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            link = row.get("news_link") or ""
+            if link:
+                processed_news_links.add(str(link))
+                processed_news_links.add(canonicalize_url(link))
+        print(f"🧾 تم تحميل {len(rows)} سجلًا سابقًا لمقارنة الروابط والعناوين.")
+        return rows
+    except Exception as exc:
+        print(f"⚠️ تعذّر تحميل سجل الأخبار السابق ({type(exc).__name__}) — سيعمل منع التكرار داخل الجولة فقط.")
+        return []
+
 
 # ==========================================
 # 3. Article Scraper
@@ -533,16 +567,19 @@ def scan_single_source(publisher, url, now_utc):
         feed = feedparser.parse(resp.content)
 
         for entry in feed.entries[:15]:
+            published_at = None
             try:
                 if hasattr(entry, 'published_parsed') and entry.published_parsed:
                     pub_date = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+                    published_at = pub_date.isoformat()
                     if now_utc - pub_date > timedelta(hours=RADAR_MAX_AGE_HOURS):
                         continue
             except Exception:
                 pass
 
-            news_link = entry.link
-            if news_link in processed_news_links:
+            news_link = getattr(entry, "link", "")
+            normalized_link = canonicalize_url(news_link)
+            if not news_link or news_link in processed_news_links or normalized_link in processed_news_links:
                 continue
 
             # 🔎 المطابقة على العنوان أو الملخص (عناوين كثيرة بلا كلمة مفتاحية نصية)
@@ -557,7 +594,8 @@ def scan_single_source(publisher, url, now_utc):
                     "text": combined_text,
                     "link": news_link,
                     "publisher": publisher,
-                    "image_url": image_url
+                    "image_url": image_url,
+                    "published_at": published_at,
                 })
                 processed_news_links.add(news_link)
     except Exception:
@@ -692,18 +730,41 @@ def run_ai_scanner():
     print(f"\n[{datetime.now().strftime('%H:%M:%S')}] 🤖 تفعيل وضع (OSINT )...")
     now_utc = datetime.utcnow()
 
-    # Phase 1: Scan all RSS feeds in parallel (fast, no API calls)
+    # Refresh persistent history before any source scan. Both RSS and social
+    # adapters then share the same URL/title dedupe path.
+    existing_records = load_existing_news()
+
+    # Phase 1: scan news RSS feeds in parallel (fast, no AI API calls).
     all_articles = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
         futures = {executor.submit(scan_single_source, pub, url, now_utc): pub for pub, url in RSS_FEEDS.items()}
         for future in concurrent.futures.as_completed(futures):
             try:
-                articles = future.result()
-                all_articles.extend(articles)
-            except Exception:
-                pass
+                all_articles.extend(future.result())
+            except Exception as exc:
+                print(f"⚠️ تعذّر إكمال مصدر RSS ({type(exc).__name__}).")
 
-    print(f"\n📊 تم رصد {len(all_articles)} خبر جديد من جميع المصادر")
+    # Phase 1.b: add enabled social media adapters; each adapter is isolated so
+    # one unavailable platform does not stop the rest of the hourly collection.
+    social_articles = fetch_social_articles(KEYWORDS, max_age_hours=RADAR_MAX_AGE_HOURS)
+    all_articles.extend(social_articles)
+
+    # Phase 1.c: multi-level dedupe against stored records and within this batch:
+    # canonical URL -> exact normalized title -> close title/body within time window.
+    all_articles, dedupe_stats = deduplicate_articles(all_articles, existing_records)
+    for article in all_articles:
+        normalized_link = canonicalize_url(article.get("link"))
+        if normalized_link:
+            article["link"] = normalized_link
+            processed_news_links.add(normalized_link)
+
+    print(
+        f"\n📊 رُصد {dedupe_stats['input']} عنصرًا، بقي {dedupe_stats['unique']} فريدًا، "
+        f"واستُبعد {dedupe_stats['duplicates']} مكررًا "
+        f"(URL={dedupe_stats['canonical_url']}, عنوان مطابق={dedupe_stats['exact_title']}, "
+        f"عنوان متشابه={dedupe_stats['similar_title'] + dedupe_stats['similar_title_no_timestamp']}, "
+        f"نص متطابق/متشابه={dedupe_stats['identical_body'] + dedupe_stats['similar_body']})."
+    )
 
     if not all_articles:
         print("ℹ️ لا توجد أخبار جديدة مطابقة.")
