@@ -4,6 +4,7 @@ All integrations are opt-in and configuration-driven. Never scrape private accou
 or bypass platform permissions. Missing configuration disables only that adapter.
 """
 from datetime import datetime, timezone, timedelta
+from email.utils import parsedate_to_datetime
 import os
 import re
 import time
@@ -32,7 +33,10 @@ def _parse_datetime(value):
     try:
         if isinstance(value, (int, float)):
             return datetime.fromtimestamp(float(value), tz=timezone.utc)
-        parsed = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+        try:
+            parsed = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+        except ValueError:
+            parsed = parsedate_to_datetime(str(value).strip())
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
         return parsed.astimezone(timezone.utc)
