@@ -371,6 +371,30 @@ def _extra_social_rss(keywords, max_age_hours):
     return articles
 
 
+def _adapter_is_configured(platform):
+    """Inspect presence of required settings for diagnostics only; never calls a source."""
+    if platform == "Telegram":
+        return bool(_csv("OSINT_TELEGRAM_CHANNELS"))
+    if platform == "YouTube":
+        return bool(_csv("OSINT_YOUTUBE_CHANNEL_IDS"))
+    if platform == "Reddit":
+        has_subreddits = bool(_csv("OSINT_REDDIT_SUBREDDITS"))
+        has_saved_token = bool(os.environ.get("REDDIT_ACCESS_TOKEN", "").strip())
+        has_password_flow = all(os.environ.get(key, "").strip() for key in (
+            "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD",
+        ))
+        return has_subreddits and (has_saved_token or has_password_flow)
+    if platform == "X":
+        return bool(os.environ.get("X_API_BEARER_TOKEN", "").strip())
+    if platform == "Facebook":
+        return bool(os.environ.get("META_ACCESS_TOKEN", "").strip() and _csv("META_FACEBOOK_PAGE_IDS"))
+    if platform == "Instagram":
+        return bool(os.environ.get("META_ACCESS_TOKEN", "").strip() and _csv("META_INSTAGRAM_USER_IDS"))
+    if platform == "Extra social RSS":
+        return bool(os.environ.get("OSINT_EXTRA_SOCIAL_FEEDS", "").strip())
+    return False
+
+
 def fetch_social_articles(keywords, max_age_hours=3):
     """Collect recent, keyword-matching posts from enabled social adapters.
 
@@ -394,6 +418,10 @@ def fetch_social_articles(keywords, max_age_hours=3):
             articles.extend(item for item in found if item.get("title") and item.get("link"))
             if found:
                 print(f"📱 {platform}: رصد {len(found)} منشورًا مطابقًا")
+            elif not _adapter_is_configured(platform):
+                print(f"ℹ️ {platform}: المصدر غير مفعّل؛ إعداداته/معرّفاته المطلوبة غير مكتملة.")
+            else:
+                print(f"ℹ️ {platform}: المصدر جرى استدعاؤه لكنه لم يُرجع منشورات مطابقة للمرشحات الحالية.")
         except Exception:
             _warn(platform)
     return articles

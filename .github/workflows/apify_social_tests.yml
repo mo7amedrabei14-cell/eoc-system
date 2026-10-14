@@ -6,6 +6,7 @@ on:
       - feature/apify-social-radar-budget-2026-10-13
       - fix/osiris-real-incident-validation-2026-10-13
       - fix/social-search-budget-safe-2026-10-13
+      - fix/social-search-diagnostics-2026-10-14
   pull_request:
     branches:
       - main
