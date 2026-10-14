@@ -294,6 +294,24 @@ export function AuthEntryTransitionProvider({ children }) {
             }}
           >
             <ERCVectorLogo label="Egyptian Red Crescent" />
+            {/* Additive loading highlight follows the exact ERC crescent silhouette. */}
+            <svg
+              className="eoc-auth-transition__loader-trace"
+              viewBox="0 0 214 281"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                className="eoc-auth-transition__loader-trace-base"
+                pathLength="1000"
+                d="M 211.27 59.58 A 109.598 109.598 0 1 0 211.27 221.30 A 90.883 90.883 0 1 1 211.27 59.58 Z"
+              />
+              <path
+                className="eoc-auth-transition__loader-trace-light"
+                pathLength="1000"
+                d="M 211.27 59.58 A 109.598 109.598 0 1 0 211.27 221.30 A 90.883 90.883 0 1 1 211.27 59.58 Z"
+              />
+            </svg>
           </motion.div>
 
           <div className="eoc-auth-transition__status">
