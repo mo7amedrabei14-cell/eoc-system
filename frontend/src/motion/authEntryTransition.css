@@ -216,3 +216,64 @@ html[data-eoc-crest-motion="logout"] .sidebar-brand .erc-vector-logo {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* CORRECTED LOADER: follow the real Egyptian Red Crescent silhouette instead
+   of drawing a separate circular ring beneath/around the mark. */
+.eoc-auth-transition__loader-ring {
+  display: none !important;
+}
+.eoc-auth-transition__logo {
+  overflow: visible;
+}
+.eoc-auth-transition__loader-trace {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.eoc-auth-transition__loader-trace-base,
+.eoc-auth-transition__loader-trace-light {
+  fill: none !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.eoc-auth-transition__loader-trace-base {
+  stroke: rgba(255, 105, 114, .32);
+  stroke-width: 1.35;
+  opacity: .8;
+}
+.eoc-auth-transition__loader-trace-light {
+  stroke: #ff5a64;
+  stroke-width: 2.1;
+  stroke-dasharray: 108 892;
+  stroke-dashoffset: 0;
+  opacity: .98;
+  filter: drop-shadow(0 0 2px rgba(255, 50, 62, .62));
+  animation: eoc-auth-logo-trace 1.5s linear infinite;
+}
+@keyframes eoc-auth-logo-trace {
+  to { stroke-dashoffset: -1000; }
+}
+
+/* Dark curtain: black is the dominant tone; red stays as a restrained edge glow. */
+.eoc-auth-transition__backdrop {
+  background:
+    radial-gradient(ellipse at 72% 84%, rgba(199, 0, 0, .085) 0%, transparent 43%),
+    linear-gradient(125deg, #030303 0%, #080808 52%, #150808 78%, #380000 100%);
+}
+:root[data-theme="light"] .eoc-auth-transition__backdrop {
+  background:
+    radial-gradient(ellipse at 72% 84%, rgba(199, 0, 0, .085) 0%, transparent 52%),
+    linear-gradient(125deg, #ffffff 0%, #fff0f0 42%, #ffd4d4 70%, #c70000 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .eoc-auth-transition__loader-trace-light {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
