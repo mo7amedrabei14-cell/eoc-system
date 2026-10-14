@@ -133,6 +133,7 @@ test('auth transition loader traces the ERC crescent instead of drawing a circul
   assert.ok(transition.includes('className="eoc-auth-transition__loader-trace-light"'));
   assert.ok(transition.includes('d="M 211.27 59.58 A 109.598 109.598 0 1 0 211.27 221.30 A 90.883 90.883 0 1 1 211.27 59.58 Z"'));
   assert.ok(css.includes('.eoc-auth-transition__loader-ring {\n  display: none !important;'));
+  assert.ok(css.includes('.eoc-auth-transition__ring {\n  display: none !important;'));
   assert.ok(css.includes('animation: eoc-auth-logo-trace 1.5s linear infinite'));
   assert.ok(css.includes('linear-gradient(125deg, #030303 0%, #080808 52%, #150808 78%, #380000 100%)'));
   assert.ok(css.includes('linear-gradient(125deg, #ffffff 0%, #fff0f0 42%, #ffd4d4 70%, #c70000 100%)'));
