@@ -277,5 +277,41 @@ class ApifySocialSourceTests(unittest.TestCase):
         attempted = [call.args[0] for call in actor.call_args_list]
         self.assertEqual(attempted, [S.FACEBOOK_ACTOR, S.INSTAGRAM_ACTOR])
 
+
+    def test_rejected_apify_items_report_the_existing_rejection_reason(self):
+        stale = self._post(31, "Facebook")
+        missing_date = self._post(10, "Facebook")
+        missing_date.pop("published_at", None)
+        missing_link = self._post(10, "Facebook")
+        missing_link.pop("url", None)
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            self.assertIsNone(S._article_from_post(stale, "Facebook", ["حريق"], 30, self.now))
+            self.assertIsNone(S._article_from_post(missing_date, "Facebook", ["حريق"], 30, self.now))
+            self.assertIsNone(S._article_from_post(missing_link, "Facebook", ["حريق"], 30, self.now))
+
+        log = output.getvalue()
+        self.assertIn("نافذة الحداثة", log)
+        self.assertIn("لا يوجد تاريخ نشر معروف", log)
+        self.assertIn("لا يوجد رابط منشور معروف", log)
+
+    def test_consumed_budget_slot_is_reported_without_an_actor_call(self):
+        state = self._state()
+        state["slot_key"] = S._current_slot(self.now)[0]
+        state["slot_consumed"] = True
+        output = io.StringIO()
+
+        with patch.dict(os.environ, {"APIFY_API_TOKEN": "test-token"}, clear=False):
+            with patch.object(S, "_get_or_create_budget_store", return_value="store-id"):
+                with patch.object(S, "_read_budget", return_value=state):
+                    with redirect_stdout(output):
+                        with patch.object(S, "_actor_request") as actor:
+                            rows = S.fetch_apify_social_articles(["حريق"], now=self.now)
+
+        self.assertEqual(rows, [])
+        self.assertIn("خانة النصف ساعة الحالية مستخدمة أو محجوزة", output.getvalue())
+        actor.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
