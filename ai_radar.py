@@ -765,14 +765,18 @@ def run_ai_scanner():
     # one unavailable platform does not stop the rest of the hourly collection.
     social_articles = fetch_social_articles(KEYWORDS, max_age_hours=RADAR_MAX_AGE_HOURS)
     all_articles.extend(social_articles)
+    print(f"📊 إجمالي المنشورات المعادة من المصادر الاجتماعية المباشرة: {len(social_articles)}.")
 
     # Apify public-post search is budgeted separately and applies a strict 30-minute freshness filter.
     # Its durable monthly/daily counters live in Apify KVS so GitHub runners cannot reset the cap.
+    apify_articles = []
     try:
         apify_articles = fetch_apify_social_articles(KEYWORDS, max_age_minutes=APIFY_SOCIAL_MAX_AGE_MINUTES)
         all_articles.extend(apify_articles)
     except Exception as exc:
         print(f"⚠️ تعذّر إكمال بحث Apify الاجتماعي ({type(exc).__name__}).")
+    finally:
+        print(f"📊 إجمالي المنشورات المعادة من Apify بعد التحقق الأولي: {len(apify_articles)}.")
 
     # Phase 1.c: deterministic eligibility gate BEFORE dedupe and Gemini calls.
     # This saves downstream quota on keyword-matching poems, metaphors and non-events.
