@@ -125,6 +125,19 @@ test('crest travel starts from the existing login or sidebar logo and preserves 
   assert.ok(css.includes('html[data-eoc-crest-motion="login"] .lx-login-brand-mark .erc-vector-logo'));
   assert.ok(css.includes('html[data-eoc-crest-motion="logout"] .sidebar-brand .erc-vector-logo'));
 });
+test('auth transition loader traces the ERC crescent instead of drawing a circular spinner', () => {
+  const transition = read('../motion/AuthEntryTransition.jsx');
+  const css = read('../motion/authEntryTransition.css');
+
+  assert.ok(transition.includes('className="eoc-auth-transition__loader-trace"'));
+  assert.ok(transition.includes('className="eoc-auth-transition__loader-trace-light"'));
+  assert.ok(transition.includes('d="M 211.27 59.58 A 109.598 109.598 0 1 0 211.27 221.30 A 90.883 90.883 0 1 1 211.27 59.58 Z"'));
+  assert.ok(css.includes('.eoc-auth-transition__loader-ring {\n  display: none !important;'));
+  assert.ok(css.includes('animation: eoc-auth-logo-trace 1.5s linear infinite'));
+  assert.ok(css.includes('linear-gradient(125deg, #030303 0%, #080808 52%, #150808 78%, #380000 100%)'));
+  assert.ok(css.includes('linear-gradient(125deg, #ffffff 0%, #fff0f0 42%, #ffd4d4 70%, #c70000 100%)'));
+});
+
 test('unsupported browser transition API executes the update once', () => {
   const mock = installBrowserMock({ supportsTransitions: false });
   try {
