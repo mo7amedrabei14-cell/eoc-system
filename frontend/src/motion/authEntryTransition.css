@@ -277,3 +277,9 @@ html[data-eoc-crest-motion="logout"] .sidebar-brand .erc-vector-logo {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* No circular travel/loading rings: the crest-outline trace is the sole loader. */
+.eoc-auth-transition__ring {
+  display: none !important;
+}
