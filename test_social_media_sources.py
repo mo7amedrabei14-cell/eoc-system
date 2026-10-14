@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Offline regression tests for configurable social-media intake."""
+import io
 import os
 import unittest
+from contextlib import redirect_stdout
 from datetime import datetime, timezone, timedelta
 from email.utils import format_datetime
 from unittest.mock import patch
@@ -94,6 +96,61 @@ class SocialMediaSourceTests(unittest.TestCase):
             self.assertEqual(S._instagram(["حريق"], 3), [])
             self.assertEqual(S._reddit(["حريق"], 3), [])
 
+
+
+    def test_unconfigured_social_integrations_are_logged_without_network_calls(self):
+        empty = {
+            "OSINT_TELEGRAM_CHANNELS": "",
+            "OSINT_YOUTUBE_CHANNEL_IDS": "",
+            "OSINT_REDDIT_SUBREDDITS": "",
+            "REDDIT_ACCESS_TOKEN": "",
+            "REDDIT_CLIENT_ID": "",
+            "REDDIT_CLIENT_SECRET": "",
+            "REDDIT_USERNAME": "",
+            "REDDIT_PASSWORD": "",
+            "X_API_BEARER_TOKEN": "",
+            "META_ACCESS_TOKEN": "",
+            "META_FACEBOOK_PAGE_IDS": "",
+            "META_INSTAGRAM_USER_IDS": "",
+            "OSINT_EXTRA_SOCIAL_FEEDS": "",
+        }
+        output = io.StringIO()
+        with patch.dict(os.environ, empty, clear=False):
+            with patch.object(S, "_telegram", return_value=[]), \
+                 patch.object(S, "_youtube", return_value=[]), \
+                 patch.object(S, "_reddit", return_value=[]), \
+                 patch.object(S, "_x", return_value=[]), \
+                 patch.object(S, "_facebook", return_value=[]), \
+                 patch.object(S, "_instagram", return_value=[]), \
+                 patch.object(S, "_extra_social_rss", return_value=[]):
+                with redirect_stdout(output):
+                    articles = S.fetch_social_articles(["حريق"], max_age_hours=3)
+
+        self.assertEqual(articles, [])
+        log = output.getvalue()
+        self.assertIn("Telegram: المصدر غير مفعّل", log)
+        self.assertIn("YouTube: المصدر غير مفعّل", log)
+        self.assertIn("Reddit: المصدر غير مفعّل", log)
+        self.assertIn("X: المصدر غير مفعّل", log)
+        self.assertIn("Facebook: المصدر غير مفعّل", log)
+        self.assertIn("Instagram: المصدر غير مفعّل", log)
+        self.assertIn("Extra social RSS: المصدر غير مفعّل", log)
+
+    def test_configured_empty_source_is_distinguished_from_disabled_source(self):
+        output = io.StringIO()
+        with patch.dict(os.environ, {"OSINT_TELEGRAM_CHANNELS": "erc_alerts"}, clear=False):
+            with patch.object(S, "_telegram", return_value=[]), \
+                 patch.object(S, "_youtube", return_value=[]), \
+                 patch.object(S, "_reddit", return_value=[]), \
+                 patch.object(S, "_x", return_value=[]), \
+                 patch.object(S, "_facebook", return_value=[]), \
+                 patch.object(S, "_instagram", return_value=[]), \
+                 patch.object(S, "_extra_social_rss", return_value=[]):
+                with redirect_stdout(output):
+                    articles = S.fetch_social_articles(["حريق"], max_age_hours=3)
+
+        self.assertEqual(articles, [])
+        self.assertIn("Telegram: المصدر جرى استدعاؤه", output.getvalue())
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
