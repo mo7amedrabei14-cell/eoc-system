@@ -97,10 +97,19 @@ def is_recent_publication(value, max_age_minutes=30, now=None):
 
 
 def _article_from_post(item, platform, keywords, max_age_minutes, now):
+    # Diagnostic-only split of the existing rejection checks; return behavior is unchanged.
     if not isinstance(item, dict):
+        print(f"ℹ️ Apify/{platform}: استبعاد نتيجة؛ شكل بيانات المنشور ليس كائنًا.")
         return None
     published = _published_datetime(item)
-    if published is None or not is_recent_publication(published, max_age_minutes, now):
+    if published is None:
+        print(f"ℹ️ Apify/{platform}: استبعاد نتيجة؛ لا يوجد تاريخ نشر معروف يمكن التحقق منه.")
+        return None
+    if not is_recent_publication(published, max_age_minutes, now):
+        print(
+            f"ℹ️ Apify/{platform}: استبعاد نتيجة بسبب نافذة الحداثة؛ "
+            f"تاريخها {published.isoformat()} والحد {max_age_minutes} دقيقة."
+        )
         return None
 
     body_value = _first_value(item, (
@@ -110,12 +119,14 @@ def _article_from_post(item, platform, keywords, max_age_minutes, now):
     title_value = _first_value(item, ("title", "post_title", "caption", "message", "text"))
     title = re.sub(r"\s+", " ", str(title_value or body)).strip()[:220]
     if not body:
+        print(f"ℹ️ Apify/{platform}: استبعاد نتيجة حديثة؛ نص المنشور/الوصف فارغ.")
         return None
 
     link = _first_value(item, (
         "url", "post_url", "postUrl", "permalink", "permalink_url", "link", "post_link",
     ))
     if not link:
+        print(f"ℹ️ Apify/{platform}: استبعاد نتيجة حديثة؛ لا يوجد رابط منشور معروف.")
         return None
 
     author_data = item.get("author") or item.get("owner") or item.get("user") or {}
@@ -513,6 +524,7 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
     slot_key, slot_index = _current_slot(reference)
 
     if state.get("slot_consumed") or state.get("slot_reserved"):
+        print("ℹ️ Apify: تخطّي البحث؛ خانة النصف ساعة الحالية مستخدمة أو محجوزة بالفعل.")
         return []
     if state["monthly_used"] >= monthly_cap:
         print(f"⏸️ Apify: وصل الرصد إلى سقف الشهر ({state['monthly_used']}/{monthly_cap} نتيجة محتسبة).")
@@ -568,7 +580,10 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
                 result = candidates[0][1]
                 print(f"📱 Apify/{platform}: منشور حادث مؤهل خلال {max_age_minutes} دقيقة.")
                 return [result]
-            print(f"ℹ️ Apify/{platform}: رُفضت نتيجة المصدر لأنها لم تجتز شروط الوقت/الواقعة؛ حُفظ حجز الميزانية لتجنب الإنفاق المكرر.")
+            print(
+                f"ℹ️ Apify/{platform}: استُلم عنصر من المصدر لكن لم ينتج عنه منشور مؤهل؛ "
+                "الحجز محفوظ وتُغلق خانة هذه الجولة وفق السلوك الحالي."
+            )
             return []
 
         if outcome == "uncertain":
@@ -590,4 +605,6 @@ def fetch_apify_social_articles(keywords, max_age_minutes=30, now=None):
         if outcome == "auth":
             return []
 
+    if not articles:
+        print("ℹ️ Apify: لم يصل أي منشور مؤهل من Facebook أو Instagram في هذه الجولة.")
     return articles
