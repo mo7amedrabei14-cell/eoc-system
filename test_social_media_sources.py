@@ -138,7 +138,22 @@ class SocialMediaSourceTests(unittest.TestCase):
 
     def test_configured_empty_source_is_distinguished_from_disabled_source(self):
         output = io.StringIO()
-        with patch.dict(os.environ, {"OSINT_TELEGRAM_CHANNELS": "erc_alerts"}, clear=False):
+        env = {
+            "OSINT_TELEGRAM_CHANNELS": "erc_alerts",
+            "OSINT_YOUTUBE_CHANNEL_IDS": "",
+            "OSINT_REDDIT_SUBREDDITS": "",
+            "REDDIT_ACCESS_TOKEN": "",
+            "REDDIT_CLIENT_ID": "",
+            "REDDIT_CLIENT_SECRET": "",
+            "REDDIT_USERNAME": "",
+            "REDDIT_PASSWORD": "",
+            "X_API_BEARER_TOKEN": "",
+            "META_ACCESS_TOKEN": "",
+            "META_FACEBOOK_PAGE_IDS": "",
+            "META_INSTAGRAM_USER_IDS": "",
+            "OSINT_EXTRA_SOCIAL_FEEDS": "",
+        }
+        with patch.dict(os.environ, env, clear=False):
             with patch.object(S, "_telegram", return_value=[]), \
                  patch.object(S, "_youtube", return_value=[]), \
                  patch.object(S, "_reddit", return_value=[]), \
