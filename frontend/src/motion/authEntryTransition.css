@@ -166,3 +166,120 @@ html[data-eoc-crest-motion="login"] .lx-login-brand-mark .erc-vector-logo,
 html[data-eoc-crest-motion="logout"] .sidebar-brand .erc-vector-logo {
   opacity: 0 !important;
 }
+
+
+/* ADDITIVE AUTH TRANSITION POLISH
+   Keep the existing logo travel/scale animation intact. The loader circle tracks
+   the same motion values and only its thin accent arc rotates at a steady pace. */
+.eoc-auth-transition__loader-ring {
+  position: relative;
+  display: block;
+  width: clamp(12rem, 18vw, 17rem);
+  aspect-ratio: 1;
+  flex: none;
+  border: 1px solid rgba(255, 116, 124, .26);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px rgba(199, 0, 0, .05),
+    0 0 22px rgba(199, 0, 0, .08);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.eoc-auth-transition__loader-arc {
+  position: absolute;
+  inset: -1px;
+  display: block;
+  border: 1.5px solid transparent;
+  border-top-color: #ff555f;
+  border-right-color: rgba(255, 85, 95, .62);
+  border-radius: inherit;
+  animation: eoc-auth-loader-spin 1.2s linear infinite;
+}
+@keyframes eoc-auth-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Transition curtain gradient only — the actual login screen is untouched. */
+.eoc-auth-transition__backdrop {
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(199, 0, 0, .14) 0%, transparent 58%),
+    linear-gradient(125deg, #c70000 0%, #4a0000 36%, #170000 68%, #050505 100%);
+}
+:root[data-theme="light"] .eoc-auth-transition__backdrop {
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(199, 0, 0, .09) 0%, transparent 60%),
+    linear-gradient(125deg, #ffffff 0%, #fff0f0 42%, #ffd4d4 70%, #c70000 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .eoc-auth-transition__loader-arc {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+
+/* CORRECTED LOADER: follow the real Egyptian Red Crescent silhouette instead
+   of drawing a separate circular ring beneath/around the mark. */
+.eoc-auth-transition__loader-ring {
+  display: none !important;
+}
+.eoc-auth-transition__logo {
+  overflow: visible;
+}
+.eoc-auth-transition__loader-trace {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.eoc-auth-transition__loader-trace-base,
+.eoc-auth-transition__loader-trace-light {
+  fill: none !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.eoc-auth-transition__loader-trace-base {
+  stroke: rgba(255, 105, 114, .32);
+  stroke-width: 1.35;
+  opacity: .8;
+}
+.eoc-auth-transition__loader-trace-light {
+  stroke: #ff5a64;
+  stroke-width: 2.1;
+  stroke-dasharray: 108 892;
+  stroke-dashoffset: 0;
+  opacity: .98;
+  filter: drop-shadow(0 0 2px rgba(255, 50, 62, .62));
+  animation: eoc-auth-logo-trace 1.5s linear infinite;
+}
+@keyframes eoc-auth-logo-trace {
+  to { stroke-dashoffset: -1000; }
+}
+
+/* Dark curtain: black is the dominant tone; red stays as a restrained edge glow. */
+.eoc-auth-transition__backdrop {
+  background:
+    radial-gradient(ellipse at 72% 84%, rgba(199, 0, 0, .085) 0%, transparent 43%),
+    linear-gradient(125deg, #030303 0%, #080808 52%, #150808 78%, #380000 100%);
+}
+:root[data-theme="light"] .eoc-auth-transition__backdrop {
+  background:
+    radial-gradient(ellipse at 72% 84%, rgba(199, 0, 0, .085) 0%, transparent 52%),
+    linear-gradient(125deg, #ffffff 0%, #fff0f0 42%, #ffd4d4 70%, #c70000 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .eoc-auth-transition__loader-trace-light {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+
+/* No circular travel/loading rings: the crest-outline trace is the sole loader. */
+.eoc-auth-transition__ring {
+  display: none !important;
+}

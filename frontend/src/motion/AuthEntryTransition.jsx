@@ -230,6 +230,36 @@ export function AuthEntryTransitionProvider({ children }) {
                   }
                 : { duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             />
+            {/* Additive loader: follows the existing crest motion without changing it. */}
+            <motion.span
+              className="eoc-auth-transition__loader-ring"
+              aria-hidden="true"
+              initial={{
+                opacity: 0,
+                x: originFrame.x,
+                y: originFrame.y,
+                scale: originFrame.scale,
+              }}
+              animate={phase === 'running'
+                ? {
+                    opacity: [0.35, 1, 1],
+                    x: [originFrame.x, 0, 0],
+                    y: [originFrame.y, -2, 0],
+                    scale: [originFrame.scale, 1.035, 1],
+                  }
+                : phase === 'closing'
+                  ? { opacity: 0, x: 0, y: -8, scale: 1.14 }
+                  : { opacity: 1, x: 0, y: 0, scale: 1 }}
+              transition={phase === 'running'
+                ? {
+                    duration: reducedMotion ? 0.12 : 1.32,
+                    times: [0, 0.76, 1],
+                    ease: [0.16, 1, 0.3, 1],
+                  }
+                : { duration: phase === 'closing' ? (reducedMotion ? 0.12 : 0.3) : 0.2, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="eoc-auth-transition__loader-arc" />
+            </motion.span>
           </div>
 
           <motion.div
@@ -264,6 +294,24 @@ export function AuthEntryTransitionProvider({ children }) {
             }}
           >
             <ERCVectorLogo label="Egyptian Red Crescent" />
+            {/* Additive loading highlight follows the exact ERC crescent silhouette. */}
+            <svg
+              className="eoc-auth-transition__loader-trace"
+              viewBox="0 0 214 281"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                className="eoc-auth-transition__loader-trace-base"
+                pathLength="1000"
+                d="M 211.27 59.58 A 109.598 109.598 0 1 0 211.27 221.30 A 90.883 90.883 0 1 1 211.27 59.58 Z"
+              />
+              <path
+                className="eoc-auth-transition__loader-trace-light"
+                pathLength="1000"
+                d="M 211.27 59.58 A 109.598 109.598 0 1 0 211.27 221.30 A 90.883 90.883 0 1 1 211.27 59.58 Z"
+              />
+            </svg>
           </motion.div>
 
           <div className="eoc-auth-transition__status">
