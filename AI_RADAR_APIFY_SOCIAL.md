@@ -21,7 +21,7 @@ The scanner workflow is scheduled at `*/30 * * * *` (every 30 minutes) through G
 The Actors' own keyword search and publication-date ranking can change. The filter in this repository is the final acceptance rule, but it cannot make posts appear in an Actor's returned dataset when that Actor does not return them.
 
 ## Validation
-The branch-specific `apify_social_tests.yml` workflow runs offline unit tests only. It does not call Apify, Gemini, or EOC and does not consume credits. Live authentication and end-to-end delivery require a manually initiated production-like scan; that live scan was not run during implementation to avoid spending the owner's Apify balance or inserting test records into EOC.
+The branch-specific `apify_social_tests.yml` workflow runs offline unit tests only. It does not call Apify, Gemini, or EOC and does not consume credits. The production AI Radar workflow is intentionally schedule-only: manual dispatch and the legacy API trigger are disabled. Live authentication and end-to-end delivery have therefore not been verified by an on-demand production scan; do not temporarily enable one without accounting for Apify/Gemini usage and the possibility of writing real news records to EOC.
 
 ## Vercel safeguard
 Both Vercel configuration files disable branch deployments for `feature/apify-social-radar-budget-2026-10-13` and `fix/osiris-real-incident-validation-2026-10-13` through `git.deploymentEnabled`. That branch-specific guard should be retained until the owner decides how to integrate the change; main-branch production settings are otherwise unchanged.
