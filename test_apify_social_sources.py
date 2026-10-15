@@ -148,6 +148,8 @@ class ApifySocialSourceTests(unittest.TestCase):
         self.assertEqual(payload["startDate"], "1")
         self.assertEqual(payload["maxConcurrency"], 2)
         self.assertTrue(payload["monitorMode"])
+        # The full output form keeps its published nested field schema intact.
+        self.assertFalse(payload["compact"])
         self.assertEqual(payload["monitorStoreName"], "eoc-ai-radar-facebook-v2")
         self.assertEqual(payload["maxPostsPerQuery"], 1)
         self.assertEqual(payload["maxItems"], 1)
