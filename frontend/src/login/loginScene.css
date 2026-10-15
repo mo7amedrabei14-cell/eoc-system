@@ -4001,3 +4001,18 @@
     stroke-opacity: 0;
   }
 }
+
+
+/* LOGIN-CLOUD-STARS-2026-10-15 */
+/* Visual-only: keep the existing twinkle and add a slow, cloud-like drift. */
+.lx-night-sky-stars {
+  animation: lx-stars-twinkle 4s ease-in-out infinite alternate,
+             lx-cloud-star-drift 38s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes lx-cloud-star-drift {
+  0%, 100% { transform: translate3d(-1.4%, 0.2%, 0); }
+  25%      { transform: translate3d(0.8%, -0.6%, 0); }
+  50%      { transform: translate3d(1.5%, 0.4%, 0); }
+  75%      { transform: translate3d(-0.5%, -0.5%, 0); }
+}
