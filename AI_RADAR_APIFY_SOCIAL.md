@@ -16,7 +16,7 @@ Repository **Settings → Secrets and variables → Actions → Secrets** must c
 No token is embedded in source code or printed in logs. If Apify budget storage cannot be read or written, collection fails closed instead of risking unbounded spending.
 
 ## Frequency and limits
-The scanner workflow is scheduled at `0 * * * *` (once per hour) through GitHub Actions. Each run keeps the strict 30-minute post-freshness rule: older or undated posts are never passed to the EOC API. The Apify budget guard still allows at most one chargeable result per 30-minute UTC slot across both platforms, while the hourly workflow normally uses at most 24 scheduled runs per day. The daily cap of 50 and monthly cap of 1,000 remain hard safety limits; actual use is usually lower when no qualifying posts are returned. Some matching posts may be missed during high-volume periods, and the scraper cannot promise to capture every public post.
+The scanner workflow is scheduled at `*/30 * * * *` (every 30 minutes) through GitHub Actions. Each run keeps the strict 30-minute post-freshness rule: older or undated posts are never passed to the EOC API. The Apify budget guard allows at most one chargeable result per 30-minute UTC slot across both platforms, with a daily cap of 50 and monthly cap of 1,000 as additional hard safety limits. Some matching posts may be missed during high-volume periods, and the scraper cannot promise to capture every public post.
 
 The Actors' own keyword search and publication-date ranking can change. The filter in this repository is the final acceptance rule, but it cannot make posts appear in an Actor's returned dataset when that Actor does not return them.
 
