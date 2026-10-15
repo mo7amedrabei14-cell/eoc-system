@@ -3,9 +3,8 @@ name: AI Radar Scanner 🤖
 on:
   schedule:
     - cron: '*/30 * * * *'
-  workflow_dispatch:
 
-# Keep a scheduled scan and a manual run from spending budget concurrently.
+# Prevent scheduled scans from overlapping or racing on shared quota.
 concurrency:
   group: ai-radar-scan
   cancel-in-progress: false

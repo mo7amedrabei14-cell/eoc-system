@@ -16,12 +16,12 @@ Repository **Settings → Secrets and variables → Actions → Secrets** must c
 No token is embedded in source code or printed in logs. If Apify budget storage cannot be read or written, collection fails closed instead of risking unbounded spending.
 
 ## Frequency and limits
-The scanner workflow is scheduled at `*/30 * * * *` (every 30 minutes). The freshness test remains strict and is applied immediately after each Actor returns; older or undated posts are never passed to the EOC API. Because the result budget allows only one paid social result per half-hour slot across two platforms, some matching posts may be missed during periods of high volume. This is the deliberate trade-off for a predictable result budget; it does not promise to capture every public post.
+The scanner workflow is scheduled at `*/30 * * * *` (every 30 minutes) through GitHub Actions. Each run keeps the strict 30-minute post-freshness rule: older or undated posts are never passed to the EOC API. The Apify budget guard allows at most one chargeable result per 30-minute UTC slot across both platforms, with a daily cap of 50 and monthly cap of 1,000 as additional hard safety limits. Some matching posts may be missed during high-volume periods, and the scraper cannot promise to capture every public post.
 
 The Actors' own keyword search and publication-date ranking can change. The filter in this repository is the final acceptance rule, but it cannot make posts appear in an Actor's returned dataset when that Actor does not return them.
 
 ## Validation
-The branch-specific `apify_social_tests.yml` workflow runs offline unit tests only. It does not call Apify, Gemini, or EOC and does not consume credits. Live authentication and end-to-end delivery require a manually initiated production-like scan; that live scan was not run during implementation to avoid spending the owner's Apify balance or inserting test records into EOC.
+The branch-specific `apify_social_tests.yml` workflow runs offline unit tests only. It does not call Apify, Gemini, or EOC and does not consume credits. The production AI Radar workflow is intentionally schedule-only: manual dispatch and the legacy API trigger are disabled. Live authentication and end-to-end delivery have therefore not been verified by an on-demand production scan; do not temporarily enable one without accounting for Apify/Gemini usage and the possibility of writing real news records to EOC.
 
 ## Vercel safeguard
 Both Vercel configuration files disable branch deployments for `feature/apify-social-radar-budget-2026-10-13` and `fix/osiris-real-incident-validation-2026-10-13` through `git.deploymentEnabled`. That branch-specific guard should be retained until the owner decides how to integrate the change; main-branch production settings are otherwise unchanged.

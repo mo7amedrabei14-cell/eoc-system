@@ -2,7 +2,7 @@
 
 ## Schedule
 
-The workflow \`.github/workflows/ai_cron.yml\` runs at minute 0 of every hour (GitHub Actions schedule syntax: \`0 * * * *\`). GitHub may delay scheduled starts during busy periods, so this is hourly scheduling rather than a real-time guarantee. Manual runs remain available via \`workflow_dispatch\`.
+The workflow `.github/workflows/ai_cron.yml` runs automatically every 30 minutes (GitHub Actions schedule syntax: `*/30 * * * *`). GitHub may delay scheduled starts during busy periods, so this is a half-hour schedule rather than a real-time guarantee. The workflow intentionally has no manual-dispatch trigger; scheduled GitHub Actions runs are the only supported trigger in this repository.
 
 ## Duplicate prevention
 
