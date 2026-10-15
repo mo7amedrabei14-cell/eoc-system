@@ -1,0 +1,36 @@
+name: visual-login-star-patch
+on:
+  push:
+    branches:
+      - fix/login-cloud-stars-2026-10-15
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply visual-only cloud drift
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/login/loginScene.css')
+          css = p.read_text(encoding='utf-8')
+          marker = '/* LOGIN-CLOUD-STARS-2026-10-15 */'
+          if marker not in css:
+              css += '''\n\n/* LOGIN-CLOUD-STARS-2026-10-15 */\n/* Visual-only: keep the existing twinkle and add a slow, cloud-like drift. */\n.lx-night-sky-stars {\n  animation: lx-stars-twinkle 4s ease-in-out infinite alternate,\n             lx-cloud-star-drift 38s ease-in-out infinite;\n  will-change: transform, opacity;\n}\n@keyframes lx-cloud-star-drift {\n  0%, 100% { transform: translate3d(-1.4%, 0.2%, 0); }\n  25%      { transform: translate3d(0.8%, -0.6%, 0); }\n  50%      { transform: translate3d(1.5%, 0.4%, 0); }\n  75%      { transform: translate3d(-0.5%, -0.5%, 0); }\n}\n'''
+              p.write_text(css, encoding='utf-8')
+          PY
+      - name: Verify only the intended CSS changed
+        run: |
+          git diff --check
+          git diff -- frontend/src/login/loginScene.css
+          test "$(git diff --name-only | wc -l)" -eq 1
+      - name: Commit visual change and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/login/loginScene.css
+          git rm .github/workflows/_visual_patch_login_stars.yml
+          git commit -m "style: make login stars drift like clouds"
+          git push
