@@ -4004,15 +4004,32 @@
 
 
 /* LOGIN-CLOUD-STARS-2026-10-15 */
-/* Visual-only: keep the existing twinkle and add a slow, cloud-like drift. */
+/* Visual-only: faster cloud drift, stronger star points and subtle halos. */
 .lx-night-sky-stars {
-  animation: lx-stars-twinkle 4s ease-in-out infinite alternate,
-             lx-cloud-star-drift 16s ease-in-out infinite;
+  background-image:
+    radial-gradient(5px 5px at 20px 30px, rgba(255,255,255,.42), transparent 75%),
+    radial-gradient(2px 2px at 20px 30px, #fff, transparent 100%),
+    radial-gradient(5px 5px at 40px 70px, rgba(255,255,255,.4), transparent 75%),
+    radial-gradient(2px 2px at 40px 70px, #fff, transparent 100%),
+    radial-gradient(6px 6px at 90px 40px, rgba(174,221,129,.42), transparent 75%),
+    radial-gradient(2.5px 2.5px at 90px 40px, #d7ffb0, transparent 100%),
+    radial-gradient(5px 5px at 75% 55%, rgba(255,255,255,.42), transparent 75%),
+    radial-gradient(2px 2px at 75% 55%, #fff, transparent 100%),
+    radial-gradient(6px 6px at 70% 78%, rgba(129,212,250,.48), transparent 75%),
+    radial-gradient(2.5px 2.5px at 70% 78%, #b8edff, transparent 100%),
+    radial-gradient(5px 5px at 32% 84%, rgba(255,255,255,.4), transparent 75%),
+    radial-gradient(2px 2px at 32% 84%, #fff, transparent 100%);
+  animation: lx-stars-twinkle 2.2s ease-in-out infinite alternate,
+             lx-cloud-star-drift 8s ease-in-out infinite;
   will-change: transform, opacity;
 }
+@keyframes lx-stars-twinkle {
+  from { opacity: .62; }
+  to   { opacity: 1; }
+}
 @keyframes lx-cloud-star-drift {
-  0%, 100% { transform: translate3d(-1.4%, 0.2%, 0); }
-  25%      { transform: translate3d(0.8%, -0.6%, 0); }
-  50%      { transform: translate3d(1.5%, 0.4%, 0); }
-  75%      { transform: translate3d(-0.5%, -0.5%, 0); }
+  0%, 100% { transform: translate3d(-2%, 0.7%, 0); }
+  25%      { transform: translate3d(1.1%, -1.1%, 0); }
+  50%      { transform: translate3d(2%, 0.8%, 0); }
+  75%      { transform: translate3d(-1.2%, -0.8%, 0); }
 }
