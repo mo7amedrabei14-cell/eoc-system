@@ -7785,6 +7785,23 @@ def normalize_legacy_ai_news(credentials: HTTPAuthorizationCredentials = Depends
 import os
 import requests
 
+@app.post("/api/trigger-ai-radar")
+def trigger_ai_radar_disabled(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Legacy UI route retained only to report that manual/external AI Radar dispatch is disabled."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    role = get_user_role(user_id)
+    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
+        raise HTTPException(status_code=403, detail="عفواً، المالك فقط يمكنه الوصول إلى هذه الوظيفة.")
+
+    raise HTTPException(
+        status_code=410,
+        detail="التشغيل اليدوي للرادار معطل. يعمل الرادار تلقائياً عبر GitHub Actions كل 30 دقيقة."
+    )
+
 # Fix Vercel Environment Variables Conflict
 
 # =====================================================================
