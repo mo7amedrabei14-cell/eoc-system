@@ -2,8 +2,7 @@ name: AI Radar Scanner 🤖
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *'
 
 # Keep a scheduled scan and a manual run from spending budget concurrently.
 concurrency:
