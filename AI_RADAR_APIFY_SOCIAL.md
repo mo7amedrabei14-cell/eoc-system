@@ -3,6 +3,7 @@
 ## What this change does
 - Connects the existing AI Radar to the two configured Apify Actors: `topapi~facebook-search-posts-scraper` and `seemuapps~instagram-keyword-posts-scraper`.
 - Uses high-signal incident-reporting phrases for social searches and then applies deterministic content validation; generic words alone are not sufficient for acceptance.
+- Requests Facebook's full output form (`compact: false`) so returned rows retain the nested field shapes declared by the Actor's published output schema. This addresses the dataset-schema failure seen in the recorded run as a compatibility hypothesis; a live run is still needed to confirm the provider-side failure is resolved.
 - Accepts a social post only when it has an explicit publication timestamp no older than 30 minutes, a usable post URL, and incident-specific evidence. Unknown timestamps, literary content, and metaphorical posts without factual context fail closed.
 - Sends accepted posts into the existing multi-source deduplication, AI/fallback analysis, and EOC API flow.
 - Limits collection to at most one chargeable result per 30-minute UTC slot across both platforms. The preferred platform alternates; the other is queried in the same slot only if the preferred Actor returns a confirmed empty/non-billable result.
