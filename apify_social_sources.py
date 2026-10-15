@@ -464,7 +464,9 @@ def _actor_payload(platform, keywords, slot_index=0):
             "mustContainQuery": True,
             "maxPostsPerQuery": 1,
             "maxItems": 1,
-            "compact": True,
+            # Keep the full documented output shape. The Actor output schema declares nested author/image objects;
+            # compact mode can return a reduced shape that has failed dataset validation in production.
+            "compact": False,
             "includePostDetails": False,
             "monitorMode": True,
             # Start a clean per-query monitor checkpoint after the repeated FAILED
