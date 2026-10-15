@@ -7785,43 +7785,6 @@ def normalize_legacy_ai_news(credentials: HTTPAuthorizationCredentials = Depends
 import os
 import requests
 
-@app.post("/api/trigger-ai-radar")
-def trigger_ai_radar(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id: raise HTTPException(status_code=401, detail="غير مصرح")
-    
-    role = get_user_role(user_id)
-    if not role or role["role_name"].upper() not in ["OWNER", "المالك"]:
-        raise HTTPException(status_code=403, detail="عفواً، المالك فقط يمكنه إطلاق الرادار.")
-
-    # 💡 تم تغيير الاسم لتجنب حظر Vercel لأي متغير يبدأ بـ GITHUB
-    radar_key = os.environ.get("RADAR_SECRET_KEY")
-    
-    if not radar_key:
-        raise HTTPException(status_code=500, detail="الخطأ: مفتاح RADAR_SECRET_KEY غير موجود في إعدادات Vercel.")
-
-    # إرسال أمر التشغيل لجيت هاب
-    url = "https://api.github.com/repos/mo7amedrabei14-cell/eoc-system/actions/workflows/ai_cron.yml/dispatches"
-    headers = {
-        "Accept": "application/vnd.github.v3+json",
-        "Authorization": f"Bearer {radar_key}",
-        "Content-Type": "application/json"
-    }
-    data = {"ref": "main"}
-
-    try:
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code in [200, 204]:
-            return {"message": "تم إطلاق وحش الرصد بنجاح! 🚀\nيتم مسح السوشيال ميديا والأخبار حالياً، راقب الخريطة."}
-        else:
-            # 🧯 لا نُمرّر نص رد GitHub كما هو (قد يحمل تفاصيل داخلية) — رسالة مختصرة فقط
-            raise HTTPException(status_code=502, detail="تعذّر إطلاق الرادار عبر GitHub — تحقق من صلاحية مفتاح التشغيل.")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=500, detail="فشل الاتصال الداخلي بمزوّد التشغيل")
-
 # Fix Vercel Environment Variables Conflict
 
 # =====================================================================
