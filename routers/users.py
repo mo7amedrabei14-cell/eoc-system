@@ -23,13 +23,11 @@ def _actor_is_owner(cursor, actor_user_id: int) -> bool:
         SELECT r.role_name
         FROM user_roles ur
         INNER JOIN roles r ON r.role_id = ur.role_id
-        WHERE ur.user_id = %s
-        LIMIT 1;
+        WHERE ur.user_id = %s;
         """,
         (actor_user_id,),
     )
-    role = cursor.fetchone()
-    return bool(role and _is_owner_role(role[0]))
+    return any(_is_owner_role(row[0]) for row in cursor.fetchall())
 
 # 1. جلب كل المستخدمين
 @router.get("/")
@@ -182,14 +180,12 @@ def update_user_role(
             SELECT r.role_name
             FROM user_roles ur
             INNER JOIN roles r ON r.role_id = ur.role_id
-            WHERE ur.user_id = %s
-            LIMIT 1;
+            WHERE ur.user_id = %s;
             """,
             (user_id,),
         )
-        target_role = cursor.fetchone()
+        target_is_owner = any(_is_owner_role(row[0]) for row in cursor.fetchall())
         actor_is_owner = _actor_is_owner(cursor, current_user_id)
-        target_is_owner = bool(target_role and _is_owner_role(target_role[0]))
         requested_is_owner = _is_owner_role(requested_role[0])
 
         # Only an existing OWNER may grant OWNER or change an existing OWNER's role.
