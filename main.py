@@ -915,7 +915,7 @@ _login_rate_limit_cleanup_at = 0.0
 
 
 def ensure_login_rate_limit_schema() -> bool:
-    """Create the distributed login rate-limit table without heavy schema migration."""
+    """Create the shared sliding-window login-attempt table."""
     global _LOGIN_RATE_LIMIT_SCHEMA_READY
     if _LOGIN_RATE_LIMIT_SCHEMA_READY:
         return True
@@ -928,16 +928,19 @@ def ensure_login_rate_limit_schema() -> bool:
             connection = get_connection()
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS login_rate_limits (
-                        key_hash          VARCHAR(64) PRIMARY KEY,
-                        window_started_at TIMESTAMPTZ NOT NULL,
-                        failure_count     INTEGER NOT NULL DEFAULT 0,
-                        updated_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    CREATE TABLE IF NOT EXISTS login_rate_limit_events (
+                        event_id  BIGSERIAL PRIMARY KEY,
+                        key_hash  VARCHAR(64) NOT NULL,
+                        failed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
                 """)
                 cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_login_rate_limits_updated_at
-                    ON login_rate_limits (updated_at);
+                    CREATE INDEX IF NOT EXISTS idx_login_rate_events_key_failed
+                    ON login_rate_limit_events (key_hash, failed_at DESC);
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_login_rate_events_failed
+                    ON login_rate_limit_events (failed_at);
                 """)
             connection.commit()
             _LOGIN_RATE_LIMIT_SCHEMA_READY = True
@@ -1432,8 +1435,8 @@ def _login_is_throttled(key: str) -> bool:
 
     connection = get_connection()
     try:
-        # Run cheap, bounded cleanup periodically per process; an index prevents a full
-        # table scan as old attacker-generated keys accumulate.
+        # Run cheap, bounded cleanup periodically per process; indexes keep cleanup
+        # and sliding-window counts efficient as expired attempts accumulate.
         global _login_rate_limit_cleanup_at
         now_mono = _perf_time.monotonic()
         should_cleanup = False
@@ -1446,8 +1449,8 @@ def _login_is_throttled(key: str) -> bool:
             if should_cleanup:
                 try:
                     cursor.execute("""
-                        DELETE FROM login_rate_limits
-                        WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL '1 day';
+                        DELETE FROM login_rate_limit_events
+                        WHERE failed_at < CURRENT_TIMESTAMP - INTERVAL '1 day';
                     """)
                 except Exception as exc:
                     # Cleanup is operational hygiene; a failure must not bypass throttling.
@@ -1459,16 +1462,16 @@ def _login_is_throttled(key: str) -> bool:
 
             cursor.execute(
                 """
-                SELECT failure_count,
-                       window_started_at >= CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
-                FROM login_rate_limits
-                WHERE key_hash = %s;
+                SELECT COUNT(*)
+                FROM login_rate_limit_events
+                WHERE key_hash = %s
+                  AND failed_at >= CURRENT_TIMESTAMP - (%s * INTERVAL '1 second');
                 """,
-                (LOGIN_WINDOW_SECONDS, key),
+                (key, LOGIN_WINDOW_SECONDS),
             )
             row = cursor.fetchone()
         connection.commit()
-        return bool(row and row[1] and int(row[0]) >= LOGIN_MAX_FAILURES)
+        return bool(row and int(row[0]) >= LOGIN_MAX_FAILURES)
     except Exception:
         try:
             connection.rollback()
@@ -1487,25 +1490,10 @@ def _login_note_failure(key: str):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO login_rate_limits
-                    (key_hash, window_started_at, failure_count, updated_at)
-                VALUES (%s, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
-                ON CONFLICT (key_hash) DO UPDATE
-                SET window_started_at = CASE
-                        WHEN login_rate_limits.window_started_at
-                             < CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
-                        THEN CURRENT_TIMESTAMP
-                        ELSE login_rate_limits.window_started_at
-                    END,
-                    failure_count = CASE
-                        WHEN login_rate_limits.window_started_at
-                             < CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
-                        THEN 1
-                        ELSE login_rate_limits.failure_count + 1
-                    END,
-                    updated_at = CURRENT_TIMESTAMP;
+                INSERT INTO login_rate_limit_events (key_hash, failed_at)
+                VALUES (%s, CURRENT_TIMESTAMP);
                 """,
-                (key, LOGIN_WINDOW_SECONDS, LOGIN_WINDOW_SECONDS),
+                (key,),
             )
         connection.commit()
     except Exception:
@@ -1524,7 +1512,10 @@ def _login_clear_failures(key: str):
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("DELETE FROM login_rate_limits WHERE key_hash = %s;", (key,))
+            cursor.execute(
+                "DELETE FROM login_rate_limit_events WHERE key_hash = %s;",
+                (key,),
+            )
         connection.commit()
     except Exception:
         try:
