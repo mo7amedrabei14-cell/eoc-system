@@ -37,7 +37,12 @@ del _out_stream
 from audit import create_audit_log
 from realtime import notify_participant_accounts, create_realtime_event
 from db import get_connection
-from idempotency import build_idempotency_scope
+from idempotency import (
+    build_idempotency_scope,
+    ensure_scoped_idempotency_schema,
+    fetch_cached_response,
+    save_cached_response,
+)
 from security_limits import build_login_rate_limit_key
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
@@ -855,58 +860,6 @@ def ensure_participant_branch_schema():
         connection.close()
 
 
-# Separate idempotency scope schema: legacy rows cannot be safely attributed
-# to a user or route, so keep them untouched and never replay them as v2 records.
-_IDEMPOTENCY_V2_SCHEMA_READY = False
-_IDEMPOTENCY_V2_SCHEMA_LOCK = threading.Lock()
-
-
-def ensure_idempotency_v2_schema() -> bool:
-    """Create the scoped idempotency table without rerunning the heavy app schema."""
-    global _IDEMPOTENCY_V2_SCHEMA_READY
-    if _IDEMPOTENCY_V2_SCHEMA_READY:
-        return True
-
-    with _IDEMPOTENCY_V2_SCHEMA_LOCK:
-        if _IDEMPOTENCY_V2_SCHEMA_READY:
-            return True
-
-        connection = None
-        try:
-            connection = get_connection()
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS idempotency_keys_v2 (
-                        identity_hash   VARCHAR(64) NOT NULL,
-                        method          VARCHAR(10) NOT NULL,
-                        route_path      VARCHAR(255) NOT NULL,
-                        query_hash      VARCHAR(64) NOT NULL,
-                        client_key_hash VARCHAR(64) NOT NULL,
-                        response        JSONB,
-                        original_status INTEGER,
-                        created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        PRIMARY KEY (
-                            identity_hash, method, route_path, query_hash, client_key_hash
-                        )
-                    );
-                """)
-            connection.commit()
-            _IDEMPOTENCY_V2_SCHEMA_READY = True
-            print("idempotency v2 schema: ready")
-            return True
-        except Exception as exc:
-            if connection is not None:
-                try:
-                    connection.rollback()
-                except Exception:
-                    pass
-            print(f"ensure_idempotency_v2_schema error (will retry): {exc}")
-            return False
-        finally:
-            if connection is not None:
-                connection.close()
-
-
 # Shared login throttling schema. Attempt keys are hashes of (trusted client IP, username).
 _LOGIN_RATE_LIMIT_SCHEMA_READY = False
 _LOGIN_RATE_LIMIT_SCHEMA_LOCK = threading.Lock()
@@ -969,7 +922,7 @@ def _bootstrap_schema_in_background():
     """
     try:
         ensure_schema()
-        ensure_idempotency_v2_schema()      # 🔐 Scoped idempotency records
+        ensure_scoped_idempotency_schema(get_connection)  # 🔐 Scoped idempotency records
         ensure_login_rate_limit_schema()     # 🔐 Shared login throttling
         ensure_participant_branch_schema()
         ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
@@ -1116,7 +1069,7 @@ async def idempotency_middleware(request: Request, call_next):
             # The separate table may not yet exist on a newly started instance.
             # If it cannot be prepared, fail open as the old middleware did; mission
             # endpoints retain their own DB-level idempotency checks.
-            if scope and not ensure_idempotency_v2_schema():
+            if scope and not ensure_scoped_idempotency_schema(get_connection):
                 scope = None
 
     if scope:
@@ -1124,32 +1077,10 @@ async def idempotency_middleware(request: Request, call_next):
         try:
             connection = get_connection()
             with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT response, original_status
-                    FROM idempotency_keys_v2
-                    WHERE identity_hash = %s
-                      AND method = %s
-                      AND route_path = %s
-                      AND query_hash = %s
-                      AND client_key_hash = %s;
-                    """,
-                    (
-                        scope["identity_hash"], scope["method"], scope["route_path"],
-                        scope["query_hash"], scope["client_key_hash"],
-                    ),
-                )
-                row = cursor.fetchone()
-                if row and row[0] is not None:
-                    cached = row[0]
-                    if isinstance(cached, str):
-                        cached_response = json.loads(cached)
-                    elif isinstance(cached, dict):
-                        cached_response = cached
-                    else:
-                        cached_response = None
-                    if cached_response is not None:
-                        return JSONResponse(content=cached_response, status_code=row[1])
+                cached = fetch_cached_response(cursor, scope)
+                if cached is not None:
+                    cached_response, original_status = cached
+                    return JSONResponse(content=cached_response, status_code=original_status)
         except Exception as exc:
             # Idempotency storage must not turn a transient DB issue into a failed write.
             print(f"Idempotency v2 pre-check error (continuing without cache): {exc}")
@@ -1165,51 +1096,16 @@ async def idempotency_middleware(request: Request, call_next):
                 return response
             response_body = response.body
             status_code = response.status_code
+            payload_text = (
+                response_body.decode()
+                if isinstance(response_body, bytes)
+                else response_body
+            )
             connection = get_connection()
             try:
                 with connection.cursor() as cursor:
-                    if status_code < 400:
-                        cursor.execute(
-                            """
-                            INSERT INTO idempotency_keys_v2 (
-                                identity_hash, method, route_path, query_hash,
-                                client_key_hash, response, original_status
-                            )
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (
-                                identity_hash, method, route_path, query_hash, client_key_hash
-                            ) DO UPDATE
-                            SET response = EXCLUDED.response,
-                                original_status = EXCLUDED.original_status,
-                                created_at = CURRENT_TIMESTAMP;
-                            """,
-                            (
-                                scope["identity_hash"], scope["method"], scope["route_path"],
-                                scope["query_hash"], scope["client_key_hash"],
-                                json.dumps(
-                                    response_body.decode()
-                                    if isinstance(response_body, bytes)
-                                    else response_body
-                                ),
-                                status_code,
-                            ),
-                        )
-                    else:
-                        cursor.execute(
-                            """
-                            DELETE FROM idempotency_keys_v2
-                            WHERE identity_hash = %s
-                              AND method = %s
-                              AND route_path = %s
-                              AND query_hash = %s
-                              AND client_key_hash = %s;
-                            """,
-                            (
-                                scope["identity_hash"], scope["method"], scope["route_path"],
-                                scope["query_hash"], scope["client_key_hash"],
-                            ),
-                        )
-                    connection.commit()
+                    save_cached_response(cursor, scope, payload_text, status_code)
+                connection.commit()
             finally:
                 connection.close()
         except Exception as exc:
