@@ -43,7 +43,14 @@ from idempotency import (
     fetch_cached_response,
     save_cached_response,
 )
-from security_limits import build_login_rate_limit_key
+from security_limits import (
+    build_login_rate_limit_key,
+    ensure_login_rate_limit_schema,
+    count_recent_failures,
+    record_login_failure,
+    clear_login_failures,
+    prune_expired_failures,
+)
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
 
@@ -860,56 +867,9 @@ def ensure_participant_branch_schema():
         connection.close()
 
 
-# Shared login throttling schema. Attempt keys are hashes of (trusted client IP, username).
-_LOGIN_RATE_LIMIT_SCHEMA_READY = False
-_LOGIN_RATE_LIMIT_SCHEMA_LOCK = threading.Lock()
+# Cleanup cadence is local; failure event records are shared in PostgreSQL.
 _LOGIN_CLEANUP_LOCK = threading.Lock()
 _login_rate_limit_cleanup_at = 0.0
-
-
-def ensure_login_rate_limit_schema() -> bool:
-    """Create the shared sliding-window login-attempt table."""
-    global _LOGIN_RATE_LIMIT_SCHEMA_READY
-    if _LOGIN_RATE_LIMIT_SCHEMA_READY:
-        return True
-
-    with _LOGIN_RATE_LIMIT_SCHEMA_LOCK:
-        if _LOGIN_RATE_LIMIT_SCHEMA_READY:
-            return True
-        connection = None
-        try:
-            connection = get_connection()
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS login_rate_limit_events (
-                        event_id  BIGSERIAL PRIMARY KEY,
-                        key_hash  VARCHAR(64) NOT NULL,
-                        failed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    );
-                """)
-                cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_login_rate_events_key_failed
-                    ON login_rate_limit_events (key_hash, failed_at DESC);
-                """)
-                cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_login_rate_events_failed
-                    ON login_rate_limit_events (failed_at);
-                """)
-            connection.commit()
-            _LOGIN_RATE_LIMIT_SCHEMA_READY = True
-            print("login rate-limit schema: ready")
-            return True
-        except Exception as exc:
-            if connection is not None:
-                try:
-                    connection.rollback()
-                except Exception:
-                    pass
-            print(f"ensure_login_rate_limit_schema error (will retry): {exc}")
-            return False
-        finally:
-            if connection is not None:
-                connection.close()
 
 
 def _bootstrap_schema_in_background():
@@ -923,7 +883,7 @@ def _bootstrap_schema_in_background():
     try:
         ensure_schema()
         ensure_scoped_idempotency_schema(get_connection)  # 🔐 Scoped idempotency records
-        ensure_login_rate_limit_schema()     # 🔐 Shared login throttling
+        ensure_login_rate_limit_schema(get_connection)  # 🔐 Shared login throttling
         ensure_participant_branch_schema()
         ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
         ensure_client_errors_schema()  # 🧯 جدول بلاغات أخطاء الواجهة (خفيفة منفصلة)
@@ -1326,7 +1286,7 @@ def _login_key(request, username: str) -> str:
 
 
 def _login_is_throttled(key: str) -> bool:
-    if not ensure_login_rate_limit_schema():
+    if not ensure_login_rate_limit_schema(get_connection):
         raise RuntimeError("Shared login rate-limit storage is unavailable")
 
     connection = get_connection()
@@ -1344,10 +1304,7 @@ def _login_is_throttled(key: str) -> bool:
         with connection.cursor() as cursor:
             if should_cleanup:
                 try:
-                    cursor.execute("""
-                        DELETE FROM login_rate_limit_events
-                        WHERE failed_at < CURRENT_TIMESTAMP - INTERVAL '1 day';
-                    """)
+                    prune_expired_failures(cursor)
                 except Exception as exc:
                     # Cleanup is operational hygiene; a failure must not bypass throttling.
                     print(f"login rate-limit cleanup skipped: {exc}")
@@ -1356,18 +1313,9 @@ def _login_is_throttled(key: str) -> bool:
                     except Exception:
                         pass
 
-            cursor.execute(
-                """
-                SELECT COUNT(*)
-                FROM login_rate_limit_events
-                WHERE key_hash = %s
-                  AND failed_at >= CURRENT_TIMESTAMP - (%s * INTERVAL '1 second');
-                """,
-                (key, LOGIN_WINDOW_SECONDS),
-            )
-            row = cursor.fetchone()
+            count = count_recent_failures(cursor, key, LOGIN_WINDOW_SECONDS)
         connection.commit()
-        return bool(row and int(row[0]) >= LOGIN_MAX_FAILURES)
+        return count >= LOGIN_MAX_FAILURES
     except Exception:
         try:
             connection.rollback()
@@ -1384,13 +1332,7 @@ def _login_note_failure(key: str):
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO login_rate_limit_events (key_hash, failed_at)
-                VALUES (%s, CURRENT_TIMESTAMP);
-                """,
-                (key,),
-            )
+            record_login_failure(cursor, key)
         connection.commit()
     except Exception:
         try:
@@ -1408,10 +1350,7 @@ def _login_clear_failures(key: str):
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM login_rate_limit_events WHERE key_hash = %s;",
-                (key,),
-            )
+            clear_login_failures(cursor, key)
         connection.commit()
     except Exception:
         try:
