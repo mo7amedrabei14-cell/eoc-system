@@ -158,16 +158,16 @@ class SecurityHardeningSourceTests(unittest.TestCase):
             "def ensure_login_rate_limit_schema() -> bool:",
             "def _bootstrap_schema_in_background():",
         )
-        self.assertIn("CREATE TABLE IF NOT EXISTS login_rate_limits", schema)
-        self.assertIn("CREATE INDEX IF NOT EXISTS idx_login_rate_limits_updated_at", schema)
+        self.assertIn("CREATE TABLE IF NOT EXISTS login_rate_limit_events", schema)
+        self.assertIn("CREATE INDEX IF NOT EXISTS idx_login_rate_events_key_failed", schema)
         bootstrap = section(source, "def _bootstrap_schema_in_background():", "threading.Thread(")
         self.assertIn("ensure_login_rate_limit_schema()", bootstrap)
 
         limiter = section(source, "# 🔒 حدّ محاولات الدخول مشترك", '@app.post("/token")')
-        self.assertIn("SELECT failure_count", limiter)
-        self.assertIn("INSERT INTO login_rate_limits", limiter)
-        self.assertIn("ON CONFLICT (key_hash) DO UPDATE", limiter)
-        self.assertIn("login_rate_limits.window_started_at", limiter)
+        self.assertIn("SELECT COUNT(*)", limiter)
+        self.assertIn("INSERT INTO login_rate_limit_events", limiter)
+        self.assertIn("VALUES (%s, CURRENT_TIMESTAMP);", limiter)
+        self.assertIn("failed_at >= CURRENT_TIMESTAMP", limiter)
         self.assertIn("def _login_clear_failures(key: str):", limiter)
         self.assertNotIn("_login_failures", source)
         self.assertIn("login rate-limit check failed closed", source)
