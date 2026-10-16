@@ -906,6 +906,55 @@ def ensure_idempotency_v2_schema() -> bool:
                 connection.close()
 
 
+# Shared login throttling schema. Attempt keys are hashes of (trusted client IP, username).
+_LOGIN_RATE_LIMIT_SCHEMA_READY = False
+_LOGIN_RATE_LIMIT_SCHEMA_LOCK = threading.Lock()
+_LOGIN_CLEANUP_LOCK = threading.Lock()
+_login_rate_limit_cleanup_at = 0.0
+
+
+def ensure_login_rate_limit_schema() -> bool:
+    """Create the distributed login rate-limit table without heavy schema migration."""
+    global _LOGIN_RATE_LIMIT_SCHEMA_READY
+    if _LOGIN_RATE_LIMIT_SCHEMA_READY:
+        return True
+
+    with _LOGIN_RATE_LIMIT_SCHEMA_LOCK:
+        if _LOGIN_RATE_LIMIT_SCHEMA_READY:
+            return True
+        connection = None
+        try:
+            connection = get_connection()
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS login_rate_limits (
+                        key_hash          VARCHAR(64) PRIMARY KEY,
+                        window_started_at TIMESTAMPTZ NOT NULL,
+                        failure_count     INTEGER NOT NULL DEFAULT 0,
+                        updated_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_login_rate_limits_updated_at
+                    ON login_rate_limits (updated_at);
+                """)
+            connection.commit()
+            _LOGIN_RATE_LIMIT_SCHEMA_READY = True
+            print("login rate-limit schema: ready")
+            return True
+        except Exception as exc:
+            if connection is not None:
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
+            print(f"ensure_login_rate_limit_schema error (will retry): {exc}")
+            return False
+        finally:
+            if connection is not None:
+                connection.close()
+
+
 def _bootstrap_schema_in_background():
     """يفحص/يجهّز بنية القاعدة في الخلفية بدل الإقلاع الحاجب.
 
@@ -917,6 +966,7 @@ def _bootstrap_schema_in_background():
     try:
         ensure_schema()
         ensure_idempotency_v2_schema()      # 🔐 Scoped idempotency records
+        ensure_login_rate_limit_schema()     # 🔐 Shared login throttling
         ensure_participant_branch_schema()
         ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
         ensure_client_errors_schema()  # 🧯 جدول بلاغات أخطاء الواجهة (خفيفة منفصلة)
@@ -1352,39 +1402,140 @@ def health():
         "schema_error": _schema_error["message"],
     }
 
-# 🔒 حدّ محاولات الدخول: Argon2 يجعل كل تخمين مكلفاً أصلاً، وهذا الحد يمنع سلاسل
-#    التخمين السريعة. المفتاح = IP (من ترويسة Vercel) + اسم المستخدم.
+# 🔒 حدّ محاولات الدخول مشترك بين كل نسخ Vercel عبر PostgreSQL.
+# لا نخزّن IP أو اسم المستخدم نصاً؛ المفتاح في القاعدة SHA-256 فقط.
 LOGIN_WINDOW_SECONDS = int(os.environ.get("LOGIN_WINDOW_SECONDS", "900") or 900)
 LOGIN_MAX_FAILURES = int(os.environ.get("LOGIN_MAX_FAILURES", "10") or 10)
-_login_failures = {}
 
 
 def _login_key(request, username: str) -> str:
     client_ip = "-"
     try:
-        forwarded = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+        # Vercel overwrites these client-IP headers at its edge; do not trust arbitrary
+        # client-supplied values when a trusted platform header is present.
+        forwarded = (
+            request.headers.get("x-vercel-forwarded-for")
+            or request.headers.get("x-forwarded-for")
+            or request.headers.get("x-real-ip")
+            or ""
+        ).split(",")[0].strip()
         client_ip = forwarded or (request.client.host if request.client else "-")
     except Exception:
         pass
-    return f"{client_ip}|{(username or '').strip().lower()}"
+    normalized_username = (username or "").strip().lower()
+    return hashlib.sha256(
+        f"{client_ip}|{normalized_username}".encode("utf-8")
+    ).hexdigest()
 
 
 def _login_is_throttled(key: str) -> bool:
-    now = datetime.now(timezone.utc)
-    hits = [t for t in _login_failures.get(key, []) if (now - t).total_seconds() < LOGIN_WINDOW_SECONDS]
-    if hits:
-        _login_failures[key] = hits
-    else:
-        _login_failures.pop(key, None)
-    return len(hits) >= LOGIN_MAX_FAILURES
+    if not ensure_login_rate_limit_schema():
+        raise RuntimeError("Shared login rate-limit storage is unavailable")
+
+    connection = get_connection()
+    try:
+        # Run cheap, bounded cleanup periodically per process; an index prevents a full
+        # table scan as old attacker-generated keys accumulate.
+        global _login_rate_limit_cleanup_at
+        now_mono = _perf_time.monotonic()
+        should_cleanup = False
+        with _LOGIN_CLEANUP_LOCK:
+            if now_mono - _login_rate_limit_cleanup_at >= LOGIN_WINDOW_SECONDS:
+                _login_rate_limit_cleanup_at = now_mono
+                should_cleanup = True
+
+        with connection.cursor() as cursor:
+            if should_cleanup:
+                try:
+                    cursor.execute("""
+                        DELETE FROM login_rate_limits
+                        WHERE updated_at < CURRENT_TIMESTAMP - INTERVAL '1 day';
+                    """)
+                except Exception as exc:
+                    # Cleanup is operational hygiene; a failure must not bypass throttling.
+                    print(f"login rate-limit cleanup skipped: {exc}")
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
+
+            cursor.execute(
+                """
+                SELECT failure_count,
+                       window_started_at >= CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
+                FROM login_rate_limits
+                WHERE key_hash = %s;
+                """,
+                (LOGIN_WINDOW_SECONDS, key),
+            )
+            row = cursor.fetchone()
+        connection.commit()
+        return bool(row and row[1] and int(row[0]) >= LOGIN_MAX_FAILURES)
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        connection.close()
 
 
 def _login_note_failure(key: str):
-    _login_failures.setdefault(key, []).append(datetime.now(timezone.utc))
-    # تقليم الذاكرة لو تعددت المفاتيح (نسخة طويلة العمر) — لا تراكم لا نهائي
-    if len(_login_failures) > 5000:
-        for stale in list(_login_failures)[:1000]:
-            _login_failures.pop(stale, None)
+    if not ensure_login_rate_limit_schema():
+        raise RuntimeError("Shared login rate-limit storage is unavailable")
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO login_rate_limits
+                    (key_hash, window_started_at, failure_count, updated_at)
+                VALUES (%s, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
+                ON CONFLICT (key_hash) DO UPDATE
+                SET window_started_at = CASE
+                        WHEN login_rate_limits.window_started_at
+                             < CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
+                        THEN CURRENT_TIMESTAMP
+                        ELSE login_rate_limits.window_started_at
+                    END,
+                    failure_count = CASE
+                        WHEN login_rate_limits.window_started_at
+                             < CURRENT_TIMESTAMP - (%s * INTERVAL '1 second')
+                        THEN 1
+                        ELSE login_rate_limits.failure_count + 1
+                    END,
+                    updated_at = CURRENT_TIMESTAMP;
+                """,
+                (key, LOGIN_WINDOW_SECONDS, LOGIN_WINDOW_SECONDS),
+            )
+        connection.commit()
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        connection.close()
+
+
+def _login_clear_failures(key: str):
+    if not ensure_login_rate_limit_schema():
+        raise RuntimeError("Shared login rate-limit storage is unavailable")
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM login_rate_limits WHERE key_hash = %s;", (key,))
+        connection.commit()
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        connection.close()
 
 
 @app.post("/token")
@@ -1392,18 +1543,41 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """🔒 لا تمييز بين «مستخدم غير موجود» و«كلمة مرور خاطئة» في الرد (منع تعداد الحسابات)،
     مع حدّ محاولات لكل (IP + اسم مستخدم)."""
     login_key = _login_key(request, form_data.username)
-    if _login_is_throttled(login_key):
+    try:
+        if _login_is_throttled(login_key):
+            raise HTTPException(
+                status_code=429,
+                detail="محاولات دخول خاطئة كثيرة — حاول مرة أخرى بعد ربع ساعة.",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"login rate-limit check failed closed: {exc}")
         raise HTTPException(
-            status_code=429,
-            detail="محاولات دخول خاطئة كثيرة — حاول مرة أخرى بعد ربع ساعة.",
+            status_code=503,
+            detail="تسجيل الدخول غير متاح مؤقتًا — أعد المحاولة بعد قليل.",
         )
 
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
-        _login_note_failure(login_key)
+        try:
+            _login_note_failure(login_key)
+        except Exception as exc:
+            print(f"login rate-limit update failed closed: {exc}")
+            raise HTTPException(
+                status_code=503,
+                detail="تسجيل الدخول غير متاح مؤقتًا — أعد المحاولة بعد قليل.",
+            )
         raise HTTPException(status_code=401, detail="اسم المستخدم أو كلمة المرور غير صحيحة")
 
-    _login_failures.pop(login_key, None)
+    try:
+        _login_clear_failures(login_key)
+    except Exception as exc:
+        print(f"login rate-limit reset failed closed: {exc}")
+        raise HTTPException(
+            status_code=503,
+            detail="تعذّر إكمال تسجيل الدخول بأمان — أعد المحاولة بعد قليل.",
+        )
 
     role = get_user_role(user["user_id"])
     if not role: raise HTTPException(status_code=403, detail="User has no assigned role")
