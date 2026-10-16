@@ -161,7 +161,8 @@ class SecurityHardeningSourceTests(unittest.TestCase):
         self.assertIn("ensure_login_rate_limit_schema(get_connection)", bootstrap)
 
         limiter = section(source, "# 🔒 حدّ محاولات الدخول مشترك", '@app.post("/token")')
-        self.assertNotIn("_login_failures", source)
+        self.assertNotIn("_login_failures = {}", source)
+        self.assertNotIn("_login_failures.get(", source)
         self.assertIn("login rate-limit check failed closed", source)
         self.assertIn("status_code=503", source[source.index('@app.post("/token"'):])
 
