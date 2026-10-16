@@ -960,86 +960,58 @@ async def _http_exception_sanitizer(request: Request, exc: HTTPException):
     )
 
 
-def _scoped_idempotency_key(request: Request, raw_key: str):
-    """Hash idempotency identity so keys never collide across users, methods, or routes.
+def _idempotency_auth_is_valid(request: Request) -> bool:
+    """Permit an idempotency-cache replay only after validating its bearer identity.
 
-    A stale/invalid user token disables idempotency replay so a deactivated account
-    cannot retrieve previously cached mutation responses before route authentication.
+    Keep the historical raw Idempotency-Key as the database key so retries that
+    began before this deployment can still find their existing idempotency record.
+    Per-user key scoping requires a separate schema/data migration because existing
+    rows do not record an identity, method, or route.
     """
-    supplied_key = str(raw_key or "").strip()
-    if not supplied_key:
-        return None
-
     auth_header = (request.headers.get("authorization") or "").strip()
     parts = auth_header.split(None, 1)
-    bearer_token = (
-        parts[1].strip()
-        if len(parts) == 2 and parts[0].lower() == "bearer"
-        else ""
-    )
+    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
+        return False
 
-    if bearer_token:
-        system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
-        if system_token and hmac.compare_digest(bearer_token, system_token):
-            identity = "system:" + hashlib.sha256(bearer_token.encode("utf-8")).hexdigest()
-        else:
-            resolved_user_id = get_current_user_id(bearer_token)
-            if not resolved_user_id:
-                return None
-            identity = f"user:{resolved_user_id}"
-    elif auth_header:
-        # Other schemes are not used by this API, but still keep their keys isolated.
-        identity = "auth:" + hashlib.sha256(auth_header.encode("utf-8")).hexdigest()
-    else:
-        # Public/optional-auth endpoints use the platform IP + agent as a modest scope.
-        client_ip = (
-            request.headers.get("x-vercel-forwarded-for")
-            or request.headers.get("x-forwarded-for")
-            or request.headers.get("x-real-ip")
-            or (request.client.host if request.client else "-")
-        )
-        user_agent = request.headers.get("user-agent") or "-"
-        identity = "anonymous:" + hashlib.sha256(
-            f"{client_ip}|{user_agent}".encode("utf-8")
-        ).hexdigest()
+    bearer_token = parts[1].strip()
+    system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+    if system_token and hmac.compare_digest(bearer_token, system_token):
+        return True
 
-    scope = "|".join((
-        identity,
-        request.method.upper(),
-        request.url.path,
-        request.url.query,
-        supplied_key,
-    ))
-    return hashlib.sha256(scope.encode("utf-8")).hexdigest()
+    try:
+        return bool(get_current_user_id(bearer_token))
+    except Exception as exc:
+        # Fail closed for cache replay; the normal endpoint path handles its
+        # usual authentication/error response.
+        print(f"Idempotency auth pre-check error (cache replay disabled): {exc}")
+        return False
 
 
 @app.middleware("http")
 async def idempotency_middleware(request: Request, call_next):
     """
-    Cache only successful mutation responses, scoped to the authenticated identity,
-    HTTP method, route, query, and client-supplied idempotency key.
+    Preserve the legacy idempotency-key format and successful-response semantics.
+    Validate the bearer token before any stored response can be replayed.
     """
     is_mutation = (
         request.method in ["POST", "PUT", "PATCH", "DELETE"]
         and request.url.path != "/token"
     )
-    scoped_key = None
+    idempotency_key = None
     if is_mutation:
-        raw_key = request.headers.get("Idempotency-Key")
-        if raw_key:
-            scoped_key = _scoped_idempotency_key(request, raw_key)
+        supplied_key = request.headers.get("Idempotency-Key")
+        if supplied_key and _idempotency_auth_is_valid(request):
+            # Deliberately keep the raw key during this compatibility release.
+            idempotency_key = supplied_key
 
-    # Invalid/inactive bearer tokens produce no scoped key, so they cannot replay
-    # a cached response. The endpoint still handles the request and returns its normal
-    # authentication response.
-    if scoped_key:
+    if idempotency_key:
         connection = None
         try:
             connection = get_connection()
             with connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT response, original_status FROM idempotency_keys WHERE idempotency_key = %s;",
-                    (scoped_key,),
+                    (idempotency_key,),
                 )
                 row = cursor.fetchone()
                 if row and row[0] is not None:
@@ -1052,16 +1024,16 @@ async def idempotency_middleware(request: Request, call_next):
                         cached_response = None
                     if cached_response is not None:
                         return JSONResponse(content=cached_response, status_code=row[1])
-        except Exception as e:
+        except Exception as exc:
             # Idempotency storage must not turn a transient DB issue into a failed write.
-            print(f"Idempotency pre-check error (continuing without cache): {e}")
+            print(f"Idempotency pre-check error (continuing without cache): {exc}")
         finally:
             if connection is not None:
                 connection.close()
 
     response = await call_next(request)
 
-    if scoped_key:
+    if idempotency_key:
         try:
             if not hasattr(response, "body"):
                 return response
@@ -1081,8 +1053,12 @@ async def idempotency_middleware(request: Request, call_next):
                                 created_at = CURRENT_TIMESTAMP
                             """,
                             (
-                                scoped_key,
-                                json.dumps(response_body.decode() if isinstance(response_body, bytes) else response_body),
+                                idempotency_key,
+                                json.dumps(
+                                    response_body.decode()
+                                    if isinstance(response_body, bytes)
+                                    else response_body
+                                ),
                                 status_code,
                             ),
                         )
@@ -1090,13 +1066,13 @@ async def idempotency_middleware(request: Request, call_next):
                         # Failed responses must not pin a key to a transient error.
                         cursor.execute(
                             "DELETE FROM idempotency_keys WHERE idempotency_key = %s;",
-                            (scoped_key,),
+                            (idempotency_key,),
                         )
                     connection.commit()
             finally:
                 connection.close()
-        except Exception as e:
-            print(f"Error storing idempotency response: {e}")
+        except Exception as exc:
+            print(f"Error storing idempotency response: {exc}")
 
     return response
 
