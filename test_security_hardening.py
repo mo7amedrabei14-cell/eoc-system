@@ -111,7 +111,7 @@ class SecurityHardeningSourceTests(unittest.TestCase):
 
     def test_idempotency_uses_separate_scoped_schema_and_validates_before_replay(self):
         source = read_source("main.py")
-        schema = section(source, "def ensure_idempotency_v2_schema():", "def _bootstrap_schema_in_background():")
+        schema = section(source, "def ensure_idempotency_v2_schema() -> bool:", "def _bootstrap_schema_in_background():")
         self.assertIn("CREATE TABLE IF NOT EXISTS idempotency_keys_v2", schema)
         for column in (
             "identity_hash", "method", "route_path", "query_hash", "client_key_hash",
