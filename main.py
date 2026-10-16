@@ -13,6 +13,7 @@ from datetime import date, time, datetime, timedelta, timezone
 from psycopg.errors import OperationalError, UniqueViolation
 from urllib.parse import urlparse
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -959,106 +960,143 @@ async def _http_exception_sanitizer(request: Request, exc: HTTPException):
     )
 
 
+def _scoped_idempotency_key(request: Request, raw_key: str):
+    """Hash idempotency identity so keys never collide across users, methods, or routes.
+
+    A stale/invalid user token disables idempotency replay so a deactivated account
+    cannot retrieve previously cached mutation responses before route authentication.
+    """
+    supplied_key = str(raw_key or "").strip()
+    if not supplied_key:
+        return None
+
+    auth_header = (request.headers.get("authorization") or "").strip()
+    parts = auth_header.split(None, 1)
+    bearer_token = (
+        parts[1].strip()
+        if len(parts) == 2 and parts[0].lower() == "bearer"
+        else ""
+    )
+
+    if bearer_token:
+        system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
+        if system_token and hmac.compare_digest(bearer_token, system_token):
+            identity = "system:" + hashlib.sha256(bearer_token.encode("utf-8")).hexdigest()
+        else:
+            resolved_user_id = get_current_user_id(bearer_token)
+            if not resolved_user_id:
+                return None
+            identity = f"user:{resolved_user_id}"
+    elif auth_header:
+        # Other schemes are not used by this API, but still keep their keys isolated.
+        identity = "auth:" + hashlib.sha256(auth_header.encode("utf-8")).hexdigest()
+    else:
+        # Public/optional-auth endpoints use the platform IP + agent as a modest scope.
+        client_ip = (
+            request.headers.get("x-vercel-forwarded-for")
+            or request.headers.get("x-forwarded-for")
+            or request.headers.get("x-real-ip")
+            or (request.client.host if request.client else "-")
+        )
+        user_agent = request.headers.get("user-agent") or "-"
+        identity = "anonymous:" + hashlib.sha256(
+            f"{client_ip}|{user_agent}".encode("utf-8")
+        ).hexdigest()
+
+    scope = "|".join((
+        identity,
+        request.method.upper(),
+        request.url.path,
+        request.url.query,
+        supplied_key,
+    ))
+    return hashlib.sha256(scope.encode("utf-8")).hexdigest()
+
+
 @app.middleware("http")
 async def idempotency_middleware(request: Request, call_next):
     """
-    Idempotency middleware for mutation endpoints (POST, PUT, PATCH, DELETE).
-    If the request has an Idempotency-Key header, we check if we have already processed
-    a request with that key. If so, we return the cached response.
-    Otherwise, we process the request and cache the response.
+    Cache only successful mutation responses, scoped to the authenticated identity,
+    HTTP method, route, query, and client-supplied idempotency key.
     """
-    # Only apply to mutation endpoints, excluding certain paths like /token
-    if request.method in ["POST", "PUT", "PATCH", "DELETE"] and request.url.path not in ["/token"]:
-        idempotency_key = request.headers.get("Idempotency-Key")
-        if idempotency_key:
-            # Check if we have a cached response for this idempotency key
+    is_mutation = (
+        request.method in ["POST", "PUT", "PATCH", "DELETE"]
+        and request.url.path != "/token"
+    )
+    scoped_key = None
+    if is_mutation:
+        raw_key = request.headers.get("Idempotency-Key")
+        if raw_key:
+            scoped_key = _scoped_idempotency_key(request, raw_key)
+
+    # Invalid/inactive bearer tokens produce no scoped key, so they cannot replay
+    # a cached response. The endpoint still handles the request and returns its normal
+    # authentication response.
+    if scoped_key:
+        connection = None
+        try:
+            connection = get_connection()
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT response, original_status FROM idempotency_keys WHERE idempotency_key = %s;",
+                    (scoped_key,),
+                )
+                row = cursor.fetchone()
+                if row and row[0] is not None:
+                    cached = row[0]
+                    if isinstance(cached, str):
+                        cached_response = json.loads(cached)
+                    elif isinstance(cached, dict):
+                        cached_response = cached
+                    else:
+                        cached_response = None
+                    if cached_response is not None:
+                        return JSONResponse(content=cached_response, status_code=row[1])
+        except Exception as e:
+            # Idempotency storage must not turn a transient DB issue into a failed write.
+            print(f"Idempotency pre-check error (continuing without cache): {e}")
+        finally:
+            if connection is not None:
+                connection.close()
+
+    response = await call_next(request)
+
+    if scoped_key:
+        try:
+            if not hasattr(response, "body"):
+                return response
+            response_body = response.body
+            status_code = response.status_code
             connection = get_connection()
             try:
                 with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT response, original_status FROM idempotency_keys WHERE idempotency_key = %s;",
-                        (idempotency_key,)
-                    )
-                    row = cursor.fetchone()
-                    if row and row[0] is not None:  # response is not null
-                        # Return the cached response
-                        # psycopg3 يقرأ عمود jsonb كـ dict جاهز؛ لا نلجأ لـ json.loads إلا إذا
-                        # كانت القيمة نصية (ملفقة/مخزنة يدوياً). هذا يمنع TypeError → 500.
-                        cached = row[0]
-                        if isinstance(cached, str):
-                            cached_response = json.loads(cached)
-                        elif isinstance(cached, dict):
-                            cached_response = cached
-                        else:
-                            cached_response = None
-                        if cached_response is not None:
-                            return JSONResponse(content=cached_response, status_code=row[1])
-            except Exception as e:
-                # 🛡️ حماية من أي خلل عابر هنا (جدول غير موجود لحظياً / اتصال):
-                # لا يجب أن يفشل كل طلب كتابة بسبب فحص التكرار — نكمل التنفيذ
-                # الطبيعي (ensure_schema ينشئ الجدول عند أول إقلاع).
-                print(f"Idempotency pre-check error (continuing without cache): {e}")
+                    if status_code < 400:
+                        cursor.execute(
+                            """
+                            INSERT INTO idempotency_keys (idempotency_key, response, original_status)
+                            VALUES (%s, %s, %s)
+                            ON CONFLICT (idempotency_key) DO UPDATE
+                            SET response = EXCLUDED.response,
+                                original_status = EXCLUDED.original_status,
+                                created_at = CURRENT_TIMESTAMP
+                            """,
+                            (
+                                scoped_key,
+                                json.dumps(response_body.decode() if isinstance(response_body, bytes) else response_body),
+                                status_code,
+                            ),
+                        )
+                    else:
+                        # Failed responses must not pin a key to a transient error.
+                        cursor.execute(
+                            "DELETE FROM idempotency_keys WHERE idempotency_key = %s;",
+                            (scoped_key,),
+                        )
+                    connection.commit()
             finally:
                 connection.close()
-    # If we didn't return a cached response, proceed to the endpoint
-    response = await call_next(request)
-
-    # After the endpoint, if we had an idempotency key and the method is mutation, store the response
-    if request.method in ["POST", "PUT", "PATCH", "DELETE"] and request.url.path not in ["/token"]:
-        idempotency_key = request.headers.get("Idempotency-Key")
-        if idempotency_key:
-            # We need to get the response body and status code
-            # We assume the response is a JSONResponse and we can get the body.
-            # For safety, we try to get the body; if we can't, we skip storage.
-            try:
-                # If the response is a JSONResponse, we can access .body
-                # If it's a StreamingResponse, we cannot get the body without consuming it.
-                # We'll only handle JSONResponse for now.
-                if hasattr(response, 'body'):
-                    response_body = response.body
-                    status_code = response.status_code
-                else:
-                    # We cannot get the body, so we skip storage.
-                    return response
-
-                # ⚠️ فقط نخزّن الاستجابات الناجحة (2xx). لو خزّنا أخطاءً (4xx/5xx)
-                # كانت ستُعاد للأبد على كل إعادة محاولة بنفس المفتاح — خطأ عابر
-                # (403/400/500) كان يتحوّل إلى فشل دائم. المستخدم يقرأ الفشل
-                # فيستطيع إعادة المحاولة بمفتاح جديد حتى ينجح.
-                if status_code < 400:
-                    connection = get_connection()
-                    try:
-                        with connection.cursor() as cursor:
-                            cursor.execute(
-                                """
-                                INSERT INTO idempotency_keys (idempotency_key, response, original_status)
-                                VALUES (%s, %s, %s)
-                                ON CONFLICT (idempotency_key) DO UPDATE
-                                SET response = EXCLUDED.response,
-                                    original_status = EXCLUDED.original_status,
-                                    created_at = CURRENT_TIMESTAMP
-                                """,
-                                (idempotency_key, json.dumps(response_body.decode() if isinstance(response_body, bytes) else response_body), status_code)
-                            )
-                            connection.commit()
-                    finally:
-                        connection.close()
-                else:
-                    # استجابة خطأ: نحذف أي قيمة مخزّنة سابقاً لهذا المفتاح
-                    # حتى لا يُحتجز المفتاح بفشل قديم، ويبقى التكرار آمناً.
-                    connection = get_connection()
-                    try:
-                        with connection.cursor() as cursor:
-                            cursor.execute(
-                                "DELETE FROM idempotency_keys WHERE idempotency_key = %s;",
-                                (idempotency_key,)
-                            )
-                            connection.commit()
-                    finally:
-                        connection.close()
-            except Exception as e:
-                # If there's an error in storing, we log it but don't fail the request.
-                print(f"Error storing idempotency response: {e}")
+        except Exception as e:
+            print(f"Error storing idempotency response: {e}")
 
     return response
 
@@ -6098,11 +6136,6 @@ class LocalNewsModel(BaseModel):
 
 @app.get("/api/local-news")
 def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # 🧊 كاش مُبطَل بالأحداث — نفس النتيجة حرفياً؛ أي خبر جديد (حدث لحظي) يُبطلها فوراً
-    cached = _cache_read("local_news")
-    if cached is not None:
-        return cached
-
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
@@ -6114,6 +6147,17 @@ def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)
         if not role: raise HTTPException(status_code=403)
 
         role_name = role["role_name"]
+        # Cache only the shared, all-branches result. Branch-scoped responses must
+        # never reuse a result populated by another user's branch scope.
+        has_shared_news_cache = role_name.upper() in [
+            "OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION",
+            "مشرف", "جوكر", "المالك", "أوبريشن", "READ_ONLY_MISSIONS",
+        ]
+        if has_shared_news_cache:
+            cached = _cache_read("local_news")
+            if cached is not None:
+                return cached
+
         with connection.cursor() as cursor:
             # الصلاحيات: المالك والجوكر والمشرف بيشوفوا كله، الفرع بيشوف أخباره بس
             base_query = """
@@ -6121,7 +6165,7 @@ def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)
                 FROM local_news n 
                 LEFT JOIN branches b ON n.branch_id = b.branch_id
             """
-            if role_name.upper() in ["OWNER", "MANAGER", "ADMIN", "SUPERVISOR", "JOKER", "OPERATION", "مشرف", "جوكر", "المالك", "أوبريشن", "READ_ONLY_MISSIONS"]:
+            if has_shared_news_cache:
                 query = base_query + " ORDER BY n.created_at DESC;"
                 cursor.execute(query)
             else:
@@ -6143,7 +6187,8 @@ def get_local_news(credentials: HTTPAuthorizationCredentials = Depends(security)
                         news_data[k] = str(v)
                 result.append(news_data)
                 
-            _cache_write("local_news", result)
+            if has_shared_news_cache:
+                _cache_write("local_news", result)
             return result
     except HTTPException:
         raise
@@ -6710,14 +6755,14 @@ class GlobalDisasterModel(BaseModel):
 
 @app.get("/api/global-disasters")
 def get_global_disasters(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # 🧊 كاش مُبطَل بالأحداث — نفس النتيجة حرفياً؛ أي كارثة جديدة تُبطلها فوراً
-    cached = _cache_read("global_disasters")
-    if cached is not None:
-        return cached
-
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id: raise HTTPException(status_code=401)
+
+    # 🧊 كاش مشترك، لكن لا نقرأه إلا بعد التأكد من هوية المستخدم.
+    cached = _cache_read("global_disasters")
+    if cached is not None:
+        return cached
     
     connection = get_connection()
     try:
@@ -7483,21 +7528,21 @@ def _ensure_ai_news_observed_at(cursor):
 
 @app.get("/api/ai-news")
 def get_ai_news(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # 🧊 كاش 120 ثانية مُبطَل بالأحداث: المصدر (رادار الذكاء) يتحرك كل ساعتين، وأي خبر
-    #    جديد يبث حدثاً لحظياً يُبطل الكاش فوراً — نفس الـ response حرفياً.
-    cached = _cache_read("ai_news", 120.0)
-    if cached is not None:
-        return cached
-
     token = credentials.credentials
     import os
     system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
-    
+
     if system_token and token.strip() == system_token:
         pass # الباب مفتوح للروبوت
     else:
         user_id = get_current_user_id(token)
         if not user_id: raise HTTPException(status_code=401)
+
+    # 🧊 كاش 120 ثانية مُبطَل بالأحداث، ويُقرأ فقط بعد فحص هوية المستخدم
+    #    أو التحقق من SYSTEM_TOKEN الخاص بالروبوت.
+    cached = _cache_read("ai_news", 120.0)
+    if cached is not None:
+        return cached
     
     connection = get_connection()
     try:
