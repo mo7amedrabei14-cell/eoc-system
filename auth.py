@@ -59,6 +59,48 @@ def invalidate_session_generation_cache() -> None:
     _session_gen_cache["at"] = 0.0
 
 
+# Short per-user active-state cache bounds revocation delay while avoiding an
+# additional database connection on every frontend poll / authenticated request.
+USER_ACTIVE_CACHE_TTL = 1.5
+_user_active_cache = {}
+
+
+def _is_user_active(user_id: int):
+    """True/False from the users table; None when status cannot be verified."""
+    now = time.monotonic()
+    cached = _user_active_cache.get(int(user_id))
+    if cached and (now - cached[0]) < USER_ACTIVE_CACHE_TTL:
+        return cached[1]
+
+    connection = None
+    try:
+        connection = get_connection()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT is_active FROM users WHERE user_id = %s LIMIT 1;",
+                (int(user_id),),
+            )
+            row = cursor.fetchone()
+        active = bool(row and row[0])
+        _user_active_cache[int(user_id)] = (now, active)
+
+        if len(_user_active_cache) > 5000:
+            for old_user_id, (checked_at, _) in list(_user_active_cache.items()):
+                if (now - checked_at) >= USER_ACTIVE_CACHE_TTL:
+                    _user_active_cache.pop(old_user_id, None)
+            if len(_user_active_cache) > 5000:
+                for old_user_id in list(_user_active_cache)[:1000]:
+                    _user_active_cache.pop(old_user_id, None)
+
+        return active
+    except Exception:
+        # Do not cache an unverifiable result; the caller fails closed for this request.
+        return None
+    finally:
+        if connection is not None:
+            connection.close()
+
+
 def authenticate_user(username: str, password: str):
     connection = get_connection()
 
@@ -304,21 +346,10 @@ def get_current_user_id(token: str):
             return None
 
         # A signed JWT is not sufficient if an administrator has deactivated the
-        # account. Check the authoritative database state on each token validation;
-        # fail closed if the account row is missing, inactive, or cannot be verified.
+        # account. The short cache bounds status propagation to at most 1.5 seconds
+        # per running instance while avoiding a DB connection on every request.
         resolved_user_id = int(user_id)
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT is_active FROM users WHERE user_id = %s LIMIT 1;",
-                    (resolved_user_id,),
-                )
-                active_row = cursor.fetchone()
-        finally:
-            connection.close()
-
-        if not active_row or not bool(active_row[0]):
+        if _is_user_active(resolved_user_id) is not True:
             return None
 
         return resolved_user_id
