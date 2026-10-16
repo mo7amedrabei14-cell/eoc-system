@@ -110,15 +110,15 @@ class SecurityHardeningSourceTests(unittest.TestCase):
         self.assertIsNone(build_idempotency_scope("user:1", "POST", "/api/missions", "", " "))
         self.assertIsNone(build_idempotency_scope("user:1", "POST", "/" + "x" * 255, "", "k"))
 
-    def test_idempotency_uses_separate_scoped_schema_and_validates_before_replay(self):
+    def test_idempotency_uses_shared_scoped_store_and_validates_before_replay(self):
         source = read_source("main.py")
-        schema = section(source, "def ensure_idempotency_v2_schema() -> bool:", "def _bootstrap_schema_in_background():")
-        self.assertIn("CREATE TABLE IF NOT EXISTS idempotency_keys_v2", schema)
+        store = read_source("idempotency.py")
+        self.assertIn("CREATE TABLE IF NOT EXISTS idempotency_keys_v2", store)
         for column in (
             "identity_hash", "method", "route_path", "query_hash", "client_key_hash",
         ):
-            self.assertIn(column, schema)
-        self.assertIn("ensure_idempotency_v2_schema()", source[source.index("def _bootstrap_schema_in_background"):])
+            self.assertIn(column, store)
+        self.assertIn("ensure_scoped_idempotency_schema(get_connection)", source)
 
         auth_gate = section(source, "def _idempotency_request_identity(", '@app.middleware("http")')
         self.assertIn('parts[0].lower() != "bearer"', auth_gate)
@@ -129,13 +129,11 @@ class SecurityHardeningSourceTests(unittest.TestCase):
         self.assertIn("build_idempotency_scope(", middleware)
         self.assertLess(
             middleware.index("_idempotency_request_identity(request)"),
-            middleware.index("FROM idempotency_keys_v2"),
+            middleware.index("fetch_cached_response(cursor, scope)"),
         )
-        self.assertIn("INSERT INTO idempotency_keys_v2", middleware)
+        self.assertIn("save_cached_response(cursor, scope, payload_text, status_code)", middleware)
         self.assertNotIn("FROM idempotency_keys WHERE", middleware)
-        self.assertIn("idempotency_keys_v2", middleware)
-        # The old table is still ensured by the legacy bootstrap but its ambiguous rows
-        # are never read into the identity-scoped cache.
+        # Legacy table setup stays in the old schema, but legacy rows aren't read by v2.
         legacy_ddl = section(source, "def ensure_schema():", "def ensure_workspace_schema():")
         self.assertIn("CREATE TABLE IF NOT EXISTS idempotency_keys", legacy_ddl)
 
@@ -153,25 +151,19 @@ class SecurityHardeningSourceTests(unittest.TestCase):
 
     def test_login_rate_limit_uses_shared_database_and_fails_closed(self):
         source = read_source("main.py")
-        schema = section(
-            source,
-            "def ensure_login_rate_limit_schema() -> bool:",
-            "def _bootstrap_schema_in_background():",
-        )
-        self.assertIn("CREATE TABLE IF NOT EXISTS login_rate_limit_events", schema)
-        self.assertIn("CREATE INDEX IF NOT EXISTS idx_login_rate_events_key_failed", schema)
+        store = read_source("security_limits.py")
+        self.assertIn("CREATE TABLE IF NOT EXISTS login_rate_limit_events", store)
+        self.assertIn("idx_login_rate_events_key_failed", store)
+        self.assertIn("count_recent_failures(cursor, key, LOGIN_WINDOW_SECONDS)", source)
+        self.assertIn("record_login_failure(cursor, key)", source)
+        self.assertIn("clear_login_failures(cursor, key)", source)
         bootstrap = section(source, "def _bootstrap_schema_in_background():", "threading.Thread(")
-        self.assertIn("ensure_login_rate_limit_schema()", bootstrap)
+        self.assertIn("ensure_login_rate_limit_schema(get_connection)", bootstrap)
 
         limiter = section(source, "# 🔒 حدّ محاولات الدخول مشترك", '@app.post("/token")')
-        self.assertIn("SELECT COUNT(*)", limiter)
-        self.assertIn("INSERT INTO login_rate_limit_events", limiter)
-        self.assertIn("VALUES (%s, CURRENT_TIMESTAMP);", limiter)
-        self.assertIn("failed_at >= CURRENT_TIMESTAMP", limiter)
-        self.assertIn("def _login_clear_failures(key: str):", limiter)
         self.assertNotIn("_login_failures", source)
         self.assertIn("login rate-limit check failed closed", source)
-        self.assertIn("status_code=503", source[source.index('@app.post("/token")'):])
+        self.assertIn("status_code=503", source[source.index('@app.post("/token"'):])
 
         login_route = section(source, '@app.post("/token")', '@app.post("',)
         self.assertIn("_login_note_failure(login_key)", login_route)
