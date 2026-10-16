@@ -97,12 +97,14 @@ class SecurityPostgresIntegrationTests(unittest.TestCase):
         self.assertEqual(cached, ({"mission_id": 271, "status": "created"}, 201))
 
     def test_same_client_key_isolated_by_identity_method_route_and_query(self):
-        base = self.make_scope()
+        # Unique client key prevents residue from other integration tests sharing this schema.
+        test_key = "isolation-case-" + uuid.uuid4().hex
+        base = self.make_scope(key=test_key)
         variants = [
-            ("identity", self.make_scope(identity="user:202")),
-            ("method", self.make_scope(method="PUT")),
-            ("route", self.make_scope(path="/api/missions/271")),
-            ("query", self.make_scope(query="source=mobile")),
+            ("identity", self.make_scope(identity="user:202", key=test_key)),
+            ("method", self.make_scope(method="PUT", key=test_key)),
+            ("route", self.make_scope(path="/api/missions/271", key=test_key)),
+            ("query", self.make_scope(query="source=mobile", key=test_key)),
         ]
         for dimension, variant in variants:
             with self.subTest(scope_dimension=dimension):
