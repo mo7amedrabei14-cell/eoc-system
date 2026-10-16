@@ -37,6 +37,7 @@ del _out_stream
 from audit import create_audit_log
 from realtime import notify_participant_accounts, create_realtime_event
 from db import get_connection
+from idempotency import build_idempotency_scope
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
 
@@ -853,6 +854,58 @@ def ensure_participant_branch_schema():
         connection.close()
 
 
+# Separate idempotency scope schema: legacy rows cannot be safely attributed
+# to a user or route, so keep them untouched and never replay them as v2 records.
+_IDEMPOTENCY_V2_SCHEMA_READY = False
+_IDEMPOTENCY_V2_SCHEMA_LOCK = threading.Lock()
+
+
+def ensure_idempotency_v2_schema() -> bool:
+    """Create the scoped idempotency table without rerunning the heavy app schema."""
+    global _IDEMPOTENCY_V2_SCHEMA_READY
+    if _IDEMPOTENCY_V2_SCHEMA_READY:
+        return True
+
+    with _IDEMPOTENCY_V2_SCHEMA_LOCK:
+        if _IDEMPOTENCY_V2_SCHEMA_READY:
+            return True
+
+        connection = None
+        try:
+            connection = get_connection()
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS idempotency_keys_v2 (
+                        identity_hash   VARCHAR(64) NOT NULL,
+                        method          VARCHAR(10) NOT NULL,
+                        route_path      VARCHAR(255) NOT NULL,
+                        query_hash      VARCHAR(64) NOT NULL,
+                        client_key_hash VARCHAR(64) NOT NULL,
+                        response        JSONB,
+                        original_status INTEGER,
+                        created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (
+                            identity_hash, method, route_path, query_hash, client_key_hash
+                        )
+                    );
+                """)
+            connection.commit()
+            _IDEMPOTENCY_V2_SCHEMA_READY = True
+            print("idempotency v2 schema: ready")
+            return True
+        except Exception as exc:
+            if connection is not None:
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
+            print(f"ensure_idempotency_v2_schema error (will retry): {exc}")
+            return False
+        finally:
+            if connection is not None:
+                connection.close()
+
+
 def _bootstrap_schema_in_background():
     """يفحص/يجهّز بنية القاعدة في الخلفية بدل الإقلاع الحاجب.
 
@@ -863,6 +916,7 @@ def _bootstrap_schema_in_background():
     """
     try:
         ensure_schema()
+        ensure_idempotency_v2_schema()      # 🔐 Scoped idempotency records
         ensure_participant_branch_schema()
         ensure_workspace_schema()      # ☁️ جدول حالة العمل (خطوة خفيفة منفصلة)
         ensure_client_errors_schema()  # 🧯 جدول بلاغات أخطاء الواجهة (خفيفة منفصلة)
@@ -960,58 +1014,76 @@ async def _http_exception_sanitizer(request: Request, exc: HTTPException):
     )
 
 
-def _idempotency_auth_is_valid(request: Request) -> bool:
-    """Permit an idempotency-cache replay only after validating its bearer identity.
-
-    Keep the historical raw Idempotency-Key as the database key so retries that
-    began before this deployment can still find their existing idempotency record.
-    Per-user key scoping requires a separate schema/data migration because existing
-    rows do not record an identity, method, or route.
-    """
+def _idempotency_request_identity(request: Request) -> Optional[str]:
+    """Resolve a stable, non-PII identity for idempotency cache partitioning."""
     auth_header = (request.headers.get("authorization") or "").strip()
     parts = auth_header.split(None, 1)
     if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
-        return False
+        return None
 
     bearer_token = parts[1].strip()
     system_token = os.environ.get("SYSTEM_TOKEN", "").strip()
     if system_token and hmac.compare_digest(bearer_token, system_token):
-        return True
+        # Do not persist the bot token itself; only use its digest as a namespaced identity.
+        return "system:" + hashlib.sha256(bearer_token.encode("utf-8")).hexdigest()
 
     try:
-        return bool(get_current_user_id(bearer_token))
+        user_id = get_current_user_id(bearer_token)
+        return f"user:{user_id}" if user_id else None
     except Exception as exc:
-        # Fail closed for cache replay; the normal endpoint path handles its
-        # usual authentication/error response.
+        # Fail closed for cache replay; the endpoint itself handles its normal auth response.
         print(f"Idempotency auth pre-check error (cache replay disabled): {exc}")
-        return False
+        return None
 
 
 @app.middleware("http")
 async def idempotency_middleware(request: Request, call_next):
     """
-    Preserve the legacy idempotency-key format and successful-response semantics.
-    Validate the bearer token before any stored response can be replayed.
+    Use a separate, identity/method/route/query-scoped cache.
+    Historical raw-key records are left untouched because their owner and route
+    were never stored; replaying them cannot be done safely across users.
     """
     is_mutation = (
         request.method in ["POST", "PUT", "PATCH", "DELETE"]
         and request.url.path != "/token"
     )
-    idempotency_key = None
+    scope = None
     if is_mutation:
         supplied_key = request.headers.get("Idempotency-Key")
-        if supplied_key and _idempotency_auth_is_valid(request):
-            # Deliberately keep the raw key during this compatibility release.
-            idempotency_key = supplied_key
+        identity = _idempotency_request_identity(request) if supplied_key else None
+        if identity and supplied_key:
+            scope = build_idempotency_scope(
+                identity=identity,
+                method=request.method,
+                route_path=request.url.path,
+                query_string=request.url.query,
+                client_key=supplied_key,
+            )
+            # The separate table may not yet exist on a newly started instance.
+            # If it cannot be prepared, fail open as the old middleware did; mission
+            # endpoints retain their own DB-level idempotency checks.
+            if scope and not ensure_idempotency_v2_schema():
+                scope = None
 
-    if idempotency_key:
+    if scope:
         connection = None
         try:
             connection = get_connection()
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT response, original_status FROM idempotency_keys WHERE idempotency_key = %s;",
-                    (idempotency_key,),
+                    """
+                    SELECT response, original_status
+                    FROM idempotency_keys_v2
+                    WHERE identity_hash = %s
+                      AND method = %s
+                      AND route_path = %s
+                      AND query_hash = %s
+                      AND client_key_hash = %s;
+                    """,
+                    (
+                        scope["identity_hash"], scope["method"], scope["route_path"],
+                        scope["query_hash"], scope["client_key_hash"],
+                    ),
                 )
                 row = cursor.fetchone()
                 if row and row[0] is not None:
@@ -1026,14 +1098,14 @@ async def idempotency_middleware(request: Request, call_next):
                         return JSONResponse(content=cached_response, status_code=row[1])
         except Exception as exc:
             # Idempotency storage must not turn a transient DB issue into a failed write.
-            print(f"Idempotency pre-check error (continuing without cache): {exc}")
+            print(f"Idempotency v2 pre-check error (continuing without cache): {exc}")
         finally:
             if connection is not None:
                 connection.close()
 
     response = await call_next(request)
 
-    if idempotency_key:
+    if scope:
         try:
             if not hasattr(response, "body"):
                 return response
@@ -1045,15 +1117,21 @@ async def idempotency_middleware(request: Request, call_next):
                     if status_code < 400:
                         cursor.execute(
                             """
-                            INSERT INTO idempotency_keys (idempotency_key, response, original_status)
-                            VALUES (%s, %s, %s)
-                            ON CONFLICT (idempotency_key) DO UPDATE
+                            INSERT INTO idempotency_keys_v2 (
+                                identity_hash, method, route_path, query_hash,
+                                client_key_hash, response, original_status
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (
+                                identity_hash, method, route_path, query_hash, client_key_hash
+                            ) DO UPDATE
                             SET response = EXCLUDED.response,
                                 original_status = EXCLUDED.original_status,
-                                created_at = CURRENT_TIMESTAMP
+                                created_at = CURRENT_TIMESTAMP;
                             """,
                             (
-                                idempotency_key,
+                                scope["identity_hash"], scope["method"], scope["route_path"],
+                                scope["query_hash"], scope["client_key_hash"],
                                 json.dumps(
                                     response_body.decode()
                                     if isinstance(response_body, bytes)
@@ -1063,16 +1141,25 @@ async def idempotency_middleware(request: Request, call_next):
                             ),
                         )
                     else:
-                        # Failed responses must not pin a key to a transient error.
                         cursor.execute(
-                            "DELETE FROM idempotency_keys WHERE idempotency_key = %s;",
-                            (idempotency_key,),
+                            """
+                            DELETE FROM idempotency_keys_v2
+                            WHERE identity_hash = %s
+                              AND method = %s
+                              AND route_path = %s
+                              AND query_hash = %s
+                              AND client_key_hash = %s;
+                            """,
+                            (
+                                scope["identity_hash"], scope["method"], scope["route_path"],
+                                scope["query_hash"], scope["client_key_hash"],
+                            ),
                         )
                     connection.commit()
             finally:
                 connection.close()
         except Exception as exc:
-            print(f"Error storing idempotency response: {exc}")
+            print(f"Error storing idempotency v2 response: {exc}")
 
     return response
 
