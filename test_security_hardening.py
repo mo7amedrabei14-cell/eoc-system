@@ -170,7 +170,8 @@ class SecurityHardeningSourceTests(unittest.TestCase):
         self.assertIn("login_rate_limits.window_started_at", limiter)
         self.assertIn("def _login_clear_failures(key: str):", limiter)
         self.assertNotIn("_login_failures", source)
-        self.assertIn("status_code=503", limiter)
+        self.assertIn("login rate-limit check failed closed", source)
+        self.assertIn("status_code=503", source[source.indexOf('@app.post("/token")'):])
 
         login_route = section(source, '@app.post("/token")', '@app.post("',)
         self.assertIn("_login_note_failure(login_key)", login_route)
