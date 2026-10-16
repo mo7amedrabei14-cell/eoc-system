@@ -303,7 +303,25 @@ def get_current_user_id(token: str):
         if int(payload.get("gen", 0) or 0) < current_generation:
             return None
 
-        return int(user_id)
+        # A signed JWT is not sufficient if an administrator has deactivated the
+        # account. Check the authoritative database state on each token validation;
+        # fail closed if the account row is missing, inactive, or cannot be verified.
+        resolved_user_id = int(user_id)
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT is_active FROM users WHERE user_id = %s LIMIT 1;",
+                    (resolved_user_id,),
+                )
+                active_row = cursor.fetchone()
+        finally:
+            connection.close()
+
+        if not active_row or not bool(active_row[0]):
+            return None
+
+        return resolved_user_id
 
     except Exception:
         return None
