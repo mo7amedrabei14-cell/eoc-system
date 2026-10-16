@@ -9,6 +9,28 @@ from auth import password_hash
 # إعداد قسم المستخدمين
 router = APIRouter(prefix="/users", tags=["Users"])
 
+
+_OWNER_ROLE_NAMES = {"OWNER", "المالك"}
+
+
+def _is_owner_role(role_name) -> bool:
+    return str(role_name or "").strip().upper() in _OWNER_ROLE_NAMES
+
+
+def _actor_is_owner(cursor, actor_user_id: int) -> bool:
+    cursor.execute(
+        """
+        SELECT r.role_name
+        FROM user_roles ur
+        INNER JOIN roles r ON r.role_id = ur.role_id
+        WHERE ur.user_id = %s
+        LIMIT 1;
+        """,
+        (actor_user_id,),
+    )
+    role = cursor.fetchone()
+    return bool(role and _is_owner_role(role[0]))
+
 # 1. جلب كل المستخدمين
 @router.get("/")
 def get_users(
@@ -57,7 +79,13 @@ def create_user(
         role = cursor.fetchone()
         if not role:
             raise HTTPException(status_code=404, detail="Role not found")
-            
+
+        if _is_owner_role(role[0]) and not _actor_is_owner(cursor, current_user_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Only an OWNER can assign the OWNER role.",
+            )
+
         cursor.execute(
             """
             INSERT INTO users (full_name, username, role, password_hash, is_active)
@@ -136,18 +164,41 @@ class UpdateUserRoleRequest(BaseModel):
 def update_user_role(
     user_id: int,
     data: UpdateUserRoleRequest,
-    credentials = Depends(RequirePermission("users.role.edit")),
+    current_user_id: int = Depends(RequirePermission("users.role.edit")),
     connection: psycopg.Connection = Depends(get_db)
 ):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT role_id FROM roles WHERE role_id = %s;", (data.role_id,))
-        if not cursor.fetchone():
+        cursor.execute("SELECT role_name FROM roles WHERE role_id = %s;", (data.role_id,))
+        requested_role = cursor.fetchone()
+        if not requested_role:
             raise HTTPException(status_code=404, detail="Role not found")
-            
+
         cursor.execute("SELECT user_id FROM users WHERE user_id = %s;", (user_id,))
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="User not found")
-            
+
+        cursor.execute(
+            """
+            SELECT r.role_name
+            FROM user_roles ur
+            INNER JOIN roles r ON r.role_id = ur.role_id
+            WHERE ur.user_id = %s
+            LIMIT 1;
+            """,
+            (user_id,),
+        )
+        target_role = cursor.fetchone()
+        actor_is_owner = _actor_is_owner(cursor, current_user_id)
+        target_is_owner = bool(target_role and _is_owner_role(target_role[0]))
+        requested_is_owner = _is_owner_role(requested_role[0])
+
+        # Only an existing OWNER may grant OWNER or change an existing OWNER's role.
+        if not actor_is_owner and (requested_is_owner or target_is_owner):
+            raise HTTPException(
+                status_code=403,
+                detail="Only an OWNER can assign or change an OWNER account.",
+            )
+
         cursor.execute("DELETE FROM user_roles WHERE user_id = %s;", (user_id,))
         cursor.execute("INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s);", (user_id, data.role_id))
         
