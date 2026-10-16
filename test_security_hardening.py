@@ -7,6 +7,8 @@ import ast
 from pathlib import Path
 import unittest
 
+from idempotency import build_idempotency_scope
+
 ROOT = Path(__file__).resolve().parent
 
 
@@ -22,7 +24,7 @@ def section(source, start, end):
 
 class SecurityHardeningSourceTests(unittest.TestCase):
     def test_changed_python_files_parse(self):
-        for path in ("main.py", "auth.py", "routers/users.py"):
+        for path in ("main.py", "auth.py", "routers/users.py", "idempotency.py"):
             with self.subTest(path=path):
                 ast.parse(read_source(path), filename=path)
 
@@ -53,22 +55,88 @@ class SecurityHardeningSourceTests(unittest.TestCase):
         self.assertIn("USER_ACTIVE_CACHE_TTL = 1.5", source)
         self.assertIn("return None", active_check)
 
-    def test_idempotency_preserves_legacy_keys_and_validates_before_cache_replay(self):
+    def test_idempotency_scope_partitions_identity_method_route_query_and_key(self):
+        base = build_idempotency_scope(
+            identity="user:17",
+            method="post",
+            route_path="/api/missions",
+            query_string="source=web",
+            client_key="client-key-123",
+        )
+        self.assertIsNotNone(base)
+        variations = [
+            {"identity": "user:18"},
+            {"method": "PUT"},
+            {"route_path": "/api/missions/22"},
+            {"query_string": "source=mobile"},
+            {"client_key": "client-key-124"},
+        ]
+        base_args = {
+            "identity": "user:17",
+            "method": "POST",
+            "route_path": "/api/missions",
+            "query_string": "source=web",
+            "client_key": "client-key-123",
+        }
+        for change in variations:
+            with self.subTest(change=change):
+                candidate_args = {**base_args, **change}
+                self.assertNotEqual(
+                    base,
+                    build_idempotency_scope(**candidate_args),
+                )
+
+    def test_idempotency_scope_does_not_store_raw_identity_query_or_key(self):
+        identity = "user:secret-account-id"
+        query = "search=private-value"
+        client_key = "secret-client-key"
+        scope = build_idempotency_scope(
+            identity=identity,
+            method="POST",
+            route_path="/api/missions",
+            query_string=query,
+            client_key=client_key,
+        )
+        self.assertNotIn(identity, str(scope))
+        self.assertNotIn(query, str(scope))
+        self.assertNotIn(client_key, str(scope))
+        self.assertEqual(len(scope["identity_hash"]), 64)
+        self.assertEqual(len(scope["query_hash"]), 64)
+        self.assertEqual(len(scope["client_key_hash"]), 64)
+
+    def test_idempotency_scope_rejects_missing_identity_key_or_invalid_path(self):
+        self.assertIsNone(build_idempotency_scope("", "POST", "/api/missions", "", "k"))
+        self.assertIsNone(build_idempotency_scope("user:1", "POST", "/api/missions", "", " "))
+        self.assertIsNone(build_idempotency_scope("user:1", "POST", "/" + "x" * 255, "", "k"))
+
+    def test_idempotency_uses_separate_scoped_schema_and_validates_before_replay(self):
         source = read_source("main.py")
-        auth_gate = section(source, "def _idempotency_auth_is_valid(", '@app.middleware("http")')
+        schema = section(source, "def ensure_idempotency_v2_schema():", "def _bootstrap_schema_in_background():")
+        self.assertIn("CREATE TABLE IF NOT EXISTS idempotency_keys_v2", schema)
+        for column in (
+            "identity_hash", "method", "route_path", "query_hash", "client_key_hash",
+        ):
+            self.assertIn(column, schema)
+        self.assertIn("ensure_idempotency_v2_schema()", source[source.index("def _bootstrap_schema_in_background"):])
+
+        auth_gate = section(source, "def _idempotency_request_identity(", '@app.middleware("http")')
         self.assertIn('parts[0].lower() != "bearer"', auth_gate)
         self.assertIn("get_current_user_id(bearer_token)", auth_gate)
         self.assertIn("hmac.compare_digest(bearer_token, system_token)", auth_gate)
 
         middleware = section(source, "async def idempotency_middleware(", "app.include_router(users.router)")
-        self.assertIn('supplied_key = request.headers.get("Idempotency-Key")', middleware)
-        self.assertIn("idempotency_key = supplied_key", middleware)
+        self.assertIn("build_idempotency_scope(", middleware)
         self.assertLess(
-            middleware.index("_idempotency_auth_is_valid(request)"),
-            middleware.index("SELECT response, original_status"),
+            middleware.index("_idempotency_request_identity(request)"),
+            middleware.index("FROM idempotency_keys_v2"),
         )
-        self.assertIn("WHERE idempotency_key = %s", middleware)
-        self.assertNotIn("_scoped_idempotency_key", source)
+        self.assertIn("INSERT INTO idempotency_keys_v2", middleware)
+        self.assertNotIn("FROM idempotency_keys WHERE", middleware)
+        self.assertIn("idempotency_keys_v2", middleware)
+        # The old table is still ensured by the legacy bootstrap but its ambiguous rows
+        # are never read into the identity-scoped cache.
+        legacy_ddl = section(source, "def ensure_schema():", "def ensure_workspace_schema():")
+        self.assertIn("CREATE TABLE IF NOT EXISTS idempotency_keys", legacy_ddl)
 
     def test_only_owner_can_assign_or_change_owner_roles(self):
         source = read_source("routers/users.py")
