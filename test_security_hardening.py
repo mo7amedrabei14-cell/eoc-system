@@ -8,6 +8,7 @@ from pathlib import Path
 import unittest
 
 from idempotency import build_idempotency_scope
+from security_limits import build_login_rate_limit_key
 
 ROOT = Path(__file__).resolve().parent
 
@@ -24,7 +25,7 @@ def section(source, start, end):
 
 class SecurityHardeningSourceTests(unittest.TestCase):
     def test_changed_python_files_parse(self):
-        for path in ("main.py", "auth.py", "routers/users.py", "idempotency.py"):
+        for path in ("main.py", "auth.py", "routers/users.py", "idempotency.py", "security_limits.py"):
             with self.subTest(path=path):
                 ast.parse(read_source(path), filename=path)
 
@@ -137,6 +138,43 @@ class SecurityHardeningSourceTests(unittest.TestCase):
         # are never read into the identity-scoped cache.
         legacy_ddl = section(source, "def ensure_schema():", "def ensure_workspace_schema():")
         self.assertIn("CREATE TABLE IF NOT EXISTS idempotency_keys", legacy_ddl)
+
+    def test_login_rate_limit_key_is_hashed_and_username_normalized(self):
+        key_a = build_login_rate_limit_key("203.0.113.10", "Operation.Upper")
+        key_b = build_login_rate_limit_key("203.0.113.10", " operation.upper ")
+        key_other_ip = build_login_rate_limit_key("203.0.113.11", "operation.upper")
+        key_other_user = build_login_rate_limit_key("203.0.113.10", "operation.canal")
+        self.assertEqual(key_a, key_b)
+        self.assertNotEqual(key_a, key_other_ip)
+        self.assertNotEqual(key_a, key_other_user)
+        self.assertEqual(len(key_a), 64)
+        self.assertNotIn("203.0.113.10", key_a)
+        self.assertNotIn("operation.upper", key_a)
+
+    def test_login_rate_limit_uses_shared_database_and_fails_closed(self):
+        source = read_source("main.py")
+        schema = section(
+            source,
+            "def ensure_login_rate_limit_schema() -> bool:",
+            "def _bootstrap_schema_in_background():",
+        )
+        self.assertIn("CREATE TABLE IF NOT EXISTS login_rate_limits", schema)
+        self.assertIn("CREATE INDEX IF NOT EXISTS idx_login_rate_limits_updated_at", schema)
+        bootstrap = section(source, "def _bootstrap_schema_in_background():", "threading.Thread(")
+        self.assertIn("ensure_login_rate_limit_schema()", bootstrap)
+
+        limiter = section(source, "# 🔒 حدّ محاولات الدخول مشترك", '@app.post("/token")')
+        self.assertIn("SELECT failure_count", limiter)
+        self.assertIn("INSERT INTO login_rate_limits", limiter)
+        self.assertIn("ON CONFLICT (key_hash) DO UPDATE", limiter)
+        self.assertIn("login_rate_limits.window_started_at", limiter)
+        self.assertIn("def _login_clear_failures(key: str):", limiter)
+        self.assertNotIn("_login_failures", source)
+        self.assertIn("status_code=503", limiter)
+
+        login_route = section(source, '@app.post("/token")', '@app.post("',)
+        self.assertIn("_login_note_failure(login_key)", login_route)
+        self.assertIn("_login_clear_failures(login_key)", login_route)
 
     def test_only_owner_can_assign_or_change_owner_roles(self):
         source = read_source("routers/users.py")
