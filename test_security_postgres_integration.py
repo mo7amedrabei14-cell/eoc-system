@@ -99,22 +99,31 @@ class SecurityPostgresIntegrationTests(unittest.TestCase):
     def test_same_client_key_isolated_by_identity_method_route_and_query(self):
         base = self.make_scope()
         variants = [
-            self.make_scope(identity="user:202"),
-            self.make_scope(method="PUT"),
-            self.make_scope(path="/api/missions/271"),
-            self.make_scope(query="source=mobile"),
+            ("identity", self.make_scope(identity="user:202")),
+            ("method", self.make_scope(method="PUT")),
+            ("route", self.make_scope(path="/api/missions/271")),
+            ("query", self.make_scope(query="source=mobile")),
         ]
+        for dimension, variant in variants:
+            with self.subTest(scope_dimension=dimension):
+                self.assertNotEqual(base, variant)
+
         with self.connect_db() as connection:
             with connection.cursor() as cursor:
                 idempotency_store.save_cached_response(
                     cursor, base, json.dumps({"owner": "user-101"}), 200
                 )
                 connection.commit()
-                for variant in variants:
-                    with self.subTest(scope=variant):
+
+            for dimension, variant in variants:
+                with self.subTest(scope_dimension=dimension):
+                    with connection.cursor() as cursor:
                         self.assertIsNone(
-                            idempotency_store.fetch_cached_response(cursor, variant)
+                            idempotency_store.fetch_cached_response(cursor, variant),
+                            msg=f"another {dimension} must not share this cached response",
                         )
+
+            with connection.cursor() as cursor:
                 self.assertEqual(
                     idempotency_store.fetch_cached_response(cursor, base),
                     ({"owner": "user-101"}, 200),
