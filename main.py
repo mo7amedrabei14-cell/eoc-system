@@ -38,6 +38,7 @@ from audit import create_audit_log
 from realtime import notify_participant_accounts, create_realtime_event
 from db import get_connection
 from idempotency import build_idempotency_scope
+from security_limits import build_login_rate_limit_key
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
 
@@ -1411,8 +1412,8 @@ LOGIN_MAX_FAILURES = int(os.environ.get("LOGIN_MAX_FAILURES", "10") or 10)
 def _login_key(request, username: str) -> str:
     client_ip = "-"
     try:
-        # Vercel overwrites these client-IP headers at its edge; do not trust arbitrary
-        # client-supplied values when a trusted platform header is present.
+        # Vercel overwrites these client-IP headers at its edge; prefer its dedicated
+        # header and avoid trusting arbitrary client-supplied forwarding chains.
         forwarded = (
             request.headers.get("x-vercel-forwarded-for")
             or request.headers.get("x-forwarded-for")
@@ -1422,10 +1423,7 @@ def _login_key(request, username: str) -> str:
         client_ip = forwarded or (request.client.host if request.client else "-")
     except Exception:
         pass
-    normalized_username = (username or "").strip().lower()
-    return hashlib.sha256(
-        f"{client_ip}|{normalized_username}".encode("utf-8")
-    ).hexdigest()
+    return build_login_rate_limit_key(client_ip, username)
 
 
 def _login_is_throttled(key: str) -> bool:
