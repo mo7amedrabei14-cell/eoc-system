@@ -47,8 +47,11 @@ class SecurityHardeningSourceTests(unittest.TestCase):
     def test_inactive_user_is_rejected_during_jwt_validation(self):
         source = read_source("auth.py")
         function = section(source, "def get_current_user_id(token: str):", "def explain_token_failure(token: str)")
-        self.assertIn("SELECT is_active FROM users WHERE user_id = %s LIMIT 1;", function)
-        self.assertIn("if not active_row or not bool(active_row[0]):", function)
+        active_check = section(source, "def _is_user_active(user_id: int):", "def authenticate_user(username: str, password: str):")
+        self.assertIn("_is_user_active(resolved_user_id) is not True", function)
+        self.assertIn("SELECT is_active FROM users WHERE user_id = %s LIMIT 1;", active_check)
+        self.assertIn("USER_ACTIVE_CACHE_TTL = 1.5", source)
+        self.assertIn("return None", active_check)
 
     def test_idempotency_is_scoped_and_validated_before_cache_replay(self):
         source = read_source("main.py")
