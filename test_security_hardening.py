@@ -53,16 +53,22 @@ class SecurityHardeningSourceTests(unittest.TestCase):
         self.assertIn("USER_ACTIVE_CACHE_TTL = 1.5", source)
         self.assertIn("return None", active_check)
 
-    def test_idempotency_is_scoped_and_validated_before_cache_replay(self):
+    def test_idempotency_preserves_legacy_keys_and_validates_before_cache_replay(self):
         source = read_source("main.py")
-        helper = section(source, "def _scoped_idempotency_key(", '@app.middleware("http")')
-        self.assertIn("get_current_user_id(bearer_token)", helper)
-        self.assertIn("request.method.upper()", helper)
-        self.assertIn("request.url.path", helper)
-        self.assertIn("request.url.query", helper)
+        auth_gate = section(source, "def _idempotency_auth_is_valid(", '@app.middleware("http")')
+        self.assertIn('parts[0].lower() != "bearer"', auth_gate)
+        self.assertIn("get_current_user_id(bearer_token)", auth_gate)
+        self.assertIn("hmac.compare_digest(bearer_token, system_token)", auth_gate)
+
         middleware = section(source, "async def idempotency_middleware(", "app.include_router(users.router)")
-        self.assertLess(middleware.index("scoped_key = _scoped_idempotency_key"), middleware.index("SELECT response, original_status"))
-        self.assertIn("if not resolved_user_id:", helper)
+        self.assertIn('supplied_key = request.headers.get("Idempotency-Key")', middleware)
+        self.assertIn("idempotency_key = supplied_key", middleware)
+        self.assertLess(
+            middleware.index("_idempotency_auth_is_valid(request)"),
+            middleware.index("SELECT response, original_status"),
+        )
+        self.assertIn("WHERE idempotency_key = %s", middleware)
+        self.assertNotIn("_scoped_idempotency_key", source)
 
     def test_only_owner_can_assign_or_change_owner_roles(self):
         source = read_source("routers/users.py")
