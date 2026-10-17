@@ -747,3 +747,156 @@
   overflow: auto !important;
   overscroll-behavior: contain;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   📻 تسليم أجهزة لاسلكي — print styles v3
+   كل تسليم = صفحة إقرار + صفحة واحدة لكشف حالة كل الأجهزة.
+   ══════════════════════════════════════════════════════════════════════ */
+.wireless-print-root { display: none; }
+
+@media print {
+  /* margin: 0 ← المتصفح بيشيل الهيدر والفوتر الافتراضي (التاريخ / العنوان / الرابط / 1/4).
+     الهوامش الحقيقية موجودة كـ padding جوه .wireless-print-page */
+  @page { size: A4 portrait; margin: 0; }
+
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* إخفاء التطبيق وأي Portal تاني (مودالات / توست) وإظهار الطباعة فقط */
+  #root, .app-shell, body > *:not(.wireless-print-root) { display: none !important; }
+
+  .wireless-print-root {
+    display: block !important;
+    position: static !important;
+    width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* الصفحة: A4 كاملة، الهوامش padding، والفوتر ينزل لآخر الصفحة */
+  .wireless-print-page {
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 210mm !important;
+    min-height: 296mm !important;   /* أقل من 297 بهامش أمان عشان ما تتولدش صفحة فاضية */
+    margin: 0 !important;
+    padding: 10mm 12mm !important;
+    border: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.4;
+    overflow: visible !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+  .wireless-print-page:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+  .wireless-print-blank { break-after: page !important; page-break-after: always !important; }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  ::-webkit-scrollbar { display: none !important; }
+
+  /* ── الهيدر ── */
+  .wireless-print-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 4mm;
+    border-bottom: 2px solid #c70000;
+    padding-bottom: 2.5mm;
+    margin-bottom: 3.5mm;
+  }
+  .wireless-print-brand { text-align: start; line-height: 1.35; }
+  .wireless-print-brand strong { display: block; font-size: 12pt; color: #000; }
+  .wireless-print-brand span { font-size: 8pt; color: #555; }
+  .wireless-print-header h2 { margin: 0; text-align: center; font-size: 14pt; font-weight: 900; color: #c70000; }
+  .wireless-print-tag {
+    justify-self: end;
+    font-size: 9pt; color: #333;
+    border: 1px solid #999; border-radius: 3px; padding: 0.8mm 2.5mm;
+  }
+
+  /* أكواد وأرقام: LTR معزول (يمنع قلب # و - و / في سياق RTL) */
+  .wireless-print-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; font-family: Consolas, 'Courier New', monospace; }
+
+  /* ── الجداول: عرض ثابت = مفيش حاجة بتزقّ الصفحة برا الورقة ── */
+  .wireless-print-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin: 0 0 3.5mm;
+    font-size: 9.5pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .wireless-print-table tr { break-inside: avoid; page-break-inside: avoid; }
+  .wireless-print-table th,
+  .wireless-print-table td {
+    border: 1px solid #333;
+    padding: 1.5mm 2mm;
+    vertical-align: middle;
+    text-align: start;
+    overflow-wrap: anywhere;
+  }
+  .wireless-print-table th { background: #eee; font-weight: 700; }
+  .wireless-print-table thead th { background: #ddd; text-align: center; }
+  .wireless-print-center { text-align: center !important; }
+  .wireless-print-table small { display: block; font-size: 8pt; color: #333; line-height: 1.3; }
+
+  .wireless-print-subtitle {
+    margin: 1mm 0 2mm;
+    padding-inline-start: 3mm;
+    border-inline-start: 3px solid #c70000;
+    font-size: 11pt; font-weight: 900; color: #c70000;
+  }
+
+  /* نص الإقرار */
+  .wireless-print-fixed {
+    border: 1px solid #333; border-radius: 2px;
+    padding: 2.5mm 3mm; margin-bottom: 3.5mm;
+    background: #fafafa;
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .wireless-print-fixed pre {
+    margin: 0;
+    font-family: inherit; font-size: 9pt; line-height: 1.5;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    unicode-bidi: plaintext; text-align: start; color: #000;
+  }
+
+  /* قائمة الأجهزة في صفحة الإقرار */
+  .wireless-print-list td { padding: 1.2mm 2mm; }
+
+  /* جداول التوقيع */
+  .wireless-print-sign th { background: #f3f3f3; }
+  .wireless-print-sign td { height: 11mm; }
+  .wireless-print-sign thead th { background: #ddd; }
+
+  /* كشف الأجهزة: مساحة كتابة يدوية مريحة */
+  .wireless-print-devices tbody td { height: 17mm; }
+
+  /* الفوتر: ينزل لآخر الصفحة */
+  .wireless-print-foot {
+    margin: auto 0 0;
+    padding-top: 1.5mm;
+    border-top: 1px dashed #999;
+    font-size: 8pt; color: #666; text-align: center;
+  }
+}

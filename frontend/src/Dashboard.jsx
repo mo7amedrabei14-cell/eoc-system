@@ -270,6 +270,7 @@ const MemoEqIntelView = memo(EqIntelView);
 const MemoAINewsMonitorView = memo(AINewsMonitorView);
 const MemoHumanResourcesView = memo(HumanResourcesView);
 const MemoWeatherIntelView = memo(WeatherIntelView);
+const MemoWirelessHandoverView = memo(WirelessHandoverView);
 
 // Static dashboard labels are kept in Arabic in the existing screens.  This
 // table lets the whole dashboard share Login.jsx's language choice without
@@ -2891,6 +2892,9 @@ useEffect(() => {
       case 'global_disasters': return <MemoGlobalDisastersView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} isVolunteer={isVolunteer} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.global_disasters} />;
       case 'earthquakes': return <MemoEarthquakesView isOwner={isOwner} isSupervisor={isSupervisor} isJoker={isJoker} lang={language} focusTarget={focusTarget} liveUpdateVersion={liveUpdateVersion.earthquakes} />;
       case 'branches_inventory': return <MemoBranchesAndInventoryView branches={branchesList} />;
+      case 'wireless_handover': return (isOwner || isSupervisor)
+        ? <MemoWirelessHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} />
+        : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمشرف والمدير والمالك فقط' : 'Available to supervisors, managers and owner only'}</p></div>;
       case 'handover': return (isOwner || isSupervisor)
         ? <MemoHandoverView isOwner={isOwner} isSupervisor={isSupervisor} lang={language} focusTarget={focusTarget} />
         : <div className="card-surface p-8 text-center"><h3 className="text-xl font-bold text-white mb-2">{language === 'ar' ? 'غير مصرح بالوصول' : 'Access denied'}</h3><p className="text-[var(--muted)]">{language === 'ar' ? 'هذه الصفحة متاحة للمالك والمشرفين فقط' : 'This page is open to the owner and supervisors only'}</p></div>;
@@ -2925,6 +2929,7 @@ useEffect(() => {
         ...(!isYouth ? [{ id: 'earthquakes', icon: <EarthquakeIcon />, ar: 'مركز رصد الزلازل', en: 'Earthquake Center', update: newUpdates.earthquakes }] : []),
         ...((isOwner || isSupervisor) ? [{ id: 'branches_inventory', icon: <MapIcon />, ar: 'الفروع والمخزون الاستراتيجي', en: 'Branches & Inventory' }] : []),
         ...((isOwner || isSupervisor) ? [{ id: 'handover', icon: <HandoverIcon />, ar: 'تسليم وتسلم مشرفين', en: 'Supervisors Handover', update: newUpdates.handover }] : []),
+        ...((isOwner || isSupervisor) ? [{ id: 'wireless_handover', icon: <RadioIcon />, ar: 'تسليم أجهزة لاسلكي', en: 'Wireless Handover' }] : []),
         ...((isOwner || isSupervisor || isJoker) ? [{ id: 'audit', icon: <ShieldIcon />, ar: 'سجل النظام', en: 'System Audit', update: newUpdates.audit }] : []),
       ],
     },
@@ -3207,6 +3212,7 @@ useEffect(() => {
             {!isYouth && <NavItem icon={<EarthquakeIcon />} label="مركز رصد الزلازل" isActive={activeTab === 'earthquakes'} onClick={() => handleNavigation('earthquakes')} isOpen={isSidebarOpen} hasUpdate={newUpdates.earthquakes} />}
             {(isOwner || isSupervisor) && <NavItem icon={<MapIcon />} label="الفروع والمخزون الاستراتيجي" isActive={activeTab === 'branches_inventory'} onClick={() => handleNavigation('branches_inventory')} isOpen={isSidebarOpen} />}
             {(isOwner || isSupervisor) && <NavItem icon={<HandoverIcon />} label="تسليم وتسلم مشرفين" isActive={activeTab === 'handover'} onClick={() => handleNavigation('handover')} isOpen={isSidebarOpen} hasUpdate={newUpdates.handover} />}
+            {(isOwner || isSupervisor) && <NavItem icon={<RadioIcon />} label="تسليم أجهزة لاسلكي" isActive={activeTab === 'wireless_handover'} onClick={() => handleNavigation('wireless_handover')} isOpen={isSidebarOpen} />}
             {(isOwner || isSupervisor || isJoker) && <NavItem icon={<ShieldIcon />} label="سجل النظام" isActive={activeTab === 'audit'} onClick={() => handleNavigation('audit')} isOpen={isSidebarOpen} hasUpdate={newUpdates.audit} />}
           </nav>
         </div>
@@ -8912,6 +8918,7 @@ const MapIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" s
 const LogoutIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>;
 const InventoryIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>;
 const HandoverIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 7h12M8 7l4-4M8 7l4 4"/><path d="M16 17H4M16 17l-4-4m4 4-4 4"/></svg>;
+const RadioIcon = (props) => <svg {...props} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8a8 8 0 0 1 16 0M6.5 11a6 6 0 0 1 11 0M9 14a3 3 0 0 1 6 0"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>;
 const EditIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>;
 const DownloadIcon = (props) => <svg {...props} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>;
 const CheckIcon = ({ className = '', ...props }) => (
@@ -8937,7 +8944,966 @@ const ExcelIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24"
 // ==========================================
 // 5. شاشة سجل النظام (للمالك فقط)
 // ==========================================
-function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
+// ═══════════════════════════════════════════════════════════════════
+// 📻 تسليم أجهزة لاسلكي — v2 (رأس + أجهزة متعددة)
+// ═══════════════════════════════════════════════════════════════════
+
+function _wirelessEmptyDevice() {
+  return {
+    device_type: 'MOTOROLA',
+    device_serial: '',
+    accessories: '',
+    device_condition: 'سليم',
+    device_notes: '',
+  };
+}
+
+function _wirelessEmptyDelivery() {
+  const t = new Date();
+  const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  return {
+    full_name: '', employee_number: '', national_id: '', department: '',
+    received_date: iso, task_description: '', usage_duration: '', execution_area: '',
+    general_notes: '',
+    devices: [_wirelessEmptyDevice()],
+  };
+}
+
+// عدد الأجهزة في صفحة كشف الحالة الواحدة (لو زادوا عن كده تتفتح صفحة كشف تانية)
+const WIRELESS_DEVICES_PER_REPORT_PAGE = 6;
+
+// أقصى عدد أجهزة بيتحمل في صفحة الإقرار الواحدة (فوقه الجدول بيكمّل على صفحة تانية)
+const WIRELESS_DECLARATION_MAX_DEVICES = 8;
+
+// عدد صفحات التسليم الواحد = صفحة إقرار + صفحة واحدة لكشف حالة كل الأجهزة معاً
+// (قبل كده كان: صفحة إقرار + صفحة لكل جهاز → 3 أجهزة = 4 صفحات، دلوقتي = 2)
+function wirelessDeliveryPageCount(delivery) {
+  const n = (delivery.devices || []).length;
+  const declPages = n > WIRELESS_DECLARATION_MAX_DEVICES ? 2 : 1;
+  return declPages + Math.max(1, Math.ceil(n / WIRELESS_DEVICES_PER_REPORT_PAGE));
+}
+
+// نص LTR معزول (أكواد/أرقام تسلسلية) — يمنع قلب علامات مثل # و - جوه سياق RTL
+function WirelessLtr({ children }) {
+  return <bdi dir="ltr" className="wireless-print-ltr">{children}</bdi>;
+}
+
+function WirelessPrintHeader({ title, tag }) {
+  return (
+    <div className="wireless-print-header">
+      <div className="wireless-print-brand">
+        <strong>الهلال الأحمر المصري</strong>
+        <span>مركز عمليات الطوارئ (EOC)</span>
+      </div>
+      <h2>{title}</h2>
+      <div className="wireless-print-tag"><WirelessLtr>{tag}</WirelessLtr></div>
+    </div>
+  );
+}
+
+function WirelessPrintInfo({ delivery, rows }) {
+  return (
+    <table className="wireless-print-table wireless-print-info">
+      <colgroup>
+        <col style={{ width: '14%' }} /><col style={{ width: '22%' }} />
+        <col style={{ width: '17%' }} /><col style={{ width: '15%' }} />
+        <col style={{ width: '13%' }} /><col style={{ width: '19%' }} />
+      </colgroup>
+      <tbody>{rows}</tbody>
+    </table>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// الصفحة 1: إقرار استخدام
+// ═══════════════════════════════════════════════════════════════════
+function WirelessPrintDeclaration({ delivery, fixedText }) {
+  return (
+    <div className="wireless-print-page" dir="rtl">
+      <WirelessPrintHeader title="إقرار استخدام جهاز لاسلكي" tag={delivery.delivery_code} />
+
+      <WirelessPrintInfo
+        delivery={delivery}
+        rows={
+          <>
+            <tr>
+              <th>الاسم الثلاثي</th><td>{delivery.full_name}</td>
+              <th>الرقم الوظيفي / العضوية</th><td>{delivery.employee_number || ''}</td>
+              <th>الرقم القومي</th><td><WirelessLtr>{delivery.national_id || ''}</WirelessLtr></td>
+            </tr>
+            <tr>
+              <th>القسم / الإدارة</th><td>{delivery.department || ''}</td>
+              <th>تاريخ الاستلام</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
+              <th>مدة الاستخدام</th><td>{delivery.usage_duration || ''}</td>
+            </tr>
+            <tr>
+              <th>المهمة</th><td colSpan="3">{delivery.task_description || ''}</td>
+              <th>المنطقة</th><td>{delivery.execution_area || ''}</td>
+            </tr>
+          </>
+        }
+      />
+
+      <div className="wireless-print-fixed">
+        <pre>{fixedText || ''}</pre>
+      </div>
+
+      <h3 className="wireless-print-subtitle">الأجهزة المسلَّمة ({delivery.devices.length})</h3>
+      <table className="wireless-print-table wireless-print-list">
+        <colgroup>
+          <col style={{ width: '7%' }} /><col style={{ width: '20%' }} />
+          <col style={{ width: '25%' }} /><col style={{ width: '14%' }} /><col style={{ width: '34%' }} />
+        </colgroup>
+        <thead>
+          <tr><th>#</th><th>النوع</th><th>الرقم التسلسلي</th><th>الحالة</th><th>الملحقات</th></tr>
+        </thead>
+        <tbody>
+          {delivery.devices.map((d, i) => (
+            <tr key={i}>
+              <td className="wireless-print-center">{i + 1}</td>
+              <td>{d.device_type}</td>
+              <td><WirelessLtr>{d.device_serial || ''}</WirelessLtr></td>
+              <td>{d.device_condition}</td>
+              <td>{d.accessories || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <table className="wireless-print-table wireless-print-sign">
+        <colgroup><col style={{ width: '50%' }} /><col style={{ width: '50%' }} /></colgroup>
+        <thead>
+          {/* أول عمود = يمين الصفحة (RTL) */}
+          <tr><th>المقر بما فيه (المستلم)</th><th>مركز عمليات الطوارئ (المسلِّم)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><b>الاسم:</b></td><td><b>الاسم:</b></td></tr>
+          <tr><td><b>الكود الوظيفي:</b></td><td><b>الصفة:</b></td></tr>
+          <tr><td><b>رقم البطاقة:</b></td><td><b>التاريخ:</b></td></tr>
+          <tr><td><b>التوقيع:</b></td><td><b>التوقيع:</b></td></tr>
+        </tbody>
+      </table>
+
+      <p className="wireless-print-foot">
+        <WirelessLtr>{delivery.delivery_code}</WirelessLtr> · <WirelessLtr>{new Date().toLocaleDateString('en-GB')}</WirelessLtr> — نسخة رسمية
+      </p>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// الصفحة 2: كشف حالة كل الأجهزة في صفحة واحدة (فحص + تسليم + استلام)
+// ═══════════════════════════════════════════════════════════════════
+function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo = 1, pageCount = 1 }) {
+  const tag = pageCount > 1 ? `${delivery.delivery_code} (${pageNo}/${pageCount})` : delivery.delivery_code;
+  return (
+    <div className="wireless-print-page" dir="rtl">
+      <WirelessPrintHeader title="كشف حالة الأجهزة اللاسلكية" tag={tag} />
+
+      <WirelessPrintInfo
+        delivery={delivery}
+        rows={
+          <tr>
+            <th>المستلم</th><td>{delivery.full_name}</td>
+            <th>الرقم الوظيفي</th><td>{delivery.employee_number || ''}</td>
+            <th>تاريخ التسليم</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
+          </tr>
+        }
+      />
+
+      <h3 className="wireless-print-subtitle">الفحص البصري وحالة الأجهزة (يُملأ يدوياً)</h3>
+      <table className="wireless-print-table wireless-print-devices">
+        <colgroup>
+          <col style={{ width: '5%' }} /><col style={{ width: '23%' }} /><col style={{ width: '11%' }} />
+          <col style={{ width: '25%' }} /><col style={{ width: '18%' }} /><col style={{ width: '18%' }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th><th>الجهاز / الرقم التسلسلي</th><th>الحالة عند التسليم</th>
+            <th>الفحص البصري (أمامي · جوانب · خلفي)</th><th>الحالة عند الاستلام</th><th>ملاحظات الاستلام</th>
+          </tr>
+        </thead>
+        <tbody>
+          {devices.map((d, i) => (
+            <tr key={startIndex + i}>
+              <td className="wireless-print-center">{startIndex + i + 1}</td>
+              <td>
+                <b>{d.device_type}</b>
+                <div><WirelessLtr>{d.device_serial || '—'}</WirelessLtr></div>
+                {d.accessories ? <small>{d.accessories}</small> : null}
+              </td>
+              <td className="wireless-print-center">{d.device_condition}</td>
+              <td>{d.device_notes ? <small>{d.device_notes}</small> : null}</td>
+              <td></td>
+              <td></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <table className="wireless-print-table wireless-print-sign wireless-print-handover">
+        <colgroup>
+          <col style={{ width: '16%' }} /><col style={{ width: '34%' }} />
+          <col style={{ width: '16%' }} /><col style={{ width: '34%' }} />
+        </colgroup>
+        <thead>
+          <tr><th colSpan="2">عند التسليم</th><th colSpan="2">عند الاستلام</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>التاريخ</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td><th>التاريخ</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td></tr>
+          <tr><th>الساعة</th><td><WirelessLtr>__ : __</WirelessLtr></td><th>الساعة</th><td><WirelessLtr>__ : __</WirelessLtr></td></tr>
+          <tr><th>توقيع المستلم</th><td></td><th>توقيع المستلم</th><td></td></tr>
+          <tr><th>ملاحظات</th><td></td><th>ملاحظات</th><td>{delivery.return_notes || ''}</td></tr>
+        </tbody>
+      </table>
+
+      <p className="wireless-print-foot">
+        <WirelessLtr>{delivery.delivery_code}</WirelessLtr> · <WirelessLtr>{new Date().toLocaleDateString('en-GB')}</WirelessLtr>
+      </p>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// نافذة الفورم — 3 أقسام + أجهزة متعددة
+// ═══════════════════════════════════════════════════════════════════
+function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
+  const [form, setForm] = useState(() => initial || _wirelessEmptyDelivery());
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (show) {
+      setForm(initial ? JSON.parse(JSON.stringify(initial)) : _wirelessEmptyDelivery());
+      setErr('');
+    }
+  }, [show, initial]);
+
+  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const updateDevice = (i, patch) => setForm(f => ({ ...f, devices: f.devices.map((d, idx) => idx === i ? { ...d, ...patch } : d) }));
+  const addDevice = () => setForm(f => ({ ...f, devices: [...f.devices, _wirelessEmptyDevice()] }));
+  const removeDevice = (i) => setForm(f => f.devices.length > 1 ? { ...f, devices: f.devices.filter((_, idx) => idx !== i) } : f);
+
+  const handleSave = async () => {
+    if (saving) return;
+    if (!String(form.full_name || '').trim()) { setErr(T('الاسم إلزامي', 'Name required')); return; }
+    if (!form.received_date) { setErr(T('التاريخ إلزامي', 'Date required')); return; }
+    if (!Array.isArray(form.devices) || form.devices.length === 0) { setErr(T('أضف جهازاً واحداً على الأقل', 'At least one device')); return; }
+
+    setSaving(true);
+    setErr('');
+    try {
+      const token = sessionStorage.getItem('access_token');
+      const isEdit = !!initial?.delivery_id;
+      const url = isEdit ? `${BASE}/api/wireless-handover/${initial.delivery_id}` : `${BASE}/api/wireless-handover`;
+      const method = isEdit ? 'PUT' : 'POST';
+      const payload = {
+        full_name: form.full_name,
+        employee_number: form.employee_number || null,
+        national_id: form.national_id || null,
+        department: form.department || null,
+        received_date: form.received_date,
+        task_description: form.task_description || null,
+        usage_duration: form.usage_duration || null,
+        execution_area: form.execution_area || null,
+        general_notes: form.general_notes || null,
+        devices: form.devices.map(d => ({
+          device_type: d.device_type,
+          device_serial: d.device_serial || null,
+          accessories: d.accessories || null,
+          device_condition: d.device_condition || 'سليم',
+          device_notes: d.device_notes || null,
+        })),
+      };
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(data.detail || T('فشل الحفظ', 'Save failed')); return; }
+      onSaved && onSaved(data);
+      onClose();
+    } catch {
+      setErr(T('تعذر الاتصال', 'Connection failed'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!show) return null;
+  const isEdit = !!initial?.delivery_id;
+  const isReturned = isEdit && initial?.status === 'مُرجَع';
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="w-full max-w-5xl card-surface rounded-3xl border border-[var(--border-strong)] shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
+        <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-between shrink-0">
+          <h3 className="text-lg font-bold flex items-center gap-2">
+            <RadioIcon /> {isEdit ? T('تعديل التسليم', 'Edit delivery') : T('إنشاء تسليم جديد', 'New delivery')}
+            {isEdit && <span className="text-xs font-mono text-[var(--muted)]">{initial.delivery_code}</span>}
+          </h3>
+          <button onClick={onClose} disabled={saving} className="icon-btn icon-btn-danger">✕</button>
+        </div>
+        <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-5">
+          {err && <div className="bg-[var(--danger-soft)] text-[var(--accent)] border border-[var(--accent)]/30 rounded-xl px-3 py-2 text-sm font-bold">{err}</div>}
+          {isReturned && <div className="bg-[var(--info-soft)] text-[var(--info)] border border-[var(--info)]/30 rounded-xl px-3 py-2 text-sm font-bold">ℹ️ {T('هذا التسليم مُرجَع — لا يمكن تعديل الأجهزة. أعِد تفعيله أولاً.', 'This delivery is returned — devices cannot be edited. Reactivate it first.')}</div>}
+
+          {/* القسم 1: بيانات المستلم */}
+          <SectionCard title={T('1. بيانات المستلم', '1. Recipient data')} icon={<UsersIcon />}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormGroup label={T('الاسم الثلاثي', 'Full name') + ' *'}>
+                <StyledInput value={form.full_name} onChange={e => setField('full_name', e.target.value)} />
+              </FormGroup>
+              <FormGroup label={T('الرقم الوظيفي / العضوية', 'Employee / Membership no.')}>
+                <StyledInput value={form.employee_number} onChange={e => setField('employee_number', e.target.value)} />
+              </FormGroup>
+              <FormGroup label={T('الرقم القومي', 'National ID')}>
+                <StyledInput value={form.national_id} onChange={e => setField('national_id', e.target.value)} />
+              </FormGroup>
+              <FormGroup label={T('القسم / الإدارة', 'Department')}>
+                <StyledInput value={form.department} onChange={e => setField('department', e.target.value)} />
+              </FormGroup>
+              <FormGroup label={T('تاريخ الاستلام', 'Received date') + ' *'}>
+                <SegDateField value={form.received_date} onChange={e => setField('received_date', e.target.value)} className="field" />
+              </FormGroup>
+              <FormGroup label={T('المهمة', 'Task')}>
+                <StyledInput value={form.task_description} onChange={e => setField('task_description', e.target.value)} />
+              </FormGroup>
+              <FormGroup label={T('مدة الاستخدام', 'Usage duration')}>
+                <StyledInput value={form.usage_duration} onChange={e => setField('usage_duration', e.target.value)} />
+              </FormGroup>
+              <FormGroup label={T('المنطقة / حي التنفيذ', 'Execution area')}>
+                <StyledInput value={form.execution_area} onChange={e => setField('execution_area', e.target.value)} />
+              </FormGroup>
+            </div>
+          </SectionCard>
+
+          {/* القسم 2: الأجهزة */}
+          <SectionCard
+            title={
+              <span className="flex items-center gap-2">
+                {T('2. الأجهزة المسلَّمة', '2. Delivered devices')}
+                <span className="text-xs font-bold bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-0.5 rounded-full">📦 {form.devices.length}</span>
+              </span>
+            }
+            icon={<InventoryIcon />}
+            actionBtn={
+              !isReturned && (
+                <button type="button" onClick={addDevice} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">
+                  + {T('إضافة جهاز', 'Add device')}
+                </button>
+              )
+            }
+          >
+            <div className="space-y-3">
+              {form.devices.map((d, i) => (
+                <div key={i} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-[var(--accent)]">📻 {T(`جهاز #${i + 1}`, `Device #${i + 1}`)}</span>
+                    {!isReturned && form.devices.length > 1 && (
+                      <button type="button" onClick={() => removeDevice(i)} className="text-xs text-[var(--accent)] hover:underline font-bold">
+                        🗑 {T('حذف', 'Remove')}
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <FormGroup label={T('النوع', 'Type')}>
+                      <EocSelect value={d.device_type} onChange={e => updateDevice(i, { device_type: e.target.value })} disabled={isReturned}>
+                        <option value="MOTOROLA">MOTOROLA (TETRA)</option>
+                        <option value="HUAWEI">HUAWEI</option>
+                      </EocSelect>
+                    </FormGroup>
+                    <FormGroup label={T('الرقم التسلسلي', 'Serial')}>
+                      <StyledInput value={d.device_serial} onChange={e => updateDevice(i, { device_serial: e.target.value })} dir="ltr" disabled={isReturned} />
+                    </FormGroup>
+                    <FormGroup label={T('الحالة', 'Condition')}>
+                      <EocSelect value={d.device_condition} onChange={e => updateDevice(i, { device_condition: e.target.value })} disabled={isReturned}>
+                        <option value="سليم">سليم</option>
+                        <option value="تالف">تالف</option>
+                      </EocSelect>
+                    </FormGroup>
+                    <FormGroup label={T('الملحقات', 'Accessories')}>
+                      <StyledInput value={d.accessories} onChange={e => updateDevice(i, { accessories: e.target.value })} placeholder={T('شاحن، بطارية، كلبس…', 'charger, battery, clip…')} disabled={isReturned} />
+                    </FormGroup>
+                  </div>
+                  <div className="mt-3">
+                    <FormGroup label={T('ملاحظات الجهاز', 'Device notes')}>
+                      <textarea
+                        value={d.device_notes}
+                        onChange={e => updateDevice(i, { device_notes: e.target.value })}
+                        rows={2}
+                        className="w-full field text-sm"
+                        disabled={isReturned}
+                        placeholder={T('أي ملاحظات خاصة بالجهاز…', 'Any device-specific notes…')}
+                      />
+                    </FormGroup>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* القسم 3: ملاحظات عامة */}
+          <SectionCard title={T('3. ملاحظات عامة على التسليم', '3. General delivery notes')} icon={<EditIcon />}>
+            <textarea
+              value={form.general_notes}
+              onChange={e => setField('general_notes', e.target.value)}
+              rows={3}
+              className="w-full field text-sm"
+              placeholder={T('أي ملاحظات عامة على عملية التسليم…', 'Any general notes…')}
+            />
+          </SectionCard>
+        </div>
+        <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-2)] flex justify-end gap-3 shrink-0">
+          <button onClick={onClose} disabled={saving} className="btn-ghost px-5 py-2 rounded-xl">{T('إلغاء', 'Cancel')}</button>
+          <button onClick={handleSave} disabled={saving} className="btn-primary px-6 py-2 rounded-xl font-bold">{saving ? T('جاري الحفظ…', 'Saving…') : T('حفظ التسليم', 'Save delivery')}</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// نافذة الاستلام الجماعي
+// ═══════════════════════════════════════════════════════════════════
+function WirelessReturnModal({ show, delivery, onClose, onSaved, lang }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (show) setNotes(''); }, [show]);
+
+  const handleConfirm = async () => {
+    if (saving || !delivery) return;
+    setSaving(true);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      const res = await fetch(`${BASE}/api/wireless-handover/${delivery.delivery_id}/return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ return_notes: notes }),
+      });
+      if (res.ok) { onSaved && onSaved(); onClose(); }
+    } catch { /* network */ }
+    finally { setSaving(false); }
+  };
+
+  if (!show || !delivery) return null;
+
+  return (
+    <ApertureDialog
+      show={show}
+      tone="download"
+      kicker={T('استلام جماعي', 'Bulk return')}
+      title={T('تأكيد استلام كل الأجهزة', 'Confirm returning all devices')}
+      message={T(
+        `سيتم استلام جميع الأجهزة في تسليم ${delivery.delivery_code} لـ «${delivery.full_name}» — عدد الأجهزة: ${delivery.device_count} (${delivery.motorola_count}× MOTOROLA · ${delivery.huawei_count}× HUAWEI).`,
+        `All devices in delivery ${delivery.delivery_code} for «${delivery.full_name}» will be marked as returned — ${delivery.device_count} device(s).`
+      )}
+      onClose={onClose}
+      actions={
+        <>
+          <button type="button" className="sig-btn sig-btn-ghost" onClick={onClose} disabled={saving}>{T('إلغاء', 'Cancel')}</button>
+          <button type="button" className="sig-btn sig-btn-main" onClick={handleConfirm} disabled={saving}>
+            {saving ? T('جاري الحفظ…', 'Saving…') : `✅ ${T('تأكيد الاستلام', 'Confirm return')}`}
+          </button>
+        </>
+      }
+    >
+      <label className="block text-sm font-bold text-[var(--muted)] mb-1 mt-3">
+        {T('ملاحظات الاستلام (تُطبَّق على كل الأجهزة)', 'Return notes (applies to all devices)')}
+      </label>
+      <textarea
+        value={notes}
+        onChange={e => setNotes(e.target.value)}
+        rows={3}
+        placeholder={T('مثال: جهاز #2 فيه كسر بسيط في الغلاف…', 'e.g. device #2 has minor case damage…')}
+        className="w-full field text-sm"
+      />
+    </ApertureDialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// الشاشة الرئيسية
+// ═══════════════════════════════════════════════════════════════════
+function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
+
+  const [loading, setLoading] = useState(true);
+  const [inventory, setInventory] = useState({
+    TETRA: { total: 16, out: 0, remaining: 16, returned: 0 },
+    HUAWEI: { total: 16, out: 0, remaining: 16, returned: 0 },
+  });
+  const [fixedText, setFixedText] = useState('');
+  const [editingFixedText, setEditingFixedText] = useState(false);
+  const [fixedTextDraft, setFixedTextDraft] = useState('');
+  const [editingInventory, setEditingInventory] = useState(null);
+  const [inventoryDraft, setInventoryDraft] = useState(16);
+  const [deliveries, setDeliveries] = useState([]);
+  const [filterDate, setFilterDate] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [showReturn, setShowReturn] = useState(false);
+  const [returnTarget, setReturnTarget] = useState(null);
+  const [printTarget, setPrintTarget] = useState([]); // array of deliveries
+  const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [printMode, setPrintMode] = useState('duplex'); // 'single' | 'duplex' — افتراضي: وجه وضهر
+
+  // 📅 التسليمات المفلترة بالتاريخ (بتحكم الجدول والطباعة والسجل الشامل)
+  const filteredDeliveries = filterDate
+    ? deliveries.filter(d => String(d.received_date || '').slice(0, 10) === filterDate)
+    : deliveries;
+
+  // 📊 تنزيل السجل الشامل — المالك فقط — صف لكل جهاز داخل كل تسليم
+  const handleExportFullLog = async () => {
+    if (!isOwner) return;
+    const list = filteredDeliveries;
+    if (list.length === 0) {
+      setCustomAlert(T('لا توجد تسليمات للتصدير في هذه الفترة.', 'No deliveries to export in this period.'));
+      return;
+    }
+    const rows = [];
+    list.forEach(d => {
+      const devs = Array.isArray(d.devices) ? d.devices : [];
+      const base = {
+        'كود التسليم': d.delivery_code || '',
+        'تاريخ الاستلام': formatDateTime(d.received_date),
+        'الاسم الثلاثي': d.full_name || '',
+        'الرقم الوظيفي': d.employee_number || '',
+        'الرقم القومي': d.national_id || '',
+        'القسم / الإدارة': d.department || '',
+        'المهمة': d.task_description || '',
+        'مدة الاستخدام': d.usage_duration || '',
+        'المنطقة': d.execution_area || '',
+        'حالة التسليم': d.status || '',
+        'ملاحظات عامة': d.general_notes || '',
+        'ملاحظات الاستلام': d.return_notes || '',
+      };
+      if (devs.length === 0) {
+        rows.push({ ...base, 'نوع الجهاز': '', 'الرقم التسلسلي': '', 'الملحقات': '', 'حالة الجهاز': '', 'ملاحظات الجهاز': '' });
+        return;
+      }
+      devs.forEach(dev => {
+        rows.push({
+          ...base,
+          'نوع الجهاز': dev.device_type || '',
+          'الرقم التسلسلي': dev.device_serial || '',
+          'الملحقات': dev.accessories || '',
+          'حالة الجهاز': dev.device_condition || '',
+          'ملاحظات الجهاز': dev.device_notes || '',
+        });
+      });
+    });
+    try {
+      await exportWorkbook(
+        [{ name: 'السجل الشامل', ...gridFromRows(rows) }],
+        `السجل_الشامل_لتسليم_الأجهزة_اللاسلكية_${filterDate || todayFileDate()}.xlsx`
+      );
+      setCustomAlert(T('تم تصدير السجل الشامل بنجاح!', 'Full log exported successfully!'));
+    } catch {
+      setCustomAlert(T('حدث خطأ أثناء التصدير.', 'Export error.'));
+    }
+  };  const [customAlert, setCustomAlert] = useState(null);
+
+  useEffect(() => { if (!customAlert) return; const t = setTimeout(() => setCustomAlert(null), 7000); return () => clearTimeout(t); }, [customAlert]);
+
+  const token = () => sessionStorage.getItem('access_token');
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/wireless-handover`, { headers: { 'Authorization': `Bearer ${token()}` } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setInventory(data.inventory || { TETRA: { total: 16, out: 0, remaining: 16, returned: 0 }, HUAWEI: { total: 16, out: 0, remaining: 16, returned: 0 } });
+      setFixedText(data.fixed_text || '');
+      setDeliveries(data.deliveries || []);
+    } catch {
+      setCustomAlert(T('تعذر تحميل البيانات', 'Failed to load'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+  useSmartPoll(loadData, 60000);
+
+  const openCreate = () => { setEditing(null); setShowForm(true); };
+  const openEdit = (d) => { setEditing(d); setShowForm(true); };
+  const openReturn = (d) => { setReturnTarget(d); setShowReturn(true); };
+  const askPrint = (list) => {
+    if (!list || list.length === 0) return;
+    setPrintTarget(list);
+    setShowPrintConfirm(true);
+  };
+  const doPrint = () => {
+    setShowPrintConfirm(false);
+    setTimeout(() => {
+      try { window.print(); } catch (e) { console.error(e); }
+      // تنظيف القائمة بعد فتح نافذة الطباعة (لمنع Ctrl+P عرض قائمة قديمة)
+      setTimeout(() => setPrintTarget([]), 5000);
+    }, 420);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const res = await fetch(`${BASE}/api/wireless-handover/${deleteTarget.delivery_id}`, {
+        method: 'DELETE', headers: { 'Authorization': `Bearer ${token()}` },
+      });
+      if (res.ok) { setDeleteTarget(null); loadData(); setCustomAlert(T('تم الحذف', 'Deleted')); }
+      else setCustomAlert(T('فشل الحذف', 'Delete failed'));
+    } catch { setCustomAlert(T('تعذر الاتصال', 'Connection error')); }
+  };
+
+  const handleUnreturn = async (d) => {
+    try {
+      const res = await fetch(`${BASE}/api/wireless-handover/${d.delivery_id}/unreturn`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${token()}` },
+      });
+      if (res.ok) { loadData(); setCustomAlert(T('تمت إعادة التفعيل', 'Reactivated')); }
+      else setCustomAlert(T('فشل', 'Failed'));
+    } catch { setCustomAlert(T('تعذر الاتصال', 'Connection error')); }
+  };
+
+  const startEditInventory = (dt) => { setEditingInventory(dt); setInventoryDraft(Number(inventory[dt]?.total ?? 16)); };
+  const saveInventory = async () => {
+    if (!editingInventory) return;
+    try {
+      const res = await fetch(`${BASE}/api/wireless-handover/inventory`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
+        body: JSON.stringify({ device_type: editingInventory, total_count: Math.max(0, Number(inventoryDraft) || 0) }),
+      });
+      if (res.ok) { setEditingInventory(null); loadData(); }
+    } catch { /* */ }
+  };
+
+  const startEditFixedText = () => { setFixedTextDraft(fixedText); setEditingFixedText(true); };
+  const saveFixedText = async () => {
+    try {
+      const res = await fetch(`${BASE}/api/wireless-handover/fixed-text`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
+        body: JSON.stringify({ content: fixedTextDraft }),
+      });
+      if (res.ok) { setEditingFixedText(false); setFixedText(fixedTextDraft); }
+    } catch { /* */ }
+  };
+
+  // حساب الصفحات المتوقعة بناءً على printMode
+  const estimatedPages = useMemo(() => {
+    if (printTarget.length === 0) return 0;
+    return printTarget.reduce((sum, d, i) => {
+      const raw = wirelessDeliveryPageCount(d);
+      const isLast = i === printTarget.length - 1;
+      const padded = printMode === 'duplex' && !isLast && raw % 2 === 1;
+      return sum + (padded ? raw + 1 : raw);
+    }, 0);
+  }, [printTarget, printMode]);
+
+  const estimatedSheets = printMode === 'duplex' ? Math.ceil(estimatedPages / 2) : estimatedPages;
+  return (
+    <div className="space-y-6 pb-10 animate-fade-in-up">
+      {/* رأس */}
+      <div className="card-surface p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl md:text-2xl font-black flex items-center gap-2">
+            <span className="text-[var(--accent)]"><RadioIcon /></span>
+            {T('تسليم أجهزة لاسلكي', 'Wireless Handover')}
+          </h2>
+          <p className="text-sm text-[var(--muted)] mt-1">{T('إقرار استخدام الأجهزة اللاسلكية — سجل يومي', 'Wireless device handover — daily register')}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={loadData} className="btn-ghost px-3 py-2 rounded-xl text-sm">🔄</button>
+          <button onClick={openCreate} className="btn-primary px-4 py-2 rounded-xl font-bold">+ {T('إنشاء تسليم', 'New delivery')}</button>
+        </div>
+      </div>
+
+      {/* العدّادات */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {(['TETRA', 'HUAWEI']).map(dt => {
+          const info = inventory[dt] || { total: 16, out: 0, remaining: 16, returned: 0 };
+          const isEditing = editingInventory === dt;
+          return (
+            <div key={dt} className="card-surface p-5 rounded-3xl border border-[var(--border)]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-lg">{dt === 'TETRA' ? 'TETRA (MOTOROLA)' : 'HUAWEI'}</h3>
+                {!isEditing && <button onClick={() => startEditInventory(dt)} className="btn-ghost px-3 py-1 rounded-lg text-xs">✏️ {T('الإجمالي', 'Total')}</button>}
+              </div>
+              <div className="grid grid-cols-4 gap-3 text-center">
+                <div className="bg-[var(--surface-3)] rounded-xl p-3">
+                  <div className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] font-bold">{T('الإجمالي', 'Total')}</div>
+                  {isEditing ? <input type="number" min="0" value={inventoryDraft} onChange={e => setInventoryDraft(e.target.value)} className="field w-full text-center !py-1 mt-1" autoFocus /> : <div className="text-2xl font-black tabular-nums mt-1">{info.total}</div>}
+                </div>
+                <div className="bg-[var(--warn-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--warn)] font-bold">{T('خارج', 'Out')}</div><div className="text-2xl font-black tabular-nums text-[var(--warn)] mt-1">{info.out}</div></div>
+                <div className="bg-[var(--ok-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--ok)] font-bold">{T('متبقي', 'Remaining')}</div><div className="text-2xl font-black tabular-nums text-[var(--ok)] mt-1">{info.remaining}</div></div>
+                <div className="bg-[var(--info-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--info)] font-bold">{T('مُرجَع', 'Returned')}</div><div className="text-2xl font-black tabular-nums text-[var(--info)] mt-1">{info.returned}</div></div>
+              </div>
+              {isEditing && (
+                <div className="flex gap-2 mt-3">
+                  <button onClick={saveInventory} className="btn-primary flex-1 py-1.5 rounded-lg text-sm">{T('حفظ', 'Save')}</button>
+                  <button onClick={() => setEditingInventory(null)} className="btn-ghost flex-1 py-1.5 rounded-lg text-sm">{T('إلغاء', 'Cancel')}</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* النص الثابت */}
+      <div className="card-surface p-5 md:p-6 rounded-3xl border border-[var(--border)]">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-lg">📜 {T('نص الإقرار الثابت', 'Fixed agreement text')}</h3>
+          {isOwner && !editingFixedText && <button onClick={startEditFixedText} className="btn-ghost px-3 py-1 rounded-lg text-xs">✏️ {T('تعديل (مالك)', 'Edit (owner)')}</button>}
+        </div>
+        {editingFixedText ? (
+          <>
+            <textarea value={fixedTextDraft} onChange={e => setFixedTextDraft(e.target.value)} rows={14} className="w-full field text-sm leading-relaxed" />
+            <div className="flex gap-2 mt-2">
+              <button onClick={saveFixedText} className="btn-primary px-4 py-1.5 rounded-lg text-sm">{T('حفظ', 'Save')}</button>
+              <button onClick={() => setEditingFixedText(false)} className="btn-ghost px-4 py-1.5 rounded-lg text-sm">{T('إلغاء', 'Cancel')}</button>
+            </div>
+          </>
+        ) : (
+          <pre className="text-sm whitespace-pre-wrap leading-relaxed bg-[var(--surface-2)] rounded-xl p-4 border border-[var(--border)] max-h-72 overflow-y-auto custom-scrollbar">{fixedText || T('(لا يوجد نص)', '(no text)')}</pre>
+        )}
+      </div>
+
+      {/* الجدول */}
+      <div className="card-surface p-5 rounded-3xl border border-[var(--border)] overflow-hidden">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h3 className="font-bold text-lg">🗂️ {T(`السجل (${filteredDeliveries.length})`, `Register (${filteredDeliveries.length})`)}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <SegDateField
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="field !py-1.5 !px-3 w-auto"
+            />
+            {filterDate && (
+              <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">
+                {T('كل الأيام', 'All days')}
+              </button>
+            )}
+            {isOwner && filteredDeliveries.length > 0 && (
+              <button
+                type="button"
+                onClick={handleExportFullLog}
+                data-tip={T('تصدير السجل الشامل إلى Excel — يحترم فلتر التاريخ', 'Export full log to Excel — respects date filter')}
+                className="action-btn action-btn--ok shrink-0"
+              >
+                <ExcelIcon />
+                <span className="hidden md:inline">{T('تنزيل السجل الشامل', 'Download full log')}</span>
+              </button>
+            )}
+            {filteredDeliveries.length > 0 && (
+              <button onClick={() => askPrint(filteredDeliveries)} className="btn-ghost px-3 py-1.5 rounded-lg text-xs font-bold">
+                🖨️ {T('طباعة الكل', 'Print all')}
+              </button>
+            )}
+          </div>
+        </div>
+        {loading ? (
+          <p className="text-center text-[var(--muted)] text-sm py-6">{T('جارٍ التحميل…', 'Loading…')}</p>
+        ) : filteredDeliveries.length === 0 ? (
+          <p className="text-center text-[var(--muted)] text-sm py-8">
+            {filterDate ? T('لا توجد تسليمات في هذا اليوم', 'No deliveries on the selected day') : T('لا توجد تسليمات بعد', 'No deliveries yet')}
+          </p>
+        ) : (
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-sm text-right min-w-[68.75rem]">
+              <thead className="bg-[var(--surface-3)] border-b border-[var(--border)]">
+                <tr>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('كود', 'Code')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('التاريخ', 'Date')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الاسم', 'Name')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الوظيفي', 'No.')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الأجهزة', 'Devices')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الحالة', 'Status')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap text-center sticky end-0 bg-[var(--surface-3)]">{T('إجراءات', 'Actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDeliveries.map(d => (
+                  <tr key={d.delivery_id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)]">
+                    <td className="p-3 font-mono text-xs">{d.delivery_code}</td>
+                    <td className="p-3 font-mono text-xs">{d.received_date}</td>
+                    <td className="p-3 font-bold">{d.full_name}</td>
+                    <td className="p-3 text-xs">{d.employee_number || '—'}</td>
+                    <td className="p-3">
+                      <span className="inline-flex items-center gap-1.5 text-xs">
+                        <span className="font-black text-[var(--accent)]">{d.device_count}</span>
+                        {d.motorola_count > 0 && <span className="bg-blue-500/15 text-blue-300 px-1.5 py-0.5 rounded">MOT×{d.motorola_count}</span>}
+                        {d.huawei_count > 0 && <span className="bg-purple-500/15 text-purple-300 px-1.5 py-0.5 rounded">HW×{d.huawei_count}</span>}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`text-xs font-bold px-2 py-1 rounded ${d.status === 'مسلَّم' ? 'bg-[var(--warn-soft)] text-[var(--warn)]' : 'bg-[var(--ok-soft)] text-[var(--ok)]'}`}>{d.status}</span>
+                    </td>
+                    <td className="p-3 sticky end-0 bg-[var(--surface)] border-s border-[var(--border)]">
+                      <div className="flex gap-1 justify-center">
+                        <button onClick={() => openEdit(d)} className="icon-btn" title={T('تعديل', 'Edit')}><EyeIcon /></button>
+                        <button onClick={() => askPrint([d])} className="icon-btn" title={T('طباعة', 'Print')}>🖨️</button>
+                        {d.status === 'مسلَّم' && (
+                          <button onClick={() => openReturn(d)} className="icon-btn !text-[var(--ok)] !border-[var(--ok)]/30" title={T('استلام جماعي', 'Bulk return')}>✅</button>
+                        )}
+                        {d.status === 'مُرجَع' && (
+                          <button onClick={() => handleUnreturn(d)} className="icon-btn !text-[var(--info)] !border-[var(--info)]/30" title={T('إعادة تفعيل', 'Reactivate')}>↩️</button>
+                        )}
+                        <button onClick={() => setDeleteTarget(d)} className="icon-btn icon-btn-danger" title={T('حذف', 'Delete')}><TrashIcon /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      <WirelessDeliveryFormModal show={showForm} initial={editing} onClose={() => setShowForm(false)} onSaved={() => { loadData(); setCustomAlert(T('تم الحفظ', 'Saved')); }} lang={lang} />
+      <WirelessReturnModal show={showReturn} delivery={returnTarget} onClose={() => setShowReturn(false)} onSaved={() => { loadData(); setCustomAlert(T('تم استلام التسليم', 'Delivery returned')); }} lang={lang} />
+
+      <ApertureDialog
+        show={showPrintConfirm}
+        tone="download"
+        kicker={T('طباعة', 'Print')}
+        title={T('تأكيد الطباعة', 'Confirm printing')}
+        message={T(
+          `${estimatedPages} صفحة = ${estimatedSheets} ورقة لـ ${printTarget.length} تسليم`,
+          `${estimatedPages} pages = ${estimatedSheets} sheets for ${printTarget.length} delivery`
+        )}
+        onClose={() => setShowPrintConfirm(false)}
+        maxWidth={620}
+        actions={
+          <>
+            <button type="button" className="sig-btn sig-btn-ghost" onClick={() => setShowPrintConfirm(false)}>{T('إلغاء', 'Cancel')}</button>
+            <button type="button" className="sig-btn sig-btn-main" onClick={doPrint}>🖨️ {T('طباعة الآن', 'Print now')}</button>
+          </>
+        }
+      >
+        {/* اختيار نوع الطباعة */}
+        <div className="mt-4 space-y-2">
+          <p className="text-xs font-bold text-[var(--muted)] mb-1.5">{T('نوع الطباعة:', 'Print mode:')}</p>
+
+          <label className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${printMode === 'single' ? 'border-[var(--accent)] bg-[var(--accent-softer)]' : 'border-[var(--border)] hover:border-[var(--accent-soft)]'}`}>
+            <input type="radio" name="wireless-print-mode" checked={printMode === 'single'} onChange={() => setPrintMode('single')} className="mt-1 accent-[var(--accent)]" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold">📄 {T('طباعة عادية', 'Single-sided')}</div>
+              <div className="text-xs text-[var(--muted)] mt-0.5">{T('كل صفحة على ورقة منفصلة — لا صفحات فارغة', 'Each page on a separate sheet — no blank pages')}</div>
+            </div>
+          </label>
+
+          <label className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${printMode === 'duplex' ? 'border-[var(--accent)] bg-[var(--accent-softer)]' : 'border-[var(--border)] hover:border-[var(--accent-soft)]'}`}>
+            <input type="radio" name="wireless-print-mode" checked={printMode === 'duplex'} onChange={() => setPrintMode('duplex')} className="mt-1 accent-[var(--accent)]" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold">📑 {T('وجه وضهر', 'Double-sided')}</div>
+              <div className="text-xs text-[var(--muted)] mt-0.5">
+                {T('كل تسليم يبدأ على ورقة جديدة — تُضاف صفحة فارغة تلقائياً عند الحاجة', 'Each delivery starts on a new sheet — blank page added automatically when needed')}
+              </div>
+            </div>
+          </label>
+        </div>
+
+        {/* معاينة تفصيلية لكل تسليم */}
+        <div className="mt-3 p-2.5 rounded-xl bg-[var(--surface-3)] border border-[var(--border)] text-xs space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+          <div className="text-[max(0.625rem,9px)] font-bold text-[var(--faint)] uppercase tracking-wider mb-1">{T('التفاصيل:', 'Details:')}</div>
+          {printTarget.map((d, i) => {
+            const raw = wirelessDeliveryPageCount(d);
+            const isLast = i === printTarget.length - 1;
+            const padded = printMode === 'duplex' && !isLast && raw % 2 === 1;
+            const pages = padded ? raw + 1 : raw;
+            return (
+              <div key={d.delivery_id} className="flex justify-between gap-2">
+                <span className="truncate text-[var(--ink-2)]">{d.delivery_code} — {d.full_name}</span>
+                <span className="shrink-0 font-mono text-[var(--muted)]">
+                  {pages} {T('صفحة', 'pages')}
+                  {padded && <span className="text-[var(--warn)] font-bold"> (+1 {T('فارغة', 'blank')})</span>}
+                </span>
+              </div>
+            );
+          })}
+          <div className="flex justify-between gap-2 pt-1.5 mt-1 border-t border-[var(--border)] font-bold text-[var(--ink)]">
+            <span>{T('الإجمالي', 'Total')}</span>
+            <span className="font-mono">{estimatedPages} {T('صفحة', 'pages')} · {estimatedSheets} {T('ورقة', 'sheets')}</span>
+          </div>
+        </div>
+
+        {/* تحذير: اختيار duplex في نافذة المتصفح */}
+        {printMode === 'duplex' && (
+          <div className="mt-3 p-3 rounded-xl bg-[var(--warn-soft)] border border-[var(--warn)]/40 text-xs leading-relaxed">
+            <div className="font-bold text-[var(--warn)] mb-1.5 flex items-center gap-1.5">
+              ⚠️ {T('مهم — بعد الضغط على "طباعة الآن":', 'IMPORTANT — after pressing "Print now":')}
+            </div>
+            <ol className="list-decimal list-inside space-y-1 text-[var(--ink-2)]">
+              <li>{T('في نافذة الطباعة، افتح "More settings" (إعدادات أكثر)', 'Open "More settings" in the print dialog')}</li>
+              <li>{T('ابحث عن "Two-sided" أو "Print on both sides"', 'Find "Two-sided" / "Print on both sides"')}</li>
+              <li>{T('اختر "Long edge binding" (الربط من الحافة الطويلة)', 'Choose "Long edge binding"')}</li>
+              <li>{T('اضغط "Print" لبدء الطباعة', 'Press "Print" to start')}</li>
+            </ol>
+            <p className="mt-2 text-[max(0.625rem,9px)] text-[var(--muted)]">
+              💡 {T('النظام يجهز الصفحات بترتيب صحيح. اختيار duplex في المتصفح هو الخطوة الأخيرة.', 'The system prepares pages in correct order. Choosing duplex in the browser is the final step.')}
+            </p>
+          </div>
+        )}
+      </ApertureDialog>
+      
+      <DangerConfirmModal
+        show={deleteTarget !== null}
+        title={T('تأكيد الحذف', 'Confirm deletion')}
+        message={deleteTarget ? T(`حذف تسليم ${deleteTarget.delivery_code} لـ «${deleteTarget.full_name}» — لا يمكن التراجع.`, `Delete delivery ${deleteTarget.delivery_code} for «${deleteTarget.full_name}» — irreversible.`) : ''}
+        confirmLabel={T('نعم، احذف', 'Yes, delete')}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
+
+      {customAlert && <ActionToast message={customAlert} onClose={() => setCustomAlert(null)} />}
+
+      {createPortal(
+        <div className="wireless-print-root" dir="rtl">
+          {printTarget.flatMap((delivery, idx) => {
+            const isLast = idx === printTarget.length - 1;
+            const devs = delivery.devices || [];
+            const chunks = [];
+            for (let i = 0; i < devs.length; i += WIRELESS_DEVICES_PER_REPORT_PAGE) chunks.push(devs.slice(i, i + WIRELESS_DEVICES_PER_REPORT_PAGE));
+            if (chunks.length === 0) chunks.push([]);
+            const pages = [
+              <WirelessPrintDeclaration key={`d-${delivery.delivery_id}`} delivery={delivery} fixedText={fixedText} />,
+              ...chunks.map((chunk, ci) => (
+                <WirelessPrintDeviceReport
+                  key={`r-${delivery.delivery_id}-${ci}`}
+                  delivery={delivery}
+                  devices={chunk}
+                  startIndex={ci * WIRELESS_DEVICES_PER_REPORT_PAGE}
+                  pageNo={ci + 1}
+                  pageCount={chunks.length}
+                />
+              )),
+            ];
+            // لو الإقرار نفسه طلع على صفحتين (أكتر من 8 أجهزة) نحسب الصفحة الزيادة
+            const total = wirelessDeliveryPageCount(delivery);
+            // صفحة فارغة ذكية: تُضاف فقط إذا (duplex + ليس آخر تسليم + عدد صفحات فردي)
+            if (printMode === 'duplex' && !isLast && total % 2 === 1) {
+              pages.push(
+                <div key={`blank-${delivery.delivery_id}`} className="wireless-print-page wireless-print-blank" aria-hidden="true">&nbsp;</div>
+              );
+            }
+            return pages;
+          })}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+
+  
+}function AuditLogsView({ isOwner, liveUpdateVersion = 0 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
