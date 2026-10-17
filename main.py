@@ -13328,7 +13328,11 @@ def update_wireless_delivery(
                 raise HTTPException(status_code=400, detail="اسم المستلم لا يمكن أن يكون فارغاً")
             updates["full_name"] = n
 
-        new_devices = updates.pop("devices", None)
+        # 🛡️ devices لازم تيجي من payload.devices (pydantic models) مش من model_dump
+        #    لأن model_dump() بتحوّلها list[dict]، والكود بيستخدم d.device_type/device_serial
+        _devices_supplied = "devices" in payload.model_fields_set
+        new_devices = payload.devices if _devices_supplied else None
+        updates.pop("devices", None)
         if new_devices is not None:
             if not new_devices:
                 raise HTTPException(status_code=400, detail="لا بد من جهاز واحد على الأقل")
