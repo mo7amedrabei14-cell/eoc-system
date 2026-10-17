@@ -9587,8 +9587,18 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
         body: JSON.stringify({ device_type: editingInventory, total_count: Math.max(0, Number(inventoryDraft) || 0) }),
       });
-      if (res.ok) { setEditingInventory(null); loadData(); }
-    } catch { /* */ }
+      if (res.ok) {
+        setEditingInventory(null);
+        loadData();
+        setCustomAlert(T('تم حفظ الإجمالي بنجاح', 'Total saved'));
+      } else {
+        // 🛡️ كان بيسكت تماماً لو السيرفر رفض — دلوقتي بيوريك السبب
+        const data = await res.json().catch(() => ({}));
+        setCustomAlert(data.detail || T('فشل حفظ الإجمالي', 'Failed to save total'));
+      }
+    } catch {
+      setCustomAlert(T('تعذر الاتصال بالسيرفر', 'Connection failed'));
+    }
   };
 
   const startEditFixedText = () => { setFixedTextDraft(fixedText); setEditingFixedText(true); };

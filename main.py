@@ -13275,6 +13275,107 @@ def create_wireless_delivery(
     finally:
         connection.close()
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⚠️ مهم: هاتان الدالتان يجب أن تبقى *قبل* أي مسار فيه {delivery_id}
+#    لأن FastAPI يطابق بالترتيب — و"inventory"/"fixed-text" لو جاءت بعد
+#    /{delivery_id} تُفسَّر كـ delivery_id ويفشل التحويل لـ int → 422
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.put("/api/wireless-handover/inventory")
+def update_wireless_inventory(
+    payload: WirelessInventoryUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        if payload.device_type not in ("TETRA", "HUAWEI"):
+            raise HTTPException(status_code=400, detail="نوع الجهاز غير صالح")
+        if payload.total_count < 0 or payload.total_count > 10000:
+            raise HTTPException(status_code=400, detail="عدد غير منطقي")
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO wireless_inventory (device_type, total_count, updated_by, updated_at)
+                VALUES (%s, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
+                ON CONFLICT (device_type) DO UPDATE SET
+                    total_count = EXCLUDED.total_count,
+                    updated_by = EXCLUDED.updated_by,
+                    updated_at = EXCLUDED.updated_at;
+            """, (payload.device_type, payload.total_count, user_id))
+            try:
+                create_audit_log(
+                    cursor, user_id, "تعديل مخزون أجهزة",
+                    mission_id=None, entity_type="wireless_handover", entity_id=None,
+                    details={"action_text": f"إجمالي {payload.device_type} = {payload.total_count}"},
+                )
+            except Exception:
+                pass
+            connection.commit()
+            return {"message": "تم التعديل"}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error updating inventory: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+@app.put("/api/wireless-handover/fixed-text")
+def update_wireless_fixed_text(
+    payload: WirelessFixedTextUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_owner(role)
+        content = str(payload.content or "").strip()
+        if not content:
+            raise HTTPException(status_code=400, detail="النص لا يمكن أن يكون فارغاً")
+        if len(content) > 20000:
+            raise HTTPException(status_code=400, detail="النص طويل جداً")
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO wireless_fixed_text (id, content, updated_by, updated_at)
+                VALUES (1, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
+                ON CONFLICT (id) DO UPDATE SET
+                    content = EXCLUDED.content,
+                    updated_by = EXCLUDED.updated_by,
+                    updated_at = EXCLUDED.updated_at;
+            """, (content, user_id))
+            try:
+                create_audit_log(
+                    cursor, user_id, "تعديل نص إقرار",
+                    mission_id=None, entity_type="wireless_handover", entity_id=None,
+                    details={"action_text": "تعديل نص إقرار تسليم الأجهزة"},
+                )
+            except Exception:
+                pass
+            connection.commit()
+            return {"message": "تم حفظ النص"}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error updating fixed text: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
 
 @app.get("/api/wireless-handover/{delivery_id}")
 def get_wireless_delivery_one(
@@ -13546,102 +13647,6 @@ def delete_wireless_delivery(
     except Exception as e:
         connection.rollback()
         print(f"Error deleting: {e}")
-        raise HTTPException(status_code=500, detail="حدث خطأ")
-    finally:
-        connection.close()
-
-
-@app.put("/api/wireless-handover/inventory")
-def update_wireless_inventory(
-    payload: WirelessInventoryUpdate,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-):
-    token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id:
-        raise HTTPException(status_code=401)
-    connection = get_connection()
-    try:
-        role = get_user_role(user_id, connection=connection)
-        require_wireless_handover_access(role)
-        if payload.device_type not in ("TETRA", "HUAWEI"):
-            raise HTTPException(status_code=400, detail="نوع الجهاز غير صالح")
-        if payload.total_count < 0 or payload.total_count > 10000:
-            raise HTTPException(status_code=400, detail="عدد غير منطقي")
-
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO wireless_inventory (device_type, total_count, updated_by, updated_at)
-                VALUES (%s, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
-                ON CONFLICT (device_type) DO UPDATE SET
-                    total_count = EXCLUDED.total_count,
-                    updated_by = EXCLUDED.updated_by,
-                    updated_at = EXCLUDED.updated_at;
-            """, (payload.device_type, payload.total_count, user_id))
-            try:
-                create_audit_log(
-                    cursor, user_id, "تعديل مخزون أجهزة",
-                    mission_id=None, entity_type="wireless_handover", entity_id=None,
-                    details={"action_text": f"إجمالي {payload.device_type} = {payload.total_count}"},
-                )
-            except Exception:
-                pass
-            connection.commit()
-            return {"message": "تم التعديل"}
-    except HTTPException:
-        connection.rollback()
-        raise
-    except Exception as e:
-        connection.rollback()
-        print(f"Error updating inventory: {e}")
-        raise HTTPException(status_code=500, detail="حدث خطأ")
-    finally:
-        connection.close()
-
-
-@app.put("/api/wireless-handover/fixed-text")
-def update_wireless_fixed_text(
-    payload: WirelessFixedTextUpdate,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-):
-    token = credentials.credentials
-    user_id = get_current_user_id(token)
-    if not user_id:
-        raise HTTPException(status_code=401)
-    connection = get_connection()
-    try:
-        role = get_user_role(user_id, connection=connection)
-        require_wireless_handover_owner(role)
-        content = str(payload.content or "").strip()
-        if not content:
-            raise HTTPException(status_code=400, detail="النص لا يمكن أن يكون فارغاً")
-        if len(content) > 20000:
-            raise HTTPException(status_code=400, detail="النص طويل جداً")
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO wireless_fixed_text (id, content, updated_by, updated_at)
-                VALUES (1, %s, %s, (now() AT TIME ZONE 'Africa/Cairo'))
-                ON CONFLICT (id) DO UPDATE SET
-                    content = EXCLUDED.content,
-                    updated_by = EXCLUDED.updated_by,
-                    updated_at = EXCLUDED.updated_at;
-            """, (content, user_id))
-            try:
-                create_audit_log(
-                    cursor, user_id, "تعديل نص إقرار",
-                    mission_id=None, entity_type="wireless_handover", entity_id=None,
-                    details={"action_text": "تعديل نص إقرار تسليم الأجهزة"},
-                )
-            except Exception:
-                pass
-            connection.commit()
-            return {"message": "تم حفظ النص"}
-    except HTTPException:
-        connection.rollback()
-        raise
-    except Exception as e:
-        connection.rollback()
-        print(f"Error updating fixed text: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ")
     finally:
         connection.close()
