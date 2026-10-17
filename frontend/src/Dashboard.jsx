@@ -9048,7 +9048,7 @@ function WirelessPrintDeclaration({ delivery, fixedText }) {
         <pre>{fixedText || ''}</pre>
       </div>
 
-      <h3 className="wireless-print-subtitle">الأجهزة المسلَّمة ({delivery.devices.length})</h3>
+<h3 className="wireless-print-subtitle">الأجهزة المسلَّمة ({(delivery.devices || []).length})</h3>
       <table className="wireless-print-table wireless-print-list">
         <colgroup>
           <col style={{ width: '7%' }} /><col style={{ width: '20%' }} />
@@ -9058,7 +9058,7 @@ function WirelessPrintDeclaration({ delivery, fixedText }) {
           <tr><th>#</th><th>النوع</th><th>الرقم التسلسلي</th><th>الحالة</th><th>الملحقات</th></tr>
         </thead>
         <tbody>
-          {delivery.devices.map((d, i) => (
+          {(delivery.devices || []).map((d, i) => (
             <tr key={i}>
               <td className="wireless-print-center">{i + 1}</td>
               <td>{d.device_type}</td>
@@ -9453,7 +9453,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [showPrintConfirm, setShowPrintConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [printMode, setPrintMode] = useState('duplex'); // 'single' | 'duplex' — افتراضي: وجه وضهر
-
+  const isPrintingRef = useRef(false); // يمنع الضغط المزدوج على "طباعة الآن"
+  useEffect(() => () => { isPrintingRef.current = false; }, []); // تنظيف عند الخروج
   // 📅 التسليمات المفلترة بالتاريخ (بتحكم الجدول والطباعة والسجل الشامل)
   const filteredDeliveries = filterDate
     ? deliveries.filter(d => String(d.received_date || '').slice(0, 10) === filterDate)
@@ -9538,15 +9539,21 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const openReturn = (d) => { setReturnTarget(d); setShowReturn(true); };
   const askPrint = (list) => {
     if (!list || list.length === 0) return;
-    setPrintTarget(list);
-    setShowPrintConfirm(true);
+    setPrintTarget([]);                  // امسح أي ورق قديم (يحدث قبل window.print)
+    // الحالة الجديدة تتركب بعد ما React يخلص إزالة القديمة
+    requestAnimationFrame(() => {
+      setPrintTarget(Array.isArray(list) ? [...list] : []);
+      setShowPrintConfirm(true);
+    });
   };
   const doPrint = () => {
+    if (isPrintingRef.current) return;
+    isPrintingRef.current = true;
     setShowPrintConfirm(false);
     setTimeout(() => {
       try { window.print(); } catch (e) { console.error(e); }
-      // تنظيف القائمة بعد فتح نافذة الطباعة (لمنع Ctrl+P عرض قائمة قديمة)
-      setTimeout(() => setPrintTarget([]), 5000);
+      finally { isPrintingRef.current = false; }
+      // ⚠️ مفيش setPrintTarget([]) هنا — التنظيف بيحصل في askPrint قبل أي طباعة جديدة
     }, 420);
   };
 
