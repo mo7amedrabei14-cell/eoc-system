@@ -21,7 +21,7 @@
 | النوع | الموقع | في الشجرة الآن؟ | فعّال؟ | بصمته = مفتاحي الحالي؟ | تدوير مطلوب؟ |
 |---|---|---|---|---|---|
 | JWT جلسة (4 قيم مختلفة) | `.dev_token.tmp` (2 commits) · `_seed.json` (2) · `_token.txt` (2) · `test_api.py` (blob ما زال داخل `HEAD`) | لا (أُزيلت من القرص/التتبّع) — عدا `HEAD` القديم | ❌ منتهي: `exp` = 2026-09-14 / 2026-09-21 / 2026-09-28 (كلها قبل اليوم) | ❌ | ❌ لا (منتهية ولا تمنح وصولاً) |
-| رابط Postgres بكلمة مرور (قيمتان) | `create_idempotency_table.py` · `diag_bug2_db.py` · `run_diag_bug2.py` | ❌ لا (History فقط) | ❓ غير معروف (قاعدة قديمة) | ❌ لا يطابق `DATABASE_URL` الحالي | ✅ **نعم — لو القاعدة القديمة ما زالت قائمة** |
+| رابط Postgres بكلمة مرور (قيمتان) | `create_idempotency_table.py` · `diag_bug2_db.py` · `run_diag_bug2.py` | ❌ لا (History فقط) — أُزيل `diag_bug2_db.py` و`run_diag_bug2.py` من الشجرة في 2026-10-17 | ❓ غير معروف (قاعدة قديمة) | ❌ لا يطابق `DATABASE_URL` الحالي | ✅ **نعم — لو القاعدة القديمة ما زالت قائمة** |
 | GitHub PAT | `frontend/src/Dashboard.jsx` (rev `d720a8f`) | ❌ لا | ❌ ليس اعتماداً حقيقياً: القيمة عنصر نائب = `ghp_` + 25 حرف `x` فقط (محارف مكررة) | ❌ | ❌ لا |
 | `.env` (JWT_SECRET / DATABASE_URL / GEMINI_API_KEY) | لم يُرفع للمستودع إطلاقاً (تحقق بتاريخ كل الـrefs) | — | — | بصمات `JWT_SECRET=c6ad86e2d1cc` و`GEMINI_API_KEY=0d27fdb8ed6a` و`DATABASE_URL=3cc335d54128` **لا تظهر في أي كائن في التاريخ** | ❌ لا (لم يُسرَّب) |
 | `SYSTEM_TOKEN` / `RADAR_SECRET_KEY` / `ANTHROPIC_API_KEY` | غير موجودة محلياً ⇒ لا يمكن وصف خصائصها | — | غير متحقق محلياً | — | ✅ مراجعة إعدادات Vercel/GitHub Secrets (لم يظهر أي نمط مطابق في التاريخ) |
