@@ -9468,8 +9468,14 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [inventoryDraft, setInventoryDraft] = useState(16);
   const [deliveries, setDeliveries] = useState([]);
   const [recipients, setRecipients] = useState([]);
-  const [recipientsLoading, setRecipientsLoading] = useState(false);
+  const [recipientsLoading, setRecipientsLoading] = useState(true);
   const [recipientsError, setRecipientsError] = useState('');
+  const wirelessLoadedRef = useRef(false);
+  const wirelessLoadInFlightRef = useRef(false);
+  const wirelessLoadQueuedRef = useRef(false);
+  const recipientsLoadedRef = useRef(false);
+  const recipientsInFlightRef = useRef(false);
+  const recipientsQueuedRef = useRef(false);
   const [recipientSearch, setRecipientSearch] = useState('');
   const [exportingRecipients, setExportingRecipients] = useState(false);
   const [filterDate, setFilterDate] = useState('');
@@ -9543,20 +9549,40 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
 
   const token = () => sessionStorage.getItem('access_token');
 
-  const loadRecipients = useCallback(async () => {
-    setRecipientsLoading(true);
+  const loadRecipients = useCallback(async (silent = false) => {
+    if (recipientsInFlightRef.current) {
+      recipientsQueuedRef.current = true;
+      return;
+    }
+
+    recipientsInFlightRef.current = true;
+    const showInitialLoader = !recipientsLoadedRef.current && !silent;
+    if (showInitialLoader) setRecipientsLoading(true);
+
     try {
       const res = await fetch(`${BASE}/api/wireless-handover/recipients`, {
         headers: { Authorization: `Bearer ${token()}` },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || 'Failed to load recipients');
-      setRecipients(Array.isArray(data.recipients) ? data.recipients : []);
+      const nextRecipients = Array.isArray(data.recipients) ? data.recipients : [];
+      setRecipients(previous =>
+        JSON.stringify(previous) === JSON.stringify(nextRecipients) ? previous : nextRecipients
+      );
       setRecipientsError('');
+      recipientsLoadedRef.current = true;
     } catch {
-      setRecipientsError(T('تعذر تحميل قائمة المستلمين', 'Failed to load recipients'));
+      // Don't cover already-loaded recipients with an error banner for a transient poll failure.
+      if (!recipientsLoadedRef.current) {
+        setRecipientsError(T('تعذر تحميل قائمة المستلمين', 'Failed to load recipients'));
+      }
     } finally {
-      setRecipientsLoading(false);
+      if (showInitialLoader || !recipientsLoadedRef.current) setRecipientsLoading(false);
+      recipientsInFlightRef.current = false;
+      if (recipientsQueuedRef.current) {
+        recipientsQueuedRef.current = false;
+        Promise.resolve().then(() => loadRecipients(true));
+      }
     }
   }, [lang]);
 
@@ -9569,25 +9595,58 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
     );
   }, [recipients, recipientSearch]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (silent = false) => {
+    if (wirelessLoadInFlightRef.current) {
+      wirelessLoadQueuedRef.current = true;
+      return;
+    }
+
+    wirelessLoadInFlightRef.current = true;
+    const showInitialLoader = !wirelessLoadedRef.current && !silent;
+    if (showInitialLoader) setLoading(true);
+
     try {
-      const res = await fetch(`${BASE}/api/wireless-handover`, { headers: { 'Authorization': `Bearer ${token()}` } });
+      const res = await fetch(`${BASE}/api/wireless-handover`, {
+        headers: { 'Authorization': `Bearer ${token()}` },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setInventory(data.inventory || { TETRA: { total: 16, out: 0, remaining: 16, returned: 0 }, HUAWEI: { total: 16, out: 0, remaining: 16, returned: 0 } });
-      setFixedText(data.fixed_text || '');
-      setDeliveries(data.deliveries || []);
-      loadRecipients();
+
+      const nextInventory = data.inventory || {
+        TETRA: { total: 16, out: 0, remaining: 16, returned: 0 },
+        HUAWEI: { total: 16, out: 0, remaining: 16, returned: 0 },
+      };
+      const nextFixedText = data.fixed_text || '';
+      const nextDeliveries = Array.isArray(data.deliveries) ? data.deliveries : [];
+
+      setInventory(previous =>
+        JSON.stringify(previous) === JSON.stringify(nextInventory) ? previous : nextInventory
+      );
+      setFixedText(previous => previous === nextFixedText ? previous : nextFixedText);
+      setDeliveries(previous =>
+        JSON.stringify(previous) === JSON.stringify(nextDeliveries) ? previous : nextDeliveries
+      );
+      wirelessLoadedRef.current = true;
+      await loadRecipients(!showInitialLoader);
     } catch {
-      setCustomAlert(T('تعذر تحميل البيانات', 'Failed to load'));
+      // Preserve the current table during a transient background failure.
+      if (!wirelessLoadedRef.current) {
+        setCustomAlert(T('تعذر تحميل البيانات', 'Failed to load'));
+        // The recipients endpoint is independent; still try to populate its section.
+        loadRecipients(true);
+      }
     } finally {
-      setLoading(false);
+      if (showInitialLoader || !wirelessLoadedRef.current) setLoading(false);
+      wirelessLoadInFlightRef.current = false;
+      if (wirelessLoadQueuedRef.current) {
+        wirelessLoadQueuedRef.current = false;
+        Promise.resolve().then(() => loadData(true));
+      }
     }
   }, [loadRecipients]);
 
   useEffect(() => { loadData(); }, [loadData]);
-  useSmartPoll(loadData, 60000);
+  useSmartPoll(() => loadData(true), 60000);
 
   const handleExportRecipients = async () => {
     if (!isOwner || exportingRecipients) return;
@@ -9726,7 +9785,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
           <p className="text-sm text-[var(--muted)] mt-1">{T('إقرار استخدام الأجهزة اللاسلكية — سجل يومي', 'Wireless device handover — daily register')}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={loadData} className="btn-ghost px-3 py-2 rounded-xl text-sm">🔄</button>
+          <button onClick={() => loadData(true)} className="btn-ghost px-3 py-2 rounded-xl text-sm">🔄</button>
           <button onClick={openCreate} className="btn-primary px-4 py-2 rounded-xl font-bold">+ {T('إنشاء تسليم', 'New delivery')}</button>
         </div>
       </div>
@@ -12770,17 +12829,48 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', focusTarget = null }
     };
   }, []); // Empty run-once effect
 
-  const fetchHandovers = useCallback(() => {
-    setIsLoading(true);
-    fetch(`${BASE}/api/handovers`, { headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token') || ''}` } })
-      .then(res => (res.ok ? res.json() : []))
-      .then(data => { setHandovers(data || []); setIsLoading(false); })
-      .catch(() => setIsLoading(false));
+  const handoversLoadedRef = useRef(false);
+  const handoverFetchInFlightRef = useRef(false);
+  const handoverFetchQueuedRef = useRef(false);
+
+  const fetchHandovers = useCallback(async (silent = false) => {
+    if (handoverFetchInFlightRef.current) {
+      handoverFetchQueuedRef.current = true;
+      return;
+    }
+
+    handoverFetchInFlightRef.current = true;
+    const showInitialLoader = !handoversLoadedRef.current && !silent;
+    if (showInitialLoader) setIsLoading(true);
+
+    try {
+      const res = await fetch(`${BASE}/api/handovers`, {
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('access_token') || ''}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = await res.json();
+      const nextHandovers = Array.isArray(payload) ? payload : [];
+      setHandovers(previous =>
+        JSON.stringify(previous) === JSON.stringify(nextHandovers) ? previous : nextHandovers
+      );
+      handoversLoadedRef.current = true;
+    } catch {
+      // Keep the last successful rows visible if a background request fails.
+    } finally {
+      if (showInitialLoader || !handoversLoadedRef.current) setIsLoading(false);
+      handoverFetchInFlightRef.current = false;
+      if (handoverFetchQueuedRef.current) {
+        handoverFetchQueuedRef.current = false;
+        Promise.resolve().then(() => fetchHandovers(true));
+      }
+    }
   }, []);
 
   useEffect(() => { if (canAccess) fetchHandovers(); }, [canAccess, fetchHandovers]);
-  // Reload on entry and after explicit create/edit/delete actions only.
-  // Avoid repeated polling/realtime-triggered reloads that make this view flicker.
+
+  // Background safety refresh: one minute, same cadence as the other operational pages.
+  // It never replaces the visible table with a loading state.
+  useSmartPoll(() => fetchHandovers(true), 60000);
 
 
   const [focusedRowId, setFocusedRowId] = useState(null);
