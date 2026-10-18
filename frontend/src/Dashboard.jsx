@@ -25,6 +25,7 @@ import { captureFields, applyFieldsWhenReady } from './draftsStore';
 // الخاص: `const BASE` جوّه مكوّن سبق وسبّب `ReferenceError: BASE is not defined`
 // → React بيفكّ الشجرة كلها (مفيش error boundary) → صفحة بيضاء.
 import { BASE } from './apiBase';
+import { wirelessDeliveryDateMatchesFilter, wirelessDeliveryStatusAtFilterDate, wirelessDeliveryReturnDate } from './wirelessDateFilter';
 // ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
 //    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
 import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
@@ -9040,11 +9041,12 @@ function WirelessPrintDeclaration({ delivery, fixedText }) {
             </tr>
             <tr>
               <th>القسم / الإدارة</th><td>{delivery.department || ''}</td>
-              <th>تاريخ الاستلام</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
-              <th>مدة الاستخدام</th><td>{delivery.usage_duration || ''}</td>
+              <th>تاريخ التسليم</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
+              <th>تاريخ الاستلام</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
             </tr>
             <tr>
-              <th>المهمة</th><td colSpan="3">{delivery.task_description || ''}</td>
+              <th>مدة الاستخدام</th><td>{delivery.usage_duration || ''}</td>
+              <th>المهمة</th><td>{delivery.task_description || ''}</td>
               <th>المنطقة</th><td>{delivery.execution_area || ''}</td>
             </tr>
           </>
@@ -9114,6 +9116,11 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
             <th>المستلم</th><td>{delivery.full_name}</td>
             <th>الرقم الوظيفي</th><td>{delivery.employee_number || ''}</td>
             <th>تاريخ التسليم</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
+          </tr>
+          <tr>
+            <th>تاريخ الاستلام</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
+            <th>الحالة الحالية</th><td>{delivery.status || '—'}</td>
+            <th>ملاحظات الاستلام</th><td>{delivery.return_notes || '—'}</td>
           </tr>
         }
       />
@@ -9480,7 +9487,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const loadDataRef = useRef(null);
   const [recipientSearch, setRecipientSearch] = useState('');
   const [exportingRecipients, setExportingRecipients] = useState(false);
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(() => todayFileDate());
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showReturn, setShowReturn] = useState(false);
@@ -9491,9 +9498,10 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [printMode, setPrintMode] = useState('duplex'); // 'single' | 'duplex' — افتراضي: وجه وضهر
   const isPrintingRef = useRef(false); // يمنع الضغط المزدوج على "طباعة الآن"
   useEffect(() => () => { isPrintingRef.current = false; }, []); // تنظيف عند الخروج
-  // 📅 التسليمات المفلترة بالتاريخ (بتحكم الجدول والطباعة والسجل الشامل)
+  // 📅 عرض حالة التسليم كما كانت في اليوم المحدد: يظل المفتوح ظاهراً بعد يوم التسليم،
+  // ويظهر المُستَلَم حتى يوم استلامه فقط. هذا الفلتر يحكم الجدول وExcel والطباعة معاً.
   const filteredDeliveries = filterDate
-    ? deliveries.filter(d => String(d.received_date || '').slice(0, 10) === filterDate)
+    ? deliveries.filter(d => wirelessDeliveryDateMatchesFilter(d, filterDate))
     : deliveries;
 
   // 📊 تنزيل السجل الشامل — المالك فقط — صف لكل جهاز داخل كل تسليم
@@ -9509,7 +9517,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
       const devs = Array.isArray(d.devices) ? d.devices : [];
       const base = {
         'كود التسليم': d.delivery_code || '',
-        'تاريخ الاستلام': formatDateTime(d.received_date),
+        'تاريخ التسليم': String(d.received_date || '').slice(0, 10),
+        'تاريخ الاستلام': wirelessDeliveryReturnDate(d),
         'الاسم الثلاثي': d.full_name || '',
         'الرقم الوظيفي': d.employee_number || '',
         'الرقم القومي': d.national_id || '',
@@ -9517,7 +9526,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
         'المهمة': d.task_description || '',
         'مدة الاستخدام': d.usage_duration || '',
         'المنطقة': d.execution_area || '',
-        'حالة التسليم': d.status || '',
+        'حالة التسليم': wirelessDeliveryStatusAtFilterDate(d, filterDate),
         'ملاحظات عامة': d.general_notes || '',
         'ملاحظات الاستلام': d.return_notes || '',
       };
@@ -9885,11 +9894,12 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
           </p>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-sm text-right min-w-[68.75rem]">
+            <table className="w-full text-sm text-right min-w-[75rem]">
               <thead className="bg-[var(--surface-3)] border-b border-[var(--border)]">
                 <tr>
                   <th className="p-3 font-bold whitespace-nowrap">{T('كود', 'Code')}</th>
-                  <th className="p-3 font-bold whitespace-nowrap">{T('التاريخ', 'Date')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('تاريخ التسليم', 'Delivery date')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('تاريخ الاستلام', 'Return date')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('الاسم', 'Name')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('الوظيفي', 'No.')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('الأجهزة', 'Devices')}</th>
@@ -9901,7 +9911,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
                 {filteredDeliveries.map(d => (
                   <tr key={d.delivery_id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)]">
                     <td className="p-3 font-mono text-xs">{d.delivery_code}</td>
-                    <td className="p-3 font-mono text-xs">{d.received_date}</td>
+                    <td className="p-3 font-mono text-xs">{String(d.received_date || '').slice(0, 10)}</td>
+                    <td className="p-3 font-mono text-xs">{wirelessDeliveryReturnDate(d) || '—'}</td>
                     <td className="p-3 font-bold">{d.full_name}</td>
                     <td className="p-3 text-xs">{d.employee_number || '—'}</td>
                     <td className="p-3">
@@ -9912,7 +9923,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className={`text-xs font-bold px-2 py-1 rounded ${d.status === 'مسلَّم' ? 'bg-[var(--warn-soft)] text-[var(--warn)]' : 'bg-[var(--ok-soft)] text-[var(--ok)]'}`}>{d.status}</span>
+                      <span className={`text-xs font-bold px-2 py-1 rounded ${wirelessDeliveryStatusAtFilterDate(d, filterDate) === 'مسلَّم' ? 'bg-[var(--warn-soft)] text-[var(--warn)]' : 'bg-[var(--ok-soft)] text-[var(--ok)]'}`}>{wirelessDeliveryStatusAtFilterDate(d, filterDate)}</span>
                     </td>
                     <td className="p-3 sticky end-0 bg-[var(--surface)] border-s border-[var(--border)]">
                       <div className="flex gap-1 justify-center">
@@ -10142,8 +10153,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('الكل');
   const [entityFilter, setEntityFilter] = useState('all'); // الفلتر الجديد (الكل، مهام، أخبار)
-  // 📅 فلتر التاريخ للسجل: يُطبَّق على الجدول المعروض وعلى التصدير معاً (فارغ = كل التواريخ)
-  const [filterDate, setFilterDate] = useState('');
+  // 📅 يبدأ سجل النظام بتاريخ اليوم، مع إبقاء خيار «كل الأيام» متاحاً.
+  const [filterDate, setFilterDate] = useState(() => todayFileDate());
   const [customAlert, setCustomAlert] = useState(null);
 
   useEffect(() => {
