@@ -9298,7 +9298,7 @@ function WirelessPrintDeclaration({ delivery, fixedText, lang = 'ar' }) {
               <td className="wireless-print-center">{i + 1}</td>
               <td>{d.device_type}</td>
               <td><WirelessLtr>{d.device_serial || ''}</WirelessLtr></td>
-              <td>{d.device_condition}</td>
+              <td>{lang === 'ar' ? d.device_condition : d.device_condition === 'سليم' ? 'Good' : d.device_condition === 'تالف' ? 'Damaged' : d.device_condition}</td>
               <td>{d.accessories || ''}</td>
             </tr>
           ))}
@@ -9578,8 +9578,8 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
                     </FormGroup>
                     <FormGroup label={T('الحالة', 'Condition')}>
                       <EocSelect value={d.device_condition} onChange={e => updateDevice(i, { device_condition: e.target.value })} disabled={isReturned}>
-                        <option value="سليم">سليم</option>
-                        <option value="تالف">تالف</option>
+                        <option value="سليم">{T('سليم', 'Good')}</option>
+                        <option value="تالف">{T('تالف', 'Damaged')}</option>
                       </EocSelect>
                     </FormGroup>
                     <FormGroup label={T('الملحقات', 'Accessories')}>
