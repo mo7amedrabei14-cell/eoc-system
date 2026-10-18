@@ -15949,7 +15949,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
   const visibleAssessmentsData = loadedAssessmentScopeRef.current === assessmentScopeKey ? assessmentsData : [];
 
   const successfulAssessments = visibleAssessmentsData.filter((assessment) => assessment.ai_status === 'success');
-  const analystLabel = assessmentsData.length > 0 && successfulAssessments.length === assessmentsData.length
+  const analystLabel = visibleAssessmentsData.length > 0 && successfulAssessments.length === visibleAssessmentsData.length
     ? getAnalystLabel({
       ai_provider: successfulAssessments[0]?.ai_provider || currentRun?.source_meta?.ai_provider,
       ai_model: successfulAssessments[0]?.ai_model || currentRun?.source_meta?.ai_model,
@@ -15958,12 +15958,13 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
   // Fetch with stale-response protection. API failures never erase the last good snapshot.
   const fetchWeatherIntelData = async (silent = false) => {
+    const isSilent = silent === true;
     const requestScopeKey = `${targetDate}|${selectedLocationId}`;
     // Polling never competes with another active request.
-    if (silent && activeWeatherRequestRef.current !== null) return;
+    if (isSilent && activeWeatherRequestRef.current !== null) return;
     const requestId = ++weatherRequestSequenceRef.current;
     activeWeatherRequestRef.current = requestId;
-    if (!silent && (loadedAssessmentScopeRef.current !== requestScopeKey || assessmentsDataRef.current.length === 0)) {
+    if (!isSilent && (loadedAssessmentScopeRef.current !== requestScopeKey || assessmentsDataRef.current.length === 0)) {
       setIsLoading(true);
     }
     setApiError(null);
@@ -16003,7 +16004,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           loadedAssessmentScopeRef.current === requestScopeKey &&
           assessmentsDataRef.current.length > 0;
         // Keep a populated snapshot if a background poll returns an empty result during a transient recovery.
-        const preserveLastGoodSnapshot = silent && nextAssessments.length === 0 && hasLastGoodSnapshotForScope;
+        const preserveLastGoodSnapshot = isSilent && nextAssessments.length === 0 && hasLastGoodSnapshotForScope;
 
         if (!preserveLastGoodSnapshot) {
           loadedAssessmentScopeRef.current = requestScopeKey;
@@ -16316,7 +16317,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   };
-  const weatherFilterMatches = (assessment) => {
+  const weatherFilterMatches = useCallback((assessment) => {
     if (selectedWeatherFilter === 'all') return true;
     const forecast = assessment.forecast || {};
     const weatherCode = toWeatherNumber(forecast.weather_code);
@@ -16366,7 +16367,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
       default:
         return true;
     }
-  };
+  }, [selectedWeatherFilter, intelConfig]);
 
   // Existing quick tabs and the phenomenon filter are cumulative.
   const filteredAssessments = useMemo(() => {
@@ -16378,7 +16379,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
       }
       return weatherFilterMatches(assessment);
     });
-  }, [visibleAssessmentsData, activeFilterTab, selectedWeatherFilter, intelConfig]);
+  }, [visibleAssessmentsData, activeFilterTab, weatherFilterMatches]);
 
   // إحصاءات ملخصة للكروت العلوية
   const kpiTotalLocations = visibleAssessmentsData.length;
@@ -16487,7 +16488,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
             <button
               type="button"
-              onClick={fetchWeatherIntelData}
+              onClick={() => fetchWeatherIntelData(true)}
               className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-[color,background-color,border-color,opacity,box-shadow,transform]"
               title={T('تحديث البيانات', 'Refresh')}
             >
@@ -16695,7 +16696,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             </div>
             <button
               type="button"
-              onClick={fetchWeatherIntelData}
+              onClick={() => fetchWeatherIntelData(true)}
               disabled={isLoading}
               className="ops-btn shrink-0 bg-red-600 text-white hover:bg-red-500 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-[color,background-color,border-color,opacity,box-shadow,transform] disabled:opacity-50"
             >
