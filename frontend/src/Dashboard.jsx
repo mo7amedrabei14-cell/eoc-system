@@ -1041,8 +1041,6 @@ const ENGLISH_UI = {
   "تاريخ التسليم": "Delivery date",
   "تاريخ الاستلام": "Return date",
   "حالة التسليم": "Handover status",
-  "كل الأيام": "All days",
-  "تاريخ التسليم": "Delivery date",
   "الساعة": "Hour",
   "توقيع المستلم": "Recipient signature",
   "الاسم:": "Name:",
@@ -1104,7 +1102,6 @@ const ENGLISH_UI = {
   "اسم راصد الاستمارة:": "Form recorded by:",
   "اسم مراجع الاستمارة:": "Form reviewed by:",
   "تنزيل السجل الشامل للمهام": "Download the comprehensive mission register",
-  "جاري سحب السجلات السرية…": "Loading audit records…",
   "تفاصيل العملية": "Activity details",
   "مسح جميع الأخبار نهائيًا": "Permanently delete all news",
   "فتح الخبر": "Open news item",
@@ -1132,11 +1129,6 @@ const ENGLISH_UI = {
   "عند الاستلام": "At return",
   "سليم": "Good",
   "تالف": "Damaged",
-  "تسليم أجهزة لاسلكي": "Wireless Handover",
-  "توقعات الطقس": "Weather Forecasts",
-  "مركز عمليات الطوارئ": "Emergency Operations Center",
-  "الوحدات التلقائية": "Automated Monitoring",
-  "الوحدات التشغيلية": "Operational Units",
 };
 
 const translatedTextCache = new WeakMap();
@@ -1144,6 +1136,10 @@ const translatedAttributeCache = new WeakMap();
 const ISO_REGION_CODES = 'AF,AL,DZ,AD,AO,AG,AR,AM,AU,AT,AZ,BS,BH,BD,BB,BY,BE,BZ,BJ,BT,BO,BA,BW,BR,BN,BG,BF,BI,CV,KH,CM,CA,CF,TD,CL,CN,CO,KM,CD,CG,CR,HR,CU,CY,CZ,DK,DJ,DM,DO,EC,EG,SV,GQ,ER,EE,SZ,ET,FJ,FI,FR,GA,GM,GE,DE,GH,GR,GD,GT,GN,GW,GY,HT,HN,HU,IS,IN,ID,IR,IQ,IE,IL,IT,CI,JM,JP,JO,KZ,KE,KI,KW,KG,LA,LV,LB,LS,LR,LY,LI,LT,LU,MG,MW,MY,MV,ML,MT,MH,MR,MU,MX,FM,MD,MC,MN,ME,MA,MZ,MM,NA,NR,NP,NL,NZ,NI,NE,NG,KP,MK,NO,OM,PK,PW,PA,PG,PY,PE,PH,PL,PT,QA,RO,RU,RW,KN,LC,VC,WS,SM,ST,SA,SN,RS,SC,SL,SG,SK,SI,SB,SO,ZA,KR,SS,ES,LK,SD,SR,SE,CH,SY,TJ,TZ,TH,TL,TG,TO,TT,TN,TR,TM,TV,UG,UA,AE,GB,US,UY,UZ,VU,VE,VN,YE,ZM,ZW,TW,GL,GU,AI,KY,GI,PR,GP,MQ,NC,PN,BM,JE,IM,BL,MF'.split(',');
 const englishRegionNameCache = new Map();
 const ENGLISH_UI_PREFIXES = [
+  ['خطأ من السيرفر:', 'Server error:'],
+  ['فشل إرسال أمر التحديث', 'Failed to send the refresh command'],
+  ['حدث خطأ أثناء الاتصال', 'An error occurred while connecting'],
+  ['تعذر الاتصال', 'Connection failed'],
   ['المؤشرات الحية لفرع/محافظة:', 'Live indicators for branch/governorate:'],
   ['بيانات تمركز:', 'Deployment data:'],
   ['تحديث بواسطة:', 'Updated by:'],
