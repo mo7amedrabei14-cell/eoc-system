@@ -13403,12 +13403,125 @@ def update_wireless_fixed_text(
 
 
 def _wireless_recipient_rows(cursor, search=None):
-    """One row per valid national ID, using the most recent recorded name/member number."""
+    """One row per 14-digit national ID, with the latest identity data and total delivery count."""
     query = """
-        WITH valid_deliveries AS (
-            SELECT delivery_id, full_name, employee_number, national_id, received_date
+        WITH normalized_deliveries AS (
+            SELECT delivery_id, full_name, employee_number, received_date,
+                   translate(
+                       btrim(COALESCE(national_id, '')),
+                       '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹',
+                       '01234567890123456789'
+                   ) AS normalized_national_id
             FROM wireless_deliveries
-            WHERE national_id ~ '^[0-9]{14}
+        ),
+        valid_deliveries AS (
+            SELECT delivery_id, full_name, employee_number,
+                   normalized_national_id AS national_id, received_date
+            FROM normalized_deliveries
+            WHERE length(normalized_national_id) = 14
+              AND normalized_national_id ~ '^[0-9]{14}'
+        ),
+        recipient_counts AS (
+            SELECT national_id, COUNT(*)::integer AS receive_count
+            FROM valid_deliveries
+            GROUP BY national_id
+        ),
+        latest AS (
+            SELECT DISTINCT ON (national_id)
+                   full_name, employee_number, national_id
+            FROM valid_deliveries
+            ORDER BY national_id, received_date DESC, delivery_id DESC
+        )
+        SELECT latest.full_name, latest.national_id,
+               COALESCE(latest.employee_number, ''), recipient_counts.receive_count
+        FROM latest
+        JOIN recipient_counts USING (national_id)
+    """
+    params = []
+    search = _wclean(search, 100)
+    if search:
+        query += """
+            WHERE latest.full_name ILIKE %s
+               OR latest.national_id ILIKE %s
+               OR COALESCE(latest.employee_number, '') ILIKE %s
+        """
+        pattern = f"%{search}%"
+        params.extend((pattern, pattern, pattern))
+    query += " ORDER BY lower(latest.full_name), latest.national_id;"
+    cursor.execute(query, tuple(params))
+    return [
+        {
+            "full_name": row[0] or "",
+            "national_id": row[1] or "",
+            "employee_number": row[2] or "",
+            "receive_count": int(row[3] or 0),
+        }
+        for row in cursor.fetchall()
+    ]
+
+
+@app.get("/api/wireless-handover/recipients")
+def get_wireless_recipients(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        with connection.cursor() as cursor:
+            return {"recipients": _wireless_recipient_rows(cursor)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error loading wireless recipients: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تحميل قائمة المستلمين")
+    finally:
+        connection.close()
+
+
+@app.get("/api/wireless-handover/recipients/export")
+def export_wireless_recipients(
+    search: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Owner-only data source for the recipients Excel export."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        if not is_owner_role(role):
+            raise HTTPException(status_code=403, detail="تصدير المستلمين متاح للمالك فقط")
+        with connection.cursor() as cursor:
+            rows = _wireless_recipient_rows(cursor, search=search)
+            try:
+                create_audit_log(
+                    cursor, user_id, "تصدير مستلمي أجهزة لاسلكية",
+                    mission_id=None, entity_type="wireless_handover", entity_id=None,
+                    details={"action_text": f"تصدير قائمة المستلمين — {len(rows)} سجل"},
+                )
+            except Exception:
+                pass
+            connection.commit()
+            return {"recipients": rows}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error exporting wireless recipients: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تجهيز بيانات التصدير")
+    finally:
+        connection.close()
+
+
+@app.get("/api/wireless-handover/{delivery_id}")
 def get_wireless_delivery_one(
     delivery_id: int,
     credentials: HTTPAuthorizationCredentials = Depends(security),
