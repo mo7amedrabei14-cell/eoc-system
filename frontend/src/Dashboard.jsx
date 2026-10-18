@@ -9112,16 +9112,18 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
       <WirelessPrintInfo
         delivery={delivery}
         rows={
-          <tr>
-            <th>المستلم</th><td>{delivery.full_name}</td>
-            <th>الرقم الوظيفي</th><td>{delivery.employee_number || ''}</td>
-            <th>تاريخ التسليم</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
-          </tr>
-          <tr>
-            <th>تاريخ الاستلام</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
-            <th>الحالة الحالية</th><td>{delivery.status || '—'}</td>
-            <th>ملاحظات الاستلام</th><td>{delivery.return_notes || '—'}</td>
-          </tr>
+          <>
+            <tr>
+              <th>المستلم</th><td>{delivery.full_name}</td>
+              <th>الرقم الوظيفي</th><td>{delivery.employee_number || ''}</td>
+              <th>تاريخ التسليم</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
+            </tr>
+            <tr>
+              <th>تاريخ الاستلام</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
+              <th>الحالة الحالية</th><td>{delivery.status || '—'}</td>
+              <th>ملاحظات الاستلام</th><td>{delivery.return_notes || '—'}</td>
+            </tr>
+          </>
         }
       />
 
