@@ -2093,19 +2093,58 @@ useEffect(() => {
     const root = dashboardRootRef.current;
     if (!root) return undefined;
 
-    const localize = () => localizeDashboardDom(root, language);
-    localize();
-
-    const observer = new MutationObserver(localize);
-    observer.observe(root, {
+    const observationOptions = {
       childList: true,
       subtree: true,
       characterData: true,
       attributes: true,
       attributeFilter: ['placeholder', 'title', 'aria-label', 'alt', 'data-tip', 'data-sidebar-tooltip', 'data-label'],
-    });
+    };
+    const portalSelector = '.modal-backdrop, .eoc-modal-layer, .sig-veil-layer, .sig-dock-layer, .wireless-print-root, .eoc-portal';
+    const portalObservers = new Map();
 
-    return () => observer.disconnect();
+    // Modals and popovers rendered with createPortal live directly under body,
+    // outside dashboardRootRef. Localize only those portal roots so they receive
+    // the same language without watching every mutation across the whole page.
+    const localizePortals = () => {
+      const portals = Array.from(document.body.querySelectorAll(portalSelector))
+        .filter((element) => !root.contains(element));
+      portals.forEach((element) => {
+        localizeDashboardDom(element, language);
+        if (portalObservers.has(element)) return;
+        const portalObserver = new MutationObserver(() => localizeDashboardDom(element, language));
+        portalObserver.observe(element, observationOptions);
+        portalObservers.set(element, portalObserver);
+      });
+
+      for (const [element, portalObserver] of portalObservers.entries()) {
+        if (!element.isConnected || root.contains(element)) {
+          portalObserver.disconnect();
+          portalObservers.delete(element);
+        }
+      }
+    };
+
+    const localize = () => {
+      localizeDashboardDom(root, language);
+      localizePortals();
+    };
+    localize();
+
+    const observer = new MutationObserver(localize);
+    observer.observe(root, observationOptions);
+
+    // Observe only body-level insertions/removals; each discovered portal has
+    // its own scoped observer for text and attribute changes.
+    const bodyObserver = new MutationObserver(localizePortals);
+    bodyObserver.observe(document.body, { childList: true });
+
+    return () => {
+      observer.disconnect();
+      bodyObserver.disconnect();
+      portalObservers.forEach((portalObserver) => portalObserver.disconnect());
+      portalObservers.clear();
+    };
   }, [language]);
 
   const [branchesList, setBranchesList] = useState([]);
@@ -8887,7 +8926,7 @@ const DateInput = ({ type = "date", value, onChange, defaultValue, id, className
         {isDate && <button type="button" onClick={openCalendar} disabled={disabled} className="absolute left-0 top-1/2 -translate-y-1/2 w-6 text-[var(--muted-2)] hover:text-white text-sm" title="فتح التقويم">📅</button>}
       </div>
       {open && createPortal(
-        <div ref={popRef} className="fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[17.5rem]"
+        <div ref={popRef} className="eoc-portal fixed z-[9999] rounded-xl border border-[var(--border)] bg-[var(--surface-2)] shadow-2xl p-3 w-[17.5rem]"
           style={{ top: pos.top, left: pos.left, position: 'fixed' }}>
           <div className="flex items-center justify-between mb-2">
             <button type="button" onClick={() => changeMonth(-1)} className="w-7 h-7 rounded hover:bg-[var(--surface-hover)] text-[var(--ink-2)] text-lg leading-none">‹</button>
@@ -9484,7 +9523,7 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
   const isReturned = isEdit && initial?.status === 'مُرجَع';
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="eoc-portal fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <div className="w-full max-w-5xl card-surface rounded-3xl border border-[var(--border-strong)] shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
         <div className="p-5 border-b border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-between shrink-0">
           <h3 className="text-lg font-bold flex items-center gap-2">
