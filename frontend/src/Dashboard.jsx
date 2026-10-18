@@ -9120,8 +9120,7 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
             </tr>
             <tr>
               <th>تاريخ الاستلام</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
-              <th>الحالة الحالية</th><td>{delivery.status || '—'}</td>
-              <th>ملاحظات الاستلام</th><td>{delivery.return_notes || '—'}</td>
+              <th>ملاحظات الاستلام</th><td colSpan="3">{delivery.return_notes || '—'}</td>
             </tr>
           </>
         }
