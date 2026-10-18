@@ -13045,11 +13045,6 @@ class WirelessDeliveryUpdate(BaseModel):
     full_name: Optional[str] = None
     employee_number: Optional[str] = None
     national_id: Optional[str] = None
-
-    @field_validator("national_id", mode="before")
-    @classmethod
-    def validate_national_id(cls, value):
-        return _normalize_wireless_national_id(value)
     department: Optional[str] = None
     received_date: Optional[str] = None
     task_description: Optional[str] = None
@@ -13057,6 +13052,11 @@ class WirelessDeliveryUpdate(BaseModel):
     execution_area: Optional[str] = None
     general_notes: Optional[str] = None
     devices: Optional[List[WirelessDeviceIn]] = None
+
+    @field_validator("national_id", mode="before")
+    @classmethod
+    def validate_national_id(cls, value):
+        return _normalize_wireless_national_id(value)
 
 
 class WirelessDeliveryReturn(BaseModel):
