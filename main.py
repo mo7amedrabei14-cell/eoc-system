@@ -894,6 +894,7 @@ def ensure_wireless_handover_schema():
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_created ON wireless_deliveries (created_at DESC);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_date ON wireless_deliveries (received_date DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_national_id ON wireless_deliveries (national_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_status ON wireless_deliveries (status);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_devices_delivery ON wireless_delivery_devices (delivery_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_devices_type ON wireless_delivery_devices (device_type);")
@@ -13009,10 +13010,23 @@ class WirelessDeviceIn(BaseModel):
     device_notes: Optional[str] = None
 
 
+def _normalize_wireless_national_id(value):
+    """Normalize Arabic/Persian digits and require one Egyptian 14-digit national ID."""
+    if value is None:
+        raise ValueError("الرقم القومي إلزامي ويجب أن يتكون من 14 رقمًا بالضبط")
+    value = str(value).strip().translate(str.maketrans(
+        "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹",
+        "01234567890123456789",
+    ))
+    if not re.fullmatch(r"[0-9]{14}", value):
+        raise ValueError("الرقم القومي إلزامي ويجب أن يتكون من 14 رقمًا بالضبط")
+    return value
+
+
 class WirelessDeliveryCreate(BaseModel):
     full_name: str
     employee_number: Optional[str] = None
-    national_id: Optional[str] = None
+    national_id: str
     department: Optional[str] = None
     received_date: str
     task_description: Optional[str] = None
@@ -13020,6 +13034,11 @@ class WirelessDeliveryCreate(BaseModel):
     execution_area: Optional[str] = None
     general_notes: Optional[str] = None
     devices: List[WirelessDeviceIn]
+
+    @field_validator("national_id", mode="before")
+    @classmethod
+    def validate_national_id(cls, value):
+        return _normalize_wireless_national_id(value)
 
 
 class WirelessDeliveryUpdate(BaseModel):
@@ -13033,6 +13052,11 @@ class WirelessDeliveryUpdate(BaseModel):
     execution_area: Optional[str] = None
     general_notes: Optional[str] = None
     devices: Optional[List[WirelessDeviceIn]] = None
+
+    @field_validator("national_id", mode="before")
+    @classmethod
+    def validate_national_id(cls, value):
+        return _normalize_wireless_national_id(value)
 
 
 class WirelessDeliveryReturn(BaseModel):
@@ -13226,7 +13250,7 @@ def create_wireless_delivery(
                 (
                     delivery_code, full_name,
                     _wclean(payload.employee_number, 100),
-                    _wclean(payload.national_id, 50),
+                    payload.national_id,
                     _wclean(payload.department, 200),
                     received_date,
                     _wclean(payload.task_description, 2000),
@@ -13373,6 +13397,126 @@ def update_wireless_fixed_text(
         connection.rollback()
         print(f"Error updating fixed text: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+
+def _wireless_recipient_rows(cursor, search=None):
+    """One row per 14-digit national ID, with latest identity fields and total delivery count."""
+    query = """
+        WITH normalized_deliveries AS (
+            SELECT delivery_id, full_name, employee_number, received_date,
+                   translate(
+                       btrim(COALESCE(national_id, '')),
+                       '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹',
+                       '01234567890123456789'
+                   ) AS normalized_national_id
+            FROM wireless_deliveries
+        ),
+        valid_deliveries AS (
+            SELECT delivery_id, full_name, employee_number,
+                   normalized_national_id AS national_id, received_date
+            FROM normalized_deliveries
+            WHERE length(normalized_national_id) = 14
+              AND normalized_national_id ~ '^[0-9]{14}'
+        ),
+        recipient_counts AS (
+            SELECT national_id, COUNT(*)::integer AS receive_count
+            FROM valid_deliveries
+            GROUP BY national_id
+        ),
+        latest AS (
+            SELECT DISTINCT ON (national_id)
+                   full_name, employee_number, national_id
+            FROM valid_deliveries
+            ORDER BY national_id, received_date DESC, delivery_id DESC
+        )
+        SELECT latest.full_name, latest.national_id,
+               COALESCE(latest.employee_number, ''), recipient_counts.receive_count
+        FROM latest
+        JOIN recipient_counts USING (national_id)
+    """
+    params = []
+    search = _wclean(search, 100)
+    if search:
+        query += """
+            WHERE latest.full_name ILIKE %s
+               OR latest.national_id ILIKE %s
+               OR COALESCE(latest.employee_number, '') ILIKE %s
+        """
+        pattern = f"%{search}%"
+        params.extend((pattern, pattern, pattern))
+    query += " ORDER BY lower(latest.full_name), latest.national_id;"
+    cursor.execute(query, tuple(params))
+    return [
+        {
+            "full_name": row[0] or "",
+            "national_id": row[1] or "",
+            "employee_number": row[2] or "",
+            "receive_count": int(row[3] or 0),
+        }
+        for row in cursor.fetchall()
+    ]
+
+
+@app.get("/api/wireless-handover/recipients")
+def get_wireless_recipients(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        with connection.cursor() as cursor:
+            return {"recipients": _wireless_recipient_rows(cursor)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error loading wireless recipients: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تحميل قائمة المستلمين")
+    finally:
+        connection.close()
+
+
+@app.get("/api/wireless-handover/recipients/export")
+def export_wireless_recipients(
+    search: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Owner-only data source for the recipients Excel export."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        if not is_owner_role(role):
+            raise HTTPException(status_code=403, detail="تصدير المستلمين متاح للمالك فقط")
+        with connection.cursor() as cursor:
+            rows = _wireless_recipient_rows(cursor, search=search)
+            try:
+                create_audit_log(
+                    cursor, user_id, "تصدير مستلمي أجهزة لاسلكية",
+                    mission_id=None, entity_type="wireless_handover", entity_id=None,
+                    details={"action_text": f"تصدير قائمة المستلمين — {len(rows)} سجل"},
+                )
+            except Exception:
+                pass
+            connection.commit()
+            return {"recipients": rows}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error exporting wireless recipients: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تجهيز بيانات التصدير")
     finally:
         connection.close()
 
