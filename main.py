@@ -894,6 +894,7 @@ def ensure_wireless_handover_schema():
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_created ON wireless_deliveries (created_at DESC);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_date ON wireless_deliveries (received_date DESC);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_national_id ON wireless_deliveries (national_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_status ON wireless_deliveries (status);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_devices_delivery ON wireless_delivery_devices (delivery_id);")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_devices_type ON wireless_delivery_devices (device_type);")
@@ -13009,10 +13010,23 @@ class WirelessDeviceIn(BaseModel):
     device_notes: Optional[str] = None
 
 
+def _normalize_wireless_national_id(value):
+    """Normalize Arabic/Persian digits and require one Egyptian 14-digit national ID."""
+    if value is None:
+        raise ValueError("الرقم القومي إلزامي ويجب أن يتكون من 14 رقمًا بالضبط")
+    value = str(value).strip().translate(str.maketrans(
+        "٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹",
+        "01234567890123456789",
+    ))
+    if not re.fullmatch(r"[0-9]{14}", value):
+        raise ValueError("الرقم القومي إلزامي ويجب أن يتكون من 14 رقمًا بالضبط")
+    return value
+
+
 class WirelessDeliveryCreate(BaseModel):
     full_name: str
     employee_number: Optional[str] = None
-    national_id: Optional[str] = None
+    national_id: str
     department: Optional[str] = None
     received_date: str
     task_description: Optional[str] = None
@@ -13021,11 +13035,21 @@ class WirelessDeliveryCreate(BaseModel):
     general_notes: Optional[str] = None
     devices: List[WirelessDeviceIn]
 
+    @field_validator("national_id", mode="before")
+    @classmethod
+    def validate_national_id(cls, value):
+        return _normalize_wireless_national_id(value)
+
 
 class WirelessDeliveryUpdate(BaseModel):
     full_name: Optional[str] = None
     employee_number: Optional[str] = None
     national_id: Optional[str] = None
+
+    @field_validator("national_id", mode="before")
+    @classmethod
+    def validate_national_id(cls, value):
+        return _normalize_wireless_national_id(value)
     department: Optional[str] = None
     received_date: Optional[str] = None
     task_description: Optional[str] = None
@@ -13226,7 +13250,7 @@ def create_wireless_delivery(
                 (
                     delivery_code, full_name,
                     _wclean(payload.employee_number, 100),
-                    _wclean(payload.national_id, 50),
+                    payload.national_id,
                     _wclean(payload.department, 200),
                     received_date,
                     _wclean(payload.task_description, 2000),
@@ -13373,6 +13397,388 @@ def update_wireless_fixed_text(
         connection.rollback()
         print(f"Error updating fixed text: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+
+def _wireless_recipient_rows(cursor, search=None):
+    """One row per valid national ID, using the most recent recorded name/member number."""
+    query = """
+        WITH valid_deliveries AS (
+            SELECT delivery_id, full_name, employee_number, national_id, received_date
+            FROM wireless_deliveries
+            WHERE national_id ~ '^[0-9]{14}
+def get_wireless_delivery_one(
+    delivery_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        with connection.cursor() as cursor:
+            cursor.execute(f"{_WIRELESS_DELIVERY_SELECT} WHERE delivery_id = %s;", (delivery_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="التسليم غير موجود")
+            return _wireless_delivery_dict(cursor, row)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting wireless delivery: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+@app.put("/api/wireless-handover/{delivery_id}")
+def update_wireless_delivery(
+    delivery_id: int,
+    payload: WirelessDeliveryUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+
+        updates = payload.model_dump(exclude_unset=True)
+        if not updates:
+            raise HTTPException(status_code=400, detail="لا توجد تعديلات")
+        if "full_name" in updates:
+            n = _wclean(updates["full_name"], 200)
+            if not n:
+                raise HTTPException(status_code=400, detail="اسم المستلم لا يمكن أن يكون فارغاً")
+            updates["full_name"] = n
+
+        # 🛡️ devices لازم تيجي من payload.devices (pydantic models) مش من model_dump
+        #    لأن model_dump() بتحوّلها list[dict]، والكود بيستخدم d.device_type/device_serial
+        _devices_supplied = "devices" in payload.model_fields_set
+        new_devices = payload.devices if _devices_supplied else None
+        updates.pop("devices", None)
+        if new_devices is not None:
+            if not new_devices:
+                raise HTTPException(status_code=400, detail="لا بد من جهاز واحد على الأقل")
+            for d in new_devices:
+                _wireless_validate_device(d)
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status FROM wireless_deliveries WHERE delivery_id = %s;", (delivery_id,))
+            existing = cursor.fetchone()
+            if not existing:
+                raise HTTPException(status_code=404, detail="التسليم غير موجود")
+            if existing[0] == "مُرجَع" and new_devices is not None:
+                raise HTTPException(status_code=400, detail="لا يمكن تعديل أجهزة تسليم تم استلامه — أعِد تفعيله أولاً")
+
+            if updates:
+                set_parts, values = [], []
+                for k, v in updates.items():
+                    set_parts.append(f"{k} = %s")
+                    values.append(v if v not in ("", None) else None)
+                set_parts.append("updated_at = (now() AT TIME ZONE 'Africa/Cairo')")
+                values.append(delivery_id)
+                cursor.execute(f"UPDATE wireless_deliveries SET {', '.join(set_parts)} WHERE delivery_id = %s;", tuple(values))
+
+            if new_devices is not None:
+                cursor.execute("DELETE FROM wireless_delivery_devices WHERE delivery_id = %s;", (delivery_id,))
+                for d in new_devices:
+                    cursor.execute(
+                        """
+                        INSERT INTO wireless_delivery_devices
+                            (delivery_id, device_type, device_serial, accessories, device_condition, device_notes)
+                        VALUES (%s, %s, %s, %s, %s, %s);
+                        """,
+                        (
+                            delivery_id, d.device_type,
+                            _wclean(d.device_serial, 100),
+                            _wclean(d.accessories, 1000),
+                            d.device_condition,
+                            _wclean(d.device_notes, 1000),
+                        ),
+                    )
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "تعديل تسليم أجهزة",
+                    mission_id=None, entity_type="wireless_handover", entity_id=delivery_id,
+                    details={"action_text": f"تعديل تسليم #{delivery_id}"},
+                )
+            except Exception:
+                pass
+
+            connection.commit()
+            return {"message": "تم التعديل", "delivery_id": delivery_id}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error updating wireless delivery: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+@app.post("/api/wireless-handover/{delivery_id}/return")
+def return_wireless_delivery(
+    delivery_id: int,
+    payload: WirelessDeliveryReturn,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """استلام جماعي — يرجع كل أجهزة التسليم دفعة واحدة."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT delivery_code, full_name, status FROM wireless_deliveries WHERE delivery_id = %s;",
+                (delivery_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="التسليم غير موجود")
+            if row[2] == "مُرجَع":
+                return {"message": "التسليم مُرجَع بالفعل", "delivery_id": delivery_id}
+
+            return_notes = _wclean(payload.return_notes, 2000)
+
+            cursor.execute(
+                """
+                UPDATE wireless_deliveries SET
+                    status = 'مُرجَع',
+                    return_notes = %s,
+                    returned_at = (now() AT TIME ZONE 'Africa/Cairo'),
+                    returned_by = %s,
+                    updated_at = (now() AT TIME ZONE 'Africa/Cairo')
+                WHERE delivery_id = %s;
+                """,
+                (return_notes, user_id, delivery_id),
+            )
+
+            try:
+                create_audit_log(
+                    cursor, user_id, "استلام أجهزة لاسلكية",
+                    mission_id=None, entity_type="wireless_handover", entity_id=delivery_id,
+                    details={"action_text": f"استلام تسليم {row[0]} من «{row[1]}»" + (f" — {return_notes}" if return_notes else "")},
+                )
+            except Exception:
+                pass
+
+            connection.commit()
+            return {"message": "تم تسجيل استلام التسليم بالكامل", "delivery_id": delivery_id}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error returning wireless delivery: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+@app.post("/api/wireless-handover/{delivery_id}/unreturn")
+def unreturn_wireless_delivery(
+    delivery_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """إعادة تفعيل التسليم (تصحيح خطأ في الاستلام)."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT status FROM wireless_deliveries WHERE delivery_id = %s;", (delivery_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="التسليم غير موجود")
+            if row[0] != "مُرجَع":
+                return {"message": "التسليم ليس مُرجَعاً"}
+            cursor.execute("""
+                UPDATE wireless_deliveries SET
+                    status = 'مسلَّم',
+                    return_notes = NULL,
+                    returned_at = NULL,
+                    returned_by = NULL,
+                    updated_at = (now() AT TIME ZONE 'Africa/Cairo')
+                WHERE delivery_id = %s;
+            """, (delivery_id,))
+            try:
+                create_audit_log(
+                    cursor, user_id, "إعادة تفعيل تسليم",
+                    mission_id=None, entity_type="wireless_handover", entity_id=delivery_id,
+                    details={"action_text": f"إعادة تفعيل تسليم #{delivery_id}"},
+                )
+            except Exception:
+                pass
+            connection.commit()
+            return {"message": "تمت إعادة التفعيل"}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error unreturning: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+@app.delete("/api/wireless-handover/{delivery_id}")
+def delete_wireless_delivery(
+    delivery_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT delivery_code, full_name FROM wireless_deliveries WHERE delivery_id = %s;", (delivery_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="التسليم غير موجود")
+            cursor.execute("DELETE FROM wireless_deliveries WHERE delivery_id = %s;", (delivery_id,))
+            try:
+                create_audit_log(
+                    cursor, user_id, "حذف تسليم أجهزة",
+                    mission_id=None, entity_type="wireless_handover", entity_id=delivery_id,
+                    details={"action_text": f"حذف تسليم {row[0]} لـ «{row[1]}»"},
+                )
+            except Exception:
+                pass
+            connection.commit()
+            return {"message": "تم الحذف"}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error deleting: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+        ),
+        recipient_counts AS (
+            SELECT national_id, COUNT(*)::integer AS receive_count
+            FROM valid_deliveries
+            GROUP BY national_id
+        ),
+        latest AS (
+            SELECT DISTINCT ON (national_id)
+                   full_name, employee_number, national_id
+            FROM valid_deliveries
+            ORDER BY national_id, received_date DESC, delivery_id DESC
+        )
+        SELECT latest.full_name, latest.national_id,
+               COALESCE(latest.employee_number, ''), recipient_counts.receive_count
+        FROM latest
+        JOIN recipient_counts USING (national_id)
+    """
+    params = []
+    search = _wclean(search, 100)
+    if search:
+        query += """
+            WHERE latest.full_name ILIKE %s
+               OR latest.national_id ILIKE %s
+               OR COALESCE(latest.employee_number, '') ILIKE %s
+        """
+        pattern = f"%{search}%"
+        params.extend((pattern, pattern, pattern))
+    query += " ORDER BY lower(latest.full_name), latest.national_id;"
+    cursor.execute(query, tuple(params))
+    return [
+        {
+            "full_name": row[0] or "",
+            "national_id": row[1] or "",
+            "employee_number": row[2] or "",
+            "receive_count": int(row[3] or 0),
+        }
+        for row in cursor.fetchall()
+    ]
+
+
+@app.get("/api/wireless-handover/recipients")
+def get_wireless_recipients(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        with connection.cursor() as cursor:
+            return {"recipients": _wireless_recipient_rows(cursor)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error loading wireless recipients: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تحميل قائمة المستلمين")
+    finally:
+        connection.close()
+
+
+@app.get("/api/wireless-handover/recipients/export")
+def export_wireless_recipients(
+    search: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Owner-only data source for the recipients Excel export."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = get_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        if not is_owner_role(role):
+            raise HTTPException(status_code=403, detail="تصدير المستلمين متاح للمالك فقط")
+        with connection.cursor() as cursor:
+            rows = _wireless_recipient_rows(cursor, search=search)
+            try:
+                create_audit_log(
+                    cursor, user_id, "تصدير مستلمي أجهزة لاسلكية",
+                    mission_id=None, entity_type="wireless_handover", entity_id=None,
+                    details={"action_text": f"تصدير قائمة المستلمين — {len(rows)} سجل"},
+                )
+            except Exception:
+                pass
+            connection.commit()
+            return {"recipients": rows}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"Error exporting wireless recipients: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء تجهيز بيانات التصدير")
     finally:
         connection.close()
 
