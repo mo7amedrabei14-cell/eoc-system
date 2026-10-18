@@ -1129,6 +1129,45 @@ const ENGLISH_UI = {
   "عند الاستلام": "At return",
   "سليم": "Good",
   "تالف": "Damaged",
+  "رقم العضوية": "Membership number",
+  "ستظهر هنا كل التحديثات اللحظية فور حدوثها": "All real-time updates will appear here as they happen",
+  "استجابة)": "Response)",
+  "الرصد العالمي": "Global monitoring",
+  "مكتملة (تم المراجعة من إدارة الشباب)": "Completed (reviewed by Youth & Volunteers)",
+  "📥 تنزيل نسخة": "📥 Download a copy",
+  "↩️ إرجاع للطابور": "↩️ Return to queue",
+  "🗑️ حذف من الأرشيف": "🗑️ Remove from archive",
+  "⚠ يجب إدخال عنوان للمسار المخصص أولاً.": "⚠ Enter a name for the custom route first.",
+  "⚠ يجب إضافة مشارك واحد على الأقل بالاسم لإتمام أي عملية على المهمة.": "⚠ Add at least one named participant before performing any action on the mission.",
+  "⚠ رقم العضوية والفرع إلزاميان للمتطوع، وصفة المشارك إلزامية لغير المتطوع.": "⚠ Membership number and branch are required for volunteers; participant designation is required for non-volunteers.",
+  "🛣️ خطوط السير": "🛣️ Routes",
+  "📥 انضمام": "📥 Join",
+  "📤 انفصال": "📤 Leave",
+  "عنوان السجل الإداري — اكتب اسم اليوم أو الفترة (اليوم الأول / اليوم الثاني) في المهام المفتوحة فقط": "Administrative log title — enter the day or period (Day 1 / Day 2) for open missions only",
+  "عنوان سجل الملاحظات — اكتب اسم اليوم أو الفترة (اليوم الأول / اليوم الثاني) في المهام المفتوحة فقط": "Notes log title — enter the day or period (Day 1 / Day 2) for open missions only",
+  "الوقت:": "Time:",
+  "المقر بما فيه (المستلم)": "Recipient (holder)",
+  "مركز عمليات الطوارئ (المسلِّم)": "Emergency Operations Center (issuer)",
+  "الكود الوظيفي:": "Employee ID:",
+  "الصفة:": "Role:",
+  "رقم البطاقة:": "ID card number:",
+  "التاريخ:": "Date:",
+  "المستلم": "Recipient",
+  "الرقم الوظيفي": "Employee number",
+  "الفحص البصري وحالة الأجهزة (يُملأ يدوياً)": "Visual inspection and device condition (complete manually)",
+  "الجهاز / الرقم التسلسلي": "Device / serial number",
+  "إضافة خبر": "Add news item",
+  "تحميل السجل": "Load register",
+  "رصد كارثة": "Record disaster",
+  "👀 يستحق المراقبة الآن": "👀 Worth monitoring now",
+  "تفاصيل الزلزال ↗": "Earthquake details ↗",
+  "القوة": "Magnitude",
+  "أقوى تاريخي (±15 يوم / 500كم)": "Strongest historical event (±15 days / 500 km)",
+  "عدد أحداث الفترة": "Events in selected period",
+  "الخطورة": "Risk level",
+  "خلال الفترة المعروضة": "During the displayed period",
+  "تصدير محلي": "Export local",
+  "تصدير عالمي": "Export global",
 };
 
 const translatedTextCache = new WeakMap();
@@ -9176,12 +9215,13 @@ function WirelessLtr({ children }) {
   return <bdi dir="ltr" className="wireless-print-ltr">{children}</bdi>;
 }
 
-function WirelessPrintHeader({ title, tag }) {
+function WirelessPrintHeader({ title, tag, lang = 'ar' }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
   return (
-    <div className="wireless-print-header">
+    <div className="wireless-print-header" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <div className="wireless-print-brand">
-        <strong>الهلال الأحمر المصري</strong>
-        <span>مركز عمليات الطوارئ (EOC)</span>
+        <strong>{T('الهلال الأحمر المصري', 'Egyptian Red Crescent')}</strong>
+        <span>{T('مركز عمليات الطوارئ (EOC)', 'Emergency Operations Center (EOC)')}</span>
       </div>
       <h2>{title}</h2>
       <div className="wireless-print-tag"><WirelessLtr>{tag}</WirelessLtr></div>
@@ -9205,29 +9245,30 @@ function WirelessPrintInfo({ delivery, rows }) {
 // ═══════════════════════════════════════════════════════════════════
 // الصفحة 1: إقرار استخدام
 // ═══════════════════════════════════════════════════════════════════
-function WirelessPrintDeclaration({ delivery, fixedText }) {
+function WirelessPrintDeclaration({ delivery, fixedText, lang = 'ar' }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
   return (
-    <div className="wireless-print-page" dir="rtl">
-      <WirelessPrintHeader title="إقرار استخدام جهاز لاسلكي" tag={delivery.delivery_code} />
+    <div className="wireless-print-page" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <WirelessPrintHeader lang={lang} title={T('إقرار استخدام جهاز لاسلكي', 'Wireless Device Use Declaration')} tag={delivery.delivery_code} />
 
       <WirelessPrintInfo
         delivery={delivery}
         rows={
           <>
             <tr>
-              <th>الاسم الثلاثي</th><td>{delivery.full_name}</td>
-              <th>الرقم الوظيفي / العضوية</th><td>{delivery.employee_number || ''}</td>
-              <th>الرقم القومي</th><td><WirelessLtr>{delivery.national_id || ''}</WirelessLtr></td>
+              <th>{T('الاسم الثلاثي', 'Full name')}</th><td>{delivery.full_name}</td>
+              <th>{T('الرقم الوظيفي / العضوية', 'Employee / membership no.')}</th><td>{delivery.employee_number || ''}</td>
+              <th>{T('الرقم القومي', 'National ID')}</th><td><WirelessLtr>{delivery.national_id || ''}</WirelessLtr></td>
             </tr>
             <tr>
-              <th>القسم / الإدارة</th><td>{delivery.department || ''}</td>
-              <th>تاريخ التسليم</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
-              <th>تاريخ الاستلام</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
+              <th>{T('القسم / الإدارة', 'Department')}</th><td>{delivery.department || ''}</td>
+              <th>{T('تاريخ التسليم', 'Delivery date')}</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
+              <th>{T('تاريخ الاستلام', 'Return date')}</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
             </tr>
             <tr>
-              <th>مدة الاستخدام</th><td>{delivery.usage_duration || ''}</td>
-              <th>المهمة</th><td>{delivery.task_description || ''}</td>
-              <th>المنطقة</th><td>{delivery.execution_area || ''}</td>
+              <th>{T('مدة الاستخدام', 'Usage duration')}</th><td>{delivery.usage_duration || ''}</td>
+              <th>{T('المهمة', 'Task')}</th><td>{delivery.task_description || ''}</td>
+              <th>{T('المنطقة', 'Area')}</th><td>{delivery.execution_area || ''}</td>
             </tr>
           </>
         }
@@ -9237,14 +9278,14 @@ function WirelessPrintDeclaration({ delivery, fixedText }) {
         <pre>{fixedText || ''}</pre>
       </div>
 
-<h3 className="wireless-print-subtitle">الأجهزة المسلَّمة ({(delivery.devices || []).length})</h3>
+<h3 className="wireless-print-subtitle">{T('الأجهزة المسلَّمة', 'Devices issued')} ({(delivery.devices || []).length})</h3>
       <table className="wireless-print-table wireless-print-list">
         <colgroup>
           <col style={{ width: '7%' }} /><col style={{ width: '20%' }} />
           <col style={{ width: '25%' }} /><col style={{ width: '14%' }} /><col style={{ width: '34%' }} />
         </colgroup>
         <thead>
-          <tr><th>#</th><th>النوع</th><th>الرقم التسلسلي</th><th>الحالة</th><th>الملحقات</th></tr>
+          <tr><th>#</th><th>{T('النوع', 'Type')}</th><th>{T('الرقم التسلسلي', 'Serial number')}</th><th>{T('الحالة', 'Condition')}</th><th>{T('الملحقات', 'Accessories')}</th></tr>
         </thead>
         <tbody>
           {(delivery.devices || []).map((d, i) => (
@@ -9263,18 +9304,18 @@ function WirelessPrintDeclaration({ delivery, fixedText }) {
         <colgroup><col style={{ width: '50%' }} /><col style={{ width: '50%' }} /></colgroup>
         <thead>
           {/* أول عمود = يمين الصفحة (RTL) */}
-          <tr><th>المقر بما فيه (المستلم)</th><th>مركز عمليات الطوارئ (المسلِّم)</th></tr>
+          <tr><th>{T('المقر بما فيه (المستلم)', 'Recipient (holder)')}</th><th>{T('مركز عمليات الطوارئ (المسلِّم)', 'Emergency Operations Center (issuer)')}</th></tr>
         </thead>
         <tbody>
-          <tr><td><b>الاسم:</b></td><td><b>الاسم:</b></td></tr>
-          <tr><td><b>الكود الوظيفي:</b></td><td><b>الصفة:</b></td></tr>
-          <tr><td><b>رقم البطاقة:</b></td><td><b>التاريخ:</b></td></tr>
-          <tr><td><b>التوقيع:</b></td><td><b>التوقيع:</b></td></tr>
+          <tr><td><b>{T('الاسم:', 'Name:')}</b></td><td><b>{T('الاسم:', 'Name:')}</b></td></tr>
+          <tr><td><b>{T('الكود الوظيفي:', 'Employee ID:')}</b></td><td><b>{T('الصفة:', 'Role:')}</b></td></tr>
+          <tr><td><b>{T('رقم البطاقة:', 'ID card no.')}</b></td><td><b>{T('التاريخ:', 'Date:')}</b></td></tr>
+          <tr><td><b>{T('التوقيع:', 'Signature:')}</b></td><td><b>{T('التوقيع:', 'Signature:')}</b></td></tr>
         </tbody>
       </table>
 
       <p className="wireless-print-foot">
-        <WirelessLtr>{delivery.delivery_code}</WirelessLtr> · <WirelessLtr>{new Date().toLocaleDateString('en-GB')}</WirelessLtr> — نسخة رسمية
+        <WirelessLtr>{delivery.delivery_code}</WirelessLtr> · <WirelessLtr>{new Date().toLocaleDateString('en-GB')}</WirelessLtr> — {T('نسخة رسمية', 'Official copy')}
       </p>
     </div>
   );
@@ -9283,30 +9324,31 @@ function WirelessPrintDeclaration({ delivery, fixedText }) {
 // ═══════════════════════════════════════════════════════════════════
 // الصفحة 2: كشف حالة كل الأجهزة في صفحة واحدة (فحص + تسليم + استلام)
 // ═══════════════════════════════════════════════════════════════════
-function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo = 1, pageCount = 1 }) {
+function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo = 1, pageCount = 1, lang = 'ar' }) {
+  const T = (ar, en) => (lang === 'ar' ? ar : en);
   const tag = pageCount > 1 ? `${delivery.delivery_code} (${pageNo}/${pageCount})` : delivery.delivery_code;
   return (
-    <div className="wireless-print-page" dir="rtl">
-      <WirelessPrintHeader title="كشف حالة الأجهزة اللاسلكية" tag={tag} />
+    <div className="wireless-print-page" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <WirelessPrintHeader lang={lang} title={T('كشف حالة الأجهزة اللاسلكية', 'Wireless Device Condition Report')} tag={tag} />
 
       <WirelessPrintInfo
         delivery={delivery}
         rows={
           <>
             <tr>
-              <th>المستلم</th><td>{delivery.full_name}</td>
-              <th>الرقم الوظيفي</th><td>{delivery.employee_number || ''}</td>
-              <th>تاريخ التسليم</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
+              <th>{T('المستلم', 'Recipient')}</th><td>{delivery.full_name}</td>
+              <th>{T('الرقم الوظيفي', 'Employee no.')}</th><td>{delivery.employee_number || ''}</td>
+              <th>{T('تاريخ التسليم', 'Delivery date')}</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
             </tr>
             <tr>
-              <th>تاريخ الاستلام</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
-              <th>ملاحظات الاستلام</th><td colSpan="3">{delivery.return_notes || '—'}</td>
+              <th>{T('تاريخ الاستلام', 'Return date')}</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
+              <th>{T('ملاحظات الاستلام', 'Return notes')}</th><td colSpan="3">{delivery.return_notes || '—'}</td>
             </tr>
           </>
         }
       />
 
-      <h3 className="wireless-print-subtitle">الفحص البصري وحالة الأجهزة (يُملأ يدوياً)</h3>
+      <h3 className="wireless-print-subtitle">{T('الفحص البصري وحالة الأجهزة (يُملأ يدوياً)', 'Visual inspection and device condition (complete manually)')}</h3>
       <table className="wireless-print-table wireless-print-devices">
         <colgroup>
           <col style={{ width: '5%' }} /><col style={{ width: '23%' }} /><col style={{ width: '11%' }} />
@@ -9314,8 +9356,8 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
         </colgroup>
         <thead>
           <tr>
-            <th>#</th><th>الجهاز / الرقم التسلسلي</th><th>الحالة عند التسليم</th>
-            <th>الفحص البصري (أمامي · جوانب · خلفي)</th><th>الحالة عند الاستلام</th><th>ملاحظات الاستلام</th>
+            <th>#</th><th>{T('الجهاز / الرقم التسلسلي', 'Device / serial number')}</th><th>{T('الحالة عند التسليم', 'Condition at handover')}</th>
+            <th>{T('الفحص البصري (أمامي · جوانب · خلفي)', 'Visual inspection (front · sides · rear)')}</th><th>{T('الحالة عند الاستلام', 'Condition at return')}</th><th>{T('ملاحظات الاستلام', 'Return notes')}</th>
           </tr>
         </thead>
         <tbody>
@@ -9342,13 +9384,13 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
           <col style={{ width: '16%' }} /><col style={{ width: '34%' }} />
         </colgroup>
         <thead>
-          <tr><th colSpan="2">عند التسليم</th><th colSpan="2">عند الاستلام</th></tr>
+          <tr><th colSpan="2">{T('عند التسليم', 'At handover')}</th><th colSpan="2">{T('عند الاستلام', 'At return')}</th></tr>
         </thead>
         <tbody>
-          <tr><th>التاريخ</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td><th>التاريخ</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td></tr>
-          <tr><th>الساعة</th><td><WirelessLtr>__ : __</WirelessLtr></td><th>الساعة</th><td><WirelessLtr>__ : __</WirelessLtr></td></tr>
-          <tr><th>توقيع المستلم</th><td></td><th>توقيع المستلم</th><td></td></tr>
-          <tr><th>ملاحظات</th><td></td><th>ملاحظات</th><td>{delivery.return_notes || ''}</td></tr>
+          <tr><th>{T('التاريخ', 'Date')}</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td><th>{T('التاريخ', 'Date')}</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td></tr>
+          <tr><th>{T('الساعة', 'Time')}</th><td><WirelessLtr>__ : __</WirelessLtr></td><th>{T('الساعة', 'Time')}</th><td><WirelessLtr>__ : __</WirelessLtr></td></tr>
+          <tr><th>{T('توقيع المستلم', 'Recipient signature')}</th><td></td><th>{T('توقيع المستلم', 'Recipient signature')}</th><td></td></tr>
+          <tr><th>{T('ملاحظات', 'Notes')}</th><td></td><th>{T('ملاحظات', 'Notes')}</th><td>{delivery.return_notes || ''}</td></tr>
         </tbody>
       </table>
 
@@ -10312,7 +10354,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
             for (let i = 0; i < devs.length; i += WIRELESS_DEVICES_PER_REPORT_PAGE) chunks.push(devs.slice(i, i + WIRELESS_DEVICES_PER_REPORT_PAGE));
             if (chunks.length === 0) chunks.push([]);
             const pages = [
-              <WirelessPrintDeclaration key={`d-${delivery.delivery_id}`} delivery={delivery} fixedText={fixedText} />,
+              <WirelessPrintDeclaration key={`d-${delivery.delivery_id}`} delivery={delivery} fixedText={fixedText} lang={lang} />,
               ...chunks.map((chunk, ci) => (
                 <WirelessPrintDeviceReport
                   key={`r-${delivery.delivery_id}-${ci}`}
@@ -10321,6 +10363,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
                   startIndex={ci * WIRELESS_DEVICES_PER_REPORT_PAGE}
                   pageNo={ci + 1}
                   pageCount={chunks.length}
+                  lang={lang}
                 />
               )),
             ];
