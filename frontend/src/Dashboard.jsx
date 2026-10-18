@@ -15919,6 +15919,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
   const [targetDate, setTargetDate] = useState(getDefaultTargetDate());
   const [selectedLocationId, setSelectedLocationId] = useState('all');
   const [activeFilterTab, setActiveFilterTab] = useState('all'); // all | hazards | anomalies | ai
+  const [selectedWeatherFilter, setSelectedWeatherFilter] = useState('all');
   const [assessmentsData, setAssessmentsData] = useState([]);
   const [currentRun, setCurrentRun] = useState(null);
   const [runsHistory, setRunsHistory] = useState([]);
@@ -15931,28 +15932,53 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
   const [showRunsModal, setShowRunsModal] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [expandedSections, setExpandedSections] = useState({}); // { [locId]: { summary: true, comp: true, anom: true, ops: true, rec: true } }
-  const successfulAssessments = assessmentsData.filter((assessment) => assessment.ai_status === 'success');
-  const analystLabel = assessmentsData.length > 0 && successfulAssessments.length === assessmentsData.length
+
+  // Preserve the last known-good response and reject stale overlapping polling responses.
+  const assessmentsDataRef = useRef(assessmentsData);
+  assessmentsDataRef.current = assessmentsData;
+  const runsHistoryRef = useRef(runsHistory);
+  runsHistoryRef.current = runsHistory;
+  const locationsListRef = useRef(locationsList);
+  locationsListRef.current = locationsList;
+  const intelConfigRef = useRef(intelConfig);
+  intelConfigRef.current = intelConfig;
+  const weatherRequestSequenceRef = useRef(0);
+  const activeWeatherRequestRef = useRef(null);
+  const loadedAssessmentScopeRef = useRef(null);
+  const assessmentScopeKey = `${targetDate}|${selectedLocationId}`;
+  const visibleAssessmentsData = loadedAssessmentScopeRef.current === assessmentScopeKey ? assessmentsData : [];
+
+  const successfulAssessments = visibleAssessmentsData.filter((assessment) => assessment.ai_status === 'success');
+  const analystLabel = visibleAssessmentsData.length > 0 && successfulAssessments.length === visibleAssessmentsData.length
     ? getAnalystLabel({
       ai_provider: successfulAssessments[0]?.ai_provider || currentRun?.source_meta?.ai_provider,
       ai_model: successfulAssessments[0]?.ai_model || currentRun?.source_meta?.ai_model,
     }, '', 'success')
     : '';
 
-  // جلب البيانات الأساسية مع الاحتفاظ بأي بيانات نجحت قبل حدوث خطأ
+  // Fetch with stale-response protection. API failures never erase the last good snapshot.
   const fetchWeatherIntelData = async (silent = false) => {
-    if (!silent) setIsLoading(true);
+    const isSilent = silent === true;
+    const requestScopeKey = `${targetDate}|${selectedLocationId}`;
+    // Polling never competes with another active request.
+    if (isSilent && activeWeatherRequestRef.current !== null) return;
+    const requestId = ++weatherRequestSequenceRef.current;
+    activeWeatherRequestRef.current = requestId;
+    if (!isSilent && (loadedAssessmentScopeRef.current !== requestScopeKey || assessmentsDataRef.current.length === 0)) {
+      setIsLoading(true);
+    }
     setApiError(null);
     const token = getStoredAccessToken();
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
     let successfulEndpoints = 0;
     let hasFailure = false;
+    const isCurrentRequest = () => requestId === weatherRequestSequenceRef.current;
     const recordFailure = () => {
       hasFailure = true;
     };
 
     try {
-      // 1. جلب التقييمات للتاريخ المحدد
+      // 1. Fetch assessments for the selected date and location.
       const params = new URLSearchParams();
       if (targetDate) params.append('target_date', targetDate);
       if (selectedLocationId && selectedLocationId !== 'all') params.append('location_id', selectedLocationId);
@@ -15963,74 +15989,127 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           throw new Error(T("تعذر تحميل بيانات التقييمات.", "Assessment data could not be loaded."));
         }
         const data = await readJsonObject(resAssessments, 'assessments');
-        setAssessmentsData(
-          groupAssessmentData(
-            data.assessments,
-            data.snapshots,
-            data.statistics,
-            data.frequencies
-          )
+        if (!isCurrentRequest()) return;
+        if (!Array.isArray(data.assessments)) {
+          throw new Error(T("استجابة التقييمات غير مكتملة؛ تم الاحتفاظ بالبيانات السابقة.", "Incomplete assessments response; previous data was retained."));
+        }
+
+        const nextAssessments = groupAssessmentData(
+          data.assessments,
+          data.snapshots,
+          data.statistics,
+          data.frequencies
         );
-        setCurrentRun(isObject(data.run) ? normalizeRun(data.run) : null);
-        setLocationsList(normalizeLocations(data.locations));
+        const hasLastGoodSnapshotForScope =
+          loadedAssessmentScopeRef.current === requestScopeKey &&
+          assessmentsDataRef.current.length > 0;
+        // Keep a populated snapshot if a background poll returns an empty result during a transient recovery.
+        const preserveLastGoodSnapshot = isSilent && nextAssessments.length === 0 && hasLastGoodSnapshotForScope;
+
+        if (!preserveLastGoodSnapshot) {
+          loadedAssessmentScopeRef.current = requestScopeKey;
+          assessmentsDataRef.current = nextAssessments;
+          setAssessmentsData(nextAssessments);
+          setCurrentRun(isObject(data.run) ? normalizeRun(data.run) : null);
+
+          if (Array.isArray(data.locations)) {
+            const nextLocations = normalizeLocations(data.locations);
+            if (nextLocations.length > 0 || locationsListRef.current.length === 0) {
+              locationsListRef.current = nextLocations;
+              setLocationsList(nextLocations);
+            }
+          }
+        }
         successfulEndpoints += 1;
-      } catch (err) {
+      } catch {
         recordFailure();
       }
 
-      // 2. جلب سجل التشغيلات الأخيرة
+      if (!isCurrentRequest()) return;
+
+      // 2. Fetch recent runs; only accept the documented array response.
       try {
         const resRuns = await fetch(`${BASE}/api/weather-intel/runs?limit=10`, { headers });
         if (!resRuns.ok) {
           throw new Error(T("تعذر تحميل سجل التشغيلات.", "Weather intelligence run history could not be loaded."));
         }
         const data = await readJsonObject(resRuns, 'runs');
-        setRunsHistory(normalizeRuns(data));
+        if (!isCurrentRequest()) return;
+        if (!Array.isArray(data)) {
+          throw new Error(T("استجابة سجل التشغيلات غير صالحة.", "Invalid weather run history response."));
+        }
+        const nextRuns = normalizeRuns(data);
+        if (nextRuns.length > 0 || runsHistoryRef.current.length === 0) {
+          runsHistoryRef.current = nextRuns;
+          setRunsHistory(nextRuns);
+        }
         successfulEndpoints += 1;
       } catch {
         recordFailure();
       }
 
-      // 3. جلب الإعدادات والعتبات
+      if (!isCurrentRequest()) return;
+
+      // 3. Fetch thresholds/configuration without replacing valid settings with an empty response.
       try {
         const resConfig = await fetch(`${BASE}/api/weather-intel/config`, { headers });
         if (!resConfig.ok) {
           throw new Error(T("تعذر تحميل إعدادات استخبارات الطقس.", "Weather intelligence configuration could not be loaded."));
         }
         const data = await readJsonObject(resConfig, 'config');
-        setIntelConfig(normalizeConfig(data.config ?? data));
+        if (!isCurrentRequest()) return;
+        const nextConfig = normalizeConfig(data.config ?? data);
+        if (Object.keys(nextConfig).length > 0 || Object.keys(intelConfigRef.current).length === 0) {
+          intelConfigRef.current = nextConfig;
+          setIntelConfig(nextConfig);
+        }
         successfulEndpoints += 1;
       } catch {
         recordFailure();
       }
 
-      // 4. جلب المواقع إن لم تكن محملة
-      if (locationsList.length === 0) {
+      if (!isCurrentRequest()) return;
+
+      // 4. Fetch locations only if the assessments endpoint did not provide them.
+      if (locationsListRef.current.length === 0) {
         try {
           const resLocs = await fetch(`${BASE}/api/weather-intel/locations?active=1`, { headers });
           if (!resLocs.ok) {
             throw new Error(T("تعذر تحميل المواقع.", "Weather intelligence locations could not be loaded."));
           }
           const data = await readJsonObject(resLocs, 'locations');
-          setLocationsList(normalizeLocations(data.locations || data));
+          if (!isCurrentRequest()) return;
+          const sourceLocations = Array.isArray(data) ? data : data.locations;
+          if (!Array.isArray(sourceLocations)) {
+            throw new Error(T("استجابة المواقع غير صالحة.", "Invalid weather locations response."));
+          }
+          const nextLocations = normalizeLocations(sourceLocations);
+          if (nextLocations.length > 0 || locationsListRef.current.length === 0) {
+            locationsListRef.current = nextLocations;
+            setLocationsList(nextLocations);
+          }
           successfulEndpoints += 1;
         } catch {
           recordFailure();
         }
       }
     } finally {
-      if (successfulEndpoints === 0) {
-        setApiError(T("تعذر الاتصال بخدمة استخبارات الطقس.", "Weather intelligence service is unavailable."));
-        setApiPartial(false);
-        if (setCustomAlert) setCustomAlert(T("تعذر جلب بيانات استخبارات الطقس.", "Failed to fetch weather intelligence data."));
-      } else if (hasFailure) {
-        setApiError(T("تم جلب جزء من البيانات، لكن بعض نقاط النهاية فشلت.", "Some Weather Intelligence data could not be loaded."));
-        setApiPartial(true);
-      } else {
-        setApiError(null);
-        setApiPartial(false);
+      // An older request must not hide newer data, clear its alert, or flip its loading state.
+      if (isCurrentRequest()) {
+        if (successfulEndpoints === 0) {
+          setApiError(T("تعذر الاتصال بخدمة استخبارات الطقس.", "Weather intelligence service is unavailable; last successful data remains visible."));
+          setApiPartial(false);
+          if (setCustomAlert) setCustomAlert(T("تعذر جلب بيانات استخبارات الطقس.", "Failed to fetch weather intelligence data."));
+        } else if (hasFailure) {
+          setApiError(T("تم جلب جزء من البيانات، لكن بعض نقاط النهاية فشلت.", "Some Weather Intelligence data could not be loaded; previously loaded sections were retained."));
+          setApiPartial(true);
+        } else {
+          setApiError(null);
+          setApiPartial(false);
+        }
+        setIsLoading(false);
+        if (activeWeatherRequestRef.current === requestId) activeWeatherRequestRef.current = null;
       }
-      setIsLoading(false);
     }
   };
 
@@ -16038,12 +16117,14 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     fetchWeatherIntelData();
   }, [targetDate, selectedLocationId]);
 
-    // 🛡️ شبكة أمان: تحديث صامت دوري
+    // Poll the current date/location only; skip ticks while a request is already active.
   useEffect(() => {
-    const t = setInterval(() => { fetchWeatherIntelData(true); }, 60000);
+    const t = setInterval(() => {
+      if (activeWeatherRequestRef.current === null) fetchWeatherIntelData(true);
+    }, 60000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [targetDate, selectedLocationId]);
 
 
   // تشغيل التحليل اليومي يدويًا (Owner Only)
@@ -16073,7 +16154,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
   // تصدير التقرير إلى Excel
   const handleExportExcel = async () => {
-    if (!assessmentsData || assessmentsData.length === 0) {
+    if (!visibleAssessmentsData || visibleAssessmentsData.length === 0) {
       if (setCustomAlert) setCustomAlert(T("لا توجد بيانات متاحة للتصدير.", "No data available to export."));
       return;
     }
@@ -16092,7 +16173,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         return [title, detail].filter(Boolean).join(' — ');
       };
       // 1. ورقة التوقعات الميدانية
-      const forecastRows = assessmentsData.map(a => {
+      const forecastRows = visibleAssessmentsData.map(a => {
         const fc = a.forecast || {};
         const hazards = a.hazards || [];
         return {
@@ -16118,7 +16199,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
       // 2. ورقة الخط المرجعي التاريخي (ERA5)
       const statsRows = [];
-      assessmentsData.forEach(a => {
+      visibleAssessmentsData.forEach(a => {
         (a.statistics || []).forEach(s => {
           const anomaly = a.anomalies?.[s.metric] || {};
           statsRows.push({
@@ -16150,7 +16231,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
       // 3. ورقة تكرارات العتبات
       const freqRows = [];
-      assessmentsData.forEach(a => {
+      visibleAssessmentsData.forEach(a => {
         (a.frequencies || []).forEach(f => {
           freqRows.push({
             [T('الموقع', 'Location')]: locationName(a),
@@ -16230,30 +16311,85 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     return T(`حالة جوية (WMO ${code})`, `Weather code (${code})`);
   };
 
-  // فلترة البطاقات
+  // Match the selected phenomenon against each location's forecast and configured hazard thresholds.
+  const toWeatherNumber = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const weatherFilterMatches = useCallback((assessment) => {
+    if (selectedWeatherFilter === 'all') return true;
+    const forecast = assessment.forecast || {};
+    const weatherCode = toWeatherNumber(forecast.weather_code);
+    const rainMm = toWeatherNumber(forecast.precip_mm);
+    const rainChance = toWeatherNumber(forecast.precip_prob_pct);
+    const maxTemp = toWeatherNumber(forecast.tmax);
+    const minTemp = toWeatherNumber(forecast.tmin);
+    const maxWind = toWeatherNumber(forecast.wind_max_kph);
+    const gusts = toWeatherNumber(forecast.wind_gusts_kph);
+    const hazardCodes = new Set((assessment.hazards || []).map((item) => safeText(item?.code).trim().toLowerCase()));
+    const hasHazard = (...codes) => codes.some((code) => hazardCodes.has(code));
+    const atLeastThreshold = (value, key, fallback) => {
+      const threshold = toWeatherNumber(intelConfig[key]?.value) ?? fallback;
+      return value !== null && value >= threshold;
+    };
+    const atMostThreshold = (value, key, fallback) => {
+      const threshold = toWeatherNumber(intelConfig[key]?.value) ?? fallback;
+      return value !== null && value <= threshold;
+    };
+    const rainCodes = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+    const thunderstormCodes = [95, 96, 99];
+
+    switch (selectedWeatherFilter) {
+      case 'rain':
+        return (rainMm !== null && rainMm > 0) ||
+          (rainChance !== null && rainChance > 0) ||
+          rainCodes.includes(weatherCode) ||
+          hasHazard('heavy_rain', 'thunderstorm');
+      case 'heavy_rain':
+        return hasHazard('heavy_rain') ||
+          [65, 67, 82].includes(weatherCode) ||
+          atLeastThreshold(rainMm, 'hazard.precip_heavy_mm', 10);
+      case 'thunderstorm':
+        return hasHazard('thunderstorm') || thunderstormCodes.includes(weatherCode);
+      case 'strong_wind':
+        return hasHazard('strong_wind') ||
+          atLeastThreshold(maxWind, 'hazard.wind_high_kph', 40) ||
+          atLeastThreshold(gusts, 'hazard.wind_gusts_high_kph', 60);
+      case 'heat':
+        return hasHazard('heat') || atLeastThreshold(maxTemp, 'hazard.tmax_high_c', 40);
+      case 'cold':
+        return hasHazard('cold') || atMostThreshold(minTemp, 'hazard.tmin_low_c', 5);
+      case 'fog':
+        return hasHazard('fog') || [45, 48].includes(weatherCode);
+      case 'hazards':
+        return (assessment.hazards || []).length > 0;
+      default:
+        return true;
+    }
+  }, [selectedWeatherFilter, intelConfig]);
+
+  // Existing quick tabs and the phenomenon filter are cumulative.
   const filteredAssessments = useMemo(() => {
-    if (!assessmentsData) return [];
-    return assessmentsData.filter(a => {
-      if (activeFilterTab === 'hazards') {
-        return (a.hazards || []).length > 0;
-      }
+    return visibleAssessmentsData.filter((assessment) => {
+      if (activeFilterTab === 'hazards' && (assessment.hazards || []).length === 0) return false;
       if (activeFilterTab === 'anomalies') {
-        const anomValues = Object.values(a.anomalies || {});
-        return anomValues.some(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class));
+        const anomalyValues = Object.values(assessment.anomalies || {});
+        if (!anomalyValues.some((value) => ['extreme_high', 'extreme_low', 'high', 'low'].includes(value?.category || value?.class))) return false;
       }
-      return true;
+      return weatherFilterMatches(assessment);
     });
-  }, [assessmentsData, activeFilterTab]);
+  }, [visibleAssessmentsData, activeFilterTab, weatherFilterMatches]);
 
   // إحصاءات ملخصة للكروت العلوية
-  const kpiTotalLocations = assessmentsData.length;
-  const kpiHazardsCount = assessmentsData.reduce((acc, a) => acc + (a.hazards || []).length, 0);
-  const kpiAnomaliesCount = assessmentsData.reduce((acc, a) => {
+  const kpiTotalLocations = visibleAssessmentsData.length;
+  const kpiHazardsCount = visibleAssessmentsData.reduce((acc, a) => acc + (a.hazards || []).length, 0);
+  const kpiAnomaliesCount = visibleAssessmentsData.reduce((acc, a) => {
   const anomValues = Object.values(a.anomalies || {});
     return acc + anomValues.filter(v => ['extreme_high', 'extreme_low', 'high', 'low'].includes(v?.category || v?.class)).length;
   }, 0);
     // 🚩 محافظات بها إشارات مخاطر (مرتبة بالأكثر إشارات)
-  const kpiHazardLocations = assessmentsData
+  const kpiHazardLocations = visibleAssessmentsData
     .map(a => ({
       name: a.location_name_ar || a.location_name_en || '—',
       count: (a.hazards || []).length,
@@ -16273,7 +16409,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         { key: 'precip_mm', unit: isAr ? 'مم' : 'mm', label: T('أعلى كمية أمطار متوقعة', 'Highest Expected Rainfall'), decimals: 1 },
       ];
     for (const m of metrics) {
-      const rows = assessmentsData
+      const rows = visibleAssessmentsData
         .map(a => ({ value: num((a.forecast || {})[m.key]), name: a.location_name_ar || a.location_name_en || '—' }))
         .filter(r => r.value !== null)
         .sort((x, y) => (y.value - x.value) || x.name.localeCompare(y.name));
@@ -16352,7 +16488,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
 
             <button
               type="button"
-              onClick={fetchWeatherIntelData}
+              onClick={() => fetchWeatherIntelData(true)}
               className="ops-btn bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--border)] px-3 py-2.5 rounded-xl font-bold text-sm transition-[color,background-color,border-color,opacity,box-shadow,transform]"
               title={T('تحديث البيانات', 'Refresh')}
             >
@@ -16392,12 +16528,41 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                 ))}
               </EocSelect>
             </div>
+
+            {/* Filter locations by the weather phenomenon actually forecast or flagged. */}
+            <div className="flex items-center gap-2 bg-[var(--surface-2)] px-3 py-1.5 rounded-xl border border-[var(--border)]">
+              <span className="text-xs font-bold text-[var(--muted)]">{T('الظاهرة الجوية:', 'Weather Phenomenon:')}</span>
+              <EocSelect
+                variant="toolbar"
+                value={selectedWeatherFilter}
+                onChange={(e) => setSelectedWeatherFilter(e.target.value)}
+              >
+                <option value="all" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('كل الظواهر', 'All Phenomena')}</option>
+                <option value="rain" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('أمطار متوقعة', 'Expected Rain')}</option>
+                <option value="heavy_rain" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('أمطار غزيرة', 'Heavy Rain')}</option>
+                <option value="thunderstorm" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('عواصف رعدية', 'Thunderstorms')}</option>
+                <option value="strong_wind" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('رياح قوية', 'Strong Winds')}</option>
+                <option value="heat" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('حرارة مرتفعة', 'High Heat')}</option>
+                <option value="cold" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('برودة شديدة', 'Extreme Cold')}</option>
+                <option value="fog" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('ضباب', 'Fog')}</option>
+                <option value="hazards" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('أي مخاطر مرصودة', 'Any Detected Hazard')}</option>
+              </EocSelect>
+              {selectedWeatherFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedWeatherFilter('all')}
+                  className="text-xs font-bold text-[var(--muted)] hover:text-[var(--ink)]"
+                  title={T('مسح فلتر الظاهرة الجوية', 'Clear weather filter')}
+                  aria-label={T('مسح فلتر الظاهرة الجوية', 'Clear weather filter')}
+                >✕</button>
+              )}
+            </div>
           </div>
 
           {/* تبويبات الفلترة السريعة */}
           <div className="flex items-center gap-1.5 bg-[var(--surface-2)] p-1 rounded-2xl border border-[var(--border)] self-start md:self-auto overflow-x-auto max-w-full">
             <button type="button" onClick={() => setActiveFilterTab('all')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] ${activeFilterTab === 'all' ? 'bg-[var(--accent)] text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
-              {T('الكل', 'All')} ({assessmentsData.length})
+              {T('الكل', 'All')} ({visibleAssessmentsData.length})
             </button>
             <button type="button" onClick={() => setActiveFilterTab('hazards')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-[color,background-color,border-color,opacity,box-shadow,transform] flex items-center gap-1 ${activeFilterTab === 'hazards' ? 'bg-red-600 text-white shadow-sm' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}>
               ⚠️ {T('المخاطر المرصودة', 'Hazards')} ({kpiHazardsCount})
@@ -16531,7 +16696,7 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
             </div>
             <button
               type="button"
-              onClick={fetchWeatherIntelData}
+              onClick={() => fetchWeatherIntelData(true)}
               disabled={isLoading}
               className="ops-btn shrink-0 bg-red-600 text-white hover:bg-red-500 px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-[color,background-color,border-color,opacity,box-shadow,transform] disabled:opacity-50"
             >
@@ -16548,13 +16713,24 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           <h3 className="text-lg font-bold text-[var(--ink)]">{T('جارٍ استرجاع وتحليل استخبارات الطقس...', 'Loading Weather Intelligence Data...')}</h3>
           <p className="text-xs text-[var(--muted)] mt-1">{T('جلب التوقعات والخط المرجعي والتقييمات التشغيلية', 'Fetching forecasts, historical baselines & operational assessments')}</p>
         </div>
-      ) : apiError && !apiPartial ? null : filteredAssessments.length === 0 ? (
+      ) : apiError && !apiPartial && visibleAssessmentsData.length === 0 ? null : filteredAssessments.length === 0 ? (
         <div className="card-surface p-12 text-center rounded-3xl border border-[var(--border)]">
           <div className="text-4xl mb-3">🌤️</div>
-          <h3 className="text-lg font-bold text-[var(--ink)]">{T('لا توجد بيانات استخبارات طقس مسجلة لهذا التاريخ', 'No Weather Intelligence Data for this Date')}</h3>
+          <h3 className="text-lg font-bold text-[var(--ink)]">
+            {visibleAssessmentsData.length > 0
+              ? T('لا توجد محافظات تطابق فلتر الظاهرة الجوية المختارة', 'No locations match the selected weather filter')
+              : T('لا توجد بيانات استخبارات طقس مسجلة لهذا التاريخ', 'No Weather Intelligence Data for this Date')}
+          </h3>
           <p className="text-xs text-[var(--muted)] mt-1 max-w-md mx-auto">
-            {T('لم يتم العثور على تشغيل يومي مسجل لهذا التاريخ. يمكنك تشغيل التحليل يدويًا عبر زر "تشغيل التحليل الآن" أو اختيار تاريخ آخر.', 'No daily run found for this date. You can manually trigger an analysis or select another date.')}
+            {visibleAssessmentsData.length > 0
+              ? T('جرّب ظاهرة جوية أخرى أو اختر "كل الظواهر" لعرض جميع المحافظات المتاحة.', 'Try another phenomenon or choose "All Phenomena" to show all available locations.')
+              : T('لم يتم العثور على تشغيل يومي مسجل لهذا التاريخ. يمكنك تشغيل التحليل يدويًا عبر زر "تشغيل التحليل الآن" أو اختيار تاريخ آخر.', 'No daily run found for this date. You can manually trigger an analysis or select another date.')}
           </p>
+          {visibleAssessmentsData.length > 0 && selectedWeatherFilter !== 'all' && (
+            <button type="button" onClick={() => setSelectedWeatherFilter('all')} className="mt-4 ops-btn bg-[var(--surface-2)] border border-[var(--border)] text-[var(--ink)] px-4 py-2 rounded-xl text-xs font-bold">
+              {T('إلغاء فلتر الظاهرة', 'Clear phenomenon filter')}
+            </button>
+          )}
           {isOwner && (
             <button type="button" onClick={handleTriggerRun} disabled={isTriggering} className="mt-5 ops-btn bg-[var(--accent)] text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md inline-flex items-center gap-2">
               ⚡ {T('تشغيل التحليل الآن', 'Run Analysis Now')}
