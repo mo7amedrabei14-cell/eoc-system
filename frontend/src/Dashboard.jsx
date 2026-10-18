@@ -12105,6 +12105,8 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   const [filterDate, setFilterDate] = useState(govLocalDate());
   const [rows, setRows] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingCount, setPendingCount] = useState(() => countGovPending(loadGovPending()));
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -12115,6 +12117,8 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   const pendingRef = useRef(loadGovPending());
   const dirtyRef = useRef(new Set());
   const timerRef = useRef(null);
+  const loadRequestRef = useRef(null);
+  const loadRequestIdRef = useRef(0);
   const lockRef = useRef(false);
   const userEditRef = useRef(false);   // ✋ هل فيه تعديل مستخدم مستني أول محاولة حفظ؟ (عشان الحبة تطلع مرة واحدة بس)
 
@@ -12189,11 +12193,56 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   };
 
   const loadRows = async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    try {
-      const res = await fetch(`${url}?date=${filterDate}`, { headers: authHeaders() });
-      if (res.ok) {
+    const requestDate = filterDate;
+    const currentRequest = loadRequestRef.current;
+    // لا نبدأ طلباً مكرراً لنفس اليوم؛ الطلب الأصلي هو المسؤول عن إنهاء حالة التحميل.
+    if (currentRequest?.date === requestDate) return currentRequest.promise;
+    // اختيار يوم آخر يلغي الطلب القديم حتى لا تكتب استجابته بيانات اليوم السابق فوق الجديد.
+    if (currentRequest) {
+      clearTimeout(currentRequest.timeoutId);
+      currentRequest.controller.abort();
+    }
+
+    const controller = new AbortController();
+    const request = {
+      id: ++loadRequestIdRef.current,
+      date: requestDate,
+      controller,
+      timeoutId: null,
+      promise: null,
+    };
+    loadRequestRef.current = request;
+    if (!silent) {
+      setIsLoading(true);
+      setLoadError('');
+    }
+
+    // لا نترك الصفحة على «جارٍ تحميل السجل» إلى ما لا نهاية إذا علق اتصال الـ API.
+    request.timeoutId = setTimeout(() => controller.abort(), 15000);
+    request.promise = (async () => {
+      try {
+        const res = await fetch(`${url}?date=${requestDate}`, {
+          headers: authHeaders(),
+          signal: controller.signal,
+        });
+        if (loadRequestRef.current?.id !== request.id) return;
+        if (!res.ok) {
+          let detail = '';
+          try {
+            const payload = await res.json();
+            detail = String(payload?.detail || '');
+          } catch { /* استجابة غير JSON أو انقطاع في جسم الاستجابة */ }
+          const message = res.status === 401
+            ? T('انتهت صلاحية الجلسة. سجّل الدخول مجددًا ثم أعد المحاولة.', 'Your session expired. Sign in again, then retry.')
+            : res.status === 403
+              ? T('ليست لديك صلاحية عرض سجل التواصل.', 'You do not have permission to view the contacts log.')
+              : T(`تعذر تحميل السجل (HTTP ${res.status}). أعد المحاولة.`, `Could not load the log (HTTP ${res.status}). Please retry.`);
+          setLoadError(detail || message);
+          return;
+        }
+
         const data = await res.json();
+        if (loadRequestRef.current?.id !== request.id) return;
         const map = {};
         (data || []).forEach(r => {
           map[r.branch_id] = {
@@ -12205,14 +12254,28 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
         });
         const serverMap = { ...map };
         // 🧷 لا نطمس أي صف فيه شغل لسه ما اتأكدش حفظه (تحديث لحظي/دوري وهنكتبه احنا)
-        const pend = (pendingRef.current || {})[filterDate] || {};
+        const pend = (pendingRef.current || {})[requestDate] || {};
         Object.keys(pend).forEach(bid => { map[bid] = { ...(map[bid] || emptyGovRow()), ...pend[bid] }; });
         setRows(map);
+        setHasLoaded(true);
+        setLoadError('');
         setSyncedAt(new Date());
         provisionDay(serverMap);
-      } else if (!silent) { setRows({}); }
-    } catch { if (!silent) setRows({}); }
-    finally { if (!silent) setIsLoading(false); }
+      } catch (err) {
+        if (loadRequestRef.current?.id !== request.id) return;
+        setLoadError(err?.name === 'AbortError'
+          ? T('السيرفر اتأخر في الرد لأكثر من 15 ثانية. تحقّق من الاتصال ثم أعد المحاولة.', 'The server did not respond within 15 seconds. Check the connection and retry.')
+          : T('تعذّر الاتصال بالسيرفر أثناء تحميل السجل. تحقّق من الاتصال ثم أعد المحاولة.', 'Could not reach the server while loading the log. Check the connection and retry.'));
+      } finally {
+        clearTimeout(request.timeoutId);
+        // الطلب الذي ما زال نشطاً فقط هو الذي يغيّر حالة التحميل.
+        if (loadRequestRef.current?.id === request.id) {
+          loadRequestRef.current = null;
+          setIsLoading(false);
+        }
+      }
+    })();
+    return request.promise;
   };
 
   // 💾 حفظ تلقائي فوري: أي تعديل يتوقف عن الكتابة 0.9 ثانية وبعدها يُرفع — بدون زرار
@@ -12289,6 +12352,9 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
   // كل تغيير (فلتر التاريخ) → لوح نظيف وجلب جديد لنفس اليوم
   useEffect(() => {
     dirtyRef.current = new Set();
+    setRows({});
+    setHasLoaded(false);
+    setLoadError('');
     loadRows(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterDate]);
@@ -12579,8 +12645,23 @@ function GovernorateContactsView({ branches = [], isOwner, isJoker, isSupervisor
             <span className="text-xs text-[var(--muted)] font-bold">{T('عدد المحافظات المرئية', 'Visible governorates')}: <b className="text-[var(--ink)]">{visibleBranches.length}</b></span>
           </div>
         </div>
-        {isLoading ? (
+        {loadError && hasLoaded && (
+          <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--warn)]/30 bg-[var(--warn-soft)] p-3 text-sm text-[var(--ink)]">
+            <span>{loadError} {T('البيانات المعروضة ما زالت محفوظة.', 'The currently displayed data has been kept.')}</span>
+            <button type="button" onClick={() => loadRows(true)} className="action-btn action-btn--ok shrink-0">
+              {T('إعادة المحاولة', 'Retry')}
+            </button>
+          </div>
+        )}
+        {isLoading && !hasLoaded ? (
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('جارٍ تحميل السجل…', 'Loading…')}</p>
+        ) : loadError && !hasLoaded ? (
+          <div role="alert" className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+            <p className="text-sm text-[var(--warn)]">{loadError}</p>
+            <button type="button" onClick={() => loadRows(false)} className="action-btn action-btn--ok shrink-0">
+              {T('إعادة المحاولة', 'Retry')}
+            </button>
+          </div>
         ) : visibleBranches.length === 0 ? (
           <p className="text-[var(--muted)] text-sm py-8 text-center">{T('لا توجد محافظات ضمن نطاقك.', 'No governorates within your scope.')}</p>
         ) : (
