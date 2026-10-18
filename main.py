@@ -8298,27 +8298,33 @@ def weather_region_scope(user_id, role, connection=None):
     نطاق «أقاليم» لمستخدم الطقس (RLS): None = عام (يرى كل المحافظات)،
     وإلا مجموعة أقاليم {hq, canal, delta, saeed} = اتحاد فروع المستخدم — لا تصعّد أبداً.
     لو الجدول الرابط (user_branches) فارغ نرجع لاسم المستخدم مثل الواجهة بالضبط.
+
+    إعادة استخدام الاتصال المُمرَّر مهمة لمسارات الـ serverless: تمنع فتح
+    اتصال إضافي عند غياب ربط الفروع، وتحافظ على نفس نطاق الصلاحيات.
     """
     if is_weather_global(role):
         return None
 
-    regions = set()
-    for b in get_user_branches(user_id, connection=connection):
-        r = BRANCH_ID_TO_REGION.get(b["branch_id"])
-        if r:
-            regions.add(r)
-    if regions:
-        return regions
+    owns_connection = connection is None
+    if owns_connection:
+        connection = get_connection()
 
-    user_name = ""
-    connection = get_connection()
     try:
+        regions = set()
+        for b in get_user_branches(user_id, connection=connection):
+            r = BRANCH_ID_TO_REGION.get(b["branch_id"])
+            if r:
+                regions.add(r)
+        if regions:
+            return regions
+
         with connection.cursor() as cursor:
             cursor.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
             row = cursor.fetchone()
             user_name = str(row[0] or "").lower() if row else ""
     finally:
-        connection.close()
+        if owns_connection:
+            connection.close()
 
     if "delta" in user_name:
         return {"delta"}
@@ -8933,14 +8939,17 @@ def get_gov_contacts(date: str, credentials: HTTPAuthorizationCredentials = Depe
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    role = get_user_role(user_id)
-    require_gov_contacts_access(role)
-    contact_date = validate_forecast_date(date)
-    scope = weather_region_scope(user_id, role)
-    allowed_branch_ids = _weather_scope_branch_param(scope)
 
+    # نفس تصميم /api/weather: اتصال قاعدة بيانات واحد بعد التحقق من التوكن
+    # للدور + نطاق الفروع + قراءة السجل؛ بدل إنشاء اتصالات متتابعة لنفس الطلب.
     connection = get_connection()
     try:
+        role = get_user_role(user_id, connection=connection)
+        require_gov_contacts_access(role)
+        contact_date = validate_forecast_date(date)
+        scope = weather_region_scope(user_id, role, connection=connection)
+        allowed_branch_ids = _weather_scope_branch_param(scope)
+
         with connection.cursor() as cursor:
             sql = """
                 SELECT g.branch_id, g.contact_date, g.reason, g.contact_count,
