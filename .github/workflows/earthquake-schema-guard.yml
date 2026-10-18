@@ -7,6 +7,7 @@ on:
       - "main.py"
       - "test_eq_schema_bootstrap.py"
       - "test_eq_schema_postgres_concurrency.py"
+      - "test_idempotency_middleware_disconnect.py"
       - ".github/workflows/earthquake-schema-guard.yml"
   pull_request:
     branches: [main]
@@ -59,3 +60,5 @@ jobs:
         run: python -m unittest test_eq_schema_postgres_concurrency -v
       - name: Run earthquake deadlock regression tests
         run: python -m unittest test_eq_schema_bootstrap -v
+      - name: Run idempotency middleware disconnect regression tests
+        run: python -m unittest test_idempotency_middleware_disconnect -v
