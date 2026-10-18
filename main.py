@@ -9694,7 +9694,7 @@ def ensure_earthquake_intel_schema():
 
             if not state["exists"]:
                 cursor.execute("""
-                    CREATE TABLE earthquake_intel (
+                    CREATE TABLE IF NOT EXISTS earthquake_intel (
                         eq_intel_id BIGSERIAL PRIMARY KEY,
                         source VARCHAR(40) NOT NULL DEFAULT 'usgs',
                         external_id VARCHAR(160) NOT NULL DEFAULT '',
