@@ -668,8 +668,28 @@ def ensure_gov_contacts_schema():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT to_regclass('public.governorate_contacts');")
-            if cursor.fetchone()[0] is None:
+            # ⚡ مسار سريع لكل cold start: ما نعيدش DDL على الجدول المكتمل.
+            # CREATE INDEX / ALTER TABLE غير الضروريين يقدروا يزاحموا SELECT
+            # على governorate_contacts بقفل، رغم أن البنية متجهزة بالفعل.
+            cursor.execute("""
+                SELECT
+                    to_regclass('public.governorate_contacts') IS NOT NULL,
+                    to_regclass('public.uq_gov_contacts_date_branch') IS NOT NULL,
+                    to_regclass('public.idx_gov_contacts_date') IS NOT NULL,
+                    EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_schema = 'public'
+                          AND table_name = 'governorate_contacts'
+                          AND column_name = 'tasks_status'
+                    );
+            """)
+            table_exists, unique_index_exists, date_index_exists, tasks_status_exists = cursor.fetchone()
+            if table_exists and unique_index_exists and date_index_exists and tasks_status_exists:
+                print("gov contacts schema: already ready — skipped DDL")
+                return
+
+            if not table_exists:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS governorate_contacts (
                         contact_id     BIGSERIAL PRIMARY KEY,
@@ -688,7 +708,7 @@ def ensure_gov_contacts_schema():
                         updated_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
                     );
                 """)
-            # 🧷 الفهارس تُضمن دائماً حتى لو الجدول قديم — بلا فهرس فريد، ON CONFLICT يفشل 500 للأبد
+            # 🧷 أنشئ الفهارس المفقودة فقط — من غير DDL على كل تشغيل عادي.
             cursor.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS uq_gov_contacts_date_branch
                     ON governorate_contacts (contact_date, branch_id);
@@ -697,10 +717,10 @@ def ensure_gov_contacts_schema():
                 CREATE INDEX IF NOT EXISTS idx_gov_contacts_date
                     ON governorate_contacts (contact_date DESC);
             """)
-            # 🧩 «موقف المهام» — تُضاف للجداول القديمة كمان
+            # 🧩 «موقف المهام» — تُضاف للجداول القديمة كمان.
             cursor.execute("ALTER TABLE governorate_contacts ADD COLUMN IF NOT EXISTS tasks_status VARCHAR(120);")
             connection.commit()
-            print("gov contacts schema: governorate_contacts created")
+            print("gov contacts schema: governorate_contacts ready")
     except Exception as e:
         connection.rollback()
         print(f"ensure_gov_contacts_schema error (will retry next boot): {e}")
