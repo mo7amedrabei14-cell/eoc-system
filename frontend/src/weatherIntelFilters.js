@@ -12,12 +12,6 @@ const hasThreshold = (value, config, key, fallback) => {
   return value !== null && value >= threshold;
 };
 
-const hasMaximumThreshold = (value, config, key, fallback) => {
-  const configuredValue = toWeatherNumber(config?.[key]?.value);
-  const threshold = configuredValue ?? fallback;
-  return value !== null && value <= threshold;
-};
-
 export const WEATHER_METRIC_FILTERS = [
   { key: 'tmax', ar: 'الحرارة العظمى', en: 'Maximum temperature' },
   { key: 'tmin', ar: 'الحرارة الصغرى', en: 'Minimum temperature' },
@@ -199,7 +193,6 @@ export function matchesWeatherPhenomenon(assessment, selectedFilter = 'all', int
   const rainCodes = parseConfiguredCodes(intelConfig, 'hazard.rain_codes', DEFAULT_RAIN_CODES);
   const thunderstormCodes = parseConfiguredCodes(intelConfig, 'hazard.thunderstorm_codes', DEFAULT_THUNDERSTORM_CODES);
   const fogCodes = parseConfiguredCodes(intelConfig, 'hazard.fog_codes', DEFAULT_FOG_CODES);
-  const numberOrNull = (value) => toWeatherNumber(value);
 
   if (selectedFilter.startsWith('metric:')) {
     const [, metricKey, category] = selectedFilter.split(':');
