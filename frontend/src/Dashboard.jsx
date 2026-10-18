@@ -9476,6 +9476,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const recipientsLoadedRef = useRef(false);
   const recipientsInFlightRef = useRef(false);
   const recipientsQueuedRef = useRef(false);
+  const loadRecipientsRef = useRef(null);
+  const loadDataRef = useRef(null);
   const [recipientSearch, setRecipientSearch] = useState('');
   const [exportingRecipients, setExportingRecipients] = useState(false);
   const [filterDate, setFilterDate] = useState('');
@@ -9581,10 +9583,11 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
       recipientsInFlightRef.current = false;
       if (recipientsQueuedRef.current) {
         recipientsQueuedRef.current = false;
-        Promise.resolve().then(() => loadRecipients(true));
+        Promise.resolve().then(() => loadRecipientsRef.current?.(true));
       }
     }
   }, [lang]);
+  loadRecipientsRef.current = loadRecipients;
 
   const filteredRecipients = useMemo(() => {
     const query = normalizeWirelessDigits(recipientSearch).trim().toLocaleLowerCase();
@@ -9640,10 +9643,11 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
       wirelessLoadInFlightRef.current = false;
       if (wirelessLoadQueuedRef.current) {
         wirelessLoadQueuedRef.current = false;
-        Promise.resolve().then(() => loadData(true));
+        Promise.resolve().then(() => loadDataRef.current?.(true));
       }
     }
   }, [loadRecipients]);
+  loadDataRef.current = loadData;
 
   useEffect(() => { loadData(); }, [loadData]);
   useSmartPoll(() => loadData(true), 60000);
@@ -12832,6 +12836,7 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', focusTarget = null }
   const handoversLoadedRef = useRef(false);
   const handoverFetchInFlightRef = useRef(false);
   const handoverFetchQueuedRef = useRef(false);
+  const fetchHandoversRef = useRef(null);
 
   const fetchHandovers = useCallback(async (silent = false) => {
     if (handoverFetchInFlightRef.current) {
@@ -12861,10 +12866,11 @@ function HandoverView({ isOwner, isSupervisor, lang = 'ar', focusTarget = null }
       handoverFetchInFlightRef.current = false;
       if (handoverFetchQueuedRef.current) {
         handoverFetchQueuedRef.current = false;
-        Promise.resolve().then(() => fetchHandovers(true));
+        Promise.resolve().then(() => fetchHandoversRef.current?.(true));
       }
     }
   }, []);
+  fetchHandoversRef.current = fetchHandovers;
 
   useEffect(() => { if (canAccess) fetchHandovers(); }, [canAccess, fetchHandovers]);
 
