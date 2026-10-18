@@ -66,7 +66,9 @@ test('فلتر الكل يعرض البيانات، وأي قيمة فلتر غ�
 });
 
 test('القائمة تعرض فلترًا لكل تصنيف ولكل مؤشر قابل للتحليل', () => {
-  const values = new Set(WEATHER_FILTER_OPTIONS.map((option) => option.value));
+  const allValues = WEATHER_FILTER_OPTIONS.map((option) => option.value);
+  const values = new Set(allValues);
+  assert.equal(values.size, allValues.length, 'every selector value must be unique');
   assert.ok(values.has('fog'));
   assert.ok(values.has('cloud_high'));
   assert.ok(values.has('cloud_low'));
@@ -271,4 +273,22 @@ test('غياب قيمة التوقع منفصل عن نقص التاريخ ول�
   assert.equal(getWeatherMetricClass(weakHistory, 'dust'), 'insufficient_data');
   assert.equal(matchesWeatherPhenomenon(weakHistory, 'metric:dust:insufficient_data'), true);
   assert.equal(matchesWeatherPhenomenon(weakHistory, 'metric:dust:no_data'), false);
+});
+
+
+test('كل مؤشر يميّز بين غياب القيمة ونقص حجم العينة التاريخية', () => {
+  for (const metric of WEATHER_METRIC_FILTERS) {
+    const noValue = makeAssessment({ forecast: setMetricValue(metric.key, null) });
+    assert.equal(getWeatherMetricClass(noValue, metric.key), 'no_data', metric.key);
+    assert.equal(matchesWeatherPhenomenon(noValue, `metric:${metric.key}:no_data`), true, metric.key);
+    assert.equal(matchesWeatherPhenomenon(noValue, `metric:${metric.key}:insufficient_data`), false, metric.key);
+
+    const weakHistory = makeAssessment({
+      forecast: setMetricValue(metric.key, 45),
+      statistics: [statistic(metric.key, { sample_count: 5 })],
+    });
+    assert.equal(getWeatherMetricClass(weakHistory, metric.key), 'insufficient_data', metric.key);
+    assert.equal(matchesWeatherPhenomenon(weakHistory, `metric:${metric.key}:insufficient_data`), true, metric.key);
+    assert.equal(matchesWeatherPhenomenon(weakHistory, `metric:${metric.key}:no_data`), false, metric.key);
+  }
 });
