@@ -26,6 +26,7 @@ import { captureFields, applyFieldsWhenReady } from './draftsStore';
 // → React بيفكّ الشجرة كلها (مفيش error boundary) → صفحة بيضاء.
 import { BASE } from './apiBase';
 import { wirelessDeliveryDateMatchesFilter, wirelessDeliveryStatusAtFilterDate, wirelessDeliveryReturnDate } from './wirelessDateFilter';
+import { buildWirelessPrintTitle } from './wirelessPrintTitle';
 // ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
 //    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
 import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
@@ -953,6 +954,189 @@ const ENGLISH_UI = {
   'حذف خبر آلي': 'AI news deleted',
   'إجراء:': 'Action:',
   'الكل': 'All',
+  "مركز عمليات الطوارئ": "Emergency Operations Center",
+  "الوحدات التلقائية": "Automated Monitoring",
+  "الوحدات التشغيلية": "Operational Units",
+  "لوحة المؤشرات الرئيسية": "Main Dashboard",
+  "توقعات الطقس": "Weather Forecasts",
+  "تسليم أجهزة لاسلكي": "Wireless Handover",
+  "تحديث النظام للجميع": "Refresh System for All Users",
+  "تسجيل خروج الجميع": "Sign Out All Users",
+  "قائمة التنقل": "Navigation Menu",
+  "متصل لحظياً": "Connected in real time",
+  "جارٍ الاتصال…": "Connecting…",
+  "حساب إدارة الشباب | حساب للمتابعة والرصد": "Youth & Volunteers Account | Monitoring Access",
+  "كل الأيام": "All days",
+  "جاري سحب السجلات السرية…": "Loading audit records…",
+  "لا توجد سجلات في هذا اليوم لتصديرها.": "No records found for this date to export.",
+  "لا توجد سجلات لهذا القسم لتصديرها.": "No records found for this module to export.",
+  "تم تصدير الأرشيف بنجاح!": "Audit log exported successfully.",
+  "حدث خطأ أثناء التصدير.": "An error occurred while exporting.",
+  "تعذر الاتصال بالسيرفر.": "Could not connect to the server.",
+  "فشل إرسال أمر التحديث.": "Failed to send the refresh command.",
+  "فشل تنفيذ تسجيل خروج الجميع.": "Failed to sign out all users.",
+  "الوحدات": "Modules",
+  "كل العالم (حتى الآن)": "Global total (to date)",
+  "حسب الفلتر": "Based on filter",
+  "خلال 24 ساعة": "Last 24 hours",
+  "تغطية جغرافية للرصد": "Monitoring coverage",
+  "مهام جارية الآن:": "Active missions now:",
+  "مفتوحة:": "Open:",
+  "شبكة اتصال:": "Network:",
+  "مستقرة": "Stable",
+  "غرفة عمليات الطوارئ": "Emergency Operations Room",
+  "المهام المكتملة": "Completed missions",
+  "تم الانتهاء": "Completed",
+  "خبر محلي وعالمي": "Local and global reports",
+  "يتم رصد الزلازل بشكل آلي دون تدخل يدوي": "Earthquakes are monitored automatically",
+  "الزلازل المرصودة": "Detected earthquakes",
+  "أعلى درجة خطورة": "Highest risk score",
+  "من 100 (38% شدة · 30% قرب · 32% تاريخ)": "Out of 100 (38% magnitude · 30% proximity · 32% history)",
+  "أقوى حدث اليوم": "Strongest event today",
+  "آخر زلزال مرصود": "Latest detected earthquake",
+  "فيد لحظي — من سجل المهام": "Live feed — from the mission register",
+  "لا توجد مهام مسجلة بعد.": "No missions recorded yet.",
+  "كل الفروع": "All branches",
+  "بياناتها محفوظة عندك": "Data is saved locally",
+  "كود المهمة / ID": "Mission code / ID",
+  "تعذّر تحميل قائمة المهام — تحقق من الاتصال أو حالة السيرفر ثم أعد المحاولة.": "Could not load missions. Check the connection or server status and retry.",
+  "لا توجد أيام أو خطوط سير مخصصة بعد.": "No custom days or routes yet.",
+  "تنزيل القالب": "Download template",
+  "الساعات": "Hours",
+  "خط السير المخصص": "Custom itinerary",
+  "لا توجد سجلات انضمام/انفصال بعد": "No join/leave records yet",
+  "العنوان": "Title",
+  "الوقت": "Time",
+  "لا توجد خطوط سير متاحة. أضفها من قسم خطوط السير.": "No routes available. Add them in the Routes section.",
+  "لا توجد سجلات انضمام بعد — أضفها من قسم «انضمام / انفصال».": "No join records yet. Add one in the Join / Leave section.",
+  "لا توجد سجلات انفصال بعد — أضفها من قسم «انضمام / انفصال».": "No leave records yet. Add one in the Join / Leave section.",
+  "تم": "Done",
+  "لا يوجد مستفيدين": "No beneficiaries",
+  "+ تفعيل المستفيدين": "+ Enable beneficiaries",
+  "+ إضافة سجل إداري (يوم جديد)": "+ Add administrative log (new day)",
+  "+ إضافة سجل ملاحظات (يوم / سجل)": "+ Add notes log (day / record)",
+  "اسم العضو": "Member name",
+  "الملاحظة": "Note",
+  "لا توجد صفوف في سجل الملاحظات بعد.": "No rows in the notes log yet.",
+  "+ إضافة صف": "+ Add row",
+  "تمت المراجعة من إدارة الشباب": "Reviewed by Youth & Volunteers",
+  "حفظ التعديلات بدون إجراء": "Save changes without taking action",
+  "اعتماد المهمة (مستمرة)": "Approve mission (ongoing)",
+  "جاري تجهيز الاستمارات…": "Preparing forms…",
+  "تطبيق": "Apply",
+  "من": "From",
+  "إلى": "To",
+  "🚀 التحرك:": "🚀 Departure:",
+  "🏁 الوصول:": "🏁 Arrival:",
+  "الهلال الأحمر المصري": "Egyptian Red Crescent",
+  "الاسم الثلاثي": "Full name",
+  "الرقم الوظيفي / العضوية": "Employee / membership number",
+  "الرقم القومي": "National ID",
+  "القسم / الإدارة": "Department",
+  "مدة الاستخدام": "Usage duration",
+  "المهمة": "Mission",
+  "الرقم التسلسلي": "Serial number",
+  "الملحقات": "Accessories",
+  "ملاحظات الاستلام": "Return notes",
+  "تاريخ التسليم": "Delivery date",
+  "تاريخ الاستلام": "Return date",
+  "حالة التسليم": "Handover status",
+  "كل الأيام": "All days",
+  "تاريخ التسليم": "Delivery date",
+  "الساعة": "Hour",
+  "توقيع المستلم": "Recipient signature",
+  "الاسم:": "Name:",
+  "التوقيع:": "Signature:",
+  "مسح الكل": "Clear all",
+  "لا توجد تسليمات في هذا اليوم": "No handovers on this date",
+  "لا توجد تسليمات بعد": "No handovers yet",
+  "طباعة الكل": "Print all",
+  "مسلَّم": "Issued",
+  "مُرجَع": "Returned",
+  "كود": "Code",
+  "الأجهزة": "Devices",
+  "تحديث النظام": "Refresh system",
+  "حالة الاتصال": "Connection status",
+  "لا توجد بيانات مطابقة.": "No matching data.",
+  "حصل خطأ في العرض": "A display error occurred",
+  "إغلاق الخبر": "Close news item",
+  "تصدير الطقس اليومي إلى Excel": "Export daily weather to Excel",
+  "تصدير سجل الورديات الثلاث": "Export the three-shift register",
+  "تصدير السجل الشامل لكل التواريخ (المالك فقط)": "Export full history (owner only)",
+  "جاري تحميل البيانات…": "Loading data…",
+  "تدخلات الجمعيات": "National Society interventions",
+  "وقت الرصد": "Detection time",
+  "النطاق": "Scope",
+  "إلغاء التصدير": "Cancel export",
+  "بالتصنيفات والفئات": "Grouped by categories",
+  "ملف منظم بشيتات وجداول شجرية مفصلة لكل فئة": "Organized workbook with detailed sheets and hierarchical tables by category",
+  "مفصّل": "Detailed",
+  "جدول مسطح مباشر": "Flat table",
+  "سجل شامل مسطح ومدمج بدون تفريعات إضافية": "Unified flat register without extra breakdowns",
+  "جاري الحذف...": "Deleting...",
+  "الحالة الآن": "Current status",
+  "عدد ساعات آخر مهمة": "Hours in last mission",
+  "فتح التقويم": "Open calendar",
+  "إقرار استخدام جهاز لاسلكي": "Wireless Device Use Declaration",
+  "كشف حالة الأجهزة اللاسلكية": "Wireless Device Condition Report",
+  "حذف هذا الرصد (المالك فقط)": "Delete this record (owner only)",
+  "تأكيد حذف الرصد": "Confirm record deletion",
+  "أدخل رمز التأكيد": "Enter confirmation code",
+  "بحث باسم المشارك أو المتطوع أو رقم العضوية...": "Search by participant, volunteer, or membership number...",
+  "تصدير السجل إلى Excel": "Export register to Excel",
+  "تصدير الخبر": "Export news item",
+  "فتح التعديل": "Open editor",
+  "فتح المهمة": "Open mission",
+  "تاريخ إنشاء المهمة (يُسجل آلياً)": "Mission creation date (recorded automatically)",
+  "تاريخ الوصول": "Arrival date",
+  "ساعة التحرك / البدء": "Departure / start time",
+  "الأيام / خطوط السير المخصصة (لفرق أو أفراد محددين)": "Days / custom itineraries (for selected teams or individuals)",
+  "اكتب اسم اليوم أو خط السير المخصص (مثال: تحركات اليوم الأول)...": "Enter the day or custom itinerary name (e.g. Day 1 movements)...",
+  "الاسم (اختر أو اكتب)...": "Name (select or type)...",
+  "اكتب الفريق...": "Enter team...",
+  "تحديد خطوط السير المخصصة للمشارك": "Assign custom itineraries to participant",
+  "انضمام / انفصال": "Join / Leave",
+  "أعد تسمية السجل — يُحدَّث مفتاح الإسناد فوراً": "Rename the log — the assignment key updates immediately",
+  "عنوان التصنيف — استرشادي: اكتب اسم اليوم أو الفترة": "Category title — enter a day or period",
+  "مثال: مستفيدين اليوم الأول (المهام المفتوحة فقط)": "Example: Day 1 beneficiaries (open missions only)",
+  "ضع هنا نوع الخدمة المقدمة": "Enter the service provided",
+  "حذف الصف": "Delete row",
+  "اسم راصد الاستمارة:": "Form recorded by:",
+  "اسم مراجع الاستمارة:": "Form reviewed by:",
+  "تنزيل السجل الشامل للمهام": "Download the comprehensive mission register",
+  "جاري سحب السجلات السرية…": "Loading audit records…",
+  "تفاصيل العملية": "Activity details",
+  "مسح جميع الأخبار نهائيًا": "Permanently delete all news",
+  "فتح الخبر": "Open news item",
+  "مسح جميع التوقعات نهائيًا": "Permanently delete all forecasts",
+  "تصدير سجل اليوم إلى Excel": "Export today's register to Excel",
+  "مسح السجل بالكامل (المالك فقط + رمز التأكيد)": "Clear the entire register (owner only + confirmation code)",
+  "مسح جميع الكوارث نهائيًا": "Permanently delete all disasters",
+  "Excel من السيرفر بكل التفاصيل: «من» فقط = يوم كامل · «من+إلى» = الفترة · بلا فلتر = الكل (حتى داتا الباك فيل)": "Full Excel export from server: From only = one day · From + To = date range · No filter = all records (including backfilled data)",
+  "مسح سجل الزلازل بالكامل (المالك فقط + رمز التأكيد)": "Clear the earthquake register (owner only + confirmation code)",
+  "تمديد/تحديث الكتالوج — سنة بسنة (آمن للتكرار)": "Extend/update catalogue year by year (safe to rerun)",
+  "حذف هذا الرصد (المالك فقط) — يقيد في سجل النظام": "Delete this record (owner only) — logged in the system audit",
+  "تصدير الأخبار المحلية فقط — بنفس أعمدة سجل الأخبار المحلية": "Export local news only — same columns as the local news register",
+  "تصدير الأخبار العالمية فقط — بنفس أعمدة سجل الكوارث العالمية": "Export global news only — same columns as the global disaster register",
+  "وقت رصد الخبر (تاريخ ووقت الرصد)": "News detection time (date and time)",
+  "تعذر عرض استخبارات الطقس / Weather Intelligence unavailable": "Weather Intelligence unavailable",
+  "حدث خطأ أثناء عرض الوحدة. يمكنك العودة إلى لوحة العمليات أو إعادة المحاولة.": "An error occurred while displaying this unit. Return to the operations dashboard or retry.",
+  "للمالك فقط": "Owner only",
+  "مثال: اليوم الأول (بالمهام المفتوحة فقط)": "Example: Day 1 (open missions only)",
+  "حذف البالك": "Delete bulk selection",
+  "حالة الجهاز": "Device status",
+  "الحالة عند التسليم": "Condition at handover",
+  "الحالة عند الاستلام": "Condition at return",
+  "الفحص البصري (أمامي · جوانب · خلفي)": "Visual inspection (front · sides · rear)",
+  "عند التسليم": "At handover",
+  "عند الاستلام": "At return",
+  "سليم": "Good",
+  "تالف": "Damaged",
+  "تسليم أجهزة لاسلكي": "Wireless Handover",
+  "توقعات الطقس": "Weather Forecasts",
+  "مركز عمليات الطوارئ": "Emergency Operations Center",
+  "الوحدات التلقائية": "Automated Monitoring",
+  "الوحدات التشغيلية": "Operational Units",
 };
 
 const translatedTextCache = new WeakMap();
@@ -1127,8 +1311,8 @@ function localizeDashboardDom(root, language) {
     translatedTextCache.set(node, { source, rendered });
   });
 
-  root.querySelectorAll('[placeholder], [title], [aria-label], [alt]').forEach((element) => {
-    ['placeholder', 'title', 'aria-label', 'alt'].forEach((attribute) => {
+  root.querySelectorAll('[placeholder], [title], [aria-label], [alt], [data-tip], [data-sidebar-tooltip], [data-label]').forEach((element) => {
+    ['placeholder', 'title', 'aria-label', 'alt', 'data-tip', 'data-sidebar-tooltip', 'data-label'].forEach((attribute) => {
       const current = element.getAttribute(attribute);
       if (current === null) return;
       const previous = translatedAttributeCache.get(element)?.[attribute];
@@ -1878,7 +2062,7 @@ useEffect(() => {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['placeholder', 'title', 'aria-label', 'alt'],
+      attributeFilter: ['placeholder', 'title', 'aria-label', 'alt', 'data-tip', 'data-sidebar-tooltip', 'data-label'],
     });
 
     return () => observer.disconnect();
@@ -9712,8 +9896,21 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
     if (isPrintingRef.current) return;
     isPrintingRef.current = true;
     setShowPrintConfirm(false);
+    const originalTitle = document.title;
+    const printTitle = buildWirelessPrintTitle(printTarget, todayFileDate());
+    document.title = printTitle;
+    let titleRestoreTimer;
+    const restoreTitle = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+      if (titleRestoreTimer) window.clearTimeout(titleRestoreTimer);
+    };
+    window.addEventListener('afterprint', restoreTitle, { once: true });
+    // Browser print/PDF dialogs use document.title as the suggested filename.
+    // The afterprint handler restores the application's original title.
+    titleRestoreTimer = window.setTimeout(restoreTitle, 60000);
     setTimeout(() => {
-      try { window.print(); } catch (e) { console.error(e); }
+      try { window.print(); } catch (e) { console.error(e); restoreTitle(); }
       finally { isPrintingRef.current = false; }
       // ⚠️ مفيش setPrintTarget([]) هنا — التنظيف بيحصل في askPrint قبل أي طباعة جديدة
     }, 420);
