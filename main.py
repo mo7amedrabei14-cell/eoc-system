@@ -1151,8 +1151,24 @@ async def idempotency_middleware(request: Request, call_next):
                 print(f"Idempotency pre-check error (continuing without cache): {e}")
             finally:
                 connection.close()
-    # If we didn't return a cached response, proceed to the endpoint
-    response = await call_next(request)
+    # If we didn't return a cached response, proceed to the endpoint.
+    # Starlette's BaseHTTPMiddleware can raise this exact RuntimeError when the
+    # client disconnects before the downstream app produces a response. That is
+    # an aborted request, not an application failure. Confirm the disconnect before
+    # translating it; any genuine downstream failure must still propagate.
+    try:
+        response = await call_next(request)
+    except RuntimeError as exc:
+        if str(exc) != "No response returned.":
+            raise
+        try:
+            client_disconnected = await request.is_disconnected()
+        except Exception:
+            client_disconnected = False
+        if not client_disconnected:
+            raise
+        print(f"Client disconnected before response: {request.method} {request.url.path}")
+        return Response(status_code=499)
 
     # After the endpoint, if we had an idempotency key and the method is mutation, store the response
     if request.method in ["POST", "PUT", "PATCH", "DELETE"] and request.url.path not in ["/token"]:
