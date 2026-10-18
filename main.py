@@ -9616,54 +9616,147 @@ def _eq_intel_risk_payload(row, hist):
     }
 
 
-def ensure_earthquake_intel_schema():
-    """🌍 جدول زلازل الاستخبارات اللحظية — خطوة خفيفة منفصلة (لا رفع SCHEMA_VERSION).
+# مفتاح PostgreSQL advisory مشترك بين تهيئة المخطط وكتّاب استخبارات الزلازل.
+# القفل الحصري يُستخدم فقط عند الحاجة إلى DDL؛ والكتّاب يأخذون القفل المشترك
+# قبل أي لمس للجدول، لمنع دورة انتظار بين ALTER TABLE وINSERT.
+_EQ_INTEL_SCHEMA_LOCK_NAMESPACE = 74193
+_EQ_INTEL_SCHEMA_LOCK_KEY = 1
+_EQ_INTEL_BASE_COLUMNS = frozenset({
+    "eq_intel_id", "source", "external_id", "occurred_at", "magnitude",
+    "depth_km", "place", "latitude", "longitude", "distance_km",
+    "sound_alert", "raw", "created_at",
+})
+_EQ_INTEL_HISTORY_COLUMNS = frozenset({
+    "hist_max_mag", "hist_window_count", "hist_scanned_at",
+})
 
-    نفس أسلوب ensure_gov_contacts_schema: فحص وجود واحد + إنشاء عند الغياب.
-    مصدر السجل الوحيد للحفظ هو محرك earthquake_intel عبر SYSTEM_TOKEN —
-    القيد الفريد (source, external_id) يمنع تكرار نفس الزلزال مهما أُعيد التشغيل.
+
+def _eq_intel_read_schema_state(cursor):
+    """اقرأ حالة مخطط الزلازل من كتالوج PostgreSQL دون قفل جدول البيانات."""
+    cursor.execute("""
+        SELECT
+            to_regclass('public.earthquake_intel') IS NOT NULL,
+            COALESCE(ARRAY(
+                SELECT attname::text
+                FROM pg_attribute
+                WHERE attrelid = to_regclass('public.earthquake_intel')
+                  AND attnum > 0 AND NOT attisdropped
+            ), ARRAY[]::text[]),
+            to_regclass('public.uq_eq_intel_source_external') IS NOT NULL,
+            to_regclass('public.idx_eq_intel_occurred') IS NOT NULL;
+    """)
+    row = cursor.fetchone()
+    if not row:
+        return {"exists": False, "columns": set(), "unique_index": False, "occurred_index": False}
+    return {
+        "exists": bool(row[0]),
+        "columns": set(row[1] or []),
+        "unique_index": bool(row[2]),
+        "occurred_index": bool(row[3]),
+    }
+
+
+def _eq_intel_schema_ready(state):
+    """True فقط حين تكون الأعمدة والفهارس اللازمة للإدخال موجودة بالفعل."""
+    return (
+        state["exists"]
+        and _EQ_INTEL_BASE_COLUMNS.issubset(state["columns"])
+        and _EQ_INTEL_HISTORY_COLUMNS.issubset(state["columns"])
+        and state["unique_index"]
+        and state["occurred_index"]
+    )
+
+
+def ensure_earthquake_intel_schema():
+    """تهيئة كسولة وآمنة لمخطط الزلازل.
+
+    المسار المعتاد يفحص كتالوج PostgreSQL ويخرج بلا DDL ولا انتظار أقفال على
+    الجدول. عند فقد جدول/عمود/فهرس فقط، يتسلسل الإصلاح بقفل advisory حصري،
+    ثم يعيد الفحص لأن عاملاً آخر قد يكون أكمل التهيئة بالفعل.
     """
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT to_regclass('public.earthquake_intel');")
-            if cursor.fetchone()[0] is None:
+            state = _eq_intel_read_schema_state(cursor)
+            if _eq_intel_schema_ready(state):
+                connection.commit()
+                return
+
+            # نفس المفتاح الذي يأخذ الكتّاب قفله المشترك قبل لمس earthquake_intel.
+            cursor.execute(
+                "SELECT pg_advisory_xact_lock(%s, %s);",
+                (_EQ_INTEL_SCHEMA_LOCK_NAMESPACE, _EQ_INTEL_SCHEMA_LOCK_KEY),
+            )
+            state = _eq_intel_read_schema_state(cursor)
+            if _eq_intel_schema_ready(state):
+                connection.commit()
+                return
+
+            if not state["exists"]:
                 cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS earthquake_intel (
-                        eq_intel_id   BIGSERIAL PRIMARY KEY,
-                        source        VARCHAR(40)  NOT NULL DEFAULT 'usgs',
-                        external_id   VARCHAR(160) NOT NULL DEFAULT '',
-                        occurred_at   TIMESTAMP WITHOUT TIME ZONE,
-                        magnitude     DOUBLE PRECISION,
-                        depth_km      DOUBLE PRECISION,
-                        place         VARCHAR(240),
-                        latitude      DOUBLE PRECISION,
-                        longitude     DOUBLE PRECISION,
-                        distance_km   DOUBLE PRECISION,
-                        sound_alert   BOOLEAN NOT NULL DEFAULT FALSE,
-                        raw           JSONB,
-                        created_at    TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    CREATE TABLE earthquake_intel (
+                        eq_intel_id BIGSERIAL PRIMARY KEY,
+                        source VARCHAR(40) NOT NULL DEFAULT 'usgs',
+                        external_id VARCHAR(160) NOT NULL DEFAULT '',
+                        occurred_at TIMESTAMP WITHOUT TIME ZONE,
+                        magnitude DOUBLE PRECISION,
+                        depth_km DOUBLE PRECISION,
+                        place VARCHAR(240),
+                        latitude DOUBLE PRECISION,
+                        longitude DOUBLE PRECISION,
+                        distance_km DOUBLE PRECISION,
+                        sound_alert BOOLEAN NOT NULL DEFAULT FALSE,
+                        raw JSONB,
+                        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
+                            DEFAULT (now() AT TIME ZONE 'Africa/Cairo'),
+                        hist_max_mag DOUBLE PRECISION,
+                        hist_window_count INTEGER,
+                        hist_scanned_at TIMESTAMP WITHOUT TIME ZONE
                     );
                 """)
-            cursor.execute("""
-                CREATE UNIQUE INDEX IF NOT EXISTS uq_eq_intel_source_external
+                state = {
+                    "exists": True,
+                    "columns": _EQ_INTEL_BASE_COLUMNS | _EQ_INTEL_HISTORY_COLUMNS,
+                    "unique_index": False,
+                    "occurred_index": False,
+                }
+            else:
+                missing_base = _EQ_INTEL_BASE_COLUMNS - state["columns"]
+                if missing_base:
+                    raise RuntimeError(
+                        "earthquake_intel is missing core columns; refusing unsafe "
+                        f"automatic repair: {', '.join(sorted(missing_base))}"
+                    )
+                if "hist_max_mag" not in state["columns"]:
+                    cursor.execute(
+                        "ALTER TABLE earthquake_intel ADD COLUMN hist_max_mag DOUBLE PRECISION;"
+                    )
+                if "hist_window_count" not in state["columns"]:
+                    cursor.execute(
+                        "ALTER TABLE earthquake_intel ADD COLUMN hist_window_count INTEGER;"
+                    )
+                if "hist_scanned_at" not in state["columns"]:
+                    cursor.execute(
+                        "ALTER TABLE earthquake_intel ADD COLUMN hist_scanned_at TIMESTAMP WITHOUT TIME ZONE;"
+                    )
+
+            if not state["unique_index"]:
+                cursor.execute("""
+                    CREATE UNIQUE INDEX uq_eq_intel_source_external
                     ON earthquake_intel (source, external_id);
-            """)
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_eq_intel_occurred
+                """)
+            if not state["occurred_index"]:
+                cursor.execute("""
+                    CREATE INDEX idx_eq_intel_occurred
                     ON earthquake_intel (occurred_at DESC);
-            """)
-            # 📊 أعمدة تحليل الخطورة التاريخي (خطوة خفيفة — إضافة أعمدة فقط)
-            cursor.execute("ALTER TABLE earthquake_intel ADD COLUMN IF NOT EXISTS hist_max_mag DOUBLE PRECISION;")
-            cursor.execute("ALTER TABLE earthquake_intel ADD COLUMN IF NOT EXISTS hist_window_count INTEGER;")
-            cursor.execute("ALTER TABLE earthquake_intel ADD COLUMN IF NOT EXISTS hist_scanned_at TIMESTAMP WITHOUT TIME ZONE;")
+                """)
             connection.commit()
+            print("ensure_earthquake_intel_schema: schema ready")
     except Exception as e:
         connection.rollback()
         print(f"ensure_earthquake_intel_schema error (will retry next boot): {e}")
     finally:
         connection.close()
-
 
 def require_eq_intel_access(role):
     """صفحة الزلازل الاستخباراتية: أدوار التشغيل كلها ما عدا إدارة الشباب."""
@@ -9754,6 +9847,12 @@ def _eq_intel_ingest_events(events, source="usgs"):
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
+            # يمنع الـ DDL النادر في bootstrap من التداخل مع معاملة الإدخال.
+            # Shared locks متوافقة مع بعضها، فلا نُسلسل عمليات الإدخال الطبيعية.
+            cursor.execute(
+                "SELECT pg_advisory_xact_lock_shared(%s, %s);",
+                (_EQ_INTEL_SCHEMA_LOCK_NAMESPACE, _EQ_INTEL_SCHEMA_LOCK_KEY),
+            )
             cutoff = (datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None) - timedelta(minutes=EQ_INTEL_DEDUPE_MINUTES))
             inserted = 0
             for ev in events or []:
