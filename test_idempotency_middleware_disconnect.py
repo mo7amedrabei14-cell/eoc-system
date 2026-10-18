@@ -37,6 +37,8 @@ def load_middleware():
         if isinstance(node, ast.AsyncFunctionDef)
         and node.name == "idempotency_middleware"
     )
+    # Execute the actual function body without registering it on a FastAPI app.
+    function.decorator_list = []
     isolated = ast.Module(body=[function], type_ignores=[])
     namespace = {"Request": FakeRequest, "Response": FakeResponse}
     exec(compile(ast.fix_missing_locations(isolated), "main.py", "exec"), namespace)
