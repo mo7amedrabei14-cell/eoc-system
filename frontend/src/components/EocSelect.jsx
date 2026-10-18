@@ -251,6 +251,7 @@ const EocSelect = ({
         disabled={disabled}
         value={isControlled ? value : undefined}
         defaultValue={isControlled ? undefined : defaultValue}
+        onChange={onChange}
         onPointerDown={handlePointerDown}
         onClick={handleClick}
         onKeyDown={handleKeyDown}

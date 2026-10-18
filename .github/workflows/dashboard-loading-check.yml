@@ -1,0 +1,54 @@
+name: Dashboard loading regression checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/src/Dashboard.jsx"
+      - "frontend/src/components/EocSelect.jsx"
+      - "frontend/src/__tests__/dashboardDataLoading.test.js"
+      - "main.py"
+      - ".github/workflows/dashboard-loading-check.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/src/Dashboard.jsx"
+      - "frontend/src/components/EocSelect.jsx"
+      - "frontend/src/__tests__/dashboardDataLoading.test.js"
+      - "main.py"
+      - ".github/workflows/dashboard-loading-check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-loading-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+      - name: Full frontend test suite
+        working-directory: frontend
+        run: npm test
+      - name: Lint regression tests
+        working-directory: frontend
+        run: npx eslint src/__tests__/dashboardDataLoading.test.js
+      - name: Production frontend build
+        working-directory: frontend
+        run: npm run build
+      - name: Backend Python syntax check
+        run: python -m py_compile main.py

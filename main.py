@@ -1570,33 +1570,40 @@ def get_dashboard_stats(credentials: HTTPAuthorizationCredentials = Depends(secu
 
 @app.get("/api/dashboard/bundle")
 def get_dashboard_bundle(date: Optional[str] = None, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """📦 حزمة الصفحة الرئيسية: 9 نداءات في طلب واحد — باستدعاء نفس دوال الـ endpoints
-    القديمة حرفياً (منطق واحد وصفر تكرار). أي قسم يفشل أو غير مصرح يُرجَع null تماماً
-    كما لو أن نداءه المنفرد فشل عند الواجهة. الـ endpoints القديمة تعمل كما هي."""
+    """📦 حزمة الصفحة الرئيسية: تسعة أقسام متوازية بحد أقصى من الاتصالات.
+    كل قسم يستدعي مسار القراءة الأصلي نفسه؛ الفشل في قسم لا يمنع الأقسام الأخرى."""
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
 
     bundle_date = date or datetime.now(ZoneInfo("Africa/Cairo")).strftime("%Y-%m-%d")
+    tasks = (
+        ("missions", lambda: get_missions(credentials=credentials)),
+        ("local_news", lambda: get_local_news(credentials=credentials)),
+        ("global_disasters", lambda: get_global_disasters(credentials=credentials)),
+        ("earthquakes_global", lambda: get_global_eqs(credentials=credentials)),
+        ("earthquakes_egypt", lambda: get_egypt_eqs(credentials=credentials)),
+        ("ai_news", lambda: get_ai_news(credentials=credentials)),
+        ("weather_daily", lambda: get_weather_daily(date=bundle_date, credentials=credentials)),
+        ("earthquake_intel", lambda: get_earthquake_intel(limit=500, from_date=None, to_date=None, credentials=credentials)),
+        ("earthquake_intel_status", lambda: get_earthquake_intel_status(credentials=credentials)),
+    )
     sections: Dict[str, Any] = {}
 
-    def _sec(name: str, fn):
-        try:
-            sections[name] = fn()
-        except Exception:
-            sections[name] = None
+    # Avoid the old nine-step serial wait while bounding simultaneous DB connections.
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(max_workers=min(5, len(tasks)), thread_name_prefix="dashboard-bundle") as pool:
+        future_names = {pool.submit(task): name for name, task in tasks}
+        for future in as_completed(future_names):
+            name = future_names[future]
+            try:
+                sections[name] = future.result()
+            except Exception:
+                sections[name] = None
 
-    _sec("missions", lambda: get_missions(credentials=credentials))
-    _sec("local_news", lambda: get_local_news(credentials=credentials))
-    _sec("global_disasters", lambda: get_global_disasters(credentials=credentials))
-    _sec("earthquakes_global", lambda: get_global_eqs(credentials=credentials))
-    _sec("earthquakes_egypt", lambda: get_egypt_eqs(credentials=credentials))
-    _sec("ai_news", lambda: get_ai_news(credentials=credentials))
-    _sec("weather_daily", lambda: get_weather_daily(date=bundle_date, credentials=credentials))
-    _sec("earthquake_intel", lambda: get_earthquake_intel(limit=500, from_date=None, to_date=None, credentials=credentials))
-    _sec("earthquake_intel_status", lambda: get_earthquake_intel_status(credentials=credentials))
-    return sections
+    # Keep a stable response shape for every caller and for per-section fallback.
+    return {name: sections.get(name) for name, _ in tasks}
 
 
 @app.get("/api/ai-news/last-run")

@@ -3944,53 +3944,106 @@ function HomeView({ branches = [], liveUpdateVersion = {}, lang = 'ar', weatherE
   //    فشل نداء واحد ما يوقفش تحديث الباقي (وده كان سبب إن الأرقام تفضل قديمة)
   // ════════════════════════════════════════════════════════════════════
   const homeLoadInFlightRef = useRef(false);
-  const loadHomeIndicators = useCallback(async () => {
-    // 🛡️ single-flight: لو الجولة السابقة لم تنتهِ لا نبدأ نسخة ثانية (منع طلبات مكررة)
-    if (homeLoadInFlightRef.current) return;
+  const homeLoadPendingDateRef = useRef(null);
+  const homeRequestControllersRef = useRef(new Set());
+  const latestHomeFilterDateRef = useRef(filterDate);
+  latestHomeFilterDateRef.current = filterDate;
+  const previousHomeFilterDateRef = useRef(filterDate);
+  const DASHBOARD_BUNDLE_TIMEOUT_MS = 4500;
+  const HOME_SECTION_TIMEOUT_MS = 9000;
+
+  // A date change cancels the old date's network waits and queues the newest scope.
+  useEffect(() => {
+    if (previousHomeFilterDateRef.current === filterDate) return;
+    previousHomeFilterDateRef.current = filterDate;
+    if (homeLoadInFlightRef.current) {
+      homeLoadPendingDateRef.current = filterDate;
+      homeRequestControllersRef.current.forEach((controller) => controller.abort());
+    }
+  }, [filterDate]);
+
+  const loadHomeIndicators = useCallback(async (requestedFilterDate = filterDate) => {
+    // Single-flight without dropping refreshes/date changes: remember the newest request.
+    if (homeLoadInFlightRef.current) {
+      homeLoadPendingDateRef.current = requestedFilterDate;
+      return;
+    }
     homeLoadInFlightRef.current = true;
+    const isCurrentScope = () => requestedFilterDate === latestHomeFilterDateRef.current;
+    const requestedDate = requestedFilterDate || getLocalDate();
+    const token = sessionStorage.getItem('access_token');
+    const headers = { 'Authorization': `Bearer ${token}` };
+    const homeSections = [
+      { key: 'missions', path: () => '/api/missions', isValid: Array.isArray, apply: setMissions },
+      { key: 'local_news', path: () => '/api/local-news', isValid: Array.isArray, apply: setNews },
+      { key: 'global_disasters', path: () => '/api/global-disasters', isValid: Array.isArray, apply: setGlobalDisasters },
+      { key: 'earthquakes_global', path: () => '/api/earthquakes/global', isValid: Array.isArray, apply: setGlobalEqs },
+      { key: 'earthquakes_egypt', path: () => '/api/earthquakes/egypt', isValid: Array.isArray, apply: setEgyptEqs },
+      { key: 'ai_news', path: () => '/api/ai-news', isValid: Array.isArray, apply: setAiNewsList },
+      { key: 'weather_daily', path: () => `/api/weather/daily?date=${encodeURIComponent(requestedDate)}`, isValid: Array.isArray, apply: setDailyWeather },
+      { key: 'earthquake_intel', path: () => '/api/earthquake-intel?limit=500', isValid: Array.isArray, apply: setEqIntelList },
+      { key: 'earthquake_intel_status', path: () => '/api/earthquake-intel/status', isValid: (value) => value !== null && typeof value === 'object' && !Array.isArray(value), apply: setEqIntelStatus },
+    ];
+    const missingSections = new Set(homeSections.map((section) => section.key));
+
     try {
-      const token = sessionStorage.getItem('access_token');
-      // 📦 المسار المفضّل: حزمة واحدة (9 نداءات ← 1) بنفس البيانات حرفياً — مع fallback كامل
-      //    للنداءات المنفردة لو الحزمة فشلت، والأقسام غير المصرّح بها تُترك كما هي (null)
-      //    تماماً كما لو أن نداءها المنفرد فشل.
-      let bundled = false;
+      // The bundle is fastest when healthy, but it must not hold every indicator hostage.
+      const bundleController = new AbortController();
+      const bundleTimeoutId = setTimeout(() => bundleController.abort(), DASHBOARD_BUNDLE_TIMEOUT_MS);
+      homeRequestControllersRef.current.add(bundleController);
       try {
-        const res = await fetch(`${BASE}/api/dashboard/bundle?date=${encodeURIComponent(filterDate || getLocalDate())}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(`${BASE}/api/dashboard/bundle?date=${encodeURIComponent(requestedDate)}`, {
+          headers,
+          signal: bundleController.signal,
+        });
         if (res.ok) {
-          const b = await res.json();
-          if (b && typeof b === 'object' && !Array.isArray(b)) {
-            bundled = true;
-            if (Array.isArray(b.missions)) setMissions(b.missions);
-            if (Array.isArray(b.local_news)) setNews(b.local_news);
-            if (Array.isArray(b.global_disasters)) setGlobalDisasters(b.global_disasters);
-            if (Array.isArray(b.earthquakes_global)) setGlobalEqs(b.earthquakes_global);
-            if (Array.isArray(b.earthquakes_egypt)) setEgyptEqs(b.earthquakes_egypt);
-            if (Array.isArray(b.ai_news)) setAiNewsList(b.ai_news);
-            if (Array.isArray(b.weather_daily)) setDailyWeather(b.weather_daily);
-            if (Array.isArray(b.earthquake_intel)) setEqIntelList(b.earthquake_intel);
-            if (b.earthquake_intel_status && typeof b.earthquake_intel_status === 'object') setEqIntelStatus(b.earthquake_intel_status);
+          const bundle = await res.json();
+          if (bundle && typeof bundle === 'object' && !Array.isArray(bundle)) {
+            homeSections.forEach((section) => {
+              const value = bundle[section.key];
+              // Null/missing bundle sections are errors or denied sections, not successful loads.
+              if (!section.isValid(value)) return;
+              if (isCurrentScope()) section.apply(value);
+              missingSections.delete(section.key);
+            });
           }
         }
-      } catch { bundled = false; }
-      if (!bundled) {
-        const get = (path, pick) => fetch(`${BASE}${path}`, { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.ok ? res.json() : null)
-          .then(data => { if (data != null) pick(data); })
-          .catch(() => {});
-        await Promise.allSettled([
-          get('/api/missions',           (d) => setMissions(Array.isArray(d) ? d : [])),
-          get('/api/local-news',         (d) => setNews(Array.isArray(d) ? d : [])),
-          get('/api/global-disasters',   (d) => setGlobalDisasters(Array.isArray(d) ? d : [])),
-          get('/api/earthquakes/global', (d) => setGlobalEqs(Array.isArray(d) ? d : [])),
-          get('/api/earthquakes/egypt',  (d) => setEgyptEqs(Array.isArray(d) ? d : [])),
-          get('/api/ai-news',            (d) => setAiNewsList(Array.isArray(d) ? d : [])),
-          get(`/api/weather/daily?date=${filterDate || getLocalDate()}`, (d) => setDailyWeather(Array.isArray(d) ? d : [])),
-          get('/api/earthquake-intel?limit=500', (d) => setEqIntelList(Array.isArray(d) ? d : [])),
-          get('/api/earthquake-intel/status', (d) => setEqIntelStatus(d)),
-        ]);
+      } catch {
+        // Fall back per section below. A timeout/network error should not block other cards.
+      } finally {
+        clearTimeout(bundleTimeoutId);
+        homeRequestControllersRef.current.delete(bundleController);
+      }
+
+      // Recover missing/failed bundle sections independently, so a slow endpoint cannot block
+      // data from the other endpoints. Each request has a bounded wait and is scope-checked.
+      if (isCurrentScope() && missingSections.size > 0) {
+        await Promise.allSettled(Array.from(missingSections, async (sectionKey) => {
+          const section = homeSections.find((candidate) => candidate.key === sectionKey);
+          if (!section) return;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), HOME_SECTION_TIMEOUT_MS);
+          homeRequestControllersRef.current.add(controller);
+          try {
+            const res = await fetch(`${BASE}${section.path()}`, { headers, signal: controller.signal });
+            if (!res.ok) return;
+            const value = await res.json();
+            if (section.isValid(value) && isCurrentScope()) section.apply(value);
+          } catch {
+            // Preserve the latest successful card data when a single endpoint is unavailable.
+          } finally {
+            clearTimeout(timeoutId);
+            homeRequestControllersRef.current.delete(controller);
+          }
+        }));
       }
     } finally {
       homeLoadInFlightRef.current = false;
+      const nextFilterDate = homeLoadPendingDateRef.current;
+      homeLoadPendingDateRef.current = null;
+      if (nextFilterDate !== null && nextFilterDate === latestHomeFilterDateRef.current) {
+        queueMicrotask(() => { void loadHomeIndicators(nextFilterDate); });
+      }
     }
   }, [filterDate]);
 
