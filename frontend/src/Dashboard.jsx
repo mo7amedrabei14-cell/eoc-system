@@ -32,6 +32,9 @@ import { matchesWeatherPhenomenon, shouldPreserveWeatherSnapshot, WEATHER_FILTER
 //    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
 import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
 
+// Stable empty collection prevents filter memo dependencies from changing on every render.
+const EMPTY_WEATHER_ASSESSMENTS = Object.freeze([]);
+
 let sidebarOpenSnapshot = true;
 const sidebarStateListeners = new Set();
 
@@ -15947,7 +15950,9 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
   const activeWeatherRequestRef = useRef(null);
   const loadedAssessmentScopeRef = useRef(null);
   const assessmentScopeKey = `${targetDate}|${selectedLocationId}`;
-  const visibleAssessmentsData = loadedAssessmentScopeRef.current === assessmentScopeKey ? assessmentsData : [];
+  const visibleAssessmentsData = loadedAssessmentScopeRef.current === assessmentScopeKey
+    ? assessmentsData
+    : EMPTY_WEATHER_ASSESSMENTS;
 
   const successfulAssessments = visibleAssessmentsData.filter((assessment) => assessment.ai_status === 'success');
   const analystLabel = visibleAssessmentsData.length > 0 && successfulAssessments.length === visibleAssessmentsData.length
