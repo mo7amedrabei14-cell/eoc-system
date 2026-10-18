@@ -3304,6 +3304,7 @@ useEffect(() => {
                   {activeTab === 'earthquakes' && 'مركز رصد الزلازل'}
                   {activeTab === 'branches_inventory' && 'الانتشار الجغرافي والمخزون'}
                   {activeTab === 'handover' && 'تسليم وتسلم مشرفين'}
+                  {activeTab === 'wireless_handover' && (language === 'ar' ? 'تسليم أجهزة لاسلكي' : 'Wireless Handover')}
                   {activeTab === 'audit' && 'سجل النظام والعمليات (مراقب)'}
                   {activeTab === 'powerbi' && 'لوحة المؤشرات الرئيسية'}
                 </h1>
@@ -8958,6 +8959,12 @@ function _wirelessEmptyDevice() {
   };
 }
 
+function normalizeWirelessDigits(value) {
+  return String(value ?? '')
+    .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
+}
+
 function _wirelessEmptyDelivery() {
   const t = new Date();
   const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
@@ -9188,6 +9195,11 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
   const handleSave = async () => {
     if (saving) return;
     if (!String(form.full_name || '').trim()) { setErr(T('الاسم إلزامي', 'Name required')); return; }
+    const nationalId = normalizeWirelessDigits(form.national_id).replace(/[^0-9]/g, '');
+    if (!/^[0-9]{14}$/.test(nationalId)) {
+      setErr(T('الرقم القومي إلزامي ويجب أن يتكون من 14 رقمًا بالضبط', 'National ID is required and must contain exactly 14 digits'));
+      return;
+    }
     if (!form.received_date) { setErr(T('التاريخ إلزامي', 'Date required')); return; }
     if (!Array.isArray(form.devices) || form.devices.length === 0) { setErr(T('أضف جهازاً واحداً على الأقل', 'At least one device')); return; }
 
@@ -9201,7 +9213,7 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
       const payload = {
         full_name: form.full_name,
         employee_number: form.employee_number || null,
-        national_id: form.national_id || null,
+        national_id: nationalId,
         department: form.department || null,
         received_date: form.received_date,
         task_description: form.task_description || null,
@@ -9259,8 +9271,19 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
               <FormGroup label={T('الرقم الوظيفي / العضوية', 'Employee / Membership no.')}>
                 <StyledInput value={form.employee_number} onChange={e => setField('employee_number', e.target.value)} />
               </FormGroup>
-              <FormGroup label={T('الرقم القومي', 'National ID')}>
-                <StyledInput value={form.national_id} onChange={e => setField('national_id', e.target.value)} />
+              <FormGroup label={T('الرقم القومي', 'National ID') + ' *'}>
+                <StyledInput
+                  value={form.national_id}
+                  onChange={e => setField('national_id', normalizeWirelessDigits(e.target.value).replace(/[^0-9]/g, '').slice(0, 14))}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{14}"
+                  minLength={14}
+                  maxLength={14}
+                  autoComplete="off"
+                  dir="ltr"
+                  required
+                />
               </FormGroup>
               <FormGroup label={T('القسم / الإدارة', 'Department')}>
                 <StyledInput value={form.department} onChange={e => setField('department', e.target.value)} />
@@ -9444,6 +9467,11 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [editingInventory, setEditingInventory] = useState(null);
   const [inventoryDraft, setInventoryDraft] = useState(16);
   const [deliveries, setDeliveries] = useState([]);
+  const [recipients, setRecipients] = useState([]);
+  const [recipientsLoading, setRecipientsLoading] = useState(false);
+  const [recipientsError, setRecipientsError] = useState('');
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [exportingRecipients, setExportingRecipients] = useState(false);
   const [filterDate, setFilterDate] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -9515,6 +9543,32 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
 
   const token = () => sessionStorage.getItem('access_token');
 
+  const loadRecipients = useCallback(async () => {
+    setRecipientsLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/wireless-handover/recipients`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || 'Failed to load recipients');
+      setRecipients(Array.isArray(data.recipients) ? data.recipients : []);
+      setRecipientsError('');
+    } catch {
+      setRecipientsError(T('تعذر تحميل قائمة المستلمين', 'Failed to load recipients'));
+    } finally {
+      setRecipientsLoading(false);
+    }
+  }, [lang]);
+
+  const filteredRecipients = useMemo(() => {
+    const query = normalizeWirelessDigits(recipientSearch).trim().toLocaleLowerCase();
+    if (!query) return recipients;
+    return recipients.filter((recipient) =>
+      [recipient.full_name, recipient.national_id, recipient.employee_number]
+        .some((value) => normalizeWirelessDigits(value).toLocaleLowerCase().includes(query))
+    );
+  }, [recipients, recipientSearch]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -9524,15 +9578,50 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
       setInventory(data.inventory || { TETRA: { total: 16, out: 0, remaining: 16, returned: 0 }, HUAWEI: { total: 16, out: 0, remaining: 16, returned: 0 } });
       setFixedText(data.fixed_text || '');
       setDeliveries(data.deliveries || []);
+      loadRecipients();
     } catch {
       setCustomAlert(T('تعذر تحميل البيانات', 'Failed to load'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadRecipients]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useSmartPoll(loadData, 60000);
+
+  const handleExportRecipients = async () => {
+    if (!isOwner || exportingRecipients) return;
+    setExportingRecipients(true);
+    try {
+      const params = new URLSearchParams();
+      if (recipientSearch.trim()) params.set('search', recipientSearch.trim());
+      const suffix = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetch(`${BASE}/api/wireless-handover/recipients/export${suffix}`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || T('فشل تصدير المستلمين', 'Recipient export failed'));
+      const rows = (Array.isArray(data.recipients) ? data.recipients : []).map((recipient) => ({
+        'الاسم': recipient.full_name || '',
+        'الرقم القومي': recipient.national_id || '',
+        'الرقم الوظيفي / العضوية': recipient.employee_number || '',
+        'عدد مرات الاستلام': Number(recipient.receive_count) || 0,
+      }));
+      if (!rows.length) {
+        setCustomAlert(T('لا توجد مستلمون مطابقون للبحث للتصدير', 'No matching recipients to export'));
+        return;
+      }
+      await exportWorkbook(
+        [{ name: 'المستلمون', ...gridFromRows(rows) }],
+        `المستلمون_للأجهزة_اللاسلكية_${todayFileDate()}.xlsx`
+      );
+      setCustomAlert(T('تم تصدير قائمة المستلمين بنجاح', 'Recipients exported successfully'));
+    } catch (error) {
+      setCustomAlert(error?.message || T('حدث خطأ أثناء تصدير المستلمين', 'Recipient export error'));
+    } finally {
+      setExportingRecipients(false);
+    }
+  };
 
   const openCreate = () => { setEditing(null); setShowForm(true); };
   const openEdit = (d) => { setEditing(d); setShowForm(true); };
@@ -9774,6 +9863,70 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
                         )}
                         <button onClick={() => setDeleteTarget(d)} className="icon-btn icon-btn-danger" title={T('حذف', 'Delete')}><TrashIcon /></button>
                       </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* سجل المستلمين الموحّد: صف واحد لكل رقم قومي، والبحث لا يغيّر سجل التسليمات */}
+      <div className="card-surface p-5 rounded-3xl border border-[var(--border)] overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="font-bold text-lg">👥 {T(`المستلمون (${filteredRecipients.length})`, `Recipients (${filteredRecipients.length})`)}</h3>
+            <p className="text-xs text-[var(--muted)] mt-1">{T('كل رقم قومي صحيح يظهر مرة واحدة مع إجمالي مرات الاستلام', 'Each valid national ID appears once with its total receipt count')}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <input
+              type="search"
+              value={recipientSearch}
+              onChange={(e) => setRecipientSearch(e.target.value)}
+              placeholder={T('بحث بالاسم أو الرقم القومي أو رقم العضوية...', 'Search by name, national ID or membership number...')}
+              aria-label={T('بحث في المستلمين', 'Search recipients')}
+              className="field min-w-0 w-full md:w-80 !py-2"
+            />
+            {isOwner && (
+              <button
+                type="button"
+                onClick={handleExportRecipients}
+                disabled={exportingRecipients || recipientsLoading}
+                className="action-btn action-btn--ok shrink-0 disabled:opacity-50"
+                data-tip={T('تصدير المستلمين المطابقين للبحث إلى Excel', 'Export matching recipients to Excel')}
+              >
+                <ExcelIcon />
+                <span>{exportingRecipients ? T('جارٍ التصدير…', 'Exporting…') : T('تصدير المستلمين', 'Export recipients')}</span>
+              </button>
+            )}
+          </div>
+        </div>
+        {recipientsError ? (
+          <p role="alert" className="text-center text-[var(--danger)] text-sm py-6">{recipientsError}</p>
+        ) : recipientsLoading ? (
+          <p className="text-center text-[var(--muted)] text-sm py-6">{T('جارٍ تحميل المستلمين…', 'Loading recipients…')}</p>
+        ) : filteredRecipients.length === 0 ? (
+          <p className="text-center text-[var(--muted)] text-sm py-8">{T('لا توجد مستلمون مطابقون للبحث', 'No matching recipients')}</p>
+        ) : (
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-sm text-right min-w-[50rem]">
+              <thead className="bg-[var(--surface-3)] border-b border-[var(--border)]">
+                <tr>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الاسم', 'Name')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الرقم القومي', 'National ID')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الرقم الوظيفي / العضوية', 'Employee / Membership no.')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap text-center">{T('عدد مرات الاستلام', 'Receipt count')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecipients.map((recipient) => (
+                  <tr key={recipient.national_id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)]">
+                    <td className="p-3 font-bold">{recipient.full_name || '—'}</td>
+                    <td className="p-3 font-mono text-xs" dir="ltr">{recipient.national_id}</td>
+                    <td className="p-3 text-xs" dir="ltr">{recipient.employee_number || '—'}</td>
+                    <td className="p-3 text-center">
+                      <span className="inline-flex min-w-8 justify-center rounded-full bg-[var(--accent-soft)] text-[var(--accent)] px-2 py-1 font-black tabular-nums">{recipient.receive_count}</span>
                     </td>
                   </tr>
                 ))}
