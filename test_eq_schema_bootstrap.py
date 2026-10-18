@@ -91,16 +91,8 @@ def schema_state(exists, columns, unique_index, occurred_index):
 
 class EarthquakeSchemaGuardTests(unittest.TestCase):
     def test_healthy_schema_returns_without_ddl_or_advisory_lock(self):
-        tree = ast.parse(SOURCE, filename="main.py")
-        constants = {}
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id in {
-                        "_EQ_INTEL_BASE_COLUMNS", "_EQ_INTEL_HISTORY_COLUMNS"
-                    }:
-                        constants[target.id] = ast.literal_eval(node.value)
-        all_columns = set(constants["_EQ_INTEL_BASE_COLUMNS"]) | set(constants["_EQ_INTEL_HISTORY_COLUMNS"])
+        constants = load_real_schema_functions(FakeConnection([]))
+        all_columns = constants["_EQ_INTEL_BASE_COLUMNS"] | constants["_EQ_INTEL_HISTORY_COLUMNS"]
         connection = FakeConnection([
             schema_state(True, all_columns, True, True),
         ])
@@ -119,13 +111,7 @@ class EarthquakeSchemaGuardTests(unittest.TestCase):
         self.assertTrue(connection.closed)
 
     def test_repair_lock_precedes_only_missing_ddl(self):
-        tree = ast.parse(SOURCE, filename="main.py")
-        base_columns = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "_EQ_INTEL_BASE_COLUMNS":
-                        base_columns = set(ast.literal_eval(node.value))
+        base_columns = load_real_schema_functions(FakeConnection([]))["_EQ_INTEL_BASE_COLUMNS"]
         columns = base_columns | {"hist_max_mag", "hist_window_count"}
         state = schema_state(True, columns, False, True)
         connection = FakeConnection([state, state])
