@@ -2292,6 +2292,8 @@ useEffect(() => {
   // - المستلم يتحدد من الـ backend بالـ user_id (مش مقارنة بالأسماء زي زمان)
   // - لا تداخل بين الطلبات / لا تكرار أحداث / تنظيف عند unmount / إعادة اتصال مع backoff
   const [notifications, setNotifications] = useState([]);
+  // UI-only pagination: render the newest 10 first and reveal the next batch on demand.
+  const [visibleNotificationCount, setVisibleNotificationCount] = useState(10);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifClosing, setNotifClosing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -3629,6 +3631,7 @@ useEffect(() => {
         if (notificationsOpen) { closeNotifPanel(); return; }
         if (notifCloseTimerRef.current) clearTimeout(notifCloseTimerRef.current);
         setNotifClosing(false);
+        setVisibleNotificationCount(10);
         setNotificationsOpen(true);
       }}
       title={notificationsOpen ? 'إغلاق الإشعارات' : 'الإشعارات اللحظية'}
@@ -3681,7 +3684,7 @@ useEffect(() => {
                 {realtimeConnected ? 'متصل — بانتظار الأحداث' : 'جارٍ الاتصال…'}
               </span>
             </div>
-          ) : notifications.map((n, i) => (
+          ) : notifications.slice(0, visibleNotificationCount).map((n, i) => (
             <button
               key={n.id}
               type="button"
@@ -3702,6 +3705,19 @@ useEffect(() => {
               </span>
             </button>
           ))}
+          {notifications.length > visibleNotificationCount && (
+            <div className="px-4 py-3 flex justify-center border-t border-[var(--border)]">
+              <button
+                type="button"
+                onClick={() => setVisibleNotificationCount((count) => Math.min(count + 10, notifications.length))}
+                className="btn-ghost px-4 py-2 rounded-xl text-xs font-bold"
+              >
+                {language === 'en'
+                  ? `Show more (${notifications.length - visibleNotificationCount})`
+                  : `عرض المزيد (${notifications.length - visibleNotificationCount})`}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )}
