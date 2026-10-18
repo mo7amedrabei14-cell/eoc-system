@@ -27,7 +27,7 @@ import { captureFields, applyFieldsWhenReady } from './draftsStore';
 import { BASE } from './apiBase';
 import { wirelessDeliveryDateMatchesFilter, wirelessDeliveryStatusAtFilterDate, wirelessDeliveryReturnDate } from './wirelessDateFilter';
 import { buildWirelessPrintTitle } from './wirelessPrintTitle';
-import { matchesWeatherPhenomenon, shouldPreserveWeatherSnapshot } from './weatherIntelFilters';
+import { matchesWeatherPhenomenon, shouldPreserveWeatherSnapshot, WEATHER_FILTER_OPTIONS } from './weatherIntelFilters';
 // ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
 //    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
 import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
@@ -16323,9 +16323,14 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         const anomalyValues = Object.values(assessment.anomalies || {});
         if (!anomalyValues.some((value) => ['extreme_high', 'extreme_low', 'high', 'low'].includes(value?.category || value?.class))) return false;
       }
-      return matchesWeatherPhenomenon(assessment, selectedWeatherFilter, intelConfig);
+      return matchesWeatherPhenomenon(
+        assessment,
+        selectedWeatherFilter,
+        intelConfig,
+        Number(currentRun?.source_meta?.min_samples) || 20,
+      );
     });
-  }, [visibleAssessmentsData, activeFilterTab, selectedWeatherFilter, intelConfig]);
+  }, [visibleAssessmentsData, activeFilterTab, selectedWeatherFilter, intelConfig, currentRun?.source_meta?.min_samples]);
 
   // إحصاءات ملخصة للكروت العلوية
   const kpiTotalLocations = visibleAssessmentsData.length;
@@ -16483,15 +16488,11 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
                 value={selectedWeatherFilter}
                 onChange={(e) => setSelectedWeatherFilter(e.target.value)}
               >
-                <option value="all" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('كل الظواهر', 'All Phenomena')}</option>
-                <option value="rain" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('أمطار متوقعة', 'Expected Rain')}</option>
-                <option value="heavy_rain" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('أمطار غزيرة', 'Heavy Rain')}</option>
-                <option value="thunderstorm" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('عواصف رعدية', 'Thunderstorms')}</option>
-                <option value="strong_wind" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('رياح قوية', 'Strong Winds')}</option>
-                <option value="heat" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('حرارة مرتفعة', 'High Heat')}</option>
-                <option value="cold" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('برودة شديدة', 'Extreme Cold')}</option>
-                <option value="fog" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('ضباب', 'Fog')}</option>
-                <option value="hazards" className="bg-[var(--surface-2)] text-[var(--ink)]">{T('أي مخاطر مرصودة', 'Any Detected Hazard')}</option>
+                {WEATHER_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value} className="bg-[var(--surface-2)] text-[var(--ink)]">
+                    {T(option.ar, option.en)}
+                  </option>
+                ))}
               </EocSelect>
               {selectedWeatherFilter !== 'all' && (
                 <button
