@@ -27,6 +27,7 @@ import { captureFields, applyFieldsWhenReady } from './draftsStore';
 import { BASE } from './apiBase';
 import { wirelessDeliveryDateMatchesFilter, wirelessDeliveryStatusAtFilterDate, wirelessDeliveryReturnDate } from './wirelessDateFilter';
 import { buildWirelessPrintTitle } from './wirelessPrintTitle';
+import { matchesWeatherPhenomenon, shouldPreserveWeatherSnapshot } from './weatherIntelFilters';
 // ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
 //    حتى لا يضيع أي تعديل لما يتبعتش لحظة إغلاق الجهاز — نفس بنية الطقس بالحرف.
 import { saveWorkspace, deleteWorkspace, fetchWorkspace } from './workspace';
@@ -16000,11 +16001,14 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
           data.statistics,
           data.frequencies
         );
-        const hasLastGoodSnapshotForScope =
-          loadedAssessmentScopeRef.current === requestScopeKey &&
-          assessmentsDataRef.current.length > 0;
-        // Keep a populated snapshot if a background poll returns an empty result during a transient recovery.
-        const preserveLastGoodSnapshot = isSilent && nextAssessments.length === 0 && hasLastGoodSnapshotForScope;
+        // Preserve populated data only for an empty background poll of the exact same date/location.
+        const preserveLastGoodSnapshot = shouldPreserveWeatherSnapshot({
+          silent: isSilent,
+          nextCount: nextAssessments.length,
+          previousCount: assessmentsDataRef.current.length,
+          previousScopeKey: loadedAssessmentScopeRef.current,
+          requestScopeKey,
+        });
 
         if (!preserveLastGoodSnapshot) {
           loadedAssessmentScopeRef.current = requestScopeKey;
@@ -16311,64 +16315,6 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
     return T(`حالة جوية (WMO ${code})`, `Weather code (${code})`);
   };
 
-  // Match the selected phenomenon against each location's forecast and configured hazard thresholds.
-  const toWeatherNumber = (value) => {
-    if (value === null || value === undefined || value === '') return null;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  };
-  const weatherFilterMatches = useCallback((assessment) => {
-    if (selectedWeatherFilter === 'all') return true;
-    const forecast = assessment.forecast || {};
-    const weatherCode = toWeatherNumber(forecast.weather_code);
-    const rainMm = toWeatherNumber(forecast.precip_mm);
-    const rainChance = toWeatherNumber(forecast.precip_prob_pct);
-    const maxTemp = toWeatherNumber(forecast.tmax);
-    const minTemp = toWeatherNumber(forecast.tmin);
-    const maxWind = toWeatherNumber(forecast.wind_max_kph);
-    const gusts = toWeatherNumber(forecast.wind_gusts_kph);
-    const hazardCodes = new Set((assessment.hazards || []).map((item) => safeText(item?.code).trim().toLowerCase()));
-    const hasHazard = (...codes) => codes.some((code) => hazardCodes.has(code));
-    const atLeastThreshold = (value, key, fallback) => {
-      const threshold = toWeatherNumber(intelConfig[key]?.value) ?? fallback;
-      return value !== null && value >= threshold;
-    };
-    const atMostThreshold = (value, key, fallback) => {
-      const threshold = toWeatherNumber(intelConfig[key]?.value) ?? fallback;
-      return value !== null && value <= threshold;
-    };
-    const rainCodes = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
-    const thunderstormCodes = [95, 96, 99];
-
-    switch (selectedWeatherFilter) {
-      case 'rain':
-        return (rainMm !== null && rainMm > 0) ||
-          (rainChance !== null && rainChance > 0) ||
-          rainCodes.includes(weatherCode) ||
-          hasHazard('heavy_rain', 'thunderstorm');
-      case 'heavy_rain':
-        return hasHazard('heavy_rain') ||
-          [65, 67, 82].includes(weatherCode) ||
-          atLeastThreshold(rainMm, 'hazard.precip_heavy_mm', 10);
-      case 'thunderstorm':
-        return hasHazard('thunderstorm') || thunderstormCodes.includes(weatherCode);
-      case 'strong_wind':
-        return hasHazard('strong_wind') ||
-          atLeastThreshold(maxWind, 'hazard.wind_high_kph', 40) ||
-          atLeastThreshold(gusts, 'hazard.wind_gusts_high_kph', 60);
-      case 'heat':
-        return hasHazard('heat') || atLeastThreshold(maxTemp, 'hazard.tmax_high_c', 40);
-      case 'cold':
-        return hasHazard('cold') || atMostThreshold(minTemp, 'hazard.tmin_low_c', 5);
-      case 'fog':
-        return hasHazard('fog') || [45, 48].includes(weatherCode);
-      case 'hazards':
-        return (assessment.hazards || []).length > 0;
-      default:
-        return true;
-    }
-  }, [selectedWeatherFilter, intelConfig]);
-
   // Existing quick tabs and the phenomenon filter are cumulative.
   const filteredAssessments = useMemo(() => {
     return visibleAssessmentsData.filter((assessment) => {
@@ -16377,9 +16323,9 @@ function WeatherIntelView({ branches, isOwner, userRole, lang, setCustomAlert })
         const anomalyValues = Object.values(assessment.anomalies || {});
         if (!anomalyValues.some((value) => ['extreme_high', 'extreme_low', 'high', 'low'].includes(value?.category || value?.class))) return false;
       }
-      return weatherFilterMatches(assessment);
+      return matchesWeatherPhenomenon(assessment, selectedWeatherFilter, intelConfig);
     });
-  }, [visibleAssessmentsData, activeFilterTab, weatherFilterMatches]);
+  }, [visibleAssessmentsData, activeFilterTab, selectedWeatherFilter, intelConfig]);
 
   // إحصاءات ملخصة للكروت العلوية
   const kpiTotalLocations = visibleAssessmentsData.length;
