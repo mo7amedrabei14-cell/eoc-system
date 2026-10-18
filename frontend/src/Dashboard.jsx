@@ -9594,7 +9594,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
     setExportingRecipients(true);
     try {
       const params = new URLSearchParams();
-      if (recipientSearch.trim()) params.set('search', recipientSearch.trim());
+      if (recipientSearch.trim()) params.set('search', normalizeWirelessDigits(recipientSearch).trim());
       const suffix = params.toString() ? `?${params.toString()}` : '';
       const res = await fetch(`${BASE}/api/wireless-handover/recipients/export${suffix}`, {
         headers: { Authorization: `Bearer ${token()}` },
