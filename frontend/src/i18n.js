@@ -889,6 +889,12 @@ const ENGLISH_UI = {
   "تصدير محلي": "Export local",
   "تصدير عالمي": "Export global",
 
+  "مثال: بداية المشاركة": "Example: participation start",
+  "يُحفظ مع بيانات المهمة ويظهر فوراً عند فتحها": "Saved with the mission and shown as soon as it is opened",
+  "مثال: B-12": "Example: B-12",
+  "تصدير كل استمارات اليوم (ZIP)": "Export all forms for today (ZIP)",
+  "من (نقطة الانطلاق)...": "From (starting point)...",
+
 };
 
 /**
