@@ -9302,11 +9302,37 @@ function normalizeWirelessDigits(value) {
     .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
 }
 
+const WIRELESS_DESTINATIONS = [
+  "القنال",
+  "شمال سيناء",
+  "Mang. Eoc",
+  "هيئة الاسعاف",
+  "فرق طوارئ 1",
+  "فرق طوارئ 2",
+  "فرق طوارئ 3",
+  "فريق الانقاذ",
+  "ادارة الامن",
+  "مراسم",
+  "الاسعاف ERC",
+  "الاسطول",
+  "عمليات متنقل",
+  "طوارئ عامة",
+  "القاهرة",
+  "الدلتا",
+  "الاسكندرية",
+  "ش صعيد",
+  "وسط صعيد",
+  "ج صعيد",
+  "عمليات مركزي",
+  "خدمات طبية 1",
+  "خدمات طبية 2"
+];
+
 function _wirelessEmptyDelivery() {
   const t = new Date();
   const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
   return {
-    full_name: '', employee_number: '', national_id: '', department: '',
+    full_name: '', employee_number: '', national_id: '', department: '', radio_destination: '',
     received_date: iso, task_description: '', usage_duration: '', execution_area: '',
     general_notes: '',
     devices: [_wirelessEmptyDevice()],
@@ -9380,12 +9406,16 @@ function WirelessPrintDeclaration({ delivery, fixedText, lang = 'ar' }) {
             <tr>
               <th>{T('القسم / الإدارة', 'Department')}</th><td>{delivery.department || ''}</td>
               <th>{T('تاريخ التسليم', 'Delivery date')}</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
-              <th>{T('تاريخ الاستلام', 'Return date')}</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
+              <th>{T('تاريخ الاستلام', 'Return date')}</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || ''}</WirelessLtr></td>
             </tr>
             <tr>
               <th>{T('مدة الاستخدام', 'Usage duration')}</th><td>{delivery.usage_duration || ''}</td>
               <th>{T('المهمة', 'Task')}</th><td>{delivery.task_description || ''}</td>
               <th>{T('المنطقة', 'Area')}</th><td>{delivery.execution_area || ''}</td>
+            </tr>
+            <tr>
+              <th>{T('الموجه', 'Directed to')}</th><td colSpan="2">{delivery.radio_destination || ''}</td>
+              <th>{T('ملاحظات عامة عند التسليم', 'General handover notes')}</th><td colSpan="2">{delivery.general_notes || ''}</td>
             </tr>
           </>
         }
@@ -9454,12 +9484,16 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
           <>
             <tr>
               <th>{T('المستلم', 'Recipient')}</th><td>{delivery.full_name}</td>
-              <th>{T('الرقم الوظيفي', 'Employee no.')}</th><td>{delivery.employee_number || ''}</td>
+              <th>{T('الرقم الوظيفي / العضوية', 'Employee / membership no.')}</th><td>{delivery.employee_number || ''}</td>
               <th>{T('تاريخ التسليم', 'Delivery date')}</th><td><WirelessLtr>{delivery.received_date}</WirelessLtr></td>
             </tr>
             <tr>
-              <th>{T('تاريخ الاستلام', 'Return date')}</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || '—'}</WirelessLtr></td>
-              <th>{T('ملاحظات الاستلام', 'Return notes')}</th><td colSpan="3">{delivery.return_notes || '—'}</td>
+              <th>{T('تاريخ الاستلام', 'Return date')}</th><td><WirelessLtr>{wirelessDeliveryReturnDate(delivery) || ''}</WirelessLtr></td>
+              <th>{T('ملاحظات الاستلام', 'Return notes')}</th><td colSpan="3">{delivery.return_notes || ''}</td>
+            </tr>
+            <tr>
+              <th>{T('الموجه', 'Directed to')}</th><td>{delivery.radio_destination || ''}</td>
+              <th>{T('ملاحظات عامة عند التسليم', 'General handover notes')}</th><td colSpan="3">{delivery.general_notes || ''}</td>
             </tr>
           </>
         }
@@ -9501,12 +9535,16 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
           <col style={{ width: '16%' }} /><col style={{ width: '34%' }} />
         </colgroup>
         <thead>
-          <tr><th colSpan="2">{T('عند التسليم', 'At handover')}</th><th colSpan="2">{T('عند الاستلام', 'At return')}</th></tr>
+          {/* في RTL، أول مجموعة تظهر يمين الورقة: التسليم أولاً ثم الاستلام. أدوار التوقيع معكوسة عن صفحة الإقرار. */}
+          <tr>
+            <th colSpan="2">{T('عند التسليم', 'At handover')}<small>{T('المقر بما فيه (المسلم)', 'Holder (issuer)')}</small></th>
+            <th colSpan="2">{T('عند الاستلام', 'At return')}<small>{T('مركز عمليات الطوارئ (المستلم)', 'Emergency Operations Center (recipient)')}</small></th>
+          </tr>
         </thead>
         <tbody>
           <tr><th>{T('التاريخ', 'Date')}</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td><th>{T('التاريخ', 'Date')}</th><td><WirelessLtr>__ / __ / ______</WirelessLtr></td></tr>
           <tr><th>{T('الساعة', 'Time')}</th><td><WirelessLtr>__ : __</WirelessLtr></td><th>{T('الساعة', 'Time')}</th><td><WirelessLtr>__ : __</WirelessLtr></td></tr>
-          <tr><th>{T('توقيع المستلم', 'Recipient signature')}</th><td></td><th>{T('توقيع المستلم', 'Recipient signature')}</th><td></td></tr>
+          <tr><th>{T('توقيع المسلم', 'Issuer signature')}</th><td></td><th>{T('توقيع المستلم', 'Recipient signature')}</th><td></td></tr>
           <tr><th>{T('ملاحظات', 'Notes')}</th><td></td><th>{T('ملاحظات', 'Notes')}</th><td>{delivery.return_notes || ''}</td></tr>
         </tbody>
       </table>
@@ -9562,6 +9600,7 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
         employee_number: form.employee_number || null,
         national_id: nationalId,
         department: form.department || null,
+        radio_destination: form.radio_destination || null,
         received_date: form.received_date,
         task_description: form.task_description || null,
         usage_duration: form.usage_duration || null,
@@ -9634,6 +9673,12 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
               </FormGroup>
               <FormGroup label={T('القسم / الإدارة', 'Department')}>
                 <StyledInput value={form.department} onChange={e => setField('department', e.target.value)} />
+              </FormGroup>
+              <FormGroup label={T('الموجه', 'Directed to')}>
+                <EocSelect value={form.radio_destination || ''} onChange={e => setField('radio_destination', e.target.value)}>
+                  <option value="">{T('اختر الموجه', 'Select destination')}</option>
+                  {WIRELESS_DESTINATIONS.map(destination => <option key={destination} value={destination}>{destination}</option>)}
+                </EocSelect>
               </FormGroup>
               <FormGroup label={T('تاريخ الاستلام', 'Received date') + ' *'}>
                 <SegDateField value={form.received_date} onChange={e => setField('received_date', e.target.value)} className="field" />
@@ -9860,9 +9905,10 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
         'تاريخ التسليم': String(d.received_date || '').slice(0, 10),
         'تاريخ الاستلام': wirelessDeliveryReturnDate(d),
         'الاسم الثلاثي': d.full_name || '',
-        'الرقم الوظيفي': d.employee_number || '',
+        'الرقم الوظيفي / العضوية': d.employee_number || '',
         'الرقم القومي': d.national_id || '',
         'القسم / الإدارة': d.department || '',
+        'الموجه': d.radio_destination || '',
         'المهمة': d.task_description || '',
         'مدة الاستخدام': d.usage_duration || '',
         'المنطقة': d.execution_area || '',
@@ -10247,14 +10293,15 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
           </p>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-sm text-right min-w-[75rem]">
+            <table className="w-full text-sm text-right min-w-[82rem]">
               <thead className="bg-[var(--surface-3)] border-b border-[var(--border)]">
                 <tr>
                   <th className="p-3 font-bold whitespace-nowrap">{T('كود', 'Code')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('تاريخ التسليم', 'Delivery date')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('تاريخ الاستلام', 'Return date')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('الاسم', 'Name')}</th>
-                  <th className="p-3 font-bold whitespace-nowrap">{T('الوظيفي', 'No.')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الرقم الوظيفي / العضوية', 'Employee / membership no.')}</th>
+                  <th className="p-3 font-bold whitespace-nowrap">{T('الموجه', 'Directed to')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('الأجهزة', 'Devices')}</th>
                   <th className="p-3 font-bold whitespace-nowrap">{T('الحالة', 'Status')}</th>
                   <th className="p-3 font-bold whitespace-nowrap text-center sticky end-0 bg-[var(--surface-3)]">{T('إجراءات', 'Actions')}</th>
@@ -10268,6 +10315,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
                     <td className="p-3 font-mono text-xs">{wirelessDeliveryReturnDate(d) || '—'}</td>
                     <td className="p-3 font-bold">{d.full_name}</td>
                     <td className="p-3 text-xs">{d.employee_number || '—'}</td>
+                    <td className="p-3 text-xs">{d.radio_destination || '—'}</td>
                     <td className="p-3">
                       <span className="inline-flex items-center gap-1.5 text-xs">
                         <span className="font-black text-[var(--accent)]">{d.device_count}</span>

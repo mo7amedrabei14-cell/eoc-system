@@ -886,6 +886,7 @@ def ensure_wireless_handover_schema():
                     employee_number   VARCHAR(100),
                     national_id       VARCHAR(50),
                     department        VARCHAR(200),
+                    radio_destination VARCHAR(200),
                     received_date     DATE NOT NULL,
                     task_description  TEXT,
                     usage_duration    VARCHAR(100),
@@ -900,6 +901,7 @@ def ensure_wireless_handover_schema():
                     updated_at        TIMESTAMP WITHOUT TIME ZONE
                 );
             """)
+            cursor.execute("ALTER TABLE wireless_deliveries ADD COLUMN IF NOT EXISTS radio_destination VARCHAR(200);")
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS wireless_delivery_devices (
                     device_row_id     BIGSERIAL PRIMARY KEY,
@@ -13183,6 +13185,7 @@ class WirelessDeliveryCreate(BaseModel):
     task_description: Optional[str] = None
     usage_duration: Optional[str] = None
     execution_area: Optional[str] = None
+    radio_destination: Optional[str] = None
     general_notes: Optional[str] = None
     devices: List[WirelessDeviceIn]
 
@@ -13201,6 +13204,7 @@ class WirelessDeliveryUpdate(BaseModel):
     task_description: Optional[str] = None
     usage_duration: Optional[str] = None
     execution_area: Optional[str] = None
+    radio_destination: Optional[str] = None
     general_notes: Optional[str] = None
     devices: Optional[List[WirelessDeviceIn]] = None
 
@@ -13293,6 +13297,7 @@ def _wireless_delivery_dict(cursor, row):
         "returned_at": row[12].strftime("%Y-%m-%d %H:%M") if row[12] else "",
         "return_notes": row[13] or "",
         "created_at": row[14].strftime("%Y-%m-%d %H:%M") if row[14] else "",
+        "radio_destination": row[15] or "",
         "devices": devices,
         "device_count": len(devices),
         "motorola_count": motorola_count,
@@ -13303,7 +13308,7 @@ def _wireless_delivery_dict(cursor, row):
 _WIRELESS_DELIVERY_SELECT = """
     SELECT delivery_id, delivery_code, full_name, employee_number, national_id,
            department, received_date, task_description, usage_duration, execution_area,
-           general_notes, status, returned_at, return_notes, created_at
+           general_notes, status, returned_at, return_notes, created_at, radio_destination
     FROM wireless_deliveries
 """
 
@@ -13392,10 +13397,10 @@ def create_wireless_delivery(
             cursor.execute(
                 """
                 INSERT INTO wireless_deliveries
-                    (delivery_code, full_name, employee_number, national_id, department,
+                    (delivery_code, full_name, employee_number, national_id, department, radio_destination,
                      received_date, task_description, usage_duration, execution_area,
                      general_notes, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING delivery_id;
                 """,
                 (
@@ -13403,6 +13408,7 @@ def create_wireless_delivery(
                     _wclean(payload.employee_number, 100),
                     payload.national_id,
                     _wclean(payload.department, 200),
+                    _wclean(payload.radio_destination, 200),
                     received_date,
                     _wclean(payload.task_description, 2000),
                     _wclean(payload.usage_duration, 100),
@@ -13723,6 +13729,8 @@ def update_wireless_delivery(
             if not n:
                 raise HTTPException(status_code=400, detail="اسم المستلم لا يمكن أن يكون فارغاً")
             updates["full_name"] = n
+        if "radio_destination" in updates:
+            updates["radio_destination"] = _wclean(updates["radio_destination"], 200)
 
         # 🛡️ devices لازم تيجي من payload.devices (pydantic models) مش من model_dump
         #    لأن model_dump() بتحوّلها list[dict]، والكود بيستخدم d.device_type/device_serial
