@@ -11311,6 +11311,9 @@ def backfill_earthquake_catalog(
     if world_result is not None:
         results.append(world_result)
 
+    # بعد التعبئة اليدوية أعد فحص جاهزية الكتالوج وأي إحصاءات كانت مخزنة بالذاكرة.
+    _EQ_CATALOG_READY_CACHE["ts"] = 0.0
+    _EQ_FORECAST_MEM_CACHE.clear()
     stats = _eq_catalog_stats()
     return {
         "message": "تم تحديث الكتالوج التاريخي",
@@ -11545,14 +11548,125 @@ def _eq_world_stats_from_catalog(now_cairo):
         connection.close()
 
 
+def _eq_forecast_zone_stats_from_catalog(zone, now_cairo):
+    """حساب إحصاءات المنطقة محلياً من الكتالوج التاريخي لتجنب اعتماد الجدول على USGS وقت العرض."""
+    if zone.get("is_world") or not _eq_catalog_ready_cached():
+        return None
+
+    import math as _math
+
+    hist_window_days = EQ_FORECAST_HIST_YEARS * 365
+    hist_start = now_cairo - timedelta(days=hist_window_days)
+    recent_start = now_cairo - timedelta(days=EQ_FORECAST_RECENT_DAYS)
+    lat = float(zone["lat"])
+    lon = float(zone["lon"])
+    radius_km = float(zone["radius_km"])
+
+    # صندوق مرشح أوسع قليلاً من الدائرة لتقليل الصفوف قبل حساب المسافة الدقيقة.
+    lat_delta = radius_km / 110.0
+    max_abs_lat = min(89.0, abs(lat) + lat_delta)
+    cos_floor = max(0.01745, _math.cos(_math.radians(max_abs_lat)))
+    lon_delta = min(180.0, radius_km / (111.0 * cos_floor))
+    min_lat, max_lat = lat - lat_delta, lat + lat_delta
+    min_lon, max_lon = max(-180.0, lon - lon_delta), min(180.0, lon + lon_delta)
+
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                WITH regional_candidates AS MATERIALIZED (
+                    SELECT occurred_at, magnitude,
+                           6371.0 * acos(least(1.0, greatest(-1.0,
+                               sin(radians(%s)) * sin(radians(latitude)) +
+                               cos(radians(%s)) * cos(radians(latitude)) *
+                               cos(radians(longitude) - radians(%s))
+                           ))) AS distance_km
+                    FROM earthquake_catalog
+                    WHERE occurred_at >= %s
+                      AND occurred_at <= %s
+                      AND magnitude >= 4.0
+                      AND latitude IS NOT NULL
+                      AND longitude IS NOT NULL
+                      AND latitude BETWEEN %s AND %s
+                      AND longitude BETWEEN %s AND %s
+                )
+                SELECT
+                    COUNT(*) FILTER (
+                        WHERE distance_km <= %s AND occurred_at < %s
+                    ) AS hist40,
+                    COUNT(*) FILTER (
+                        WHERE distance_km <= %s AND magnitude >= 4.5 AND occurred_at < %s
+                    ) AS hist45,
+                    COUNT(*) FILTER (
+                        WHERE distance_km <= %s AND occurred_at >= %s
+                    ) AS recent40
+                FROM regional_candidates;
+            """, (
+                lat, lat, lon,
+                hist_start, now_cairo,
+                min_lat, max_lat, min_lon, max_lon,
+                radius_km, recent_start,
+                radius_km, recent_start,
+                radius_km, recent_start,
+            ))
+            hist40, hist45, recent40 = cursor.fetchone() or (0, 0, 0)
+
+            # الكتالوج التاريخي يبدأ من M≥4؛ تُحسب عناقيد M≥3.5 من الرصود الحية.
+            swarm_start = now_cairo - timedelta(days=2)
+            cursor.execute("""
+                WITH recent_candidates AS MATERIALIZED (
+                    SELECT 6371.0 * acos(least(1.0, greatest(-1.0,
+                               sin(radians(%s)) * sin(radians(latitude)) +
+                               cos(radians(%s)) * cos(radians(latitude)) *
+                               cos(radians(longitude) - radians(%s))
+                           ))) AS distance_km
+                    FROM earthquake_intel
+                    WHERE occurred_at >= %s
+                      AND occurred_at <= %s
+                      AND magnitude >= 3.5
+                      AND latitude IS NOT NULL
+                      AND longitude IS NOT NULL
+                      AND latitude BETWEEN %s AND %s
+                      AND longitude BETWEEN %s AND %s
+                )
+                SELECT COUNT(*) FROM recent_candidates WHERE distance_km <= %s;
+            """, (
+                lat, lat, lon, swarm_start, now_cairo,
+                min_lat, max_lat, min_lon, max_lon, radius_km,
+            ))
+            swarm35 = cursor.fetchone()[0] or 0
+
+        return {
+            "hist40": int(hist40 or 0),
+            "hist45": int(hist45 or 0),
+            "recent40": int(recent40 or 0),
+            "swarm35": int(swarm35),
+            "hist_years": EQ_FORECAST_HIST_YEARS,
+            "recent_days": EQ_FORECAST_RECENT_DAYS,
+        }
+    finally:
+        connection.close()
+
+
 def _eq_forecast_zone_stats(zone, now_cairo):
-    """إحصاءات منطقة واحدة (مع ذاكرة 3 ساعات). يرجع dict أو None عند أي فشل — بلا انهيار."""
+    """إحصاءات منطقة واحدة (مع ذاكرة 3 ساعات). يرجع dict أو None عند فشل المصدرين."""
     cache_key = zone["id"]
     import time as _time
     now_ts = _time.time()
     cached = _EQ_FORECAST_MEM_CACHE.get(cache_key)
     if cached and (now_ts - cached[0]) < _EQ_FORECAST_MEM_TTL:
         return cached[1]
+
+    # المسار الأساسي: الكتالوج المحلي؛ لا نضرب USGS أربع مرات لكل منطقة عند كل فتح للصفحة.
+    try:
+        stats = _eq_forecast_zone_stats_from_catalog(zone, now_cairo)
+        if stats is not None:
+            _EQ_FORECAST_MEM_CACHE[cache_key] = (now_ts, stats)
+            return stats
+    except Exception as e:
+        print(f"eq forecast local catalog stats failed for {zone['id']}: {e}")
+
+    # احتياطي عند عدم جاهزية الكتالوج أو تعذر قراءته: سلوك USGS الحالي.
     try:
         hist_window_days = EQ_FORECAST_HIST_YEARS * 365
         hist40 = _eq_forecast_count(zone, 4.0, hist_window_days, EQ_FORECAST_RECENT_DAYS, now_cairo)
