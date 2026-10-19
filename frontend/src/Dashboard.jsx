@@ -9535,10 +9535,10 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
           <col style={{ width: '16%' }} /><col style={{ width: '34%' }} />
         </colgroup>
         <thead>
-          {/* في RTL، المجموعة اليمنى عند الاستلام واليسرى عند التسليم؛ نحافظ على أماكن جهات التوقيع. */}
+          {/* في RTL، المجموعتان اليمنى واليسرى بعنوان عند الاستلام؛ نحافظ على أماكن جهات التوقيع. */}
           <tr>
             <th colSpan="2">{T('عند الاستلام', 'At return')}<small>{T('المقر بما فيه (المسلم)', 'Holder (issuer)')}</small></th>
-            <th colSpan="2">{T('عند التسليم', 'At handover')}<small>{T('مركز عمليات الطوارئ (المستلم)', 'Emergency Operations Center (recipient)')}</small></th>
+            <th colSpan="2">{T('عند الاستلام', 'At return')}<small>{T('مركز عمليات الطوارئ (المستلم)', 'Emergency Operations Center (recipient)')}</small></th>
           </tr>
         </thead>
         <tbody>
