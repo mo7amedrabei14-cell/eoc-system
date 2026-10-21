@@ -27,7 +27,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SYSTEM_TOKEN = os.environ.get("SYSTEM_TOKEN")
 # Accept either a backend base URL or the full AI-news endpoint. This keeps the
 # GitHub workflow portable when the API host changes, without hard-coding it twice.
-_configured_api_url = (os.environ.get("SYSTEM_API_URL") or "https://eoc-system-alpha.vercel.app").strip().rstrip("/")
+_configured_api_url = (os.environ.get("SYSTEM_API_URL") or "https://eoc-system-ochre.vercel.app").strip().rstrip("/")
 SYSTEM_API_URL = (
     _configured_api_url
     if _configured_api_url.endswith("/api/ai-news")

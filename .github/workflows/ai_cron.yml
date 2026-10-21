@@ -37,7 +37,7 @@ jobs:
           APIFY_MONTHLY_RESULT_CAP: ${{ vars.APIFY_MONTHLY_RESULT_CAP || '1000' }}
           SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
           # Set this to the active backend base URL, or to /api/ai-news itself.
-          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-alpha.vercel.app' }}
+          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-ochre.vercel.app' }}
           # Public channel/page identifiers are repository Actions Variables.
           OSINT_TELEGRAM_CHANNELS: ${{ vars.OSINT_TELEGRAM_CHANNELS }}
           OSINT_EXTRA_SOCIAL_FEEDS: ${{ vars.OSINT_EXTRA_SOCIAL_FEEDS }}
