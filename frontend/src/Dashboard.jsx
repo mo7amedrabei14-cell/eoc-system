@@ -1,6 +1,7 @@
 import { useSyncExternalStore, useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect, Fragment, memo, Component } from 'react';
 import { createPortal } from 'react-dom'; // ✅ createPortal يُصدَّر من react-dom (وليس react) في React 19
 import { useNavigate } from 'react-router-dom';
+import OwnerMessages from './components/OwnerMessages.jsx';
 import { runVisualTransition } from './motion/visualTransitions';
 import ERCVectorLogo from './ERCVectorLogo';
 import { useAuthEntryTransition } from './motion/AuthEntryTransition';
@@ -2528,7 +2529,13 @@ useEffect(() => {
         if (Number.isFinite(_t) && (Date.now() - _t) > 5 * 60 * 1000) return;
       } catch { /* تاريخ غير مفهوم ⇒ نكمل عادي */ }
 
-            // 🧾 حدث سجل النظام: يحدّث شاشة السجل المفتوحة لحظياً — بلا توست ولا جرس
+            // ✉️ رسالة من المالك: حدّث صندوق الرسائل فور وصول الحدث، والـDB يضمن بقاءها للمستخدم غير المتصل.
+      if (e.event_type === 'owner_message') {
+        window.dispatchEvent(new Event('eoc-owner-message-pending'));
+        return;
+      }
+
+      // 🧾 حدث سجل النظام: يحدّث شاشة السجل المفتوحة لحظياً — بلا توست ولا جرس
       if (e.event_type === 'audit') {
         setLiveUpdateVersion(prev => ({ ...prev, audit: prev.audit + 1 }));
         return;
@@ -3533,6 +3540,22 @@ useEffect(() => {
             </button>
           )}
 
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('eoc-open-owner-message-composer'))}
+              aria-label={language === 'en' ? 'Send a system message' : 'إرسال رسالة للمستخدمين'}
+              data-sidebar-tooltip={!isSidebarOpen ? (language === 'en' ? 'Owner message' : 'رسالة من المالك') : undefined}
+              className={`nav-item ${isSidebarOpen ? '' : 'w-14 justify-center mx-auto'}`}
+            >
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" />
+                <path d="M8 12h8M8 8.5h5" />
+              </svg>
+              {isSidebarOpen && <span className="font-semibold tracking-wide truncate">{language === 'en' ? 'Send a system message' : 'إرسال رسالة للمستخدمين'}</span>}
+            </button>
+          )}
+
           <button
             onClick={handleLogout}
             aria-label="إنهاء الجلسة الآمنة"
@@ -3549,6 +3572,7 @@ useEffect(() => {
       </SidebarStateSlot>
 
       <main id="main-scroll-container" className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(199,0,0,0.03),transparent_50%)] relative">
+        <OwnerMessages isOwner={isOwner} lang={language} />
         <header className="glass-header px-4 md:px-8 py-3.5 md:py-4 flex items-center gap-3 md:gap-4 sticky top-0 z-40">
           <SidebarStateSlot>
             {({ isSidebarOpen, setIsSidebarOpen }) => (
@@ -9836,7 +9860,8 @@ function WirelessReturnModal({ show, delivery, onClose, onSaved, lang }) {
         onChange={e => setNotes(e.target.value)}
         rows={3}
         placeholder={T('مثال: جهاز #2 فيه كسر بسيط في الغلاف…', 'e.g. device #2 has minor case damage…')}
-        className="w-full field text-sm"
+        className="block w-full min-w-0 max-w-full box-border field text-sm"
+        style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', display: 'block', marginInline: 0 }}
       />
     </ApertureDialog>
   );
