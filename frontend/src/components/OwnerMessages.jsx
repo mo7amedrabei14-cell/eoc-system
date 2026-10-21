@@ -209,12 +209,9 @@ export default function OwnerMessages({ isOwner, lang = 'ar' }) {
             </div>
             <div id="owner-message-body" className="whitespace-pre-wrap break-words px-6 py-6 text-base leading-8">{currentMessage.message}</div>
             {ackError && <p role="alert" className="mx-6 mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">{ackError}</p>}
-            <div className="flex flex-wrap justify-end gap-3 border-t border-[var(--border)] bg-[var(--surface-2)] px-6 py-4">
-              <button type="button" className="rounded-xl border border-[var(--border)] px-5 py-3 font-bold transition hover:bg-[var(--surface-hover)] disabled:opacity-60" disabled={acknowledgingId !== null} onClick={() => acknowledge(currentMessage)}>
-                {acknowledgingId === currentMessage.message_id ? textFor(lang, 'جاري التأكيد…', 'Confirming…') : textFor(lang, 'شكرًا', 'Thank you')}
-              </button>
-              <button type="button" className="rounded-xl bg-[var(--accent)] px-6 py-3 font-bold text-white shadow-lg transition hover:brightness-110 disabled:opacity-60" disabled={acknowledgingId !== null} onClick={() => acknowledge(currentMessage)}>
-                {acknowledgingId === currentMessage.message_id ? textFor(lang, 'جاري التأكيد…', 'Confirming…') : textFor(lang, 'تمام', 'Got it')}
+            <div className="flex justify-end border-t border-[var(--border)] bg-[var(--surface-2)] px-6 py-4">
+              <button type="button" className="w-full rounded-xl bg-[var(--accent)] px-6 py-3 font-bold text-white shadow-lg transition hover:brightness-110 disabled:opacity-60 sm:w-auto" disabled={acknowledgingId !== null} onClick={() => acknowledge(currentMessage)}>
+                {acknowledgingId === currentMessage.message_id ? textFor(lang, 'جاري التأكيد…', 'Confirming…') : textFor(lang, 'تم الاستلام', 'Received')}
               </button>
             </div>
           </section>

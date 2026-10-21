@@ -26,3 +26,10 @@ test('كل مستلم يحصل على حدث realtime موجّه ورسالة د
   assert.match(backend, /'owner_message'/);
   assert.match(backend, /e\.target_user_id = %s/);
 });
+
+test('مربع الرسالة يعرض زر إقرار واحد باسم تم الاستلام ولا يعرض زر شكرًا', () => {
+  assert.match(ownerMessages, /textFor\(lang, 'تم الاستلام', 'Received'\)/);
+  assert.doesNotMatch(ownerMessages, /textFor\(lang, 'شكرًا', 'Thank you'\)/);
+  const acknowledgementButtons = ownerMessages.match(/onClick=\{\(\) => acknowledge\(currentMessage\)\}/g) || [];
+  assert.equal(acknowledgementButtons.length, 1);
+});
