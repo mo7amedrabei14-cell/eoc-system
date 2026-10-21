@@ -1004,7 +1004,58 @@ def ensure_participant_branch_schema():
         connection.close()
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ✉️ رسائل المالك — بنية منفصلة وخفيفة (لا تُغيّر إصدار المخطط العام الثقيل)
+# ─────────────────────────────────────────────────────────────────────────────
+_OWNER_MESSAGES_SCHEMA_LOCK = threading.Lock()
+_OWNER_MESSAGES_SCHEMA_READY = False
+
+
+def ensure_owner_messages_schema():
+    """تهيئة جداول رسائل المالك والإقرار الفردي بصورة آمنة وقابلة لإعادة المحاولة."""
+    global _OWNER_MESSAGES_SCHEMA_READY
+    if _OWNER_MESSAGES_SCHEMA_READY:
+        return
+    with _OWNER_MESSAGES_SCHEMA_LOCK:
+        if _OWNER_MESSAGES_SCHEMA_READY:
+            return
+        connection = get_connection()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS owner_messages (
+                        message_id BIGSERIAL PRIMARY KEY,
+                        message_text TEXT NOT NULL CHECK (length(btrim(message_text)) > 0),
+                        created_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+                        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
+                            DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                    );
+                """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS owner_message_recipients (
+                        message_id BIGINT NOT NULL REFERENCES owner_messages(message_id) ON DELETE CASCADE,
+                        recipient_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                        acknowledged_at TIMESTAMP WITHOUT TIME ZONE,
+                        PRIMARY KEY (message_id, recipient_user_id)
+                    );
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_owner_message_recipients_pending
+                    ON owner_message_recipients (recipient_user_id, message_id)
+                    WHERE acknowledged_at IS NULL;
+                """)
+            connection.commit()
+            _OWNER_MESSAGES_SCHEMA_READY = True
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+
 def _bootstrap_schema_in_background():
+
     """يفحص/يجهّز بنية القاعدة في الخلفية بدل الإقلاع الحاجب.
 
     تهيئة المخطط كانت بتشتغل متزامنة عند الاستيراد (عشرات أوامر DDL على Aiven)،
@@ -1023,6 +1074,7 @@ def _bootstrap_schema_in_background():
         ensure_weather_extra_history_schema()  # 🌪️ تاريخ الطبقات الإضافية (خفيفة منفصلة)
         ensure_missions_perf_indexes()  # ⚡ فهارس تسريع صفحة المهام (خفيفة منفصلة)
         ensure_wireless_handover_schema()  # 📻 تسليم أجهزة لاسلكي
+        ensure_owner_messages_schema()  # ✉️ رسائل المالك وإقرارات الاستلام
         _schema_error["message"] = None
     except Exception as e:  # لا نكسر الإقلاع إطلاقاً — تُعاد المحاولة في التشغيلة الجاية
         _schema_error["message"] = str(e)[:200]
@@ -5970,10 +6022,11 @@ def get_realtime_events(
                     LEFT JOIN users u ON e.actor_user_id = u.user_id
                     WHERE e.event_id > %s
                       AND (e.event_type = 'system_refresh' OR e.actor_user_id IS DISTINCT FROM %s)
+                      AND (e.event_type != 'owner_message' OR e.target_user_id = %s)
                     ORDER BY e.event_id ASC
                     LIMIT %s;
                     """,
-                    (after_id, user_id, limit),
+                    (after_id, user_id, user_id, limit),
                 )
             elif is_youth_channel:
                 # 🔒 قناة إدارة الشباب: الإشعار الموجّه الخاص باكتمال الاستمارة فقط
@@ -5988,7 +6041,10 @@ def get_realtime_events(
                       AND (
                             (
                               e.target_user_id = %s
-                              AND e.details @> %s::jsonb
+                              AND (
+                                e.details @> %s::jsonb
+                                OR e.event_type = 'owner_message'
+                              )
                             )
                             OR e.event_type IN ('system_refresh', 'local_news', 'global_disaster')
                           )
@@ -14065,5 +14121,262 @@ def delete_wireless_delivery(
         connection.rollback()
         print(f"Error deleting: {e}")
         raise HTTPException(status_code=500, detail="حدث خطأ")
+    finally:
+        connection.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ✉️ رسائل المالك — تظهر للمستلم باستمرار حتى يسجل إقرار الاستلام
+# ─────────────────────────────────────────────────────────────────────────────
+class OwnerMessageCreate(BaseModel):
+    message: str
+    recipient_ids: List[int]
+
+    @field_validator("message")
+    @classmethod
+    def validate_message_text(cls, value: str) -> str:
+        value = (value or "").strip()
+        if not value:
+            raise ValueError("نص الرسالة مطلوب")
+        if len(value) > 3000:
+            raise ValueError("الحد الأقصى لنص الرسالة 3000 حرف")
+        return value
+
+    @field_validator("recipient_ids")
+    @classmethod
+    def validate_recipient_ids(cls, value: List[int]) -> List[int]:
+        unique_ids = list(dict.fromkeys(value or []))
+        if not unique_ids:
+            raise ValueError("اختر مستخدماً واحداً على الأقل")
+        if len(unique_ids) > 500:
+            raise ValueError("عدد المستلمين أكبر من الحد المسموح")
+        return unique_ids
+
+
+def _owner_messages_current_user(credentials: HTTPAuthorizationCredentials) -> int:
+    user_id = get_current_user_id(credentials.credentials)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="الجلسة غير صالحة")
+    return user_id
+
+
+def _require_owner_messages_owner(user_id: int, connection=None):
+    role = get_user_role(user_id, connection=connection)
+    if not is_owner_role(role):
+        raise HTTPException(status_code=403, detail="إرسال رسائل النظام متاح للمالك فقط")
+
+
+@app.get("/api/owner-messages/users")
+def owner_message_recipients(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """قائمة الحسابات النشطة للاختيار — للمالك فقط.
+    
+    لا تحتاج هذه القراءة إلى إنشاء جداول الرسائل؛ نتجنب انتظار التهيئة أثناء
+    فتح نافذة الإرسال، وتبقى التهيئة محصورة في مسارات الرسائل نفسها.
+    """
+    user_id = _owner_messages_current_user(credentials)
+    connection = get_connection()
+    try:
+        _require_owner_messages_owner(user_id, connection=connection)
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    u.user_id,
+                    COALESCE(NULLIF(u.full_name, ''), u.username) AS display_name,
+                    u.username,
+                    COALESCE((
+                        SELECT r.role_name
+                        FROM user_roles ur
+                        INNER JOIN roles r ON r.role_id = ur.role_id
+                        WHERE ur.user_id = u.user_id
+                        ORDER BY ur.role_id
+                        LIMIT 1
+                    ), '') AS role_name
+                FROM users u
+                WHERE u.is_active = TRUE AND u.user_id <> %s
+                ORDER BY COALESCE(NULLIF(u.full_name, ''), u.username), u.user_id;
+            """, (user_id,))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "user_id": row[0],
+                    "full_name": row[1] or row[2],
+                    "username": row[2],
+                    "role": row[3],
+                }
+                for row in rows
+            ]
+    finally:
+        connection.close()
+
+
+@app.get("/api/owner-messages/pending")
+def owner_messages_pending(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """الرسائل غير المؤكدة للمستخدم الحالي فقط."""
+    user_id = _owner_messages_current_user(credentials)
+    ensure_owner_messages_schema()
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    m.message_id,
+                    m.message_text,
+                    m.created_at,
+                    COALESCE(NULLIF(sender.full_name, ''), sender.username, 'المالك') AS sender_name
+                FROM owner_message_recipients recipient
+                INNER JOIN owner_messages m ON m.message_id = recipient.message_id
+                LEFT JOIN users sender ON sender.user_id = m.created_by
+                WHERE recipient.recipient_user_id = %s
+                  AND recipient.acknowledged_at IS NULL
+                ORDER BY m.created_at ASC, m.message_id ASC
+                LIMIT 50;
+            """, (user_id,))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "message_id": row[0],
+                    "message": row[1],
+                    "created_at": row[2],
+                    "sender_name": row[3] or "المالك",
+                }
+                for row in rows
+            ]
+    finally:
+        connection.close()
+
+
+@app.post("/api/owner-messages")
+def create_owner_message(
+    payload: OwnerMessageCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """إرسال رسالة دائمة لمجموعة محددة؛ لا تكفي حماية زر الواجهة وحدها."""
+    user_id = _owner_messages_current_user(credentials)
+    ensure_owner_messages_schema()
+    connection = get_connection()
+    try:
+        _require_owner_messages_owner(user_id, connection=connection)
+        with connection.cursor() as cursor:
+            requested_ids = payload.recipient_ids
+            cursor.execute("""
+                SELECT user_id
+                FROM users
+                WHERE is_active = TRUE
+                  AND user_id = ANY(%s)
+                  AND user_id <> %s;
+            """, (requested_ids, user_id))
+            valid_ids = {int(row[0]) for row in cursor.fetchall()}
+            if len(valid_ids) != len(requested_ids):
+                raise HTTPException(
+                    status_code=400,
+                    detail="تضم القائمة حساباً غير نشط أو غير صالح؛ لم تُرسل الرسالة."
+                )
+
+            cursor.execute("""
+                INSERT INTO owner_messages (message_text, created_by)
+                VALUES (%s, %s)
+                RETURNING message_id;
+            """, (payload.message, user_id))
+            message_id = int(cursor.fetchone()[0])
+            cursor.executemany("""
+                INSERT INTO owner_message_recipients (message_id, recipient_user_id)
+                VALUES (%s, %s);
+            """, [(message_id, recipient_id) for recipient_id in requested_ids])
+
+            # ✉️ بث حدث منفصل وموجّه لكل مستلم داخل نفس المعاملة؛ لا نستخدم
+            # create_realtime_event هنا لأن حارس التكرار العام لا يميّز المستلم.
+            cursor.execute("SAVEPOINT owner_message_realtime")
+            try:
+                cursor.executemany("""
+                    INSERT INTO realtime_events (
+                        event_type, action, actor_user_id, target_user_id,
+                        entity_id, details, created_at
+                    )
+                    VALUES (
+                        'owner_message', %s, %s, %s, %s, %s,
+                        (now() AT TIME ZONE 'Africa/Cairo')
+                    )
+                """, [
+                    (
+                        "رسالة جديدة من المالك",
+                        user_id,
+                        recipient_id,
+                        message_id,
+                        Jsonb({"message_id": message_id}),
+                    )
+                    for recipient_id in requested_ids
+                ])
+                cursor.execute("RELEASE SAVEPOINT owner_message_realtime")
+            except Exception as realtime_error:
+                cursor.execute("ROLLBACK TO SAVEPOINT owner_message_realtime")
+                cursor.execute("RELEASE SAVEPOINT owner_message_realtime")
+                print(f"owner message realtime fallback to persistent polling: {str(realtime_error)[:160]}")
+
+            # سجل التدقيق اختياري بالنسبة لإتاحة الرسالة؛ لا ندع فشله يُسقط الإرسال.
+            cursor.execute("SAVEPOINT owner_message_audit")
+            try:
+                create_audit_log(
+                    cursor,
+                    user_id,
+                    "إرسال رسالة من المالك",
+                    entity_type="owner_message",
+                    entity_id=message_id,
+                    details={"recipient_count": len(requested_ids)},
+                    realtime=False,
+                )
+                cursor.execute("RELEASE SAVEPOINT owner_message_audit")
+            except Exception:
+                cursor.execute("ROLLBACK TO SAVEPOINT owner_message_audit")
+                cursor.execute("RELEASE SAVEPOINT owner_message_audit")
+
+        connection.commit()
+        return {"message_id": message_id, "recipient_count": len(requested_ids), "message": "تم إرسال الرسالة"}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"owner message send failed: {str(e)[:200]}")
+        raise HTTPException(status_code=500, detail="تعذر إرسال الرسالة حالياً")
+    finally:
+        connection.close()
+
+
+@app.post("/api/owner-messages/{message_id}/acknowledge")
+def acknowledge_owner_message(
+    message_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """تثبيت إقرار المستلم نفسه فقط؛ تكرار الطلب آمن."""
+    user_id = _owner_messages_current_user(credentials)
+    ensure_owner_messages_schema()
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE owner_message_recipients
+                SET acknowledged_at = (now() AT TIME ZONE 'Africa/Cairo')
+                WHERE message_id = %s
+                  AND recipient_user_id = %s
+                  AND acknowledged_at IS NULL;
+            """, (message_id, user_id))
+            if cursor.rowcount == 0:
+                cursor.execute("""
+                    SELECT acknowledged_at
+                    FROM owner_message_recipients
+                    WHERE message_id = %s AND recipient_user_id = %s;
+                """, (message_id, user_id))
+                row = cursor.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="الرسالة غير موجودة لهذا الحساب")
+            connection.commit()
+            return {"message_id": message_id, "acknowledged": True}
+    except HTTPException:
+        connection.rollback()
+        raise
+    except Exception as e:
+        connection.rollback()
+        print(f"owner message acknowledge failed: {str(e)[:200]}")
+        raise HTTPException(status_code=500, detail="تعذر تأكيد استلام الرسالة")
     finally:
         connection.close()
