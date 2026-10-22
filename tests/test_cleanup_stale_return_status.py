@@ -72,6 +72,8 @@ def test_cleanup_updates_only_selected_eligible_participants():
     assert cursor.update_params == ([101, 202],)
     assert "p.participant_id = any(%s)" in cursor.update_sql
     assert "p.return_status = 'مازال بالمهمة'" in cursor.update_sql
+    assert "p.membership_number is not null" in cursor.update_sql
+    assert "m.status not in ('draft', 'cancelled', 'returned', 'completed')" in cursor.update_sql
     assert "not exists" in cursor.update_sql
     assert conn.commits == 1
     assert conn.rollbacks == 0
