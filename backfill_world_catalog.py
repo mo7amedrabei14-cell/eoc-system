@@ -70,6 +70,34 @@ def fetch_year_features(year_start_iso, year_end_iso):
     return (resp.json() or {}).get("features", []) or []
 
 
+def _find_filled_year_window_indexes(cur, windows):
+    """Return zero-based indexes for windows already containing world catalog data."""
+    windows = list(windows or [])
+    if not windows:
+        return set()
+    cur.execute("""
+        WITH requested AS (
+            SELECT start_at, end_at, ord::integer AS ord
+            FROM unnest(%s::timestamp[], %s::timestamp[])
+                 WITH ORDINALITY AS w(start_at, end_at, ord)
+        )
+        SELECT r.ord
+        FROM requested r
+        WHERE EXISTS (
+            SELECT 1
+            FROM earthquake_catalog c
+            WHERE c.region_id = 'world'
+              AND c.occurred_at >= r.start_at
+              AND c.occurred_at < r.end_at
+        )
+        ORDER BY r.ord;
+    """, (
+        [start_at for start_at, _end_at in windows],
+        [end_at for _start_at, end_at in windows],
+    ))
+    return {int(row[0]) - 1 for row in cur.fetchall()}
+
+
 def main():
     from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
@@ -95,22 +123,23 @@ def main():
             if already > 0 and not FORCE:
                 print("ℹ️ توجد بيانات عالمية مسبقاً — سيتم استكمال السنوات الناقصة فقط (استخدم --force لإعادة السحب).")
 
+            year_windows = []
             for y in range(EQ_INTEL_HIST_YEARS):
                 year_start = start_date.replace(year=start_date.year + y)
-                year_end = year_start.replace(year=year_start.year + 1)
                 if year_start > now_cairo:
                     break
-                year_end_eff = min(year_end, now_cairo)
+                year_end = year_start.replace(year=year_start.year + 1)
+                year_windows.append((year_start, min(year_end, now_cairo)))
+            filled_year_indexes = (
+                set() if FORCE else _find_filled_year_window_indexes(cur, year_windows)
+            )
+
+            for y, (year_start, year_end_eff) in enumerate(year_windows):
                 ys, ye = year_start.date().isoformat(), year_end_eff.date().isoformat()
 
-                if not FORCE:
-                    cur.execute(
-                        "SELECT 1 FROM earthquake_catalog WHERE region_id='world' AND occurred_at >= %s AND occurred_at < %s LIMIT 1;",
-                        (year_start, year_end_eff),
-                    )
-                    if cur.fetchone():
-                        print(f"  ⏭️  {year_start.year} — معبأة مسبقاً، تخطي")
-                        continue
+                if not FORCE and y in filled_year_indexes:
+                    print(f"  ⏭️  {year_start.year} — معبأة مسبقاً، تخطي")
+                    continue
 
                 t0 = time.time()
                 try:

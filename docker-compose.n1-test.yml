@@ -1,0 +1,17 @@
+services:
+  n1-test-postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: eoc_test
+      POSTGRES_PASSWORD: eoc_test
+      POSTGRES_DB: eoc_test
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eoc_test -d eoc_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - ./tests/n1_test_schema.sql:/docker-entrypoint-initdb.d/01-n1-test-schema.sql:ro
+    restart: "no"
