@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+node_modules
+**/node_modules
+__pycache__
+**/__pycache__
+*.py[cod]
+*.log
+*.sql
+*.bak
+.venv
+venv
+dist
+**/dist

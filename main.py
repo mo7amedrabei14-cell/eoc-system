@@ -9,6 +9,7 @@ import asyncio
 from pydantic import BaseModel, field_validator
 from typing import Any, Dict, List, Optional
 from psycopg.types.json import Jsonb
+from decimal import Decimal
 from datetime import date, time, datetime, timedelta, timezone
 from psycopg.errors import OperationalError, UniqueViolation
 from urllib.parse import urlparse
@@ -2714,13 +2715,39 @@ def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_
         entry_dt_map[(r[2], r[1])] = (r[3], r[0])
 
     mission_name = mission_row.get('mission_name') or ''
+
+    # ⚡ قراءة دفعة واحدة لكل المشاركين بدل استعلامين لكل مشارك (N+1).
+    #    لا يوجد أي تعديل في هذه الحلقة يمس صفوف مشارك آخر، فاللقطة المسبقة
+    #    مطابقة تماماً لما كانت كل دورة تقرأه لحظة وصولها.
+    participant_ids = [p['id'] for p in participants]
+    itineraries_by_participant = {}
+    cursor.execute(
+        "SELECT participant_id, itinerary_group FROM mission_participant_itineraries "
+        "WHERE participant_id = ANY(%s::int[]) AND mission_id = %s",
+        (participant_ids, mission_id),
+    )
+    for _r in cursor.fetchall():
+        itineraries_by_participant.setdefault(_r[0], []).append(_r[1])
+
+    sessions_by_participant = {}
+    cursor.execute(
+        "SELECT participant_id, session_id, start_dt, end_dt, session_date, check_in_time, "
+        "       check_out_time, start_entry_id, end_entry_id, notes "
+        "FROM mission_participant_sessions WHERE participant_id = ANY(%s::int[])",
+        (participant_ids,),
+    )
+    for _r in cursor.fetchall():
+        sessions_by_participant.setdefault(_r[0], []).append(_r[1:])
+
+    # حالة المهمة ثابتة طوال الحلقة (لا يعدّلها هذا الدالة ولا يوجد trigger على
+    # شرائح المشاركة يغيّرها) ⇒ تُقرأ مرة واحدة بدل مرة لكل مشارك.
+    cursor.execute(
+        "SELECT status FROM missions WHERE mission_id = %s", (mission_id,)
+    )
+    m_status = cursor.fetchone()[0]
+
     for p in participants:
-        cursor.execute(
-            "SELECT itinerary_group FROM mission_participant_itineraries "
-            "WHERE participant_id = %s AND mission_id = %s",
-            (p['id'], mission_id),
-        )
-        assigned_days = [r[0] for r in cursor.fetchall()]
+        assigned_days = itineraries_by_participant.get(p['id'], [])
 
         try:
             periods = derive_jl_segments(assigned_days, entry_dt_map, mission_row, routes, p['sfm'])
@@ -2734,13 +2761,7 @@ def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_
         #    بداية الانضمام عند تبدل الانفصال (مفتوحة→مغلقة أو العكس — الانضمام
         #    يفتح فترة واحدة لكل مشارك)، ثم بالبدء الاحتياطي (start_entry NULL =
         #    صف اشتقاق واحد كحد أقصى لكل مشارك). القديم (بلا وسوم) لا يُلمس أبداً.
-        cursor.execute(
-            "SELECT session_id, start_dt, end_dt, session_date, check_in_time, check_out_time, "
-            "       start_entry_id, end_entry_id, notes "
-            "FROM mission_participant_sessions WHERE participant_id = %s",
-            (p['id'],),
-        )
-        existing = cursor.fetchall()
+        existing = sessions_by_participant.get(p['id'], [])
         tagged_rows = [r for r in existing if r[6] is not None or r[7] is not None]
         claimed = set()  # session_ids المُحدَّثة في مكانها (لا حذف ولا إدراج جديد)
 
@@ -2799,10 +2820,6 @@ def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_
                 _emit_jl_event(cursor, mission_id, user_id, created_pd)
 
         # ── مزامنة الحالة: مفتوح ⇒ «مازال بالمهمة»؛ وإلا أغلق كل شيء ⇒ «تم انتهاء مهمتة»
-        cursor.execute(
-            "SELECT status FROM missions WHERE mission_id = %s", (mission_id,)
-        )
-        m_status = cursor.fetchone()[0]
         if any(pd['end'] is None for pd in periods):
             new_status = 'مازال بالمهمة'
         elif periods:
@@ -5384,11 +5401,34 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
             participant_rows = cursor.fetchall()
             mission_status = mission_data.get("status")
             mission_data["participants"] = []
+
+            # ⚡ قراءة دفعة واحدة لكل المشاركين بدل استعلامين لكل مشارك (N+1):
+            #    نفس الأعمدة ونفس ترتيب الصفوف داخل كل مشارك — التجميع في Python.
+            #    (لا استعلام إطلاقاً لو لا يوجد مشاركون — نفس السلوك السابق حرفياً.)
+            participant_ids = [r[0] for r in participant_rows]
+            sessions_by_participant = {}
+            assigned_days_by_participant = {}
+            if participant_ids:
+                cursor.execute(
+                    "SELECT participant_id, session_id, session_date, check_in_time, check_out_time, notes, start_dt, end_dt, itinerary_group, start_entry_id, end_entry_id "
+                    "FROM mission_participant_sessions WHERE participant_id = ANY(%s::int[]) "
+                    "ORDER BY participant_id, COALESCE(start_dt, session_date), start_dt, session_id",
+                    (participant_ids,),
+                )
+                for _s in cursor.fetchall():
+                    sessions_by_participant.setdefault(_s[0], []).append(_s[1:])
+                cursor.execute(
+                    "SELECT participant_id, itinerary_group FROM mission_participant_itineraries "
+                    "WHERE participant_id = ANY(%s::int[]) ORDER BY participant_id, itinerary_group",
+                    (participant_ids,),
+                )
+                for _d in cursor.fetchall():
+                    assigned_days_by_participant.setdefault(_d[0], []).append(_d[1])
+
             for r in participant_rows:
                 pid = r[0]
-                cursor.execute("SELECT session_id, session_date, check_in_time, check_out_time, notes, start_dt, end_dt, itinerary_group, start_entry_id, end_entry_id FROM mission_participant_sessions WHERE participant_id = %s ORDER BY COALESCE(start_dt, session_date), start_dt", (pid,))
                 segments = []
-                for s in cursor.fetchall():
+                for s in sessions_by_participant.get(pid, []):
                     segments.append({
                         "session_id": s[0],
                         "session_date": str(s[1]) if s[1] else "",
@@ -5401,8 +5441,7 @@ def get_mission_details(mission_id: int, client_now: Optional[str] = None, crede
                         "start_entry_id": s[8],
                         "end_entry_id": s[9],
                     })
-                cursor.execute("SELECT itinerary_group FROM mission_participant_itineraries WHERE participant_id = %s ORDER BY itinerary_group", (pid,))
-                assigned_days = [d[0] for d in cursor.fetchall()]
+                assigned_days = assigned_days_by_participant.get(pid, [])
                 status = compute_participant_status(mission_status, r[12], segments)
                 # 🆕 «يُحسب من بداية المهمة» — القيمة المخزنة (NULL قديم = TRUE افتراضياً)
                 start_from_mission = (r[15] is not False)
@@ -7174,8 +7213,16 @@ def add_global_eqs_bulk(eqs: List[GlobalEqModel], credentials: HTTPAuthorization
         with connection.cursor() as cursor:
             # 🛡️ منع التكرار: بصمة (تاريخ + الدقيقة + الموقع) — المكرر من ملف سابق أو
             #    داخل نفس الملف يُتجاهل، والجديد فقط يُدرج.
+            # ⚡ استعلام واحد لكل الملف بدل استعلام فحص لكل صف: نفس بصمة منع التكرار
+            #    ونفس مقارنة الأعمدة القديمة حرفياً (SUBSTRING/ROUND/COALESCE)، لكن
+            #    على البصمات الفريدة في الملف مرة واحدة (WITH ORDINALITY لإرجاع رقم الصف).
+            #    ⚠️ الفحص القديم كان يعيد قراءة الجدول بعد كل إدراج، فكان يرى الصفوف
+            #    المُدرجة من نفس الملف. الاستعلام الواحد يرى الجدول قبل الإدراج فقط،
+            #    فالتكرار *داخل الملف* يُستكمل أدناه بنفس مقارنة SQL بالضبط (مفتاح
+            #    الصف المخزَّن = ROUND على القيمة كما تُخزَّن، ومفتاح الصف الجديد =
+            #    round() بايثون كما كان يُمرَّر للمقارنة) — بدون إعادة تعريف التكرار.
             seen = set()
-            inserted = 0
+            pending = []  # (eq, HH:MM, lat1, lon1) — بترتيب الملف وبلا تكرار داخلي
             for eq in eqs:
                 _lat = round(eq.latitude, 1) if eq.latitude is not None else None
                 _lon = round(eq.longitude, 1) if eq.longitude is not None else None
@@ -7184,21 +7231,63 @@ def add_global_eqs_bulk(eqs: List[GlobalEqModel], credentials: HTTPAuthorization
                 if fp in seen:
                     continue
                 seen.add(fp)
+                pending.append((eq, _t, _lat, _lon))
+
+            new_rows = []
+            if pending:
                 cursor.execute("""
-                    SELECT 1 FROM global_earthquakes
-                    WHERE date = %s
-                      AND SUBSTRING(COALESCE(time, ''), 1, 5) = %s
-                      AND ROUND(COALESCE(latitude::numeric, 0), 1) = COALESCE(%s::numeric, 0)
-                      AND ROUND(COALESCE(longitude::numeric, 0), 1) = COALESCE(%s::numeric, 0)
-                    LIMIT 1
-                """, (eq.date, _t, _lat, _lon))
-                if cursor.fetchone():
-                    continue
-                cursor.execute("""
+                    WITH incoming AS (
+                        SELECT ord, d, t5, lat, lon, raw_lat, raw_lon
+                        FROM unnest(%s::text[], %s::text[], %s::float8[], %s::float8[],
+                                    %s::float8[], %s::float8[])
+                             WITH ORDINALITY AS t(d, t5, lat, lon, raw_lat, raw_lon, ord)
+                    )
+                    -- lat/lon = القيمة بعد round() بايثون (نفس ما كان يُمرَّر للفحص القديم)،
+                    -- raw_* = القيمة كما ستُخزَّن — منها يُبنى مفتاح الصف المخزَّن.
+                    SELECT i.ord,
+                           ROUND(COALESCE(i.raw_lat::numeric, 0), 1) AS lat_key,
+                           ROUND(COALESCE(i.raw_lon::numeric, 0), 1) AS lon_key,
+                           (count(g.eq_id) > 0) AS is_dup
+                    FROM incoming i
+                    LEFT JOIN global_earthquakes g
+                      ON g.date = i.d
+                     AND SUBSTRING(COALESCE(g.time, ''), 1, 5) = i.t5
+                     AND ROUND(COALESCE(g.latitude::numeric, 0), 1) = COALESCE(i.lat::numeric, 0)
+                     AND ROUND(COALESCE(g.longitude::numeric, 0), 1) = COALESCE(i.lon::numeric, 0)
+                    GROUP BY i.ord, lat_key, lon_key
+                """, (
+                    [p[0].date for p in pending],
+                    [p[1] for p in pending],
+                    [p[2] for p in pending],
+                    [p[3] for p in pending],
+                    [p[0].latitude for p in pending],
+                    [p[0].longitude for p in pending],
+                ))
+                # مفتاح الصف كما سيُخزَّن: ROUND على القيمة الخام (نفس دلالة العمود)
+                stored_keys = set()
+                for ord_, lat_key, lon_key, is_dup in cursor.fetchall():
+                    if is_dup:
+                        continue              # مكرر من الجدول ⇒ يُتجاهل كما كان
+                    row = pending[int(ord_) - 1]
+                    lookup = (
+                        row[0].date, row[1],
+                        Decimal(repr(row[2])) if row[2] is not None else Decimal(0),
+                        Decimal(repr(row[3])) if row[3] is not None else Decimal(0),
+                    )
+                    if lookup in stored_keys:
+                        continue              # مكرر من صف أُدرج في نفس الملف ⇒ يُتجاهل
+                    stored_keys.add((row[0].date, row[1], lat_key, lon_key))
+                    new_rows.append(row)
+
+            if new_rows:
+                cursor.executemany("""
                     INSERT INTO global_earthquakes (date, month, time, country, magnitude, depth_km, region, status, longitude, latitude)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude))
-                inserted += 1
+                """, [
+                    (eq.date, eq.month, eq.time, eq.country, eq.magnitude, eq.depth_km, eq.region, eq.status, eq.longitude, eq.latitude)
+                    for eq, _t, _lat, _lon in new_rows
+                ])
+            inserted = len(new_rows)
             try: create_audit_log(cursor, user_id, "رفع سجل زلازل", mission_id=None, entity_type="earthquake", entity_id=None, details={"action_text": f"قام برفع ملف زلازل عالمية: {inserted} جديد من {len(eqs)} صف (المكرر اتتجاهل)"})
             except Exception: pass
             _emit_live(cursor, event_type="earthquake", action="رفع سجل زلازل", actor_user_id=user_id, entity_id=None, details={"action_text": f"تم رفع ملف زلازل عالمية: {inserted} جديد من {len(eqs)} صف"})
