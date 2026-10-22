@@ -1,0 +1,82 @@
+name: N+1 regression tests
+
+on:
+  push:
+    branches:
+      - fix/n1-comprehensive-audit-2026-10-22
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  n1-postgres-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: eoc_test
+          POSTGRES_PASSWORD: eoc_test
+          POSTGRES_DB: eoc_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eoc_test -d eoc_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://eoc_test:eoc_test@127.0.0.1:5432/eoc_test
+      DATABASE_URL: postgresql://eoc_test:eoc_test@127.0.0.1:5432/eoc_test
+      JWT_SECRET: n1-test-only-secret-not-for-production
+      EOC_EQ_LOCAL_ENGINE: "0"
+      EOC_EQ_WORLD_BACKFILL: "0"
+      EOC_EQ_EMSC_ENGINE: "0"
+    steps:
+      - name: Checkout full history for the legacy baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest
+      - name: Compile tracked application and maintenance modules
+        run: |
+          python - <<'PY'
+          import pathlib
+          import py_compile
+          import subprocess
+
+          tracked = subprocess.check_output(["git", "ls-files", "*.py"], text=True).splitlines()
+          excluded_prefixes = (
+              "test_", "_", "diag_", "check_", "verify_", "run_",
+              "smoke_test_", "tools/tests/", "frontend/src/",
+          )
+          excluded_suffixes = ("_test.py", "_probe.py")
+          paths = []
+          for name in tracked:
+              path = pathlib.Path(name)
+              if (name.startswith(excluded_prefixes) or name.endswith(excluded_suffixes)):
+                  continue
+              paths.append(path)
+          for path in paths:
+              py_compile.compile(str(path), doraise=True)
+          py_compile.compile("test_n1_query_optimizations.py", doraise=True)
+          print(f"Compiled {len(paths)} application/maintenance modules plus the N+1 test suite.")
+          PY
+      - name: Run database-backed equivalence and query-count regression suite
+        run: python test_n1_query_optimizations.py
+      - name: Run join-leave notification and weather batch regressions
+        run: python -m pytest -q tests/test_jl_weather_regressions.py tests/test_cleanup_stale_return_status.py

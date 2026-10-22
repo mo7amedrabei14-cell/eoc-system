@@ -535,6 +535,56 @@ def parse_archive_payload(
     return rows, max(parsed_dates)
 
 
+def _insert_history_rows_cursor(cur, rows: list[dict[str, Any]]) -> int:
+    """Insert history rows in one PostgreSQL statement; return the number newly inserted."""
+    if not rows:
+        return 0
+    cur.execute(
+        """
+        WITH incoming AS (
+            SELECT location_id, record_date_text::date AS record_date,
+                   tmax, tmin, precip_mm, wind_max_kph, wind_gusts_kph,
+                   humidity_mean_pct, cloud_cover_mean_pct, data_source, ord
+            FROM unnest(
+                %s::integer[], %s::text[], %s::double precision[],
+                %s::double precision[], %s::double precision[],
+                %s::double precision[], %s::double precision[],
+                %s::double precision[], %s::double precision[],
+                %s::text[]
+            ) WITH ORDINALITY AS u(
+                location_id, record_date_text, tmax, tmin, precip_mm,
+                wind_max_kph, wind_gusts_kph, humidity_mean_pct,
+                cloud_cover_mean_pct, data_source, ord
+            )
+        )
+        INSERT INTO weather_history_daily
+            (location_id, record_date, tmax, tmin, precip_mm,
+             wind_max_kph, wind_gusts_kph, humidity_mean_pct,
+             cloud_cover_mean_pct, data_source)
+        SELECT location_id, record_date, tmax, tmin, precip_mm,
+               wind_max_kph, wind_gusts_kph, humidity_mean_pct,
+               cloud_cover_mean_pct, data_source
+        FROM incoming
+        ORDER BY ord
+        ON CONFLICT (location_id, record_date, data_source) DO NOTHING
+        RETURNING location_id, record_date, data_source
+        """,
+        (
+            [row["location_id"] for row in rows],
+            [row["record_date"].isoformat() if hasattr(row["record_date"], "isoformat") else str(row["record_date"]) for row in rows],
+            [float(row["tmax"]) if row.get("tmax") is not None else None for row in rows],
+            [float(row["tmin"]) if row.get("tmin") is not None else None for row in rows],
+            [float(row["precip_mm"]) if row.get("precip_mm") is not None else None for row in rows],
+            [float(row["wind_max_kph"]) if row.get("wind_max_kph") is not None else None for row in rows],
+            [float(row["wind_gusts_kph"]) if row.get("wind_gusts_kph") is not None else None for row in rows],
+            [float(row["humidity_mean_pct"]) if row.get("humidity_mean_pct") is not None else None for row in rows],
+            [float(row["cloud_cover_mean_pct"]) if row.get("cloud_cover_mean_pct") is not None else None for row in rows],
+            [row.get("data_source", DATA_SOURCE) for row in rows],
+        ),
+    )
+    return len(cur.fetchall())
+
+
 def insert_history_rows(rows: list[dict[str, Any]]) -> dict[str, int]:
     """Insert only new rows; never update or delete historical data."""
     if not rows:
@@ -542,35 +592,9 @@ def insert_history_rows(rows: list[dict[str, Any]]) -> dict[str, int]:
     if not DATABASE_URL:
         raise SystemExit("DATABASE_URL is not set in the environment or .env")
 
-    inserted = 0
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
-            for row in rows:
-                cur.execute(
-                    """
-                    INSERT INTO weather_history_daily
-                    (location_id, record_date, tmax, tmin, precip_mm,
-                     wind_max_kph, wind_gusts_kph, humidity_mean_pct,
-                     cloud_cover_mean_pct, data_source)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (location_id, record_date, data_source) DO NOTHING
-                    RETURNING location_id
-                    """,
-                    (
-                        row["location_id"],
-                        row["record_date"],
-                        row.get("tmax"),
-                        row.get("tmin"),
-                        row.get("precip_mm"),
-                        row.get("wind_max_kph"),
-                        row.get("wind_gusts_kph"),
-                        row.get("humidity_mean_pct"),
-                        row.get("cloud_cover_mean_pct"),
-                        row.get("data_source", DATA_SOURCE),
-                    ),
-                )
-                if cur.fetchone() is not None:
-                    inserted += 1
+            inserted = _insert_history_rows_cursor(cur, rows)
             conn.commit()
 
     return {"inserted": inserted, "skipped": max(0, len(rows) - inserted)}

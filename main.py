@@ -35,7 +35,14 @@ del _out_stream
 
 # ملفات المشروع الخاصة بيك
 from audit import create_audit_log
-from realtime import notify_participant_accounts, create_realtime_event
+from realtime import (
+    notify_participant_accounts,
+    create_realtime_event,
+    find_recent_duplicate_target_ids,
+    get_latest_recent_event_action,
+    is_recent_duplicate_action,
+    resolve_mission_creator,
+)
 from db import get_connection
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
@@ -47,6 +54,69 @@ def _emit_live(cursor, **kwargs):
         create_realtime_event(cursor, **kwargs)
     except Exception:
         pass
+
+
+def _execute_contiguous_batches(cursor, operations):
+    """Batch adjacent identical SQL while preserving order between unlike writes."""
+    current_sql = None
+    batch = []
+    for sql, params in operations:
+        if current_sql is not None and sql != current_sql:
+            cursor.executemany(current_sql, batch)
+            batch = []
+        current_sql = sql
+        batch.append(params)
+    if batch:
+        cursor.executemany(current_sql, batch)
+
+
+def _sync_participant_itinerary_assignments(cursor, mission_id, assignments):
+    """Sync submitted itinerary assignments in bounded batches without changing partial-save semantics."""
+    keep_delete_rows = []
+    clear_delete_rows = []
+    insert_rows = []
+
+    for participant_id, assigned_days in assignments:
+        # None means the field was omitted: preserve all stored links for this participant.
+        if assigned_days is None:
+            continue
+
+        wanted = list(dict.fromkeys(
+            str(day).strip()
+            for day in (assigned_days or [])
+            if day is not None and str(day).strip()
+        ))
+        if wanted:
+            keep_delete_rows.append((participant_id, mission_id, wanted))
+            insert_rows.extend(
+                (participant_id, mission_id, day_title) for day_title in wanted
+            )
+        else:
+            clear_delete_rows.append((participant_id, mission_id))
+
+    # Participant IDs are unique in the submitted roster. These child rows have no
+    # per-row RETURNING/audit side effect, so deletes can precede inserts in bounded batches.
+    if keep_delete_rows:
+        cursor.executemany(
+            """DELETE FROM mission_participant_itineraries
+               WHERE participant_id = %s AND mission_id = %s
+                 AND NOT (itinerary_group = ANY(%s))""",
+            keep_delete_rows,
+        )
+    if clear_delete_rows:
+        cursor.executemany(
+            """DELETE FROM mission_participant_itineraries
+               WHERE participant_id = %s AND mission_id = %s""",
+            clear_delete_rows,
+        )
+    if insert_rows:
+        cursor.executemany(
+            """INSERT INTO mission_participant_itineraries
+                   (participant_id, mission_id, itinerary_group)
+               VALUES (%s, %s, %s)
+               ON CONFLICT ON CONSTRAINT uq_mpi_participant_group DO NOTHING""",
+            insert_rows,
+        )
 
 
 from auth import (
@@ -2184,33 +2254,55 @@ def notify_youth_of_completion(cursor, mission_id, mission_name, actor_user_id, 
     if not youth_ids:
         return
     was_already_completed = previous_status in COMPLETED_STATUSES_ALL
-    for uid in youth_ids:
-        if uid == actor_user_id:
-            continue  # لا إشعار للفاعل نفسه (نفس قاعدة القناة اللحظية الحالية)
-        if was_already_completed:
-            cursor.execute("""
-                SELECT 1 FROM realtime_events
-                WHERE event_type = 'mission'
-                  AND mission_id = %s
-                  AND target_user_id = %s
-                  AND details @> %s::jsonb
-                LIMIT 1;
-            """, (mission_id, uid, Jsonb({"youth_completion": True})))
-            if cursor.fetchone():
-                continue  # تم إشعار هذا الحساب بهذا الاكتمال من قبل — لا تكرار
+    eligible_ids = list(dict.fromkeys(uid for uid in youth_ids if uid and uid != actor_user_id))
+    if not eligible_ids:
+        return
+
+    action = f"اكتملت المهمة: {mission_name or 'مهمة'} — بانتظار مراجعة إدارة الشباب"
+    duplicate_targets = find_recent_duplicate_target_ids(
+        cursor,
+        event_type="mission",
+        entity_id=None,
+        mission_id=mission_id,
+        actor_user_id=actor_user_id,
+        target_user_ids=eligible_ids,
+        action=action,
+    )
+
+    already_notified = set()
+    if was_already_completed:
+        cursor.execute("""
+            SELECT target_user_id
+            FROM realtime_events
+            WHERE event_type = 'mission'
+              AND mission_id = %s
+              AND target_user_id = ANY(%s::int[])
+              AND details @> %s::jsonb;
+        """, (mission_id, eligible_ids, Jsonb({"youth_completion": True})))
+        already_notified = {row[0] for row in cursor.fetchall()}
+
+    for uid in eligible_ids:
+        if was_already_completed and uid in already_notified:
+            continue  # تم إشعار هذا الحساب بهذا الاكتمال من قبل — لا تكرار
+        if uid in duplicate_targets:
+            continue  # فحص التكرار التجميعي يغني عن استعلام لكل مستلم
         create_realtime_event(
             cursor,
             event_type="mission",
-            action=f"اكتملت المهمة: {mission_name or 'مهمة'} — بانتظار مراجعة إدارة الشباب",
+            action=action,
             actor_user_id=actor_user_id,
             mission_id=mission_id,
             details={
-                "action_text": f"اكتملت المهمة: {mission_name or 'مهمة'} — بانتظار مراجعة إدارة الشباب",
+                "action_text": action,
                 "youth_completion": True,
                 "mission_name": mission_name or "",
             },
             target_user_id=uid,
+            dedupe_prechecked=True,
         )
+        duplicate_targets.add(uid)
+        if was_already_completed:
+            already_notified.add(uid)
 
 
 # =============================================================================
@@ -2352,6 +2444,134 @@ def resolve_participant_identity(cursor, part, exclude_mission_id=None):
             owner_mission_branch = row[1]
 
     return volunteer_id, user_id, membership, owner_mission_id, owner_mission_branch
+
+
+def resolve_participant_identities(cursor, parts, exclude_mission_id=None):
+    """Resolve identities and availability for multiple participants in one SQL call.
+
+    The first five returned values per item match resolve_participant_identity.
+    Remaining values are normalization keys for the update-path in-memory snapshot.
+    """
+    parts = list(parts or [])
+    if not parts:
+        return []
+
+    exclude_sql = " AND p.mission_id <> %s" if exclude_mission_id is not None else ""
+    sql = """
+        WITH requested AS (
+            SELECT ord::integer AS ord, is_volunteer, supplied_membership, branch_id
+            FROM unnest(%s::boolean[], %s::text[], %s::integer[])
+                 WITH ORDINALITY AS incoming(is_volunteer, supplied_membership, branch_id, ord)
+        )
+        SELECT
+            r.ord,
+            v.volunteer_id,
+            u.user_id,
+            CASE
+                WHEN v.membership_number IS NOT NULL AND v.membership_number <> ''
+                THEN v.membership_number
+                ELSE r.supplied_membership
+            END AS membership_number,
+            active.owner_mission_name,
+            active.owner_mission_branch,
+            COALESCE(requested_branch.branch_name, 'غير محدد') AS requested_branch_name,
+            LOWER(CASE
+                WHEN v.membership_number IS NOT NULL AND v.membership_number <> ''
+                THEN v.membership_number
+                ELSE r.supplied_membership
+            END) AS membership_param_lower,
+            LOWER(TRIM(CASE
+                WHEN v.membership_number IS NOT NULL AND v.membership_number <> ''
+                THEN v.membership_number
+                ELSE r.supplied_membership
+            END)) AS membership_stored_lower
+        FROM requested r
+        LEFT JOIN LATERAL (
+            SELECT v.volunteer_id, v.membership_number
+            FROM volunteers v
+            WHERE r.is_volunteer
+              AND r.supplied_membership <> ''
+              AND LOWER(TRIM(v.membership_number)) = LOWER(r.supplied_membership)
+              AND v.branch_id IS NOT DISTINCT FROM r.branch_id
+            ORDER BY v.volunteer_id ASC
+            LIMIT 1
+        ) v ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT u.user_id
+            FROM users u
+            JOIN volunteers matched_v ON matched_v.volunteer_id = v.volunteer_id
+            WHERE v.volunteer_id IS NOT NULL
+              AND LOWER(TRIM(u.username)) = LOWER(TRIM(matched_v.membership_number))
+            LIMIT 1
+        ) u ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT
+                m.mission_name AS owner_mission_name,
+                COALESCE(b.branch_name, 'غير محدد') AS owner_mission_branch
+            FROM mission_participants p
+            JOIN missions m ON p.mission_id = m.mission_id
+            LEFT JOIN branches b ON b.branch_id = p.branch_id
+            WHERE r.supplied_membership <> ''
+              AND (
+                    (
+                        v.volunteer_id IS NOT NULL
+                        AND (
+                            p.volunteer_id = v.volunteer_id
+                            OR (
+                                LOWER(TRIM(p.membership_number)) = LOWER(CASE
+                                    WHEN v.membership_number IS NOT NULL AND v.membership_number <> ''
+                                    THEN v.membership_number
+                                    ELSE r.supplied_membership
+                                END)
+                                AND p.branch_id IS NOT DISTINCT FROM r.branch_id
+                            )
+                        )
+                        AND (
+                            EXISTS (
+                                SELECT 1 FROM mission_participant_sessions s
+                                WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
+                            )
+                            OR (
+                                NOT EXISTS (
+                                    SELECT 1 FROM mission_participant_sessions s
+                                    WHERE s.participant_id = p.participant_id AND s.end_dt IS NOT NULL
+                                )
+                                AND m.status NOT IN ('Completed', 'مكتملة')
+                                AND COALESCE(p.return_status, '') <> 'تم انتهاء مهمتة'
+                            )
+                        )
+                    )
+                    OR (
+                        v.volunteer_id IS NULL
+                        AND LOWER(TRIM(p.membership_number)) = LOWER(r.supplied_membership)
+                        AND p.branch_id IS NOT DISTINCT FROM r.branch_id
+                        AND EXISTS (
+                            SELECT 1 FROM mission_participant_sessions s
+                            WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
+                        )
+                    )
+              )
+              """ + exclude_sql + """
+            LIMIT 1
+        ) active ON TRUE
+        LEFT JOIN branches requested_branch ON requested_branch.branch_id = r.branch_id
+        ORDER BY r.ord;
+    """
+    params = (
+        [part.participant_type == "volunteer" for part in parts],
+        [(part.participation_role or "").strip() for part in parts],
+        [part.branch_id for part in parts],
+    )
+    if exclude_mission_id is not None:
+        params = (*params, exclude_mission_id)
+    cursor.execute(sql, params)
+    rows = cursor.fetchall()
+    results = [None] * len(parts)
+    for row in rows:
+        results[int(row[0]) - 1] = tuple(row[1:])
+    if any(result is None for result in results):
+        raise RuntimeError("Batch participant identity resolver returned an incomplete result set")
+    return results
 
 
 def should_block_active_participant(active_in_other, is_new_participant, mission_status):
@@ -2746,6 +2966,7 @@ def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_
     )
     m_status = cursor.fetchone()[0]
 
+    realtime_dedupe_state = {} if fire_events else None
     for p in participants:
         assigned_days = itineraries_by_participant.get(p['id'], [])
 
@@ -2817,7 +3038,7 @@ def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_
                 created_pd = dict(pd)
                 created_pd['mission_name'] = mission_name
                 created_pd['participant_name'] = p['name']
-                _emit_jl_event(cursor, mission_id, user_id, created_pd)
+                _emit_jl_event(cursor, mission_id, user_id, created_pd, realtime_dedupe_state)
 
         # ── مزامنة الحالة: مفتوح ⇒ «مازال بالمهمة»؛ وإلا أغلق كل شيء ⇒ «تم انتهاء مهمتة»
         if any(pd['end'] is None for pd in periods):
@@ -2837,18 +3058,63 @@ def materialize_jl_segments(cursor, mission_id, mission_row, user_id=None, fire_
             )
 
 
-def _emit_jl_event(cursor, mission_id, user_id, pd):
-    """Audit + حدث لحظي لشريحة مشاركة مستحدثة من كتالوج الانضمام/الانفصال.
-    لا تُفسد الحفظ أبداً (polite — أي خطأ يُطبع ويُتجاوز)."""
+def _emit_jl_event(cursor, mission_id, user_id, pd, realtime_dedupe_state=None):
+    """Audit + حدث لحظي لشريحة مشاركة مستحدثة، مع فحص تكرار مجمّع واحد لكل عملية."""
+    action = "انضمام" if pd["end_entry_id"] is None else "انفصال"
+    details = {
+        "action_text": (
+            f"تسجيل انضمام {pd['participant_name']} في {pd['mission_name']} "
+            f"عند {fmt_dt(pd['start'])}"
+        ),
+    }
     try:
         create_audit_log(
-            cursor, user_id, "انضمام" if pd['end_entry_id'] is None else "انفصال",
+            cursor, user_id, action,
             mission_id=mission_id, entity_type="mission", entity_id=mission_id,
-            details={
-                "action_text": (f"تسجيل انضمام {pd['participant_name']} في {pd['mission_name']} "
-                                f"عند {fmt_dt(pd['start'])}"),
-            },
+            details=details, realtime=(realtime_dedupe_state is None),
         )
+        if realtime_dedupe_state is None:
+            return
+        if not realtime_dedupe_state.get("loaded"):
+            realtime_dedupe_state["loaded"] = True
+            try:
+                # Preserve create_audit_log -> create_realtime_event(resolve_creator=True):
+                # notify the mission creator when someone else performs the action,
+                # but leave the event untargeted when the creator is the actor.
+                creator_user_id = resolve_mission_creator(cursor, mission_id)
+                target_user_id = (
+                    creator_user_id
+                    if creator_user_id is not None and creator_user_id != user_id
+                    else None
+                )
+                realtime_dedupe_state["target_user_id"] = target_user_id
+                latest_event = get_latest_recent_event_action(
+                    cursor, event_type="mission", entity_id=None, mission_id=mission_id,
+                    actor_user_id=user_id, target_user_id=target_user_id,
+                )
+                realtime_dedupe_state["latest_action"] = latest_event[0] if latest_event else None
+                realtime_dedupe_state["latest_at"] = latest_event[1] if latest_event else None
+                realtime_dedupe_state["available"] = True
+            except Exception as e:
+                realtime_dedupe_state["available"] = False
+                print(f"Realtime dedupe prefetch error (JL): {e}")
+        if not realtime_dedupe_state.get("available", True):
+            return
+        if is_recent_duplicate_action(
+            realtime_dedupe_state.get("latest_action"), action,
+            realtime_dedupe_state.get("latest_at"),
+        ):
+            return
+        try:
+            emitted = create_realtime_event(
+                cursor, event_type="mission", action=action, actor_user_id=user_id,
+                mission_id=mission_id, entity_id=None, details=details,
+                target_user_id=realtime_dedupe_state.get("target_user_id"), dedupe_prechecked=True,
+            )
+            realtime_dedupe_state["latest_action"] = action
+            realtime_dedupe_state["latest_at"] = emitted[1] if emitted else None
+        except Exception as e:
+            print(f"Realtime event error (JL): {e}")
     except Exception as e:
         print(f"Audit Error (JL): {e}")
 
@@ -3422,11 +3688,19 @@ def create_mission(
             if not cursor.fetchone():
                 raise Exception(f"Mission creation failed: mission_id={mission_id} not found after INSERT. Aborting itinerary insert to prevent FK violation.")
 
-            for route in mission.routes:
-                cursor.execute("""
-                    INSERT INTO mission_itineraries (mission_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date)
+            route_rows = [
+                (mission_id, route.group_title, none_if_empty(route.route_from), route.route_to,
+                 none_if_empty(route.departure_time), none_if_empty(route.arrival_time),
+                 none_if_empty(route.departure_date), none_if_empty(route.arrival_date))
+                for route in mission.routes
+            ]
+            if route_rows:
+                cursor.executemany("""
+                    INSERT INTO mission_itineraries
+                        (mission_id, group_title, route_from, route_to, departure_time,
+                         arrival_time, departure_date, arrival_date)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-                """, (mission_id, route.group_title, none_if_empty(route.route_from), route.route_to, none_if_empty(route.departure_time), none_if_empty(route.arrival_time), none_if_empty(route.departure_date), none_if_empty(route.arrival_date)))
+                """, route_rows)
             # 🛡️ بوابة خط السير: أي حفظ (مسودة أو إرسال للجوكر) لازم عليه خط سير
             #    محفوظ، أو إعلان صريح «لا يوجد خط سير» — الرفض برسالة واضحة.
             _fb = getattr(mission, 'form_blocks', None)
@@ -3440,35 +3714,62 @@ def create_mission(
                     raise HTTPException(status_code=400,
                         detail="لا يمكن الحفظ بدون خط سير — أضف خط السير أولاً، أو اضغط «لا يوجد خط سير» بوضوح.")
 
-            for vehicle in mission.vehicles:
-                cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
+            vehicle_rows = [
+                (mission_id, vehicle.driver_name, vehicle.vehicle_number)
+                for vehicle in mission.vehicles
+            ]
+            if vehicle_rows:
+                cursor.executemany(
+                    "INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);",
+                    vehicle_rows,
+                )
 
             # 🆕 كتالوج الانضمام/الانفصال (فئة مستقلة عن الخطوط) — إدراج سجلات النموذج
             _sync_jl_catalog(cursor, mission_id, mission.join_leave_entries)
 
             # منع تكرار نفس المتطوع داخل نفس الاستمارة (قبل الرادار والإدخال)
-            participant_user_ids = []
-            inserted_participants = []  # (participant_id, participant_model) for session linking
-            for part in dedupe_participants(mission.participants):
+            participant_parts = dedupe_participants(mission.participants)
+            for part in participant_parts:
                 if part.participant_type == "non_volunteer":
                     part.branch_id = None
                     part.participation_role = ""
                 elif part.participant_type == "volunteer":
                     part.participant_position = None
-
-                # 1. أوتوميشن الإغلاق
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
 
-                # 2. الهوية الفعلية (الـ DB هي مصدر الحقيقة): ربط المتطوع + حساب دخوله + رادار المنع
-                volunteer_id, participant_user_id, membership, active_in_other, active_in_other_branch = resolve_participant_identity(cursor, part)
+            participant_identity_rows = resolve_participant_identities(cursor, participant_parts)
+            participant_user_ids = []
+            inserted_participants = []  # (participant_id, participant_model) for session linking
+            inserted_identity_records = []
+            for part, identity in zip(participant_parts, participant_identity_rows):
+                (volunteer_id, participant_user_id, membership, active_in_other,
+                 active_in_other_branch, requested_branch_name, membership_param_lower,
+                 membership_stored_lower) = identity
                 if participant_user_id:
                     participant_user_ids.append(participant_user_id)
 
-                # 3. رادار التتبع لمنع خروج المتطوع في مهمتين مع بعض (بالهوية المركّبة لا بالنصوص)
+                # The original loop saw earlier roster rows created by this same request.
+                # Those rows have no session rows until the loop ends; preserve this radar
+                # behavior in memory rather than issuing another identity SELECT per row.
+                if (active_in_other is None and volunteer_id is not None
+                        and mission.status is not None
+                        and mission.status not in ('Completed', 'مكتملة')):
+                    for prior in inserted_identity_records:
+                        same_identity = (
+                            prior["volunteer_id"] == volunteer_id
+                            or (
+                                prior["membership_stored_lower"] == membership_param_lower
+                                and prior["branch_id"] == part.branch_id
+                            )
+                        )
+                        if same_identity and prior["return_status"] != 'تم انتهاء مهمتة':
+                            active_in_other = mission.mission_name
+                            active_in_other_branch = prior["branch_name"]
+                            break
+
                 if should_block_active_participant(active_in_other, True, mission.status):
                     raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {active_in_other_branch}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال/LEAVE) أو لا يزال مُدرجاً في مهمة أخرى بلا تسجيل انفصال ({active_in_other}).\n\nلا يمكن إضافته حتى يُسجَّل انفصاله (LEAVE) في تلك المهمة أولاً ليصبح متاحاً.")
-
                 cursor.execute("""
                     INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, start_from_mission)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -3476,6 +3777,13 @@ def create_mission(
                 """, (mission_id, part.participant_type, part.full_name, part.team_name or '', part.team_code or '', part.participation_role, part.participant_position or '', volunteer_id, participant_user_id, membership, part.branch_id, part.assigned_itinerary, part.return_status, part.phase_name, part.stay_type, (part.start_from_mission is not False)))
                 pid = cursor.fetchone()[0]
                 inserted_participants.append((pid, part))
+                inserted_identity_records.append({
+                    "volunteer_id": volunteer_id,
+                    "membership_stored_lower": membership_stored_lower,
+                    "branch_id": part.branch_id,
+                    "return_status": part.return_status,
+                    "branch_name": requested_branch_name,
+                })
 
             # 🆕 فترات المشاركة (legacy path فقط — الواجهة الجديدة تدير الـ segments عبر
             #    /join و /leave ولا ترسل فترات في النموذج). أي فترة واردة تُخزَّن
@@ -3504,13 +3812,17 @@ def create_mission(
                     ON CONFLICT ON CONSTRAINT uq_mpi_participant_group DO NOTHING
                 """, day_rows)
             # 🆕 اتساق الحالة الآلية مع الرادار: مشارك كل فتراته مغلقة ⇒ انتهت مهمته
-            for pid, part in inserted_participants:
-                periods = part.participation_periods or []
-                if periods and all(per.check_out_time for per in periods):
-                    cursor.execute("""
-                        UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة'
-                        WHERE participant_id = %s
-                    """, (pid,))
+            completed_participant_ids = [
+                pid for pid, part in inserted_participants
+                if part.participation_periods
+                and all(per.check_out_time for per in part.participation_periods)
+            ]
+            if completed_participant_ids:
+                cursor.execute("""
+                    UPDATE mission_participants
+                    SET return_status = 'تم انتهاء مهمتة'
+                    WHERE participant_id = ANY(%s::bigint[])
+                """, (completed_participant_ids,))
 
             # 🆕 اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (كل الحالات — يُعاد
             #    حسابه عند الحفظ تماماً مثل المسارات). يُستدعى قبل حظر الإغلاق التلقائي
@@ -3545,12 +3857,26 @@ def create_mission(
                           AND end_dt IS NULL
                     """, (comp_dt, comp_dt.strftime('%H:%M'), mission_id))
 
-            for ben in mission.beneficiaries:
-                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, group_title, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s, %s);", (mission_id, ben.group_title, ben.category_name, ben.direct_count, ben.indirect_count))
+            beneficiary_rows = [
+                (mission_id, ben.group_title, ben.category_name, ben.direct_count, ben.indirect_count)
+                for ben in mission.beneficiaries
+            ]
+            if beneficiary_rows:
+                cursor.executemany(
+                    "INSERT INTO mission_beneficiaries (mission_id, group_title, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s, %s);",
+                    beneficiary_rows,
+                )
 
 
-            for staff in mission.eoc_staff:
-                cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
+            staff_rows = [
+                (mission_id, staff.role_name, staff.staff_name)
+                for staff in mission.eoc_staff
+            ]
+            if staff_rows:
+                cursor.executemany(
+                    "INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);",
+                    staff_rows,
+                )
 
             # 🆕 حفظ بالكات الاستمارة المتكررة (أيام/سجلات) — مسار التعديل (PUT)
             if mission.form_blocks is not None:
@@ -3682,6 +4008,17 @@ def _sync_mission_routes(cursor, mission_id, routes, deleted_ids=None, clear_det
     by_fp = {_route_fingerprint(*r[1:]): r[0] for r in stored}
     used_ids = set()
 
+    route_update_sql = """UPDATE mission_itineraries SET
+        group_title=%s, route_from=%s, route_to=%s, departure_time=%s,
+        arrival_time=%s, departure_date=%s, arrival_date=%s
+        WHERE itinerary_id=%s AND mission_id=%s"""
+    pending_route_updates = []
+
+    def _flush_route_updates():
+        if pending_route_updates:
+            cursor.executemany(route_update_sql, pending_route_updates)
+            pending_route_updates.clear()
+
     for route in incoming:
         fp = _route_fingerprint(
             route.group_title, route.route_from, route.route_to,
@@ -3694,18 +4031,17 @@ def _sync_mission_routes(cursor, mission_id, routes, deleted_ids=None, clear_det
             target_id = by_fp[fp]
 
         if target_id is not None:
-            cursor.execute(
-                """UPDATE mission_itineraries SET
-                       group_title=%s, route_from=%s, route_to=%s, departure_time=%s,
-                       arrival_time=%s, departure_date=%s, arrival_date=%s
-                   WHERE itinerary_id=%s AND mission_id=%s""",
-                (_route_norm(route.group_title) or 'خط السير الأساسي', none_if_empty(route.route_from or ''), route.route_to or '',
-                 none_if_empty(route.departure_time or ''), none_if_empty(route.arrival_time or ''),
-                 none_if_empty(route.departure_date or ''), none_if_empty(route.arrival_date or ''),
-                 target_id, mission_id),
-            )
+            pending_route_updates.append((
+                _route_norm(route.group_title) or 'خط السير الأساسي',
+                none_if_empty(route.route_from or ''), route.route_to or '',
+                none_if_empty(route.departure_time or ''), none_if_empty(route.arrival_time or ''),
+                none_if_empty(route.departure_date or ''), none_if_empty(route.arrival_date or ''),
+                target_id, mission_id,
+            ))
             used_ids.add(target_id)
         else:
+            # Keep writes in submission order around INSERT ... RETURNING operations.
+            _flush_route_updates()
             cursor.execute(
                 """INSERT INTO mission_itineraries
                        (mission_id, group_title, route_from, route_to, departure_time, arrival_time, departure_date, arrival_date)
@@ -3715,6 +4051,7 @@ def _sync_mission_routes(cursor, mission_id, routes, deleted_ids=None, clear_det
                  none_if_empty(route.departure_date or ''), none_if_empty(route.arrival_date or '')),
             )
             used_ids.add(cursor.fetchone()[0])
+    _flush_route_updates()
 
     # 4) أي صف مخزَّن لم يُذكر في الحمولة يبقى محفوظاً كما هو — لا حذف ضمني إطلاقاً.
 
@@ -4016,8 +4353,15 @@ def update_mission(
             # 3. إدخال التفاصيل الجديدة بعد التعديل
             # 🛡️ خط السير أُدرِج/حُدِّث في مكانه داخل _sync_mission_routes أعلاه (لا إدراج مكرر).
 
-            for vehicle in mission.vehicles:
-                cursor.execute("INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);", (mission_id, vehicle.driver_name, vehicle.vehicle_number))
+            vehicle_rows = [
+                (mission_id, vehicle.driver_name, vehicle.vehicle_number)
+                for vehicle in mission.vehicles
+            ]
+            if vehicle_rows:
+                cursor.executemany(
+                    "INSERT INTO mission_vehicles (mission_id, driver_name, vehicle_number) VALUES (%s, %s, %s);",
+                    vehicle_rows,
+                )
 
             # 🆕 كتالوج الانضمام/الانفصال: upsert في مكانه (يُحافَظ على entry_id =
             #    provenance ثابت للشرائح المشتقة)، وحذف ما لم يُرسَل بتنظيف صريح.
@@ -4039,26 +4383,63 @@ def update_mission(
                 leaves = tuple(sorted(d for d in days if d.startswith('JL:L:')))
                 return (joins, leaves)
 
-            participant_user_ids = []
-            reinserted_idents = set()
-            kept_pids = []
-            pending_open = set()  # idents أُدرج لها صف فترة مفتوحة (JOIN بلا LEAVE) في هذه الحفظة
-            new_participants = []  # (participant_id, part) for day linking
-            for part in (dedupe_participants(mission.participants) if mission.participants is not None else []):
+            participant_parts = (
+                dedupe_participants(mission.participants)
+                if mission.participants is not None else []
+            )
+            for part in participant_parts:
                 if part.participant_type == "non_volunteer":
                     part.branch_id = None
                     part.participation_role = ""
                 elif part.participant_type == "volunteer":
                     part.participant_position = None
-
                 if mission.status in ['Completed', 'مكتملة']:
                     part.return_status = 'تم انتهاء مهمتة'
 
-                # الهوية الفعلية (الـ DB هي مصدر الحقيقة) + رادار التوافر بالهوية
-                # المركّبة (رقم العضوية + الفرع). نستثني المهمة الحالية من رادار
-                # "مهمة أخرى" كي لا يصرّع صفاً يُحدَّث في مكانه بنفسه (fix #7) —
-                # أما الفترة الجديدة فتتولى بوّابتها أدناه.
-                volunteer_id, participant_user_id, membership, active_in_other, active_in_other_branch = resolve_participant_identity(cursor, part, exclude_mission_id=mission_id)
+            participant_identity_rows = (
+                resolve_participant_identities(cursor, participant_parts, exclude_mission_id=mission_id)
+                if participant_parts else []
+            )
+            open_session_identities = {}
+            if participant_parts:
+                cursor.execute("""
+                    SELECT p.participant_id, LOWER(TRIM(p.membership_number)), p.branch_id
+                    FROM mission_participants p
+                    WHERE p.mission_id = %s
+                      AND EXISTS (
+                          SELECT 1 FROM mission_participant_sessions s
+                          WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL
+                      );
+                """, (mission_id,))
+                open_session_identities = {
+                    pid: (membership_lower, branch_id)
+                    for pid, membership_lower, branch_id in cursor.fetchall()
+                }
+
+            participant_user_ids = []
+            reinserted_idents = set()
+            kept_pids = []
+            pending_open = set()  # idents أُدرج لها صف فترة مفتوحة (JOIN بلا LEAVE) في هذه الحفظة
+            new_participants = []  # (participant_id, part) for day linking
+            participant_update_sql = """
+                UPDATE mission_participants SET
+                    participant_type=%s, full_name=%s, team_name=%s, team_code=%s,
+                    participation_role=%s, participant_position=%s, volunteer_id=%s, user_id=%s,
+                    membership_number=%s, branch_id=%s, assigned_itinerary=%s, return_status=%s,
+                    phase_name=%s, stay_type=%s, start_from_mission=%s, roster_active=true
+                WHERE participant_id=%s;
+            """
+            pending_participant_updates = []
+
+            def _flush_participant_updates():
+                if pending_participant_updates:
+                    cursor.executemany(participant_update_sql, pending_participant_updates)
+                    pending_participant_updates.clear()
+
+            for part, identity in zip(participant_parts, participant_identity_rows):
+                (volunteer_id, participant_user_id, membership, active_in_other,
+                 active_in_other_branch, _requested_branch_name, membership_param_lower,
+                 membership_stored_lower) = identity
                 if participant_user_id:
                     participant_user_ids.append(participant_user_id)
 
@@ -4096,16 +4477,11 @@ def update_mission(
                     if ident:
                         if ident in pending_open:
                             raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {part.branch_id or 'غير محدد'}) غير قابل للإضافة: أُدرجت له فترة مفتوحة (انضمام بلا انفصال) في هذه الحفظة نفسها.\n\nيجب تسجيل انفصاله (LEAVE) أولاً حتى تنغلق الجلسة ويصبح متاحاً.")
-                        cursor.execute("""
-                            SELECT 1 FROM mission_participants p
-                            WHERE LOWER(TRIM(p.membership_number)) = LOWER(%s)
-                              AND p.branch_id IS NOT DISTINCT FROM %s
-                              AND p.mission_id = %s
-                              AND EXISTS (SELECT 1 FROM mission_participant_sessions s
-                                          WHERE s.participant_id = p.participant_id AND s.end_dt IS NULL)
-                            LIMIT 1;
-                        """, (membership, part.branch_id, mission_id))
-                        if cursor.fetchone():
+                        if any(
+                            stored_membership_lower == membership_param_lower
+                            and stored_branch_id == part.branch_id
+                            for stored_membership_lower, stored_branch_id in open_session_identities.values()
+                        ):
                             raise Exception(f"المشارك '{part.full_name}' (رقم العضوية {membership} — فرع {part.branch_id or 'غير محدد'}) غير قابل للإضافة: له جلسة مفتوحة (انضمام بلا انفصال) في هذه المهمة فعلاً.\n\nلا يمكن فترتان متداخلتان لنفس الهوية — سجّل انفصاله (LEAVE) أولاً.")
 
                 # ── استعادة الحقول التي لا تعرضها/لا تُدارُ من الاستمارة (مصدر الحقيقة):
@@ -4126,21 +4502,20 @@ def update_mission(
                         part.return_status = prev.get("return_status") or part.return_status
 
                 if prev:
-                    # تحديث في مكانه — يُحافَظ على participant_id فتبقى segments المسجلة كما هي
-                    cursor.execute("""
-                        UPDATE mission_participants SET
-                            participant_type=%s, full_name=%s, team_name=%s, team_code=%s,
-                            participation_role=%s, participant_position=%s, volunteer_id=%s, user_id=%s,
-                            membership_number=%s, branch_id=%s, assigned_itinerary=%s, return_status=%s,
-                            phase_name=%s, stay_type=%s, start_from_mission=%s, roster_active=true
-                        WHERE participant_id=%s;
-                    """, (part.participant_type, part.full_name, part.team_name or '', part.team_code or '',
-                          part.participation_role, part.participant_position or '', volunteer_id, participant_user_id,
-                          membership, part.branch_id, part.assigned_itinerary, part.return_status,
-                          part.phase_name, part.stay_type, (part.start_from_mission is not False),
-                          prev["participant_id"]))
+                    # تحديث في مكانه — احتفظ بالهوية وsegments. اجمع التحديثات المتجاورة
+                    # فقط، وافصل الدفعة قبل أي INSERT يعيد participant_id للحفاظ على الترتيب.
+                    pending_participant_updates.append((
+                        part.participant_type, part.full_name, part.team_name or '', part.team_code or '',
+                        part.participation_role, part.participant_position or '', volunteer_id, participant_user_id,
+                        membership, part.branch_id, part.assigned_itinerary, part.return_status,
+                        part.phase_name, part.stay_type, (part.start_from_mission is not False),
+                        prev["participant_id"],
+                    ))
                     pid = prev["participant_id"]
+                    if pid in open_session_identities:
+                        open_session_identities[pid] = (membership_stored_lower, part.branch_id)
                 else:
+                    _flush_participant_updates()
                     cursor.execute("""
                         INSERT INTO mission_participants (mission_id, participant_type, full_name, team_name, team_code, participation_role, participant_position, volunteer_id, user_id, membership_number, branch_id, assigned_itinerary, return_status, phase_name, stay_type, roster_active, start_from_mission)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true, %s)
@@ -4156,6 +4531,8 @@ def update_mission(
                         pending_open.add(ident)
                 kept_pids.append(pid)
                 new_participants.append((pid, part))
+
+            _flush_participant_updates()
 
             # ── من أُزيلوا من الاستمارة (كل الصفوف عبر الهويات — صف بلا مطابقة بفترته):
             #    بلا segments ⇒ حذف نهائي؛ وله segments ⇒ يُخفى ويبقى سجله للرادار والـ HR
@@ -4182,34 +4559,14 @@ def update_mission(
                     """, (mission_id, kept_pids))
 
             # 🆕 تخصيص الأيام/الخطوط — مزامنة كاملة: حذف المُلغى + إدراج الجديد (لا تكرار)
-            for pid, part in new_participants:
-                # 🛡️ assigned_days = None ⇐ القسم لم يُرسَل في هذه الحفظة ⇒ لا تُمسّ
-                #    إسنادات الأيام المخزَّنة (كان الافتراضي [] فيُمحى الإسناد صامتاً).
-                if getattr(part, 'assigned_days', None) is None:
-                    continue
-                wanted = list(dict.fromkeys(
-                    str(d).strip()
-                    for d in (part.assigned_days or [])
-                    if d is not None and str(d).strip()
-                ))
-                if wanted:
-                    cursor.execute("""
-                        DELETE FROM mission_participant_itineraries
-                        WHERE participant_id = %s AND mission_id = %s
-                          AND NOT (itinerary_group = ANY(%s))
-                    """, (pid, mission_id, wanted))
-                else:
-                    cursor.execute("""
-                        DELETE FROM mission_participant_itineraries
-                        WHERE participant_id = %s AND mission_id = %s
-                    """, (pid, mission_id))
-                for day_title in wanted:
-                    cursor.execute("""
-                        INSERT INTO mission_participant_itineraries
-                            (participant_id, mission_id, itinerary_group)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT ON CONSTRAINT uq_mpi_participant_group DO NOTHING
-                    """, (pid, mission_id, day_title))
+            _sync_participant_itinerary_assignments(
+                cursor,
+                mission_id,
+                [
+                    (pid, getattr(part, 'assigned_days', None))
+                    for pid, part in new_participants
+                ],
+            )
 
             # 🆕 إعادة اشتقاق شرائح المشاركة من كتالوج الانضمام/الانفصال (كل الحالات — يُعاد
             #    حسابه عند الحفظ تماماً مثل المسارات). يُستدعى قبل حظر الإغلاق التلقائي
@@ -4254,11 +4611,25 @@ def update_mission(
                           AND end_dt IS NULL
                     """, (comp_dt, comp_dt.strftime('%H:%M'), mission_id))
 
-            for ben in mission.beneficiaries:
-                cursor.execute("INSERT INTO mission_beneficiaries (mission_id, group_title, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s, %s);", (mission_id, ben.group_title, ben.category_name, ben.direct_count, ben.indirect_count))
+            beneficiary_rows = [
+                (mission_id, ben.group_title, ben.category_name, ben.direct_count, ben.indirect_count)
+                for ben in mission.beneficiaries
+            ]
+            if beneficiary_rows:
+                cursor.executemany(
+                    "INSERT INTO mission_beneficiaries (mission_id, group_title, category_name, direct_count, indirect_count) VALUES (%s, %s, %s, %s, %s);",
+                    beneficiary_rows,
+                )
 
-            for staff in mission.eoc_staff:
-                cursor.execute("INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);", (mission_id, staff.role_name, staff.staff_name))
+            staff_rows = [
+                (mission_id, staff.role_name, staff.staff_name)
+                for staff in mission.eoc_staff
+            ]
+            if staff_rows:
+                cursor.executemany(
+                    "INSERT INTO mission_eoc_staff (mission_id, role_name, staff_name) VALUES (%s, %s, %s);",
+                    staff_rows,
+                )
 
             # 🆕 حفظ بالكات الاستمارة المتكررة (أيام/سجلات) — مسار التعديل (PUT)
             if mission.form_blocks is not None:
@@ -4503,6 +4874,30 @@ def none_if_empty_str(val):
     return val if val != "" else None
 
 
+def _apply_end_participation_writes(cursor, valid_ids, participants_with_sessions, mission_id, departure_time, now_ref):
+    """Apply end-participation writes in set-based updates and ordered insert batches."""
+    if not valid_ids:
+        return
+    cursor.execute(
+        "UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة' "
+        "WHERE participant_id = ANY(%s::bigint[])",
+        (valid_ids,),
+    )
+    cursor.execute(
+        "UPDATE mission_participant_sessions SET check_out_time = %s::time, end_dt = %s::timestamp "
+        "WHERE participant_id = ANY(%s::bigint[]) AND end_dt IS NULL",
+        (now_ref.time(), now_ref, valid_ids),
+    )
+    missing_session_ids = [pid for pid in valid_ids if pid not in participants_with_sessions]
+    if missing_session_ids:
+        cursor.executemany(
+            """INSERT INTO mission_participant_sessions
+               (participant_id, mission_id, session_date, check_in_time, check_out_time, end_dt, notes)
+               VALUES (%s, %s, CURRENT_DATE, %s, CURRENT_TIME, CURRENT_TIMESTAMP, 'إنهاء المشاركة')""",
+            [(pid, mission_id, departure_time) for pid in missing_session_ids],
+        )
+
+
 @app.post("/api/missions/{mission_id}/end-participation")
 def end_participation(
     mission_id: int,
@@ -4543,31 +4938,17 @@ def end_participation(
             if not valid_ids:
                 raise HTTPException(status_code=404, detail="لا يوجد مشاركون صالحون في هذه المهمة")
 
-            for pid in valid_ids:
-                # 1. تسجيل العودة (يحرر من الرادار)
-                cursor.execute(
-                    "UPDATE mission_participants SET return_status = 'تم انتهاء مهمتة' WHERE participant_id = %s",
-                    (pid,),
-                )
-                # 2. غلق أي فترة مفتوحة (بلا end_dt) عند زمن الإنهاء — يُغلق end_dt أيضاً
-                #    (وليس check_out_time فقط) حتى تتوقف ساعات «المباشر» عن النمو بعد الإنهاء،
-                #    وهو ما تطبقه حسابات الساعات (start_dt..end_dt) في الواجهة والقوة البشرية.
-                cursor.execute(
-                    "UPDATE mission_participant_sessions SET check_out_time = %s::time, end_dt = %s::timestamp WHERE participant_id = %s AND end_dt IS NULL",
-                    (now_ref.time(), now_ref, pid),
-                )
-                # 3. لو بلا فترات: سطر توثيق للإنهاء (تسجيل معلومة الحضور/الخروج)
-                cursor.execute(
-                    "SELECT 1 FROM mission_participant_sessions WHERE participant_id = %s LIMIT 1",
-                    (pid,),
-                )
-                if not cursor.fetchone():
-                    cursor.execute(
-                        """INSERT INTO mission_participant_sessions
-                           (participant_id, mission_id, session_date, check_in_time, check_out_time, end_dt, notes)
-                           VALUES (%s, %s, CURRENT_DATE, %s, CURRENT_TIME, CURRENT_TIMESTAMP, 'إنهاء المشاركة')""",
-                        (pid, mission_id, departure_time),
-                    )
+            cursor.execute(
+                "SELECT DISTINCT participant_id FROM mission_participant_sessions "
+                "WHERE participant_id = ANY(%s::int[])",
+                (valid_ids,),
+            )
+            participants_with_sessions = {row[0] for row in cursor.fetchall()}
+
+            _apply_end_participation_writes(
+                cursor, valid_ids, participants_with_sessions, mission_id,
+                departure_time, now_ref,
+            )
 
             try:
                 create_audit_log(
@@ -5083,32 +5464,38 @@ def _sync_jl_catalog(cursor, mission_id, entries):
     if dup_entry is not None:
         raise HTTPException(status_code=400, detail=f"يوجد بالفعل سجل {labels[dup_entry['kind']]} بنفس العنوان «{dup_entry['title']}» — اختر عنواناً مختلفاً")
 
-    # حذف غير المُرسَل: شرائح مشتقة ← مفتاح الإسناد ← صف الكتالوج (ترتيب FK الآمن)
-    for eid, e in existing.items():
-        if eid in sub_ids:
-            continue
+    # حذف غير المُرسَل: جميع التوابع أولاً، ثم مفاتيح الإسناد، ثم صفوف الكتالوج.
+    stale_entries = [(eid, entry) for eid, entry in existing.items() if eid not in sub_ids]
+    if stale_entries:
+        stale_ids = [eid for eid, _entry in stale_entries]
+        stale_keys = [jl_key(entry["kind"], entry["title"]) for _eid, entry in stale_entries]
         cursor.execute(
-            "DELETE FROM mission_participant_sessions WHERE start_entry_id = %s OR end_entry_id = %s",
-            (eid, eid),
+            "DELETE FROM mission_participant_sessions "
+            "WHERE start_entry_id = ANY(%s::bigint[]) OR end_entry_id = ANY(%s::bigint[])",
+            (stale_ids, stale_ids),
         )
         cursor.execute(
-            "DELETE FROM mission_participant_itineraries WHERE itinerary_group = %s",
-            (jl_key(e['kind'], e['title']),),
+            "DELETE FROM mission_participant_itineraries WHERE itinerary_group = ANY(%s::text[])",
+            (stale_keys,),
         )
-        cursor.execute("DELETE FROM mission_join_leave_entries WHERE entry_id = %s", (eid,))
+        cursor.execute(
+            "DELETE FROM mission_join_leave_entries WHERE entry_id = ANY(%s::bigint[])",
+            (stale_ids,),
+        )
 
-    # upsert: تحديث في مكانه (يُحافَظ على entry_id = provenance stable) أو إدراج جديد
-    for s in submitted:
-        if s['entry_id'] is not None:
-            cursor.execute(
+    catalog_ops = []
+    for entry in submitted:
+        if entry["entry_id"] is not None:
+            catalog_ops.append((
                 "UPDATE mission_join_leave_entries SET title = %s, kind = %s, dt = %s WHERE entry_id = %s",
-                (s['title'], s['kind'], s['dt'], s['entry_id']),
-            )
+                (entry["title"], entry["kind"], entry["dt"], entry["entry_id"]),
+            ))
         else:
-            cursor.execute(
+            catalog_ops.append((
                 "INSERT INTO mission_join_leave_entries (mission_id, title, kind, dt) VALUES (%s, %s, %s, %s)",
-                (mission_id, s['title'], s['kind'], s['dt']),
-            )
+                (mission_id, entry["title"], entry["kind"], entry["dt"]),
+            ))
+    _execute_contiguous_batches(cursor, catalog_ops)
 
 
 def _jl_validate(cursor, mission_id, kind, dt_str, client_now):
@@ -5823,19 +6210,17 @@ def update_volunteer_room_notes(
                 return s if s != "" else None
 
             cursor.execute("DELETE FROM mission_volunteer_room_notes WHERE mission_id = %s", (mission_id,))
-            for order, r in enumerate(data.rows or []):
-                cursor.execute("""
+            note_rows = [
+                (mission_id, _clean(r.note_date), _clean(r.membership_number),
+                 _clean(r.member_name), _clean(r.note_text), order)
+                for order, r in enumerate(data.rows or [])
+            ]
+            if note_rows:
+                cursor.executemany("""
                     INSERT INTO mission_volunteer_room_notes
                         (mission_id, note_date, membership_number, member_name, note_text, row_order)
                     VALUES (%s, %s, %s, %s, %s, %s);
-                """, (
-                    mission_id,
-                    _clean(r.note_date),
-                    _clean(r.membership_number),
-                    _clean(r.member_name),
-                    _clean(r.note_text),
-                    order,
-                ))
+                """, note_rows)
 
             cursor.execute(
                 "UPDATE missions SET volunteer_room_reviewer_name = %s WHERE mission_id = %s",
@@ -7255,6 +7640,7 @@ def add_global_eqs_bulk(eqs: List[GlobalEqModel], credentials: HTTPAuthorization
                      AND ROUND(COALESCE(g.latitude::numeric, 0), 1) = COALESCE(i.lat::numeric, 0)
                      AND ROUND(COALESCE(g.longitude::numeric, 0), 1) = COALESCE(i.lon::numeric, 0)
                     GROUP BY i.ord, lat_key, lon_key
+                    ORDER BY i.ord
                 """, (
                     [p[0].date for p in pending],
                     [p[1] for p in pending],
@@ -8080,6 +8466,7 @@ def normalize_legacy_ai_news(credentials: HTTPAuthorizationCredentials = Depends
             cursor.execute("SELECT id, governorate, governorate_original, news_scope, news_publisher, incident_description, area_name, street_name FROM ai_news;")
             rows = cursor.fetchall()
             changed = cleared = 0
+            updates = []
             for _id, _cur, _saved, _scope, _pub, _desc, _area, _street in rows:
                 _cur = str(_cur or '').strip()
                 _orig = _cur or str(_saved or '').strip()
@@ -8087,13 +8474,15 @@ def normalize_legacy_ai_news(credentials: HTTPAuthorizationCredentials = Depends
                 _loc = normalize_ai_location(_orig, _pub)
                 _new_scope = _ai_news_scope_label(_loc, _ctx)
                 if _loc != _cur or _new_scope != str(_scope or ''):
-                    cursor.execute(
-                        "UPDATE ai_news SET governorate_original = COALESCE(NULLIF(governorate_original,''), NULLIF(%s,'')), "
-                        "governorate=%s, news_scope=%s WHERE id=%s;",
-                        (_orig, _loc, _new_scope, _id),
-                    )
+                    updates.append((_orig, _loc, _new_scope, _id))
                     changed += 1
                     if not _loc: cleared += 1
+            if updates:
+                cursor.executemany(
+                    "UPDATE ai_news SET governorate_original = COALESCE(NULLIF(governorate_original,''), NULLIF(%s,'')), "
+                    "governorate=%s, news_scope=%s WHERE id=%s;",
+                    updates,
+                )
             connection.commit()
             return {"message": f"تم الترحيل: {changed} سجل اتعدل — منهم {cleared} خالف النطاق واتصنف عالمي (الأصل محفوظ في governorate_original)",
                     "total": len(rows), "changed": changed, "out_of_scope_cleared": cleared}
@@ -8785,10 +9174,8 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
+            forecast_ops = []
             for row in valid_rows:
-                # 🛡️ حفظ جزئي: تُكتب أعمدة الوردية التي أرسلها العميل فقط. أي عمود غائب
-                #    عن الحمولة يبقى بقيمته المخزَّنة (COALESCE غير مطلوب — العمود لا يُذكر
-                #    أصلاً في جملة UPDATE) — فلا يمحو حفظ خانة واحدة باقي قياسات المحافظة.
                 provided = row.provided_metrics()
                 if not provided:
                     continue
@@ -8797,8 +9184,7 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
                           *[getattr(row, c) for c in provided], user_id]
                 placeholders = ", ".join(["%s"] * len(values)) + ", (now() AT TIME ZONE 'Africa/Cairo')"
                 assignments = ", ".join([f"{c}=EXCLUDED.{c}" for c in provided])
-                cursor.execute(
-                    f"""
+                sql = f"""
                     INSERT INTO weather_forecasts ({', '.join(cols)})
                     VALUES ({placeholders})
                     ON CONFLICT (forecast_date, shift, branch_id)
@@ -8806,9 +9192,9 @@ def save_weather_batch(payload: WeatherBatchModel, credentials: HTTPAuthorizatio
                         {assignments},
                         entered_by=EXCLUDED.entered_by,
                         updated_at=(now() AT TIME ZONE 'Africa/Cairo');
-                    """,
-                    tuple(values),
-                )
+                """
+                forecast_ops.append((sql, tuple(values)))
+            _execute_contiguous_batches(cursor, forecast_ops)
 
             # 🤫 الحفظ التلقائي (silent=True) لا يُنشئ أي لوج إطلاقاً — كان يُغرق سجل النظام
             #    بإدخال جديد مع كل رقم/قيمة تُحفظ تلقائياً. الحفظ اليدوي فقط يُسجَّل في السجل،
@@ -9231,14 +9617,14 @@ def save_gov_contacts(
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
+            contact_ops = []
             for row, fields, cols, values, reason_provided in prepared:
                 assignments = ", ".join(f"{f} = EXCLUDED.{f}" for f in fields)
                 if not reason_provided:
                     assignments += (
                         ", reason = COALESCE(NULLIF(governorate_contacts.reason, ''), EXCLUDED.reason)"
                     )
-                cursor.execute(
-                    f"""
+                sql = f"""
                     INSERT INTO governorate_contacts
                         (contact_date, branch_id, {', '.join(cols)}, entered_by, updated_at)
                     VALUES ({', '.join(['%s'] * (len(values) + 3))}, (now() AT TIME ZONE 'Africa/Cairo'))
@@ -9246,9 +9632,9 @@ def save_gov_contacts(
                         {assignments},
                         entered_by = EXCLUDED.entered_by,
                         updated_at = (now() AT TIME ZONE 'Africa/Cairo');
-                    """,
-                    (contact_date, row.branch_id, *values, user_id),
-                )
+                """
+                contact_ops.append((sql, (contact_date, row.branch_id, *values, user_id)))
+            _execute_contiguous_batches(cursor, contact_ops)
             if not payload.silent:
                 create_audit_log(
                     cursor,
@@ -10004,6 +10390,105 @@ def ingest_earthquake_intel(
         raise HTTPException(status_code=500, detail="حدث خطأ أثناء استقبال الزلازل")
 
 
+
+
+def _eq_intel_cross_source_candidates(cursor, source, normalized_events):
+    """Fetch up to 20 cross-source candidates for every event in one SQL round trip."""
+    normalized_events = list(normalized_events or [])
+    if not normalized_events:
+        return []
+    cursor.execute("""
+        WITH incoming AS (
+            SELECT ord::integer AS ord, occurred_at, latitude, longitude
+            FROM unnest(%s::timestamp[], %s::double precision[], %s::double precision[])
+                 WITH ORDINALITY AS incoming(occurred_at, latitude, longitude, ord)
+        )
+        SELECT i.ord, candidate.latitude, candidate.longitude, candidate.magnitude
+        FROM incoming i
+        JOIN LATERAL (
+            SELECT e.eq_intel_id, e.latitude, e.longitude, e.magnitude
+            FROM earthquake_intel e
+            WHERE e.source <> %s
+              AND e.occurred_at BETWEEN i.occurred_at - interval '5 minutes'
+                                    AND i.occurred_at + interval '5 minutes'
+              AND e.latitude BETWEEN i.latitude - 2.0 AND i.latitude + 2.0
+              AND e.longitude BETWEEN i.longitude - 3.0 AND i.longitude + 3.0
+            LIMIT 20
+        ) candidate ON TRUE
+        ORDER BY i.ord;
+    """, (
+        [ev["occurred_at"] for ev in normalized_events],
+        [ev["latitude"] for ev in normalized_events],
+        [ev["longitude"] for ev in normalized_events],
+        source or "usgs",
+    ))
+    candidates = [[] for _ in normalized_events]
+    for ord_, latitude, longitude, magnitude in cursor.fetchall():
+        candidates[int(ord_) - 1].append((latitude, longitude, magnitude))
+    return candidates
+
+
+def _eq_intel_cross_source_candidates_values(cursor, source, normalized_events, batch_size=250):
+    """Fallback candidate lookup using bounded VALUES batches, never one round-trip per event."""
+    normalized_events = list(normalized_events or [])
+    candidates = [[] for _ in normalized_events]
+    if not normalized_events:
+        return candidates
+    batch_size = max(1, min(int(batch_size or 250), 250))
+    for offset in range(0, len(normalized_events), batch_size):
+        chunk = normalized_events[offset:offset + batch_size]
+        values_sql = ", ".join(
+            "(%s::integer, %s::timestamp, %s::double precision, %s::double precision)"
+            for _ in chunk
+        )
+        params = []
+        for ord_, event in enumerate(chunk, start=offset + 1):
+            params.extend((ord_, event["occurred_at"], event["latitude"], event["longitude"]))
+        params.append(source or "usgs")
+        cursor.execute(f"""
+            WITH incoming(ord, occurred_at, latitude, longitude) AS (
+                VALUES {values_sql}
+            )
+            SELECT i.ord, candidate.latitude, candidate.longitude, candidate.magnitude
+            FROM incoming i
+            JOIN LATERAL (
+                SELECT e.latitude, e.longitude, e.magnitude
+                FROM earthquake_intel e
+                WHERE e.source <> %s
+                  AND e.occurred_at BETWEEN i.occurred_at - interval '5 minutes'
+                                        AND i.occurred_at + interval '5 minutes'
+                  AND e.latitude BETWEEN i.latitude - 2.0 AND i.latitude + 2.0
+                  AND e.longitude BETWEEN i.longitude - 3.0 AND i.longitude + 3.0
+                LIMIT 20
+            ) candidate ON TRUE
+            ORDER BY i.ord;
+        """, tuple(params))
+        for ord_, latitude, longitude, magnitude in cursor.fetchall():
+            candidates[int(ord_) - 1].append((latitude, longitude, magnitude))
+    return candidates
+
+
+def _eq_intel_cross_source_candidates_resilient(cursor, source, normalized_events):
+    """Try the normal array batch, then an alternate VALUES batch inside savepoints."""
+    cursor.execute("SAVEPOINT eq_cross_source_batch")
+    try:
+        result = _eq_intel_cross_source_candidates(cursor, source, normalized_events)
+        cursor.execute("RELEASE SAVEPOINT eq_cross_source_batch")
+        return result
+    except Exception:
+        cursor.execute("ROLLBACK TO SAVEPOINT eq_cross_source_batch")
+        cursor.execute("RELEASE SAVEPOINT eq_cross_source_batch")
+    cursor.execute("SAVEPOINT eq_cross_source_values")
+    try:
+        result = _eq_intel_cross_source_candidates_values(cursor, source, normalized_events)
+        cursor.execute("RELEASE SAVEPOINT eq_cross_source_values")
+        return result
+    except Exception:
+        cursor.execute("ROLLBACK TO SAVEPOINT eq_cross_source_values")
+        cursor.execute("RELEASE SAVEPOINT eq_cross_source_values")
+        raise
+
+
 def _eq_intel_ingest_events(events, source="usgs"):
     """🌍 نواة الاستقبال المشتركة (endpoint الخارجي + المحرك المحلي الدوري):
     إدخال الجديدة فقط + بث الريال تايم + قيد الأوديت — بمعاملة واحدة."""
@@ -10017,43 +10502,58 @@ def _eq_intel_ingest_events(events, source="usgs"):
                 (_EQ_INTEL_SCHEMA_LOCK_NAMESPACE, _EQ_INTEL_SCHEMA_LOCK_KEY),
             )
             cutoff = (datetime.now(ZoneInfo("Africa/Cairo")).replace(tzinfo=None) - timedelta(minutes=EQ_INTEL_DEDUPE_MINUTES))
-            inserted = 0
+            prepared_events = []
             for ev in events or []:
                 norm = _eq_intel_normalize_event(ev)
                 if not norm or not norm["external_id"]:
                     continue
                 if norm["occurred_at"] and norm["occurred_at"] < cutoff:
                     continue  # قديم من إعادة تشغيل التغذية — تجاهله
+                prepared_events.append((ev, norm))
 
-                                # 🧲 مضاد تكرار المصدرين: نفس الزلزال ممكن يوصلك من EMSC وبعده من USGS
-                #    (أو العكس) بمعرّفين مختلفين تماماً — نقارن هندسياً: ±5 دقائق زمني
-                #    + مسافة ≤150 كم + فرق قوة ≤0.8 ⇒ الأول الجاي كفى؛ الثاني يُتجاهل
-                #    (بلا صف جديد وبلا إشعار ثاني). الفشل في المقارنة ما يمنعش الاستقبال.
-                if norm["occurred_at"] is not None and norm["latitude"] is not None and norm["longitude"] is not None:
-                    try:
-                        cursor.execute("""
-                            SELECT latitude, longitude, magnitude
-                            FROM earthquake_intel
-                            WHERE source <> %s
-                              AND occurred_at BETWEEN %s::timestamp - interval '5 minutes'
-                                                  AND %s::timestamp + interval '5 minutes'
-                              AND latitude  BETWEEN %s - 2.0 AND %s + 2.0
-                              AND longitude BETWEEN %s - 3.0 AND %s + 3.0
-                            LIMIT 20;
-                        """, (source or "usgs", norm["occurred_at"], norm["occurred_at"],
-                              norm["latitude"], norm["latitude"],
-                              norm["longitude"], norm["longitude"]))
-                        _dup = False
-                        for _r in cursor.fetchall():
-                            _d = _eq_intel_haversine_km(norm["latitude"], norm["longitude"], _r[0], _r[1]) or 99999
-                            _mag_d = abs(float(norm["magnitude"] if norm["magnitude"] is not None else 0) - float(_r[2] if _r[2] is not None else 0))
-                            if _d <= 150 and _mag_d <= 0.8:
-                                _dup = True
-                                break
-                        if _dup:
-                            continue   # جاش من المصدر الثاني — الأول غطّاه بإشعار واحد
-                    except Exception as _fde:
-                        print(f"eq cross-source dedup check failed: {_fde}")
+            cross_source_indexes = [
+                index for index, (_ev, norm) in enumerate(prepared_events)
+                if norm["occurred_at"] is not None
+                and norm["latitude"] is not None
+                and norm["longitude"] is not None
+            ]
+            cross_source_candidates = {}
+            cross_source_prefetch_ok = True
+            if cross_source_indexes:
+                try:
+                    candidate_groups = _eq_intel_cross_source_candidates_resilient(
+                        cursor,
+                        source or "usgs",
+                        [prepared_events[index][1] for index in cross_source_indexes],
+                    )
+                    cross_source_candidates = {
+                        index: group
+                        for index, group in zip(cross_source_indexes, candidate_groups)
+                    }
+                except Exception as _fde:
+                    # Do not reintroduce N per-event reads if both set-based strategies fail.
+                    cross_source_prefetch_ok = False
+                    print(f"eq cross-source batch and VALUES fallback failed; continuing without cross-source suppression: {_fde}")
+
+            inserted = 0
+            for prepared_index, (ev, norm) in enumerate(prepared_events):
+                if (norm["occurred_at"] is not None
+                        and norm["latitude"] is not None
+                        and norm["longitude"] is not None):
+                    candidates = (
+                        cross_source_candidates.get(prepared_index, [])
+                        if cross_source_prefetch_ok else []
+                    )
+
+                    _dup = False
+                    for _r in candidates:
+                        _d = _eq_intel_haversine_km(norm["latitude"], norm["longitude"], _r[0], _r[1]) or 99999
+                        _mag_d = abs(float(norm["magnitude"] if norm["magnitude"] is not None else 0) - float(_r[2] if _r[2] is not None else 0))
+                        if _d <= 150 and _mag_d <= 0.8:
+                            _dup = True
+                            break
+                    if _dup:
+                        continue   # جاش من المصدر الثاني — الأول غطّاه بإشعار واحد
 
                 dist = _eq_intel_haversine_km(
                     norm["latitude"], norm["longitude"],
@@ -10930,36 +11430,84 @@ def analyze_earthquake_intel(
             #    ويُستخدم فقط لو غطّى موقع الحدث؛ وإلا يقع العمل على USGS المباشر.
             catalog_ready = _eq_catalog_stats()["ready"]
             need = []
+            local_hist_by_id = {}
+            local_items = []
+            if catalog_ready:
+                local_items = [
+                    (r[0], float(r[4]), float(r[5]), r[1].date())
+                    for r in rows
+                    if r[8] is None and r[4] is not None and r[5] is not None and r[1] is not None
+                ]
+                if local_items:
+                    # Preserve the old optional-read fail-open behavior without leaving
+                    # the request transaction aborted on a query failure.
+                    cursor.execute("SAVEPOINT eq_local_history_batch")
+                    try:
+                        local_hist_by_id = _eq_catalog_local_hist_batch(
+                            cursor, local_items, EQ_INTEL_HIST_RADIUS_KM
+                        )
+                        cursor.execute("RELEASE SAVEPOINT eq_local_history_batch")
+                    except Exception as _local_err:
+                        cursor.execute("ROLLBACK TO SAVEPOINT eq_local_history_batch")
+                        cursor.execute("RELEASE SAVEPOINT eq_local_history_batch")
+                        local_hist_by_id = {item[0]: None for item in local_items}
+                        print(f"eq catalog local history batch failed (falling back to history helper): {_local_err}")
+
+            local_history_updates = []
             for r in rows:
                 if r[8] is None and r[4] is not None and r[5] is not None and r[1] is not None:
-                    if catalog_ready:
-                        local = _eq_catalog_local_hist(float(r[4]), float(r[5]), r[1].date(), EQ_INTEL_HIST_RADIUS_KM)
-                        if local is not None:
-                            cursor.execute("""
-                                UPDATE earthquake_intel
-                                SET hist_max_mag = %s, hist_window_count = %s,
-                                    hist_scanned_at = (now() AT TIME ZONE 'Africa/Cairo')
-                                WHERE eq_intel_id = %s;
-                            """, (local["hist_max_mag"], local["hist_window_count"], r[0]))
-                            continue
+                    local = local_hist_by_id.get(r[0]) if catalog_ready else None
+                    if local is not None:
+                        local_history_updates.append((local["hist_max_mag"], local["hist_window_count"], r[0]))
+                        continue
                     need.append((r[0], float(r[4]), float(r[5]), r[1].date()))
+            if local_history_updates:
+                cursor.executemany("""
+                    UPDATE earthquake_intel
+                    SET hist_max_mag = %s, hist_window_count = %s,
+                        hist_scanned_at = (now() AT TIME ZONE 'Africa/Cairo')
+                    WHERE eq_intel_id = %s;
+                """, local_history_updates)
             hist_by_id = {}
             if need:
-                from concurrent.futures import ThreadPoolExecutor
-                def _fetch_one(item):
-                    eq_id, lat, lon, d = item
-                    return eq_id, _eq_intel_fetch_history(lat, lon, d, EQ_INTEL_HIST_RADIUS_KM)
-                with ThreadPoolExecutor(max_workers=8) as pool:
-                    for eq_id, hist in pool.map(_fetch_one, need):
-                        if hist is not None:
-                            hist_by_id[eq_id] = hist
-                for eq_id, hist in hist_by_id.items():
-                    cursor.execute("""
+                # When the world catalog is ready, _eq_intel_fetch_history's fallback
+                # is another local PostgreSQL aggregate. Batch it, preserving live cache
+                # hits. If that optional query fails, use the existing concurrent helper.
+                world_catalog_ready = _eq_catalog_ready_cached()
+                if world_catalog_ready:
+                    cursor.execute("SAVEPOINT eq_history_fallback_batch")
+                    try:
+                        hist_by_id = _eq_intel_fetch_history_batch_local(
+                            cursor, need, EQ_INTEL_HIST_RADIUS_KM
+                        )
+                        cursor.execute("RELEASE SAVEPOINT eq_history_fallback_batch")
+                    except Exception as _hist_batch_err:
+                        cursor.execute("ROLLBACK TO SAVEPOINT eq_history_fallback_batch")
+                        cursor.execute("RELEASE SAVEPOINT eq_history_fallback_batch")
+                        print(f"eq history batch failed; using original history helper: {_hist_batch_err}")
+                        hist_by_id = {}
+                if not world_catalog_ready or not hist_by_id:
+                    from concurrent.futures import ThreadPoolExecutor
+                    def _fetch_one(item):
+                        eq_id, lat, lon, d = item
+                        return eq_id, _eq_intel_fetch_history(lat, lon, d, EQ_INTEL_HIST_RADIUS_KM)
+                    with ThreadPoolExecutor(max_workers=8) as pool:
+                        for eq_id, hist in pool.map(_fetch_one, need):
+                            if hist is not None:
+                                hist_by_id[eq_id] = hist
+                else:
+                    hist_by_id = {eq_id: hist for eq_id, hist in hist_by_id.items() if hist is not None}
+                history_updates = [
+                    (hist["hist_max_mag"], hist["hist_window_count"], eq_id)
+                    for eq_id, hist in hist_by_id.items()
+                ]
+                if history_updates:
+                    cursor.executemany("""
                         UPDATE earthquake_intel
                         SET hist_max_mag = %s, hist_window_count = %s,
                             hist_scanned_at = (now() AT TIME ZONE 'Africa/Cairo')
                         WHERE eq_intel_id = %s;
-                    """, (hist["hist_max_mag"], hist["hist_window_count"], eq_id))
+                    """, history_updates)
             if hist_by_id:
                 connection.commit()
 
@@ -11173,6 +11721,73 @@ def _eq_catalog_local_hist(lat, lon, event_date, radius_km=EQ_INTEL_HIST_RADIUS_
         return None
 
 
+
+
+def _eq_catalog_local_hist_batch(cursor, items, radius_km=EQ_INTEL_HIST_RADIUS_KM):
+    """Evaluate the existing seasonal/radius aggregate for many events in one SELECT.
+
+    The caller checks _eq_catalog_stats()['ready'] first, matching the old helper's
+    empty-catalog guard while avoiding two connection/SELECT round trips per event.
+    """
+    items = list(items or [])
+    if not items:
+        return {}
+    cursor.execute("""
+        WITH incoming AS (
+            SELECT eq_intel_id, latitude, longitude, event_date,
+                   EXTRACT(DOY FROM event_date)::integer AS event_date_doy,
+                   ord::integer AS ord
+            FROM unnest(%s::bigint[], %s::double precision[], %s::double precision[], %s::date[])
+                 WITH ORDINALITY AS incoming(eq_intel_id, latitude, longitude, event_date, ord)
+        )
+        SELECT i.eq_intel_id, hist.hist_max_mag, hist.hist_window_count
+        FROM incoming i
+        CROSS JOIN LATERAL (
+            SELECT MAX(magnitude) AS hist_max_mag, COUNT(*) AS hist_window_count
+            FROM earthquake_catalog
+            WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+              AND magnitude IS NOT NULL
+              AND occurred_at IS NOT NULL
+              AND (6371.0 * 2 * atan2(
+                    sqrt(
+                      power(sin(radians(latitude - i.latitude) / 2), 2) +
+                      cos(radians(i.latitude)) * cos(radians(latitude)) *
+                      power(sin(radians(longitude - i.longitude) / 2), 2)
+                    ),
+                    sqrt(1 - (
+                      power(sin(radians(latitude - i.latitude) / 2), 2) +
+                      cos(radians(i.latitude)) * cos(radians(latitude)) *
+                      power(sin(radians(longitude - i.longitude) / 2), 2)
+                    ))
+                  )) <= %s
+              AND (
+                    (date_part('doy', occurred_at)::int - i.event_date_doy + 365) %% 365 <= %s
+                 OR (date_part('doy', occurred_at)::int - i.event_date_doy + 365) %% 365 >= 365 - %s
+              )
+        ) hist
+        ORDER BY i.ord;
+    """, (
+        [item[0] for item in items],
+        [item[1] for item in items],
+        [item[2] for item in items],
+        [item[3] for item in items],
+        radius_km,
+        EQ_INTEL_HIST_WINDOW_DAYS,
+        EQ_INTEL_HIST_WINDOW_DAYS,
+    ))
+    results = {}
+    for eq_id, hist_max_mag, hist_window_count in cursor.fetchall():
+        if int(hist_window_count or 0) == 0:
+            results[eq_id] = None
+        else:
+            results[eq_id] = {
+                "hist_max_mag": hist_max_mag,
+                "hist_window_count": int(hist_window_count),
+                "hist_source": "local_catalog",
+            }
+    return results
+
+
 def _eq_catalog_stats(connection=None):
     """حالة الكتالوج المحلي: العدد الإجمالي + تغطيته الزمنية + عدد لكل منطقة."""
     owns_connection = connection is None
@@ -11206,40 +11821,277 @@ def _eq_catalog_stats(connection=None):
         return {"total": 0, "coverage_from": None, "coverage_to": None, "per_region": {}, "ready": False}
 
 
+
+
+def _eq_intel_fetch_history_batch_local(cursor, items, radius_km=EQ_INTEL_HIST_RADIUS_KM):
+    """Batched equivalent of the local-catalog branch in _eq_intel_fetch_history.
+
+    Cache hits are reused first. On misses, one SQL statement handles the distinct
+    existing cache keys. Repeated rounded-coordinate keys share one result just as
+    the existing cache contract intends; this removes per-event PostgreSQL reads.
+    """
+    import time as _time
+    items = list(items or [])
+    if not items:
+        return {}
+
+    now_ts = _time.time()
+    results = {}
+    pending_by_key = {}
+    event_to_key = {}
+
+    for eq_id, lat, lon, event_date in items:
+        key = (round(float(lat), 1), round(float(lon), 1), event_date.month, event_date.day, radius_km)
+        event_to_key[eq_id] = key
+        cached = _EQ_INTEL_HIST_MEM_CACHE.get(key)
+        if cached and (now_ts - cached[0]) < _EQ_INTEL_HIST_MEM_TTL:
+            results[eq_id] = cached[1]
+            continue
+        if key in pending_by_key:
+            continue
+        try:
+            start_day = event_date - timedelta(days=EQ_INTEL_HIST_WINDOW_DAYS)
+            end_day = event_date + timedelta(days=EQ_INTEL_HIST_WINDOW_DAYS)
+            start = start_day.replace(year=event_date.year - EQ_INTEL_HIST_YEARS)
+            end = end_day.replace(year=event_date.year - 1)
+            pending_by_key[key] = {
+                "eq_id": eq_id, "lat": float(lat), "lon": float(lon),
+                "start": start, "end": end,
+                "event_doy": event_date.timetuple().tm_yday,
+            }
+        except Exception:
+            results[eq_id] = None
+
+    pending = list(pending_by_key.values())
+    if pending:
+        cursor.execute("""
+            WITH incoming AS (
+                SELECT eq_intel_id, latitude, longitude, start_date, end_date, event_doy,
+                       ord::integer AS ord
+                FROM unnest(
+                    %s::bigint[], %s::double precision[], %s::double precision[],
+                    %s::date[], %s::date[], %s::integer[]
+                ) WITH ORDINALITY AS incoming(
+                    eq_intel_id, latitude, longitude, start_date, end_date, event_doy, ord
+                )
+            )
+            SELECT i.eq_intel_id, hist.total_local, hist.window_max, hist.window_count, i.start_date
+            FROM incoming i
+            CROSS JOIN LATERAL (
+                SELECT
+                    COUNT(*) AS total_local,
+                    MAX(magnitude) FILTER (WHERE
+                        ABS(date_part('doy', occurred_at)::int - i.event_doy) <= %s
+                        OR 365 - ABS(date_part('doy', occurred_at)::int - i.event_doy) <= %s
+                    ) AS window_max,
+                    COUNT(*) FILTER (WHERE
+                        ABS(date_part('doy', occurred_at)::int - i.event_doy) <= %s
+                        OR 365 - ABS(date_part('doy', occurred_at)::int - i.event_doy) <= %s
+                    ) AS window_count
+                FROM earthquake_catalog
+                WHERE magnitude IS NOT NULL
+                  AND occurred_at BETWEEN i.start_date AND i.end_date
+                  AND 6371.0 * acos(least(1.0, greatest(-1.0,
+                        sin(radians(i.latitude)) * sin(radians(latitude)) +
+                        cos(radians(i.latitude)) * cos(radians(latitude)) *
+                        cos(radians(longitude) - radians(i.longitude))
+                  ))) <= %s
+            ) hist
+            ORDER BY i.ord;
+        """, (
+            [item["eq_id"] for item in pending],
+            [item["lat"] for item in pending],
+            [item["lon"] for item in pending],
+            [item["start"] for item in pending],
+            [item["end"] for item in pending],
+            [item["event_doy"] for item in pending],
+            EQ_INTEL_HIST_WINDOW_DAYS,
+            EQ_INTEL_HIST_WINDOW_DAYS,
+            EQ_INTEL_HIST_WINDOW_DAYS,
+            EQ_INTEL_HIST_WINDOW_DAYS,
+            radius_km,
+        ))
+        for eq_id, total_local, w_max, w_count, start in cursor.fetchall():
+            result = {
+                "hist_max_mag": (float(w_max) if w_max is not None else None),
+                "hist_window_count": int(w_count or 0),
+                "hist_total_catalog": int(total_local or 0),
+                "hist_since": start.isoformat(),
+                "hist_source": "local_catalog",
+            }
+            key = event_to_key[eq_id]
+            _EQ_INTEL_HIST_MEM_CACHE[key] = (now_ts, result)
+            for item_id, item_key in event_to_key.items():
+                if item_key == key:
+                    results[item_id] = result
+
+    return {eq_id: results.get(eq_id) for eq_id, *_rest in items}
+
+
+def _eq_world_filled_year_windows(cursor, windows):
+    """Return zero-based indexes of filled world-catalog windows using one SELECT."""
+    windows = list(windows or [])
+    if not windows:
+        return set()
+    cursor.execute("""
+        WITH requested AS (
+            SELECT start_at, end_at, ord::integer AS ord
+            FROM unnest(%s::timestamp[], %s::timestamp[])
+                 WITH ORDINALITY AS w(start_at, end_at, ord)
+        )
+        SELECT r.ord FROM requested r
+        WHERE EXISTS (
+            SELECT 1 FROM earthquake_catalog c
+            WHERE c.region_id = 'world'
+              AND c.occurred_at >= r.start_at AND c.occurred_at < r.end_at
+        )
+        ORDER BY r.ord;
+    """, (
+        [start_at for start_at, _end_at in windows],
+        [end_at for _start_at, end_at in windows],
+    ))
+    return {int(row[0]) - 1 for row in cursor.fetchall()}
+
+
 def _eq_catalog_baseline_zones():
-    """خط الأساس التاريخي لكل منطقة مؤثرة على مصر: أقوى حدث في نفس الفترة الحالية
-    (±15 يوماً) خلال كل عمق الكتالوج + إجمالي أحداثها الكتالوجية."""
+    """حساب خط الأساس الموسمي والإجمالي للمناطق المؤثرة على مصر بقراءة مجمعة واحدة."""
     out = []
     try:
         now_doy = datetime.now(ZoneInfo("Africa/Cairo")).timetuple().tm_yday
         connection = get_connection()
         try:
             with connection.cursor() as cursor:
+                region_ids = [zone["id"] for zone in EQ_CATALOG_REGIONS]
+                if not region_ids:
+                    return []
+                cursor.execute("""
+                    WITH requested AS (
+                        SELECT region_id, ord::integer AS ord
+                        FROM unnest(%s::text[]) WITH ORDINALITY AS r(region_id, ord)
+                    )
+                    SELECT
+                        r.region_id,
+                        MAX(c.magnitude) FILTER (WHERE
+                            c.magnitude IS NOT NULL AND c.occurred_at IS NOT NULL
+                            AND (
+                                ABS(date_part('doy', c.occurred_at)::int - %s) <= %s
+                                OR 365 - ABS(date_part('doy', c.occurred_at)::int - %s) <= %s
+                            )
+                        ) AS season_max_mag,
+                        COUNT(c.catalog_id) FILTER (WHERE
+                            c.magnitude IS NOT NULL AND c.occurred_at IS NOT NULL
+                            AND (
+                                ABS(date_part('doy', c.occurred_at)::int - %s) <= %s
+                                OR 365 - ABS(date_part('doy', c.occurred_at)::int - %s) <= %s
+                            )
+                        ) AS season_count,
+                        COUNT(c.catalog_id) AS total_count
+                    FROM requested r
+                    LEFT JOIN earthquake_catalog c ON c.region_id = r.region_id
+                    GROUP BY r.region_id, r.ord
+                    ORDER BY r.ord;
+                """, (
+                    region_ids,
+                    now_doy, EQ_INTEL_HIST_WINDOW_DAYS, now_doy, EQ_INTEL_HIST_WINDOW_DAYS,
+                    now_doy, EQ_INTEL_HIST_WINDOW_DAYS, now_doy, EQ_INTEL_HIST_WINDOW_DAYS,
+                ))
+                values_by_region = {
+                    row[0]: (row[1], int(row[2] or 0), int(row[3] or 0))
+                    for row in cursor.fetchall()
+                }
                 for zone in EQ_CATALOG_REGIONS:
-                    cursor.execute("""
-                        SELECT COALESCE(MAX(magnitude), NULL), COUNT(*)
-                        FROM earthquake_catalog
-                        WHERE region_id = %s AND magnitude IS NOT NULL
-                          AND occurred_at IS NOT NULL
-                          AND (
-                                (date_part('doy', occurred_at)::int - %s + 365) %% 365 <= %s
-                             OR (date_part('doy', occurred_at)::int - %s + 365) %% 365 >= 365 - %s
-                          );
-                    """, (zone["id"], now_doy, EQ_INTEL_HIST_WINDOW_DAYS, now_doy, EQ_INTEL_HIST_WINDOW_DAYS))
-                    mx, cnt = cursor.fetchone()
-                    cursor.execute("SELECT COUNT(*) FROM earthquake_catalog WHERE region_id = %s;", (zone["id"],))
-                    total = cursor.fetchone()[0]
+                    mx, cnt, total = values_by_region.get(zone["id"], (None, 0, 0))
                     out.append({
                         "id": zone["id"], "ar": zone["ar"], "en": zone["en"],
-                        "season_max_mag": mx,
-                        "season_count": int(cnt or 0),
-                        "total_count": int(total or 0),
+                        "season_max_mag": mx, "season_count": cnt, "total_count": total,
                     })
         finally:
             connection.close()
     except Exception as e:
         print(f"eq catalog baseline failed: {e}")
     return out
+
+
+
+
+def _eq_catalog_rows_from_usgs_features(features, region_id):
+    """Normalize a USGS GeoJSON feature batch into ordered earthquake_catalog rows."""
+    rows = []
+    for feature in features or []:
+        if not isinstance(feature, dict):
+            continue
+        props = feature.get("properties") or {}
+        geom = feature.get("geometry") or {}
+        coords = geom.get("coordinates") or [None, None, None]
+        lon, lat, depth = (list(coords) + [None, None, None])[:3]
+        external_id = str(feature.get("id") or props.get("code") or "").strip()
+        timestamp_ms = props.get("time")
+        if not external_id or timestamp_ms is None or lat is None:
+            continue
+        try:
+            occurred_at = datetime.fromtimestamp(
+                float(timestamp_ms) / 1000.0, tz=ZoneInfo("UTC")
+            ).astimezone(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
+        except Exception:
+            continue
+        rows.append((
+            external_id[:160],
+            occurred_at,
+            props.get("mag"),
+            depth,
+            (props.get("place") or "")[:240] or None,
+            lat,
+            lon,
+            region_id,
+        ))
+    return rows
+
+
+def _eq_catalog_insert_rows(cursor, rows):
+    """Insert a normalized catalog batch with stable order and exact conflict-aware count."""
+    if not rows:
+        return 0
+
+    external_ids, occurred_at, magnitudes, depths, places, latitudes, longitudes, regions = zip(*rows)
+    cursor.execute("""
+        WITH incoming AS (
+            SELECT ord::integer AS ord, external_id, occurred_at, magnitude,
+                   depth_km, place, latitude, longitude, region_id
+            FROM unnest(
+                %s::text[],
+                %s::timestamp[],
+                %s::double precision[],
+                %s::double precision[],
+                %s::text[],
+                %s::double precision[],
+                %s::double precision[],
+                %s::text[]
+            ) WITH ORDINALITY AS item(
+                external_id, occurred_at, magnitude, depth_km, place,
+                latitude, longitude, region_id, ord
+            )
+        )
+        INSERT INTO earthquake_catalog
+            (source, external_id, occurred_at, magnitude, depth_km,
+             place, latitude, longitude, region_id)
+        SELECT 'usgs', external_id, occurred_at, magnitude, depth_km,
+               place, latitude, longitude, region_id
+        FROM incoming
+        ORDER BY ord
+        ON CONFLICT (source, external_id) DO NOTHING
+        RETURNING external_id;
+    """, (
+        list(external_ids),
+        list(occurred_at),
+        [float(value) if value is not None else None for value in magnitudes],
+        [float(value) if value is not None else None for value in depths],
+        list(places),
+        [float(value) if value is not None else None for value in latitudes],
+        [float(value) if value is not None else None for value in longitudes],
+        list(regions),
+    ))
+    # RETURNING counts only actually inserted rows, including conflicts and in-batch duplicates.
+    return len(cursor.fetchall())
 
 
 def _eq_world_backfill_core(now_cairo):
@@ -11254,16 +12106,16 @@ def _eq_world_backfill_core(now_cairo):
         connection = get_connection()
         try:
             with connection.cursor() as cursor:
+                year_windows = []
                 for year_offset in range(EQ_INTEL_HIST_YEARS):
                     year_start = start_date.replace(year=start_date.year + year_offset)
-                    year_end = year_start.replace(year=year_start.year + 1)
                     if year_start > now_cairo:
                         break
-                    cursor.execute(
-                        "SELECT 1 FROM earthquake_catalog WHERE region_id='world' AND occurred_at >= %s AND occurred_at < %s LIMIT 1;",
-                        (year_start, min(year_end, now_cairo)),
-                    )
-                    if cursor.fetchone():
+                    year_end = year_start.replace(year=year_start.year + 1)
+                    year_windows.append((year_start, min(year_end, now_cairo)))
+                filled_year_indexes = _eq_world_filled_year_windows(cursor, year_windows)
+                for year_offset, (year_start, year_end_eff) in enumerate(year_windows):
+                    if year_offset in filled_year_indexes:
                         continue  # هذه السنة معبأة مسبقاً
                     try:
                         resp = _requests.get(
@@ -11271,7 +12123,7 @@ def _eq_world_backfill_core(now_cairo):
                             params={
                                 "format": "geojson",
                                 "starttime": year_start.date().isoformat(),
-                                "endtime": min(year_end, now_cairo).date().isoformat(),
+                                "endtime": year_end_eff.date().isoformat(),
                                 "minmagnitude": EQ_CATALOG_MINMAG,
                                 "orderby": "time",
                                 "limit": 20000,
@@ -11283,30 +12135,8 @@ def _eq_world_backfill_core(now_cairo):
                             err = f"year {year_start.year}: HTTP {resp.status_code}"
                             continue
                         features = (resp.json() or {}).get("features", []) or []
-                        for f in features:
-                            props = (f or {}).get("properties") or {}
-                            geom = (f or {}).get("geometry") or {}
-                            coords = (geom.get("coordinates") or [None, None, None])
-                            lon, lat, depth = (list(coords) + [None, None, None])[:3]
-                            ext = str(f.get("id") or props.get("code") or "").strip()
-                            t_ms = props.get("time")
-                            if not ext or t_ms is None or lat is None:
-                                continue
-                            try:
-                                occ = datetime.fromtimestamp(float(t_ms) / 1000.0, tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
-                            except Exception:
-                                continue
-                            cursor.execute("""
-                                INSERT INTO earthquake_catalog
-                                    (source, external_id, occurred_at, magnitude, depth_km,
-                                     place, latitude, longitude, region_id)
-                                VALUES ('usgs', %s, %s, %s, %s, %s, %s, %s, 'world')
-                                ON CONFLICT (source, external_id) DO NOTHING;
-                            """, (
-                                ext[:160], occ, props.get("mag"), depth,
-                                (props.get("place") or "")[:240] or None, lat, lon,
-                            ))
-                            inserted_total += cursor.rowcount
+                        rows = _eq_catalog_rows_from_usgs_features(features, "world")
+                        inserted_total += _eq_catalog_insert_rows(cursor, rows)
                         connection.commit()
                     except Exception as ye:
                         err = f"year {year_start.year}: {str(ye)[:100]}"
@@ -11411,30 +12241,8 @@ def backfill_earthquake_catalog(
             inserted = 0
             try:
                 with conn2.cursor() as cur2:
-                    for f in features:
-                        props = (f or {}).get("properties") or {}
-                        geom = (f or {}).get("geometry") or {}
-                        coords = (geom.get("coordinates") or [None, None, None])
-                        lon, lat, depth = (list(coords) + [None, None, None])[:3]
-                        ext = str(f.get("id") or props.get("code") or "").strip()
-                        t_ms = props.get("time")
-                        if not ext or t_ms is None or lat is None:
-                            continue
-                        try:
-                            occ = datetime.fromtimestamp(float(t_ms) / 1000.0, tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Africa/Cairo")).replace(tzinfo=None)
-                        except Exception:
-                            continue
-                        cur2.execute("""
-                            INSERT INTO earthquake_catalog
-                                (source, external_id, occurred_at, magnitude, depth_km,
-                                 place, latitude, longitude, region_id)
-                            VALUES ('usgs', %s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (source, external_id) DO NOTHING;
-                        """, (
-                            ext[:160], occ, props.get("mag"), depth,
-                            (props.get("place") or "")[:240] or None, lat, lon, zone["id"],
-                        ))
-                        inserted += cur2.rowcount
+                    rows = _eq_catalog_rows_from_usgs_features(features, zone["id"])
+                    inserted = _eq_catalog_insert_rows(cur2, rows)
                 conn2.commit()
             except Exception as e:
                 conn2.rollback()
@@ -12446,10 +13254,20 @@ def ingest_weather_intel(
 
             # 6. Insert assessments
             if payload.assessments:
+                assessment_rows = []
                 for a in payload.assessments:
                     loc_id = a.get("location_id")
                     snap_id = a.get("forecast_snapshot_id") or loc_snap_map.get(loc_id)
-                    cursor.execute("""
+                    assessment_rows.append((
+                        run_id, loc_id, a.get("target_date", payload.target_date), snap_id,
+                        json.dumps(a.get("anomalies")) if a.get("anomalies") else None,
+                        json.dumps(a.get("hazards")) if a.get("hazards") else None,
+                        a.get("ai_assessment"),
+                        json.dumps(a.get("ai_assessment_json")) if a.get("ai_assessment_json") else None,
+                        a.get("ai_model"), a.get("ai_status", "skipped"), a.get("ai_error"),
+                    ))
+                if assessment_rows:
+                    cursor.executemany("""
                         INSERT INTO weather_assessments
                         (weather_run_id, location_id, target_date, forecast_snapshot_id,
                          anomalies, hazards, ai_assessment, ai_assessment_json, ai_model,
@@ -12464,19 +13282,7 @@ def ingest_weather_intel(
                             ai_model = EXCLUDED.ai_model,
                             ai_status = EXCLUDED.ai_status,
                             ai_error = EXCLUDED.ai_error
-                    """, (
-                        run_id,
-                        loc_id,
-                        a.get("target_date", payload.target_date),
-                        snap_id,
-                        json.dumps(a.get("anomalies")) if a.get("anomalies") else None,
-                        json.dumps(a.get("hazards")) if a.get("hazards") else None,
-                        a.get("ai_assessment"),
-                        json.dumps(a.get("ai_assessment_json")) if a.get("ai_assessment_json") else None,
-                        a.get("ai_model"),
-                        a.get("ai_status", "skipped"),
-                        a.get("ai_error")
-                    ))
+                    """, assessment_rows)
 
             create_audit_log(
                 cursor,
@@ -13494,54 +14300,45 @@ def _wireless_validate_device(d):
 
 
 def _wireless_inventory_calc(cursor):
-    """TETRA = أجهزة MOTOROLA. out = الأجهزة في تسليمات بحالة 'مسلَّم'."""
+    """TETRA = أجهزة MOTOROLA. اقرأ المخزون والمسلَّم والمرتجع باستعلام تجميعي واحد."""
+    cursor.execute("""
+        WITH requested(ord, device_type, form_type) AS (
+            VALUES (1, 'TETRA', 'MOTOROLA'), (2, 'HUAWEI', 'HUAWEI')
+        ),
+        delivery_counts AS (
+            SELECT d.device_type,
+                   COUNT(*) FILTER (WHERE del.status = 'مسلَّم') AS out_count,
+                   COUNT(*) FILTER (WHERE del.status = 'مُرجَع') AS returned_count
+            FROM wireless_delivery_devices d
+            JOIN wireless_deliveries del ON del.delivery_id = d.delivery_id
+            WHERE d.device_type IN ('MOTOROLA', 'HUAWEI')
+            GROUP BY d.device_type
+        )
+        SELECT r.device_type, COALESCE(inv.total_count, 16) AS total_count,
+               COALESCE(dc.out_count, 0) AS out_count,
+               COALESCE(dc.returned_count, 0) AS returned_count
+        FROM requested r
+        LEFT JOIN wireless_inventory inv ON inv.device_type = r.device_type
+        LEFT JOIN delivery_counts dc ON dc.device_type = r.form_type
+        ORDER BY r.ord;
+    """)
     out = {}
-    for dtype, form_type in (("TETRA", "MOTOROLA"), ("HUAWEI", "HUAWEI")):
-        cursor.execute("SELECT total_count FROM wireless_inventory WHERE device_type = %s;", (dtype,))
-        row = cursor.fetchone()
-        total = int(row[0]) if row else 16
-        cursor.execute("""
-            SELECT COUNT(*) FROM wireless_delivery_devices d
-            JOIN wireless_deliveries del ON del.delivery_id = d.delivery_id
-            WHERE d.device_type = %s AND del.status = 'مسلَّم';
-        """, (form_type,))
-        out_count = int(cursor.fetchone()[0] or 0)
-        cursor.execute("""
-            SELECT COUNT(*) FROM wireless_delivery_devices d
-            JOIN wireless_deliveries del ON del.delivery_id = d.delivery_id
-            WHERE d.device_type = %s AND del.status = 'مُرجَع';
-        """, (form_type,))
-        returned = int(cursor.fetchone()[0] or 0)
+    for dtype, total, out_count, returned in cursor.fetchall():
+        total = int(total or 0)
         out[dtype] = {
             "total": total,
-            "out": out_count,
-            "remaining": max(0, total - out_count),
-            "returned": returned,
+            "out": int(out_count or 0),
+            "remaining": max(0, total - int(out_count or 0)),
+            "returned": int(returned or 0),
         }
     return out
 
 
-def _wireless_delivery_dict(cursor, row):
-    delivery_id = row[0]
-    cursor.execute("""
-        SELECT device_row_id, device_type, device_serial, accessories,
-               device_condition, device_notes
-        FROM wireless_delivery_devices
-        WHERE delivery_id = %s
-        ORDER BY device_row_id;
-    """, (delivery_id,))
-    devices = [{
-        "device_row_id": r[0],
-        "device_type": r[1] or "",
-        "device_serial": r[2] or "",
-        "accessories": r[3] or "",
-        "device_condition": r[4] or "سليم",
-        "device_notes": r[5] or "",
-    } for r in cursor.fetchall()]
+def _wireless_delivery_payload(row, devices):
     motorola_count = sum(1 for d in devices if d["device_type"] == "MOTOROLA")
     huawei_count = sum(1 for d in devices if d["device_type"] == "HUAWEI")
     return {
-        "delivery_id": delivery_id,
+        "delivery_id": row[0],
         "delivery_code": row[1] or "",
         "full_name": row[2] or "",
         "employee_number": row[3] or "",
@@ -13562,6 +14359,50 @@ def _wireless_delivery_dict(cursor, row):
         "motorola_count": motorola_count,
         "huawei_count": huawei_count,
     }
+
+
+def _wireless_device_dict(row):
+    return {
+        "device_row_id": row[0],
+        "device_type": row[1] or "",
+        "device_serial": row[2] or "",
+        "accessories": row[3] or "",
+        "device_condition": row[4] or "سليم",
+        "device_notes": row[5] or "",
+    }
+
+
+def _wireless_delivery_dict(cursor, row):
+    cursor.execute("""
+        SELECT device_row_id, device_type, device_serial, accessories,
+               device_condition, device_notes
+        FROM wireless_delivery_devices
+        WHERE delivery_id = %s
+        ORDER BY device_row_id;
+    """, (row[0],))
+    return _wireless_delivery_payload(row, [_wireless_device_dict(r) for r in cursor.fetchall()])
+
+
+def _wireless_delivery_dicts(cursor, rows):
+    """Build delivery list payloads after one query for all child device rows."""
+    rows = list(rows or [])
+    if not rows:
+        return []
+    delivery_ids = [row[0] for row in rows]
+    cursor.execute("""
+        SELECT delivery_id, device_row_id, device_type, device_serial, accessories,
+               device_condition, device_notes
+        FROM wireless_delivery_devices
+        WHERE delivery_id = ANY(%s::int[])
+        ORDER BY delivery_id, device_row_id;
+    """, (delivery_ids,))
+    devices_by_delivery = {delivery_id: [] for delivery_id in delivery_ids}
+    for item in cursor.fetchall():
+        devices_by_delivery.setdefault(item[0], []).append(_wireless_device_dict(item[1:]))
+    return [
+        _wireless_delivery_payload(row, devices_by_delivery.get(row[0], []))
+        for row in rows
+    ]
 
 
 _WIRELESS_DELIVERY_SELECT = """
@@ -13610,7 +14451,7 @@ def get_wireless_handover(
                 f"{_WIRELESS_DELIVERY_SELECT} {where_sql} ORDER BY created_at DESC LIMIT %s;",
                 (*params, limit),
             )
-            rows = [_wireless_delivery_dict(cursor, r) for r in cursor.fetchall()]
+            rows = _wireless_delivery_dicts(cursor, cursor.fetchall())
 
             return {"inventory": inventory, "fixed_text": fixed_text, "deliveries": rows}
     except HTTPException:
@@ -13678,21 +14519,18 @@ def create_wireless_delivery(
             )
             new_id = cursor.fetchone()[0]
 
-            for d in devices:
-                cursor.execute(
-                    """
+            device_rows = [
+                (new_id, d.device_type, _wclean(d.device_serial, 100),
+                 _wclean(d.accessories, 1000), d.device_condition,
+                 _wclean(d.device_notes, 1000))
+                for d in devices
+            ]
+            if device_rows:
+                cursor.executemany("""
                     INSERT INTO wireless_delivery_devices
                         (delivery_id, device_type, device_serial, accessories, device_condition, device_notes)
                     VALUES (%s, %s, %s, %s, %s, %s);
-                    """,
-                    (
-                        new_id, d.device_type,
-                        _wclean(d.device_serial, 100),
-                        _wclean(d.accessories, 1000),
-                        d.device_condition,
-                        _wclean(d.device_notes, 1000),
-                    ),
-                )
+                """, device_rows)
 
             try:
                 create_audit_log(
@@ -14021,21 +14859,18 @@ def update_wireless_delivery(
 
             if new_devices is not None:
                 cursor.execute("DELETE FROM wireless_delivery_devices WHERE delivery_id = %s;", (delivery_id,))
-                for d in new_devices:
-                    cursor.execute(
-                        """
+                device_rows = [
+                    (delivery_id, d.device_type, _wclean(d.device_serial, 100),
+                     _wclean(d.accessories, 1000), d.device_condition,
+                     _wclean(d.device_notes, 1000))
+                    for d in new_devices
+                ]
+                if device_rows:
+                    cursor.executemany("""
                         INSERT INTO wireless_delivery_devices
                             (delivery_id, device_type, device_serial, accessories, device_condition, device_notes)
                         VALUES (%s, %s, %s, %s, %s, %s);
-                        """,
-                        (
-                            delivery_id, d.device_type,
-                            _wclean(d.device_serial, 100),
-                            _wclean(d.accessories, 1000),
-                            d.device_condition,
-                            _wclean(d.device_notes, 1000),
-                        ),
-                    )
+                    """, device_rows)
 
             try:
                 create_audit_log(

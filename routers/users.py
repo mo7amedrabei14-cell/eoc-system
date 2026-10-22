@@ -6,6 +6,16 @@ import psycopg
 from dependencies import get_db, RequirePermission
 from auth import password_hash
 
+
+def _insert_user_branch_links(cursor, user_id: int, branch_ids: list[int]) -> None:
+    """Insert user/branch links in input order through one driver batch."""
+    rows = [(user_id, branch_id) for branch_id in (branch_ids or [])]
+    if rows:
+        cursor.executemany(
+            "INSERT INTO user_branches (user_id, branch_id) VALUES (%s, %s);",
+            rows,
+        )
+
 # إعداد قسم المستخدمين
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -69,8 +79,7 @@ def create_user(
         
         cursor.execute("INSERT INTO user_roles (user_id, role_id) VALUES (%s, %s);", (user_id, data.role_id))
         
-        for branch_id in data.branch_ids:
-            cursor.execute("INSERT INTO user_branches (user_id, branch_id) VALUES (%s, %s);", (user_id, branch_id))
+        _insert_user_branch_links(cursor, user_id, data.branch_ids)
             
     return {"message": "User created successfully", "user_id": user_id}
 
@@ -177,7 +186,6 @@ def update_user_branches(
                 raise HTTPException(status_code=400, detail=f"Invalid branch IDs: {invalid}")
                 
         cursor.execute("DELETE FROM user_branches WHERE user_id = %s;", (user_id,))
-        for branch_id in data.branch_ids:
-            cursor.execute("INSERT INTO user_branches (user_id, branch_id) VALUES (%s, %s);", (user_id, branch_id))
+        _insert_user_branch_links(cursor, user_id, data.branch_ids)
             
     return {"message": "User branches updated successfully", "user_id": user_id, "branch_ids": data.branch_ids}
