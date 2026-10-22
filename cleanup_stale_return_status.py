@@ -61,6 +61,14 @@ def main() -> None:
                 SET return_status = 'في الانتظار'
                 WHERE p.participant_id = ANY(%s)
                   AND p.return_status = 'مازال بالمهمة'
+                  AND p.membership_number IS NOT NULL
+                  AND TRIM(p.membership_number) <> ''
+                  AND EXISTS (
+                      SELECT 1
+                      FROM missions m
+                      WHERE m.mission_id = p.mission_id
+                        AND m.status NOT IN ('Draft', 'Cancelled', 'Returned', 'Completed')
+                  )
                   AND NOT EXISTS (
                       SELECT 1
                       FROM mission_participant_sessions s
