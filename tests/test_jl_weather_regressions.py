@@ -21,7 +21,7 @@ def _participant():
 
 def _run_join_leave_event(actor_id, creator_id):
     state = {}
-    emitted = {"event": 1, "created_at": dt.datetime(2026, 10, 22, 10, 0)}
+    emitted = (1, dt.datetime(2026, 10, 22, 10, 0))
     with (
         patch.object(main, "create_audit_log"),
         patch.object(main, "fmt_dt", return_value="10:00"),
