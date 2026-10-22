@@ -2103,15 +2103,16 @@ def test_mission_route_write_batch():
             NEW._sync_mission_routes(cur, 700, routes)
             calls = counter.n
             cur.execute("""
-                SELECT itinerary_id, group_title, route_from, route_to
+                SELECT itinerary_id, group_title, route_from, route_to,
+                       departure_date, departure_time, arrival_date, arrival_time
                 FROM mission_itineraries WHERE mission_id=700 ORDER BY itinerary_id
             """)
             stored = cur.fetchall()
-            ok("mission route updates preserve IDs, field values and insert order",
+            ok("mission routes preserve IDs, locations, dates, times and insert order",
                stored == [
-                   (1, "Group A updated", "A2", "B2"),
-                   (2, "Group B updated", "B2", "C2"),
-                   (3, "Group C", "C", "D"),
+                   (1, "Group A updated", "A2", "B2", "2026-10-20", "08:30", "2026-10-20", "09:30"),
+                   (2, "Group B updated", "B2", "C2", "2026-10-20", "09:30", "2026-10-20", "10:30"),
+                   (3, "Group C", "C", "D", "2026-10-20", "10:30", "2026-10-20", "11:30"),
                ], f"stored={stored}")
             ok("consecutive route updates batch before RETURNING insert",
                calls == 3, f"driver calls={calls}")
