@@ -79,4 +79,4 @@ jobs:
       - name: Run database-backed equivalence and query-count regression suite
         run: python test_n1_query_optimizations.py
       - name: Run join-leave notification and weather batch regressions
-        run: python -m pytest -q tests/test_jl_weather_regressions.py
+        run: python -m pytest -q tests/test_jl_weather_regressions.py tests/test_cleanup_stale_return_status.py
