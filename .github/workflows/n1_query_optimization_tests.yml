@@ -65,19 +65,16 @@ jobs:
               "smoke_test_", "tools/tests/", "frontend/src/",
           )
           excluded_suffixes = ("_test.py", "_probe.py")
-          excluded_exact = {"cleanup_stale_return_status.py"}
           paths = []
           for name in tracked:
               path = pathlib.Path(name)
-              if (name in excluded_exact or name.startswith(excluded_prefixes)
-                      or name.endswith(excluded_suffixes)):
+              if (name.startswith(excluded_prefixes) or name.endswith(excluded_suffixes)):
                   continue
               paths.append(path)
           for path in paths:
               py_compile.compile(str(path), doraise=True)
           py_compile.compile("test_n1_query_optimizations.py", doraise=True)
           print(f"Compiled {len(paths)} application/maintenance modules plus the N+1 test suite.")
-          print("Excluded the documented pre-existing cleanup_stale_return_status.py syntax defect.")
           PY
       - name: Run database-backed equivalence and query-count regression suite
         run: python test_n1_query_optimizations.py
