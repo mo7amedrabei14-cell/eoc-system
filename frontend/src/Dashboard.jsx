@@ -64,6 +64,10 @@ function SidebarStateSlot({ children }) {
   return children(useSidebarState());
 }
 
+function PortalWhen({ enabled, children }) {
+  return enabled ? createPortal(children, document.body) : children;
+}
+
 // 📤 الطابور المحلي + أرشيف المرفوضات + مخزن الطقس المعلّق:
 //    المنطق ده كله مطلوع لملف نقي قابل للاختبار — frontend/src/outbox.js
 //    واختباراته في src/__tests__/outbox.test.js (وأهمها: 401 لا يمسح الاستمارة)
@@ -7676,9 +7680,10 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
       </div>
       )}
 
-      {isTableExpanded && <div className="fixed inset-0 bg-[var(--bg-deep)]/85 backdrop-blur-sm z-[140]" onClick={() => setIsTableExpanded(false)}></div>}
+      <PortalWhen enabled={isTableExpanded}>
+      {isTableExpanded && <div className="fixed inset-0 bg-[var(--bg-deep)]/85 backdrop-blur-sm z-[999]" onClick={() => setIsTableExpanded(false)}></div>}
 
-      <div className={isTableExpanded ? `fixed inset-4 z-[150] card-surface rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up ${isSidebarOpen ? 'md:right-10 md:left-10' : 'md:right-20 md:left-10'}` : "table-shell flex-1 flex flex-col overflow-hidden relative"}>
+      <div className={isTableExpanded ? "fixed inset-4 z-[1000] card-surface rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up" : "table-shell flex-1 flex flex-col overflow-hidden relative"}>
 
         {isTableExpanded && (
           <div className="p-4 border-b border-[var(--border)] bg-[var(--surface-2)] flex justify-between items-center shrink-0">
@@ -7811,6 +7816,8 @@ const addCustomItinerary = () => setCustomItineraries(prev => (
         </table>
         </div>
       </div>
+
+      </PortalWhen>
 
       {isModalOpen && createPortal(
         <div key={currentMissionData ? `edit-${currentMissionData.mission_id}` : 'new'} className="modal-backdrop fixed inset-0 flex items-center justify-center z-[1000] p-4">
