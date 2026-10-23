@@ -21,7 +21,7 @@ jobs:
         image: postgres:18-alpine
         env:
           POSTGRES_USER: eoc_test
-          POSTGRES_PASSWORD: eoc_test
+          POSTGRES_PASSWORD: ${{ secrets.N1_TEST_DB_PASSWORD }}
           POSTGRES_DB: eoc_test
         ports:
           - 5432:5432
@@ -31,8 +31,8 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      TEST_DATABASE_URL: postgresql://eoc_test:eoc_test@127.0.0.1:5432/eoc_test
-      DATABASE_URL: postgresql://eoc_test:eoc_test@127.0.0.1:5432/eoc_test
+      TEST_DATABASE_URL: postgresql://eoc_test:${{ secrets.N1_TEST_DB_PASSWORD }}@127.0.0.1:5432/eoc_test
+      DATABASE_URL: postgresql://eoc_test:${{ secrets.N1_TEST_DB_PASSWORD }}@127.0.0.1:5432/eoc_test
       JWT_SECRET: n1-test-only-secret-not-for-production
       EOC_EQ_LOCAL_ENGINE: "0"
       EOC_EQ_WORLD_BACKFILL: "0"

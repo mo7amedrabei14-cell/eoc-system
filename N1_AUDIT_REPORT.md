@@ -108,13 +108,13 @@ From PowerShell at the repository root, using only a disposable database:
 
 ```powershell
 docker compose -f docker-compose.n1-test.yml up -d --wait
-$env:TEST_DATABASE_URL = "postgresql://eoc_test:eoc_test@127.0.0.1:55432/eoc_test"
+$env:TEST_DATABASE_URL = "postgresql://eoc_test:<REDACTED>@127.0.0.1:55432/eoc_test"
 python -m py_compile test_n1_query_optimizations.py
 python test_n1_query_optimizations.py
 docker compose -f docker-compose.n1-test.yml down -v
 ```
 
-Do not point `TEST_DATABASE_URL` at any existing EOC or production database. The fixtures truncate test tables.
+The `<REDACTED>` segment is the disposable `POSTGRES_PASSWORD` value defined in `docker-compose.n1-test.yml`; use that file as the source of the local-only test credential. Do not point `TEST_DATABASE_URL` at any existing EOC or production database. The fixtures truncate test tables.
 
 ## Release decision
 
