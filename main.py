@@ -44,6 +44,7 @@ from realtime import (
     resolve_mission_creator,
 )
 from db import get_connection
+from wireless_daily_reference import next_wireless_delivery_code
 from pwdlib import PasswordHash
 from routers import users, missions, volunteers, branches
 
@@ -983,6 +984,14 @@ def ensure_wireless_handover_schema():
                     device_condition  VARCHAR(20) NOT NULL DEFAULT 'سليم' CHECK (device_condition IN ('سليم','مستعمل','تالف')),
                     device_notes      TEXT,
                     created_at        TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
+                );
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS wireless_delivery_daily_counters (
+                    reference_date DATE PRIMARY KEY,
+                    last_number   INTEGER NOT NULL CHECK (last_number >= 1),
+                    updated_at    TIMESTAMP WITHOUT TIME ZONE NOT NULL
+                                  DEFAULT (now() AT TIME ZONE 'Africa/Cairo')
                 );
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_wireless_deliveries_created ON wireless_deliveries (created_at DESC);")
@@ -14490,9 +14499,7 @@ def create_wireless_delivery(
             _wireless_validate_device(d)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COALESCE(MAX(delivery_id), 0) + 1 FROM wireless_deliveries;")
-            next_id = int(cursor.fetchone()[0] or 1)
-            delivery_code = f"#WH-{next_id:05d}"
+            delivery_code = next_wireless_delivery_code(cursor, received_date)
 
             cursor.execute(
                 """
