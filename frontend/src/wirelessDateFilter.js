@@ -1,40 +1,48 @@
-// Date-aware visibility for the wireless handover register.
-// received_date is the delivery-to-recipient date; returned_at is when EOC received it back.
-export function wirelessDeliveryDateMatchesFilter(delivery, filterDate) {
+// Daily activity visibility for the wireless handover register.
+// Deliveries appear on their issue date; returned deliveries also appear on their return date.
+// Older, still-open handovers are available through the explicit carryover toggle.
+const isIsoDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+export function wirelessDeliveryDateMatchesFilter(delivery, filterDate, includeCarryover = false) {
   if (!filterDate) return true;
-
   const deliveryDate = String(delivery?.received_date ?? "").slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate) || deliveryDate > filterDate) {
-    return false;
-  }
-
-  // A delivered item stays visible from its delivery date until it is returned.
-  if (delivery?.status !== "مُرجَع") return true;
+  if (!isIsoDate(deliveryDate)) return false;
+  if (deliveryDate === filterDate) return true;
 
   const returnDate = String(delivery?.returned_at ?? "").slice(0, 10);
-  // Legacy returned records without a return timestamp cannot reliably be
-  // assigned to a later closure day, so keep them on their delivery date only.
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(returnDate)) {
-    return deliveryDate === filterDate;
-  }
+  if (delivery?.status === "مُرجَع" && isIsoDate(returnDate) && returnDate === filterDate) return true;
 
-  // Include the item through its return date; hide it on subsequent dates.
-  return returnDate >= filterDate;
+  return Boolean(includeCarryover && delivery?.status !== "مُرجَع" && deliveryDate < filterDate);
 }
 
 export function wirelessDeliveryStatusAtFilterDate(delivery, filterDate) {
   const currentStatus = String(delivery?.status || "مسلَّم");
   if (!filterDate || currentStatus !== "مُرجَع") return currentStatus;
-
   const returnDate = String(delivery?.returned_at ?? "").slice(0, 10);
-  // Before the recorded return date, the item was still checked out.
-  if (/^\d{4}-\d{2}-\d{2}$/.test(returnDate) && filterDate < returnDate) {
-    return "مسلَّم";
-  }
+  if (isIsoDate(returnDate) && filterDate < returnDate) return "مسلَّم";
   return currentStatus;
 }
 
 export function wirelessDeliveryReturnDate(delivery) {
   const value = String(delivery?.returned_at ?? "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+  return isIsoDate(value) ? value : "";
+}
+
+export function wirelessDeliveryDailyActivity(deliveries, activityDate, deviceType) {
+  if (!isIsoDate(String(activityDate || ""))) return { issued: 0, returned: 0 };
+  const storedType = deviceType === "TETRA" ? "MOTOROLA" : deviceType;
+  let issued = 0;
+  let returned = 0;
+  for (const delivery of Array.isArray(deliveries) ? deliveries : []) {
+    const devices = Array.isArray(delivery?.devices) ? delivery.devices : [];
+    const matchingDeviceCount = devices.reduce(
+      (count, device) => count + (device?.device_type === storedType ? 1 : 0),
+      0
+    );
+    if (!matchingDeviceCount) continue;
+    if (String(delivery?.received_date ?? "").slice(0, 10) === activityDate) issued += matchingDeviceCount;
+    const returnDate = String(delivery?.returned_at ?? "").slice(0, 10);
+    if (delivery?.status === "مُرجَع" && isIsoDate(returnDate) && returnDate === activityDate) returned += matchingDeviceCount;
+  }
+  return { issued, returned };
 }

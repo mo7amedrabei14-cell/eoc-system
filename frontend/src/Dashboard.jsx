@@ -26,7 +26,7 @@ import { captureFields, applyFieldsWhenReady } from './draftsStore';
 // الخاص: `const BASE` جوّه مكوّن سبق وسبّب `ReferenceError: BASE is not defined`
 // → React بيفكّ الشجرة كلها (مفيش error boundary) → صفحة بيضاء.
 import { BASE } from './apiBase';
-import { wirelessDeliveryDateMatchesFilter, wirelessDeliveryStatusAtFilterDate, wirelessDeliveryReturnDate } from './wirelessDateFilter';
+import { wirelessDeliveryDateMatchesFilter, wirelessDeliveryStatusAtFilterDate, wirelessDeliveryReturnDate, wirelessDeliveryDailyActivity } from './wirelessDateFilter';
 import { buildWirelessPrintTitle } from './wirelessPrintTitle';
 import { matchesWeatherPhenomenon, shouldPreserveWeatherSnapshot, WEATHER_FILTER_OPTIONS } from './weatherIntelFilters';
 // ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
@@ -9905,6 +9905,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [recipientSearch, setRecipientSearch] = useState('');
   const [exportingRecipients, setExportingRecipients] = useState(false);
   const [filterDate, setFilterDate] = useState(() => todayFileDate());
+  // Daily register defaults to today's activity; prior open loans stay accessible separately.
+  const [showCarryoverDeliveries, setShowCarryoverDeliveries] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showReturn, setShowReturn] = useState(false);
@@ -9915,11 +9917,25 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const [printMode, setPrintMode] = useState('duplex'); // 'single' | 'duplex' — افتراضي: وجه وضهر
   const isPrintingRef = useRef(false); // يمنع الضغط المزدوج على "طباعة الآن"
   useEffect(() => () => { isPrintingRef.current = false; }, []); // تنظيف عند الخروج
-  // 📅 عرض حالة التسليم كما كانت في اليوم المحدد: يظل المفتوح ظاهراً بعد يوم التسليم،
-  // ويظهر المُستَلَم حتى يوم استلامه فقط. هذا الفلتر يحكم الجدول وExcel والطباعة معاً.
+  // 📅 سجل اليوم يعرض حركة التسليم في يومها وحركة الاستلام في يوم الإرجاع فقط.
+  // العهدة المفتوحة من الأيام السابقة منفصلة حتى لا يتراكم عداد اليوم ولا تختفي العهدة فعلياً.
+  const dailyActivityDate = filterDate || todayFileDate();
+  const dailyDeliveryCount = filterDate
+    ? deliveries.filter(d => wirelessDeliveryDateMatchesFilter(d, filterDate)).length
+    : deliveries.length;
+  const carryoverDeliveries = filterDate
+    ? deliveries.filter(d =>
+        String(d.received_date || '').slice(0, 10) < filterDate &&
+        d.status !== 'مُرجَع'
+      )
+    : [];
   const filteredDeliveries = filterDate
-    ? deliveries.filter(d => wirelessDeliveryDateMatchesFilter(d, filterDate))
+    ? deliveries.filter(d => wirelessDeliveryDateMatchesFilter(d, filterDate, showCarryoverDeliveries))
     : deliveries;
+  const dailyInventoryActivity = useMemo(() => ({
+    TETRA: wirelessDeliveryDailyActivity(deliveries, dailyActivityDate, 'TETRA'),
+    HUAWEI: wirelessDeliveryDailyActivity(deliveries, dailyActivityDate, 'HUAWEI'),
+  }), [deliveries, dailyActivityDate]);
 
   // 📊 تنزيل السجل الشامل — المالك فقط — صف لكل جهاز داخل كل تسليم
   const handleExportFullLog = async () => {
@@ -10250,10 +10266,15 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
                   <div className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] font-bold">{T('الإجمالي', 'Total')}</div>
                   {isEditing ? <input type="number" min="0" value={inventoryDraft} onChange={e => setInventoryDraft(e.target.value)} className="field w-full text-center !py-1 mt-1" autoFocus /> : <div className="text-2xl font-black tabular-nums mt-1">{info.total}</div>}
                 </div>
-                <div className="bg-[var(--warn-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--warn)] font-bold">{T('خارج', 'Out')}</div><div className="text-2xl font-black tabular-nums text-[var(--warn)] mt-1">{info.out}</div></div>
+                <div className="bg-[var(--warn-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--warn)] font-bold">{T('تسليم اليوم', 'Issued today')}</div><div className="text-2xl font-black tabular-nums text-[var(--warn)] mt-1">{dailyInventoryActivity[dt]?.issued || 0}</div></div>
                 <div className="bg-[var(--ok-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--ok)] font-bold">{T('متبقي', 'Remaining')}</div><div className="text-2xl font-black tabular-nums text-[var(--ok)] mt-1">{info.remaining}</div></div>
-                <div className="bg-[var(--info-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--info)] font-bold">{T('مُرجَع', 'Returned')}</div><div className="text-2xl font-black tabular-nums text-[var(--info)] mt-1">{info.returned}</div></div>
+                <div className="bg-[var(--info-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--info)] font-bold">{T('استلام اليوم', 'Returned today')}</div><div className="text-2xl font-black tabular-nums text-[var(--info)] mt-1">{dailyInventoryActivity[dt]?.returned || 0}</div></div>
               </div>
+              <p className="text-xs text-[var(--muted)] mt-3">
+                {T('خارج المخزن حاليًا من جميع الأيام:', 'Currently outside inventory across all dates:')} <b className="font-mono">{info.out}</b>
+                <span className="mx-2">·</span>
+                {T('إجمالي المُرجع تاريخيًا:', 'All-time returned:')} <b className="font-mono">{info.returned}</b>
+              </p>
               {isEditing && (
                 <div className="flex gap-2 mt-3">
                   <button onClick={saveInventory} className="btn-primary flex-1 py-1.5 rounded-lg text-sm">{T('حفظ', 'Save')}</button>
@@ -10287,13 +10308,25 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
       {/* الجدول */}
       <div className="card-surface p-5 rounded-3xl border border-[var(--border)] overflow-hidden">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="font-bold text-lg">🗂️ {T(`السجل (${filteredDeliveries.length})`, `Register (${filteredDeliveries.length})`)}</h3>
+          <h3 className="font-bold text-lg">🗂️ {filterDate ? T(`السجل اليومي (${dailyDeliveryCount})`, `Daily register (${dailyDeliveryCount})`) : T(`السجل (${filteredDeliveries.length})`, `Register (${filteredDeliveries.length})`)}</h3>
           <div className="flex flex-wrap items-center gap-2">
             <SegDateField
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
               className="field !py-1.5 !px-3 w-auto"
             />
+            {filterDate && carryoverDeliveries.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowCarryoverDeliveries(value => !value)}
+                className={showCarryoverDeliveries ? "chip chip-active !py-1" : "chip !py-1"}
+                title={T('إظهار التسليمات المفتوحة من أيام سابقة دون احتسابها ضمن عداد اليوم', 'Show outstanding handovers from previous days without counting them as today activity')}
+              >
+                {showCarryoverDeliveries
+                  ? T(`إخفاء التسليمات السابقة (${carryoverDeliveries.length})`, `Hide prior handovers (${carryoverDeliveries.length})`)
+                  : T(`عرض التسليمات السابقة المفتوحة (${carryoverDeliveries.length})`, `Show prior open handovers (${carryoverDeliveries.length})`)}
+              </button>
+            )}
             {filterDate && (
               <button onClick={() => setFilterDate('')} className="chip chip-active !py-1">
                 {T('كل الأيام', 'All days')}
