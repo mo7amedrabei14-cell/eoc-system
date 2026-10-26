@@ -9882,8 +9882,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
 
   const [loading, setLoading] = useState(true);
   const [inventory, setInventory] = useState({
-    TETRA: { total: 16, out: 0, remaining: 16, returned: 0 },
-    HUAWEI: { total: 16, out: 0, remaining: 16, returned: 0 },
+    TETRA: { total: 16, out: 0, remaining: 16 },
+    HUAWEI: { total: 16, out: 0, remaining: 16 },
   });
   const [fixedText, setFixedText] = useState('');
   const [editingFixedText, setEditingFixedText] = useState(false);
@@ -10043,8 +10043,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
       const data = await res.json();
 
       const nextInventory = data.inventory || {
-        TETRA: { total: 16, out: 0, remaining: 16, returned: 0 },
-        HUAWEI: { total: 16, out: 0, remaining: 16, returned: 0 },
+        TETRA: { total: 16, out: 0, remaining: 16 },
+        HUAWEI: { total: 16, out: 0, remaining: 16 },
       };
       const nextFixedText = data.fixed_text || '';
       const nextDeliveries = Array.isArray(data.deliveries) ? data.deliveries : [];
@@ -10237,7 +10237,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
       {/* العدّادات */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {(['TETRA', 'HUAWEI']).map(dt => {
-          const info = inventory[dt] || { total: 16, out: 0, remaining: 16, returned: 0 };
+          const info = inventory[dt] || { total: 16, out: 0, remaining: 16 };
           const isEditing = editingInventory === dt;
           return (
             <div key={dt} className="card-surface p-5 rounded-3xl border border-[var(--border)]">
@@ -10245,14 +10245,13 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
                 <h3 className="font-bold text-lg">{dt === 'TETRA' ? 'TETRA (MOTOROLA)' : 'HUAWEI'}</h3>
                 {!isEditing && <button onClick={() => startEditInventory(dt)} className="btn-ghost px-3 py-1 rounded-lg text-xs">✏️ {T('الإجمالي', 'Total')}</button>}
               </div>
-              <div className="grid grid-cols-4 gap-3 text-center">
+              <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="bg-[var(--surface-3)] rounded-xl p-3">
                   <div className="text-[max(0.6875rem,9.5px)] text-[var(--muted)] font-bold">{T('الإجمالي', 'Total')}</div>
                   {isEditing ? <input type="number" min="0" value={inventoryDraft} onChange={e => setInventoryDraft(e.target.value)} className="field w-full text-center !py-1 mt-1" autoFocus /> : <div className="text-2xl font-black tabular-nums mt-1">{info.total}</div>}
                 </div>
                 <div className="bg-[var(--warn-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--warn)] font-bold">{T('خارج', 'Out')}</div><div className="text-2xl font-black tabular-nums text-[var(--warn)] mt-1">{info.out}</div></div>
                 <div className="bg-[var(--ok-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--ok)] font-bold">{T('متبقي', 'Remaining')}</div><div className="text-2xl font-black tabular-nums text-[var(--ok)] mt-1">{info.remaining}</div></div>
-                <div className="bg-[var(--info-soft)] rounded-xl p-3"><div className="text-[max(0.6875rem,9.5px)] text-[var(--info)] font-bold">{T('مُرجَع', 'Returned')}</div><div className="text-2xl font-black tabular-nums text-[var(--info)] mt-1">{info.returned}</div></div>
               </div>
               {isEditing && (
                 <div className="flex gap-2 mt-3">

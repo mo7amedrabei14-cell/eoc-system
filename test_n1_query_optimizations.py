@@ -1085,15 +1085,9 @@ def test_wireless_inventory_calc_batch():
                     WHERE d.device_type = %s AND del.status = 'مسلَّم';
                 """, (form_type,))
                 out_count = int(cur.fetchone()[0] or 0)
-                cur.execute("""
-                    SELECT COUNT(*) FROM wireless_delivery_devices d
-                    JOIN wireless_deliveries del ON del.delivery_id = d.delivery_id
-                    WHERE d.device_type = %s AND del.status = 'مُرجَع';
-                """, (form_type,))
-                returned = int(cur.fetchone()[0] or 0)
                 expected[dtype] = {
                     "total": total, "out": out_count,
-                    "remaining": max(0, total - out_count), "returned": returned,
+                    "remaining": max(0, total - out_count),
                 }
             old_queries = counter.n
             counter.reset()
@@ -1101,7 +1095,7 @@ def test_wireless_inventory_calc_batch():
             new_queries = counter.n
         ok("wireless inventory counts unchanged", expected == actual,
            f"expected={expected} actual={actual}")
-        ok("six summary reads become one SELECT", old_queries == 6 and new_queries == 1,
+        ok("four summary reads become one SELECT", old_queries == 4 and new_queries == 1,
            f"old={old_queries} new={new_queries}")
     except Exception as exc:
         ok("wireless inventory fixture completes", False, repr(exc))

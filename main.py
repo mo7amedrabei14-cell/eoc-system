@@ -14300,36 +14300,33 @@ def _wireless_validate_device(d):
 
 
 def _wireless_inventory_calc(cursor):
-    """TETRA = أجهزة MOTOROLA. اقرأ المخزون والمسلَّم والمرتجع باستعلام تجميعي واحد."""
+    """TETRA = أجهزة MOTOROLA. اقرأ المخزون والمسلَّم باستعلام تجميعي واحد."""
     cursor.execute("""
         WITH requested(ord, device_type, form_type) AS (
             VALUES (1, 'TETRA', 'MOTOROLA'), (2, 'HUAWEI', 'HUAWEI')
         ),
         delivery_counts AS (
             SELECT d.device_type,
-                   COUNT(*) FILTER (WHERE del.status = 'مسلَّم') AS out_count,
-                   COUNT(*) FILTER (WHERE del.status = 'مُرجَع') AS returned_count
+                   COUNT(*) FILTER (WHERE del.status = 'مسلَّم') AS out_count
             FROM wireless_delivery_devices d
             JOIN wireless_deliveries del ON del.delivery_id = d.delivery_id
             WHERE d.device_type IN ('MOTOROLA', 'HUAWEI')
             GROUP BY d.device_type
         )
         SELECT r.device_type, COALESCE(inv.total_count, 16) AS total_count,
-               COALESCE(dc.out_count, 0) AS out_count,
-               COALESCE(dc.returned_count, 0) AS returned_count
+               COALESCE(dc.out_count, 0) AS out_count
         FROM requested r
         LEFT JOIN wireless_inventory inv ON inv.device_type = r.device_type
         LEFT JOIN delivery_counts dc ON dc.device_type = r.form_type
         ORDER BY r.ord;
     """)
     out = {}
-    for dtype, total, out_count, returned in cursor.fetchall():
+    for dtype, total, out_count in cursor.fetchall():
         total = int(total or 0)
         out[dtype] = {
             "total": total,
             "out": int(out_count or 0),
             "remaining": max(0, total - int(out_count or 0)),
-            "returned": int(returned or 0),
         }
     return out
 
