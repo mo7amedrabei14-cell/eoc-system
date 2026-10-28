@@ -9963,22 +9963,39 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
 // ═══════════════════════════════════════════════════════════════════
 // نافذة الاستلام الجماعي
 // ═══════════════════════════════════════════════════════════════════
+function wirelessReturnDateInputValue() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+}
+
 function WirelessReturnModal({ show, delivery, onClose, onSaved, lang }) {
   const T = (ar, en) => (lang === 'ar' ? ar : en);
   const [notes, setNotes] = useState('');
+  const [returnDate, setReturnDate] = useState(() => wirelessReturnDateInputValue());
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { if (show) setNotes(''); }, [show]);
+  useEffect(() => {
+    if (show) {
+      setNotes('');
+      setReturnDate(wirelessReturnDateInputValue());
+    }
+  }, [show]);
 
   const handleConfirm = async () => {
-    if (saving || !delivery) return;
+    if (saving || !delivery || !returnDate) return;
     setSaving(true);
     try {
       const token = sessionStorage.getItem('access_token');
       const res = await fetch(`${BASE}/api/wireless-handover/${delivery.delivery_id}/return`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ return_notes: notes }),
+        body: JSON.stringify({ return_notes: notes, returned_date: returnDate }),
       });
       if (res.ok) { onSaved && onSaved(); onClose(); }
     } catch { /* network */ }
@@ -10001,12 +10018,27 @@ function WirelessReturnModal({ show, delivery, onClose, onSaved, lang }) {
       actions={
         <>
           <button type="button" className="sig-btn sig-btn-ghost" onClick={onClose} disabled={saving}>{T('إلغاء', 'Cancel')}</button>
-          <button type="button" className="sig-btn sig-btn-main" onClick={handleConfirm} disabled={saving}>
+          <button type="button" className="sig-btn sig-btn-main" onClick={handleConfirm} disabled={saving || !returnDate}>
             {saving ? T('جاري الحفظ…', 'Saving…') : `✅ ${T('تأكيد الاستلام', 'Confirm return')}`}
           </button>
         </>
       }
     >
+      <label className="block text-sm font-bold text-[var(--muted)] mb-1 mt-3">
+        {T('تاريخ الاستلام', 'Return date')}
+      </label>
+      <input
+        type="date"
+        value={returnDate}
+        max={wirelessReturnDateInputValue()}
+        onChange={e => setReturnDate(e.target.value)}
+        required
+        className="block w-full min-w-0 max-w-full box-border field text-sm"
+        style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', display: 'block', marginInline: 0 }}
+      />
+      <p className="mt-1 text-xs text-[var(--muted)]">
+        {T('التاريخ الافتراضي هو اليوم، ويمكن تغييره إذا كان الاستلام في يوم سابق.', 'Defaults to today. Change it if the devices were returned on an earlier date.')}
+      </p>
       <label className="block text-sm font-bold text-[var(--muted)] mb-1 mt-3">
         {T('ملاحظات الاستلام (تُطبَّق على كل الأجهزة)', 'Return notes (applies to all devices)')}
       </label>

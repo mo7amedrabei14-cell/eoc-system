@@ -14334,6 +14334,7 @@ class WirelessDeliveryUpdate(BaseModel):
 
 class WirelessDeliveryReturn(BaseModel):
     return_notes: Optional[str] = None
+    returned_date: Optional[date] = None
 
 
 class WirelessRecipientLookup(BaseModel):
@@ -15020,25 +15021,33 @@ def return_wireless_delivery(
                 return {"message": "التسليم مُرجَع بالفعل", "delivery_id": delivery_id}
 
             return_notes = _wclean(payload.return_notes, 2000)
+            now_cairo = datetime.now(ZoneInfo("Africa/Cairo"))
+            returned_date = payload.returned_date or now_cairo.date()
+            if returned_date > now_cairo.date():
+                raise HTTPException(status_code=422, detail="تاريخ الاستلام لا يمكن أن يكون في المستقبل")
+            returned_at = datetime.combine(
+                returned_date,
+                now_cairo.time().replace(tzinfo=None, microsecond=0),
+            )
 
             cursor.execute(
                 """
                 UPDATE wireless_deliveries SET
                     status = 'مُرجَع',
                     return_notes = %s,
-                    returned_at = (now() AT TIME ZONE 'Africa/Cairo'),
+                    returned_at = %s,
                     returned_by = %s,
                     updated_at = (now() AT TIME ZONE 'Africa/Cairo')
                 WHERE delivery_id = %s;
                 """,
-                (return_notes, user_id, delivery_id),
+                (return_notes, returned_at, user_id, delivery_id),
             )
 
             try:
                 create_audit_log(
                     cursor, user_id, "استلام أجهزة لاسلكية",
                     mission_id=None, entity_type="wireless_handover", entity_id=delivery_id,
-                    details={"action_text": f"استلام تسليم {row[0]} من «{row[1]}»" + (f" — {return_notes}" if return_notes else "")},
+                    details={"action_text": f"استلام تسليم {row[0]} من «{row[1]}» بتاريخ {returned_date.isoformat()}" + (f" — {return_notes}" if return_notes else "")},
                 )
             except Exception:
                 pass
