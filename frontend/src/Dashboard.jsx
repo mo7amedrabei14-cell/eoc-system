@@ -10024,21 +10024,17 @@ function WirelessReturnModal({ show, delivery, onClose, onSaved, lang }) {
         </>
       }
     >
-      <label className="block text-sm font-bold text-[var(--muted)] mb-1 mt-3">
-        {T('تاريخ الاستلام', 'Return date')}
-      </label>
-      <input
-        type="date"
-        value={returnDate}
-        max={wirelessReturnDateInputValue()}
-        onChange={e => setReturnDate(e.target.value)}
-        required
-        className="block w-full min-w-0 max-w-full box-border field text-sm"
-        style={{ width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', display: 'block', marginInline: 0 }}
-      />
-      <p className="mt-1 text-xs text-[var(--muted)]">
-        {T('التاريخ الافتراضي هو اليوم، ويمكن تغييره إذا كان الاستلام في يوم سابق.', 'Defaults to today. Change it if the devices were returned on an earlier date.')}
-      </p>
+      <FormGroup className="mt-3" label={T('تاريخ الاستلام', 'Return date')} required>
+        <SegDateField
+          value={returnDate}
+          onChange={e => setReturnDate(e.target.value)}
+          max={wirelessReturnDateInputValue()}
+          className="field"
+        />
+        <p className="text-xs text-[var(--muted)]">
+          {T('التاريخ الافتراضي هو اليوم، ويمكن تغييره إذا كان الاستلام في يوم سابق.', 'Defaults to today. Change it if the devices were returned on an earlier date.')}
+        </p>
+      </FormGroup>
       <label className="block text-sm font-bold text-[var(--muted)] mb-1 mt-3">
         {T('ملاحظات الاستلام (تُطبَّق على كل الأجهزة)', 'Return notes (applies to all devices)')}
       </label>
