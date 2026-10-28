@@ -27,6 +27,7 @@ import { captureFields, applyFieldsWhenReady } from './draftsStore';
 // → React بيفكّ الشجرة كلها (مفيش error boundary) → صفحة بيضاء.
 import { BASE } from './apiBase';
 import { wirelessDeliveryDateMatchesFilter, wirelessDeliveryStatusAtFilterDate, wirelessDeliveryReturnDate } from './wirelessDateFilter';
+import { findWirelessRecipient, normalizeWirelessNationalId } from './wirelessRecipientLookup.js';
 import { buildWirelessPrintTitle } from './wirelessPrintTitle';
 import { matchesWeatherPhenomenon, shouldPreserveWeatherSnapshot, WEATHER_FILTER_OPTIONS } from './weatherIntelFilters';
 // ☁️ حالة العمل على السيرفر (مسودات/إرسال معلّق): تستخدمها مرآة «سجل التواصل»
@@ -9333,6 +9334,49 @@ function normalizeWirelessDigits(value) {
     .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
 }
 
+async function fetchWirelessJson(url, options = {}, timeoutMs = 15000, fallbackMessage = 'تعذر جلب البيانات') {
+  const controller = new AbortController();
+  const { signal: externalSignal, ...fetchOptions } = options || {};
+  const forwardAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener('abort', forwardAbort, { once: true });
+  }
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message = typeof data?.detail === 'string' && data.detail.trim()
+        ? data.detail : `${fallbackMessage} (HTTP ${response.status})`;
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error(fallbackMessage);
+    return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timeout = new Error('Request timed out');
+      timeout.code = externalSignal?.aborted ? 'WIRELESS_ABORTED' : 'WIRELESS_TIMEOUT';
+      throw timeout;
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+    if (externalSignal) externalSignal.removeEventListener('abort', forwardAbort);
+  }
+}
+
+function wirelessErrorMessage(error, lang, fallback) {
+  const ar = lang === 'ar';
+  if (error?.code === 'WIRELESS_TIMEOUT') return ar ? 'استغرق الاتصال بالخادم وقتًا أطول من المتوقع. أعد المحاولة.' : 'The server request timed out. Please retry.';
+  if (error?.status === 401) return ar ? 'انتهت جلسة الدخول أو لم تعد صالحة. سجّل الدخول مجددًا.' : 'Your session has expired. Please sign in again.';
+  if (error?.status === 403) return ar ? 'حسابك لا يملك صلاحية الوصول إلى بيانات التسليم اللاسلكي.' : 'Your account is not allowed to access wireless handover data.';
+  if (error?.status === 503) return ar ? 'قاعدة البيانات تجهّز بيانات التسليم أو الاتصال بها غير متاح مؤقتًا. ستتم إعادة المحاولة تلقائيًا.' : 'The wireless data service is warming up or temporarily unavailable. It will retry automatically.';
+  return error?.message || fallback;
+}
+
 const WIRELESS_DESTINATIONS = [
   "القنال",
   "شمال سيناء",
@@ -9592,15 +9636,30 @@ function WirelessPrintDeviceReport({ delivery, devices, startIndex = 0, pageNo =
 // ═══════════════════════════════════════════════════════════════════
 function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
   const T = (ar, en) => (lang === 'ar' ? ar : en);
+  const isEdit = !!initial?.delivery_id;
   const [form, setForm] = useState(() => initial || _wirelessEmptyDelivery());
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const [recipientLookupStatus, setRecipientLookupStatus] = useState(() => isEdit ? 'ready' : 'locked');
+  const [recipientLookupMessage, setRecipientLookupMessage] = useState('');
+  const lookupTimerRef = useRef(null);
+  const lookupAbortRef = useRef(null);
+  const lookupGenerationRef = useRef(0);
 
   useEffect(() => {
     if (show) {
       setForm(initial ? JSON.parse(JSON.stringify(initial)) : _wirelessEmptyDelivery());
       setErr('');
+      setRecipientLookupStatus(initial?.delivery_id ? 'ready' : 'locked');
+      setRecipientLookupMessage('');
     }
+    return () => {
+      if (lookupTimerRef.current !== null) window.clearTimeout(lookupTimerRef.current);
+      lookupTimerRef.current = null;
+      lookupAbortRef.current?.abort();
+      lookupAbortRef.current = null;
+      lookupGenerationRef.current += 1;
+    };
   }, [show, initial]);
 
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -9608,8 +9667,84 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
   const addDevice = () => setForm(f => ({ ...f, devices: [...f.devices, _wirelessEmptyDevice()] }));
   const removeDevice = (i) => setForm(f => f.devices.length > 1 ? { ...f, devices: f.devices.filter((_, idx) => idx !== i) } : f);
 
+  const canEditForm = isEdit || recipientLookupStatus === 'existing' || recipientLookupStatus === 'new';
+
+  const requestRecipientLookup = (valueOrEvent) => {
+    const rawValue = typeof valueOrEvent === 'string' ? valueOrEvent : valueOrEvent?.target?.value;
+    const nationalId = normalizeWirelessNationalId(rawValue);
+    if (lookupTimerRef.current !== null) window.clearTimeout(lookupTimerRef.current);
+    lookupTimerRef.current = null;
+    lookupAbortRef.current?.abort();
+    lookupAbortRef.current = null;
+    const requestId = ++lookupGenerationRef.current;
+    setForm(current => ({
+      ...current,
+      national_id: nationalId,
+      ...(isEdit ? {} : { full_name: '', employee_number: '' }),
+    }));
+    setErr('');
+    setRecipientLookupMessage('');
+    if (isEdit) {
+      setRecipientLookupStatus('ready');
+      return;
+    }
+    if (nationalId.length !== 14) {
+      setRecipientLookupStatus('locked');
+      return;
+    }
+    setRecipientLookupStatus('checking');
+    lookupTimerRef.current = window.setTimeout(async () => {
+      const controller = new AbortController();
+      lookupAbortRef.current = controller;
+      try {
+        const data = await fetchWirelessJson(
+          `${BASE}/api/wireless-handover/recipients/lookup`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${sessionStorage.getItem('access_token') || ''}`,
+            },
+            body: JSON.stringify({ national_id: nationalId }),
+            signal: controller.signal,
+          },
+          12000,
+          T('تعذر التحقق من الرقم القومي', 'Could not verify the national ID'),
+        );
+        if (requestId !== lookupGenerationRef.current) return;
+        const recipient = findWirelessRecipient(data.recipient ? [data.recipient] : [], nationalId);
+        if (recipient) {
+          setForm(current => ({
+            ...current,
+            national_id: nationalId,
+            full_name: recipient.full_name || '',
+            employee_number: recipient.employee_number || '',
+          }));
+          setRecipientLookupStatus('existing');
+          setRecipientLookupMessage(T('تم العثور على المستلم؛ تم ملء الاسم ورقم العضوية تلقائيًا.', 'Recipient found; name and membership number were filled automatically.'));
+        } else {
+          setForm(current => ({ ...current, national_id: nationalId, full_name: '', employee_number: '' }));
+          setRecipientLookupStatus('new');
+          setRecipientLookupMessage(T('لا يوجد مستلم بهذا الرقم. أدخل بيانات المستلم الجديد؛ سيضاف إلى القائمة بعد حفظ التسليم.', 'No recipient matches this ID. Enter the new recipient details; they will be added after the delivery is saved.'));
+        }
+      } catch (error) {
+        if (requestId !== lookupGenerationRef.current || error?.code === 'WIRELESS_ABORTED') return;
+        setRecipientLookupStatus('error');
+        setRecipientLookupMessage(wirelessErrorMessage(error, lang, T('تعذر التحقق من الرقم القومي. ستظل الخانات مغلقة حتى نجاح البحث.', 'Could not verify this national ID. Fields will remain locked until lookup succeeds.')));
+      } finally {
+        if (lookupAbortRef.current === controller) lookupAbortRef.current = null;
+      }
+    }, 300);
+  };
+
   const handleSave = async () => {
     if (saving) return;
+    if (!isEdit && !['existing', 'new'].includes(recipientLookupStatus)) {
+      setErr(recipientLookupStatus === 'error'
+        ? T('تعذر التحقق من الرقم القومي. أعد البحث قبل المتابعة.', 'Could not verify this ID. Retry the lookup before continuing.')
+        : T('أدخل الرقم القومي كاملًا وانتظر نتيجة البحث قبل إدخال باقي البيانات.', 'Enter all 14 digits and wait for the lookup before entering the remaining data.'));
+      return;
+    }
     if (!String(form.full_name || '').trim()) { setErr(T('الاسم إلزامي', 'Name required')); return; }
     const nationalId = normalizeWirelessDigits(form.national_id).replace(/[^0-9]/g, '');
     if (!/^[0-9]{14}$/.test(nationalId)) {
@@ -9662,7 +9797,6 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
   };
 
   if (!show) return null;
-  const isEdit = !!initial?.delivery_id;
   const isReturned = isEdit && initial?.status === 'مُرجَع';
 
   return createPortal(
@@ -9682,16 +9816,10 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
           {/* القسم 1: بيانات المستلم */}
           <SectionCard title={T('1. بيانات المستلم', '1. Recipient data')} icon={<UsersIcon />}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormGroup label={T('الاسم الثلاثي', 'Full name') + ' *'}>
-                <StyledInput value={form.full_name} onChange={e => setField('full_name', e.target.value)} />
-              </FormGroup>
-              <FormGroup label={T('الرقم الوظيفي / العضوية', 'Employee / Membership no.')}>
-                <StyledInput value={form.employee_number} onChange={e => setField('employee_number', e.target.value)} />
-              </FormGroup>
-              <FormGroup label={T('الرقم القومي', 'National ID') + ' *'}>
+              <FormGroup label={T('الرقم القومي', 'National ID') + ' *'} className="md:col-span-3">
                 <StyledInput
                   value={form.national_id}
-                  onChange={e => setField('national_id', normalizeWirelessDigits(e.target.value).replace(/[^0-9]/g, '').slice(0, 14))}
+                  onChange={requestRecipientLookup}
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]{14}"
@@ -9700,28 +9828,47 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
                   autoComplete="off"
                   dir="ltr"
                   required
+                  placeholder={T('اكتب الرقم القومي للبحث عن مستلم سابق أو بدء تسجيل مستلم جديد', 'Enter a national ID to find an existing recipient or start a new recipient record')}
+                  aria-describedby="wireless-recipient-lookup-hint"
                 />
+                <div id="wireless-recipient-lookup-hint" role="status" aria-live="polite" className="text-xs leading-relaxed text-[var(--muted)] mt-1">
+                  {!isEdit && recipientLookupStatus === 'locked' && T('أدخل 14 رقمًا؛ سيجري البحث تلقائيًا. ستظل باقي الخانات مغلقة حتى ظهور النتيجة.', 'Enter 14 digits; lookup runs automatically. Other fields stay locked until a result is returned.')}
+                  {!isEdit && recipientLookupStatus === 'checking' && T('جارٍ البحث في قائمة المستلمين…', 'Searching the recipient list…')}
+                  {!isEdit && recipientLookupMessage}
+                  {isEdit && T('يمكن تعديل بيانات التسليم الحالي.', 'You can edit this delivery.')}
+                </div>
+                {!isEdit && recipientLookupStatus === 'error' && (
+                  <button type="button" className="btn-ghost self-start px-3 py-1 rounded-lg text-xs" onClick={() => requestRecipientLookup(form.national_id)}>
+                    {T('إعادة البحث', 'Retry lookup')}
+                  </button>
+                )}
+              </FormGroup>
+              <FormGroup label={T('الاسم الثلاثي', 'Full name') + ' *'}>
+                <StyledInput value={form.full_name} onChange={e => setField('full_name', e.target.value)} disabled={!canEditForm} />
+              </FormGroup>
+              <FormGroup label={T('الرقم الوظيفي / العضوية', 'Employee / Membership no.')}>
+                <StyledInput value={form.employee_number} onChange={e => setField('employee_number', e.target.value)} disabled={!canEditForm} />
               </FormGroup>
               <FormGroup label={T('القسم / الإدارة', 'Department')}>
-                <StyledInput value={form.department} onChange={e => setField('department', e.target.value)} />
+                <StyledInput value={form.department} onChange={e => setField('department', e.target.value)} disabled={!canEditForm} />
               </FormGroup>
               <FormGroup label={T('الموجه', 'Directed to')}>
-                <EocSelect value={form.radio_destination || ''} onChange={e => setField('radio_destination', e.target.value)}>
+                <EocSelect value={form.radio_destination || ''} onChange={e => setField('radio_destination', e.target.value)} disabled={!canEditForm}>
                   <option value="">{T('اختر الموجه', 'Select destination')}</option>
                   {WIRELESS_DESTINATIONS.map(destination => <option key={destination} value={destination}>{destination}</option>)}
                 </EocSelect>
               </FormGroup>
               <FormGroup label={T('تاريخ الاستلام', 'Received date') + ' *'}>
-                <SegDateField value={form.received_date} onChange={e => setField('received_date', e.target.value)} className="field" />
+                <SegDateField value={form.received_date} onChange={e => setField('received_date', e.target.value)} className="field" disabled={!canEditForm} />
               </FormGroup>
               <FormGroup label={T('المهمة', 'Task')}>
-                <StyledInput value={form.task_description} onChange={e => setField('task_description', e.target.value)} />
+                <StyledInput value={form.task_description} onChange={e => setField('task_description', e.target.value)} disabled={!canEditForm} />
               </FormGroup>
               <FormGroup label={T('مدة الاستخدام', 'Usage duration')}>
-                <StyledInput value={form.usage_duration} onChange={e => setField('usage_duration', e.target.value)} />
+                <StyledInput value={form.usage_duration} onChange={e => setField('usage_duration', e.target.value)} disabled={!canEditForm} />
               </FormGroup>
               <FormGroup label={T('المنطقة / حي التنفيذ', 'Execution area')}>
-                <StyledInput value={form.execution_area} onChange={e => setField('execution_area', e.target.value)} />
+                <StyledInput value={form.execution_area} onChange={e => setField('execution_area', e.target.value)} disabled={!canEditForm} />
               </FormGroup>
             </div>
           </SectionCard>
@@ -9736,7 +9883,7 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
             }
             icon={<InventoryIcon />}
             actionBtn={
-              !isReturned && (
+              !isReturned && canEditForm && (
                 <button type="button" onClick={addDevice} className="text-xs text-[var(--accent)] hover:text-white font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-lg">
                   + {T('إضافة جهاز', 'Add device')}
                 </button>
@@ -9749,29 +9896,29 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-bold text-[var(--accent)]">📻 {T(`جهاز #${i + 1}`, `Device #${i + 1}`)}</span>
                     {!isReturned && form.devices.length > 1 && (
-                      <button type="button" onClick={() => removeDevice(i)} className="text-xs text-[var(--accent)] hover:underline font-bold">
+                      <button type="button" onClick={() => removeDevice(i)} className="text-xs text-[var(--accent)] hover:underline font-bold" disabled={!canEditForm}>
                         🗑 {T('حذف', 'Remove')}
                       </button>
                     )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <FormGroup label={T('النوع', 'Type')}>
-                      <EocSelect value={d.device_type} onChange={e => updateDevice(i, { device_type: e.target.value })} disabled={isReturned}>
+                      <EocSelect value={d.device_type} onChange={e => updateDevice(i, { device_type: e.target.value })} disabled={isReturned || !canEditForm}>
                         <option value="MOTOROLA">MOTOROLA (TETRA)</option>
                         <option value="HUAWEI">HUAWEI</option>
                       </EocSelect>
                     </FormGroup>
                     <FormGroup label={T('الرقم التسلسلي', 'Serial')}>
-                      <StyledInput value={d.device_serial} onChange={e => updateDevice(i, { device_serial: e.target.value })} dir="ltr" disabled={isReturned} />
+                      <StyledInput value={d.device_serial} onChange={e => updateDevice(i, { device_serial: e.target.value })} dir="ltr" disabled={isReturned || !canEditForm} />
                     </FormGroup>
                     <FormGroup label={T('الحالة', 'Condition')}>
-                      <EocSelect value={d.device_condition} onChange={e => updateDevice(i, { device_condition: e.target.value })} disabled={isReturned}>
+                      <EocSelect value={d.device_condition} onChange={e => updateDevice(i, { device_condition: e.target.value })} disabled={isReturned || !canEditForm}>
                         <option value="سليم">{T('سليم', 'Good')}</option>
                         <option value="تالف">{T('تالف', 'Damaged')}</option>
                       </EocSelect>
                     </FormGroup>
                     <FormGroup label={T('الملحقات', 'Accessories')}>
-                      <StyledInput value={d.accessories} onChange={e => updateDevice(i, { accessories: e.target.value })} placeholder={T('شاحن، بطارية، كلبس…', 'charger, battery, clip…')} disabled={isReturned} />
+                      <StyledInput value={d.accessories} onChange={e => updateDevice(i, { accessories: e.target.value })} placeholder={T('شاحن، بطارية، كلبس…', 'charger, battery, clip…')} disabled={isReturned || !canEditForm} />
                     </FormGroup>
                   </div>
                   <div className="mt-3">
@@ -9781,7 +9928,7 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
                         onChange={e => updateDevice(i, { device_notes: e.target.value })}
                         rows={2}
                         className="w-full field text-sm"
-                        disabled={isReturned}
+                        disabled={isReturned || !canEditForm}
                         placeholder={T('أي ملاحظات خاصة بالجهاز…', 'Any device-specific notes…')}
                       />
                     </FormGroup>
@@ -9798,13 +9945,14 @@ function WirelessDeliveryFormModal({ show, initial, onClose, onSaved, lang }) {
               onChange={e => setField('general_notes', e.target.value)}
               rows={3}
               className="w-full field text-sm"
+              disabled={!canEditForm}
               placeholder={T('أي ملاحظات عامة على عملية التسليم…', 'Any general notes…')}
             />
           </SectionCard>
         </div>
         <div className="p-4 border-t border-[var(--border)] bg-[var(--surface-2)] flex justify-end gap-3 shrink-0">
           <button onClick={onClose} disabled={saving} className="btn-ghost px-5 py-2 rounded-xl">{T('إلغاء', 'Cancel')}</button>
-          <button onClick={handleSave} disabled={saving} className="btn-primary px-6 py-2 rounded-xl font-bold">{saving ? T('جاري الحفظ…', 'Saving…') : T('حفظ التسليم', 'Save delivery')}</button>
+          <button onClick={handleSave} disabled={saving || (!isEdit && !canEditForm)} className="btn-primary px-6 py-2 rounded-xl font-bold">{saving ? T('جاري الحفظ…', 'Saving…') : T('حفظ التسليم', 'Save delivery')}</button>
         </div>
       </div>
     </div>,
@@ -9881,6 +10029,7 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const T = (ar, en) => (lang === 'ar' ? ar : en);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [inventory, setInventory] = useState({
     TETRA: { total: 16, out: 0, remaining: 16 },
     HUAWEI: { total: 16, out: 0, remaining: 16 },
@@ -9902,6 +10051,22 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const recipientsQueuedRef = useRef(false);
   const loadRecipientsRef = useRef(null);
   const loadDataRef = useRef(null);
+  const wirelessRetryTimerRef = useRef(null);
+  const wirelessRetryAttemptRef = useRef(0);
+  const scheduleWirelessRetry = useCallback(() => {
+    if (wirelessRetryTimerRef.current !== null) return;
+    const delay = Math.min(2000 * (2 ** Math.min(wirelessRetryAttemptRef.current, 5)), 60000);
+    wirelessRetryAttemptRef.current += 1;
+    wirelessRetryTimerRef.current = window.setTimeout(() => {
+      wirelessRetryTimerRef.current = null;
+      loadDataRef.current?.(true);
+    }, delay);
+  }, []);
+  const clearWirelessRetry = useCallback(() => {
+    if (wirelessRetryTimerRef.current !== null) window.clearTimeout(wirelessRetryTimerRef.current);
+    wirelessRetryTimerRef.current = null;
+    wirelessRetryAttemptRef.current = 0;
+  }, []);
   const [recipientSearch, setRecipientSearch] = useState('');
   const [exportingRecipients, setExportingRecipients] = useState(false);
   const [filterDate, setFilterDate] = useState(() => todayFileDate());
@@ -9979,41 +10144,31 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   const token = () => sessionStorage.getItem('access_token');
 
   const loadRecipients = useCallback(async (silent = false) => {
-    if (recipientsInFlightRef.current) {
-      recipientsQueuedRef.current = true;
-      return;
-    }
-
+    if (recipientsInFlightRef.current) { recipientsQueuedRef.current = true; return; }
     recipientsInFlightRef.current = true;
     const showInitialLoader = !recipientsLoadedRef.current && !silent;
     if (showInitialLoader) setRecipientsLoading(true);
-
     try {
-      const res = await fetch(`${BASE}/api/wireless-handover/recipients`, {
-        headers: { Authorization: `Bearer ${token()}` },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || 'Failed to load recipients');
-      const nextRecipients = Array.isArray(data.recipients) ? data.recipients : [];
-      setRecipients(previous =>
-        JSON.stringify(previous) === JSON.stringify(nextRecipients) ? previous : nextRecipients
-      );
+      const data = await fetchWirelessJson(`${BASE}/api/wireless-handover/recipients`,
+        { headers: { Authorization: `Bearer ${token() || ''}` } }, 15000,
+        T('تعذر تحميل قائمة المستلمين', 'Failed to load recipients'));
+      if (!Array.isArray(data.recipients)) throw new Error(T('استجابة قائمة المستلمين غير صحيحة', 'The recipients response is invalid'));
+      const nextRecipients = data.recipients;
+      setRecipients(previous => JSON.stringify(previous) === JSON.stringify(nextRecipients) ? previous : nextRecipients);
       setRecipientsError('');
       recipientsLoadedRef.current = true;
-    } catch {
-      // Don't cover already-loaded recipients with an error banner for a transient poll failure.
-      if (!recipientsLoadedRef.current) {
-        setRecipientsError(T('تعذر تحميل قائمة المستلمين', 'Failed to load recipients'));
-      }
+      clearWirelessRetry();
+    } catch (error) {
+      const message = wirelessErrorMessage(error, lang, T('تعذر تحميل قائمة المستلمين', 'Failed to load recipients'));
+      if (!recipientsLoadedRef.current) setRecipientsError(message);
+      console.error('[Wireless Handover] recipient list failed', { status: error?.status ?? null, code: error?.code ?? null, message: error?.message ?? 'unknown error' });
+      scheduleWirelessRetry();
     } finally {
       if (showInitialLoader || !recipientsLoadedRef.current) setRecipientsLoading(false);
       recipientsInFlightRef.current = false;
-      if (recipientsQueuedRef.current) {
-        recipientsQueuedRef.current = false;
-        Promise.resolve().then(() => loadRecipientsRef.current?.(true));
-      }
+      if (recipientsQueuedRef.current) { recipientsQueuedRef.current = false; Promise.resolve().then(() => loadRecipientsRef.current?.(true)); }
     }
-  }, [lang]);
+  }, [clearWirelessRetry, lang, scheduleWirelessRetry]);
   loadRecipientsRef.current = loadRecipients;
 
   const filteredRecipients = useMemo(() => {
@@ -10026,57 +10181,56 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
   }, [recipients, recipientSearch]);
 
   const loadData = useCallback(async (silent = false) => {
-    if (wirelessLoadInFlightRef.current) {
-      wirelessLoadQueuedRef.current = true;
-      return;
-    }
-
+    if (wirelessLoadInFlightRef.current) { wirelessLoadQueuedRef.current = true; return; }
     wirelessLoadInFlightRef.current = true;
     const showInitialLoader = !wirelessLoadedRef.current && !silent;
     if (showInitialLoader) setLoading(true);
-
     try {
-      const res = await fetch(`${BASE}/api/wireless-handover`, {
-        headers: { 'Authorization': `Bearer ${token()}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      const nextInventory = data.inventory || {
-        TETRA: { total: 16, out: 0, remaining: 16 },
-        HUAWEI: { total: 16, out: 0, remaining: 16 },
-      };
-      const nextFixedText = data.fixed_text || '';
-      const nextDeliveries = Array.isArray(data.deliveries) ? data.deliveries : [];
-
-      setInventory(previous =>
-        JSON.stringify(previous) === JSON.stringify(nextInventory) ? previous : nextInventory
-      );
-      setFixedText(previous => previous === nextFixedText ? previous : nextFixedText);
-      setDeliveries(previous =>
-        JSON.stringify(previous) === JSON.stringify(nextDeliveries) ? previous : nextDeliveries
-      );
-      wirelessLoadedRef.current = true;
-      await loadRecipients(!showInitialLoader);
-    } catch {
-      // Preserve the current table during a transient background failure.
-      if (!wirelessLoadedRef.current) {
-        setCustomAlert(T('تعذر تحميل البيانات', 'Failed to load'));
-        // The recipients endpoint is independent; still try to populate its section.
-        loadRecipients(true);
+      const headers = { Authorization: `Bearer ${token() || ''}` };
+      const accumulatedDeliveries = [];
+      let firstPage = null, offset = 0, pageCount = 0;
+      while (true) {
+        const query = new URLSearchParams({ limit: '1000', offset: String(offset) });
+        const page = await fetchWirelessJson(`${BASE}/api/wireless-handover?${query.toString()}`,
+          { headers }, 20000, T('تعذر تحميل بيانات التسليم', 'Failed to load wireless handovers'));
+        if (!page.inventory || typeof page.inventory !== 'object' || !Array.isArray(page.deliveries)) {
+          throw new Error(T('استجابة بيانات التسليم غير مكتملة أو غير صحيحة', 'The wireless handover response is incomplete or invalid'));
+        }
+        if (!firstPage) firstPage = page;
+        accumulatedDeliveries.push(...page.deliveries);
+        pageCount += 1;
+        if (typeof page.has_more !== 'boolean') {
+          if (page.deliveries.length >= 1000) throw new Error(T('خادم البيانات لم يدعم ترقيم السجل بعد. حدّث نشر الواجهة والخادم ثم أعد المحاولة.', 'The API does not support paginated register loading yet. Deploy the frontend and backend update, then retry.'));
+          break;
+        }
+        if (page.has_more !== true || page.deliveries.length === 0) break;
+        offset += page.deliveries.length;
+        if (pageCount >= 100) throw new Error(T('السجل أكبر من الحد الآمن للتحميل دفعة واحدة. حدّد فترة زمنية أو تواصل مع مسؤول النظام.', 'The register exceeds the safe one-time load limit. Filter the date range or contact the system administrator.'));
       }
+      const nextInventory = firstPage.inventory;
+      const nextFixedText = typeof firstPage.fixed_text === 'string' ? firstPage.fixed_text : '';
+      setInventory(previous => JSON.stringify(previous) === JSON.stringify(nextInventory) ? previous : nextInventory);
+      setFixedText(previous => previous === nextFixedText ? previous : nextFixedText);
+      setDeliveries(previous => JSON.stringify(previous) === JSON.stringify(accumulatedDeliveries) ? previous : accumulatedDeliveries);
+      wirelessLoadedRef.current = true;
+      setLoadError('');
+      clearWirelessRetry();
+      await loadRecipients(!showInitialLoader);
+    } catch (error) {
+      setLoadError(wirelessErrorMessage(error, lang, T('تعذر تحميل البيانات', 'Failed to load wireless handover data')));
+      console.error('[Wireless Handover] register load failed', { status: error?.status ?? null, code: error?.code ?? null, message: error?.message ?? 'unknown error' });
+      if (!recipientsLoadedRef.current) loadRecipients(true);
+      scheduleWirelessRetry();
     } finally {
       if (showInitialLoader || !wirelessLoadedRef.current) setLoading(false);
       wirelessLoadInFlightRef.current = false;
-      if (wirelessLoadQueuedRef.current) {
-        wirelessLoadQueuedRef.current = false;
-        Promise.resolve().then(() => loadDataRef.current?.(true));
-      }
+      if (wirelessLoadQueuedRef.current) { wirelessLoadQueuedRef.current = false; Promise.resolve().then(() => loadDataRef.current?.(true)); }
     }
-  }, [loadRecipients]);
+  }, [clearWirelessRetry, lang, loadRecipients, scheduleWirelessRetry]);
   loadDataRef.current = loadData;
 
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => () => { if (wirelessRetryTimerRef.current !== null) window.clearTimeout(wirelessRetryTimerRef.current); }, []);
   useSmartPoll(() => loadData(true), 60000);
 
   const handleExportRecipients = async () => {
@@ -10234,6 +10388,14 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
         </div>
       </div>
 
+      {loadError && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-soft)] px-4 py-3 text-sm">
+          <span className="font-semibold">{loadError}</span>
+          <button type="button" onClick={() => { clearWirelessRetry(); loadData(false); }} disabled={loading} className="btn-ghost px-3 py-1.5 rounded-lg font-bold disabled:opacity-50">
+            {T('إعادة تحميل البيانات', 'Retry loading')}
+          </button>
+        </div>
+      )}
       {/* العدّادات */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {(['TETRA', 'HUAWEI']).map(dt => {
@@ -10318,6 +10480,8 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
         </div>
         {loading ? (
           <p className="text-center text-[var(--muted)] text-sm py-6">{T('جارٍ التحميل…', 'Loading…')}</p>
+        ) : (loadError && !wirelessLoadedRef.current) ? (
+          <p role="alert" className="text-center text-[var(--danger)] text-sm py-8">{T('تعذر تحميل السجل. ستُعاد المحاولة تلقائيًا؛ يمكنك استخدام زر إعادة التحميل.', 'The register could not be loaded. It will retry automatically; you can also retry manually.')}</p>
         ) : filteredDeliveries.length === 0 ? (
           <p className="text-center text-[var(--muted)] text-sm py-8">
             {filterDate ? T('لا توجد تسليمات في هذا اليوم', 'No deliveries on the selected day') : T('لا توجد تسليمات بعد', 'No deliveries yet')}
@@ -10409,7 +10573,10 @@ function WirelessHandoverView({ isOwner, isSupervisor, lang = 'ar' }) {
           </div>
         </div>
         {recipientsError ? (
-          <p role="alert" className="text-center text-[var(--danger)] text-sm py-6">{recipientsError}</p>
+          <div role="alert" className="flex flex-wrap items-center justify-center gap-3 py-6 text-sm text-[var(--danger)]">
+            <p>{recipientsError}</p>
+            <button type="button" onClick={() => loadRecipients(false)} disabled={recipientsLoading} className="btn-ghost px-3 py-1 rounded-lg font-bold disabled:opacity-50">{T('إعادة المحاولة', 'Retry')}</button>
+          </div>
         ) : recipientsLoading ? (
           <p className="text-center text-[var(--muted)] text-sm py-6">{T('جارٍ تحميل المستلمين…', 'Loading recipients…')}</p>
         ) : filteredRecipients.length === 0 ? (

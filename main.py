@@ -902,10 +902,16 @@ def ensure_client_errors_schema():
     finally:
         connection.close()
 
+_WIRELESS_SCHEMA_LOCK = threading.Lock()
+_wireless_schema_ready = threading.Event()
+_wireless_schema_error = {"message": None}
+
+
 def ensure_wireless_handover_schema():
     """📻 بنية صفحة تسليم أجهزة لاسلكي — v2 (رأس + أجهزة)."""
-    connection = get_connection()
+    connection = None
     try:
+        connection = get_connection()
         with connection.cursor() as cursor:
             # الجداول
             cursor.execute("""
@@ -1028,12 +1034,59 @@ def ensure_wireless_handover_schema():
                 """)
 
             connection.commit()
+            _wireless_schema_error["message"] = None
+            _wireless_schema_ready.set()
             print("wireless handover schema v2: ready")
     except Exception as e:
-        connection.rollback()
-        print(f"ensure_wireless_handover_schema error (will retry next boot): {e}")
+        if connection is not None:
+            try:
+                connection.rollback()
+            except Exception:
+                pass
+        _wireless_schema_error["message"] = str(e)[:200] or "unknown wireless schema error"
+        print(f"ensure_wireless_handover_schema error (will retry): {e}")
     finally:
-        connection.close()
+        if connection is not None:
+            try:
+                connection.close()
+            except Exception:
+                pass
+
+
+def _wireless_connection():
+    """Return a DB connection only after wireless schema initialization has succeeded."""
+    if not _wireless_schema_ready.is_set():
+        bootstrap_ready = globals().get("_schema_ready")
+        # Avoid racing background DDL. The frontend retries 503 responses with backoff.
+        if bootstrap_ready is not None and not bootstrap_ready.wait(timeout=0.4):
+            raise HTTPException(
+                status_code=503,
+                detail="قاعدة البيانات ما زالت تجهّز جداول تسليم الأجهزة اللاسلكية. أعد المحاولة بعد لحظات.",
+                headers={"Retry-After": "2"},
+            )
+        if not _wireless_schema_ready.is_set():
+            with _WIRELESS_SCHEMA_LOCK:
+                if not _wireless_schema_ready.is_set():
+                    ensure_wireless_handover_schema()
+        if not _wireless_schema_ready.is_set():
+            print(
+                "Wireless handover schema is not ready: "
+                f"{_wireless_schema_error.get('message') or 'initialization pending'}"
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="جداول تسليم الأجهزة اللاسلكية غير جاهزة مؤقتًا. أعد المحاولة بعد لحظات.",
+                headers={"Retry-After": "3"},
+            )
+    try:
+        return get_connection()
+    except Exception as e:
+        print(f"Wireless handover database connection failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="تعذر الاتصال بقاعدة البيانات مؤقتًا. أعد المحاولة بعد لحظات.",
+            headers={"Retry-After": "3"},
+        )
 
 # 🆔 هوية التشغيلة + وقت الإقلاع: الواجهة بتقارنهم بين نبضتين — لو الاتصال بانقطع
 #    ورجع بهوية جديدة يبقى السيرفر قام من جديد فعلاً ⇒ نطلب تحديث كامل (Ctrl+Shift+R).
@@ -14283,6 +14336,15 @@ class WirelessDeliveryReturn(BaseModel):
     return_notes: Optional[str] = None
 
 
+class WirelessRecipientLookup(BaseModel):
+    national_id: str
+
+    @field_validator("national_id", mode="before")
+    @classmethod
+    def validate_national_id(cls, value):
+        return _normalize_wireless_national_id(value)
+
+
 def _wclean(v, max_len=None):
     if v is None:
         return None
@@ -14390,7 +14452,7 @@ def _wireless_delivery_dicts(cursor, rows):
         SELECT delivery_id, device_row_id, device_type, device_serial, accessories,
                device_condition, device_notes
         FROM wireless_delivery_devices
-        WHERE delivery_id = ANY(%s::int[])
+        WHERE delivery_id = ANY(%s::bigint[])
         ORDER BY delivery_id, device_row_id;
     """, (delivery_ids,))
     devices_by_delivery = {delivery_id: [] for delivery_id in delivery_ids}
@@ -14414,21 +14476,23 @@ _WIRELESS_DELIVERY_SELECT = """
 def get_wireless_handover(
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
-    limit: int = 500,
+    limit: int = 1000,
+    offset: int = 0,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
         try:
-            limit = max(1, min(int(limit or 500), 1000))
+            limit = max(1, min(int(limit or 1000), 1000))
+            offset = max(0, min(int(offset or 0), 1000000000))
         except Exception:
-            limit = 500
+            limit, offset = 1000, 0
 
         with connection.cursor() as cursor:
             inventory = _wireless_inventory_calc(cursor)
@@ -14445,12 +14509,20 @@ def get_wireless_handover(
                 params.append(to_date)
             where_sql = ("WHERE " + " AND ".join(where)) if where else ""
             cursor.execute(
-                f"{_WIRELESS_DELIVERY_SELECT} {where_sql} ORDER BY created_at DESC LIMIT %s;",
-                (*params, limit),
+                f"{_WIRELESS_DELIVERY_SELECT} {where_sql} ORDER BY created_at DESC, delivery_id DESC LIMIT %s OFFSET %s;",
+                (*params, limit + 1, offset),
             )
-            rows = _wireless_delivery_dicts(cursor, cursor.fetchall())
-
-            return {"inventory": inventory, "fixed_text": fixed_text, "deliveries": rows}
+            fetched_rows = cursor.fetchall()
+            has_more = len(fetched_rows) > limit
+            rows = _wireless_delivery_dicts(cursor, fetched_rows[:limit])
+            return {
+                "inventory": inventory,
+                "fixed_text": fixed_text,
+                "deliveries": rows,
+                "has_more": has_more,
+                "limit": limit,
+                "offset": offset,
+            }
     except HTTPException:
         raise
     except Exception as e:
@@ -14469,7 +14541,7 @@ def create_wireless_delivery(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
@@ -14487,21 +14559,17 @@ def create_wireless_delivery(
             _wireless_validate_device(d)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT COALESCE(MAX(delivery_id), 0) + 1 FROM wireless_deliveries;")
-            next_id = int(cursor.fetchone()[0] or 1)
-            delivery_code = f"#WH-{next_id:05d}"
-
             cursor.execute(
                 """
                 INSERT INTO wireless_deliveries
-                    (delivery_code, full_name, employee_number, national_id, department, radio_destination,
+                    (full_name, employee_number, national_id, department, radio_destination,
                      received_date, task_description, usage_duration, execution_area,
                      general_notes, created_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING delivery_id;
                 """,
                 (
-                    delivery_code, full_name,
+                    full_name,
                     _wclean(payload.employee_number, 100),
                     payload.national_id,
                     _wclean(payload.department, 200),
@@ -14515,6 +14583,11 @@ def create_wireless_delivery(
                 ),
             )
             new_id = cursor.fetchone()[0]
+            delivery_code = f"#WH-{int(new_id):05d}"
+            cursor.execute(
+                "UPDATE wireless_deliveries SET delivery_code = %s WHERE delivery_id = %s;",
+                (delivery_code, new_id),
+            )
 
             device_rows = [
                 (new_id, d.device_type, _wclean(d.device_serial, 100),
@@ -14565,7 +14638,7 @@ def update_wireless_inventory(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
@@ -14613,7 +14686,7 @@ def update_wireless_fixed_text(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_owner(role)
@@ -14711,20 +14784,48 @@ def _wireless_recipient_rows(cursor, search=None):
     ]
 
 
+@app.post("/api/wireless-handover/recipients/lookup")
+def lookup_wireless_recipient(
+    payload: WirelessRecipientLookup,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Exact national-ID lookup for the delivery form; the ID stays out of the URL."""
+    token = credentials.credentials
+    user_id = get_current_user_id(token)
+    if not user_id:
+        raise HTTPException(status_code=401)
+    connection = _wireless_connection()
+    try:
+        role = get_user_role(user_id, connection=connection)
+        require_wireless_handover_access(role)
+        with connection.cursor() as cursor:
+            matches = _wireless_recipient_rows(cursor, search=payload.national_id)
+            recipient = next((row for row in matches if row["national_id"] == payload.national_id), None)
+            return {"recipient": recipient}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error looking up wireless recipient: {e}")
+        raise HTTPException(status_code=500, detail="حدث خطأ أثناء التحقق من الرقم القومي")
+    finally:
+        connection.close()
+
+
 @app.get("/api/wireless-handover/recipients")
 def get_wireless_recipients(
+    search: Optional[str] = None,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     token = credentials.credentials
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
         with connection.cursor() as cursor:
-            return {"recipients": _wireless_recipient_rows(cursor)}
+            return {"recipients": _wireless_recipient_rows(cursor, search=search)}
     except HTTPException:
         raise
     except Exception as e:
@@ -14744,7 +14845,7 @@ def export_wireless_recipients(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         if not is_owner_role(role):
@@ -14781,7 +14882,7 @@ def get_wireless_delivery_one(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
@@ -14810,7 +14911,7 @@ def update_wireless_delivery(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
@@ -14902,7 +15003,7 @@ def return_wireless_delivery(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
@@ -14965,7 +15066,7 @@ def unreturn_wireless_delivery(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
@@ -15015,7 +15116,7 @@ def delete_wireless_delivery(
     user_id = get_current_user_id(token)
     if not user_id:
         raise HTTPException(status_code=401)
-    connection = get_connection()
+    connection = _wireless_connection()
     try:
         role = get_user_role(user_id, connection=connection)
         require_wireless_handover_access(role)
