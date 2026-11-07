@@ -1,0 +1,1204 @@
+{
+  "nodes": [
+    {
+      "id": "function:main.py:ensure_weather_extra_history_schema",
+      "type": "function",
+      "name": "ensure_weather_extra_history_schema",
+      "filePath": "main.py",
+      "lineRange": [
+        801,
+        834
+      ],
+      "summary": "Handles the ensure weather extra history schema operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_assert_safe_link",
+      "type": "function",
+      "name": "_assert_safe_link",
+      "filePath": "main.py",
+      "lineRange": [
+        1430,
+        1436
+      ],
+      "summary": "Handles the assert safe link operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_dashboard_bundle",
+      "type": "function",
+      "name": "get_dashboard_bundle",
+      "filePath": "main.py",
+      "lineRange": [
+        1766,
+        1800
+      ],
+      "summary": "Handles the get dashboard bundle operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:require_admin_role",
+      "type": "function",
+      "name": "require_admin_role",
+      "filePath": "main.py",
+      "lineRange": [
+        2236,
+        2243
+      ],
+      "summary": "Handles the require admin role operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:fmt_dt",
+      "type": "function",
+      "name": "fmt_dt",
+      "filePath": "main.py",
+      "lineRange": [
+        2723,
+        2725
+      ],
+      "summary": "Handles the fmt dt operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_clean_text",
+      "type": "function",
+      "name": "_clean_text",
+      "filePath": "main.py",
+      "lineRange": [
+        3232,
+        3236
+      ],
+      "summary": "Handles the clean text operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:update_mission",
+      "type": "function",
+      "name": "update_mission",
+      "filePath": "main.py",
+      "lineRange": [
+        4113,
+        4743
+      ],
+      "summary": "Handles the update mission operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:main.py:create_join_leave_entry",
+      "type": "function",
+      "name": "create_join_leave_entry",
+      "filePath": "main.py",
+      "lineRange": [
+        5593,
+        5634
+      ],
+      "summary": "Handles the create join leave entry operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:stream_realtime_events",
+      "type": "function",
+      "name": "stream_realtime_events",
+      "filePath": "main.py",
+      "lineRange": [
+        6616,
+        6693
+      ],
+      "summary": "Handles the stream realtime events operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:get_handover_by_date",
+      "type": "function",
+      "name": "get_handover_by_date",
+      "filePath": "main.py",
+      "lineRange": [
+        7177,
+        7209
+      ],
+      "summary": "Handles the get handover by date operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:delete_global_eq",
+      "type": "function",
+      "name": "delete_global_eq",
+      "filePath": "main.py",
+      "lineRange": [
+        7766,
+        7780
+      ],
+      "summary": "Handles the delete global eq operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:create_ai_news",
+      "type": "function",
+      "name": "create_ai_news",
+      "filePath": "main.py",
+      "lineRange": [
+        8281,
+        8384
+      ],
+      "summary": "Handles the create ai news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:get_user_region_scope",
+      "type": "function",
+      "name": "get_user_region_scope",
+      "filePath": "main.py",
+      "lineRange": [
+        8898,
+        8925
+      ],
+      "summary": "Handles the get user region scope operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:require_gov_contacts_owner",
+      "type": "function",
+      "name": "require_gov_contacts_owner",
+      "filePath": "main.py",
+      "lineRange": [
+        9529,
+        9533
+      ],
+      "summary": "Handles the require gov contacts owner operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_proximity_factor",
+      "type": "function",
+      "name": "_eq_intel_proximity_factor",
+      "filePath": "main.py",
+      "lineRange": [
+        10003,
+        10007
+      ],
+      "summary": "Handles the eq intel proximity factor operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:ingest_earthquake_intel",
+      "type": "function",
+      "name": "ingest_earthquake_intel",
+      "filePath": "main.py",
+      "lineRange": [
+        10420,
+        10443
+      ],
+      "summary": "Handles the ingest earthquake intel operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:export_earthquake_intel_log",
+      "type": "function",
+      "name": "export_earthquake_intel_log",
+      "filePath": "main.py",
+      "lineRange": [
+        11208,
+        11373
+      ],
+      "summary": "Handles the export earthquake intel log operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_world_backfill_thread",
+      "type": "function",
+      "name": "_eq_world_backfill_thread",
+      "filePath": "main.py",
+      "lineRange": [
+        12206,
+        12240
+      ],
+      "summary": "Handles the eq world backfill thread operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_weather_intel_auth",
+      "type": "function",
+      "name": "get_weather_intel_auth",
+      "filePath": "main.py",
+      "lineRange": [
+        12838,
+        12847
+      ],
+      "summary": "Handles the get weather intel auth operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_workspace_kind",
+      "type": "function",
+      "name": "_workspace_kind",
+      "filePath": "main.py",
+      "lineRange": [
+        13897,
+        13901
+      ],
+      "summary": "Handles the workspace kind operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_wclean",
+      "type": "function",
+      "name": "_wclean",
+      "filePath": "main.py",
+      "lineRange": [
+        14349,
+        14355
+      ],
+      "summary": "Handles the wclean operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_wireless_recipients",
+      "type": "function",
+      "name": "get_wireless_recipients",
+      "filePath": "main.py",
+      "lineRange": [
+        14816,
+        14836
+      ],
+      "summary": "Handles the get wireless recipients operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:ClearAllRequest",
+      "type": "class",
+      "name": "ClearAllRequest",
+      "filePath": "main.py",
+      "lineRange": [
+        159,
+        160
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:MissionCreate",
+      "type": "class",
+      "name": "MissionCreate",
+      "filePath": "main.py",
+      "lineRange": [
+        2014,
+        2087
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:main.py:WeatherRowModel",
+      "type": "class",
+      "name": "WeatherRowModel",
+      "filePath": "main.py",
+      "lineRange": [
+        8977,
+        9012
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WorkspaceItemModel",
+      "type": "class",
+      "name": "WorkspaceItemModel",
+      "filePath": "main.py",
+      "lineRange": [
+        13887,
+        13891
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test_multi_itinerary_hours.py",
+      "type": "file",
+      "name": "test_multi_itinerary_hours.py",
+      "filePath": "test_multi_itinerary_hours.py",
+      "summary": "Contains focused automated tests for test multi itinerary hours.",
+      "tags": [
+        "test",
+        "verification",
+        "backend"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_multi_itinerary_hours.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "test_multi_itinerary_hours.py",
+      "lineRange": [
+        31,
+        36
+      ],
+      "summary": "Exercises or verifies the check behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_multi_itinerary_hours.py:part_a",
+      "type": "function",
+      "name": "part_a",
+      "filePath": "test_multi_itinerary_hours.py",
+      "lineRange": [
+        39,
+        65
+      ],
+      "summary": "Exercises or verifies the part a behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_multi_itinerary_hours.py:part_b",
+      "type": "function",
+      "name": "part_b",
+      "filePath": "test_multi_itinerary_hours.py",
+      "lineRange": [
+        68,
+        90
+      ],
+      "summary": "Exercises or verifies the part b behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_multi_itinerary_hours.py:part_c",
+      "type": "function",
+      "name": "part_c",
+      "filePath": "test_multi_itinerary_hours.py",
+      "lineRange": [
+        93,
+        115
+      ],
+      "summary": "Exercises or verifies the part c behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_multi_itinerary_hours.py:part_d",
+      "type": "function",
+      "name": "part_d",
+      "filePath": "test_multi_itinerary_hours.py",
+      "lineRange": [
+        118,
+        142
+      ],
+      "summary": "Exercises or verifies the part d behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_multi_itinerary_hours.py:part_e",
+      "type": "function",
+      "name": "part_e",
+      "filePath": "test_multi_itinerary_hours.py",
+      "lineRange": [
+        145,
+        175
+      ],
+      "summary": "Exercises or verifies the part e behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_multi_itinerary_hours.py:part_f",
+      "type": "function",
+      "name": "part_f",
+      "filePath": "test_multi_itinerary_hours.py",
+      "lineRange": [
+        178,
+        258
+      ],
+      "summary": "Exercises or verifies the part f behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_no_detail_loss.py",
+      "type": "file",
+      "name": "test_no_detail_loss.py",
+      "filePath": "test_no_detail_loss.py",
+      "summary": "Contains focused automated tests for test no detail loss.",
+      "tags": [
+        "test",
+        "verification",
+        "backend"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_no_detail_loss.py:ok",
+      "type": "function",
+      "name": "ok",
+      "filePath": "test_no_detail_loss.py",
+      "lineRange": [
+        49,
+        56
+      ],
+      "summary": "Exercises or verifies the ok behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_no_detail_loss.py:db_routes",
+      "type": "function",
+      "name": "db_routes",
+      "filePath": "test_no_detail_loss.py",
+      "lineRange": [
+        59,
+        65
+      ],
+      "summary": "Exercises or verifies the db routes behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_no_detail_loss.py:db_days",
+      "type": "function",
+      "name": "db_days",
+      "filePath": "test_no_detail_loss.py",
+      "lineRange": [
+        68,
+        73
+      ],
+      "summary": "Exercises or verifies the db days behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_weather_extra_history_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_weather_extra_history_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_assert_safe_link",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_assert_safe_link",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_dashboard_bundle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_dashboard_bundle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:require_admin_role",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:require_admin_role",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:fmt_dt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:fmt_dt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_clean_text",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_clean_text",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_join_leave_entry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_join_leave_entry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:stream_realtime_events",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:stream_realtime_events",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_handover_by_date",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_handover_by_date",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_global_eq",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_global_eq",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_ai_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_ai_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_user_region_scope",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_user_region_scope",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:require_gov_contacts_owner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:require_gov_contacts_owner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_proximity_factor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_proximity_factor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ingest_earthquake_intel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ingest_earthquake_intel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:export_earthquake_intel_log",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:export_earthquake_intel_log",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_world_backfill_thread",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_world_backfill_thread",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_auth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_auth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_workspace_kind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_workspace_kind",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wclean",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wclean",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_wireless_recipients",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_wireless_recipients",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:ClearAllRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:ClearAllRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:MissionCreate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:MissionCreate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WeatherRowModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WeatherRowModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WorkspaceItemModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WorkspaceItemModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_a",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_a",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_b",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_b",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_c",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_c",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_d",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_d",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_e",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_e",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_f",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "function:test_multi_itinerary_hours.py:part_f",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "function:test_no_detail_loss.py:ok",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "function:test_no_detail_loss.py:ok",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "function:test_no_detail_loss.py:db_routes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "function:test_no_detail_loss.py:db_routes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "function:test_no_detail_loss.py:db_days",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "function:test_no_detail_loss.py:db_days",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_multi_itinerary_hours.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:test_multi_itinerary_hours.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_no_detail_loss.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:auth.py",
+      "target": "file:test_no_detail_loss.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:db.py",
+      "target": "file:test_no_detail_loss.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:test_no_detail_loss.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

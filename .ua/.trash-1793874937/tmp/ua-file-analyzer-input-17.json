@@ -1,0 +1,83 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 17,
+  "batchFiles": [
+    {
+      "path": "frontend/MOBILE_RESPONSIVENESS_AUDIT.md",
+      "language": "markdown",
+      "sizeLines": 187,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/README.md",
+      "language": "markdown",
+      "sizeLines": 16,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "frontend/fix-logo.bat",
+      "language": "batch",
+      "sizeLines": 2,
+      "fileCategory": "script"
+    },
+    {
+      "path": "frontend/fix-logo.ps1",
+      "language": "powershell",
+      "sizeLines": 209,
+      "fileCategory": "script"
+    },
+    {
+      "path": "frontend/index.html",
+      "language": "html",
+      "sizeLines": 27,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "frontend/package.json",
+      "language": "json",
+      "sizeLines": 38,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/vercel.json",
+      "language": "json",
+      "sizeLines": 41,
+      "fileCategory": "config"
+    }
+  ],
+  "batchImportData": {
+    "frontend/MOBILE_RESPONSIVENESS_AUDIT.md": [],
+    "frontend/README.md": [],
+    "frontend/fix-logo.bat": [],
+    "frontend/fix-logo.ps1": [],
+    "frontend/index.html": [],
+    "frontend/package.json": [],
+    "frontend/vercel.json": []
+  },
+  "neighborMap": {}
+}

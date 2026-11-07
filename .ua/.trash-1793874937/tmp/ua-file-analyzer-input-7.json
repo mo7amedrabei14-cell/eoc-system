@@ -1,0 +1,119 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 7,
+  "batchFiles": [
+    {
+      "path": "perf/baseline22-dist/assets/App-KKyF1FNW.js",
+      "language": "javascript",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/exceljs.min-BmMNYSu0.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/index-CBRKr4gE.js",
+      "language": "javascript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/jszip.min-DnCw9i7G.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "language": "javascript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "language": "javascript",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/vendor-CzY76_2m.js",
+      "language": "javascript",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "perf/baseline22-dist/assets/App-KKyF1FNW.js": [
+      "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js",
+      "perf/baseline22-dist/assets/vendor-CzY76_2m.js"
+    ],
+    "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js": [],
+    "perf/baseline22-dist/assets/exceljs.min-BmMNYSu0.js": [
+      "perf/baseline22-dist/assets/vendor-CzY76_2m.js"
+    ],
+    "perf/baseline22-dist/assets/index-CBRKr4gE.js": [
+      "perf/baseline22-dist/assets/apiBase-DSGGbg7P.js",
+      "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ],
+    "perf/baseline22-dist/assets/jszip.min-DnCw9i7G.js": [
+      "perf/baseline22-dist/assets/vendor-CzY76_2m.js"
+    ],
+    "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js": [
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ],
+    "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js": [
+      "perf/baseline22-dist/assets/map-vendor-DAKzUuMp.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ],
+    "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js": [],
+    "perf/baseline22-dist/assets/vendor-CzY76_2m.js": [
+      "perf/baseline22-dist/assets/react-vendor-CmLZwYxA.js",
+      "perf/baseline22-dist/assets/rolldown-runtime-W7wSyTde.js"
+    ]
+  },
+  "neighborMap": {}
+}

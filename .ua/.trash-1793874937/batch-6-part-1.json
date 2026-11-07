@@ -1,0 +1,2405 @@
+{
+  "nodes": [
+    {
+      "id": "file:ai_news_dedupe.py",
+      "type": "file",
+      "name": "ai_news_dedupe.py",
+      "filePath": "ai_news_dedupe.py",
+      "summary": "Provides deterministic URL, text, timestamp, and similarity normalization to detect duplicate AI-news articles across existing records and the current intake batch.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "normalization",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:canonicalize_url",
+      "type": "function",
+      "name": "canonicalize_url",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        29,
+        57
+      ],
+      "summary": "Removes tracking parameters and fragments while preserving story-identifying URL data.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:normalize_text",
+      "type": "function",
+      "name": "normalize_text",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        60,
+        71
+      ],
+      "summary": "Normalizes article text for consistent comparisons, including HTML and Unicode cleanup.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:normalize_title",
+      "type": "function",
+      "name": "normalize_title",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        74,
+        75
+      ],
+      "summary": "Normalizes a news title before exact or similarity-based duplicate checks.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:_timestamp",
+      "type": "function",
+      "name": "_timestamp",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        78,
+        97
+      ],
+      "summary": "Extracts a usable publication timestamp from an article record.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:_within_hours",
+      "type": "function",
+      "name": "_within_hours",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        100,
+        104
+      ],
+      "summary": "Checks whether two timestamps fall within the configured comparison window.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:_title",
+      "type": "function",
+      "name": "_title",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        107,
+        114
+      ],
+      "summary": "Selects and normalizes the title field from a news record.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:_body",
+      "type": "function",
+      "name": "_body",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        117,
+        119
+      ],
+      "summary": "Selects the available article-body text from a news record.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:_token_similarity",
+      "type": "function",
+      "name": "_token_similarity",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        122,
+        127
+      ],
+      "summary": "Measures token-level similarity between two normalized text values.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:duplicate_reason",
+      "type": "function",
+      "name": "duplicate_reason",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        130,
+        163
+      ],
+      "summary": "Returns the matching duplicate criterion for a candidate and an earlier record.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_news_dedupe.py:deduplicate_articles",
+      "type": "function",
+      "name": "deduplicate_articles",
+      "filePath": "ai_news_dedupe.py",
+      "lineRange": [
+        166,
+        205
+      ],
+      "summary": "Filters duplicate candidates against stored records and earlier items in the same batch.",
+      "tags": [
+        "ai-news",
+        "deduplication",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:ai_radar.py",
+      "type": "file",
+      "name": "ai_radar.py",
+      "filePath": "ai_radar.py",
+      "summary": "Coordinates AI Radar news intake, source collection, incident classification, tactical reporting, and repair of records that lack a successful analysis.",
+      "tags": [
+        "ai-radar",
+        "ai-news",
+        "analysis",
+        "reporting"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:ai_radar.py:guess_governorate",
+      "type": "function",
+      "name": "guess_governorate",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        130,
+        137
+      ],
+      "summary": "Infers a governorate from the location text associated with an article.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_radar.py:load_existing_news",
+      "type": "function",
+      "name": "load_existing_news",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        176,
+        206
+      ],
+      "summary": "Loads existing news records used to avoid reprocessing duplicates.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_radar.py:scrape_full_article",
+      "type": "function",
+      "name": "scrape_full_article",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        212,
+        226
+      ],
+      "summary": "Fetches and extracts article text from a source page for downstream analysis.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_radar.py:can_call_gemini",
+      "type": "function",
+      "name": "can_call_gemini",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        232,
+        234
+      ],
+      "summary": "Checks whether a Gemini analysis attempt is currently available under the configured limits.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_radar.py:_parse_ai_json",
+      "type": "function",
+      "name": "_parse_ai_json",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        237,
+        261
+      ],
+      "summary": "Extracts and validates a structured analysis object from model response text.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_radar.py:_call_gemini_model",
+      "type": "function",
+      "name": "_call_gemini_model",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        264,
+        321
+      ],
+      "summary": "Attempts the configured Gemini model sequence and returns an analysis response.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:ai_radar.py:_to_int",
+      "type": "function",
+      "name": "_to_int",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        375,
+        386
+      ],
+      "summary": "Converts a model-produced value to a safe integer when possible.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_radar.py:_extract_counts",
+      "type": "function",
+      "name": "_extract_counts",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        389,
+        403
+      ],
+      "summary": "Extracts incident and casualty counts from an analysis result.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_radar.py:fallback_analysis",
+      "type": "function",
+      "name": "fallback_analysis",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        406,
+        465
+      ],
+      "summary": "Builds a local classification and summary when model analysis is unavailable or invalid.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:ai_radar.py:analyze_batch_with_ai",
+      "type": "function",
+      "name": "analyze_batch_with_ai",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        467,
+        563
+      ],
+      "summary": "Analyzes a group of collected articles and supplies a result for each item.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:ai_radar.py:scan_single_source",
+      "type": "function",
+      "name": "scan_single_source",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        568,
+        611
+      ],
+      "summary": "Collects and prepares articles from an individual source for analysis.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_radar.py:_build_tactical_report",
+      "type": "function",
+      "name": "_build_tactical_report",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        620,
+        637
+      ],
+      "summary": "Formats analyzed incidents into a concise operational report.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:ai_radar.py:send_report",
+      "type": "function",
+      "name": "send_report",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        640,
+        725
+      ],
+      "summary": "Validates and submits an analyzed report to the configured system API.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:ai_radar.py:run_ai_scanner",
+      "type": "function",
+      "name": "run_ai_scanner",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        730,
+        867
+      ],
+      "summary": "Runs the collection, deduplication, analysis, filtering, and reporting workflow.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:ai_radar.py:_needs_repair",
+      "type": "function",
+      "name": "_needs_repair",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        877,
+        883
+      ],
+      "summary": "Determines whether a stored news item is missing a usable analysis.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:ai_radar.py:repair_unanalyzed_news",
+      "type": "function",
+      "name": "repair_unanalyzed_news",
+      "filePath": "ai_radar.py",
+      "lineRange": [
+        886,
+        965
+      ],
+      "summary": "Reanalyzes eligible stored news items and updates their analysis records.",
+      "tags": [
+        "ai-radar",
+        "analysis",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:apify_social_sources.py",
+      "type": "file",
+      "name": "apify_social_sources.py",
+      "filePath": "apify_social_sources.py",
+      "summary": "Collects recent public posts through configured Apify social-search actors, enforces request-budget state, normalizes results, and filters incidents locally.",
+      "tags": [
+        "social-media",
+        "apify",
+        "data-ingestion",
+        "budget-control"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apify_social_sources.py:_int_env",
+      "type": "function",
+      "name": "_int_env",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        39,
+        43
+      ],
+      "summary": "Reads and bounds an integer setting from the environment.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:_parse_datetime",
+      "type": "function",
+      "name": "_parse_datetime",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        46,
+        64
+      ],
+      "summary": "Parses supported publication-time formats into a normalized timestamp.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apify_social_sources.py:_first_value",
+      "type": "function",
+      "name": "_first_value",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        67,
+        72
+      ],
+      "summary": "Selects the first non-empty value among alternate source fields.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:_published_datetime",
+      "type": "function",
+      "name": "_published_datetime",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        75,
+        82
+      ],
+      "summary": "Extracts a post publication timestamp from its possible source fields.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:is_recent_publication",
+      "type": "function",
+      "name": "is_recent_publication",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        85,
+        96
+      ],
+      "summary": "Accepts a post only when its publication time satisfies the freshness window.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:_article_from_post",
+      "type": "function",
+      "name": "_article_from_post",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        99,
+        168
+      ],
+      "summary": "Converts a platform post to the shared article shape and applies incident checks.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apify_social_sources.py:_new_budget_state",
+      "type": "function",
+      "name": "_new_budget_state",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        171,
+        184
+      ],
+      "summary": "Creates the initial persistent accounting state for social-source usage.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:_current_slot",
+      "type": "function",
+      "name": "_current_slot",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        187,
+        189
+      ],
+      "summary": "Determines the current time slot used by the request-budget rules.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:_normalize_budget_state",
+      "type": "function",
+      "name": "_normalize_budget_state",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        192,
+        220
+      ],
+      "summary": "Normalizes persisted budget data before it is read or updated.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apify_social_sources.py:_auth_headers",
+      "type": "function",
+      "name": "_auth_headers",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        223,
+        224
+      ],
+      "summary": "Builds request headers from the configured authentication environment.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:_get_or_create_budget_store",
+      "type": "function",
+      "name": "_get_or_create_budget_store",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        227,
+        273
+      ],
+      "summary": "Finds or initializes the persistent store used for budget accounting.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apify_social_sources.py:_read_budget",
+      "type": "function",
+      "name": "_read_budget",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        276,
+        292
+      ],
+      "summary": "Reads the current social-source usage budget state.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apify_social_sources.py:_save_budget",
+      "type": "function",
+      "name": "_save_budget",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        295,
+        305
+      ],
+      "summary": "Persists updated social-source usage and slot information.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:apify_social_sources.py:_safe_apify_error_detail",
+      "type": "function",
+      "name": "_safe_apify_error_detail",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        308,
+        335
+      ],
+      "summary": "Redacts unsafe response details before producing an Apify diagnostic.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apify_social_sources.py:_failed_actor_run_detail",
+      "type": "function",
+      "name": "_failed_actor_run_detail",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        338,
+        409
+      ],
+      "summary": "Retrieves safe diagnostic context for an unsuccessful actor run.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:apify_social_sources.py:_actor_request",
+      "type": "function",
+      "name": "_actor_request",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        412,
+        448
+      ],
+      "summary": "Sends a bounded request to an Apify actor endpoint.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apify_social_sources.py:_actor_payload",
+      "type": "function",
+      "name": "_actor_payload",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        451,
+        484
+      ],
+      "summary": "Builds the actor input payload from selected platform and search settings.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:apify_social_sources.py:fetch_apify_social_articles",
+      "type": "function",
+      "name": "fetch_apify_social_articles",
+      "filePath": "apify_social_sources.py",
+      "lineRange": [
+        487,
+        612
+      ],
+      "summary": "Fetches, freshness-checks, normalizes, and locally validates social posts within configured budgets.",
+      "tags": [
+        "social-media",
+        "apify",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:incident_validation.py",
+      "type": "file",
+      "name": "incident_validation.py",
+      "filePath": "incident_validation.py",
+      "summary": "Provides deterministic pre-filtering for real-world incident reports, rejecting explicit fictional or metaphorical content before AI confirmation or reporting.",
+      "tags": [
+        "incident-validation",
+        "safety",
+        "text-processing",
+        "filtering"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:incident_validation.py:normalize_incident_text",
+      "type": "function",
+      "name": "normalize_incident_text",
+      "filePath": "incident_validation.py",
+      "lineRange": [
+        65,
+        74
+      ],
+      "summary": "Normalizes incident text for language-independent rule checks.",
+      "tags": [
+        "incident-validation",
+        "filtering",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:incident_validation.py:_value_is_false",
+      "type": "function",
+      "name": "_value_is_false",
+      "filePath": "incident_validation.py",
+      "lineRange": [
+        77,
+        86
+      ],
+      "summary": "Recognizes explicit false-like values in a validation result.",
+      "tags": [
+        "incident-validation",
+        "filtering",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:incident_validation.py:_source_text",
+      "type": "function",
+      "name": "_source_text",
+      "filePath": "incident_validation.py",
+      "lineRange": [
+        89,
+        97
+      ],
+      "summary": "Combines available article fields into the text considered by incident rules.",
+      "tags": [
+        "incident-validation",
+        "filtering",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:incident_validation.py:validate_incident",
+      "type": "function",
+      "name": "validate_incident",
+      "filePath": "incident_validation.py",
+      "lineRange": [
+        100,
+        141
+      ],
+      "summary": "Applies deterministic reporting-context and non-fiction checks to an article.",
+      "tags": [
+        "incident-validation",
+        "filtering",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:incident_validation.py:is_ai_confirmation_candidate",
+      "type": "function",
+      "name": "is_ai_confirmation_candidate",
+      "filePath": "incident_validation.py",
+      "lineRange": [
+        144,
+        157
+      ],
+      "summary": "Identifies ambiguous candidates that require an explicit AI verdict.",
+      "tags": [
+        "incident-validation",
+        "filtering",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:incident_validation.py:is_probable_real_incident",
+      "type": "function",
+      "name": "is_probable_real_incident",
+      "filePath": "incident_validation.py",
+      "lineRange": [
+        160,
+        162
+      ],
+      "summary": "Determines whether text contains sufficient evidence of a real-world incident.",
+      "tags": [
+        "incident-validation",
+        "filtering",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:social_media_sources.py",
+      "type": "file",
+      "name": "social_media_sources.py",
+      "filePath": "social_media_sources.py",
+      "summary": "Provides opt-in adapters for configured public social and RSS sources, normalizing recent keyword-matched posts into AI Radar article records.",
+      "tags": [
+        "social-media",
+        "data-ingestion",
+        "adapters",
+        "configuration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:social_media_sources.py:_csv",
+      "type": "function",
+      "name": "_csv",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        26,
+        27
+      ],
+      "summary": "Parses a comma-separated environment setting into a normalized list.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:social_media_sources.py:_parse_datetime",
+      "type": "function",
+      "name": "_parse_datetime",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        30,
+        44
+      ],
+      "summary": "Parses supported publication-time formats and normalizes timezone information.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_is_recent",
+      "type": "function",
+      "name": "_is_recent",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        47,
+        51
+      ],
+      "summary": "Checks that a feed item is within the accepted freshness period.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:social_media_sources.py:_matches",
+      "type": "function",
+      "name": "_matches",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        54,
+        56
+      ],
+      "summary": "Checks whether text matches the configured incident-search terms.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:social_media_sources.py:_article",
+      "type": "function",
+      "name": "_article",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        59,
+        68
+      ],
+      "summary": "Maps a source item to the shared article record shape.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:social_media_sources.py:_http_get",
+      "type": "function",
+      "name": "_http_get",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        71,
+        74
+      ],
+      "summary": "Performs a bounded HTTP GET for a configured source adapter.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:social_media_sources.py:_warn",
+      "type": "function",
+      "name": "_warn",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        77,
+        80
+      ],
+      "summary": "Records a sanitized warning when an optional source cannot be used.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:social_media_sources.py:_telegram",
+      "type": "function",
+      "name": "_telegram",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        83,
+        115
+      ],
+      "summary": "Collects eligible public Telegram channel items from configured sources.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_youtube",
+      "type": "function",
+      "name": "_youtube",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        118,
+        146
+      ],
+      "summary": "Collects eligible items from configured YouTube feeds or channels.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_reddit_token",
+      "type": "function",
+      "name": "_reddit_token",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        149,
+        171
+      ],
+      "summary": "Obtains an access token for a configured Reddit integration.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_reddit",
+      "type": "function",
+      "name": "_reddit",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        174,
+        212
+      ],
+      "summary": "Collects eligible Reddit posts using configured authenticated access.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_x",
+      "type": "function",
+      "name": "_x",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        215,
+        270
+      ],
+      "summary": "Collects eligible posts from a configured X integration.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:social_media_sources.py:_meta_graph",
+      "type": "function",
+      "name": "_meta_graph",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        273,
+        286
+      ],
+      "summary": "Requests platform data through the configured Meta Graph API.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:social_media_sources.py:_facebook",
+      "type": "function",
+      "name": "_facebook",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        289,
+        310
+      ],
+      "summary": "Collects eligible public Facebook items using configured access.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_instagram",
+      "type": "function",
+      "name": "_instagram",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        313,
+        334
+      ],
+      "summary": "Collects eligible public Instagram items using configured access.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_extra_social_rss",
+      "type": "function",
+      "name": "_extra_social_rss",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        337,
+        371
+      ],
+      "summary": "Collects and normalizes items from additional configured RSS feeds.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:_adapter_is_configured",
+      "type": "function",
+      "name": "_adapter_is_configured",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        374,
+        395
+      ],
+      "summary": "Checks whether an adapter has the settings required to run.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:social_media_sources.py:fetch_social_articles",
+      "type": "function",
+      "name": "fetch_social_articles",
+      "filePath": "social_media_sources.py",
+      "lineRange": [
+        398,
+        427
+      ],
+      "summary": "Runs enabled source adapters and returns normalized recent articles for AI Radar.",
+      "tags": [
+        "social-media",
+        "adapters",
+        "utility"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_ai_news_dedupe.py",
+      "type": "file",
+      "name": "test_ai_news_dedupe.py",
+      "filePath": "test_ai_news_dedupe.py",
+      "summary": "Regression-tests URL canonicalization, Arabic title normalization, exact and fuzzy duplicate detection, and deduplication across stored and in-batch articles.",
+      "tags": [
+        "test",
+        "ai-news",
+        "deduplication",
+        "regression"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:test_ai_news_dedupe.py:AINewsDedupeTests",
+      "type": "class",
+      "name": "AINewsDedupeTests",
+      "filePath": "test_ai_news_dedupe.py",
+      "lineRange": [
+        8,
+        74
+      ],
+      "summary": "Covers canonical URL, normalized title, article similarity, and batch/database duplicate behavior.",
+      "tags": [
+        "test",
+        "deduplication",
+        "test",
+        "suite"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:canonicalize_url",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:normalize_text",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:normalize_title",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_timestamp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_within_hours",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_title",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_body",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_token_similarity",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:duplicate_reason",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:deduplicate_articles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:canonicalize_url",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:normalize_text",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:normalize_title",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_timestamp",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_within_hours",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_title",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_body",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:_token_similarity",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:duplicate_reason",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "function:ai_news_dedupe.py:deduplicate_articles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:guess_governorate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:load_existing_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:scrape_full_article",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:can_call_gemini",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_parse_ai_json",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_call_gemini_model",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_to_int",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_extract_counts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:fallback_analysis",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:analyze_batch_with_ai",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:scan_single_source",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_build_tactical_report",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:send_report",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:run_ai_scanner",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_needs_repair",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:repair_unanalyzed_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "file:ai_news_dedupe.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "file:apify_social_sources.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "file:incident_validation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "file:social_media_sources.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:guess_governorate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:load_existing_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:scrape_full_article",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:can_call_gemini",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_parse_ai_json",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_call_gemini_model",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_to_int",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_extract_counts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:fallback_analysis",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:analyze_batch_with_ai",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:scan_single_source",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_build_tactical_report",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:send_report",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:run_ai_scanner",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:_needs_repair",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "function:ai_radar.py:repair_unanalyzed_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:load_existing_news",
+      "target": "function:ai_news_dedupe.py:canonicalize_url",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:scan_single_source",
+      "target": "function:ai_news_dedupe.py:canonicalize_url",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:send_report",
+      "target": "function:incident_validation.py:validate_incident",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:send_report",
+      "target": "function:ai_news_dedupe.py:canonicalize_url",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:run_ai_scanner",
+      "target": "function:social_media_sources.py:fetch_social_articles",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:run_ai_scanner",
+      "target": "function:apify_social_sources.py:fetch_apify_social_articles",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:run_ai_scanner",
+      "target": "function:incident_validation.py:validate_incident",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:run_ai_scanner",
+      "target": "function:incident_validation.py:is_ai_confirmation_candidate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:run_ai_scanner",
+      "target": "function:ai_news_dedupe.py:canonicalize_url",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:ai_radar.py:run_ai_scanner",
+      "target": "function:ai_news_dedupe.py:deduplicate_articles",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_int_env",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_parse_datetime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_first_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_published_datetime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:is_recent_publication",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_article_from_post",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_new_budget_state",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_current_slot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_normalize_budget_state",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_auth_headers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_get_or_create_budget_store",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_read_budget",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_save_budget",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_safe_apify_error_detail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_failed_actor_run_detail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_actor_request",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_actor_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:fetch_apify_social_articles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "file:incident_validation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_int_env",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_parse_datetime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_first_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_published_datetime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:is_recent_publication",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_article_from_post",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_new_budget_state",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_current_slot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_normalize_budget_state",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_auth_headers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_get_or_create_budget_store",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_read_budget",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_save_budget",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_safe_apify_error_detail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_failed_actor_run_detail",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_actor_request",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:_actor_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "function:apify_social_sources.py:fetch_apify_social_articles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:apify_social_sources.py:_article_from_post",
+      "target": "function:incident_validation.py:validate_incident",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:apify_social_sources.py:_article_from_post",
+      "target": "function:incident_validation.py:is_ai_confirmation_candidate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:normalize_incident_text",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:_value_is_false",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:_source_text",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:validate_incident",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:is_ai_confirmation_candidate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:is_probable_real_incident",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:normalize_incident_text",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:_value_is_false",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:_source_text",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:validate_incident",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:is_ai_confirmation_candidate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "function:incident_validation.py:is_probable_real_incident",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_csv",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_parse_datetime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_is_recent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_matches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_article",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_http_get",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_warn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_telegram",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_youtube",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_reddit_token",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_reddit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_x",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_meta_graph",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_facebook",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_instagram",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_extra_social_rss",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_adapter_is_configured",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:fetch_social_articles",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_csv",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_parse_datetime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_is_recent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_matches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_article",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_http_get",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_warn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_telegram",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_youtube",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_reddit_token",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_reddit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_x",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_meta_graph",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_facebook",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_instagram",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_extra_social_rss",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:_adapter_is_configured",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "function:social_media_sources.py:fetch_social_articles",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ai_news_dedupe.py",
+      "target": "class:test_ai_news_dedupe.py:AINewsDedupeTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ai_news_dedupe.py",
+      "target": "file:ai_news_dedupe.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ai_news_dedupe.py",
+      "target": "class:test_ai_news_dedupe.py:AINewsDedupeTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:ai_news_dedupe.py",
+      "target": "file:test_ai_news_dedupe.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "file:test_ai_news_repair_flow.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "file:test_ai_radar_resilience.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:apify_social_sources.py",
+      "target": "file:test_apify_social_sources.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:ai_radar.py",
+      "target": "file:test_incident_validation.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:incident_validation.py",
+      "target": "file:test_incident_validation.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:social_media_sources.py",
+      "target": "file:test_social_media_sources.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

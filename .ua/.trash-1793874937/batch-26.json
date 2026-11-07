@@ -1,0 +1,355 @@
+{
+  "nodes": [
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000012",
+      "type": "file",
+      "name": "f_000012",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000012",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000013",
+      "type": "file",
+      "name": "f_000013",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000013",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000014",
+      "type": "file",
+      "name": "f_000014",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000014",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000015",
+      "type": "file",
+      "name": "f_000015",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000015",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000016",
+      "type": "file",
+      "name": "f_000016",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000016",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000017",
+      "type": "file",
+      "name": "f_000017",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000017",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000018",
+      "type": "file",
+      "name": "f_000018",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000018",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000019",
+      "type": "file",
+      "name": "f_000019",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000019",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00001a",
+      "type": "file",
+      "name": "f_00001a",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00001a",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00001b",
+      "type": "file",
+      "name": "f_00001b",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00001b",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00001c",
+      "type": "file",
+      "name": "f_00001c",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00001c",
+      "summary": "Opaque Chromium disk-cache entry; its cached payload is generated browser data and is not analyzed as application source.",
+      "tags": [
+        "browser-cache",
+        "cache-entry",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/index",
+      "type": "file",
+      "name": "index",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/index",
+      "summary": "Chromium disk-cache index metadata; it records cache bookkeeping rather than application source code.",
+      "tags": [
+        "browser-cache",
+        "cache-index",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/No_Vary_Search/journal.baj",
+      "type": "file",
+      "name": "journal.baj",
+      "filePath": "_shot_profile/Default/Cache/No_Vary_Search/journal.baj",
+      "summary": "Chromium No-Vary-Search cache metadata artifact; its binary contents are not application source code.",
+      "tags": [
+        "browser-cache",
+        "cache-metadata",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/No_Vary_Search/snapshot.baf",
+      "type": "file",
+      "name": "snapshot.baf",
+      "filePath": "_shot_profile/Default/Cache/No_Vary_Search/snapshot.baf",
+      "summary": "Chromium No-Vary-Search cache metadata artifact; its binary contents are not application source code.",
+      "tags": [
+        "browser-cache",
+        "cache-metadata",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/074be9d46587adb0_0",
+      "type": "file",
+      "name": "074be9d46587adb0_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/074be9d46587adb0_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/0b2e0d4a8e062a35_0",
+      "type": "file",
+      "name": "0b2e0d4a8e062a35_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/0b2e0d4a8e062a35_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/0c0ea5d2eee61474_0",
+      "type": "file",
+      "name": "0c0ea5d2eee61474_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/0c0ea5d2eee61474_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/12205b61dc909aef_0",
+      "type": "file",
+      "name": "12205b61dc909aef_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/12205b61dc909aef_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/1d8855b9036992ab_0",
+      "type": "file",
+      "name": "1d8855b9036992ab_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/1d8855b9036992ab_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/20559001d4cf9068_0",
+      "type": "file",
+      "name": "20559001d4cf9068_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/20559001d4cf9068_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/26cc15c6cdfba2dd_0",
+      "type": "file",
+      "name": "26cc15c6cdfba2dd_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/26cc15c6cdfba2dd_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/33e0a944e6a1951c_0",
+      "type": "file",
+      "name": "33e0a944e6a1951c_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/33e0a944e6a1951c_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/34c41afe0e4d6856_0",
+      "type": "file",
+      "name": "34c41afe0e4d6856_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/34c41afe0e4d6856_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/38e6a2b332ce13f7_0",
+      "type": "file",
+      "name": "38e6a2b332ce13f7_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/38e6a2b332ce13f7_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Code Cache/js/3c3d3e2cd44efe11_0",
+      "type": "file",
+      "name": "3c3d3e2cd44efe11_0",
+      "filePath": "_shot_profile/Default/Code Cache/js/3c3d3e2cd44efe11_0",
+      "summary": "Opaque Chromium compiled JavaScript cache artifact; it is generated browser data rather than an application source module.",
+      "tags": [
+        "browser-cache",
+        "javascript-cache",
+        "generated-artifact",
+        "non-source"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

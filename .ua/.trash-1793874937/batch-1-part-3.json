@@ -1,0 +1,1954 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/drafts.jsx",
+      "type": "file",
+      "name": "drafts.jsx",
+      "filePath": "frontend/src/drafts.jsx",
+      "summary": "React form-draft hook and restore indicators, combining periodic local saves with server synchronization and user-controlled restoration.",
+      "tags": [
+        "component",
+        "form-draft",
+        "autosave",
+        "synchronization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/drafts.jsx:useFormDraft",
+      "type": "function",
+      "name": "useFormDraft",
+      "filePath": "frontend/src/drafts.jsx",
+      "lineRange": [
+        25,
+        152
+      ],
+      "summary": "Autosaves a form locally and remotely, then exposes restore and discard actions.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/drafts.jsx:DraftRestoreBar",
+      "type": "function",
+      "name": "DraftRestoreBar",
+      "filePath": "frontend/src/drafts.jsx",
+      "lineRange": [
+        162,
+        184
+      ],
+      "summary": "Renders the user decision controls for a previously saved form draft.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/drafts.jsx:DraftSavedHint",
+      "type": "function",
+      "name": "DraftSavedHint",
+      "filePath": "frontend/src/drafts.jsx",
+      "lineRange": [
+        187,
+        195
+      ],
+      "summary": "Displays the form-draft save status.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/draftsStore.js",
+      "type": "file",
+      "name": "draftsStore.js",
+      "filePath": "frontend/src/draftsStore.js",
+      "summary": "Framework-independent local draft store with retention and pruning, plus DOM field capture and restoration helpers.",
+      "tags": [
+        "utility",
+        "persistence",
+        "form-draft",
+        "field-restoration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:draftKey",
+      "type": "function",
+      "name": "draftKey",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        28,
+        28
+      ],
+      "summary": "Builds a stable storage key for a form and its optional scope.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:hasContent",
+      "type": "function",
+      "name": "hasContent",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        31,
+        43
+      ],
+      "summary": "Checks recursively whether a draft contains meaningful user-entered content.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:readDraft",
+      "type": "function",
+      "name": "readDraft",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        45,
+        55
+      ],
+      "summary": "Reads, validates, and expires a locally stored draft.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:saveDraft",
+      "type": "function",
+      "name": "saveDraft",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        57,
+        66
+      ],
+      "summary": "Persists a draft locally and prunes older entries when needed.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:clearDraft",
+      "type": "function",
+      "name": "clearDraft",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        68,
+        68
+      ],
+      "summary": "Removes one locally stored draft.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:listDrafts",
+      "type": "function",
+      "name": "listDrafts",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        71,
+        84
+      ],
+      "summary": "Lists valid drafts in newest-first order.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:pruneDrafts",
+      "type": "function",
+      "name": "pruneDrafts",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        86,
+        90
+      ],
+      "summary": "Enforces the configured draft-retention count.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:captureFields",
+      "type": "function",
+      "name": "captureFields",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        98,
+        112
+      ],
+      "summary": "Captures eligible form fields from a DOM subtree while omitting sensitive control types.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:applyFields",
+      "type": "function",
+      "name": "applyFields",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        114,
+        138
+      ],
+      "summary": "Restores captured values to matching form controls and dispatches input events.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/draftsStore.js:applyFieldsWhenReady",
+      "type": "function",
+      "name": "applyFieldsWhenReady",
+      "filePath": "frontend/src/draftsStore.js",
+      "lineRange": [
+        142,
+        155
+      ],
+      "summary": "Retries form restoration until dynamically rendered fields are available.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/i18n.js",
+      "type": "file",
+      "name": "i18n.js",
+      "filePath": "frontend/src/i18n.js",
+      "summary": "Static Arabic-to-English interface dictionary and translation helpers for dashboard labels and generated UI text.",
+      "tags": [
+        "utility",
+        "internationalization",
+        "translation",
+        "localization"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/i18n.js:translate",
+      "type": "function",
+      "name": "translate",
+      "filePath": "frontend/src/i18n.js",
+      "lineRange": [
+        906,
+        910
+      ],
+      "summary": "Looks up and formats an English translation for Arabic interface text.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/liveToast.js",
+      "type": "file",
+      "name": "liveToast.js",
+      "filePath": "frontend/src/liveToast.js",
+      "summary": "Pure live-notification rules for event styling, labels, age, timing, deduplication, and earthquake alarm audio.",
+      "tags": [
+        "utility",
+        "notifications",
+        "event-handling",
+        "audio"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:notifyVisual",
+      "type": "function",
+      "name": "notifyVisual",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        26,
+        28
+      ],
+      "summary": "Maps an event type to its notification tone and icon category.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:unlockEarthquakeSound",
+      "type": "function",
+      "name": "unlockEarthquakeSound",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        54,
+        71
+      ],
+      "summary": "Initializes browser audio after user interaction so later alerts can play.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:playEarthquakeAlarm",
+      "type": "function",
+      "name": "playEarthquakeAlarm",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        73,
+        102
+      ],
+      "summary": "Plays the configured browser-generated earthquake alert pattern.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:notifyLabel",
+      "type": "function",
+      "name": "notifyLabel",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        104,
+        108
+      ],
+      "summary": "Returns a localized short label for a notification event type.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:formatEventAge",
+      "type": "function",
+      "name": "formatEventAge",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        112,
+        124
+      ],
+      "summary": "Formats elapsed time since an event for notification display.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:pauseToastClock",
+      "type": "function",
+      "name": "pauseToastClock",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        132,
+        135
+      ],
+      "summary": "Pauses the active notification countdown.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:resumeToastClock",
+      "type": "function",
+      "name": "resumeToastClock",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        138,
+        142
+      ],
+      "summary": "Resumes the notification countdown after a pause.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:shouldExpireToast",
+      "type": "function",
+      "name": "shouldExpireToast",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        145,
+        148
+      ],
+      "summary": "Determines whether a notification should be removed after its display interval.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:normalizeActionText",
+      "type": "function",
+      "name": "normalizeActionText",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        169,
+        178
+      ],
+      "summary": "Normalizes action text before notification comparison.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:logicalEventKey",
+      "type": "function",
+      "name": "logicalEventKey",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        181,
+        186
+      ],
+      "summary": "Creates a stable key for identifying logically equivalent events.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:shouldSuppressDuplicate",
+      "type": "function",
+      "name": "shouldSuppressDuplicate",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        189,
+        193
+      ],
+      "summary": "Checks whether an event matches a recently displayed duplicate.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:rememberEventKey",
+      "type": "function",
+      "name": "rememberEventKey",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        196,
+        201
+      ],
+      "summary": "Records an event key for subsequent duplicate checks.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:initialsFrom",
+      "type": "function",
+      "name": "initialsFrom",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        207,
+        216
+      ],
+      "summary": "Derives compact initials for a notification avatar.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:shouldPurgeToast",
+      "type": "function",
+      "name": "shouldPurgeToast",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        219,
+        222
+      ],
+      "summary": "Determines whether a queued notification is stale and should be removed.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/liveToast.js:playEgyptRiskAlarm",
+      "type": "function",
+      "name": "playEgyptRiskAlarm",
+      "filePath": "frontend/src/liveToast.js",
+      "lineRange": [
+        225,
+        250
+      ],
+      "summary": "Plays the browser-generated alarm used for Egypt-related risk notifications.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/outbox.js",
+      "type": "file",
+      "name": "outbox.js",
+      "filePath": "frontend/src/outbox.js",
+      "summary": "Offline-resilient submission queue with server mirroring, rejected-item recovery, and pending weather-update synchronization.",
+      "tags": [
+        "utility",
+        "offline-support",
+        "retry-queue",
+        "synchronization"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:readOutbox",
+      "type": "function",
+      "name": "readOutbox",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        34,
+        36
+      ],
+      "summary": "Reads the local pending-submission queue with a safe empty fallback.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:writeOutbox",
+      "type": "function",
+      "name": "writeOutbox",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        37,
+        37
+      ],
+      "summary": "Persists the pending-submission queue locally.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:enqueueOutbox",
+      "type": "function",
+      "name": "enqueueOutbox",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        38,
+        44
+      ],
+      "summary": "Adds or replaces a pending submission and mirrors it to the server workspace.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:removeFromOutbox",
+      "type": "function",
+      "name": "removeFromOutbox",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        45,
+        48
+      ],
+      "summary": "Removes a successfully handled submission from the local and remote queues.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:pushOutboxToServer",
+      "type": "function",
+      "name": "pushOutboxToServer",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        51,
+        60
+      ],
+      "summary": "Mirrors one queued submission into the server workspace.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:syncOutboxFromServer",
+      "type": "function",
+      "name": "syncOutboxFromServer",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        67,
+        100
+      ],
+      "summary": "Merges locally queued submissions with the server-side queue.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:readRejected",
+      "type": "function",
+      "name": "readRejected",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        108,
+        110
+      ],
+      "summary": "Reads the locally archived rejected submissions.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:writeRejected",
+      "type": "function",
+      "name": "writeRejected",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        111,
+        113
+      ],
+      "summary": "Persists the bounded rejected-submission archive.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:archiveRejectedOutbox",
+      "type": "function",
+      "name": "archiveRejectedOutbox",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        123,
+        133
+      ],
+      "summary": "Moves a rejected submission into the recovery archive.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:restoreRejectedToOutbox",
+      "type": "function",
+      "name": "restoreRejectedToOutbox",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        135,
+        143
+      ],
+      "summary": "Returns an archived submission to the pending queue.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:dropRejected",
+      "type": "function",
+      "name": "dropRejected",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        145,
+        148
+      ],
+      "summary": "Removes a selected item from the rejected-submission archive.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:markOutboxAuthBlocked",
+      "type": "function",
+      "name": "markOutboxAuthBlocked",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        153,
+        160
+      ],
+      "summary": "Marks queued submissions as blocked pending an authenticated session.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:clearOutboxAuthBlocked",
+      "type": "function",
+      "name": "clearOutboxAuthBlocked",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        162,
+        168
+      ],
+      "summary": "Clears the authentication-blocked state for queued submissions.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:outboxAuthBlockedCount",
+      "type": "function",
+      "name": "outboxAuthBlockedCount",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        170,
+        170
+      ],
+      "summary": "Counts submissions awaiting authentication before retry.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:loadWeatherPending",
+      "type": "function",
+      "name": "loadWeatherPending",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        176,
+        181
+      ],
+      "summary": "Loads locally pending weather updates.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:flushWeatherPendingToServer",
+      "type": "function",
+      "name": "flushWeatherPendingToServer",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        188,
+        203
+      ],
+      "summary": "Uploads pending weather changes and clears them after confirmation.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:saveWeatherPending",
+      "type": "function",
+      "name": "saveWeatherPending",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        204,
+        210
+      ],
+      "summary": "Stores a weather change locally until it can be synchronized.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:clearWeatherPending",
+      "type": "function",
+      "name": "clearWeatherPending",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        211,
+        216
+      ],
+      "summary": "Removes a confirmed weather update from the pending store.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:syncWeatherPendingFromServer",
+      "type": "function",
+      "name": "syncWeatherPendingFromServer",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        222,
+        238
+      ],
+      "summary": "Merges server-side pending weather changes into local state.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/outbox.js:countWeatherPending",
+      "type": "function",
+      "name": "countWeatherPending",
+      "filePath": "frontend/src/outbox.js",
+      "lineRange": [
+        240,
+        241
+      ],
+      "summary": "Counts locally pending weather changes.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/participantImport.js",
+      "type": "file",
+      "name": "participantImport.js",
+      "filePath": "frontend/src/participantImport.js",
+      "summary": "Spreadsheet row parser that normalizes cell text, validates participant entries, and resolves branch references.",
+      "tags": [
+        "utility",
+        "data-import",
+        "spreadsheet",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/participantImport.js:parseParticipantRows",
+      "type": "function",
+      "name": "parseParticipantRows",
+      "filePath": "frontend/src/participantImport.js",
+      "lineRange": [
+        14,
+        81
+      ],
+      "summary": "Parses spreadsheet rows, validates required fields, and maps branch references.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/timeutils.js",
+      "type": "file",
+      "name": "timeutils.js",
+      "filePath": "frontend/src/timeutils.js",
+      "summary": "Shared time and date-time normalization utilities that keep machine values consistent while formatting user-facing 12-hour displays.",
+      "tags": [
+        "utility",
+        "date-time",
+        "normalization",
+        "formatting"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/timeutils.js:normTime",
+      "type": "function",
+      "name": "normTime",
+      "filePath": "frontend/src/timeutils.js",
+      "lineRange": [
+        11,
+        21
+      ],
+      "summary": "Converts supported time text into a normalized 24-hour machine value.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/timeutils.js:parseTimeText",
+      "type": "function",
+      "name": "parseTimeText",
+      "filePath": "frontend/src/timeutils.js",
+      "lineRange": [
+        27,
+        44
+      ],
+      "summary": "Parses pasted time text, including localized meridiem markers, into machine format.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/timeutils.js:formatTime12",
+      "type": "function",
+      "name": "formatTime12",
+      "filePath": "frontend/src/timeutils.js",
+      "lineRange": [
+        47,
+        53
+      ],
+      "summary": "Formats normalized time values for consistent 12-hour display.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/timeutils.js:formatDateTime12",
+      "type": "function",
+      "name": "formatDateTime12",
+      "filePath": "frontend/src/timeutils.js",
+      "lineRange": [
+        57,
+        80
+      ],
+      "summary": "Formats date-time values as day-first dates with 12-hour time.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/weatherIntelFilters.js",
+      "type": "file",
+      "name": "weatherIntelFilters.js",
+      "filePath": "frontend/src/weatherIntelFilters.js",
+      "summary": "Weather intelligence helpers for extracting forecast metrics, applying phenomenon and anomaly filters, and preserving relevant snapshots.",
+      "tags": [
+        "utility",
+        "weather",
+        "filtering",
+        "anomaly-detection"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/weatherIntelFilters.js:getExtraWeatherValue",
+      "type": "function",
+      "name": "getExtraWeatherValue",
+      "filePath": "frontend/src/weatherIntelFilters.js",
+      "lineRange": [
+        84,
+        97
+      ],
+      "summary": "Reads a numeric weather measure from supported forecast extensions.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/weatherIntelFilters.js:getWeatherMetricValue",
+      "type": "function",
+      "name": "getWeatherMetricValue",
+      "filePath": "frontend/src/weatherIntelFilters.js",
+      "lineRange": [
+        99,
+        118
+      ],
+      "summary": "Extracts the requested normalized metric from a forecast assessment.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/weatherIntelFilters.js:getWeatherMetricClass",
+      "type": "function",
+      "name": "getWeatherMetricClass",
+      "filePath": "frontend/src/weatherIntelFilters.js",
+      "lineRange": [
+        125,
+        157
+      ],
+      "summary": "Classifies a weather metric using its configured historical thresholds.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/weatherIntelFilters.js:matchesWeatherPhenomenon",
+      "type": "function",
+      "name": "matchesWeatherPhenomenon",
+      "filePath": "frontend/src/weatherIntelFilters.js",
+      "lineRange": [
+        171,
+        278
+      ],
+      "summary": "Tests whether an assessment matches the selected weather phenomenon filter.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/weatherIntelFilters.js:shouldPreserveWeatherSnapshot",
+      "type": "function",
+      "name": "shouldPreserveWeatherSnapshot",
+      "filePath": "frontend/src/weatherIntelFilters.js",
+      "lineRange": [
+        281,
+        292
+      ],
+      "summary": "Determines whether an incoming update should retain the current weather snapshot.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "function:frontend/src/drafts.jsx:useFormDraft",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "function:frontend/src/drafts.jsx:DraftRestoreBar",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "function:frontend/src/drafts.jsx:DraftSavedHint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "function:frontend/src/drafts.jsx:useFormDraft",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "function:frontend/src/drafts.jsx:DraftRestoreBar",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "function:frontend/src/drafts.jsx:DraftSavedHint",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:draftKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:hasContent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:readDraft",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:saveDraft",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:clearDraft",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:listDrafts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:pruneDrafts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:captureFields",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:applyFields",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:applyFieldsWhenReady",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:draftKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:hasContent",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:readDraft",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:saveDraft",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:clearDraft",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:listDrafts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:pruneDrafts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:captureFields",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:applyFields",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/draftsStore.js",
+      "target": "function:frontend/src/draftsStore.js:applyFieldsWhenReady",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/i18n.js",
+      "target": "function:frontend/src/i18n.js:translate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/i18n.js",
+      "target": "function:frontend/src/i18n.js:translate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:notifyVisual",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:unlockEarthquakeSound",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:playEarthquakeAlarm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:notifyLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:formatEventAge",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:pauseToastClock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:resumeToastClock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:shouldExpireToast",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:normalizeActionText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:logicalEventKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:shouldSuppressDuplicate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:rememberEventKey",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:initialsFrom",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:shouldPurgeToast",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:playEgyptRiskAlarm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:notifyVisual",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:unlockEarthquakeSound",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:playEarthquakeAlarm",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:notifyLabel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:formatEventAge",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:pauseToastClock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:resumeToastClock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:shouldExpireToast",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:normalizeActionText",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:logicalEventKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:shouldSuppressDuplicate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:rememberEventKey",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:initialsFrom",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:shouldPurgeToast",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/liveToast.js",
+      "target": "function:frontend/src/liveToast.js:playEgyptRiskAlarm",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:readOutbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:writeOutbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:enqueueOutbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:removeFromOutbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:pushOutboxToServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:syncOutboxFromServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:readRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:writeRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:archiveRejectedOutbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:restoreRejectedToOutbox",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:dropRejected",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:markOutboxAuthBlocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:clearOutboxAuthBlocked",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:outboxAuthBlockedCount",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:loadWeatherPending",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:flushWeatherPendingToServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:saveWeatherPending",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:clearWeatherPending",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:syncWeatherPendingFromServer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:countWeatherPending",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:readOutbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:writeOutbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:enqueueOutbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:removeFromOutbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:pushOutboxToServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:syncOutboxFromServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:readRejected",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:writeRejected",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:archiveRejectedOutbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:restoreRejectedToOutbox",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:dropRejected",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:markOutboxAuthBlocked",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:clearOutboxAuthBlocked",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:outboxAuthBlockedCount",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:loadWeatherPending",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:saveWeatherPending",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:clearWeatherPending",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:syncWeatherPendingFromServer",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "function:frontend/src/outbox.js:countWeatherPending",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/participantImport.js",
+      "target": "function:frontend/src/participantImport.js:parseParticipantRows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/participantImport.js",
+      "target": "function:frontend/src/participantImport.js:parseParticipantRows",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:normTime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:parseTimeText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:formatTime12",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:formatDateTime12",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:normTime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:parseTimeText",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:formatTime12",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/timeutils.js",
+      "target": "function:frontend/src/timeutils.js:formatDateTime12",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:getExtraWeatherValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:getWeatherMetricValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:getWeatherMetricClass",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:matchesWeatherPhenomenon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:shouldPreserveWeatherSnapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:getWeatherMetricValue",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:getWeatherMetricClass",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:matchesWeatherPhenomenon",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/weatherIntelFilters.js",
+      "target": "function:frontend/src/weatherIntelFilters.js:shouldPreserveWeatherSnapshot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "file:frontend/src/draftsStore.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/drafts.jsx",
+      "target": "file:frontend/src/workspace.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/outbox.js",
+      "target": "file:frontend/src/workspace.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

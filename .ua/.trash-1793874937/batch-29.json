@@ -1,0 +1,303 @@
+{
+  "nodes": [
+    {
+      "id": "file:_shot_profile/Default/Local Storage/leveldb/MANIFEST-000001",
+      "type": "file",
+      "name": "MANIFEST-000001",
+      "filePath": "_shot_profile/Default/Local Storage/leveldb/MANIFEST-000001",
+      "summary": "LevelDB manifest artifact for the browser profile's local storage; its contents are not represented.",
+      "tags": ["browser-profile", "local-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Network/Cookies",
+      "type": "file",
+      "name": "Cookies",
+      "filePath": "_shot_profile/Default/Network/Cookies",
+      "summary": "Chromium network cookie-store artifact in the browser profile; individual records and values are not represented.",
+      "tags": ["browser-profile", "cookie-storage", "runtime-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Network/Cookies-journal",
+      "type": "file",
+      "name": "Cookies-journal",
+      "filePath": "_shot_profile/Default/Network/Cookies-journal",
+      "summary": "Journal artifact associated with the browser profile's network cookie store; its contents are not represented.",
+      "tags": ["browser-profile", "cookie-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Network/NetworkDataMigrated",
+      "type": "file",
+      "name": "NetworkDataMigrated",
+      "filePath": "_shot_profile/Default/Network/NetworkDataMigrated",
+      "summary": "Browser-profile network-data migration state marker.",
+      "tags": ["browser-profile", "network-state", "runtime-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/PersistentOriginTrials/LOCK",
+      "type": "file",
+      "name": "LOCK",
+      "filePath": "_shot_profile/Default/PersistentOriginTrials/LOCK",
+      "summary": "Lock artifact for the browser profile's persistent origin-trial storage.",
+      "tags": ["browser-profile", "origin-trials", "lock-file"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/PersistentOriginTrials/LOG",
+      "type": "file",
+      "name": "LOG",
+      "filePath": "_shot_profile/Default/PersistentOriginTrials/LOG",
+      "summary": "Database log artifact for the browser profile's persistent origin-trial storage; log contents are not represented.",
+      "tags": ["browser-profile", "origin-trials", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Session Storage/CURRENT",
+      "type": "file",
+      "name": "CURRENT",
+      "filePath": "_shot_profile/Default/Session Storage/CURRENT",
+      "summary": "Current-manifest pointer artifact for the browser profile's session storage.",
+      "tags": ["browser-profile", "session-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Session Storage/LOCK",
+      "type": "file",
+      "name": "LOCK",
+      "filePath": "_shot_profile/Default/Session Storage/LOCK",
+      "summary": "Lock artifact for the browser profile's session storage.",
+      "tags": ["browser-profile", "session-storage", "lock-file"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Session Storage/LOG",
+      "type": "file",
+      "name": "LOG",
+      "filePath": "_shot_profile/Default/Session Storage/LOG",
+      "summary": "Database log artifact for the browser profile's session storage; log contents are not represented.",
+      "tags": ["browser-profile", "session-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Session Storage/MANIFEST-000001",
+      "type": "file",
+      "name": "MANIFEST-000001",
+      "filePath": "_shot_profile/Default/Session Storage/MANIFEST-000001",
+      "summary": "Manifest artifact for the browser profile's session storage; its contents are not represented.",
+      "tags": ["browser-profile", "session-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Shared Dictionary/cache/index",
+      "type": "file",
+      "name": "index",
+      "filePath": "_shot_profile/Default/Shared Dictionary/cache/index",
+      "summary": "Index artifact for the browser profile's shared-dictionary cache.",
+      "tags": ["browser-profile", "shared-dictionary", "cache"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Shared Dictionary/cache/index-dir/the-real-index",
+      "type": "file",
+      "name": "the-real-index",
+      "filePath": "_shot_profile/Default/Shared Dictionary/cache/index-dir/the-real-index",
+      "summary": "Underlying index artifact for the browser profile's shared-dictionary cache.",
+      "tags": ["browser-profile", "shared-dictionary", "cache"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Shared Dictionary/db",
+      "type": "file",
+      "name": "db",
+      "filePath": "_shot_profile/Default/Shared Dictionary/db",
+      "summary": "Shared-dictionary database artifact for the browser profile; stored data values are not represented.",
+      "tags": ["browser-profile", "shared-dictionary", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Shared Dictionary/db-journal",
+      "type": "file",
+      "name": "db-journal",
+      "filePath": "_shot_profile/Default/Shared Dictionary/db-journal",
+      "summary": "Journal artifact associated with the browser profile's shared-dictionary database.",
+      "tags": ["browser-profile", "shared-dictionary", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/CURRENT",
+      "type": "file",
+      "name": "CURRENT",
+      "filePath": "_shot_profile/Default/shared_proto_db/CURRENT",
+      "summary": "Current-manifest pointer artifact for the browser profile's shared protocol database.",
+      "tags": ["browser-profile", "protocol-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/LOCK",
+      "type": "file",
+      "name": "LOCK",
+      "filePath": "_shot_profile/Default/shared_proto_db/LOCK",
+      "summary": "Lock artifact for the browser profile's shared protocol database.",
+      "tags": ["browser-profile", "protocol-storage", "lock-file"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/LOG",
+      "type": "file",
+      "name": "LOG",
+      "filePath": "_shot_profile/Default/shared_proto_db/LOG",
+      "summary": "Database log artifact for the browser profile's shared protocol storage; log contents are not represented.",
+      "tags": ["browser-profile", "protocol-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/MANIFEST-000001",
+      "type": "file",
+      "name": "MANIFEST-000001",
+      "filePath": "_shot_profile/Default/shared_proto_db/MANIFEST-000001",
+      "summary": "Manifest artifact for the browser profile's shared protocol database; its contents are not represented.",
+      "tags": ["browser-profile", "protocol-storage", "database-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/metadata/CURRENT",
+      "type": "file",
+      "name": "CURRENT",
+      "filePath": "_shot_profile/Default/shared_proto_db/metadata/CURRENT",
+      "summary": "Current-manifest pointer artifact for metadata in the browser profile's shared protocol database.",
+      "tags": ["browser-profile", "protocol-storage", "metadata"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/metadata/LOCK",
+      "type": "file",
+      "name": "LOCK",
+      "filePath": "_shot_profile/Default/shared_proto_db/metadata/LOCK",
+      "summary": "Lock artifact for metadata in the browser profile's shared protocol database.",
+      "tags": ["browser-profile", "protocol-storage", "metadata"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/metadata/LOG",
+      "type": "file",
+      "name": "LOG",
+      "filePath": "_shot_profile/Default/shared_proto_db/metadata/LOG",
+      "summary": "Database log artifact for shared protocol metadata; log contents are not represented.",
+      "tags": ["browser-profile", "protocol-storage", "metadata"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/shared_proto_db/metadata/MANIFEST-000001",
+      "type": "file",
+      "name": "MANIFEST-000001",
+      "filePath": "_shot_profile/Default/shared_proto_db/metadata/MANIFEST-000001",
+      "summary": "Manifest artifact for shared protocol metadata; its contents are not represented.",
+      "tags": ["browser-profile", "protocol-storage", "metadata"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/DevToolsActivePort",
+      "type": "file",
+      "name": "DevToolsActivePort",
+      "filePath": "_shot_profile/DevToolsActivePort",
+      "summary": "Browser DevTools launch-state artifact; its contents are not represented.",
+      "tags": ["browser-profile", "devtools", "runtime-artifact"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_test_weather_tie.py",
+      "type": "file",
+      "name": "_test_weather_tie.py",
+      "filePath": "_test_weather_tie.py",
+      "summary": "Regression checks the dashboard's weather-save and refresh logic for dropped or overwritten edits, including preservation of new cell values during asynchronous updates.",
+      "tags": ["test", "weather-data", "regression", "dashboard"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:_undo_blob.mjs",
+      "type": "file",
+      "name": "_undo_blob.mjs",
+      "filePath": "_undo_blob.mjs",
+      "summary": "Recovery utility that reconstructs two frontend files from saved HEAD blobs by matching unchanged neighboring lines; it supports dry-run and an explicit write mode.",
+      "tags": ["recovery", "file-io", "javascript", "utility"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_test_weather_tie.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "_test_weather_tie.py",
+      "lineRange": [20, 23],
+      "summary": "Prints a pass/fail result for one assertion and records failed check names.",
+      "tags": ["test", "assertion-helper", "reporting"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_weather_tie.py:region",
+      "type": "function",
+      "name": "region",
+      "filePath": "_test_weather_tie.py",
+      "lineRange": [26, 29],
+      "summary": "Returns a bounded source-text slice beginning at a named dashboard-code marker for regression assertions.",
+      "tags": ["test", "source-inspection", "helper"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_weather_tie.py:simulate_drop",
+      "type": "function",
+      "name": "simulate_drop",
+      "filePath": "_test_weather_tie.py",
+      "lineRange": [59, 78],
+      "summary": "Simulates clearing only pending cell values that match those sent to the server, preserving newer or intentionally cleared edits.",
+      "tags": ["test", "weather-data", "simulation"],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:_test_weather_tie.py",
+      "target": "function:_test_weather_tie.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:_test_weather_tie.py",
+      "target": "function:_test_weather_tie.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_weather_tie.py",
+      "target": "function:_test_weather_tie.py:region",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:_test_weather_tie.py",
+      "target": "function:_test_weather_tie.py:region",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_weather_tie.py",
+      "target": "function:_test_weather_tie.py:simulate_drop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:_test_weather_tie.py",
+      "target": "function:_test_weather_tie.py:simulate_drop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

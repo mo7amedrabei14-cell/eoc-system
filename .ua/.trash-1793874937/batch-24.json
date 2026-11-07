@@ -1,0 +1,50 @@
+{
+  "nodes": [
+    {
+      "id": "file:perf/baseline22-dist/assets/App-CJsu5YTT.css",
+      "type": "file",
+      "name": "App-CJsu5YTT.css",
+      "filePath": "perf/baseline22-dist/assets/App-CJsu5YTT.css",
+      "summary": "Provides application styling for the EOC authentication transition overlay, including its backdrop and responsive visual states.",
+      "tags": [
+        "stylesheet",
+        "application-ui",
+        "authentication",
+        "animation",
+        "responsive-design"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/index-CWihVeMM.css",
+      "type": "file",
+      "name": "index-CWihVeMM.css",
+      "filePath": "perf/baseline22-dist/assets/index-CWihVeMM.css",
+      "summary": "Contains the application's generated Tailwind stylesheet, defining shared utility classes and responsive application styling.",
+      "tags": [
+        "stylesheet",
+        "tailwindcss",
+        "utility-classes",
+        "responsive-design",
+        "application-ui"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:perf/baseline22-dist/assets/map-vendor-CcXJxNtP.css",
+      "type": "file",
+      "name": "map-vendor-CcXJxNtP.css",
+      "filePath": "perf/baseline22-dist/assets/map-vendor-CcXJxNtP.css",
+      "summary": "Provides Leaflet map styling for map containers, panes, tiles, and marker layers.",
+      "tags": [
+        "stylesheet",
+        "leaflet",
+        "mapping",
+        "vendor-asset",
+        "map-ui"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": []
+}

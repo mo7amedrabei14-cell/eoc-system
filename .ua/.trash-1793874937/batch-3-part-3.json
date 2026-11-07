@@ -1,0 +1,1703 @@
+{
+  "nodes": [
+    {
+      "id": "function:main.py:_sync_participant_itinerary_assignments",
+      "type": "function",
+      "name": "_sync_participant_itinerary_assignments",
+      "filePath": "main.py",
+      "lineRange": [
+        73,
+        119
+      ],
+      "summary": "Handles the sync participant itinerary assignments operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:ensure_participant_branch_schema",
+      "type": "function",
+      "name": "ensure_participant_branch_schema",
+      "filePath": "main.py",
+      "lineRange": [
+        1102,
+        1128
+      ],
+      "summary": "Handles the ensure participant branch schema operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_probe_database_health",
+      "type": "function",
+      "name": "_probe_database_health",
+      "filePath": "main.py",
+      "lineRange": [
+        1516,
+        1539
+      ],
+      "summary": "Handles the probe database health operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:strip_field_status_marker",
+      "type": "function",
+      "name": "strip_field_status_marker",
+      "filePath": "main.py",
+      "lineRange": [
+        2104,
+        2106
+      ],
+      "summary": "Handles the strip field status marker operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:resolve_participant_identity",
+      "type": "function",
+      "name": "resolve_participant_identity",
+      "filePath": "main.py",
+      "lineRange": [
+        2368,
+        2499
+      ],
+      "summary": "Handles the resolve participant identity operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:planned_start_dt",
+      "type": "function",
+      "name": "planned_start_dt",
+      "filePath": "main.py",
+      "lineRange": [
+        2833,
+        2840
+      ],
+      "summary": "Handles the planned start dt operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:assigned_span",
+      "type": "function",
+      "name": "assigned_span",
+      "filePath": "main.py",
+      "lineRange": [
+        3299,
+        3329
+      ],
+      "summary": "Handles the assigned span operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:mission_join",
+      "type": "function",
+      "name": "mission_join",
+      "filePath": "main.py",
+      "lineRange": [
+        5025,
+        5147
+      ],
+      "summary": "Handles the mission join operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:delete_mission",
+      "type": "function",
+      "name": "delete_mission",
+      "filePath": "main.py",
+      "lineRange": [
+        6028,
+        6078
+      ],
+      "summary": "Handles the delete mission operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:clear_all_local_news",
+      "type": "function",
+      "name": "clear_all_local_news",
+      "filePath": "main.py",
+      "lineRange": [
+        6968,
+        7020
+      ],
+      "summary": "Handles the clear all local news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:get_global_disasters",
+      "type": "function",
+      "name": "get_global_disasters",
+      "filePath": "main.py",
+      "lineRange": [
+        7421,
+        7447
+      ],
+      "summary": "Handles the get global disasters operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:update_egypt_eq",
+      "type": "function",
+      "name": "update_egypt_eq",
+      "filePath": "main.py",
+      "lineRange": [
+        7859,
+        7879
+      ],
+      "summary": "Handles the update egypt eq operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:trigger_ai_radar_disabled",
+      "type": "function",
+      "name": "trigger_ai_radar_disabled",
+      "filePath": "main.py",
+      "lineRange": [
+        8552,
+        8566
+      ],
+      "summary": "Handles the trigger ai radar disabled operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_weather_daily",
+      "type": "function",
+      "name": "get_weather_daily",
+      "filePath": "main.py",
+      "lineRange": [
+        9113,
+        9190
+      ],
+      "summary": "Handles the get weather daily operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:save_gov_contacts",
+      "type": "function",
+      "name": "save_gov_contacts",
+      "filePath": "main.py",
+      "lineRange": [
+        9629,
+        9713
+      ],
+      "summary": "Handles the save gov contacts operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_catalog_ready_cached",
+      "type": "function",
+      "name": "_eq_catalog_ready_cached",
+      "filePath": "main.py",
+      "lineRange": [
+        10064,
+        10083
+      ],
+      "summary": "Handles the eq catalog ready cached operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_engine_cycle",
+      "type": "function",
+      "name": "_eq_intel_engine_cycle",
+      "filePath": "main.py",
+      "lineRange": [
+        10774,
+        10870
+      ],
+      "summary": "Handles the eq intel engine cycle operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_catalog_local_hist_batch",
+      "type": "function",
+      "name": "_eq_catalog_local_hist_batch",
+      "filePath": "main.py",
+      "lineRange": [
+        11779,
+        11841
+      ],
+      "summary": "Handles the eq catalog local hist batch operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_forecast_blend",
+      "type": "function",
+      "name": "_eq_forecast_blend",
+      "filePath": "main.py",
+      "lineRange": [
+        12422,
+        12431
+      ],
+      "summary": "Handles the eq forecast blend operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_weather_intel_config",
+      "type": "function",
+      "name": "get_weather_intel_config",
+      "filePath": "main.py",
+      "lineRange": [
+        13057,
+        13081
+      ],
+      "summary": "Handles the get weather intel config operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_client_error_kind",
+      "type": "function",
+      "name": "_client_error_kind",
+      "filePath": "main.py",
+      "lineRange": [
+        14098,
+        14100
+      ],
+      "summary": "Handles the client error kind operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_wireless_delivery_dict",
+      "type": "function",
+      "name": "_wireless_delivery_dict",
+      "filePath": "main.py",
+      "lineRange": [
+        14435,
+        14443
+      ],
+      "summary": "Handles the wireless delivery dict operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:unreturn_wireless_delivery",
+      "type": "function",
+      "name": "unreturn_wireless_delivery",
+      "filePath": "main.py",
+      "lineRange": [
+        15069,
+        15116
+      ],
+      "summary": "Handles the unreturn wireless delivery operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:ParticipantModel",
+      "type": "class",
+      "name": "ParticipantModel",
+      "filePath": "main.py",
+      "lineRange": [
+        1943,
+        1966
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:VolunteerRoomNotesRequest",
+      "type": "class",
+      "name": "VolunteerRoomNotesRequest",
+      "filePath": "main.py",
+      "lineRange": [
+        6099,
+        6103
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:GovContactBatchModel",
+      "type": "class",
+      "name": "GovContactBatchModel",
+      "filePath": "main.py",
+      "lineRange": [
+        9494,
+        9497
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WirelessDeliveryCreate",
+      "type": "class",
+      "name": "WirelessDeliveryCreate",
+      "filePath": "main.py",
+      "lineRange": [
+        14297,
+        14313
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:run_draft_lifecycle.py",
+      "type": "file",
+      "name": "run_draft_lifecycle.py",
+      "filePath": "run_draft_lifecycle.py",
+      "summary": "Runs application verification scenarios for run draft lifecycle.",
+      "tags": [
+        "verification",
+        "scenario",
+        "automation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        42,
+        49
+      ],
+      "summary": "Exercises or verifies the check behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:fmt",
+      "type": "function",
+      "name": "fmt",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        52,
+        53
+      ],
+      "summary": "Exercises or verifies the fmt behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:branch_id",
+      "type": "function",
+      "name": "branch_id",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        56,
+        63
+      ],
+      "summary": "Exercises or verifies the branch id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:owner_user_id",
+      "type": "function",
+      "name": "owner_user_id",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        66,
+        80
+      ],
+      "summary": "Exercises or verifies the owner user id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:api",
+      "type": "function",
+      "name": "api",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        83,
+        91
+      ],
+      "summary": "Exercises or verifies the api behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:get_mission",
+      "type": "function",
+      "name": "get_mission",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        94,
+        95
+      ],
+      "summary": "Exercises or verifies the get mission behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:find_part",
+      "type": "function",
+      "name": "find_part",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        98,
+        102
+      ],
+      "summary": "Exercises or verifies the find part behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:find_entry",
+      "type": "function",
+      "name": "find_entry",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        105,
+        109
+      ],
+      "summary": "Exercises or verifies the find entry behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:server_loop",
+      "type": "function",
+      "name": "server_loop",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        112,
+        113
+      ],
+      "summary": "Exercises or verifies the server loop behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_draft_lifecycle.py:main_r",
+      "type": "function",
+      "name": "main_r",
+      "filePath": "run_draft_lifecycle.py",
+      "lineRange": [
+        116,
+        322
+      ],
+      "summary": "Exercises or verifies the main r behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:run_e2e_scenarios.py",
+      "type": "file",
+      "name": "run_e2e_scenarios.py",
+      "filePath": "run_e2e_scenarios.py",
+      "summary": "Runs application verification scenarios for run e2e scenarios.",
+      "tags": [
+        "verification",
+        "scenario",
+        "automation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        50,
+        62
+      ],
+      "summary": "Exercises or verifies the check behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:now_naive",
+      "type": "function",
+      "name": "now_naive",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        65,
+        66
+      ],
+      "summary": "Exercises or verifies the now naive behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:fmt",
+      "type": "function",
+      "name": "fmt",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        69,
+        70
+      ],
+      "summary": "Exercises or verifies the fmt behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:branch_id",
+      "type": "function",
+      "name": "branch_id",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        73,
+        80
+      ],
+      "summary": "Exercises or verifies the branch id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:owner_user_id",
+      "type": "function",
+      "name": "owner_user_id",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        83,
+        97
+      ],
+      "summary": "Exercises or verifies the owner user id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:non_owner_user_id",
+      "type": "function",
+      "name": "non_owner_user_id",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        100,
+        118
+      ],
+      "summary": "Exercises or verifies the non owner user id behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:participant",
+      "type": "function",
+      "name": "participant",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        129,
+        139
+      ],
+      "summary": "Exercises or verifies the participant behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:mission_base",
+      "type": "function",
+      "name": "mission_base",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        142,
+        156
+      ],
+      "summary": "Exercises or verifies the mission base behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:api",
+      "type": "function",
+      "name": "api",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        159,
+        167
+      ],
+      "summary": "Exercises or verifies the api behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:raw_api",
+      "type": "function",
+      "name": "raw_api",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        170,
+        177
+      ],
+      "summary": "Exercises or verifies the raw api behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:get_mission",
+      "type": "function",
+      "name": "get_mission",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        180,
+        181
+      ],
+      "summary": "Exercises or verifies the get mission behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:find_part",
+      "type": "function",
+      "name": "find_part",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        184,
+        188
+      ],
+      "summary": "Exercises or verifies the find part behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:open_segments",
+      "type": "function",
+      "name": "open_segments",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        191,
+        205
+      ],
+      "summary": "Exercises or verifies the open segments behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:server_loop",
+      "type": "function",
+      "name": "server_loop",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        208,
+        209
+      ],
+      "summary": "Exercises or verifies the server loop behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:main_r",
+      "type": "function",
+      "name": "main_r",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        212,
+        471
+      ],
+      "summary": "Exercises or verifies the main r behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:run_e2e_scenarios.py:cleanup",
+      "type": "function",
+      "name": "cleanup",
+      "filePath": "run_e2e_scenarios.py",
+      "lineRange": [
+        474,
+        495
+      ],
+      "summary": "Exercises or verifies the cleanup behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_sync_participant_itinerary_assignments",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_sync_participant_itinerary_assignments",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_participant_branch_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_participant_branch_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_probe_database_health",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_probe_database_health",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:strip_field_status_marker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:strip_field_status_marker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:resolve_participant_identity",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:resolve_participant_identity",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:planned_start_dt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:planned_start_dt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:assigned_span",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:assigned_span",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_join",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:mission_join",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_local_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_local_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_global_disasters",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_global_disasters",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_egypt_eq",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_egypt_eq",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:trigger_ai_radar_disabled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:trigger_ai_radar_disabled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_daily",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_daily",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:save_gov_contacts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:save_gov_contacts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_ready_cached",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_ready_cached",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_engine_cycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_engine_cycle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_local_hist_batch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_catalog_local_hist_batch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_blend",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_forecast_blend",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_config",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_weather_intel_config",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_client_error_kind",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_client_error_kind",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_delivery_dict",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_delivery_dict",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:unreturn_wireless_delivery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:unreturn_wireless_delivery",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:ParticipantModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:ParticipantModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:VolunteerRoomNotesRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:VolunteerRoomNotesRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:GovContactBatchModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:GovContactBatchModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessDeliveryCreate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessDeliveryCreate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:fmt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:fmt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:branch_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:branch_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:owner_user_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:owner_user_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:api",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:api",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:get_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:get_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:find_part",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:find_part",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:find_entry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:find_entry",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:server_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:server_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:main_r",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "function:run_draft_lifecycle.py:main_r",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:now_naive",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:now_naive",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:fmt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:fmt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:branch_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:branch_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:owner_user_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:owner_user_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:non_owner_user_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:non_owner_user_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:participant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:participant",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:mission_base",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:mission_base",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:api",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:api",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:raw_api",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:raw_api",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:get_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:get_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:find_part",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:find_part",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:open_segments",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:open_segments",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:server_loop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:server_loop",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:main_r",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:main_r",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:cleanup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "function:run_e2e_scenarios.py:cleanup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:run_draft_lifecycle.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:run_e2e_scenarios.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

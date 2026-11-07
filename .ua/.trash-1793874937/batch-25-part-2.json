@@ -1,0 +1,186 @@
+{
+  "nodes": [
+    {
+      "id": "file:.freebuff/project-id",
+      "type": "file",
+      "name": "project-id",
+      "filePath": ".freebuff/project-id",
+      "summary": "Opaque project metadata marker retained as a file reference; its contents are intentionally not surfaced.",
+      "tags": [
+        "project-metadata",
+        "opaque-data",
+        "generated-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot.mjs",
+      "type": "file",
+      "name": "_shot.mjs",
+      "filePath": "_shot.mjs",
+      "summary": "Browser automation helper that establishes a debugging connection and coordinates page-side operations through the browser protocol.",
+      "tags": [
+        "browser-automation",
+        "debug-protocol",
+        "runtime-script"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_shot.mjs:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "_shot.mjs",
+      "lineRange": [
+        20,
+        110
+      ],
+      "summary": "Provides main behavior for dashboard workflows.",
+      "tags": [
+        "utility",
+        "dashboard-logic",
+        "dashboard-logic"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000008",
+      "type": "file",
+      "name": "f_000008",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000008",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000009",
+      "type": "file",
+      "name": "f_000009",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000009",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00000a",
+      "type": "file",
+      "name": "f_00000a",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00000a",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00000b",
+      "type": "file",
+      "name": "f_00000b",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00000b",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00000c",
+      "type": "file",
+      "name": "f_00000c",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00000c",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00000d",
+      "type": "file",
+      "name": "f_00000d",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00000d",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00000e",
+      "type": "file",
+      "name": "f_00000e",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00000e",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_00000f",
+      "type": "file",
+      "name": "f_00000f",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_00000f",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000010",
+      "type": "file",
+      "name": "f_000010",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000010",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_shot_profile/Default/Cache/Cache_Data/f_000011",
+      "type": "file",
+      "name": "f_000011",
+      "filePath": "_shot_profile/Default/Cache/Cache_Data/f_000011",
+      "summary": "Opaque browser cache artifact indexed as a file reference; cached contents are not interpreted or included.",
+      "tags": [
+        "browser-cache",
+        "opaque-data",
+        "runtime-artifact"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:_shot.mjs",
+      "target": "function:_shot.mjs:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    }
+  ]
+}

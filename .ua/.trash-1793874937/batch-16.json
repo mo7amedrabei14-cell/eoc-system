@@ -1,0 +1,54 @@
+{
+  "nodes": [
+    {
+      "id": "document:design-delivery/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "design-delivery/README.md",
+      "summary": "Implementation report for the design-delivery work, describing the visual direction, CSS-only scope, integration constraints, and validation status.",
+      "tags": ["documentation", "design-system", "integration", "validation"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:design-delivery/design-tokens.json",
+      "type": "config",
+      "name": "design-tokens.json",
+      "filePath": "design-delivery/design-tokens.json",
+      "summary": "Portable design-token configuration defining brand, dark and light color palettes, surface and text colors, corner radii, motion settings, and accessibility expectations.",
+      "tags": ["configuration", "design-tokens", "theming", "accessibility"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:design-delivery/variables.scss",
+      "type": "file",
+      "name": "variables.scss",
+      "filePath": "design-delivery/variables.scss",
+      "summary": "Sass maps for dark and light interface colors, radius scales, and motion timing, providing reusable design values for stylesheet integration.",
+      "tags": ["style-variables", "design-tokens", "theming", "sass"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "document:design-delivery/README.md",
+      "target": "config:design-delivery/design-tokens.json",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "document:design-delivery/README.md",
+      "target": "file:design-delivery/variables.scss",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:design-delivery/design-tokens.json",
+      "target": "file:design-delivery/variables.scss",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

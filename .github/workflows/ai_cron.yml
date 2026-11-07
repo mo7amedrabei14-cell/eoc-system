@@ -32,20 +32,20 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
-          APIFY_SOCIAL_MAX_AGE_MINUTES: ${{ vars.APIFY_SOCIAL_MAX_AGE_MINUTES || '30' }}
-          APIFY_DAILY_RESULT_CAP: ${{ vars.APIFY_DAILY_RESULT_CAP || '50' }}
-          APIFY_MONTHLY_RESULT_CAP: ${{ vars.APIFY_MONTHLY_RESULT_CAP || '1000' }}
+          APIFY_SOCIAL_MAX_AGE_MINUTES: ${{ vars.APIFY_SOCIAL_MAX_AGE_MINUTES != '' && vars.APIFY_SOCIAL_MAX_AGE_MINUTES || '30' }}
+          APIFY_DAILY_RESULT_CAP: ${{ vars.APIFY_DAILY_RESULT_CAP != '' && vars.APIFY_DAILY_RESULT_CAP || '50' }}
+          APIFY_MONTHLY_RESULT_CAP: ${{ vars.APIFY_MONTHLY_RESULT_CAP != '' && vars.APIFY_MONTHLY_RESULT_CAP || '1000' }}
           SYSTEM_TOKEN: ${{ secrets.SYSTEM_TOKEN }}
           # Set this to the active backend base URL, or to /api/ai-news itself.
-          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL || 'https://eoc-system-khaki.vercel.app' }}
+          SYSTEM_API_URL: ${{ secrets.SYSTEM_API_URL != '' && secrets.SYSTEM_API_URL || 'https://eoc-system-omega.vercel.app' }}
           # Public channel/page identifiers are repository Actions Variables.
           OSINT_TELEGRAM_CHANNELS: ${{ vars.OSINT_TELEGRAM_CHANNELS }}
-          OSINT_EXTRA_SOCIAL_FEEDS: ${{ vars.OSINT_EXTRA_SOCIAL_FEEDS }}
+          OSINT_EXTRA_SOCIAL_FEEDS: ${{ vars.OSINT_EXTRA_SOCIAL_FEEDS || '' }}
           OSINT_YOUTUBE_CHANNEL_IDS: ${{ vars.OSINT_YOUTUBE_CHANNEL_IDS }}
           OSINT_REDDIT_SUBREDDITS: ${{ vars.OSINT_REDDIT_SUBREDDITS }}
           META_FACEBOOK_PAGE_IDS: ${{ vars.META_FACEBOOK_PAGE_IDS }}
           META_INSTAGRAM_USER_IDS: ${{ vars.META_INSTAGRAM_USER_IDS }}
-          META_GRAPH_API_VERSION: ${{ vars.META_GRAPH_API_VERSION || 'v24.0' }}
+          META_GRAPH_API_VERSION: ${{ vars.META_GRAPH_API_VERSION != '' && vars.META_GRAPH_API_VERSION || 'v24.0' }}
           # Platform access tokens/credentials belong in Actions Secrets only.
           X_API_BEARER_TOKEN: ${{ secrets.X_API_BEARER_TOKEN }}
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}

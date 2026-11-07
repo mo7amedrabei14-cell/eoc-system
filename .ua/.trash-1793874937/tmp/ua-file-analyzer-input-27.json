@@ -1,0 +1,209 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 27,
+  "batchFiles": [
+    {
+      "path": "_shot_profile/Default/Code Cache/js/476e697f4d801cdf_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/47e9027527443bdb_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/49ce613c8f5fe922_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/55d96aeffbe066fc_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/568f80ad67cad4da_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/5729a4c3d436fecc_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/6e9348d0e624d722_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/74cdeb79cc6ac7c0_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7be6358861894a7d_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7ce3d2392f9452c7_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7f1237c4b801c4da_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/7fa657661e2beb31_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/8fc2f58fdafbb7b5_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/9a9073055345fb52_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/9b9aad443b9e7dc0_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/ad0eaaf2bc648774_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/afa30a55c1b37597_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/b56e39a1c556c3b6_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/b763c5353448477b_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/cc59708e33c0a9f6_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/dd0d70889624e239_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/e50ef9b991441529_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/eea795006b015923_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/f24fd9dbe113b6f7_0",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Code Cache/js/fa9e00dbd8004d99_0",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "_shot_profile/Default/Code Cache/js/476e697f4d801cdf_0": [],
+    "_shot_profile/Default/Code Cache/js/47e9027527443bdb_0": [],
+    "_shot_profile/Default/Code Cache/js/49ce613c8f5fe922_0": [],
+    "_shot_profile/Default/Code Cache/js/55d96aeffbe066fc_0": [],
+    "_shot_profile/Default/Code Cache/js/568f80ad67cad4da_0": [],
+    "_shot_profile/Default/Code Cache/js/5729a4c3d436fecc_0": [],
+    "_shot_profile/Default/Code Cache/js/6e9348d0e624d722_0": [],
+    "_shot_profile/Default/Code Cache/js/74cdeb79cc6ac7c0_0": [],
+    "_shot_profile/Default/Code Cache/js/7be6358861894a7d_0": [],
+    "_shot_profile/Default/Code Cache/js/7ce3d2392f9452c7_0": [],
+    "_shot_profile/Default/Code Cache/js/7f1237c4b801c4da_0": [],
+    "_shot_profile/Default/Code Cache/js/7fa657661e2beb31_0": [],
+    "_shot_profile/Default/Code Cache/js/8fc2f58fdafbb7b5_0": [],
+    "_shot_profile/Default/Code Cache/js/9a9073055345fb52_0": [],
+    "_shot_profile/Default/Code Cache/js/9b9aad443b9e7dc0_0": [],
+    "_shot_profile/Default/Code Cache/js/ad0eaaf2bc648774_0": [],
+    "_shot_profile/Default/Code Cache/js/afa30a55c1b37597_0": [],
+    "_shot_profile/Default/Code Cache/js/b56e39a1c556c3b6_0": [],
+    "_shot_profile/Default/Code Cache/js/b763c5353448477b_0": [],
+    "_shot_profile/Default/Code Cache/js/cc59708e33c0a9f6_0": [],
+    "_shot_profile/Default/Code Cache/js/dd0d70889624e239_0": [],
+    "_shot_profile/Default/Code Cache/js/e50ef9b991441529_0": [],
+    "_shot_profile/Default/Code Cache/js/eea795006b015923_0": [],
+    "_shot_profile/Default/Code Cache/js/f24fd9dbe113b6f7_0": [],
+    "_shot_profile/Default/Code Cache/js/fa9e00dbd8004d99_0": []
+  },
+  "neighborMap": {}
+}

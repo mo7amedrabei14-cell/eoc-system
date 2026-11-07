@@ -1,0 +1,209 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 25,
+  "batchFiles": [
+    {
+      "path": ".freebuff/project-id",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_drive_crash.mjs",
+      "language": "javascript",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_head_dash.jsx",
+      "language": "javascript",
+      "sizeLines": 16023,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot.mjs",
+      "language": "javascript",
+      "sizeLines": 112,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_0",
+      "language": "unknown",
+      "sizeLines": 3,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_1",
+      "language": "unknown",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_2",
+      "language": "unknown",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/data_3",
+      "language": "unknown",
+      "sizeLines": 472,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000001",
+      "language": "unknown",
+      "sizeLines": 1245,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000002",
+      "language": "unknown",
+      "sizeLines": 664,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000003",
+      "language": "unknown",
+      "sizeLines": 768,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000004",
+      "language": "unknown",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000005",
+      "language": "unknown",
+      "sizeLines": 427,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000006",
+      "language": "unknown",
+      "sizeLines": 204,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000007",
+      "language": "unknown",
+      "sizeLines": 14382,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000008",
+      "language": "unknown",
+      "sizeLines": 185,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000009",
+      "language": "unknown",
+      "sizeLines": 2478,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000a",
+      "language": "unknown",
+      "sizeLines": 10221,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000b",
+      "language": "unknown",
+      "sizeLines": 220,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000c",
+      "language": "unknown",
+      "sizeLines": 39989,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000d",
+      "language": "unknown",
+      "sizeLines": 694,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000e",
+      "language": "unknown",
+      "sizeLines": 125,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_00000f",
+      "language": "unknown",
+      "sizeLines": 269,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000010",
+      "language": "unknown",
+      "sizeLines": 15539,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Cache/Cache_Data/f_000011",
+      "language": "unknown",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    ".freebuff/project-id": [],
+    "_drive_crash.mjs": [],
+    "_head_dash.jsx": [],
+    "_shot.mjs": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_0": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_1": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_2": [],
+    "_shot_profile/Default/Cache/Cache_Data/data_3": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000001": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000002": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000003": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000004": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000005": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000006": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000007": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000008": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000009": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000a": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000b": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000c": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000d": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000e": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_00000f": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000010": [],
+    "_shot_profile/Default/Cache/Cache_Data/f_000011": []
+  },
+  "neighborMap": {}
+}

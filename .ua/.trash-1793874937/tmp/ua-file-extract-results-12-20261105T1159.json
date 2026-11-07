@@ -1,0 +1,977 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 28,
+  "filesSkipped": [],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 28,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 28
+    }
+  },
+  "results": [
+    {
+      "path": "migrations/20260813_participant_types.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 40,
+      "nonEmptyLines": 31,
+      "definitions": [
+        {
+          "name": "mission_participants_one_open_attendance",
+          "kind": "index",
+          "fields": [],
+          "startLine": 32,
+          "endLine": 32
+        },
+        {
+          "name": "mission_participants_mission_type_index",
+          "kind": "index",
+          "fields": [],
+          "startLine": 37,
+          "endLine": 37
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 2
+      }
+    },
+    {
+      "path": "migrations/20260904_mission_team_code_realtime.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 34,
+      "nonEmptyLines": 29,
+      "definitions": [
+        {
+          "name": "realtime_events",
+          "kind": "table",
+          "fields": [
+            "event_id",
+            "event_type",
+            "action",
+            "actor_user_id",
+            "target_user_id",
+            "mission_id",
+            "details",
+            "created_at"
+          ],
+          "startLine": 17,
+          "endLine": 26
+        },
+        {
+          "name": "realtime_events_id_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 28,
+          "endLine": 28
+        },
+        {
+          "name": "realtime_events_mission_idx",
+          "kind": "index",
+          "fields": [],
+          "startLine": 31,
+          "endLine": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 3
+      }
+    },
+    {
+      "path": "migrations/20260905_hr_active_volunteers_fix.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 42,
+      "nonEmptyLines": 37,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260905_participant_identity.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 94,
+      "nonEmptyLines": 82,
+      "definitions": [
+        {
+          "name": "uq_mp_mission_membership",
+          "kind": "index",
+          "fields": [],
+          "startLine": 73,
+          "endLine": 73
+        },
+        {
+          "name": "uq_mp_mission_volunteer",
+          "kind": "index",
+          "fields": [],
+          "startLine": 77,
+          "endLine": 77
+        },
+        {
+          "name": "uq_mp_mission_user",
+          "kind": "index",
+          "fields": [],
+          "startLine": 81,
+          "endLine": 81
+        },
+        {
+          "name": "idx_mp_volunteer_status",
+          "kind": "index",
+          "fields": [],
+          "startLine": 86,
+          "endLine": 86
+        },
+        {
+          "name": "idx_mp_membership_status",
+          "kind": "index",
+          "fields": [],
+          "startLine": 90,
+          "endLine": 90
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 5
+      }
+    },
+    {
+      "path": "migrations/20260905_prevent_users_delete.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 35,
+      "nonEmptyLines": 30,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260906_participant_position.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 24,
+      "nonEmptyLines": 20,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260907_open_mission_multi_day.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 50,
+      "nonEmptyLines": 43,
+      "definitions": [
+        {
+          "name": "mission_participant_itineraries",
+          "kind": "table",
+          "fields": [
+            "id",
+            "participant_id",
+            "mission_id",
+            "itinerary_group"
+          ],
+          "startLine": 10,
+          "endLine": 15
+        },
+        {
+          "name": "idx_mpi_mission",
+          "kind": "index",
+          "fields": [],
+          "startLine": 38,
+          "endLine": 38
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 2
+      }
+    },
+    {
+      "path": "migrations/20260907_participation_periods.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 57,
+      "nonEmptyLines": 47,
+      "definitions": [
+        {
+          "name": "idx_mps_mission",
+          "kind": "index",
+          "fields": [],
+          "startLine": 32,
+          "endLine": 32
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 1
+      }
+    },
+    {
+      "path": "migrations/20260907_participation_segments.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 44,
+      "nonEmptyLines": 38,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260907_unify_engine.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 19,
+      "nonEmptyLines": 15,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260909_mission_start_creation_datetime.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 31,
+      "nonEmptyLines": 26,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260912_jl_leave_closes_session.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 34,
+      "nonEmptyLines": 31,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260914_supervisors_handover.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 37,
+      "nonEmptyLines": 32,
+      "definitions": [
+        {
+          "name": "handover_log",
+          "kind": "table",
+          "fields": [
+            "handover_id",
+            "handover_date",
+            "local_news_count",
+            "global_news_count",
+            "forms_count",
+            "issues_text",
+            "tetra_count",
+            "huawei_count",
+            "new_equipment_count",
+            "shift_matrix",
+            "follow_ups_text",
+            "created_by",
+            "created_at",
+            "updated_by",
+            "updated_at"
+          ],
+          "startLine": 13,
+          "endLine": 29
+        },
+        {
+          "name": "uq_handover_log_date",
+          "kind": "index",
+          "fields": [],
+          "startLine": 31,
+          "endLine": 31
+        },
+        {
+          "name": "idx_handover_log_created_by",
+          "kind": "index",
+          "fields": [],
+          "startLine": 34,
+          "endLine": 34
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 3
+      }
+    },
+    {
+      "path": "migrations/20260916_weather_module.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 39,
+      "nonEmptyLines": 33,
+      "definitions": [
+        {
+          "name": "weather_forecasts",
+          "kind": "table",
+          "fields": [
+            "id",
+            "forecast_date",
+            "shift",
+            "branch_id",
+            "temp_min",
+            "temp_max",
+            "wind_min",
+            "wind_max",
+            "rain_min",
+            "rain_max",
+            "humidity_min",
+            "humidity_max",
+            "clouds_min",
+            "clouds_max",
+            "aqi_min",
+            "aqi_max",
+            "entered_by",
+            "created_at",
+            "updated_at"
+          ],
+          "startLine": 8,
+          "endLine": 28
+        },
+        {
+          "name": "uq_weather_forecast_shift_branch",
+          "kind": "index",
+          "fields": [],
+          "startLine": 30,
+          "endLine": 30
+        },
+        {
+          "name": "idx_weather_forecasts_date",
+          "kind": "index",
+          "fields": [],
+          "startLine": 33,
+          "endLine": 33
+        },
+        {
+          "name": "idx_weather_forecasts_branch",
+          "kind": "index",
+          "fields": [],
+          "startLine": 36,
+          "endLine": 36
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 4
+      }
+    },
+    {
+      "path": "migrations/20260917_weather_intel.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 216,
+      "nonEmptyLines": 204,
+      "definitions": [
+        {
+          "name": "weather_locations",
+          "kind": "table",
+          "fields": [
+            "id",
+            "name_ar",
+            "name_en",
+            "latitude",
+            "longitude",
+            "altitude_m",
+            "region",
+            "branch_id",
+            "is_active",
+            "created_at"
+          ],
+          "startLine": 11,
+          "endLine": 22
+        },
+        {
+          "name": "weather_history_daily",
+          "kind": "table",
+          "fields": [
+            "id",
+            "location_id",
+            "record_date",
+            "tmax",
+            "tmin",
+            "precip_mm",
+            "wind_max_kph",
+            "wind_gusts_kph",
+            "humidity_mean_pct",
+            "cloud_cover_mean_pct",
+            "data_source",
+            "created_at"
+          ],
+          "startLine": 59,
+          "endLine": 72
+        },
+        {
+          "name": "weather_runs",
+          "kind": "table",
+          "fields": [
+            "id",
+            "client_run_uuid",
+            "run_date",
+            "target_date",
+            "status",
+            "total_locations",
+            "successful_locations",
+            "error_locations",
+            "error_details",
+            "source_meta",
+            "started_at",
+            "completed_at"
+          ],
+          "startLine": 79,
+          "endLine": 92
+        },
+        {
+          "name": "weather_forecast_snapshots",
+          "kind": "table",
+          "fields": [
+            "id",
+            "weather_run_id",
+            "location_id",
+            "target_date",
+            "data_source",
+            "fetched_at",
+            "raw_json",
+            "tmax",
+            "tmin",
+            "precip_mm",
+            "precip_prob_pct",
+            "wind_max_kph",
+            "wind_gusts_kph",
+            "humidity_mean_pct",
+            "cloud_cover_mean_pct",
+            "weather_code"
+          ],
+          "startLine": 96,
+          "endLine": 113
+        },
+        {
+          "name": "weather_statistics",
+          "kind": "table",
+          "fields": [
+            "id",
+            "weather_run_id",
+            "location_id",
+            "target_date",
+            "metric",
+            "history_source",
+            "window_days",
+            "methodology_version",
+            "period_start",
+            "period_end",
+            "sample_count",
+            "mean",
+            "median",
+            "min",
+            "max",
+            "p10",
+            "p25",
+            "p75",
+            "p90",
+            "stddev",
+            "computed_at"
+          ],
+          "startLine": 120,
+          "endLine": 142
+        },
+        {
+          "name": "weather_frequencies",
+          "kind": "table",
+          "fields": [
+            "id",
+            "weather_run_id",
+            "location_id",
+            "target_date",
+            "metric",
+            "threshold_value",
+            "threshold_unit",
+            "threshold_desc_ar",
+            "qualifying_count",
+            "total_count",
+            "frequency_pct",
+            "period_start",
+            "period_end",
+            "methodology",
+            "computed_at"
+          ],
+          "startLine": 147,
+          "endLine": 163
+        },
+        {
+          "name": "weather_assessments",
+          "kind": "table",
+          "fields": [
+            "id",
+            "weather_run_id",
+            "location_id",
+            "target_date",
+            "forecast_snapshot_id",
+            "anomalies",
+            "hazards",
+            "ai_assessment",
+            "ai_assessment_json",
+            "ai_model",
+            "ai_status",
+            "ai_error",
+            "generated_at"
+          ],
+          "startLine": 168,
+          "endLine": 182
+        },
+        {
+          "name": "weather_intel_config",
+          "kind": "table",
+          "fields": [
+            "value",
+            "unit",
+            "description_ar",
+            "source",
+            "updated_at"
+          ],
+          "startLine": 189,
+          "endLine": 196
+        },
+        {
+          "name": "uq_weather_history_day",
+          "kind": "index",
+          "fields": [],
+          "startLine": 73,
+          "endLine": 73
+        },
+        {
+          "name": "idx_weather_history_loc_date",
+          "kind": "index",
+          "fields": [],
+          "startLine": 75,
+          "endLine": 75
+        },
+        {
+          "name": "idx_weather_runs_target",
+          "kind": "index",
+          "fields": [],
+          "startLine": 93,
+          "endLine": 93
+        },
+        {
+          "name": "uq_weather_snapshot",
+          "kind": "index",
+          "fields": [],
+          "startLine": 114,
+          "endLine": 114
+        },
+        {
+          "name": "idx_weather_snap_loc_date",
+          "kind": "index",
+          "fields": [],
+          "startLine": 116,
+          "endLine": 116
+        },
+        {
+          "name": "uq_weather_stat",
+          "kind": "index",
+          "fields": [],
+          "startLine": 143,
+          "endLine": 143
+        },
+        {
+          "name": "uq_weather_freq",
+          "kind": "index",
+          "fields": [],
+          "startLine": 164,
+          "endLine": 164
+        },
+        {
+          "name": "uq_weather_assessment",
+          "kind": "index",
+          "fields": [],
+          "startLine": 183,
+          "endLine": 183
+        },
+        {
+          "name": "idx_weather_assess_loc_date",
+          "kind": "index",
+          "fields": [],
+          "startLine": 185,
+          "endLine": 185
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 17
+      }
+    },
+    {
+      "path": "migrations/20260920_add_youth_monitoring_status.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 22,
+      "nonEmptyLines": 17,
+      "definitions": [
+        {
+          "name": "public",
+          "kind": "table",
+          "fields": [
+            "id",
+            "mission_id",
+            "user_id",
+            "action_text",
+            "created_at"
+          ],
+          "startLine": 11,
+          "endLine": 17
+        },
+        {
+          "name": "idx_mission_youth_monitoring_mission_id",
+          "kind": "index",
+          "fields": [],
+          "startLine": 19,
+          "endLine": 19
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 2
+      }
+    },
+    {
+      "path": "migrations/20260920_read_only_missions_role.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 28,
+      "nonEmptyLines": 22,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260921_add_participant_notes_column.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 10,
+      "nonEmptyLines": 7,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260921_add_volunteer_notes_permission.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 26,
+      "nonEmptyLines": 21,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260922_add_staff_view_permission.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 19,
+      "nonEmptyLines": 15,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260922_volunteer_room_notes.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 61,
+      "nonEmptyLines": 53,
+      "definitions": [
+        {
+          "name": "public",
+          "kind": "table",
+          "fields": [
+            "note_id",
+            "mission_id",
+            "note_date",
+            "membership_number",
+            "member_name",
+            "note_text",
+            "row_order",
+            "created_at"
+          ],
+          "startLine": 15,
+          "endLine": 24
+        },
+        {
+          "name": "idx_mission_vrn_mission",
+          "kind": "index",
+          "fields": [],
+          "startLine": 26,
+          "endLine": 26
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 2
+      }
+    },
+    {
+      "path": "migrations/20260923_add_youth_review_permission.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 31,
+      "nonEmptyLines": 26,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260923_ai_news_observed_at.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 20,
+      "nonEmptyLines": 15,
+      "definitions": [
+        {
+          "name": "idx_ai_news_observed_at",
+          "kind": "index",
+          "fields": [],
+          "startLine": 18,
+          "endLine": 18
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 1
+      }
+    },
+    {
+      "path": "migrations/20260924_mission_field_operation_status.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 77,
+      "nonEmptyLines": 70,
+      "definitions": [
+        {
+          "name": "idx_missions_field_operation_status",
+          "kind": "index",
+          "fields": [],
+          "startLine": 17,
+          "endLine": 17
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 1
+      }
+    },
+    {
+      "path": "migrations/20260927_eoc_staff_name_1000.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 25,
+      "nonEmptyLines": 23,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260928_participant_branch_rules.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 15,
+      "nonEmptyLines": 12,
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 0
+      }
+    },
+    {
+      "path": "migrations/20260929_client_errors.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 44,
+      "nonEmptyLines": 40,
+      "definitions": [
+        {
+          "name": "client_errors",
+          "kind": "table",
+          "fields": [
+            "error_id",
+            "fingerprint",
+            "kind",
+            "stack",
+            "url",
+            "app_revision",
+            "boot_id",
+            "user_id",
+            "last_seen"
+          ],
+          "startLine": 18,
+          "endLine": 33
+        },
+        {
+          "name": "uq_client_errors_fingerprint_day",
+          "kind": "index",
+          "fields": [],
+          "startLine": 36,
+          "endLine": 36
+        },
+        {
+          "name": "idx_client_errors_last_seen",
+          "kind": "index",
+          "fields": [],
+          "startLine": 40,
+          "endLine": 40
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 3
+      }
+    },
+    {
+      "path": "migrations/20260929_workspace_server_side.sql",
+      "language": "sql",
+      "fileCategory": "data",
+      "totalLines": 34,
+      "nonEmptyLines": 29,
+      "definitions": [
+        {
+          "name": "public",
+          "kind": "table",
+          "fields": [
+            "item_id",
+            "user_id",
+            "kind",
+            "scope",
+            "payload",
+            "meta",
+            "updated_at"
+          ],
+          "startLine": 17,
+          "endLine": 25
+        },
+        {
+          "name": "uq_workspace_user_kind_scope",
+          "kind": "index",
+          "fields": [],
+          "startLine": 28,
+          "endLine": 28
+        },
+        {
+          "name": "idx_workspace_user_kind",
+          "kind": "index",
+          "fields": [],
+          "startLine": 31,
+          "endLine": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "definitionCount": 3
+      }
+    }
+  ]
+}

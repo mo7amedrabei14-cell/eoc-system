@@ -1,0 +1,55 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 18,
+  "batchFiles": [
+    {
+      "path": "frontend/_unz__flat/xl/metadata.xml",
+      "language": "xml",
+      "sizeLines": 19,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/styles.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": "frontend/_unz__flat/xl/workbook.xml",
+      "language": "xml",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    }
+  ],
+  "batchImportData": {
+    "frontend/_unz__flat/xl/metadata.xml": [],
+    "frontend/_unz__flat/xl/styles.xml": [],
+    "frontend/_unz__flat/xl/workbook.xml": []
+  },
+  "neighborMap": {}
+}

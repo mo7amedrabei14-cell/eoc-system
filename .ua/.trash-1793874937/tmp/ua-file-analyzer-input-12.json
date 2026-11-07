@@ -1,0 +1,230 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 12,
+  "batchFiles": [
+    {
+      "path": "migrations/20260813_participant_types.sql",
+      "language": "sql",
+      "sizeLines": 40,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260904_mission_team_code_realtime.sql",
+      "language": "sql",
+      "sizeLines": 33,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260905_hr_active_volunteers_fix.sql",
+      "language": "sql",
+      "sizeLines": 41,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260905_participant_identity.sql",
+      "language": "sql",
+      "sizeLines": 93,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260905_prevent_users_delete.sql",
+      "language": "sql",
+      "sizeLines": 34,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260906_participant_position.sql",
+      "language": "sql",
+      "sizeLines": 23,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_open_mission_multi_day.sql",
+      "language": "sql",
+      "sizeLines": 49,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_participation_periods.sql",
+      "language": "sql",
+      "sizeLines": 57,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_participation_segments.sql",
+      "language": "sql",
+      "sizeLines": 44,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260907_unify_engine.sql",
+      "language": "sql",
+      "sizeLines": 18,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260909_mission_start_creation_datetime.sql",
+      "language": "sql",
+      "sizeLines": 30,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260912_jl_leave_closes_session.sql",
+      "language": "sql",
+      "sizeLines": 33,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260914_supervisors_handover.sql",
+      "language": "sql",
+      "sizeLines": 36,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260916_weather_module.sql",
+      "language": "sql",
+      "sizeLines": 38,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260917_weather_intel.sql",
+      "language": "sql",
+      "sizeLines": 215,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260920_add_youth_monitoring_status.sql",
+      "language": "sql",
+      "sizeLines": 21,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260920_read_only_missions_role.sql",
+      "language": "sql",
+      "sizeLines": 27,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260921_add_participant_notes_column.sql",
+      "language": "sql",
+      "sizeLines": 9,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260921_add_volunteer_notes_permission.sql",
+      "language": "sql",
+      "sizeLines": 25,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260922_add_staff_view_permission.sql",
+      "language": "sql",
+      "sizeLines": 18,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260922_volunteer_room_notes.sql",
+      "language": "sql",
+      "sizeLines": 61,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260923_add_youth_review_permission.sql",
+      "language": "sql",
+      "sizeLines": 31,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260923_ai_news_observed_at.sql",
+      "language": "sql",
+      "sizeLines": 20,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260924_mission_field_operation_status.sql",
+      "language": "sql",
+      "sizeLines": 77,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260927_eoc_staff_name_1000.sql",
+      "language": "sql",
+      "sizeLines": 25,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260928_participant_branch_rules.sql",
+      "language": "sql",
+      "sizeLines": 15,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260929_client_errors.sql",
+      "language": "sql",
+      "sizeLines": 44,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/20260929_workspace_server_side.sql",
+      "language": "sql",
+      "sizeLines": 34,
+      "fileCategory": "data"
+    }
+  ],
+  "batchImportData": {
+    "migrations/20260813_participant_types.sql": [],
+    "migrations/20260904_mission_team_code_realtime.sql": [],
+    "migrations/20260905_hr_active_volunteers_fix.sql": [],
+    "migrations/20260905_participant_identity.sql": [],
+    "migrations/20260905_prevent_users_delete.sql": [],
+    "migrations/20260906_participant_position.sql": [],
+    "migrations/20260907_open_mission_multi_day.sql": [],
+    "migrations/20260907_participation_periods.sql": [],
+    "migrations/20260907_participation_segments.sql": [],
+    "migrations/20260907_unify_engine.sql": [],
+    "migrations/20260909_mission_start_creation_datetime.sql": [],
+    "migrations/20260912_jl_leave_closes_session.sql": [],
+    "migrations/20260914_supervisors_handover.sql": [],
+    "migrations/20260916_weather_module.sql": [],
+    "migrations/20260917_weather_intel.sql": [],
+    "migrations/20260920_add_youth_monitoring_status.sql": [],
+    "migrations/20260920_read_only_missions_role.sql": [],
+    "migrations/20260921_add_participant_notes_column.sql": [],
+    "migrations/20260921_add_volunteer_notes_permission.sql": [],
+    "migrations/20260922_add_staff_view_permission.sql": [],
+    "migrations/20260922_volunteer_room_notes.sql": [],
+    "migrations/20260923_add_youth_review_permission.sql": [],
+    "migrations/20260923_ai_news_observed_at.sql": [],
+    "migrations/20260924_mission_field_operation_status.sql": [],
+    "migrations/20260927_eoc_staff_name_1000.sql": [],
+    "migrations/20260928_participant_branch_rules.sql": [],
+    "migrations/20260929_client_errors.sql": [],
+    "migrations/20260929_workspace_server_side.sql": []
+  },
+  "neighborMap": {}
+}

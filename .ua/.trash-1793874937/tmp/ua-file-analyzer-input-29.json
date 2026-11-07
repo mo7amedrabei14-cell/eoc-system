@@ -1,0 +1,209 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 29,
+  "batchFiles": [
+    {
+      "path": "_shot_profile/Default/Local Storage/leveldb/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Network/Cookies",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Network/Cookies-journal",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Network/NetworkDataMigrated",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/PersistentOriginTrials/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/PersistentOriginTrials/LOG",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Session Storage/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/cache/index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/cache/index-dir/the-real-index",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/db",
+      "language": "unknown",
+      "sizeLines": 13,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/Shared Dictionary/db-journal",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/CURRENT",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/LOCK",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/LOG",
+      "language": "unknown",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/Default/shared_proto_db/metadata/MANIFEST-000001",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_shot_profile/DevToolsActivePort",
+      "language": "unknown",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_test_weather_tie.py",
+      "language": "python",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "_undo_blob.mjs",
+      "language": "javascript",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "_shot_profile/Default/Local Storage/leveldb/MANIFEST-000001": [],
+    "_shot_profile/Default/Network/Cookies": [],
+    "_shot_profile/Default/Network/Cookies-journal": [],
+    "_shot_profile/Default/Network/NetworkDataMigrated": [],
+    "_shot_profile/Default/PersistentOriginTrials/LOCK": [],
+    "_shot_profile/Default/PersistentOriginTrials/LOG": [],
+    "_shot_profile/Default/Session Storage/CURRENT": [],
+    "_shot_profile/Default/Session Storage/LOCK": [],
+    "_shot_profile/Default/Session Storage/LOG": [],
+    "_shot_profile/Default/Session Storage/MANIFEST-000001": [],
+    "_shot_profile/Default/Shared Dictionary/cache/index": [],
+    "_shot_profile/Default/Shared Dictionary/cache/index-dir/the-real-index": [],
+    "_shot_profile/Default/Shared Dictionary/db": [],
+    "_shot_profile/Default/Shared Dictionary/db-journal": [],
+    "_shot_profile/Default/shared_proto_db/CURRENT": [],
+    "_shot_profile/Default/shared_proto_db/LOCK": [],
+    "_shot_profile/Default/shared_proto_db/LOG": [],
+    "_shot_profile/Default/shared_proto_db/MANIFEST-000001": [],
+    "_shot_profile/Default/shared_proto_db/metadata/CURRENT": [],
+    "_shot_profile/Default/shared_proto_db/metadata/LOCK": [],
+    "_shot_profile/Default/shared_proto_db/metadata/LOG": [],
+    "_shot_profile/Default/shared_proto_db/metadata/MANIFEST-000001": [],
+    "_shot_profile/DevToolsActivePort": [],
+    "_test_weather_tie.py": [],
+    "_undo_blob.mjs": []
+  },
+  "neighborMap": {}
+}

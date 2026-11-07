@@ -1,0 +1,2685 @@
+{
+  "nodes": [
+    {
+      "id": "file:frontend/src/Dashboard.jsx",
+      "type": "file",
+      "name": "Dashboard.jsx",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "summary": "Main React application surface for EOC operations, coordinating navigation, shared state, data loading, forms, monitoring pages, and operational reports.",
+      "tags": [
+        "entry-point",
+        "component",
+        "dashboard",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:missionClosedDay",
+      "type": "function",
+      "name": "missionClosedDay",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        117,
+        129
+      ],
+      "summary": "Determines the dashboard day associated with a mission closure.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:missionDayNumber",
+      "type": "function",
+      "name": "missionDayNumber",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        133,
+        146
+      ],
+      "summary": "Converts mission date information into a day index for dashboard grouping.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:getBrowserStorages",
+      "type": "function",
+      "name": "getBrowserStorages",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        153,
+        164
+      ],
+      "summary": "Collects browser storage backends available to dashboard persistence helpers.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:getStoredAccessToken",
+      "type": "function",
+      "name": "getStoredAccessToken",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        166,
+        176
+      ],
+      "summary": "Reads the active session credential from browser storage for authenticated requests.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:getStoredAuth",
+      "type": "function",
+      "name": "getStoredAuth",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        178,
+        193
+      ],
+      "summary": "Retrieves the stored authentication state used to initialize the dashboard.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:clearStoredAuth",
+      "type": "function",
+      "name": "clearStoredAuth",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        195,
+        204
+      ],
+      "summary": "Clears locally stored authentication state during logout or reset.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:getRoleFlags",
+      "type": "function",
+      "name": "getRoleFlags",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        213,
+        223
+      ],
+      "summary": "Derives dashboard capability flags from the current role context.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:getEnglishRegionName",
+      "type": "function",
+      "name": "getEnglishRegionName",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1208,
+        1222
+      ],
+      "summary": "Converts region labels to their English display form.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:translateGeneratedUiText",
+      "type": "function",
+      "name": "translateGeneratedUiText",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1224,
+        1249
+      ],
+      "summary": "Localizes generated interface text through the dashboard translation helpers.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:getEnglishUiText",
+      "type": "function",
+      "name": "getEnglishUiText",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1251,
+        1278
+      ],
+      "summary": "Looks up an English display string for a dashboard label.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:localizeActionSuffix",
+      "type": "function",
+      "name": "localizeActionSuffix",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1282,
+        1320
+      ],
+      "summary": "Localizes action suffixes used in activity descriptions.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:localizeMissionDetails",
+      "type": "function",
+      "name": "localizeMissionDetails",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1323,
+        1339
+      ],
+      "summary": "Localizes mission-detail labels for the current interface language.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:localizeDashboardDom",
+      "type": "function",
+      "name": "localizeDashboardDom",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1346,
+        1378
+      ],
+      "summary": "Applies language updates to generated dashboard DOM content.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:format12H",
+      "type": "function",
+      "name": "format12H",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1392,
+        1402
+      ],
+      "summary": "Formats a time value for 12-hour dashboard display.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:durHMS",
+      "type": "function",
+      "name": "durHMS",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1413,
+        1423
+      ],
+      "summary": "Formats a duration as hours, minutes, and seconds.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:buildNewsRow",
+      "type": "function",
+      "name": "buildNewsRow",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1449,
+        1488
+      ],
+      "summary": "Builds a display row for a news item in dashboard lists.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:useAnimatedNumber",
+      "type": "function",
+      "name": "useAnimatedNumber",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1520,
+        1540
+      ],
+      "summary": "Animates changing numeric values for dashboard indicators.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:Magnetic",
+      "type": "function",
+      "name": "Magnetic",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1542,
+        1570
+      ],
+      "summary": "Renders a pointer-responsive visual component for dashboard interactions.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:HoursCell",
+      "type": "function",
+      "name": "HoursCell",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1578,
+        1610
+      ],
+      "summary": "Renders a compact hours value for operational tables.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:deliverFile",
+      "type": "function",
+      "name": "deliverFile",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1684,
+        1706
+      ],
+      "summary": "Starts a browser download for generated file content.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:_xlsxToDate",
+      "type": "function",
+      "name": "_xlsxToDate",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1713,
+        1736
+      ],
+      "summary": "Converts spreadsheet date values into the application date representation.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:_xlsxTime",
+      "type": "function",
+      "name": "_xlsxTime",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1756,
+        1768
+      ],
+      "summary": "Normalizes spreadsheet time values for application processing.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:_exportWorkbookImpl",
+      "type": "function",
+      "name": "_exportWorkbookImpl",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1771,
+        1857
+      ],
+      "summary": "Creates the workbook export used by dashboard reporting actions.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:buildWorkbookBufferZip",
+      "type": "function",
+      "name": "buildWorkbookBufferZip",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1874,
+        1950
+      ],
+      "summary": "Packages workbook data into a downloadable archive buffer.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:downloadZipFile",
+      "type": "function",
+      "name": "downloadZipFile",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1953,
+        1970
+      ],
+      "summary": "Downloads a generated archive through the browser.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:fmtHours",
+      "type": "function",
+      "name": "fmtHours",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1975,
+        1985
+      ],
+      "summary": "Formats hour values for dashboard summaries.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:Dashboard",
+      "type": "function",
+      "name": "Dashboard",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        1987,
+        3813
+      ],
+      "summary": "Coordinates the main application shell, navigation, shared state, and operational views.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:CountUp",
+      "type": "function",
+      "name": "CountUp",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        3820,
+        3843
+      ],
+      "summary": "Renders the count up interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:TiltCard",
+      "type": "function",
+      "name": "TiltCard",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        3847,
+        3873
+      ],
+      "summary": "Renders the tilt card interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:HomeView",
+      "type": "function",
+      "name": "HomeView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        3900,
+        4485
+      ],
+      "summary": "Renders the home view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:BranchesAndInventoryView",
+      "type": "function",
+      "name": "BranchesAndInventoryView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        4487,
+        4647
+      ],
+      "summary": "Renders the branches and inventory view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:useSmartPoll",
+      "type": "function",
+      "name": "useSmartPoll",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        4658,
+        4680
+      ],
+      "summary": "Coordinates conditional polling for dashboard data refreshes.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:PowerBiView",
+      "type": "function",
+      "name": "PowerBiView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        4684,
+        4813
+      ],
+      "summary": "Renders the power bi view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:_importCellText",
+      "type": "function",
+      "name": "_importCellText",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        4824,
+        4834
+      ],
+      "summary": "Normalizes spreadsheet cell content before import validation.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:sanitizeParticipantImportRows",
+      "type": "function",
+      "name": "sanitizeParticipantImportRows",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        4842,
+        4862
+      ],
+      "summary": "Validates and normalizes imported participant rows without exposing their contents.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:sanitizeImportedParticipants",
+      "type": "function",
+      "name": "sanitizeImportedParticipants",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        4863,
+        4882
+      ],
+      "summary": "Filters and prepares parsed participant entries for dashboard use.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:MissionsView",
+      "type": "function",
+      "name": "MissionsView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        4884,
+        8772
+      ],
+      "summary": "Renders the missions view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:FormGroup",
+      "type": "function",
+      "name": "FormGroup",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        8775,
+        8789
+      ],
+      "summary": "Renders the form group interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:DateInput",
+      "type": "function",
+      "name": "DateInput",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        8800,
+        9061
+      ],
+      "summary": "Renders the date input interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:RouteCard",
+      "type": "function",
+      "name": "RouteCard",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9084,
+        9197
+      ],
+      "summary": "Renders the route card interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:NavItem",
+      "type": "function",
+      "name": "NavItem",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9199,
+        9215
+      ],
+      "summary": "Renders the nav item interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:TableLoadingRow",
+      "type": "function",
+      "name": "TableLoadingRow",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9217,
+        9228
+      ],
+      "summary": "Renders the table loading row interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:kpiGlyphFor",
+      "type": "function",
+      "name": "kpiGlyphFor",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9245,
+        9257
+      ],
+      "summary": "Selects the dashboard glyph associated with a key performance indicator.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:InventoryCard",
+      "type": "function",
+      "name": "InventoryCard",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9258,
+        9269
+      ],
+      "summary": "Renders the inventory card interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:StatCard",
+      "type": "function",
+      "name": "StatCard",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9270,
+        9280
+      ],
+      "summary": "Renders the stat card interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:CheckIcon",
+      "type": "function",
+      "name": "CheckIcon",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9294,
+        9309
+      ],
+      "summary": "Renders the check icon interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:fetchWirelessJson",
+      "type": "function",
+      "name": "fetchWirelessJson",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9337,
+        9369
+      ],
+      "summary": "Loads wireless handover data through the frontend API.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:_wirelessEmptyDelivery",
+      "type": "function",
+      "name": "_wirelessEmptyDelivery",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9406,
+        9415
+      ],
+      "summary": "Creates an empty draft structure for the wireless handover form.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WirelessPrintHeader",
+      "type": "function",
+      "name": "WirelessPrintHeader",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9436,
+        9448
+      ],
+      "summary": "Renders the wireless print header interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WirelessPrintInfo",
+      "type": "function",
+      "name": "WirelessPrintInfo",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9450,
+        9461
+      ],
+      "summary": "Renders the wireless print info interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WirelessPrintDeclaration",
+      "type": "function",
+      "name": "WirelessPrintDeclaration",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9466,
+        9544
+      ],
+      "summary": "Renders the wireless print declaration interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WirelessPrintDeviceReport",
+      "type": "function",
+      "name": "WirelessPrintDeviceReport",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9549,
+        9632
+      ],
+      "summary": "Renders the wireless print device report interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WirelessDeliveryFormModal",
+      "type": "function",
+      "name": "WirelessDeliveryFormModal",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9637,
+        9961
+      ],
+      "summary": "Renders the wireless delivery form modal interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:wirelessReturnDateInputValue",
+      "type": "function",
+      "name": "wirelessReturnDateInputValue",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9966,
+        9975
+      ],
+      "summary": "Derives a form-ready return-date value from a wireless handover record.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WirelessReturnModal",
+      "type": "function",
+      "name": "WirelessReturnModal",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        9977,
+        10051
+      ],
+      "summary": "Renders the wireless return modal interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WirelessHandoverView",
+      "type": "function",
+      "name": "WirelessHandoverView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        10056,
+        10778
+      ],
+      "summary": "Renders the wireless handover view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:AuditLogsView",
+      "type": "function",
+      "name": "AuditLogsView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        10778,
+        10960
+      ],
+      "summary": "Renders the audit logs view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:LocalNewsView",
+      "type": "function",
+      "name": "LocalNewsView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        10965,
+        11532
+      ],
+      "summary": "Renders the local news view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:cairoShiftNow",
+      "type": "function",
+      "name": "cairoShiftNow",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        11598,
+        11608
+      ],
+      "summary": "Computes the current shift time using the dashboard?s Cairo-local clock handling.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WeatherShiftWarning",
+      "type": "function",
+      "name": "WeatherShiftWarning",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        11616,
+        11656
+      ],
+      "summary": "Renders the weather shift warning interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WeatherForecastView",
+      "type": "function",
+      "name": "WeatherForecastView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        11659,
+        12702
+      ],
+      "summary": "Renders the weather forecast view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:GovernorateContactsView",
+      "type": "function",
+      "name": "GovernorateContactsView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        12711,
+        13390
+      ],
+      "summary": "Renders the governorate contacts view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:govTimeLabel",
+      "type": "function",
+      "name": "govTimeLabel",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        13415,
+        13424
+      ],
+      "summary": "Formats the local time label shown with regional dashboard information.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:normalizeShiftMatrix",
+      "type": "function",
+      "name": "normalizeShiftMatrix",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        13455,
+        13467
+      ],
+      "summary": "Normalizes shift and handover matrix data for consistent display.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:HandoverView",
+      "type": "function",
+      "name": "HandoverView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        13474,
+        14143
+      ],
+      "summary": "Renders the handover view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:GlobalDisastersView",
+      "type": "function",
+      "name": "GlobalDisastersView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        14148,
+        14592
+      ],
+      "summary": "Renders the global disasters view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:EqIntelView",
+      "type": "function",
+      "name": "EqIntelView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        14599,
+        15378
+      ],
+      "summary": "Renders the eq intel view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:EarthquakesView",
+      "type": "function",
+      "name": "EarthquakesView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        15380,
+        15946
+      ],
+      "summary": "Renders the earthquakes view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WeatherIntelView",
+      "type": "function",
+      "name": "WeatherIntelView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        15951,
+        17293
+      ],
+      "summary": "Renders the weather intel view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:AINewsMonitorView",
+      "type": "function",
+      "name": "AINewsMonitorView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        17322,
+        17944
+      ],
+      "summary": "Renders the ainews monitor view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:ApertureDialog",
+      "type": "function",
+      "name": "ApertureDialog",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        17949,
+        18030
+      ],
+      "summary": "Renders the aperture dialog interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:ExportChoiceModal",
+      "type": "function",
+      "name": "ExportChoiceModal",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18033,
+        18075
+      ],
+      "summary": "Renders the export choice modal interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:DownloadConfirmModal",
+      "type": "function",
+      "name": "DownloadConfirmModal",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18078,
+        18102
+      ],
+      "summary": "Renders the download confirm modal interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:DangerConfirmModal",
+      "type": "function",
+      "name": "DangerConfirmModal",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18105,
+        18147
+      ],
+      "summary": "Renders the danger confirm modal interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:LiveGlyph",
+      "type": "function",
+      "name": "LiveGlyph",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18152,
+        18202
+      ],
+      "summary": "Renders the live glyph interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:SignalNote",
+      "type": "function",
+      "name": "SignalNote",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18222,
+        18304
+      ],
+      "summary": "Renders the signal note interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:WorkingToast",
+      "type": "function",
+      "name": "WorkingToast",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18309,
+        18332
+      ],
+      "summary": "Renders the working toast interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:ActionToast",
+      "type": "function",
+      "name": "ActionToast",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18334,
+        18422
+      ],
+      "summary": "Renders the action toast interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/Dashboard.jsx:HumanResourcesView",
+      "type": "function",
+      "name": "HumanResourcesView",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18431,
+        18661
+      ],
+      "summary": "Renders the human resources view interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:frontend/src/Dashboard.jsx:WeatherIntelErrorBoundary",
+      "type": "class",
+      "name": "WeatherIntelErrorBoundary",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        245,
+        267
+      ],
+      "summary": "WeatherIntelErrorBoundary isolates rendering failures and provides a fallback boundary for the application?s weather intelligence interface.",
+      "tags": [
+        "class",
+        "error-handling",
+        "resilience"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:frontend/src/Dashboard.jsx:AppErrorBoundary",
+      "type": "class",
+      "name": "AppErrorBoundary",
+      "filePath": "frontend/src/Dashboard.jsx",
+      "lineRange": [
+        18664,
+        18687
+      ],
+      "summary": "AppErrorBoundary isolates rendering failures and provides a fallback boundary for the application?s dashboard interface.",
+      "tags": [
+        "class",
+        "error-handling",
+        "resilience"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/SegInputs.jsx",
+      "type": "file",
+      "name": "SegInputs.jsx",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "summary": "Reusable segmented date, time, and date-time controls with validation, keyboard entry, and wheel-based time selection.",
+      "tags": [
+        "component",
+        "form-controls",
+        "date-time",
+        "input-validation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:flipMeridian",
+      "type": "function",
+      "name": "flipMeridian",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        24,
+        33
+      ],
+      "summary": "Implements the flip meridian helper used by SegInputs for frontend data handling.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:TimeWheel",
+      "type": "function",
+      "name": "TimeWheel",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        40,
+        69
+      ],
+      "summary": "Renders the time wheel interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:parseTimeSegs",
+      "type": "function",
+      "name": "parseTimeSegs",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        101,
+        111
+      ],
+      "summary": "Implements the parse time segs helper used by SegInputs for frontend data handling.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:clampSegInput",
+      "type": "function",
+      "name": "clampSegInput",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        114,
+        137
+      ],
+      "summary": "Implements the clamp seg input helper used by SegInputs for frontend data handling.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:segIndexFromClick",
+      "type": "function",
+      "name": "segIndexFromClick",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        145,
+        155
+      ],
+      "summary": "Implements the seg index from click helper used by SegInputs for frontend data handling.",
+      "tags": [
+        "utility",
+        "frontend",
+        "data-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:SegPills",
+      "type": "function",
+      "name": "SegPills",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        158,
+        171
+      ],
+      "summary": "Renders the seg pills interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:SegDateField",
+      "type": "function",
+      "name": "SegDateField",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        176,
+        467
+      ],
+      "summary": "Renders the seg date field interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:SegTimeField",
+      "type": "function",
+      "name": "SegTimeField",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        472,
+        757
+      ],
+      "summary": "Renders the seg time field interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/SegInputs.jsx:SegDateTimeField",
+      "type": "function",
+      "name": "SegDateTimeField",
+      "filePath": "frontend/src/SegInputs.jsx",
+      "lineRange": [
+        762,
+        1177
+      ],
+      "summary": "Renders the seg date time field interface component within its frontend workflow.",
+      "tags": [
+        "component",
+        "frontend",
+        "operations"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/__tests__/draftsStore.test.js",
+      "type": "file",
+      "name": "draftsStore.test.js",
+      "filePath": "frontend/src/__tests__/draftsStore.test.js",
+      "summary": "Node test suite for local form-draft persistence, pruning, restoration, and safe field capture behavior.",
+      "tags": [
+        "test",
+        "unit-test",
+        "drafts",
+        "persistence"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "type": "file",
+      "name": "fakeBrowser.js",
+      "filePath": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "summary": "Test-only browser shims for storage, event dispatch, and minimal DOM nodes used by frontend unit tests.",
+      "tags": [
+        "test-helper",
+        "browser-mock",
+        "storage",
+        "dom"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/__tests__/helpers/fakeBrowser.js:makeFakeStorage",
+      "type": "function",
+      "name": "makeFakeStorage",
+      "filePath": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "lineRange": [
+        8,
+        23
+      ],
+      "summary": "Creates an in-memory localStorage substitute for tests.",
+      "tags": [
+        "test-helper",
+        "frontend",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/__tests__/helpers/fakeBrowser.js:installFakeStorage",
+      "type": "function",
+      "name": "installFakeStorage",
+      "filePath": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "lineRange": [
+        26,
+        37
+      ],
+      "summary": "Installs the in-memory storage substitute on the test global object.",
+      "tags": [
+        "test-helper",
+        "frontend",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/__tests__/helpers/fakeBrowser.js:installFakeWindow",
+      "type": "function",
+      "name": "installFakeWindow",
+      "filePath": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "lineRange": [
+        40,
+        56
+      ],
+      "summary": "Installs a minimal event-recording window substitute for tests.",
+      "tags": [
+        "test-helper",
+        "frontend",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/__tests__/helpers/fakeBrowser.js:fakeNode",
+      "type": "function",
+      "name": "fakeNode",
+      "filePath": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "lineRange": [
+        59,
+        70
+      ],
+      "summary": "Creates a minimal form-control substitute for DOM-related tests.",
+      "tags": [
+        "test-helper",
+        "frontend",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:frontend/src/__tests__/helpers/fakeBrowser.js:fakeRoot",
+      "type": "function",
+      "name": "fakeRoot",
+      "filePath": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "lineRange": [
+        75,
+        81
+      ],
+      "summary": "Creates a queryable form-root substitute for field-capture tests.",
+      "tags": [
+        "test-helper",
+        "frontend",
+        "unit-test"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/__tests__/liveToast.test.js",
+      "type": "file",
+      "name": "liveToast.test.js",
+      "filePath": "frontend/src/__tests__/liveToast.test.js",
+      "summary": "Node test suite for live-notification labels, visual rules, timing, duplicate suppression, and alarm behavior.",
+      "tags": [
+        "test",
+        "unit-test",
+        "notifications",
+        "event-handling"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/__tests__/outbox.test.js",
+      "type": "file",
+      "name": "outbox.test.js",
+      "filePath": "frontend/src/__tests__/outbox.test.js",
+      "summary": "Node test suite for resilient submission queues, rejected-item recovery, server synchronization, and pending weather updates.",
+      "tags": [
+        "test",
+        "unit-test",
+        "offline-support",
+        "queue"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/__tests__/participantImport.test.js",
+      "type": "file",
+      "name": "participantImport.test.js",
+      "filePath": "frontend/src/__tests__/participantImport.test.js",
+      "summary": "Node test suite for spreadsheet participant-row parsing and validation.",
+      "tags": [
+        "test",
+        "unit-test",
+        "data-import",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:frontend/src/__tests__/timeutils.test.js",
+      "type": "file",
+      "name": "timeutils.test.js",
+      "filePath": "frontend/src/__tests__/timeutils.test.js",
+      "summary": "Node test suite for time parsing, 12-hour display formatting, and date-time conversion.",
+      "tags": [
+        "test",
+        "unit-test",
+        "date-time",
+        "formatting"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:missionClosedDay",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:missionDayNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:getBrowserStorages",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:getStoredAccessToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:getStoredAuth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:clearStoredAuth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:getRoleFlags",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:getEnglishRegionName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:translateGeneratedUiText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:getEnglishUiText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:localizeActionSuffix",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:localizeMissionDetails",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:localizeDashboardDom",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:format12H",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:durHMS",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:buildNewsRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:useAnimatedNumber",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:Magnetic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:HoursCell",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:deliverFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:_xlsxToDate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:_xlsxTime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:_exportWorkbookImpl",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:buildWorkbookBufferZip",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:downloadZipFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:fmtHours",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:Dashboard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:CountUp",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:TiltCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:HomeView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:BranchesAndInventoryView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:useSmartPoll",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:PowerBiView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:_importCellText",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:sanitizeParticipantImportRows",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:sanitizeImportedParticipants",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:MissionsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:FormGroup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:DateInput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:RouteCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:NavItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:TableLoadingRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:kpiGlyphFor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:InventoryCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:StatCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:CheckIcon",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:fetchWirelessJson",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:_wirelessEmptyDelivery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WirelessPrintHeader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WirelessPrintInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WirelessPrintDeclaration",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WirelessPrintDeviceReport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WirelessDeliveryFormModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:wirelessReturnDateInputValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WirelessReturnModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WirelessHandoverView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:AuditLogsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:LocalNewsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:cairoShiftNow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WeatherShiftWarning",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WeatherForecastView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:GovernorateContactsView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:govTimeLabel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:normalizeShiftMatrix",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:HandoverView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:GlobalDisastersView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:EqIntelView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:EarthquakesView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WeatherIntelView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:AINewsMonitorView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:ApertureDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:ExportChoiceModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:DownloadConfirmModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:DangerConfirmModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:LiveGlyph",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:SignalNote",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WorkingToast",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:ActionToast",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:HumanResourcesView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "class:frontend/src/Dashboard.jsx:WeatherIntelErrorBoundary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "class:frontend/src/Dashboard.jsx:AppErrorBoundary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:Dashboard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "function:frontend/src/Dashboard.jsx:WorkingToast",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "class:frontend/src/Dashboard.jsx:AppErrorBoundary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:flipMeridian",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:TimeWheel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:parseTimeSegs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:clampSegInput",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:segIndexFromClick",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:SegPills",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:SegDateField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:SegTimeField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:SegDateTimeField",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:SegDateField",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:SegTimeField",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "function:frontend/src/SegInputs.jsx:SegDateTimeField",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:makeFakeStorage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:installFakeStorage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:installFakeWindow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:fakeNode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:fakeRoot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:makeFakeStorage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:installFakeStorage",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:installFakeWindow",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:fakeNode",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "target": "function:frontend/src/__tests__/helpers/fakeBrowser.js:fakeRoot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/ERCVectorLogo.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/SegInputs.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/activityMap.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/apiBase.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/components/EocSelect.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/components/OwnerMessages.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/drafts.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/draftsStore.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/i18n.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/liveToast.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/motion/AuthEntryTransition.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/motion/visualTransitions.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/outbox.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/participantImport.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/serverHealth.jsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/timeutils.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/weatherIntelFilters.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/wirelessDateFilter.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/wirelessPrintTitle.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/wirelessRecipientLookup.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/workingToast.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/Dashboard.jsx",
+      "target": "file:frontend/src/workspace.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/SegInputs.jsx",
+      "target": "file:frontend/src/timeutils.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/draftsStore.test.js",
+      "target": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/draftsStore.test.js",
+      "target": "file:frontend/src/draftsStore.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/liveToast.test.js",
+      "target": "file:frontend/src/liveToast.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/outbox.test.js",
+      "target": "file:frontend/src/__tests__/helpers/fakeBrowser.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/outbox.test.js",
+      "target": "file:frontend/src/outbox.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/participantImport.test.js",
+      "target": "file:frontend/src/participantImport.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/__tests__/timeutils.test.js",
+      "target": "file:frontend/src/timeutils.js",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

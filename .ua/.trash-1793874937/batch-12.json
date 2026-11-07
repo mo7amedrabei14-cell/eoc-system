@@ -1,0 +1,257 @@
+{
+  "nodes": [
+    {
+      "id": "table:migrations/20260813_participant_types.sql",
+      "type": "table",
+      "name": "20260813_participant_types.sql",
+      "filePath": "migrations/20260813_participant_types.sql",
+      "summary": "Extends mission participant records to distinguish participant categories and support non-volunteer identities, while updating related constraints and indexes.",
+      "tags": ["database", "migration", "participants", "schema"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260904_mission_team_code_realtime.sql",
+      "type": "table",
+      "name": "20260904_mission_team_code_realtime.sql",
+      "filePath": "migrations/20260904_mission_team_code_realtime.sql",
+      "summary": "Adds mission team-code support and a persisted event table for realtime activity, with indexes for event and mission lookups.",
+      "tags": ["database", "migration", "realtime", "missions"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260905_hr_active_volunteers_fix.sql",
+      "type": "table",
+      "name": "20260905_hr_active_volunteers_fix.sql",
+      "filePath": "migrations/20260905_hr_active_volunteers_fix.sql",
+      "summary": "Reconciles mission participant records with the active-volunteer state used by the HR data model.",
+      "tags": ["database", "migration", "participants", "hr-data"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260905_participant_identity.sql",
+      "type": "table",
+      "name": "20260905_participant_identity.sql",
+      "filePath": "migrations/20260905_participant_identity.sql",
+      "summary": "Refines participant identity fields and adds uniqueness and lookup indexes for mission membership and participant status.",
+      "tags": ["database", "migration", "participants", "identity"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:migrations/20260905_prevent_users_delete.sql",
+      "type": "table",
+      "name": "20260905_prevent_users_delete.sql",
+      "filePath": "migrations/20260905_prevent_users_delete.sql",
+      "summary": "Adds a database trigger that prevents user deletion when the application must preserve user-linked records.",
+      "tags": ["database", "migration", "security", "data-integrity"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260906_participant_position.sql",
+      "type": "table",
+      "name": "20260906_participant_position.sql",
+      "filePath": "migrations/20260906_participant_position.sql",
+      "summary": "Adds and backfills participant position information used to describe a person's role in a mission.",
+      "tags": ["database", "migration", "participants", "data-model"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260907_open_mission_multi_day.sql",
+      "type": "table",
+      "name": "20260907_open_mission_multi_day.sql",
+      "filePath": "migrations/20260907_open_mission_multi_day.sql",
+      "summary": "Introduces participant itinerary records and related constraints to support open, multi-day missions.",
+      "tags": ["database", "migration", "missions", "itinerary"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260907_participation_periods.sql",
+      "type": "table",
+      "name": "20260907_participation_periods.sql",
+      "filePath": "migrations/20260907_participation_periods.sql",
+      "summary": "Updates participant-session storage to represent participation periods and their association with missions.",
+      "tags": ["database", "migration", "attendance", "participants"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260907_participation_segments.sql",
+      "type": "table",
+      "name": "20260907_participation_segments.sql",
+      "filePath": "migrations/20260907_participation_segments.sql",
+      "summary": "Extends mission itinerary records to capture distinct segments of participant activity.",
+      "tags": ["database", "migration", "attendance", "itinerary"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260907_unify_engine.sql",
+      "type": "table",
+      "name": "20260907_unify_engine.sql",
+      "filePath": "migrations/20260907_unify_engine.sql",
+      "summary": "Aligns itinerary and participant-session schemas for the unified mission participation flow, including route metadata and flexible session dates.",
+      "tags": ["database", "migration", "attendance", "missions"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260909_mission_start_creation_datetime.sql",
+      "type": "table",
+      "name": "20260909_mission_start_creation_datetime.sql",
+      "filePath": "migrations/20260909_mission_start_creation_datetime.sql",
+      "summary": "Updates mission and participant records to distinguish mission start timing from creation timing.",
+      "tags": ["database", "migration", "missions", "datetime"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260912_jl_leave_closes_session.sql",
+      "type": "table",
+      "name": "20260912_jl_leave_closes_session.sql",
+      "filePath": "migrations/20260912_jl_leave_closes_session.sql",
+      "summary": "Removes obsolete uniqueness indexes on mission participant membership and identity pairings to accommodate leave and session-close workflows.",
+      "tags": ["database", "migration", "participants", "attendance"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260914_supervisors_handover.sql",
+      "type": "table",
+      "name": "20260914_supervisors_handover.sql",
+      "filePath": "migrations/20260914_supervisors_handover.sql",
+      "summary": "Creates a structured supervisor handover log with timestamps, shift information, and indexes for audit and author lookups.",
+      "tags": ["database", "migration", "handover", "operations"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260916_weather_module.sql",
+      "type": "table",
+      "name": "20260916_weather_module.sql",
+      "filePath": "migrations/20260916_weather_module.sql",
+      "summary": "Adds branch- and shift-oriented weather forecast records with environmental metrics and lookup indexes.",
+      "tags": ["database", "migration", "weather", "monitoring"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260917_weather_intel.sql",
+      "type": "table",
+      "name": "20260917_weather_intel.sql",
+      "filePath": "migrations/20260917_weather_intel.sql",
+      "summary": "Builds the weather-intelligence schema for locations, historical observations, forecast runs and snapshots, statistical summaries, frequency estimates, assessments, and configuration.",
+      "tags": ["database", "migration", "weather", "analytics", "schema"],
+      "complexity": "complex"
+    },
+    {
+      "id": "table:migrations/20260920_add_youth_monitoring_status.sql",
+      "type": "table",
+      "name": "20260920_add_youth_monitoring_status.sql",
+      "filePath": "migrations/20260920_add_youth_monitoring_status.sql",
+      "summary": "Creates mission-linked youth monitoring records and an index for retrieving them by mission.",
+      "tags": ["database", "migration", "monitoring", "missions"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260920_read_only_missions_role.sql",
+      "type": "table",
+      "name": "20260920_read_only_missions_role.sql",
+      "filePath": "migrations/20260920_read_only_missions_role.sql",
+      "summary": "Registers a read-only missions role and associates it with the relevant application permissions.",
+      "tags": ["database", "migration", "access-control", "missions"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260921_add_participant_notes_column.sql",
+      "type": "table",
+      "name": "20260921_add_participant_notes_column.sql",
+      "filePath": "migrations/20260921_add_participant_notes_column.sql",
+      "summary": "Adds a notes field to mission participant records for operational annotations.",
+      "tags": ["database", "migration", "participants", "schema"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260921_add_volunteer_notes_permission.sql",
+      "type": "table",
+      "name": "20260921_add_volunteer_notes_permission.sql",
+      "filePath": "migrations/20260921_add_volunteer_notes_permission.sql",
+      "summary": "Registers an application permission for managing volunteer notes and assigns it through the role-permission model.",
+      "tags": ["database", "migration", "access-control", "volunteers"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260922_add_staff_view_permission.sql",
+      "type": "table",
+      "name": "20260922_add_staff_view_permission.sql",
+      "filePath": "migrations/20260922_add_staff_view_permission.sql",
+      "summary": "Adds a staff-view permission and links it to the appropriate application roles.",
+      "tags": ["database", "migration", "access-control", "staff"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260922_volunteer_room_notes.sql",
+      "type": "table",
+      "name": "20260922_volunteer_room_notes.sql",
+      "filePath": "migrations/20260922_volunteer_room_notes.sql",
+      "summary": "Creates mission-scoped volunteer room notes with date and ordering metadata, plus a mission lookup index.",
+      "tags": ["database", "migration", "volunteers", "notes"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:migrations/20260923_add_youth_review_permission.sql",
+      "type": "table",
+      "name": "20260923_add_youth_review_permission.sql",
+      "filePath": "migrations/20260923_add_youth_review_permission.sql",
+      "summary": "Registers a youth-review permission and assigns it to the designated application roles.",
+      "tags": ["database", "migration", "access-control", "youth"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260923_ai_news_observed_at.sql",
+      "type": "table",
+      "name": "20260923_ai_news_observed_at.sql",
+      "filePath": "migrations/20260923_ai_news_observed_at.sql",
+      "summary": "Adds an observed-time field to AI news records, backfills existing entries, and indexes the timestamp for retrieval.",
+      "tags": ["database", "migration", "news", "datetime"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260924_mission_field_operation_status.sql",
+      "type": "table",
+      "name": "20260924_mission_field_operation_status.sql",
+      "filePath": "migrations/20260924_mission_field_operation_status.sql",
+      "summary": "Extends mission records with field-operation status and supporting constraints and indexes for operational filtering.",
+      "tags": ["database", "migration", "missions", "operations"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "table:migrations/20260927_eoc_staff_name_1000.sql",
+      "type": "table",
+      "name": "20260927_eoc_staff_name_1000.sql",
+      "filePath": "migrations/20260927_eoc_staff_name_1000.sql",
+      "summary": "Increases the supported length of EOC staff names in the database schema.",
+      "tags": ["database", "migration", "staff", "schema"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260928_participant_branch_rules.sql",
+      "type": "table",
+      "name": "20260928_participant_branch_rules.sql",
+      "filePath": "migrations/20260928_participant_branch_rules.sql",
+      "summary": "Updates mission participant branch rules and existing records to keep branch assignment behavior consistent.",
+      "tags": ["database", "migration", "participants", "branches"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260929_client_errors.sql",
+      "type": "table",
+      "name": "20260929_client_errors.sql",
+      "filePath": "migrations/20260929_client_errors.sql",
+      "summary": "Creates a client-error reporting table with deduplication and recency indexes for application diagnostics.",
+      "tags": ["database", "migration", "monitoring", "diagnostics"],
+      "complexity": "simple"
+    },
+    {
+      "id": "table:migrations/20260929_workspace_server_side.sql",
+      "type": "table",
+      "name": "20260929_workspace_server_side.sql",
+      "filePath": "migrations/20260929_workspace_server_side.sql",
+      "summary": "Creates server-side per-user workspace storage with item-kind and scope metadata, backed by uniqueness and lookup indexes.",
+      "tags": ["database", "migration", "workspace", "persistence"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

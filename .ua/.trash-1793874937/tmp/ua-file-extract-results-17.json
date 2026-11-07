@@ -1,0 +1,232 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 4,
+  "filesSkipped": [
+    "frontend/fix-logo.bat",
+    "frontend/fix-logo.ps1",
+    "frontend/index.html"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 4,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 4
+    }
+  },
+  "results": [
+    {
+      "path": "frontend/MOBILE_RESPONSIVENESS_AUDIT.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 188,
+      "nonEmptyLines": 140,
+      "sections": [
+        {
+          "heading": "Mobile Responsiveness Audit — EOC React Frontend (375px / iPhone)",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "PRIORITY 1 — HandoverView (`function HandoverView`, Dashboard.jsx:5870–6343)",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "PRIORITY 2 — SYSTEM-WIDE (All Other Views + Shared Chrome)",
+          "level": 2,
+          "line": 23
+        },
+        {
+          "heading": "2.1 Touch Targets (Global CSS)",
+          "level": 3,
+          "line": 25
+        },
+        {
+          "heading": "2.2 Missions View (`function MissionsView`, ~3751–4699)",
+          "level": 3,
+          "line": 35
+        },
+        {
+          "heading": "2.3 Audit / System Log View (`function AuditLogsView`, ~5218–5360)",
+          "level": 3,
+          "line": 47
+        },
+        {
+          "heading": "2.4 Local News View (`function LocalNewsView`, ~5393–5740)",
+          "level": 3,
+          "line": 57
+        },
+        {
+          "heading": "2.5 Global Disasters View (`function GlobalDisastersView`, ~6538–6660)",
+          "level": 3,
+          "line": 69
+        },
+        {
+          "heading": "2.6 Earthquakes View (`function EarthquakesView`, ~7000–7160)",
+          "level": 3,
+          "line": 79
+        },
+        {
+          "heading": "2.7 AI News View (`function AINewsView`, ~7615–7695)",
+          "level": 3,
+          "line": 90
+        },
+        {
+          "heading": "2.8 Human Resources View (`function HumanResourcesView`, ~8042–8137)",
+          "level": 3,
+          "line": 102
+        },
+        {
+          "heading": "2.9 Home / Inventory Table (`function BranchesInventoryView`, ~2478–2540)",
+          "level": 3,
+          "line": 112
+        },
+        {
+          "heading": "2.10 Shared Chrome — Sidebar, Header, Modals",
+          "level": 3,
+          "line": 120
+        },
+        {
+          "heading": "SUMMARY — TOP 5 HIGHEST-IMPACT FIXES",
+          "level": 2,
+          "line": 135
+        },
+        {
+          "heading": "QUICK CSS PATCH (apply to `index.css`)",
+          "level": 2,
+          "line": 147
+        },
+        {
+          "heading": "VERIFICATION CHECKLIST (post-fix)",
+          "level": 2,
+          "line": 174
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 16
+      }
+    },
+    {
+      "path": "frontend/README.md",
+      "language": "markdown",
+      "fileCategory": "docs",
+      "totalLines": 16,
+      "nonEmptyLines": 9,
+      "sections": [
+        {
+          "heading": "React + Vite",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "React Compiler",
+          "level": 2,
+          "line": 10
+        },
+        {
+          "heading": "Expanding the ESLint configuration",
+          "level": 2,
+          "line": 14
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": "frontend/package.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 38,
+      "nonEmptyLines": 38,
+      "sections": [
+        {
+          "heading": "name",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "private",
+          "level": 1,
+          "line": 3
+        },
+        {
+          "heading": "version",
+          "level": 1,
+          "line": 4
+        },
+        {
+          "heading": "type",
+          "level": 1,
+          "line": 5
+        },
+        {
+          "heading": "scripts",
+          "level": 1,
+          "line": 6
+        },
+        {
+          "heading": "dependencies",
+          "level": 1,
+          "line": 13
+        },
+        {
+          "heading": "devDependencies",
+          "level": 1,
+          "line": 24
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 7
+      }
+    },
+    {
+      "path": "frontend/vercel.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 41,
+      "nonEmptyLines": 41,
+      "sections": [
+        {
+          "heading": "rewrites",
+          "level": 1,
+          "line": 2
+        },
+        {
+          "heading": "headers",
+          "level": 1,
+          "line": 8
+        },
+        {
+          "heading": "git",
+          "level": 1,
+          "line": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    }
+  ]
+}

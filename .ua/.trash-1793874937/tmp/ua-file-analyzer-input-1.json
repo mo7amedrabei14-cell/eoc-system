@@ -1,0 +1,387 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 1,
+  "batchFiles": [
+    {
+      "path": "frontend/src/Dashboard.jsx",
+      "language": "javascript",
+      "sizeLines": 18687,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/SegInputs.jsx",
+      "language": "javascript",
+      "sizeLines": 1177,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/draftsStore.test.js",
+      "language": "javascript",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "language": "javascript",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/liveToast.test.js",
+      "language": "javascript",
+      "sizeLines": 224,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/outbox.test.js",
+      "language": "javascript",
+      "sizeLines": 189,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/participantImport.test.js",
+      "language": "javascript",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/timeutils.test.js",
+      "language": "javascript",
+      "sizeLines": 52,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/weatherIntelFilters.test.js",
+      "language": "javascript",
+      "sizeLines": 294,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessDateFilter.test.js",
+      "language": "javascript",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessPrintTitle.test.js",
+      "language": "javascript",
+      "sizeLines": 50,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/wirelessRecipientLookup.test.js",
+      "language": "javascript",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/activityMap.js",
+      "language": "javascript",
+      "sizeLines": 5016,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/apiBase.js",
+      "language": "javascript",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/EocSelect.jsx",
+      "language": "javascript",
+      "sizeLines": 351,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/components/OwnerMessages.jsx",
+      "language": "javascript",
+      "sizeLines": 280,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/drafts.jsx",
+      "language": "javascript",
+      "sizeLines": 195,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/draftsStore.js",
+      "language": "javascript",
+      "sizeLines": 155,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/i18n.js",
+      "language": "javascript",
+      "sizeLines": 911,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/liveToast.js",
+      "language": "javascript",
+      "sizeLines": 250,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/outbox.js",
+      "language": "javascript",
+      "sizeLines": 241,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/participantImport.js",
+      "language": "javascript",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/timeutils.js",
+      "language": "javascript",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/weatherIntelFilters.js",
+      "language": "javascript",
+      "sizeLines": 292,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/wirelessDateFilter.js",
+      "language": "javascript",
+      "sizeLines": 40,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/wirelessPrintTitle.js",
+      "language": "javascript",
+      "sizeLines": 34,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/wirelessRecipientLookup.js",
+      "language": "javascript",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/workspace.js",
+      "language": "javascript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "verify_12h.mjs",
+      "language": "javascript",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "frontend/src/Dashboard.jsx": [
+      "frontend/src/ERCVectorLogo.jsx",
+      "frontend/src/SegInputs.jsx",
+      "frontend/src/activityMap.js",
+      "frontend/src/apiBase.js",
+      "frontend/src/components/EocSelect.jsx",
+      "frontend/src/components/OwnerMessages.jsx",
+      "frontend/src/drafts.jsx",
+      "frontend/src/draftsStore.js",
+      "frontend/src/i18n.js",
+      "frontend/src/liveToast.js",
+      "frontend/src/motion/AuthEntryTransition.jsx",
+      "frontend/src/motion/visualTransitions.js",
+      "frontend/src/outbox.js",
+      "frontend/src/participantImport.js",
+      "frontend/src/serverHealth.jsx",
+      "frontend/src/timeutils.js",
+      "frontend/src/weatherIntelFilters.js",
+      "frontend/src/wirelessDateFilter.js",
+      "frontend/src/wirelessPrintTitle.js",
+      "frontend/src/wirelessRecipientLookup.js",
+      "frontend/src/workingToast.js",
+      "frontend/src/workspace.js"
+    ],
+    "frontend/src/SegInputs.jsx": [
+      "frontend/src/timeutils.js"
+    ],
+    "frontend/src/__tests__/draftsStore.test.js": [
+      "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "frontend/src/draftsStore.js"
+    ],
+    "frontend/src/__tests__/helpers/fakeBrowser.js": [],
+    "frontend/src/__tests__/liveToast.test.js": [
+      "frontend/src/liveToast.js"
+    ],
+    "frontend/src/__tests__/outbox.test.js": [
+      "frontend/src/__tests__/helpers/fakeBrowser.js",
+      "frontend/src/outbox.js"
+    ],
+    "frontend/src/__tests__/participantImport.test.js": [
+      "frontend/src/participantImport.js"
+    ],
+    "frontend/src/__tests__/timeutils.test.js": [
+      "frontend/src/timeutils.js"
+    ],
+    "frontend/src/__tests__/weatherIntelFilters.test.js": [
+      "frontend/src/weatherIntelFilters.js"
+    ],
+    "frontend/src/__tests__/wirelessDateFilter.test.js": [
+      "frontend/src/wirelessDateFilter.js"
+    ],
+    "frontend/src/__tests__/wirelessPrintTitle.test.js": [
+      "frontend/src/wirelessPrintTitle.js"
+    ],
+    "frontend/src/__tests__/wirelessRecipientLookup.test.js": [
+      "frontend/src/wirelessRecipientLookup.js"
+    ],
+    "frontend/src/activityMap.js": [],
+    "frontend/src/apiBase.js": [],
+    "frontend/src/components/EocSelect.jsx": [],
+    "frontend/src/components/OwnerMessages.jsx": [
+      "frontend/src/apiBase.js"
+    ],
+    "frontend/src/drafts.jsx": [
+      "frontend/src/draftsStore.js",
+      "frontend/src/workspace.js"
+    ],
+    "frontend/src/draftsStore.js": [],
+    "frontend/src/i18n.js": [],
+    "frontend/src/liveToast.js": [],
+    "frontend/src/outbox.js": [
+      "frontend/src/workspace.js"
+    ],
+    "frontend/src/participantImport.js": [],
+    "frontend/src/timeutils.js": [],
+    "frontend/src/weatherIntelFilters.js": [],
+    "frontend/src/wirelessDateFilter.js": [],
+    "frontend/src/wirelessPrintTitle.js": [],
+    "frontend/src/wirelessRecipientLookup.js": [],
+    "frontend/src/workspace.js": [
+      "frontend/src/apiBase.js"
+    ],
+    "verify_12h.mjs": [
+      "frontend/src/timeutils.js"
+    ]
+  },
+  "neighborMap": {
+    "frontend/src/Dashboard.jsx": [
+      {
+        "path": "frontend/src/ERCVectorLogo.jsx",
+        "batchIndex": 4,
+        "symbols": [
+          "ERCVectorLogo"
+        ]
+      },
+      {
+        "path": "frontend/src/motion/AuthEntryTransition.jsx",
+        "batchIndex": 4,
+        "symbols": [
+          "AuthEntryTransitionProvider",
+          "useAuthEntryTransition"
+        ]
+      },
+      {
+        "path": "frontend/src/motion/visualTransitions.js",
+        "batchIndex": 4,
+        "symbols": [
+          "ENABLE_VISUAL_TRANSITIONS",
+          "runVisualTransition"
+        ]
+      },
+      {
+        "path": "frontend/src/serverHealth.jsx",
+        "batchIndex": 4,
+        "symbols": [
+          "useServerHealth",
+          "ServerDownOverlay"
+        ]
+      },
+      {
+        "path": "frontend/src/workingToast.js",
+        "batchIndex": 4,
+        "symbols": [
+          "setWorkingHardCap",
+          "setWorkingSuppressed",
+          "showWorking",
+          "hideWorking",
+          "resetWorking",
+          "withWorking",
+          "installWorkingAuto",
+          "WORKING_EVENTS",
+          "getWorkingText"
+        ]
+      }
+    ],
+    "frontend/src/apiBase.js": [
+      {
+        "path": "frontend/src/Login.jsx",
+        "batchIndex": 4,
+        "symbols": [
+          "Login"
+        ]
+      },
+      {
+        "path": "frontend/src/clientErrorReport.js",
+        "batchIndex": 9,
+        "symbols": [
+          "CLIENT_ERRORS_API",
+          "FATAL_SCREEN_ID",
+          "MOUNT_FLAG",
+          "sanitizeUrl",
+          "isAppMounted",
+          "markAppMounted",
+          "reportClientError",
+          "showFatalScreen",
+          "hideFatalScreen",
+          "installClientErrorReporting",
+          "startMountWatchdog",
+          "__resetClientErrorState"
+        ]
+      },
+      {
+        "path": "frontend/src/serverHealthCore.js",
+        "batchIndex": 4,
+        "symbols": [
+          "HEALTH_PATH",
+          "DEFAULT_POLL_MS",
+          "HIDDEN_POLL_MS",
+          "SUSPECT_POLL_MS",
+          "BLOCKED_POLL_MS",
+          "TIMEOUT_MS",
+          "FAIL_THRESHOLD",
+          "RECOVERY_BANNER_MS",
+          "healthUrl",
+          "checkServerHealth",
+          "classifyHealth",
+          "resolveRecovery"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "nodes": [
+    {
+      "id": "config:perf/lh22_after_blocked_4.json",
+      "type": "config",
+      "name": "lh22_after_blocked_4.json",
+      "filePath": "perf/lh22_after_blocked_4.json",
+      "summary": "Lighthouse audit capture for the post-change blocked-state scenario, sample 4. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "blocked-state", "post-change"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh22_after_blocked_5.json",
+      "type": "config",
+      "name": "lh22_after_blocked_5.json",
+      "filePath": "perf/lh22_after_blocked_5.json",
+      "summary": "Lighthouse audit capture for the post-change blocked-state scenario, sample 5. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "blocked-state", "post-change"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh22_before_blocked_1.json",
+      "type": "config",
+      "name": "lh22_before_blocked_1.json",
+      "filePath": "perf/lh22_before_blocked_1.json",
+      "summary": "Lighthouse audit capture for the pre-change blocked-state scenario, sample 1. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "blocked-state", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh22_before_blocked_2.json",
+      "type": "config",
+      "name": "lh22_before_blocked_2.json",
+      "filePath": "perf/lh22_before_blocked_2.json",
+      "summary": "Lighthouse audit capture for the pre-change blocked-state scenario, sample 2. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "blocked-state", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh22_before_blocked_3.json",
+      "type": "config",
+      "name": "lh22_before_blocked_3.json",
+      "filePath": "perf/lh22_before_blocked_3.json",
+      "summary": "Lighthouse audit capture for the pre-change blocked-state scenario, sample 3. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "blocked-state", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh22_before_blocked_4.json",
+      "type": "config",
+      "name": "lh22_before_blocked_4.json",
+      "filePath": "perf/lh22_before_blocked_4.json",
+      "summary": "Lighthouse audit capture for the pre-change blocked-state scenario, sample 4. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "blocked-state", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh22_before_blocked_5.json",
+      "type": "config",
+      "name": "lh22_before_blocked_5.json",
+      "filePath": "perf/lh22_before_blocked_5.json",
+      "summary": "Lighthouse audit capture for the pre-change blocked-state scenario, sample 5. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "blocked-state", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_after22_login_1.json",
+      "type": "config",
+      "name": "lh_after22_login_1.json",
+      "filePath": "perf/lh_after22_login_1.json",
+      "summary": "Lighthouse audit capture for the post-change login scenario, sample 1. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "post-change"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_after22_login_2.json",
+      "type": "config",
+      "name": "lh_after22_login_2.json",
+      "filePath": "perf/lh_after22_login_2.json",
+      "summary": "Lighthouse audit capture for the post-change login scenario, sample 2. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "post-change"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_after22_login_3.json",
+      "type": "config",
+      "name": "lh_after22_login_3.json",
+      "filePath": "perf/lh_after22_login_3.json",
+      "summary": "Lighthouse audit capture for the post-change login scenario, sample 3. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "post-change"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_after22_login_4.json",
+      "type": "config",
+      "name": "lh_after22_login_4.json",
+      "filePath": "perf/lh_after22_login_4.json",
+      "summary": "Lighthouse audit capture for the post-change login scenario, sample 4. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "post-change"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_after22_login_5.json",
+      "type": "config",
+      "name": "lh_after22_login_5.json",
+      "filePath": "perf/lh_after22_login_5.json",
+      "summary": "Lighthouse audit capture for the post-change login scenario, sample 5. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "post-change"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_before_login_1.json",
+      "type": "config",
+      "name": "lh_before_login_1.json",
+      "filePath": "perf/lh_before_login_1.json",
+      "summary": "Lighthouse audit capture for the pre-change login scenario, sample 1. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_before_login_2.json",
+      "type": "config",
+      "name": "lh_before_login_2.json",
+      "filePath": "perf/lh_before_login_2.json",
+      "summary": "Lighthouse audit capture for the pre-change login scenario, sample 2. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_before_login_3.json",
+      "type": "config",
+      "name": "lh_before_login_3.json",
+      "filePath": "perf/lh_before_login_3.json",
+      "summary": "Lighthouse audit capture for the pre-change login scenario, sample 3. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_before_login_4.json",
+      "type": "config",
+      "name": "lh_before_login_4.json",
+      "filePath": "perf/lh_before_login_4.json",
+      "summary": "Lighthouse audit capture for the pre-change login scenario, sample 4. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/lh_before_login_5.json",
+      "type": "config",
+      "name": "lh_before_login_5.json",
+      "filePath": "perf/lh_before_login_5.json",
+      "summary": "Lighthouse audit capture for the pre-change login scenario, sample 5. It records audit results, category metadata, environment information, and run timing.",
+      "tags": ["performance-testing", "lighthouse", "audit-report", "login-flow", "baseline"],
+      "complexity": "complex"
+    },
+    {
+      "id": "config:perf/login_diff22.json",
+      "type": "config",
+      "name": "login_diff22.json",
+      "filePath": "perf/login_diff22.json",
+      "summary": "Compact pixel-difference metrics associated with the login comparison, including image dimensions and change statistics.",
+      "tags": ["performance-testing", "visual-regression", "pixel-diff", "login-flow"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

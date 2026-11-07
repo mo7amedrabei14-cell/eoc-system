@@ -1,0 +1,87 @@
+[
+  {
+    "order": 1,
+    "title": "Project Overview",
+    "description": "The README introduces the EOC System as a digital operations platform and maps its major components, local setup, workers, security configuration, and verification. Treat it as the route map for understanding how the interface, API, data, and intelligence workflows fit together.",
+    "nodeIds": ["document:README.md"]
+  },
+  {
+    "order": 2,
+    "title": "React/Vite Frontend",
+    "description": "Building on the project map, main.jsx bootstraps the React client and App.jsx composes routing, shared UI, authentication transitions, and dashboard fallbacks. Dashboard.jsx coordinates operational navigation, data loading, forms, monitoring, and reports, while the Vite config and frontend manifest define the development, build, lint, and test toolchain.",
+    "nodeIds": [
+      "file:frontend/src/main.jsx",
+      "file:frontend/src/App.jsx",
+      "file:frontend/src/Dashboard.jsx",
+      "config:frontend/vite.config.js",
+      "config:frontend/package.json"
+    ]
+  },
+  {
+    "order": 3,
+    "title": "FastAPI Backend",
+    "description": "The frontend's operational surface is served by main.py, the central FastAPI application that defines routes, typed request models, and runtime workflows. Its authentication helpers validate sessions, issue access tokens, and resolve role- and branch-based permissions, establishing how requests are handled and access is controlled.",
+    "nodeIds": ["file:main.py", "file:auth.py"]
+  },
+  {
+    "order": 4,
+    "title": "Database and Migrations",
+    "description": "The backend's persistence layer is centralized in db.py, which handles connection configuration, pooler behavior, transient errors, and connection acquisition. The migration nodes show how the schema evolves to represent participant categories and preserve user-linked records, connecting operational data needs to database constraints and indexes.",
+    "nodeIds": [
+      "file:db.py",
+      "table:migrations/20260813_participant_types.sql",
+      "table:migrations/20260905_prevent_users_delete.sql"
+    ]
+  },
+  {
+    "order": 5,
+    "title": "Realtime/API Integration",
+    "description": "The frontend chooses its API base from the Vite environment with a production fallback, while realtime.py creates mission events, detects duplicate logical actions, and routes notifications to relevant accounts. The related migration adds mission team-code support and a persisted, indexed event table, showing how API configuration and database state support real-time activity.",
+    "nodeIds": [
+      "file:frontend/src/apiBase.js",
+      "file:realtime.py",
+      "table:migrations/20260904_mission_team_code_realtime.sql"
+    ]
+  },
+  {
+    "order": 6,
+    "title": "Intelligence Workers",
+    "description": "Beyond interactive API requests, the weather worker gathers forecast and historical signals, derives anomalies and hazards, and requests structured AI interpretation. AI Radar coordinates news intake, incident classification, and tactical reporting, while the earthquake worker runs an individual intelligence-processing cycle; together these modules extend the platform with background analysis.",
+    "nodeIds": [
+      "file:weather_intel.py",
+      "file:ai_radar.py",
+      "file:earthquake_intel.py"
+    ]
+  },
+  {
+    "order": 7,
+    "title": "Deployment and Config",
+    "description": "The Dockerfile packages the Python application, installs its requirements, and launches it with Uvicorn, while .dockerignore controls which files enter the build context. The root package manifest also includes Cloudflare/OpenNext deployment tooling, giving a view of the repository's deployment-related configuration alongside its backend container.",
+    "nodeIds": [
+      "service:Dockerfile",
+      "config:.dockerignore",
+      "config:package.json"
+    ]
+  },
+  {
+    "order": 8,
+    "title": "Scheduled Operations",
+    "description": "The worker workflows show how intelligence processing runs outside the web request lifecycle: weather checks recur every two hours, and the AI Radar scanner runs on a schedule with concurrency control. The AI Radar operations guide documents its Apify social-content workflow and safeguards, connecting scheduled automation to its external-source integration.",
+    "nodeIds": [
+      "pipeline:.github/workflows/weather_cron.yml",
+      "pipeline:.github/workflows/ai_cron.yml",
+      "document:AI_RADAR_APIFY_SOCIAL.md"
+    ]
+  },
+  {
+    "order": 9,
+    "title": "Testing and Verification",
+    "description": "The dashboard-loading CI workflow checks the frontend test suite and build alongside focused linting and a backend syntax check, while the N1 query tests guard query counts and batched reads and writes across operational workflows. The smoke-test summary and N1 PostgreSQL Compose service round out the tour with documented verification and the isolated database setup used for testing.",
+    "nodeIds": [
+      "pipeline:.github/workflows/dashboard-loading-check.yml",
+      "file:test_n1_query_optimizations.py",
+      "document:smoke_test_summary.md",
+      "service:docker-compose.n1-test.yml"
+    ]
+  }
+]

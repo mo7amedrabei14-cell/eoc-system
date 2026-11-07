@@ -1,0 +1,1510 @@
+{
+  "nodes": [
+    {
+      "id": "file:_jl_db_integration.py",
+      "type": "file",
+      "name": "_jl_db_integration.py",
+      "filePath": "_jl_db_integration.py",
+      "summary": "Database-backed integration tests that exercise mission-record creation, querying, updates, and cleanup. The script runs an end-to-end scenario against the application database.",
+      "tags": [
+        "test",
+        "integration",
+        "database"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_jl_db_integration.py:make_mission",
+      "type": "function",
+      "name": "make_mission",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        33,
+        53
+      ],
+      "summary": "Builds a mission fixture for the database integration scenario.",
+      "tags": [
+        "test",
+        "fixture",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:create",
+      "type": "function",
+      "name": "create",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        56,
+        59
+      ],
+      "summary": "Provides a creation operation used by the database integration scenario.",
+      "tags": [
+        "test",
+        "database",
+        "write-operation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:put",
+      "type": "function",
+      "name": "put",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        62,
+        64
+      ],
+      "summary": "Provides an update operation used by the database integration scenario.",
+      "tags": [
+        "test",
+        "database",
+        "update-operation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:jl_entries",
+      "type": "function",
+      "name": "jl_entries",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        67,
+        74
+      ],
+      "summary": "Loads mission-ledger entries needed by the integration checks.",
+      "tags": [
+        "test",
+        "database",
+        "query"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:q",
+      "type": "function",
+      "name": "q",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        81,
+        83
+      ],
+      "summary": "Runs a focused database query for the integration scenario.",
+      "tags": [
+        "test",
+        "database",
+        "query"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:hours_for",
+      "type": "function",
+      "name": "hours_for",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        86,
+        119
+      ],
+      "summary": "Calculates the hour total used when validating mission-ledger results.",
+      "tags": [
+        "test",
+        "calculation",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        124,
+        127
+      ],
+      "summary": "Asserts that the integration scenario produced the expected application state.",
+      "tags": [
+        "test",
+        "assertion",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:cleanup_test_data",
+      "type": "function",
+      "name": "cleanup_test_data",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        130,
+        163
+      ],
+      "summary": "Removes test-created database state after the integration run.",
+      "tags": [
+        "test",
+        "cleanup",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_db_integration.py:main_test",
+      "type": "function",
+      "name": "main_test",
+      "filePath": "_jl_db_integration.py",
+      "lineRange": [
+        166,
+        400
+      ],
+      "summary": "Coordinates the full database integration scenario and its assertions.",
+      "tags": [
+        "test",
+        "integration",
+        "database"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:_jl_db_probe.py",
+      "type": "file",
+      "name": "_jl_db_probe.py",
+      "filePath": "_jl_db_probe.py",
+      "summary": "Small database probe used to inspect connectivity and the application’s mission-data integration during debugging.",
+      "tags": [
+        "diagnostic",
+        "database",
+        "integration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_jl_logic_test.py",
+      "type": "file",
+      "name": "_jl_logic_test.py",
+      "filePath": "_jl_logic_test.py",
+      "summary": "Focused regression checks for mission-logic behavior using small input fixtures.",
+      "tags": [
+        "test",
+        "logic",
+        "regression"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_jl_logic_test.py:arr",
+      "type": "function",
+      "name": "arr",
+      "filePath": "_jl_logic_test.py",
+      "lineRange": [
+        22,
+        24
+      ],
+      "summary": "Builds the array-shaped input used by the focused logic check.",
+      "tags": [
+        "test",
+        "logic",
+        "fixture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_make_seed.py",
+      "type": "file",
+      "name": "_make_seed.py",
+      "filePath": "_make_seed.py",
+      "summary": "Utility script for preparing seed records used by local application or database checks.",
+      "tags": [
+        "script",
+        "seed-data",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_probe331.py",
+      "type": "file",
+      "name": "_probe331.py",
+      "filePath": "_probe331.py",
+      "summary": "Targeted diagnostic probe for investigating a specific application/database behavior associated with issue 331.",
+      "tags": [
+        "diagnostic",
+        "database",
+        "debugging"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_probe331_full.py",
+      "type": "file",
+      "name": "_probe331_full.py",
+      "filePath": "_probe331_full.py",
+      "summary": "Expanded diagnostic probe for issue 331, collecting broader application/database observations than the focused probe.",
+      "tags": [
+        "diagnostic",
+        "database",
+        "debugging"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_probe_users.py",
+      "type": "file",
+      "name": "_probe_users.py",
+      "filePath": "_probe_users.py",
+      "summary": "Diagnostic utility for examining user lookup behavior and related database state without representing user records in the graph.",
+      "tags": [
+        "diagnostic",
+        "database",
+        "user-auth"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_test_eq_ingest.py",
+      "type": "file",
+      "name": "_test_eq_ingest.py",
+      "filePath": "_test_eq_ingest.py",
+      "summary": "Regression test script for event ingestion, checking the processing cycle and resulting database state.",
+      "tags": [
+        "test",
+        "ingestion",
+        "database"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:_test_eq_ingest.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "_test_eq_ingest.py",
+      "lineRange": [
+        38,
+        41
+      ],
+      "summary": "Asserts the expected behavior of the event-ingestion regression scenario.",
+      "tags": [
+        "test",
+        "ingestion",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_eq_ingest.py:db_counts",
+      "type": "function",
+      "name": "db_counts",
+      "filePath": "_test_eq_ingest.py",
+      "lineRange": [
+        44,
+        51
+      ],
+      "summary": "Reads database counts used to verify the ingestion test result.",
+      "tags": [
+        "test",
+        "database",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_eq_ingest.py:run_cycle",
+      "type": "function",
+      "name": "run_cycle",
+      "filePath": "_test_eq_ingest.py",
+      "lineRange": [
+        156,
+        160
+      ],
+      "summary": "Runs one event-ingestion cycle for the regression test.",
+      "tags": [
+        "test",
+        "ingestion",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:_test_sse.py",
+      "type": "file",
+      "name": "_test_sse.py",
+      "filePath": "_test_sse.py",
+      "summary": "Endpoint tests for authenticated server-sent event streams, response contracts, heartbeat/EOF behavior, and read-only polling.",
+      "tags": [
+        "test",
+        "api",
+        "server-sent-events"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:_test_sse.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        25,
+        28
+      ],
+      "summary": "Validates an endpoint-test response against its expected conditions.",
+      "tags": [
+        "test",
+        "api",
+        "assertion"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_sse.py:make_token",
+      "type": "function",
+      "name": "make_token",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        31,
+        34
+      ],
+      "summary": "Creates authentication material for exercising the event-stream endpoint in tests.",
+      "tags": [
+        "test",
+        "authentication",
+        "fixture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_sse.py:test_auth",
+      "type": "function",
+      "name": "test_auth",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        37,
+        43
+      ],
+      "summary": "Verifies authentication behavior for the server-sent event endpoint.",
+      "tags": [
+        "test",
+        "authentication",
+        "api"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_sse.py:test_stream_shapes",
+      "type": "function",
+      "name": "test_stream_shapes",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        46,
+        64
+      ],
+      "summary": "Checks the structure of server-sent event stream responses.",
+      "tags": [
+        "test",
+        "api",
+        "server-sent-events"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_sse.py:test_no_duplicate_contract",
+      "type": "function",
+      "name": "test_no_duplicate_contract",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        67,
+        77
+      ],
+      "summary": "Verifies the stream response contract does not produce duplicate entries.",
+      "tags": [
+        "test",
+        "api",
+        "contract"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_sse.py:test_heartbeat_and_eof",
+      "type": "function",
+      "name": "test_heartbeat_and_eof",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        80,
+        89
+      ],
+      "summary": "Checks heartbeat and end-of-stream behavior for streaming responses.",
+      "tags": [
+        "test",
+        "api",
+        "server-sent-events"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_sse.py:test_poll_untouched",
+      "type": "function",
+      "name": "test_poll_untouched",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        92,
+        101
+      ],
+      "summary": "Verifies polling leaves the tested application state unchanged.",
+      "tags": [
+        "test",
+        "api",
+        "read-only"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:_test_sse.py:test_status_readonly",
+      "type": "function",
+      "name": "test_status_readonly",
+      "filePath": "_test_sse.py",
+      "lineRange": [
+        104,
+        113
+      ],
+      "summary": "Verifies the status endpoint can be read without changing state.",
+      "tags": [
+        "test",
+        "api",
+        "read-only"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:add_constraints.py",
+      "type": "file",
+      "name": "add_constraints.py",
+      "filePath": "add_constraints.py",
+      "summary": "Database maintenance script that applies schema constraints through database operations.",
+      "tags": [
+        "database",
+        "schema",
+        "migration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:add_constraints.py:add_constraints",
+      "type": "function",
+      "name": "add_constraints",
+      "filePath": "add_constraints.py",
+      "lineRange": [
+        5,
+        186
+      ],
+      "summary": "Applies the configured database integrity constraints using the database connection.",
+      "tags": [
+        "database",
+        "schema",
+        "migration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:add_constraints_v2.py",
+      "type": "file",
+      "name": "add_constraints_v2.py",
+      "filePath": "add_constraints_v2.py",
+      "summary": "Revised database constraint utility that executes schema-alteration statements and applies integrity rules.",
+      "tags": [
+        "database",
+        "schema",
+        "migration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:add_constraints_v2.py:execute_alter_table",
+      "type": "function",
+      "name": "execute_alter_table",
+      "filePath": "add_constraints_v2.py",
+      "lineRange": [
+        5,
+        19
+      ],
+      "summary": "Executes a table-alteration operation for the revised constraint workflow.",
+      "tags": [
+        "database",
+        "schema",
+        "migration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:add_constraints_v2.py:add_constraints",
+      "type": "function",
+      "name": "add_constraints",
+      "filePath": "add_constraints_v2.py",
+      "lineRange": [
+        21,
+        114
+      ],
+      "summary": "Applies the configured database integrity constraints using the database connection.",
+      "tags": [
+        "database",
+        "schema",
+        "migration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:audit_test.py",
+      "type": "file",
+      "name": "audit_test.py",
+      "filePath": "audit_test.py",
+      "summary": "Audit-related integration tests that exercise request handling and database-backed behavior.",
+      "tags": [
+        "test",
+        "audit",
+        "api"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:audit_test.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "audit_test.py",
+      "lineRange": [
+        27,
+        34
+      ],
+      "summary": "Asserts expected results in the audit-related test scenario.",
+      "tags": [
+        "test",
+        "audit",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:audit_test.py:route",
+      "type": "function",
+      "name": "route",
+      "filePath": "audit_test.py",
+      "lineRange": [
+        36,
+        38
+      ],
+      "summary": "Builds or invokes the audit-test request route used by the test scenario.",
+      "tags": [
+        "test",
+        "audit",
+        "api"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:audit_test.py:mission_data",
+      "type": "function",
+      "name": "mission_data",
+      "filePath": "audit_test.py",
+      "lineRange": [
+        40,
+        49
+      ],
+      "summary": "Prepares mission-related input data for audit tests.",
+      "tags": [
+        "test",
+        "audit",
+        "fixture"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:auth.py",
+      "type": "file",
+      "name": "auth.py",
+      "filePath": "auth.py",
+      "summary": "Authentication and authorization helpers for session validation, access-token issuance, effective permissions, role/branch lookup, and access checks.",
+      "tags": [
+        "authentication",
+        "authorization",
+        "permissions"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:auth.py:get_session_generation",
+      "type": "function",
+      "name": "get_session_generation",
+      "filePath": "auth.py",
+      "lineRange": [
+        32,
+        55
+      ],
+      "summary": "Retrieves the current session-generation value used in session validation.",
+      "tags": [
+        "authentication",
+        "session",
+        "cache"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:invalidate_session_generation_cache",
+      "type": "function",
+      "name": "invalidate_session_generation_cache",
+      "filePath": "auth.py",
+      "lineRange": [
+        58,
+        59
+      ],
+      "summary": "Invalidates cached session-generation state after a change.",
+      "tags": [
+        "authentication",
+        "session",
+        "cache"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:authenticate_user",
+      "type": "function",
+      "name": "authenticate_user",
+      "filePath": "auth.py",
+      "lineRange": [
+        62,
+        102
+      ],
+      "summary": "Validates an incoming authentication attempt and resolves its user context.",
+      "tags": [
+        "authentication",
+        "identity",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:create_access_token",
+      "type": "function",
+      "name": "create_access_token",
+      "filePath": "auth.py",
+      "lineRange": [
+        105,
+        119
+      ],
+      "summary": "Creates a signed access token for the authentication flow without exposing token contents.",
+      "tags": [
+        "authentication",
+        "token",
+        "security"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:get_effective_permissions",
+      "type": "function",
+      "name": "get_effective_permissions",
+      "filePath": "auth.py",
+      "lineRange": [
+        121,
+        156
+      ],
+      "summary": "Computes the permissions effective for the current user context.",
+      "tags": [
+        "authorization",
+        "permissions",
+        "access-control"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:get_user_branches",
+      "type": "function",
+      "name": "get_user_branches",
+      "filePath": "auth.py",
+      "lineRange": [
+        158,
+        196
+      ],
+      "summary": "Retrieves the branches available to a user for branch-scoped authorization.",
+      "tags": [
+        "authorization",
+        "branches",
+        "access-control"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:get_user_role",
+      "type": "function",
+      "name": "get_user_role",
+      "filePath": "auth.py",
+      "lineRange": [
+        198,
+        232
+      ],
+      "summary": "Resolves the role associated with a user context.",
+      "tags": [
+        "authorization",
+        "roles",
+        "access-control"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:check_permission",
+      "type": "function",
+      "name": "check_permission",
+      "filePath": "auth.py",
+      "lineRange": [
+        234,
+        242
+      ],
+      "summary": "Checks whether a user context is allowed a requested permission.",
+      "tags": [
+        "authorization",
+        "permissions",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:check_branch_access",
+      "type": "function",
+      "name": "check_branch_access",
+      "filePath": "auth.py",
+      "lineRange": [
+        244,
+        260
+      ],
+      "summary": "Checks access to a branch-scoped resource.",
+      "tags": [
+        "authorization",
+        "branches",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:authorize",
+      "type": "function",
+      "name": "authorize",
+      "filePath": "auth.py",
+      "lineRange": [
+        262,
+        274
+      ],
+      "summary": "Builds a reusable authorization guard for protected application operations.",
+      "tags": [
+        "authorization",
+        "access-control",
+        "middleware"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:get_current_user_id",
+      "type": "function",
+      "name": "get_current_user_id",
+      "filePath": "auth.py",
+      "lineRange": [
+        276,
+        309
+      ],
+      "summary": "Resolves the current authenticated user identifier from request context.",
+      "tags": [
+        "authentication",
+        "identity",
+        "request-context"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:auth.py:explain_token_failure",
+      "type": "function",
+      "name": "explain_token_failure",
+      "filePath": "auth.py",
+      "lineRange": [
+        311,
+        327
+      ],
+      "summary": "Classifies token-validation failure conditions for authentication handling.",
+      "tags": [
+        "authentication",
+        "token",
+        "diagnostics"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:make_mission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:make_mission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:create",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:create",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:put",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:put",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:jl_entries",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:jl_entries",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:q",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:q",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:hours_for",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:hours_for",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:cleanup_test_data",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:cleanup_test_data",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:main_test",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "function:_jl_db_integration.py:main_test",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_jl_db_integration.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_jl_db_probe.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_jl_logic_test.py",
+      "target": "function:_jl_logic_test.py:arr",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_jl_logic_test.py",
+      "target": "function:_jl_logic_test.py:arr",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_jl_logic_test.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_make_seed.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_make_seed.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_probe331.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_probe331.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_probe331_full.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_probe_users.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_test_eq_ingest.py",
+      "target": "function:_test_eq_ingest.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_eq_ingest.py",
+      "target": "function:_test_eq_ingest.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_eq_ingest.py",
+      "target": "function:_test_eq_ingest.py:db_counts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_eq_ingest.py",
+      "target": "function:_test_eq_ingest.py:db_counts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_eq_ingest.py",
+      "target": "function:_test_eq_ingest.py:run_cycle",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_eq_ingest.py",
+      "target": "function:_test_eq_ingest.py:run_cycle",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_eq_ingest.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:make_token",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:make_token",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_auth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_auth",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_stream_shapes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_stream_shapes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_no_duplicate_contract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_no_duplicate_contract",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_heartbeat_and_eof",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_heartbeat_and_eof",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_poll_untouched",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_poll_untouched",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_status_readonly",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "function:_test_sse.py:test_status_readonly",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:_test_sse.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:add_constraints.py",
+      "target": "function:add_constraints.py:add_constraints",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:add_constraints.py",
+      "target": "function:add_constraints.py:add_constraints",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:add_constraints.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:add_constraints_v2.py",
+      "target": "function:add_constraints_v2.py:execute_alter_table",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:add_constraints_v2.py",
+      "target": "function:add_constraints_v2.py:execute_alter_table",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:add_constraints_v2.py",
+      "target": "function:add_constraints_v2.py:add_constraints",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:add_constraints_v2.py",
+      "target": "function:add_constraints_v2.py:add_constraints",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:add_constraints_v2.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "function:audit_test.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "function:audit_test.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "function:audit_test.py:route",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "function:audit_test.py:route",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "function:audit_test.py:mission_data",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "function:audit_test.py:mission_data",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:audit_test.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_session_generation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_session_generation",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:invalidate_session_generation_cache",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:invalidate_session_generation_cache",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:authenticate_user",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:authenticate_user",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:create_access_token",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:create_access_token",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_effective_permissions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_effective_permissions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_user_branches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_user_branches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_user_role",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_user_role",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:check_permission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:check_permission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:check_branch_access",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:check_branch_access",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:authorize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:authorize",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_current_user_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:get_current_user_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:explain_token_failure",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:auth.py",
+      "target": "function:auth.py:explain_token_failure",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:auth.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

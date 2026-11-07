@@ -1,0 +1,284 @@
+{
+  "nodes": [
+    {
+      "id": "document:AI_RADAR_APIFY_SOCIAL.md",
+      "type": "document",
+      "name": "AI_RADAR_APIFY_SOCIAL.md",
+      "filePath": "AI_RADAR_APIFY_SOCIAL.md",
+      "summary": "Describes the EOC AI Radar workflow for collecting social content through Apify, including scheduling, safeguards, and validation practices.",
+      "tags": [
+        "documentation",
+        "monitoring",
+        "social-data",
+        "operations"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:AI_RADAR_SOCIAL_SOURCES.md",
+      "type": "document",
+      "name": "AI_RADAR_SOCIAL_SOURCES.md",
+      "filePath": "AI_RADAR_SOCIAL_SOURCES.md",
+      "summary": "Documents the AI Radar collection schedule, duplicate prevention, social-source connectors, and verification approach.",
+      "tags": [
+        "documentation",
+        "monitoring",
+        "social-data",
+        "integration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:Eoc Data Base.sql",
+      "type": "file",
+      "name": "Eoc Data Base.sql",
+      "filePath": "Eoc Data Base.sql",
+      "summary": "A small SQL query artifact for database interaction; it defines no table or schema objects.",
+      "tags": [
+        "database",
+        "sql",
+        "query"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:N1_AUDIT_REPORT.md",
+      "type": "document",
+      "name": "N1_AUDIT_REPORT.md",
+      "filePath": "N1_AUDIT_REPORT.md",
+      "summary": "Records a multi-phase audit of database access patterns and related regression verification, with a final release assessment.",
+      "tags": [
+        "documentation",
+        "database",
+        "performance",
+        "audit"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:PRODUCT.md",
+      "type": "document",
+      "name": "PRODUCT.md",
+      "filePath": "PRODUCT.md",
+      "summary": "Defines the EOC platform purpose, operating context, user groups, capabilities, constraints, and product principles.",
+      "tags": [
+        "documentation",
+        "product",
+        "platform",
+        "requirements"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Introduces the EOC System and its major components, repository layout, local run instructions, workers, security configuration, and verification.",
+      "tags": [
+        "documentation",
+        "entry-point",
+        "setup",
+        "overview"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:SECURITY_AUDIT.md",
+      "type": "document",
+      "name": "SECURITY_AUDIT.md",
+      "filePath": "SECURITY_AUDIT.md",
+      "summary": "Summarizes a security assessment of the EOC System, its review scope, high-level findings, remediation work, and verification activities.",
+      "tags": [
+        "documentation",
+        "security",
+        "audit",
+        "remediation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:SECURITY_VERIFICATION.md",
+      "type": "document",
+      "name": "SECURITY_VERIFICATION.md",
+      "filePath": "SECURITY_VERIFICATION.md",
+      "summary": "Records independent security verification across operational controls and system behavior, along with prioritized follow-up actions.",
+      "tags": [
+        "documentation",
+        "security",
+        "verification",
+        "operations"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:VISUAL_TRANSFORM_PLAN.md",
+      "type": "document",
+      "name": "VISUAL_TRANSFORM_PLAN.md",
+      "filePath": "VISUAL_TRANSFORM_PLAN.md",
+      "summary": "Presents a detailed plan for transforming the product?s visual design, organizing goals, design direction, and implementation considerations.",
+      "tags": [
+        "documentation",
+        "design",
+        "ui",
+        "planning"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:_head_index.css",
+      "type": "file",
+      "name": "_head_index.css",
+      "filePath": "_head_index.css",
+      "summary": "Provides extensive shared CSS styling for the application?s index/head surface, including responsive rules and reusable custom properties.",
+      "tags": [
+        "styles",
+        "ui",
+        "responsive-design",
+        "design-system"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:after.txt",
+      "type": "document",
+      "name": "after.txt",
+      "filePath": "after.txt",
+      "summary": "Contains a large post-change backend code snapshot with data models and endpoint-oriented application logic.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "models",
+        "api"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:after_class.txt",
+      "type": "document",
+      "name": "after_class.txt",
+      "filePath": "after_class.txt",
+      "summary": "Contains a post-change backend snapshot centered on application model classes and related operations.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "models",
+        "post-change"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:before.txt",
+      "type": "document",
+      "name": "before.txt",
+      "filePath": "before.txt",
+      "summary": "Contains a pre-change backend code snapshot covering application models and endpoint-oriented logic.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "models",
+        "pre-change"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:before_class.txt",
+      "type": "document",
+      "name": "before_class.txt",
+      "filePath": "before_class.txt",
+      "summary": "Contains a pre-change backend snapshot focused on application model classes.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "models",
+        "pre-change"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:main_after.txt",
+      "type": "document",
+      "name": "main_after.txt",
+      "filePath": "main_after.txt",
+      "summary": "Contains a post-change snapshot of the backend main module and its application operations.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "main-module",
+        "post-change"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:main_before.txt",
+      "type": "document",
+      "name": "main_before.txt",
+      "filePath": "main_before.txt",
+      "summary": "Contains a pre-change snapshot of the backend main module and its application operations.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "main-module",
+        "pre-change"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:main_new_func.txt",
+      "type": "document",
+      "name": "main_new_func.txt",
+      "filePath": "main_new_func.txt",
+      "summary": "Captures newly introduced backend functions as a focused source excerpt.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "functions",
+        "change-review"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:new_class.txt",
+      "type": "document",
+      "name": "new_class.txt",
+      "filePath": "new_class.txt",
+      "summary": "Captures a newly introduced backend model class as a focused source excerpt.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "model",
+        "change-review"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:new_func.txt",
+      "type": "document",
+      "name": "new_func.txt",
+      "filePath": "new_func.txt",
+      "summary": "Captures newly introduced backend functions as a focused source excerpt.",
+      "tags": [
+        "code-snapshot",
+        "backend",
+        "functions",
+        "change-review"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:openapi_spec.json",
+      "type": "config",
+      "name": "openapi_spec.json",
+      "filePath": "openapi_spec.json",
+      "summary": "Defines the EOC System OpenAPI contract, with API paths and reusable component schemas.",
+      "tags": [
+        "api-schema",
+        "openapi",
+        "configuration",
+        "endpoints"
+      ],
+      "complexity": "complex"
+    }
+  ],
+  "edges": []
+}

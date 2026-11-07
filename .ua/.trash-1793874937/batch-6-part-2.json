@@ -1,0 +1,384 @@
+{
+  "nodes": [
+    {
+      "id": "file:test_ai_news_repair_flow.py",
+      "type": "file",
+      "name": "test_ai_news_repair_flow.py",
+      "filePath": "test_ai_news_repair_flow.py",
+      "summary": "Exercises the AI-news repair path through the application test client, checking retrieval, authentication behavior, reanalysis, and the resulting stored update.",
+      "tags": [
+        "test",
+        "ai-news",
+        "repair-flow",
+        "integration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_ai_news_repair_flow.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "test_ai_news_repair_flow.py",
+      "lineRange": [
+        33,
+        40
+      ],
+      "summary": "Records a named integration-check outcome and tracks overall pass or failure state.",
+      "tags": [
+        "test",
+        "repair-flow",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test_ai_radar_resilience.py",
+      "type": "file",
+      "name": "test_ai_radar_resilience.py",
+      "filePath": "test_ai_radar_resilience.py",
+      "summary": "Regression-tests AI Radar fallback analysis, response parsing, and report behavior when model, network, or API attempts fail.",
+      "tags": [
+        "test",
+        "ai-radar",
+        "resilience",
+        "regression"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_ai_radar_resilience.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "test_ai_radar_resilience.py",
+      "lineRange": [
+        27,
+        34
+      ],
+      "summary": "Records a named resilience-check outcome and tracks overall pass or failure state.",
+      "tags": [
+        "test",
+        "resilience",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_ai_radar_resilience.py:no_failure_marker",
+      "type": "function",
+      "name": "no_failure_marker",
+      "filePath": "test_ai_radar_resilience.py",
+      "lineRange": [
+        37,
+        38
+      ],
+      "summary": "Checks that output does not contain a failed-analysis marker.",
+      "tags": [
+        "test",
+        "resilience",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_ai_radar_resilience.py:fake_post",
+      "type": "function",
+      "name": "fake_post",
+      "filePath": "test_ai_radar_resilience.py",
+      "lineRange": [
+        107,
+        113
+      ],
+      "summary": "Provides a controlled fake HTTP response for tests of outbound reporting.",
+      "tags": [
+        "test",
+        "resilience",
+        "utility"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:test_ai_radar_resilience.py:FakeResponse",
+      "type": "class",
+      "name": "FakeResponse",
+      "filePath": "test_ai_radar_resilience.py",
+      "lineRange": [
+        85,
+        90
+      ],
+      "summary": "Supplies a minimal controllable response object for HTTP failure and reporting tests.",
+      "tags": [
+        "test",
+        "resilience",
+        "test",
+        "suite"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test_apify_social_sources.py",
+      "type": "file",
+      "name": "test_apify_social_sources.py",
+      "filePath": "test_apify_social_sources.py",
+      "summary": "Tests Apify adapter freshness filtering, post normalization, budget accounting, query selection, cost limits, and safe handling of unsuccessful actor runs.",
+      "tags": [
+        "test",
+        "apify",
+        "social-media",
+        "budget-control"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:test_apify_social_sources.py:ApifySocialSourceTests",
+      "type": "class",
+      "name": "ApifySocialSourceTests",
+      "filePath": "test_apify_social_sources.py",
+      "lineRange": [
+        12,
+        316
+      ],
+      "summary": "Covers Apify post eligibility, normalization, budget and slot limits, actor requests, and safe diagnostics.",
+      "tags": [
+        "test",
+        "apify",
+        "test",
+        "suite"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:test_incident_validation.py",
+      "type": "file",
+      "name": "test_incident_validation.py",
+      "filePath": "test_incident_validation.py",
+      "summary": "Regression-tests deterministic incident validation against fictional, metaphorical, ambiguous, and concrete incident-report examples.",
+      "tags": [
+        "test",
+        "incident-validation",
+        "safety",
+        "regression"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:test_incident_validation.py:IncidentValidationTests",
+      "type": "class",
+      "name": "IncidentValidationTests",
+      "filePath": "test_incident_validation.py",
+      "lineRange": [
+        8,
+        106
+      ],
+      "summary": "Verifies rejection of non-incident content and acceptance or escalation of plausible incident reports.",
+      "tags": [
+        "test",
+        "incident-validation",
+        "test",
+        "suite"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_social_media_sources.py",
+      "type": "file",
+      "name": "test_social_media_sources.py",
+      "filePath": "test_social_media_sources.py",
+      "summary": "Tests social-source adapter configuration, timestamp and keyword filtering, normalized article shape, and behavior when integrations are disabled or empty.",
+      "tags": [
+        "test",
+        "social-media",
+        "adapters",
+        "regression"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:test_social_media_sources.py:SocialMediaSourceTests",
+      "type": "class",
+      "name": "SocialMediaSourceTests",
+      "filePath": "test_social_media_sources.py",
+      "lineRange": [
+        14,
+        168
+      ],
+      "summary": "Covers parsing, filtering, configuration, and article normalization across optional source adapters.",
+      "tags": [
+        "test",
+        "social-media",
+        "test",
+        "suite"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:test_ai_news_repair_flow.py",
+      "target": "function:test_ai_news_repair_flow.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ai_news_repair_flow.py",
+      "target": "file:ai_radar.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ai_news_repair_flow.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ai_news_repair_flow.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ai_news_repair_flow.py",
+      "target": "function:test_ai_news_repair_flow.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "function:test_ai_radar_resilience.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "function:test_ai_radar_resilience.py:no_failure_marker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "function:test_ai_radar_resilience.py:fake_post",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "class:test_ai_radar_resilience.py:FakeResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "file:ai_radar.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "function:test_ai_radar_resilience.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "function:test_ai_radar_resilience.py:no_failure_marker",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "class:test_ai_radar_resilience.py:FakeResponse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_ai_radar_resilience.py",
+      "target": "function:test_ai_radar_resilience.py:fake_post",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_apify_social_sources.py",
+      "target": "class:test_apify_social_sources.py:ApifySocialSourceTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_apify_social_sources.py",
+      "target": "file:apify_social_sources.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_apify_social_sources.py",
+      "target": "class:test_apify_social_sources.py:ApifySocialSourceTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_incident_validation.py",
+      "target": "class:test_incident_validation.py:IncidentValidationTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_incident_validation.py",
+      "target": "file:ai_radar.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_incident_validation.py",
+      "target": "file:incident_validation.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_incident_validation.py",
+      "target": "class:test_incident_validation.py:IncidentValidationTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_social_media_sources.py",
+      "target": "class:test_social_media_sources.py:SocialMediaSourceTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_social_media_sources.py",
+      "target": "file:social_media_sources.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_social_media_sources.py",
+      "target": "class:test_social_media_sources.py:SocialMediaSourceTests",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

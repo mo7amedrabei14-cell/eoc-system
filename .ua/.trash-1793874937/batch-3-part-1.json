@@ -1,0 +1,936 @@
+{
+  "nodes": [
+    {
+      "id": "file:diag_route_titles_readonly.py",
+      "type": "file",
+      "name": "diag_route_titles_readonly.py",
+      "filePath": "diag_route_titles_readonly.py",
+      "summary": "Provides a read-only diagnostic for inspecting route-title behavior.",
+      "tags": [
+        "diagnostic",
+        "routing",
+        "read-only"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:diag_route_titles_readonly.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "diag_route_titles_readonly.py",
+      "lineRange": [
+        15,
+        67
+      ],
+      "summary": "Handles the main operation in this module.",
+      "tags": [
+        "utility",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:main.py",
+      "type": "file",
+      "name": "main.py",
+      "filePath": "main.py",
+      "summary": "Defines the central EOC web application, including application routes, typed request models, and runtime workflows.",
+      "tags": [
+        "entry-point",
+        "api-handler",
+        "service",
+        "backend"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:main.py:_emit_live",
+      "type": "function",
+      "name": "_emit_live",
+      "filePath": "main.py",
+      "lineRange": [
+        52,
+        56
+      ],
+      "summary": "Handles the emit live operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:ensure_wireless_handover_schema",
+      "type": "function",
+      "name": "ensure_wireless_handover_schema",
+      "filePath": "main.py",
+      "lineRange": [
+        910,
+        1053
+      ],
+      "summary": "Handles the ensure wireless handover schema operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_cache_read",
+      "type": "function",
+      "name": "_cache_read",
+      "filePath": "main.py",
+      "lineRange": [
+        1491,
+        1505
+      ],
+      "summary": "Handles the cache read operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_branches_locations",
+      "type": "function",
+      "name": "get_branches_locations",
+      "filePath": "main.py",
+      "lineRange": [
+        1867,
+        1916
+      ],
+      "summary": "Handles the get branches locations operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:find_youth_account_ids",
+      "type": "function",
+      "name": "find_youth_account_ids",
+      "filePath": "main.py",
+      "lineRange": [
+        2284,
+        2294
+      ],
+      "summary": "Handles the find youth account ids operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:validate_segment_datetime",
+      "type": "function",
+      "name": "validate_segment_datetime",
+      "filePath": "main.py",
+      "lineRange": [
+        2809,
+        2813
+      ],
+      "summary": "Handles the validate segment datetime operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:describe_details_edits",
+      "type": "function",
+      "name": "describe_details_edits",
+      "filePath": "main.py",
+      "lineRange": [
+        3271,
+        3284
+      ],
+      "summary": "Handles the describe details edits operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_apply_end_participation_writes",
+      "type": "function",
+      "name": "_apply_end_participation_writes",
+      "filePath": "main.py",
+      "lineRange": [
+        4930,
+        4951
+      ],
+      "summary": "Handles the apply end participation writes operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_mission_details",
+      "type": "function",
+      "name": "get_mission_details",
+      "filePath": "main.py",
+      "lineRange": [
+        5798,
+        5962
+      ],
+      "summary": "Handles the get mission details operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:create_local_news",
+      "type": "function",
+      "name": "create_local_news",
+      "filePath": "main.py",
+      "lineRange": [
+        6867,
+        6917
+      ],
+      "summary": "Handles the create local news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:delete_handover",
+      "type": "function",
+      "name": "delete_handover",
+      "filePath": "main.py",
+      "lineRange": [
+        7309,
+        7338
+      ],
+      "summary": "Handles the delete handover operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:delete_egypt_eq",
+      "type": "function",
+      "name": "delete_egypt_eq",
+      "filePath": "main.py",
+      "lineRange": [
+        7819,
+        7833
+      ],
+      "summary": "Handles the delete egypt eq operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:delete_ai_news",
+      "type": "function",
+      "name": "delete_ai_news",
+      "filePath": "main.py",
+      "lineRange": [
+        8486,
+        8504
+      ],
+      "summary": "Handles the delete ai news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_weather_scope_branch_param",
+      "type": "function",
+      "name": "_weather_scope_branch_param",
+      "filePath": "main.py",
+      "lineRange": [
+        9031,
+        9033
+      ],
+      "summary": "Handles the weather scope branch param operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_gov_contact_field_value",
+      "type": "function",
+      "name": "_gov_contact_field_value",
+      "filePath": "main.py",
+      "lineRange": [
+        9558,
+        9561
+      ],
+      "summary": "Handles the gov contact field value operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_risk_level",
+      "type": "function",
+      "name": "_eq_intel_risk_level",
+      "filePath": "main.py",
+      "lineRange": [
+        10031,
+        10043
+      ],
+      "summary": "Handles the eq intel risk level operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_cross_source_candidates_resilient",
+      "type": "function",
+      "name": "_eq_intel_cross_source_candidates_resilient",
+      "filePath": "main.py",
+      "lineRange": [
+        10524,
+        10542
+      ],
+      "summary": "Handles the eq intel cross source candidates resilient operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:ensure_earthquake_catalog_schema",
+      "type": "function",
+      "name": "ensure_earthquake_catalog_schema",
+      "filePath": "main.py",
+      "lineRange": [
+        11675,
+        11720
+      ],
+      "summary": "Handles the ensure earthquake catalog schema operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:clear_all_earthquake_intel",
+      "type": "function",
+      "name": "clear_all_earthquake_intel",
+      "filePath": "main.py",
+      "lineRange": [
+        12355,
+        12405
+      ],
+      "summary": "Handles the clear all earthquake intel operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:update_weather_intel_location",
+      "type": "function",
+      "name": "update_weather_intel_location",
+      "filePath": "main.py",
+      "lineRange": [
+        12943,
+        13009
+      ],
+      "summary": "Handles the update weather intel location operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:delete_workspace",
+      "type": "function",
+      "name": "delete_workspace",
+      "filePath": "main.py",
+      "lineRange": [
+        13988,
+        14012
+      ],
+      "summary": "Handles the delete workspace operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_wireless_delivery_payload",
+      "type": "function",
+      "name": "_wireless_delivery_payload",
+      "filePath": "main.py",
+      "lineRange": [
+        14397,
+        14421
+      ],
+      "summary": "Handles the wireless delivery payload operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:update_wireless_delivery",
+      "type": "function",
+      "name": "update_wireless_delivery",
+      "filePath": "main.py",
+      "lineRange": [
+        14906,
+        14993
+      ],
+      "summary": "Handles the update wireless delivery operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:main.py:VehicleModel",
+      "type": "class",
+      "name": "VehicleModel",
+      "filePath": "main.py",
+      "lineRange": [
+        1932,
+        1934
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:YouthReviewRequest",
+      "type": "class",
+      "name": "YouthReviewRequest",
+      "filePath": "main.py",
+      "lineRange": [
+        6088,
+        6089
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WeatherExportLogModel",
+      "type": "class",
+      "name": "WeatherExportLogModel",
+      "filePath": "main.py",
+      "lineRange": [
+        9027,
+        9028
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WirelessFixedTextUpdate",
+      "type": "class",
+      "name": "WirelessFixedTextUpdate",
+      "filePath": "main.py",
+      "lineRange": [
+        14272,
+        14273
+      ],
+      "summary": "Defines a typed request or input structure used by application workflows.",
+      "tags": [
+        "data-model",
+        "validation",
+        "api-model"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:diag_route_titles_readonly.py",
+      "target": "function:diag_route_titles_readonly.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_titles_readonly.py",
+      "target": "function:diag_route_titles_readonly.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_emit_live",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_emit_live",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_wireless_handover_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_wireless_handover_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_cache_read",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_cache_read",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_branches_locations",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_branches_locations",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:find_youth_account_ids",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:find_youth_account_ids",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:validate_segment_datetime",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:validate_segment_datetime",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:describe_details_edits",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:describe_details_edits",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_apply_end_participation_writes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_apply_end_participation_writes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_mission_details",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_mission_details",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_local_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:create_local_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_handover",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_handover",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_egypt_eq",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_egypt_eq",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_ai_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_ai_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_weather_scope_branch_param",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_weather_scope_branch_param",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_gov_contact_field_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_gov_contact_field_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_risk_level",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_risk_level",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_cross_source_candidates_resilient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_cross_source_candidates_resilient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_earthquake_catalog_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_earthquake_catalog_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_earthquake_intel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_earthquake_intel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_weather_intel_location",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_weather_intel_location",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_workspace",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:delete_workspace",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_delivery_payload",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_wireless_delivery_payload",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_wireless_delivery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:update_wireless_delivery",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:VehicleModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:VehicleModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:YouthReviewRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:YouthReviewRequest",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WeatherExportLogModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WeatherExportLogModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessFixedTextUpdate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WirelessFixedTextUpdate",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_titles_readonly.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:audit.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:realtime.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

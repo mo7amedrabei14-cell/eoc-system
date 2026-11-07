@@ -1,0 +1,813 @@
+{
+    "edges":  [
+                  {
+                      "target":  "function:frontend/diag_tdz_order.mjs:stripCode",
+                      "direction":  "forward",
+                      "source":  "file:frontend/diag_tdz_order.mjs",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/runtime_verify_time.mjs:apiPayload",
+                      "direction":  "forward",
+                      "source":  "file:frontend/runtime_verify_time.mjs",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/activityMap.old.js:classifyActivity",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/activityMap.old.js",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/activityMap.old.js:classifyActivity",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/activityMap.old.js",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:norm",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:norm",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:_strip_open_day",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:_strip_open_day",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:key_from_norm",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:key_from_norm",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:clean",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:clean",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:load_source",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/build_activity_map.py:load_source",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/build_activity_map.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/clean_membership.py:build",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/clean_membership.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/clean_membership.py:build",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/clean_membership.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/clean_membership.py:finalize",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/clean_membership.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/clean_membership.py:finalize",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/clean_membership.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/clean_membership.py:plan",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/clean_membership.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/clean_membership.py:plan",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/clean_membership.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:norm",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:norm",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:_strip_open_day",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:_strip_open_day",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:key_from",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:key_from",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:clean",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:clean",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:has_word",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "contains",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "function:frontend/src/daily_check.py:has_word",
+                      "direction":  "forward",
+                      "source":  "file:frontend/src/daily_check.py",
+                      "type":  "exports",
+                      "weight":  0.8
+                  }
+              ],
+    "nodes":  [
+                  {
+                      "id":  "config:frontend/_unz__s/docProps/core.xml",
+                      "name":  "core.xml",
+                      "tags":  [
+                                   "configuration",
+                                   "spreadsheet",
+                                   "metadata"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/_unz__s/docProps/core.xml",
+                      "type":  "config",
+                      "summary":  "Workbook core-properties XML metadata for a spreadsheet document; the file records document-level properties rather than application logic."
+                  },
+                  {
+                      "id":  "file:frontend/_unz__s/xl/_rels/workbook.xml.rels",
+                      "name":  "workbook.xml.rels",
+                      "tags":  [
+                                   "spreadsheet",
+                                   "xml",
+                                   "relationships"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/_unz__s/xl/_rels/workbook.xml.rels",
+                      "type":  "file",
+                      "summary":  "Spreadsheet package relationship XML linking workbook parts such as sheets and shared workbook resources."
+                  },
+                  {
+                      "id":  "config:frontend/_unz__s/xl/theme/theme1.xml",
+                      "name":  "theme1.xml",
+                      "tags":  [
+                                   "configuration",
+                                   "spreadsheet",
+                                   "theme"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/_unz__s/xl/theme/theme1.xml",
+                      "type":  "config",
+                      "summary":  "Spreadsheet theme XML defining presentation-level visual defaults for workbook content."
+                  },
+                  {
+                      "id":  "config:frontend/_unz__s/xl/worksheets/sheet1.xml",
+                      "name":  "sheet1.xml",
+                      "tags":  [
+                                   "configuration",
+                                   "spreadsheet",
+                                   "worksheet"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/_unz__s/xl/worksheets/sheet1.xml",
+                      "type":  "config",
+                      "summary":  "Spreadsheet worksheet XML containing a serialized sheet structure and presentation references."
+                  },
+                  {
+                      "id":  "file:frontend/diag_tdz_order.mjs",
+                      "name":  "diag_tdz_order.mjs",
+                      "tags":  [
+                                   "utility",
+                                   "diagnostics",
+                                   "javascript"
+                               ],
+                      "complexity":  "moderate",
+                      "filePath":  "frontend/diag_tdz_order.mjs",
+                      "type":  "file",
+                      "summary":  "A Node.js diagnostic utility that strips non-code text and checks frontend sources for temporal-dead-zone declaration ordering issues."
+                  },
+                  {
+                      "id":  "config:frontend/eslint.config.js",
+                      "name":  "eslint.config.js",
+                      "tags":  [
+                                   "configuration",
+                                   "linting",
+                                   "javascript"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/eslint.config.js",
+                      "type":  "config",
+                      "summary":  "Frontend ESLint flat configuration combining JavaScript recommendations with browser globals and React Hooks and Fast Refresh rules."
+                  },
+                  {
+                      "id":  "file:frontend/fix-logo-centering.cjs",
+                      "name":  "fix-logo-centering.cjs",
+                      "tags":  [
+                                   "utility",
+                                   "image-processing",
+                                   "png"
+                               ],
+                      "complexity":  "moderate",
+                      "filePath":  "frontend/fix-logo-centering.cjs",
+                      "type":  "file",
+                      "summary":  "A standalone Node.js image-processing utility that edits PNG chunks and pixel rows for a logo-centering adjustment."
+                  },
+                  {
+                      "id":  "config:frontend/postcss.config.js",
+                      "name":  "postcss.config.js",
+                      "tags":  [
+                                   "configuration",
+                                   "css",
+                                   "build-system"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/postcss.config.js",
+                      "type":  "config",
+                      "summary":  "PostCSS plugin configuration for the frontend CSS build pipeline."
+                  },
+                  {
+                      "id":  "file:frontend/runtime_verify_time.mjs",
+                      "name":  "runtime_verify_time.mjs",
+                      "tags":  [
+                                   "test",
+                                   "browser-automation",
+                                   "runtime-verification"
+                               ],
+                      "complexity":  "complex",
+                      "filePath":  "frontend/runtime_verify_time.mjs",
+                      "type":  "file",
+                      "summary":  "A browser-driven runtime verification script that serves the frontend and exercises time-entry controls and related UI behavior."
+                  },
+                  {
+                      "id":  "file:frontend/src/Dashboard.jsx.bak",
+                      "name":  "Dashboard.jsx.bak",
+                      "tags":  [
+                                   "backup",
+                                   "frontend",
+                                   "dashboard"
+                               ],
+                      "complexity":  "complex",
+                      "filePath":  "frontend/src/Dashboard.jsx.bak",
+                      "type":  "file",
+                      "summary":  "A large backup snapshot of the frontend dashboard component, retained as an archival source copy rather than an active module."
+                  },
+                  {
+                      "id":  "file:frontend/src/__tests__/dashboardDataLoading.test.js",
+                      "name":  "dashboardDataLoading.test.js",
+                      "tags":  [
+                                   "test",
+                                   "dashboard",
+                                   "data-loading"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/src/__tests__/dashboardDataLoading.test.js",
+                      "type":  "file",
+                      "summary":  "Node.js tests for dashboard field behavior and asynchronous data loading, including bounded parallel requests and request cancellation."
+                  },
+                  {
+                      "id":  "file:frontend/src/__tests__/ownerMessagesDelivery.test.js",
+                      "name":  "ownerMessagesDelivery.test.js",
+                      "tags":  [
+                                   "test",
+                                   "messaging",
+                                   "delivery"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/src/__tests__/ownerMessagesDelivery.test.js",
+                      "type":  "file",
+                      "summary":  "Frontend tests covering recipient-message delivery, acknowledgement controls, and message-send completion behavior."
+                  },
+                  {
+                      "id":  "file:frontend/src/__tests__/wirelessReturnNotesLayout.test.js",
+                      "name":  "wirelessReturnNotesLayout.test.js",
+                      "tags":  [
+                                   "test",
+                                   "layout",
+                                   "regression"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/src/__tests__/wirelessReturnNotesLayout.test.js",
+                      "type":  "file",
+                      "summary":  "A focused frontend regression test for the layout of notes in the wireless return confirmation flow."
+                  },
+                  {
+                      "id":  "file:frontend/src/__tests__/workingToast.test.js",
+                      "name":  "workingToast.test.js",
+                      "tags":  [
+                                   "test",
+                                   "ui-feedback",
+                                   "async-state"
+                               ],
+                      "complexity":  "moderate",
+                      "filePath":  "frontend/src/__tests__/workingToast.test.js",
+                      "type":  "file",
+                      "summary":  "Tests for the shared working indicator, including asynchronous completion, user-triggered visibility, suppression cases, and duration limits."
+                  },
+                  {
+                      "id":  "file:frontend/src/_p2.py",
+                      "name":  "_p2.py",
+                      "tags":  [
+                                   "python",
+                                   "utility",
+                                   "minimal"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/src/_p2.py",
+                      "type":  "file",
+                      "summary":  "A one-line Python artifact with no declarations recognized by structural extraction; it has no discernible standalone module role."
+                  },
+                  {
+                      "id":  "file:frontend/src/activityMap.old.js",
+                      "name":  "activityMap.old.js",
+                      "tags":  [
+                                   "legacy",
+                                   "classification",
+                                   "frontend"
+                               ],
+                      "complexity":  "complex",
+                      "filePath":  "frontend/src/activityMap.old.js",
+                      "type":  "file",
+                      "summary":  "A legacy activity-classification module that maps activity labels to categories using embedded lookup data."
+                  },
+                  {
+                      "id":  "file:frontend/src/build_activity_map.py",
+                      "name":  "build_activity_map.py",
+                      "tags":  [
+                                   "utility",
+                                   "data-processing",
+                                   "spreadsheet"
+                               ],
+                      "complexity":  "complex",
+                      "filePath":  "frontend/src/build_activity_map.py",
+                      "type":  "file",
+                      "summary":  "A Python utility that normalizes activity labels and builds a classification map from spreadsheet source data."
+                  },
+                  {
+                      "id":  "file:frontend/src/clean_membership.py",
+                      "name":  "clean_membership.py",
+                      "tags":  [
+                                   "utility",
+                                   "data-cleaning",
+                                   "membership"
+                               ],
+                      "complexity":  "moderate",
+                      "filePath":  "frontend/src/clean_membership.py",
+                      "type":  "file",
+                      "summary":  "A Python utility that normalizes membership data and prepares cleaned records for persistence."
+                  },
+                  {
+                      "id":  "file:frontend/src/daily_check.py",
+                      "name":  "daily_check.py",
+                      "tags":  [
+                                   "utility",
+                                   "validation",
+                                   "spreadsheet"
+                               ],
+                      "complexity":  "moderate",
+                      "filePath":  "frontend/src/daily_check.py",
+                      "type":  "file",
+                      "summary":  "A Python validation utility that reads activity data and applies normalization and matching checks for daily review."
+                  },
+                  {
+                      "id":  "file:frontend/src/fix_modals.py",
+                      "name":  "fix_modals.py",
+                      "tags":  [
+                                   "component",
+                                   "modal",
+                                   "frontend"
+                               ],
+                      "complexity":  "moderate",
+                      "filePath":  "frontend/src/fix_modals.py",
+                      "type":  "file",
+                      "summary":  "A collection of frontend confirmation, export-choice, and danger-confirmation modal components; despite its suffix, the source contains JavaScript UI code."
+                  },
+                  {
+                      "id":  "file:frontend/src/login/loginScene.css",
+                      "name":  "loginScene.css",
+                      "tags":  [
+                                   "stylesheet",
+                                   "authentication",
+                                   "layout"
+                               ],
+                      "complexity":  "complex",
+                      "filePath":  "frontend/src/login/loginScene.css",
+                      "type":  "file",
+                      "summary":  "Styles for the login scene, defining its layout and visual treatment."
+                  },
+                  {
+                      "id":  "file:frontend/src/motion/authEntryTransition.css",
+                      "name":  "authEntryTransition.css",
+                      "tags":  [
+                                   "stylesheet",
+                                   "animation",
+                                   "authentication"
+                               ],
+                      "complexity":  "complex",
+                      "filePath":  "frontend/src/motion/authEntryTransition.css",
+                      "type":  "file",
+                      "summary":  "CSS transitions for authentication-entry screens and their state changes."
+                  },
+                  {
+                      "id":  "file:frontend/src/motion/premiumPageTransitions.css",
+                      "name":  "premiumPageTransitions.css",
+                      "tags":  [
+                                   "stylesheet",
+                                   "animation",
+                                   "frontend"
+                               ],
+                      "complexity":  "moderate",
+                      "filePath":  "frontend/src/motion/premiumPageTransitions.css",
+                      "type":  "file",
+                      "summary":  "CSS transition rules for premium-page presentation changes."
+                  },
+                  {
+                      "id":  "config:frontend/tailwind.config.js",
+                      "name":  "tailwind.config.js",
+                      "tags":  [
+                                   "configuration",
+                                   "css",
+                                   "design-system"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/tailwind.config.js",
+                      "type":  "config",
+                      "summary":  "Tailwind CSS configuration defining the frontend content scan and theme extensions."
+                  },
+                  {
+                      "id":  "config:frontend/vite.config.js",
+                      "name":  "vite.config.js",
+                      "tags":  [
+                                   "configuration",
+                                   "build-system",
+                                   "development-server"
+                               ],
+                      "complexity":  "simple",
+                      "filePath":  "frontend/vite.config.js",
+                      "type":  "config",
+                      "summary":  "Vite frontend build and development-server configuration with React and Tailwind CSS integration."
+                  },
+                  {
+                      "id":  "function:frontend/diag_tdz_order.mjs:stripCode",
+                      "filePath":  "frontend/diag_tdz_order.mjs",
+                      "tags":  [
+                                   "utility",
+                                   "source-analysis",
+                                   "javascript"
+                               ],
+                      "name":  "stripCode",
+                      "type":  "function",
+                      "complexity":  "moderate",
+                      "summary":  "Removes comments and string or template-literal contents to isolate executable source for declaration-order diagnostics.",
+                      "lineRange":  [
+                                        28,
+                                        63
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/runtime_verify_time.mjs:apiPayload",
+                      "filePath":  "frontend/runtime_verify_time.mjs",
+                      "tags":  [
+                                   "test-helper",
+                                   "http",
+                                   "runtime-verification"
+                               ],
+                      "name":  "apiPayload",
+                      "type":  "function",
+                      "complexity":  "moderate",
+                      "summary":  "Builds the local test-server response payload for frontend runtime verification.",
+                      "lineRange":  [
+                                        34,
+                                        48
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/activityMap.old.js:classifyActivity",
+                      "filePath":  "frontend/src/activityMap.old.js",
+                      "tags":  [
+                                   "classification",
+                                   "legacy",
+                                   "exported"
+                               ],
+                      "name":  "classifyActivity",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Classifies an activity label using the legacy lookup rules in this module.",
+                      "lineRange":  [
+                                        804,
+                                        812
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/build_activity_map.py:norm",
+                      "filePath":  "frontend/src/build_activity_map.py",
+                      "tags":  [
+                                   "normalization",
+                                   "utility",
+                                   "exported"
+                               ],
+                      "name":  "norm",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Normalizes an activity label for consistent matching.",
+                      "lineRange":  [
+                                        45,
+                                        53
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/build_activity_map.py:_strip_open_day",
+                      "filePath":  "frontend/src/build_activity_map.py",
+                      "tags":  [
+                                   "normalization",
+                                   "utility",
+                                   "exported"
+                               ],
+                      "name":  "_strip_open_day",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Removes an opening-day qualifier from an activity label before matching.",
+                      "lineRange":  [
+                                        55,
+                                        64
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/build_activity_map.py:key_from_norm",
+                      "filePath":  "frontend/src/build_activity_map.py",
+                      "tags":  [
+                                   "classification",
+                                   "utility",
+                                   "exported"
+                               ],
+                      "name":  "key_from_norm",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Derives a canonical lookup key from a normalized activity label.",
+                      "lineRange":  [
+                                        66,
+                                        76
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/build_activity_map.py:clean",
+                      "filePath":  "frontend/src/build_activity_map.py",
+                      "tags":  [
+                                   "data-cleaning",
+                                   "utility",
+                                   "exported"
+                               ],
+                      "name":  "clean",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Cleans a source value before it enters the activity-map processing pipeline.",
+                      "lineRange":  [
+                                        78,
+                                        79
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/build_activity_map.py:load_source",
+                      "filePath":  "frontend/src/build_activity_map.py",
+                      "tags":  [
+                                   "spreadsheet",
+                                   "data-loading",
+                                   "exported"
+                               ],
+                      "name":  "load_source",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Loads source spreadsheet data for activity-map construction.",
+                      "lineRange":  [
+                                        82,
+                                        89
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/clean_membership.py:build",
+                      "filePath":  "frontend/src/clean_membership.py",
+                      "tags":  [
+                                   "data-cleaning",
+                                   "membership",
+                                   "exported"
+                               ],
+                      "name":  "build",
+                      "type":  "function",
+                      "complexity":  "moderate",
+                      "summary":  "Builds cleaned membership records from branch-oriented source data.",
+                      "lineRange":  [
+                                        27,
+                                        44
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/clean_membership.py:finalize",
+                      "filePath":  "frontend/src/clean_membership.py",
+                      "tags":  [
+                                   "data-cleaning",
+                                   "membership",
+                                   "exported"
+                               ],
+                      "name":  "finalize",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Finalizes a membership value for the cleaning pipeline.",
+                      "lineRange":  [
+                                        46,
+                                        51
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/clean_membership.py:plan",
+                      "filePath":  "frontend/src/clean_membership.py",
+                      "tags":  [
+                                   "data-cleaning",
+                                   "validation",
+                                   "exported"
+                               ],
+                      "name":  "plan",
+                      "type":  "function",
+                      "complexity":  "moderate",
+                      "summary":  "Plans a membership-field transformation using a supplied value and pattern.",
+                      "lineRange":  [
+                                        53,
+                                        66
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/daily_check.py:norm",
+                      "filePath":  "frontend/src/daily_check.py",
+                      "tags":  [
+                                   "normalization",
+                                   "validation",
+                                   "exported"
+                               ],
+                      "name":  "norm",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Normalizes an activity name used by daily validation checks.",
+                      "lineRange":  [
+                                        22,
+                                        29
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/daily_check.py:_strip_open_day",
+                      "filePath":  "frontend/src/daily_check.py",
+                      "tags":  [
+                                   "normalization",
+                                   "validation",
+                                   "exported"
+                               ],
+                      "name":  "_strip_open_day",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Removes an opening-day qualifier before daily activity matching.",
+                      "lineRange":  [
+                                        31,
+                                        37
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/daily_check.py:key_from",
+                      "filePath":  "frontend/src/daily_check.py",
+                      "tags":  [
+                                   "classification",
+                                   "validation",
+                                   "exported"
+                               ],
+                      "name":  "key_from",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Creates a canonical activity key for daily comparison.",
+                      "lineRange":  [
+                                        39,
+                                        49
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/daily_check.py:clean",
+                      "filePath":  "frontend/src/daily_check.py",
+                      "tags":  [
+                                   "data-cleaning",
+                                   "validation",
+                                   "exported"
+                               ],
+                      "name":  "clean",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Cleans an input value for use in daily checks.",
+                      "lineRange":  [
+                                        51,
+                                        52
+                                    ]
+                  },
+                  {
+                      "id":  "function:frontend/src/daily_check.py:has_word",
+                      "filePath":  "frontend/src/daily_check.py",
+                      "tags":  [
+                                   "text-matching",
+                                   "validation",
+                                   "exported"
+                               ],
+                      "name":  "has_word",
+                      "type":  "function",
+                      "complexity":  "simple",
+                      "summary":  "Checks whether a normalized text value contains a complete word.",
+                      "lineRange":  [
+                                        54,
+                                        55
+                                    ]
+                  }
+              ]
+}

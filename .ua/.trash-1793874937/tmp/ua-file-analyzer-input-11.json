@@ -1,0 +1,90 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 11,
+  "batchFiles": [
+    {
+      "path": ".github/workflows/ai_cron.yml",
+      "language": "yaml",
+      "sizeLines": 57,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/apify_social_tests.yml",
+      "language": "yaml",
+      "sizeLines": 33,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/dashboard-loading-check.yml",
+      "language": "yaml",
+      "sizeLines": 54,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/earthquake-schema-guard.yml",
+      "language": "yaml",
+      "sizeLines": 67,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/earthquake_cron.yml",
+      "language": "yaml",
+      "sizeLines": 48,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/frontend-motion-audit.yml",
+      "language": "yaml",
+      "sizeLines": 65,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/n1_query_optimization_tests.yml",
+      "language": "yaml",
+      "sizeLines": 82,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/weather_cron.yml",
+      "language": "yaml",
+      "sizeLines": 31,
+      "fileCategory": "infra"
+    }
+  ],
+  "batchImportData": {
+    ".github/workflows/ai_cron.yml": [],
+    ".github/workflows/apify_social_tests.yml": [],
+    ".github/workflows/dashboard-loading-check.yml": [],
+    ".github/workflows/earthquake-schema-guard.yml": [],
+    ".github/workflows/earthquake_cron.yml": [],
+    ".github/workflows/frontend-motion-audit.yml": [],
+    ".github/workflows/n1_query_optimization_tests.yml": [],
+    ".github/workflows/weather_cron.yml": []
+  },
+  "neighborMap": {}
+}

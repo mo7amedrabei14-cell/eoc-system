@@ -1,0 +1,89 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 9,
+  "batchFiles": [
+    {
+      "path": "frontend/src/RootErrorBoundary.jsx",
+      "language": "javascript",
+      "sizeLines": 54,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/__tests__/clientErrorReport.test.js",
+      "language": "javascript",
+      "sizeLines": 311,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/clientErrorReport.js",
+      "language": "javascript",
+      "sizeLines": 383,
+      "fileCategory": "code"
+    },
+    {
+      "path": "frontend/src/main.jsx",
+      "language": "javascript",
+      "sizeLines": 47,
+      "fileCategory": "code"
+    }
+  ],
+  "batchImportData": {
+    "frontend/src/RootErrorBoundary.jsx": [
+      "frontend/src/clientErrorReport.js"
+    ],
+    "frontend/src/__tests__/clientErrorReport.test.js": [
+      "frontend/src/clientErrorReport.js"
+    ],
+    "frontend/src/clientErrorReport.js": [
+      "frontend/src/apiBase.js"
+    ],
+    "frontend/src/main.jsx": [
+      "frontend/src/RootErrorBoundary.jsx",
+      "frontend/src/clientErrorReport.js",
+      "frontend/src/index.css"
+    ]
+  },
+  "neighborMap": {
+    "frontend/src/clientErrorReport.js": [
+      {
+        "path": "frontend/src/apiBase.js",
+        "batchIndex": 1,
+        "symbols": [
+          "BASE"
+        ]
+      }
+    ],
+    "frontend/src/main.jsx": [
+      {
+        "path": "frontend/src/index.css",
+        "batchIndex": 20,
+        "symbols": []
+      }
+    ]
+  }
+}

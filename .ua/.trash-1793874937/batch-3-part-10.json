@@ -1,0 +1,1035 @@
+{
+  "nodes": [
+    {
+      "id": "function:main.py:ensure_gov_contacts_schema",
+      "type": "function",
+      "name": "ensure_gov_contacts_schema",
+      "filePath": "main.py",
+      "lineRange": [
+        730,
+        799
+      ],
+      "summary": "Handles the ensure gov contacts schema operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_redact_error",
+      "type": "function",
+      "name": "_redact_error",
+      "filePath": "main.py",
+      "lineRange": [
+        1418,
+        1422
+      ],
+      "summary": "Handles the redact error operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_dashboard_stats",
+      "type": "function",
+      "name": "get_dashboard_stats",
+      "filePath": "main.py",
+      "lineRange": [
+        1717,
+        1762
+      ],
+      "summary": "Handles the get dashboard stats operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:is_admin_role",
+      "type": "function",
+      "name": "is_admin_role",
+      "filePath": "main.py",
+      "lineRange": [
+        2231,
+        2233
+      ],
+      "summary": "Handles the is admin role operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:segment_span_from_parts",
+      "type": "function",
+      "name": "segment_span_from_parts",
+      "filePath": "main.py",
+      "lineRange": [
+        2710,
+        2720
+      ],
+      "summary": "Handles the segment span from parts operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:details_snapshot",
+      "type": "function",
+      "name": "details_snapshot",
+      "filePath": "main.py",
+      "lineRange": [
+        3200,
+        3202
+      ],
+      "summary": "Handles the details snapshot operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_sync_mission_routes",
+      "type": "function",
+      "name": "_sync_mission_routes",
+      "filePath": "main.py",
+      "lineRange": [
+        4023,
+        4109
+      ],
+      "summary": "Handles the sync mission routes operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_jl_dup_guard",
+      "type": "function",
+      "name": "_jl_dup_guard",
+      "filePath": "main.py",
+      "lineRange": [
+        5570,
+        5589
+      ],
+      "summary": "Handles the jl dup guard operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_realtime_events",
+      "type": "function",
+      "name": "get_realtime_events",
+      "filePath": "main.py",
+      "lineRange": [
+        6452,
+        6592
+      ],
+      "summary": "Handles the get realtime events operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:clear_all_handovers",
+      "type": "function",
+      "name": "clear_all_handovers",
+      "filePath": "main.py",
+      "lineRange": [
+        7127,
+        7173
+      ],
+      "summary": "Handles the clear all handovers operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:add_global_eq",
+      "type": "function",
+      "name": "add_global_eq",
+      "filePath": "main.py",
+      "lineRange": [
+        7742,
+        7763
+      ],
+      "summary": "Handles the add global eq operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_ai_news",
+      "type": "function",
+      "name": "get_ai_news",
+      "filePath": "main.py",
+      "lineRange": [
+        8245,
+        8278
+      ],
+      "summary": "Handles the get ai news operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:regions_to_branch_ids",
+      "type": "function",
+      "name": "regions_to_branch_ids",
+      "filePath": "main.py",
+      "lineRange": [
+        8894,
+        8895
+      ],
+      "summary": "Handles the regions to branch ids operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:require_gov_contacts_export",
+      "type": "function",
+      "name": "require_gov_contacts_export",
+      "filePath": "main.py",
+      "lineRange": [
+        9519,
+        9526
+      ],
+      "summary": "Handles the require gov contacts export operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_magnitude_factor",
+      "type": "function",
+      "name": "_eq_intel_magnitude_factor",
+      "filePath": "main.py",
+      "lineRange": [
+        9987,
+        10000
+      ],
+      "summary": "Handles the eq intel magnitude factor operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:_eq_intel_normalize_event",
+      "type": "function",
+      "name": "_eq_intel_normalize_event",
+      "filePath": "main.py",
+      "lineRange": [
+        10376,
+        10416
+      ],
+      "summary": "Handles the eq intel normalize event operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:get_earthquake_intel_status",
+      "type": "function",
+      "name": "get_earthquake_intel_status",
+      "filePath": "main.py",
+      "lineRange": [
+        11137,
+        11198
+      ],
+      "summary": "Handles the get earthquake intel status operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_eq_world_backfill_core",
+      "type": "function",
+      "name": "_eq_world_backfill_core",
+      "filePath": "main.py",
+      "lineRange": [
+        12150,
+        12200
+      ],
+      "summary": "Handles the eq world backfill core operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:forecast_earthquake_intel",
+      "type": "function",
+      "name": "forecast_earthquake_intel",
+      "filePath": "main.py",
+      "lineRange": [
+        12696,
+        12792
+      ],
+      "summary": "Handles the forecast earthquake intel operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:logout_all_users",
+      "type": "function",
+      "name": "logout_all_users",
+      "filePath": "main.py",
+      "lineRange": [
+        13792,
+        13876
+      ],
+      "summary": "Handles the logout all users operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:main.py:_normalize_wireless_national_id",
+      "type": "function",
+      "name": "_normalize_wireless_national_id",
+      "filePath": "main.py",
+      "lineRange": [
+        14284,
+        14294
+      ],
+      "summary": "Handles the normalize wireless national id operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:lookup_wireless_recipient",
+      "type": "function",
+      "name": "lookup_wireless_recipient",
+      "filePath": "main.py",
+      "lineRange": [
+        14789,
+        14812
+      ],
+      "summary": "Handles the lookup wireless recipient operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:main.py:acknowledge_owner_message",
+      "type": "function",
+      "name": "acknowledge_owner_message",
+      "filePath": "main.py",
+      "lineRange": [
+        15377,
+        15413
+      ],
+      "summary": "Handles the acknowledge owner message operation in this module.",
+      "tags": [
+        "api-handler",
+        "backend",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:EOCStaffModel",
+      "type": "class",
+      "name": "EOCStaffModel",
+      "filePath": "main.py",
+      "lineRange": [
+        2010,
+        2012
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:AINewsModel",
+      "type": "class",
+      "name": "AINewsModel",
+      "filePath": "main.py",
+      "lineRange": [
+        7951,
+        7972
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:main.py:WeatherIntelIngestModel",
+      "type": "class",
+      "name": "WeatherIntelIngestModel",
+      "filePath": "main.py",
+      "lineRange": [
+        12819,
+        12836
+      ],
+      "summary": "Defines a structured data model used by application workflows.",
+      "tags": [
+        "data-model",
+        "schema",
+        "backend"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:test_jl_redesign.py",
+      "type": "file",
+      "name": "test_jl_redesign.py",
+      "filePath": "test_jl_redesign.py",
+      "summary": "Contains focused automated tests for test jl redesign.",
+      "tags": [
+        "test",
+        "verification",
+        "backend"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:test_jl_redesign.py:check",
+      "type": "function",
+      "name": "check",
+      "filePath": "test_jl_redesign.py",
+      "lineRange": [
+        36,
+        41
+      ],
+      "summary": "Exercises or verifies the check behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_jl_redesign.py:emit",
+      "type": "function",
+      "name": "emit",
+      "filePath": "test_jl_redesign.py",
+      "lineRange": [
+        44,
+        52
+      ],
+      "summary": "Exercises or verifies the emit behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_jl_redesign.py:_hh",
+      "type": "function",
+      "name": "_hh",
+      "filePath": "test_jl_redesign.py",
+      "lineRange": [
+        55,
+        56
+      ],
+      "summary": "Exercises or verifies the hh behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test_jl_redesign.py:part_a",
+      "type": "function",
+      "name": "part_a",
+      "filePath": "test_jl_redesign.py",
+      "lineRange": [
+        59,
+        127
+      ],
+      "summary": "Exercises or verifies the part a behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:test_jl_redesign.py:part_b",
+      "type": "function",
+      "name": "part_b",
+      "filePath": "test_jl_redesign.py",
+      "lineRange": [
+        130,
+        250
+      ],
+      "summary": "Exercises or verifies the part b behavior in this scenario.",
+      "tags": [
+        "test",
+        "verification",
+        "workflow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:test_mission.py",
+      "type": "file",
+      "name": "test_mission.py",
+      "filePath": "test_mission.py",
+      "summary": "Contains focused automated tests for test mission.",
+      "tags": [
+        "test",
+        "verification",
+        "backend"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_gov_contacts_schema",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:ensure_gov_contacts_schema",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_redact_error",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_redact_error",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_dashboard_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_dashboard_stats",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:is_admin_role",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:is_admin_role",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:segment_span_from_parts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:segment_span_from_parts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:details_snapshot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:details_snapshot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_sync_mission_routes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_sync_mission_routes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_jl_dup_guard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_jl_dup_guard",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_realtime_events",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_realtime_events",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_handovers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:clear_all_handovers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:add_global_eq",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:add_global_eq",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_ai_news",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_ai_news",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:regions_to_branch_ids",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:regions_to_branch_ids",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:require_gov_contacts_export",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:require_gov_contacts_export",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_magnitude_factor",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_magnitude_factor",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_normalize_event",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_intel_normalize_event",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_earthquake_intel_status",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:get_earthquake_intel_status",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_world_backfill_core",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_eq_world_backfill_core",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:forecast_earthquake_intel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:forecast_earthquake_intel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:logout_all_users",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:logout_all_users",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_normalize_wireless_national_id",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:_normalize_wireless_national_id",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:lookup_wireless_recipient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:lookup_wireless_recipient",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:acknowledge_owner_message",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "function:main.py:acknowledge_owner_message",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:EOCStaffModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:EOCStaffModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:AINewsModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:AINewsModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WeatherIntelIngestModel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:main.py",
+      "target": "class:main.py:WeatherIntelIngestModel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:check",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:check",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:emit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:emit",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:_hh",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:_hh",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:part_a",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:part_a",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:part_b",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "function:test_jl_redesign.py:part_b",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:test_jl_redesign.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.py",
+      "target": "file:test_jl_redesign.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:test_mission.py",
+      "target": "file:auth.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:test_mission.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:auth.py",
+      "target": "file:test_mission.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:db.py",
+      "target": "file:test_mission.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 0,
+  "filesSkipped": [
+    "frontend/src/App.css",
+    "frontend/src/_apt2.txt",
+    "frontend/src/index.css",
+    "frontend/src/missing.txt",
+    "frontend/src/mobile.css",
+    "frontend/src/supercharged-tail.css",
+    "frontend/src/supercharged.css"
+  ],
+  "filesUnreadable": [],
+  "analysisOutcomes": {
+    "structure": {
+      "succeeded": 0,
+      "failed": 0
+    },
+    "callGraph": {
+      "succeeded": 0,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "results": []
+}

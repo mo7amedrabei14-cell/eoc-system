@@ -1,0 +1,49 @@
+{
+    "nodes":  [
+                  {
+                      "id":  "config:frontend/_unz__s/xl/metadata.xml",
+                      "type":  "config",
+                      "name":  "metadata.xml",
+                      "filePath":  "frontend/_unz__s/xl/metadata.xml",
+                      "summary":  "Defines spreadsheet cell metadata and dynamic-array feature properties for the workbook.",
+                      "tags":  [
+                                   "configuration",
+                                   "spreadsheet",
+                                   "dynamic-array",
+                                   "cell-metadata"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "config:frontend/_unz__s/xl/styles.xml",
+                      "type":  "config",
+                      "name":  "styles.xml",
+                      "filePath":  "frontend/_unz__s/xl/styles.xml",
+                      "summary":  "Stores workbook presentation defaults, including a font, fills, borders, and number-format definitions.",
+                      "tags":  [
+                                   "configuration",
+                                   "spreadsheet",
+                                   "formatting",
+                                   "number-format"
+                               ],
+                      "complexity":  "simple"
+                  },
+                  {
+                      "id":  "config:frontend/_unz__s/xl/workbook.xml",
+                      "type":  "config",
+                      "name":  "workbook.xml",
+                      "filePath":  "frontend/_unz__s/xl/workbook.xml",
+                      "summary":  "Declares workbook-level properties and its sheet catalog.",
+                      "tags":  [
+                                   "configuration",
+                                   "spreadsheet",
+                                   "workbook",
+                                   "worksheet"
+                               ],
+                      "complexity":  "simple"
+                  }
+              ],
+    "edges":  [
+
+              ]
+}

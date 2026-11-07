@@ -1,0 +1,174 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 14,
+  "batchFiles": [
+    {
+      "path": "AI_RADAR_APIFY_SOCIAL.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "AI_RADAR_SOCIAL_SOURCES.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "Eoc Data Base.sql",
+      "language": "sql",
+      "sizeLines": 5,
+      "fileCategory": "data"
+    },
+    {
+      "path": "N1_AUDIT_REPORT.md",
+      "language": "markdown",
+      "sizeLines": 121,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "PRODUCT.md",
+      "language": "markdown",
+      "sizeLines": 71,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 103,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "SECURITY_AUDIT.md",
+      "language": "markdown",
+      "sizeLines": 225,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "SECURITY_VERIFICATION.md",
+      "language": "markdown",
+      "sizeLines": 212,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "VISUAL_TRANSFORM_PLAN.md",
+      "language": "markdown",
+      "sizeLines": 331,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "_head_index.css",
+      "language": "css",
+      "sizeLines": 3976,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "after.txt",
+      "language": "txt",
+      "sizeLines": 1343,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "after_class.txt",
+      "language": "txt",
+      "sizeLines": 1525,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "before.txt",
+      "language": "txt",
+      "sizeLines": 454,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "before_class.txt",
+      "language": "txt",
+      "sizeLines": 346,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "main_after.txt",
+      "language": "txt",
+      "sizeLines": 1369,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "main_before.txt",
+      "language": "txt",
+      "sizeLines": 454,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "main_new_func.txt",
+      "language": "txt",
+      "sizeLines": 82,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "new_class.txt",
+      "language": "txt",
+      "sizeLines": 31,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "new_func.txt",
+      "language": "txt",
+      "sizeLines": 82,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "openapi_spec.json",
+      "language": "json",
+      "sizeLines": 0,
+      "fileCategory": "config"
+    }
+  ],
+  "batchImportData": {
+    "AI_RADAR_APIFY_SOCIAL.md": [],
+    "AI_RADAR_SOCIAL_SOURCES.md": [],
+    "Eoc Data Base.sql": [],
+    "N1_AUDIT_REPORT.md": [],
+    "PRODUCT.md": [],
+    "README.md": [],
+    "SECURITY_AUDIT.md": [],
+    "SECURITY_VERIFICATION.md": [],
+    "VISUAL_TRANSFORM_PLAN.md": [],
+    "_head_index.css": [],
+    "after.txt": [],
+    "after_class.txt": [],
+    "before.txt": [],
+    "before_class.txt": [],
+    "main_after.txt": [],
+    "main_before.txt": [],
+    "main_new_func.txt": [],
+    "new_class.txt": [],
+    "new_func.txt": [],
+    "openapi_spec.json": []
+  },
+  "neighborMap": {}
+}

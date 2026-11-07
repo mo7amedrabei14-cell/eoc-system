@@ -1,0 +1,55 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 16,
+  "batchFiles": [
+    {
+      "path": "design-delivery/README.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "design-delivery/design-tokens.json",
+      "language": "json",
+      "sizeLines": 56,
+      "fileCategory": "config"
+    },
+    {
+      "path": "design-delivery/variables.scss",
+      "language": "css",
+      "sizeLines": 43,
+      "fileCategory": "markup"
+    }
+  ],
+  "batchImportData": {
+    "design-delivery/README.md": [],
+    "design-delivery/design-tokens.json": [],
+    "design-delivery/variables.scss": []
+  },
+  "neighborMap": {}
+}

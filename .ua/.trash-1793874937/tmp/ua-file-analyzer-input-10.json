@@ -1,0 +1,55 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 10,
+  "batchFiles": [
+    {
+      "path": ".dockerignore",
+      "language": "unknown",
+      "sizeLines": 17,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "Dockerfile",
+      "language": "dockerfile",
+      "sizeLines": 12,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "docker-compose.n1-test.yml",
+      "language": "yaml",
+      "sizeLines": 17,
+      "fileCategory": "infra"
+    }
+  ],
+  "batchImportData": {
+    ".dockerignore": [],
+    "Dockerfile": [],
+    "docker-compose.n1-test.yml": []
+  },
+  "neighborMap": {}
+}

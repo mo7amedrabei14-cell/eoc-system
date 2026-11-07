@@ -1,0 +1,55 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 24,
+  "batchFiles": [
+    {
+      "path": "perf/baseline22-dist/assets/App-CJsu5YTT.css",
+      "language": "css",
+      "sizeLines": 1,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/index-CWihVeMM.css",
+      "language": "css",
+      "sizeLines": 2,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "perf/baseline22-dist/assets/map-vendor-CcXJxNtP.css",
+      "language": "css",
+      "sizeLines": 1,
+      "fileCategory": "markup"
+    }
+  ],
+  "batchImportData": {
+    "perf/baseline22-dist/assets/App-CJsu5YTT.css": [],
+    "perf/baseline22-dist/assets/index-CWihVeMM.css": [],
+    "perf/baseline22-dist/assets/map-vendor-CcXJxNtP.css": []
+  },
+  "neighborMap": {}
+}

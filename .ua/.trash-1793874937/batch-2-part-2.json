@@ -1,0 +1,583 @@
+{
+  "nodes": [
+    {
+      "id": "file:check_catalog.py",
+      "type": "file",
+      "name": "check_catalog.py",
+      "filePath": "check_catalog.py",
+      "summary": "Small database inspection utility for checking catalog-related application state.",
+      "tags": [
+        "diagnostic",
+        "database",
+        "catalog"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:check_eq_event_delay.py",
+      "type": "file",
+      "name": "check_eq_event_delay.py",
+      "filePath": "check_eq_event_delay.py",
+      "summary": "Diagnostic query script for inspecting event-processing delay.",
+      "tags": [
+        "diagnostic",
+        "events",
+        "timing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:check_eq_timing.py",
+      "type": "file",
+      "name": "check_eq_timing.py",
+      "filePath": "check_eq_timing.py",
+      "summary": "Small diagnostic utility for checking event timing behavior.",
+      "tags": [
+        "diagnostic",
+        "events",
+        "timing"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:check_sources.py",
+      "type": "file",
+      "name": "check_sources.py",
+      "filePath": "check_sources.py",
+      "summary": "Minimal database-backed check of configured or registered data sources.",
+      "tags": [
+        "diagnostic",
+        "database",
+        "data-sources"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:clean_eq_audit.py",
+      "type": "file",
+      "name": "clean_eq_audit.py",
+      "filePath": "clean_eq_audit.py",
+      "summary": "Focused cleanup utility for audit data associated with the event workflow.",
+      "tags": [
+        "maintenance",
+        "audit",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:db.py",
+      "type": "file",
+      "name": "db.py",
+      "filePath": "db.py",
+      "summary": "Central database connection utilities covering connection configuration, pooler handling, transient-error detection, and connection acquisition.",
+      "tags": [
+        "database",
+        "connection-pool",
+        "retry"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:db.py:_is_pooled",
+      "type": "function",
+      "name": "_is_pooled",
+      "filePath": "db.py",
+      "lineRange": [
+        57,
+        72
+      ],
+      "summary": "Determines whether the configured database connection uses a pooler.",
+      "tags": [
+        "database",
+        "connection-pool",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:db.py:_clean_dsn",
+      "type": "function",
+      "name": "_clean_dsn",
+      "filePath": "db.py",
+      "lineRange": [
+        75,
+        87
+      ],
+      "summary": "Normalizes a database connection address for connection setup without exposing its contents.",
+      "tags": [
+        "database",
+        "configuration",
+        "normalization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:db.py:_pooler_kwargs",
+      "type": "function",
+      "name": "_pooler_kwargs",
+      "filePath": "db.py",
+      "lineRange": [
+        90,
+        92
+      ],
+      "summary": "Builds connection options appropriate for the configured pooler.",
+      "tags": [
+        "database",
+        "connection-pool",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:db.py:_is_retryable",
+      "type": "function",
+      "name": "_is_retryable",
+      "filePath": "db.py",
+      "lineRange": [
+        95,
+        97
+      ],
+      "summary": "Classifies whether a database error is eligible for retry.",
+      "tags": [
+        "database",
+        "retry",
+        "error-handling"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:db.py:get_connection",
+      "type": "function",
+      "name": "get_connection",
+      "filePath": "db.py",
+      "lineRange": [
+        100,
+        145
+      ],
+      "summary": "Acquires a database connection and applies the module’s connection and retry behavior.",
+      "tags": [
+        "database",
+        "connection-pool",
+        "retry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:diag_assigned_days_readonly.py",
+      "type": "file",
+      "name": "diag_assigned_days_readonly.py",
+      "filePath": "diag_assigned_days_readonly.py",
+      "summary": "Read-only diagnostic report for assigned-day data and its related application state.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:diag_assigned_days_readonly.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "diag_assigned_days_readonly.py",
+      "lineRange": [
+        15,
+        72
+      ],
+      "summary": "Runs read-only queries and reports assigned-day diagnostic results.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "database"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:diag_bug2_readonly.py",
+      "type": "file",
+      "name": "diag_bug2_readonly.py",
+      "filePath": "diag_bug2_readonly.py",
+      "summary": "Read-only diagnostic script for investigating a reported application bug through targeted database/application checks.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "debugging"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:diag_bug2_readonly.py:section",
+      "type": "function",
+      "name": "section",
+      "filePath": "diag_bug2_readonly.py",
+      "lineRange": [
+        14,
+        16
+      ],
+      "summary": "Formats a labeled section in the read-only bug diagnostic output.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "reporting"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:diag_hr.py",
+      "type": "file",
+      "name": "diag_hr.py",
+      "filePath": "diag_hr.py",
+      "summary": "Diagnostic checks for HR-related data and application routes.",
+      "tags": [
+        "diagnostic",
+        "human-resources",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:diag_hr2.py",
+      "type": "file",
+      "name": "diag_hr2.py",
+      "filePath": "diag_hr2.py",
+      "summary": "Additional HR-focused diagnostic checks across database state and application routes.",
+      "tags": [
+        "diagnostic",
+        "human-resources",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:diag_rbac_readonly.py",
+      "type": "file",
+      "name": "diag_rbac_readonly.py",
+      "filePath": "diag_rbac_readonly.py",
+      "summary": "Read-only inspection of role-based access-control state and related database records.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "authorization"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:diag_route_drops_readonly.py",
+      "type": "file",
+      "name": "diag_route_drops_readonly.py",
+      "filePath": "diag_route_drops_readonly.py",
+      "summary": "Read-only route diagnostic that investigates where expected records or events may be dropped.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "routing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:diag_route_drops_readonly.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "diag_route_drops_readonly.py",
+      "lineRange": [
+        18,
+        76
+      ],
+      "summary": "Runs read-only checks to trace route-level drops and inspect relevant request or data flow.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "routing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:diag_route_loss_readonly.py",
+      "type": "file",
+      "name": "diag_route_loss_readonly.py",
+      "filePath": "diag_route_loss_readonly.py",
+      "summary": "Read-only route diagnostic for tracing loss across application request/data paths.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "routing"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:diag_route_loss_readonly.py:q",
+      "type": "function",
+      "name": "q",
+      "filePath": "diag_route_loss_readonly.py",
+      "lineRange": [
+        20,
+        22
+      ],
+      "summary": "Executes a focused read-only query supporting the route-loss diagnostics.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "database"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:diag_route_loss_readonly.py:main",
+      "type": "function",
+      "name": "main",
+      "filePath": "diag_route_loss_readonly.py",
+      "lineRange": [
+        25,
+        89
+      ],
+      "summary": "Runs read-only diagnostics tracing data loss across application route stages.",
+      "tags": [
+        "diagnostic",
+        "read-only",
+        "routing"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:check_catalog.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:check_eq_event_delay.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:check_eq_timing.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:check_sources.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:clean_eq_audit.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_is_pooled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_is_pooled",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_clean_dsn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_clean_dsn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_pooler_kwargs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_pooler_kwargs",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_is_retryable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:_is_retryable",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:get_connection",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:db.py",
+      "target": "function:db.py:get_connection",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_assigned_days_readonly.py",
+      "target": "function:diag_assigned_days_readonly.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_assigned_days_readonly.py",
+      "target": "function:diag_assigned_days_readonly.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_assigned_days_readonly.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_bug2_readonly.py",
+      "target": "function:diag_bug2_readonly.py:section",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_bug2_readonly.py",
+      "target": "function:diag_bug2_readonly.py:section",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_bug2_readonly.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_hr.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_hr.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_hr2.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_hr2.py",
+      "target": "file:main.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_rbac_readonly.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_route_drops_readonly.py",
+      "target": "function:diag_route_drops_readonly.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_drops_readonly.py",
+      "target": "function:diag_route_drops_readonly.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_drops_readonly.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:diag_route_loss_readonly.py",
+      "target": "function:diag_route_loss_readonly.py:q",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_loss_readonly.py",
+      "target": "function:diag_route_loss_readonly.py:q",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_loss_readonly.py",
+      "target": "function:diag_route_loss_readonly.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:diag_route_loss_readonly.py",
+      "target": "function:diag_route_loss_readonly.py:main",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:diag_route_loss_readonly.py",
+      "target": "file:db.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    }
+  ]
+}

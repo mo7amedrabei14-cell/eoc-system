@@ -1,0 +1,97 @@
+{
+  "projectRoot": "C:\\Users\\mo7am\\OneDrive\\Work\\EOC System",
+  "projectName": "EOC System",
+  "projectDescription": "A digital operations platform for coordination, monitoring, reporting, and decision-making at the Egyptian Red Crescent Emergency Operations Center.",
+  "languages": [
+    "baf",
+    "baj",
+    "bak",
+    "batch",
+    "css",
+    "dockerfile",
+    "docx",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "markdown",
+    "powershell",
+    "python",
+    "rels",
+    "sql",
+    "txt",
+    "unknown",
+    "xlsx",
+    "xml",
+    "yaml"
+  ],
+  "batchIndex": 15,
+  "batchFiles": [
+    {
+      "path": "output.txt",
+      "language": "txt",
+      "sizeLines": 11,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "package.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plan.md",
+      "language": "markdown",
+      "sizeLines": 84,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "requirements.txt",
+      "language": "txt",
+      "sizeLines": 19,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "seg-probe.html",
+      "language": "html",
+      "sizeLines": 113,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "smoke_test_summary.md",
+      "language": "markdown",
+      "sizeLines": 64,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "vercel.json",
+      "language": "json",
+      "sizeLines": 51,
+      "fileCategory": "config"
+    },
+    {
+      "path": "weather_backfill_report.json",
+      "language": "json",
+      "sizeLines": 701,
+      "fileCategory": "config"
+    },
+    {
+      "path": "wrangler.jsonc",
+      "language": "jsonc",
+      "sizeLines": 10,
+      "fileCategory": "config"
+    }
+  ],
+  "batchImportData": {
+    "output.txt": [],
+    "package.json": [],
+    "plan.md": [],
+    "requirements.txt": [],
+    "seg-probe.html": [],
+    "smoke_test_summary.md": [],
+    "vercel.json": [],
+    "weather_backfill_report.json": [],
+    "wrangler.jsonc": []
+  },
+  "neighborMap": {}
+}
